@@ -200,7 +200,7 @@ if [ -f "$KI" ]; then
 else
   bad "T12 needs $KI in the clone"
 fi
-OI=proto8/cmd/aos-agent/aos_agent/_index.json
+OI=proto8/py/aos/apps/agent/_index.json
 printf ' ' >> "$OI"
 cq submit --line ok-a --files "$OI" --msg-file "$(msg t12b m12b)" > "$RUN/t12b.out" 2>&1; E=$?
 check "proto8 code _index.json still refused as generated ($E)" bash -c "[ $E = 3 ] && grep -q 'generated file' $RUN/t12b.out"

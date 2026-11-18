@@ -23,7 +23,7 @@
      沒給＝live.jsonl 舊 result 記的 contextWindow（同 model，找不到取最小的），都沒有＝None（explain 說要設 config.window）。
      transcript 找得到就以它為準：它讀不到＝None，不退回 live（免得壓完讀到壓之前的數字又觸發）；找不到才讀 2 的 live.jsonl。
      實測 claude 2.1.325（11-16）：transcript 的 assistant 行有 usage（數字同 stream）、stop_reason；-p /compact 那輪沒有 assistant。
-     畫面開著時 context_wrap 寄的 /compact 怎麼進畫面（aos_eca/slash.py slash_turn→on_screen）：畫面正在答（busy.txt）＝不打、信留 cur/ 下一輪再試；
+     畫面開著時 context_wrap 寄的 /compact 怎麼進畫面（aos/apps/eca/slash.py slash_turn→on_screen）：畫面正在答（busy.txt）＝不打、信留 cur/ 下一輪再試；
      claude 的輸入框有人打了字或看不出來（screen_slash.input_clear）＝也不打、信留著（不用 C-u 清，會吃掉人的字）；
      否則 tmux send-keys 打字、0.5 秒後 Enter，等畫面的 hook 換掉 history（上限 120 秒）才回信，等不到只在回信裡說一句、不重打。
   3. fsm 腦：<stack>/observed.jsonl 最後 256 KiB 裡最後一則有用量的 think；視窗用 window 參數，或 think/brain_wait.json 指的 kernel 公開的 endpoints.json。

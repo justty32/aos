@@ -1,0 +1,63 @@
+{
+ "agent": {
+  "description": "aos-agent：給人用的 agent 介面，ctl add／rm／起停睡醒、say／listen／chat、畫面、tools／llm／system／goal／hook 覆蓋層與搬家說明；要改人操作 agent 的指令時進去",
+  "index": "agent/_index.json"
+ },
+ "asuser": {
+  "description": "aos-asuser：免 root 換成 subuid 執行程式或救援檔案"
+ },
+ "clock": {
+  "description": "aos-clock — 把時鐘檔的回合數往前走一格"
+ },
+ "clock_register": {
+  "description": "aos-clock-register：時鐘登記表的 add／rm／ls，每 N 個 cycle 往一個 aos-post 箱子寄一句，用來定時叫醒 agent"
+ },
+ "comm": {
+  "description": "proto8/py/aos/apps/comm — aos-comm：布告欄（comm/1）"
+ },
+ "daemon_ctl": {
+  "description": "aos-daemon-ctl — 掛上 proc、起停、暫停、自檢與清理舊列"
+ },
+ "eca": {
+  "description": "aos-eca-turn 的 Python 套件：一輪的認領批信、hook、slash 指令、交給 CLI 前後、等回答時又來的信、history 讀寫與換台開場白"
+ },
+ "feedback": {
+  "description": "aos-feedback 的 Python 套件：旗標解析與顯示、意見的附加寫入與評分者分類規則、從評分與工具帳算 AI 舒適度"
+ },
+ "grow": {
+  "description": "aos-grow：把一個函數往上長一級或縮回一級、呼叫方跟著改的原型指令（嘗試性質，純標準庫 Python）"
+ },
+ "json_view": {
+  "description": "aos-json-view — 只讀：把 json 印成人好讀的樣子"
+ },
+ "kit": {
+  "description": "aos-kit"
+ },
+ "mailbox": {
+  "description": "aos-mailbox：每個 stack 一個 aos-post 信箱，where／peek／read／send 照 inbox 協議跟 agent 互寄信；人也能把自己當一隻 agent 用"
+ },
+ "mcp": {
+  "description": "aos-mcp：把 aos-tools 登記的工具包成 MCP tools 給外部 agent（Claude Code、codex、eca）叫；要改 MCP 這一層時進去"
+ },
+ "mcp_import": {
+  "description": "aos-mcp-import：連一次外部 MCP server，把它的工具凍結進 server 檔變成一包可疊進 tools.json 的工具；sync 重問並印差異"
+ },
+ "mcp_launch": {
+  "description": "aos-mcp-launch：起一台外部 stdio MCP server——讀 server 檔與它的 env_file（金鑰），exec 成那支 server，金鑰只活在 server 行程"
+ },
+ "sandbox": {
+  "description": "aos-sandbox：照一份設定（ro／rw 綁定、指令白名單、斷網、上限）用 bwrap／s6 把 prog 關進沙箱再跑，含範例設定與要 root 的 setup.sh"
+ },
+ "share": {
+  "description": "aos-share：替共用夾與點名使用者的檔案設定 ACL"
+ },
+ "sweeper": {
+  "description": "aos-sweeper — 清道夫：一台 daemon 的 stderr 封存、封存保留期、收表外子 loop"
+ },
+ "tools": {
+  "description": "aos-tools — 一個 agent 資料夾一份工具註冊檔"
+ },
+ "tree_start": {
+  "description": "aos-tree-start：起樹前先看殼裡有沒有別棵樹的 AOS_*"
+ }
+}

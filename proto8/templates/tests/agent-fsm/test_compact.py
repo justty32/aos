@@ -188,7 +188,7 @@ class Compact(unittest.TestCase):
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"history": "history.jsonl"}}))
         (daemon / "procs_state.json").write_text(json.dumps({"procs": {"fake": {
             "phase": "paused", "stack": str(self.stack), "ws": str(self.root), "def": str(self.defn)}}}))
-        result = subprocess.run([str(PROTO / "cmd/aos-agent/bin/aos-agent"), "--daemon", str(daemon),
+        result = subprocess.run([str(PROTO / "bin/aos-agent"), "--daemon", str(daemon),
                                  "history", "--target", "fake", "summarize", "1-2", "Earlier summary"],
                                 env=self.env, capture_output=True, text=True, timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -366,7 +366,7 @@ print(json.dumps({'message':message,'usage':{'prompt_tokens':used,'completion_to
         write(root / "kernel_daemon.json", {"interval_ms": 10, "exec": {"argv": [
             str(PROTO / "py/tools/aos/kernel_llm/_entry"), str(root / "kernel.json")]}})
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
-        bins = [str(PROTO / "bin")] + [str(p) for p in PROTO.glob("cmd/*/bin")]
+        bins = [str(PROTO / "bin")]
         env.update(PATH=os.pathsep.join(bins + [env["PATH"]]),
                    PYTHONPATH=os.pathsep.join([str(PROTO / "py")]),
                    PYTHONDONTWRITEBYTECODE="1", AOS_HOME=str(PROTO), AOS_STACK=str(daemon),

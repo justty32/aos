@@ -10,7 +10,7 @@ import unittest
 sys.dont_write_bytecode = True
 TOOL = Path(__file__).resolve().parents[1] / "_entry"
 PROTO = Path(__file__).resolve().parents[5]
-sys.path.insert(0, str(PROTO / "cmd" / "aos-agent" / "tests"))
+sys.path.insert(0, str(PROTO / "py" / "tests" / "apps" / "agent"))
 import reply_fixture as rf  # noqa: E402
 
 # aos-agent on PATH for the tool: ctl ls / who answered from the fake table (procs_state.json), everything else goes to the real aos-agent -d <fake daemon>.

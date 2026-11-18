@@ -21,7 +21,7 @@ class MailNotifyDaemon(unittest.TestCase):
         if not os.environ.get("KEEP"):
             self.addCleanup(shutil.rmtree, self.root, True)
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        bins = [str(PROTO / "bin")] + [str(p) for p in sorted(PROTO.glob("cmd/*/bin"))]
+        bins = [str(PROTO / "bin")]
         kernel = self.root / "kernel"
         kernel.mkdir()
         self.env = dict(env, AOS_HOME=str(PROTO), PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_LLM_KERNEL=str(kernel),

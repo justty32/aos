@@ -12,7 +12,7 @@ sys.dont_write_bytecode = True
 TOOL = Path(__file__).resolve().parents[1] / "_entry"
 PROTO = Path(__file__).resolve().parents[5]
 NAME = TOOL.parent.name
-BINS = [PROTO / "cmd" / "aos-tools" / "bin", PROTO / "bin"]
+BINS = [PROTO / "bin", PROTO / "bin"]
 
 
 def make_def(d):

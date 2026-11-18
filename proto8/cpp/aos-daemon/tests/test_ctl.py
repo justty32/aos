@@ -13,9 +13,9 @@ import unittest
 from unittest.mock import patch
 
 from support import ENV, PROTO, dc, read, write
-sys.path.insert(0, str(PROTO / 'cmd' / 'aos-agent'))
-from aos_agent import hints
-from aos_agent.ctl import shared
+sys.path.insert(0, str(PROTO / 'py'))
+from aos.apps.agent import hints
+from aos.apps.agent.ctl import shared
 
 
 class Control(unittest.TestCase):
@@ -77,7 +77,7 @@ class Control(unittest.TestCase):
                 self.assertEqual(shared.phase_body(cmd, 'job'), {'procs_' + key: ['job']})
 
     def test_agent_sleep_waits_for_stopped_when_escalating(self):
-        from aos_agent.ctl import phase
+        from aos.apps.agent.ctl import phase
         agent = SimpleNamespace(name='job', phase='stopping', stack=str(self.root))
         def wait(cmd, body, reached, *args, **kwargs):
             self.assertEqual(cmd, 'sleep')
@@ -94,7 +94,7 @@ class Control(unittest.TestCase):
         self.assertIn('ctl start', out.getvalue())
 
     def test_agent_sleep_keeps_sleep_and_remove_pending_modes(self):
-        from aos_agent.ctl import phase
+        from aos.apps.agent.ctl import phase
         for mode in ('sleep', 'remove', None):
             with self.subTest(mode=mode):
                 agent = SimpleNamespace(name='job', phase='stopping' if mode else 'running', stack=str(self.root))
@@ -139,7 +139,8 @@ class Prune(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(prefix='aos-prune-ctl-')
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.cli = PROTO / 'cmd' / 'aos-daemon-ctl' / 'bin' / 'aos-daemon-ctl'
+        self.cli = PROTO / 'bin' / 'aos-daemon-ctl'                      # the entry install.py writes
+        self.src = PROTO / 'py' / 'aos' / 'apps' / 'daemon_ctl' / 'main.py'   # its module (loaded here, not run)
         self.procs = {}
 
     def row(self, name, phase='stopped', **fields):
@@ -250,7 +251,7 @@ class Prune(unittest.TestCase):
         marker.write_text('keep')
         os.utime(marker, (100, 100))
         os.utime(stack, (100, 100))
-        cli = runpy.run_path(str(self.cli))
+        cli = runpy.run_path(str(self.src))
         opts = {'daemon': str(self.root)}
         with patch.object(dc, 'send', return_value='letter') as send, \
              patch.object(dc, 'mailbox_of', return_value='box'), \
@@ -287,7 +288,7 @@ class Prune(unittest.TestCase):
         stack = self.row('job')
         os.utime(stack, (100, 100))
         initial = dc.rows(str(self.root))
-        cli = runpy.run_path(str(self.cli))
+        cli = runpy.run_path(str(self.src))
         for changed in (dict(initial['job'], phase='running'), initial['job']):
             with self.subTest(changed=changed):
                 os.utime(stack, (100, 100))
@@ -307,7 +308,7 @@ class Prune(unittest.TestCase):
 
     def test_dry_run_never_sends_and_bad_flags_have_usage(self):
         self.row('missing').rmdir()
-        cli = runpy.run_path(str(self.cli))
+        cli = runpy.run_path(str(self.src))
         for flags in ([], ['--apply']):
             with patch.object(dc, 'send') as send, contextlib.redirect_stdout(io.StringIO()) as out:
                 cli['cmd_prune']({'daemon': str(self.root)}, ['--older-than', '1d', *flags])

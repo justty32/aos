@@ -1,4 +1,7 @@
 {
+ "__init__.py": {
+  "description": "aos.agentlib - agent 層的共用模組（hooks、cooldown、claude／codex 對話的 cli_*、cmd_call …；S3 前在 lib/agent）。"
+ },
  "agent_files.py": {
   "description": "匯出共用的定義檔與 stack 覆蓋檔宣告讀取器。"
  },

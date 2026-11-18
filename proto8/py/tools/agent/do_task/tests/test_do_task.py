@@ -1,4 +1,4 @@
-"""Test do_task start / end / status on a real history file: a fake aos-agent answers ctl who, its history half is the real aos_agent.history."""
+"""Test do_task start / end / status on a real history file: a fake aos-agent answers ctl who, its history half is the real aos.apps.agent.history."""
 import json
 import os
 from pathlib import Path
@@ -12,15 +12,15 @@ sys.dont_write_bytecode = True
 TOOL = Path(__file__).resolve().parents[1] / "_entry"
 PROTO = TOOL.parents[4]
 
-# 假 aos-agent：ctl who＝bob；history＝真的 aos_agent.history，只把「哪隻、哪個檔」換成 FAKE_HISTORY（不要 daemon）
+# 假 aos-agent：ctl who＝bob；history＝真的 aos.apps.agent.history，只把「哪隻、哪個檔」換成 FAKE_HISTORY（不要 daemon）
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys
 from types import SimpleNamespace
 P = os.environ["FAKE_PROTO"]
-sys.path[:0] = [P + "/cmd/aos-agent", P + "/lib"]
+sys.path[:0] = [P + "/lib"]
 from aos import flags as aos_flags
-from aos_agent import history
-from aos_agent.common import Fail
+from aos.apps.agent import history
+from aos.apps.agent.common import Fail
 with open(os.environ["FAKE_LOG"], "a") as f:
     f.write(json.dumps(sys.argv[1:]) + "\n")
 if sys.argv[1:3] == ["ctl", "who"]:

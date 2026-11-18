@@ -59,5 +59,5 @@ The gather tool set (26 tools) keeps reading, write/edit/mkdir, gadgets, todo, m
 ## Known limits
 
 - Writing only inside the workspace is a convention in the system text; no hook enforces it yet.
-- board_read and board_wait run the `aos-comm` command, so it must be on PATH (`source proto8/env.sh` puts every `cmd/*/bin` there; the optional `proto8/cmd/install.sh` symlinks them into `~/.local/bin`); without it those two calls fail and the rest of the kit still works.
+- board_read and board_wait run the `aos-comm` command, so it must be on PATH (`source proto8/env.sh` puts `proto8/bin` there); without it those two calls fail and the rest of the kit still works.
 - Only tier A general text and two roles exist so far.

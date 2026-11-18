@@ -5,7 +5,7 @@
 
 工具怎麼找到它（py/docs/01 規則 9；11-18 S4 起在 aos 套件裡，from aos import tool_io）：先找工具自己的資料夾（複製出 lib 的工具，把 aos 套件夾一起複製進去），
 再沿自身 realpath 的祖先找含 aos/__init__.py 的那層（原始碼 py/ 或裝好的 lib/），最後交給標準 Python 路徑（.pth／PYTHONPATH）。
-沙箱裡要看得到它：綁工具資料夾時把 aos 套件夾也綁唯讀（例 cmd/aos-sandbox/examples/shell-boxed/_metainfo.json 的 ro）。
+沙箱裡要看得到它：綁工具資料夾時把 aos 套件夾也綁唯讀（例 py/aos/apps/sandbox/examples/shell-boxed/_metainfo.json 的 ro）。
 
 旗標映射（thinking/2026-11/05/json-argv 的 03、07 與 J1 任務書）：
 _tooldef.json.env 只生成 hub 環境變數說明；parameters 同源生成旗標、說明與 type／required 檢查；旗標優先於 stdin，點路徑只換一葉。

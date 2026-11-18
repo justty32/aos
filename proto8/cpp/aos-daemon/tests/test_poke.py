@@ -22,7 +22,7 @@ class Poke(unittest.TestCase):
         self.config = self.stack / 'daemon.json'
         self.state = self.stack / 'state.json'
         self.proc = None
-        self.cli = PROTO / 'cmd' / 'aos-daemon-ctl' / 'bin' / 'aos-daemon-ctl'
+        self.cli = PROTO / 'bin' / 'aos-daemon-ctl'
         self.addCleanup(self.close)
 
     def start(self, body=False):

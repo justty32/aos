@@ -1,5 +1,5 @@
 """驗 cli_stream（wake-1114 主案 S）：claude -p --input-format stream-json 的 stdin 先不關、回答途中投新信；併進同一輪、
-result 之後再投＝多一輪、上限（封數、秒數）、逾時、管子斷了、is_error。CLI 用 cmd/aos-eca/tests/fake_claude_stream 代替，不叫模型。"""
+result 之後再投＝多一輪、上限（封數、秒數）、逾時、管子斷了、is_error。CLI 用 py/tests/apps/eca/fake_claude_stream 代替，不叫模型。"""
 import json
 import os
 from pathlib import Path
@@ -13,7 +13,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from aos.agentlib import cli_base, cli_stream  # noqa: E402
 
-FAKE = Path(__file__).resolve().parents[2] / "cmd" / "aos-eca" / "tests" / "fake_claude_stream"
+FAKE = Path(__file__).resolve().parents[2] / "py" / "tests" / "apps" / "eca" / "fake_claude_stream"
 
 
 class Died(Exception):

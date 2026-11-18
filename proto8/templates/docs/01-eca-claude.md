@@ -2,7 +2,7 @@
 
 ## 外部 coding agent 範本（eca-claude）
 
-claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../cmd/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [py/aos/agentlib/cli_session.py](../../py/aos/agentlib/cli_session.py)，介面宣告共用 [py/aos/agentlib/agent_files.py](../../py/aos/agentlib/agent_files.py)（K-5）；兩者都在 `lib/agent/`，不 import lib 頂層的 `aos_flags` 系列。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（沒有 codex 版範本，只差 `cli.json`：要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 py/tools/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒唯讀。）
+claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../py/docs/05-commands.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [py/aos/agentlib/cli_session.py](../../py/aos/agentlib/cli_session.py)，介面宣告共用 [py/aos/agentlib/agent_files.py](../../py/aos/agentlib/agent_files.py)（K-5）；兩者都在 `lib/agent/`，不 import lib 頂層的 `aos_flags` 系列。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（沒有 codex 版範本，只差 `cli.json`：要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 py/tools/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒唯讀。）
 
 ```json
 {"kind": "codex",
@@ -45,7 +45,7 @@ eca-claude/
 **實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`（掛 daemon 的在 daemon 給的 proc 的 stack），裡面長 `queue/`、`history.jsonl`、`ctl.json`、`state.json` 與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）。這隻自己改過的還有 tools 與 llm 覆蓋層（只存差異；路徑依 `interfaces.json` 的同名欄位，此範本是 `tools.json`、`llm.json`，K-6）（`aos-agent tools`／`llm`；`aos-agent llm --target myproj set model=haiku`＝下一題起 `--model haiku`，`reset` 回定義的 sonnet）。換定義的模型＝`aos-json set --str proto8/templates/eca-claude/llm.json#/model opus`。eca 的腦是 CLI 自己，不經 llm kernel（think-as-function 03 § 2）。
 
 ```sh
-# PATH 要有 cpp 的 aos-exec／aos-loop／aos-post／aos-daemon、proto8/cmd/*/bin 的 aos-eca-turn、aos-eca-screen、aos-tools、aos-daemon-ctl、
+# PATH 要有 proto8/bin 的 aos-exec／aos-loop／aos-post／aos-daemon 與 aos-eca-turn、aos-eca-screen、aos-tools、aos-daemon-ctl、
 # aos-mcp、aos-agent（source 過 proto8/env.sh 就都在），還有 claude；AOS_DAEMON＝跑著的 daemon 的 $AOS_STACK
 aos-agent ctl add --ws ~/code/myproj --name myproj proto8/templates/eca-claude
 aos-agent say --target myproj 看一下 README 在講什麼 && aos-agent listen --target myproj
@@ -56,7 +56,7 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 
 不掛 daemon、直接 `aos-exec --ws ~/code/myproj proto8/templates/eca-claude &` 跑的，aos-agent 不管：`aos-post send --ordered ~/code/myproj/.stack/queue` 寫信（stdin＝`{"role": "user", "content": 話}`）、看 `.stack/history.jsonl`、寫 `.stack/ctl.json` 停（`{"cmd": "pause"}`／`{"cmd": "stop"}`）。
 
-`aos-eca-turn` 一次答一批（怎麼答、`--on-empty`／`--on-busy`、錯見 [cmd/docs/01](../../cmd/docs/01-逐支說明.md)）。`--on-busy yield` 只管貼字那條路：畫面開著、信走 claude 的收件口（一封一個署名信封，11-13 [eca-a2a-notify](../../thinking/2026-11/13/eca-a2a-notify.md)）時不退讓，有人接在畫面上、正在跑一輪都照投，`loop.json` 不用改。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就放一份檔、aos-eca-turn 加 `--prompt 那個檔`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。**goal**（[thinking goal](../../thinking/2026-11/11/goal/README.md)）：queue 空、上一輪 CLI 答完了、`$AOS_STACK/goal.json` 是 active＝這輪的題目換成一則 `[aos] goal: …`（射後不理版也一樣：有 active 的 goal 就不收工）；這輪 CLI 自己的對話檔（`transcripts/`）裡叫了 `goal` 以外的工具＝計數歸零，連續 LIMIT 次（預設 10）沒進展＝goal 改 paused；codex 照同一套。
+`aos-eca-turn` 一次答一批（怎麼答、`--on-empty`／`--on-busy`、錯見 [cmd/docs/01](../../py/docs/05-commands/01-逐支說明.md)）。`--on-busy yield` 只管貼字那條路：畫面開著、信走 claude 的收件口（一封一個署名信封，11-13 [eca-a2a-notify](../../thinking/2026-11/13/eca-a2a-notify.md)）時不退讓，有人接在畫面上、正在跑一輪都照投，`loop.json` 不用改。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就放一份檔、aos-eca-turn 加 `--prompt 那個檔`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。**goal**（[thinking goal](../../thinking/2026-11/11/goal/README.md)）：queue 空、上一輪 CLI 答完了、`$AOS_STACK/goal.json` 是 active＝這輪的題目換成一則 `[aos] goal: …`（射後不理版也一樣：有 active 的 goal 就不收工）；這輪 CLI 自己的對話檔（`transcripts/`）裡叫了 `goal` 以外的工具＝計數歸零，連續 LIMIT 次（預設 10）沒進展＝goal 改 paused；codex 照同一套。
 
 **沒開畫面時中途收信（`live_mail`，預設關；[wake-1114](../../thinking/2026-11/14/wake-1114.md)）**：`cli.json` 寫 `"live_mail": true`，非互動那條路的 `claude -p` 加 `--input-format stream-json --replay-user-messages`、stdin 先不關。aos-eca-turn 等回答時 queue 又來的信，照畫面那條路的規矩認領、過 before_queue，一封一行寫進 stdin（寫進去＝交出去：接進 history、收信、after_queue），模型在下一個工具空檔讀到；CLI 回 `isReplay` 表示那行被取走。看到 result、每行都被取走、沒有背景任務、又沒新信，才關 stdin 讓它收尾；result 之後還有行沒取走、30 秒沒動靜也關。回答＝這一輪每個 result，加上取走中途信之後、下一次用工具之前模型說的話，用空行接成 history 的一則。上限 `live_mail_cap`（預設 `{"letters": 5, "seconds": 300}`，格式錯＝`CfgBad`）；冷卻剛到期那一輪不投；slash 指令停在它前面。依 claude 2.1.325 實測。
 
@@ -100,7 +100,7 @@ hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停�
 
 兩條路：**CLI 自己接**（本節前半）與**經 aos**（本節最後一段，凍結成一包 aos 工具）。一台選一條。
 
-定義資料夾放一份 **server 檔**（一台一份，例 `mcp/teamsite.json`），`cli.json` 加 `"mcp_servers": ["mcp/teamsite.json"]`（相對從 `cli.json` 的資料夾算，也可寫指示詞；可列好幾份）。claude、codex 兩身都吃；CLI 自己連、自己列工具（不凍結說明），列了的那台整台免核准，`only`／`except` 挑工具。某一份壞了＝`cli_session: warning: external MCP server … skipped: …`，其他照接；stdio 的每次起 CLI 前還會先看指令找不找得到、能不能執行，不行＝同一種 warning（`… skipped: CommandMissing its command is not found or cannot be run: …`）跳過那台。claude 非互動那條若 CLI 開場回報某台沒連上，stderr 多一行 `warning: external MCP server X was not connected when claude started (status failed)`（回合照走；codex 沒有這種回報，起來之後才壞的看不到）。設計：[external-mcp 02](../../thinking/2026-11/12/external-mcp/02-設計.md)；程式：`py/aos/mcp_server_file.py`、`cmd/aos-mcp-launch`。
+定義資料夾放一份 **server 檔**（一台一份，例 `mcp/teamsite.json`），`cli.json` 加 `"mcp_servers": ["mcp/teamsite.json"]`（相對從 `cli.json` 的資料夾算，也可寫指示詞；可列好幾份）。claude、codex 兩身都吃；CLI 自己連、自己列工具（不凍結說明），列了的那台整台免核准，`only`／`except` 挑工具。某一份壞了＝`cli_session: warning: external MCP server … skipped: …`，其他照接；stdio 的每次起 CLI 前還會先看指令找不找得到、能不能執行，不行＝同一種 warning（`… skipped: CommandMissing its command is not found or cannot be run: …`）跳過那台。claude 非互動那條若 CLI 開場回報某台沒連上，stderr 多一行 `warning: external MCP server X was not connected when claude started (status failed)`（回合照走；codex 沒有這種回報，起來之後才壞的看不到）。設計：[external-mcp 02](../../thinking/2026-11/12/external-mcp/02-設計.md)；程式：`py/aos/mcp_server_file.py`、`py/aos/apps/mcp_launch`。
 
 **http（Bearer＋自簽 CA）**：
 
@@ -124,9 +124,9 @@ token 檔一行 `TEAMSITE_TOKEN=<值>`、權限 600，放定義與工作區以�
 
 `command` 與 `args` 的相對路徑都從 server 檔所在的資料夾算（server 就在那裡起；要工作區的路徑寫 `{"$env": "AOS_WS", "$path": "…"}`），經 aos 那條同一條規則。server 拿到起它那個行程的全部環境變數（claude 身與經 aos＝起樹那個殼的整份，殼裡的 API key 也在；codex 只帶 aos 給的幾個），使用者 11-12 裁不做白名單、風險自負。
 
-腦看到的工具名＝`mcp__<名字>__<工具名>`。**秘密不要用 `aos-agent ctl add --envs` 給**（值明文寫進 `procs/<名>/exec.json`）。`aos-mcp-launch` 要在 PATH（`source proto8/env.sh` 重 source 一次；用選配 `proto8/cmd/install.sh` 的重跑它）。
+腦看到的工具名＝`mcp__<名字>__<工具名>`。**秘密不要用 `aos-agent ctl add --envs` 給**（值明文寫進 `procs/<名>/exec.json`）。`aos-mcp-launch` 要在 PATH（`source proto8/env.sh` 重 source 一次）。
 
-**經 aos（凍結成一包工具）**：同一份 server 檔也可以先跑一次 `aos-mcp-import mcp/teamsite.json`（[README](../../cmd/aos-mcp-import/README.md)），把工具凍結進檔裡，再疊進定義的 `tools.json`：`{"$override": [<原本的包…>, "mcp/teamsite.json"], "tools": {}}`。腦看到的是 aos 的工具 `teamsite_<工具名>`（eca 經 aos-mcp＝`mcp__aos__teamsite_<工具名>`；agent-fsm 也用得到，這條路不限 eca）。**先放好 server 檔、匯入過再疊**：`$override` 指到不在的檔＝整份登記讀不了（`PathMissing`）；還沒匯入的檔疊上去＝那一層沒有工具、不報錯。
+**經 aos（凍結成一包工具）**：同一份 server 檔也可以先跑一次 `aos-mcp-import mcp/teamsite.json`（[README](../../py/aos/apps/mcp_import/README.md)），把工具凍結進檔裡，再疊進定義的 `tools.json`：`{"$override": [<原本的包…>, "mcp/teamsite.json"], "tools": {}}`。腦看到的是 aos 的工具 `teamsite_<工具名>`（eca 經 aos-mcp＝`mcp__aos__teamsite_<工具名>`；agent-fsm 也用得到，這條路不限 eca）。**先放好 server 檔、匯入過再疊**：`$override` 指到不在的檔＝整份登記讀不了（`PathMissing`）；還沒匯入的檔疊上去＝那一層沒有工具、不報錯。
 
 | | 經 aos（`aos-mcp-import`＋`tools.json`） | CLI 自己接（`cli.json` 的 `mcp_servers`） |
 |---|---|---|

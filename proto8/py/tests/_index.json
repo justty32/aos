@@ -1,4 +1,8 @@
 {
+ "apps": {
+  "description": "Python 指令（py/aos/apps/<名>）的測試，一個指令一夾、夾名同 apps 底下（原 cmd/<指令>/tests，11-18 S5 搬來）；不是套件，要逐夾 unittest discover",
+  "index": "apps/_index.json"
+ },
  "fake-mcp-http": {
   "description": "fake-mcp-http：假的 http MCP server（Bearer＋自簽 CA），給外部 MCP 測試用；只聽 127.0.0.1、只用假 token"
  },
@@ -93,7 +97,7 @@
   "description": "index_view（py/aos/index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。"
  },
  "test_install.py": {
-  "description": "proto8/install.py in a throwaway home with a fake make: fills bin/, lib/ (py/ copy + C++ libraries) and include/, a rerun gives the same result, miss…"
+  "description": "proto8/install.py in a throwaway home with a fake make: fills bin/ (C++ + the Python entries of py/entries.json), lib/ (py/ copy + C++ libraries) and…"
  },
  "test_json_tools.py": {
   "description": "json 工具一族（py/aos/json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。"

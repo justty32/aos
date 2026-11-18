@@ -20,7 +20,7 @@ class BoardTools(unittest.TestCase):
             (self.tmp / n).mkdir(parents=True)
         (self.tmp / "d" / "procs_state.json").write_text(json.dumps(
             {"procs": {"alice": {"stack": "../alice", "phase": "running"}, "bob": {"stack": "../bob", "phase": "sleeping"}}}))
-        path = "%s:%s:%s" % (PROTO / "cmd" / "aos-comm" / "bin", PROTO / "cmd" / "aos-agent" / "bin", os.environ["PATH"])
+        path = "%s:%s:%s" % (PROTO / "bin", PROTO / "bin", os.environ["PATH"])
         self.env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         self.env.update(PATH=path, AOS_WS=str(self.tmp / "ws"), AOS_DAEMON=str(self.tmp / "d"), PYTHONDONTWRITEBYTECODE="1",
                         HOME=str(self.tmp), AOS_USER_ZONE=str(self.tmp / "zone"))

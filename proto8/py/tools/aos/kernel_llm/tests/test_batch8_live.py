@@ -24,8 +24,7 @@ class Batch8Live(unittest.TestCase):
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
         self.env['AOS_HOME'] = str(PROTO)          # kernel templates point into proto8 through AOS_HOME (11-10 templates-cp)
         bins = [str(PROTO / 'bin')]
-        cmds = [str(p) for p in (PROTO / 'cmd').glob('*/bin')]
-        self.env['PATH'] = os.pathsep.join(bins + cmds + [self.env['PATH']])
+        self.env['PATH'] = os.pathsep.join(bins + [self.env['PATH']])
         for name in ('aos-exec', 'aos-daemon', 'aos-llm'):
             self.assertTrue(shutil.which(name, path=self.env['PATH']).startswith(str(PROTO)))
         self.assertTrue(KERNEL.is_file())

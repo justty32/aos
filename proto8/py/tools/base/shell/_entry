@@ -75,7 +75,7 @@ def tail(f):
 
 
 def stop(p):
-    # 跟 lib/process_group.stop 同一件事，但先不改用：cmd/aos-sandbox/examples/shell-boxed 只唯讀掛 tool_io、shell_observed、observed 三支（11-12 線 F）
+    # 跟 lib/process_group.stop 同一件事，但先不改用：aos/apps/sandbox/examples/shell-boxed 只唯讀掛 tool_io、shell_observed、observed 三支（11-12 線 F）
     for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, None)):
         try:
             os.killpg(p.pid, sig)

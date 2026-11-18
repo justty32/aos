@@ -1,6 +1,6 @@
 # templates — agent 範本與同步裁判比對器。
 
-← [proto8](../README.md)｜程式：[cpp](../cpp/README.md)（aos-exec、aos-loop…，C++）、[cmd](../cmd/README.md)（aos-eca-turn、aos-tools…）、[aos-agent](../cmd/aos-agent/README.md)｜掛在 daemon 上的管理元件：[kernel](kernel/README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)
+← [proto8](../README.md)｜程式：[cpp](../cpp/README.md)（aos-exec、aos-loop…，C++）、[cmd](../py/docs/05-commands.md)（aos-eca-turn、aos-tools…）、[aos-agent](../py/aos/apps/agent/README.md)｜掛在 daemon 上的管理元件：[kernel](kernel/README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)
 
 <a id="agent-danagent-dan-q11-02-晚刪了"></a>
 <a id="agent-eveagent-當工具10-24"></a>
@@ -13,7 +13,7 @@
 
 **範本不帶測試**（使用者 11-10「啊？範本不該有tests。有的話就跟着抄。」，[tonight-rulings](../thinking/2026-11/10/tonight-rulings/README.md) 題 5）：範本資料夾裡抄到哪就帶到哪，所以測試一律放 [`tests/`](tests/)——`tests/agent-fsm/`、`tests/reviewer/`、`tests/judge-llm/` 各測一個範本，`tests/` 底下直接放的 `test_daily.py`、`test_paths_move.py` 跨範本。跑法：`python3 -m unittest discover -s proto8/templates/tests/agent-fsm`（資料夾名有 `-`，不能從 `tests/` 一次 discover 下去）。`cp -r` 與 `agent_def new` 也是整夾抄。
 
-**PATH 由呼叫的人放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），定義裡寫的 `aos-loop`、`aos-exec`、`aos-eca-turn` 要呼叫端事先放進 PATH：C++ 的 `proto8/cpp/<名>/bin/`（要先建，見 [testing](../../wf/workflows/testing.md#proto8)）與 Python 的 `proto8/cmd/<名>/bin/`（`source proto8/env.sh` 一次放好；選配 `proto8/cmd/install.sh` 連進 `~/.local/bin`）。
+**PATH 由呼叫的人放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），定義裡寫的 `aos-loop`、`aos-exec`、`aos-eca-turn` 要呼叫端事先放進 PATH：C++ 與 Python 的指令都在 `proto8/bin/`（`python3 proto8/install.py` 裝好，見 [testing](../../wf/workflows/testing.md#proto8)；`source proto8/env.sh` 一次放好）。
 
 [`tool-python`](tool-python/README.md) 不是 agent 範本，是**一支工具的骨架**（[tools-def](../thinking/2026-11/10/tools-def/README.md)）：`_entry.json`（`python3 tool.py`）＋`tool.py`（用 [`py/aos/tool_spec.py`](../py/aos/tool_spec.py) 寫的加法）＋產出來的 `_tooldef.json`、`_metainfo.json`＋給 AI 看的英文 README。腦用 `tools_def new` 複製它、只改 `tool.py` 的下半段；人可以直接 `cp -r`，改完跑 `python3 tool.py --write-defs`。測試在 `tests/tool-python/`。
 

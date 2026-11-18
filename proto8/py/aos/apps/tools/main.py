@@ -1,0 +1,1159 @@
+"""aos-tools [--file F] add|rm|ls|get|call|override … — 管理工具登記（可 $override 另一份只記差異）、環境與小格，三種工具一律經 aos-exec 從 stdin 呼叫。
+
+設計與代定：proto8/thinking/2026-10/28/aos-tools/README.md。白話：tools.json 是「這隻 agent 的工具通訊錄」，
+aos agent 想問腦之前先 `aos-tools ls --json` 拿工具清單，腦要叫工具時 `aos-tools call 名`；
+claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的翻譯櫃台）。
+
+    aos-tools [--file F] add [--replace] [--name N] [--no-cache] [--env-file FILE] [--envs K=V]... XXX|--path-json JSON
+                                                           登記 XXX（檔或資料夾；相對路徑從 cwd 算），印 added NAME -> 絕對路徑 (寫進的檔: 存的原樣值)
+    aos-tools [--file F] rm XXX                            每個拿掉的名字印 removed NAME (寫進的檔)；拿掉（XXX＝工具名；不是登記過的名字就當路徑，拿掉指到那裡的）
+    aos-tools [--file F] ls [-l | --json]                  列：預設一行一支「名字 TAB 說明第一句」；-l＝「名字 TAB 種類 TAB 路徑 TAB FROM TAB STORED TAB ENV（只印名）」；--json＝一行 JSON 陣列（11-10 深夜使用者「默認是給出短板，然後用-l才是給長版」）
+    aos-tools [--file F] get XXX                           一個工具一行 JSON：name、kind、path、tooldef、metainfo（有才給）
+    aos-tools [--file F] call 名 [ARGS_JSON]               叫一次：ARGS_JSON（沒給＝stdin）原樣進工具的 stdin，stdout／結束碼＝工具的
+    aos-tools [--file F] override (BASE...|--path-json J)  在 F 寫 "$override"：F 從此只記對 BASE 的差異（BASE 寫法同 XXX；多個＝陣列）
+  --file 子命令前後都收（前後不同＝ArgumentsBad）；旗標寫在 XXX／名後面＝ArgumentsBad；沒給 --file 且 ./tools.json 不在＝讀的子命令印一行 warning（11-10 aos-tools-cli 步 1）。
+
+註冊檔：--file ＞ ./tools.json。長這樣：{"tools": {"名": {"path": "/絕對/路徑"}, …}}；沒有這份檔＝沒登記任何工具。
+  aos 讀的 JSON 都解指示詞（N-45）：檔裡有 $ref／$env 就交給 aos-json 解（`$ref` 陣列＝把註冊檔拆成好幾份），
+  改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。add 存路徑保留使用者的寫法（11-10 TC，使用者「要用相對位置、絕對位置、環境變數指定都可」）：
+  給絕對＝存絕對；給相對（從 cwd 算）＝存成相對「寫進的那份檔（F）的資料夾」的相對；--path-json JSON＝原樣存（字串或指示詞，例
+  '{"$env":"AOS_HOME","$path":"/lib/tools/base/shell"}'；現在解一次只為了驗與取名，解出來的值不寫回）。
+  手寫的相對路徑從這份檔的資料夾算。
+三種登記對象（種類照 aos-exec 認法，N-61：資料夾；檔有 +x＝可執行檔；檔沒 +x＝JSON）：
+  dir   資料夾裡有 _tooldef.json，或 _metainfo.json 裡有 tooldef 鍵；_metainfo.json 有就一起給（11-04 起只認帶 .json 的：
+        _ 開頭的資料檔一律帶副檔名，不帶的 _tooldef／_metainfo 不認——兩處都沒有＝ToolDefMissing）。叫＝aos-exec 資料夾，arguments 進 stdin。
+        兩處都有（11-12 metainfo，N-69 推薦讀法）＝先讀 _metainfo 裡的 tooldef、再讀獨立的 _tooldef，頂層鍵淺合併、同名整鍵外面贏。
+  json  JSON 檔（aos-exec 跑得動的那種）頂層要有 _tooldef 物件或 _metainfo.tooldef（合併同上）；_metainfo key 有就一起給。叫＝aos-exec 檔，arguments 進 stdin。
+        也收 檔.json#/指標（11-10 深夜 tools-def，使用者「2.收」）：那個物件要有 _tooldef 或 _metainfo.tooldef（_metainfo 有就給），叫＝aos-exec 檔#/指標
+        （照 aos-exec：跑那個物件的 _entry，cwd＝JSON 檔的資料夾，所以 _entry 裡的 python3 x.py 從 JSON 檔的資料夾算）。
+        存法同上：只有 #/ 前面那段算相對／絕對，#/ 後面原樣存；預設名字＝指標最後一段（~1、~0 解開）。
+  exe   python 或其他可執行檔：`XXX --tooldef` 在 stdout 吐工具定義（JSON 物件，10 秒內、退 0）；結果快取在
+        $AOS_STACK/tooldef_cache.json（11-10 aos-tools-cli 步 2：{絕對路徑: {"stamp": "mtime奈秒-大小", "tooldef": …}}；
+        stamp 相符就用，不符重跑並寫回（寫的是 stack，不是定義資料夾，P-15）；檔壞＝當沒有、重寫；
+        AOS_STACK 沒設或不是資料夾＝不快取、不寫任何檔）。登記檔不再存快取。
+        add --no-cache（11-03）＝那一項記 "cache": false：之後 ls／get 每次都重跑 --tooldef、不讀不寫快取檔
+        （快取有時候礙事，例如定義是工具 import 的別的檔算出來的、檔本身沒變）。手寫也行（aos-json set …#/tools/名/cache false）。
+        cache 只收 false，別的＝RegistryBad；dir／json 項寫 false＝RegistryBad、add --no-cache 給 dir／json＝ArgumentsBad。
+        --replace 重登記時沒帶 --no-cache＝回到有快取（整項重寫）。
+        叫＝aos-exec 檔，arguments 原樣從 stdin 進；三種工具都不要求呼叫方設 AOS_STACK。
+"$override"（11-10 aos-tools-cli 步 4；使用者 Q4「"override":"../another_tools.json"」、N1「跟一般清單同形狀。想要rm的話，就是指定的key : null」、
+  K1「現在就寫 $override」、「$override希望能支援array…跟$ref一樣」）：{"$override": BASE, "tools": {"名": {…}, "不要的": null}}（11-10 改口「null就是null，我們不做rm功能」「寫成 null，讀的人當它不是工具」）。
+  BASE＝路徑字串（相對從這份檔的資料夾算、絕對）或指示詞物件（每次用到才交 aos-directive 解），或它們的陣列；空陣列＝沒有底檔。
+  疊法＝照順序疊，後面蓋前面（使用者 11-10「都按你的建議」）：每個底檔先展開成它自己的序列，照陣列順序接起來，最後接這份自己的，一份一份補丁式往下合；
+  物件逐 key 合，其餘（含 null）整個蓋過去——合併沒有刪除，null 只是值。讀的時候值是 null 的工具格不算工具；工具格裡值是 null 的欄位＝當沒設
+  （所以只寫 {"env": {…}} 的同名格會沿用底檔的 path；add --replace 要整格換時用 null 蓋過底檔有、這次沒給的欄位）。
+  底檔可以再 $override（鏈）；同一份經兩條路被引到＝序列裡出現兩次、照樣疊（菱形不算環）；環以真實路徑判、只看往上那幾層＝RegistryBad。
+  底檔指不到＝PathMissing（檔#/$override[/i]: 路徑 does not exist）、不是物件＝RegistryBad（訊息帶 from 檔#/$override）；頂層有 add／rm＝RegistryBad。
+  tools 那格先照 lv0 解 $ref／$env（aos-json get --follow --resolve），再做 $override 合併；寫入只寫 F（aos-json set／del --follow），
+  rm：只有 F 自己記的名字＝刪那個 key；底檔也有的＝在 F 寫 "名": null（成功行說是哪一種）；底檔一個位元組都不動。
+  路徑指不到＝PathMissing，訊息帶工具名、解出的路徑與它來自哪份檔的哪一格（檔#/tools/名/path，檔＝寫那個 path 的那份）。
+登記格選填 env（11-05 晚）：{"名": {"path": …, "env": {"LANG": "C.UTF-8"}}}，call 時合進那次呼叫的環境
+  （蓋過外面同名的）；值照字面用、不當路徑解（C-56；要相對就靠讀它的工具自己的規則）。
+  鍵只收 [A-Za-z_][A-Za-z0-9_]*、值只收字串（不含 NUL，11-05 晚邊緣測試：原本 call 時吐 traceback），別的＝RegistryBad。--envs K=V（可重複）存進 env。
+  選填 env_file（11-10 aos-tools-cli 步 3，使用者 Q1「只記位置」）：add --env-file FILE 只記位置（寫法同 XXX：絕對存絕對、相對存相對寫進的那份檔），
+  不存內容；add 當下檔在就讀一次只為驗格式與 hub 提醒，不在＝warning 照登記。每次 call 才讀（dotenv 基礎子集，${VAR} 照這次呼叫的環境展開），
+  不在＝PathMissing 不跑（N4「報錯不跑」）、壞＝DotenvBad，訊息帶工具名與 檔#/tools/名/env_file。後面的贏：呼叫者環境 < env_file < env < AOS_STACK 小格。
+  ls／get 不讀 env 檔、不印 env 值；ls -l 的 ENV 欄印 env 的名字與 @"存的 env_file"。
+  用途：這隻自己那份（aos-agent tools add 寫的，$override 定義那份）也能替這一隻換知識庫，不必在定義裡做包裝資料夾。
+call 的小格：父 AOS_STACK 非空時，子設成 <父 stack>/tools/<名>/，優先於登記 env；父沒設就不從登記 env 補 stack，交 aos-exec 給預設。
+  小格只給路徑、不建（11-11 tool-cells-lazy，使用者「我確實想改成工具真的寫東西時才建資料夾」）：交 aos-exec --stack-lazy，工具要寫自己 mkdir -p。
+  同時給 AOS_STACK_IN_CALLER=tools/<名>（11-13 使用者裁 fx-2:A）：小格在叫方 stack 裡的相對位置，每次 call 重設、優先於登記 env 與外面帶進來的；
+  工具把自己小格裡的路徑印給叫方時寫成 $AOS_STACK/tools/<名>/…（tool_io.place 照它），叫方照自己的 stack 找得到。父沒設 AOS_STACK＝不給（外面有也拿掉）。
+ls --json 保留完整 tooldef；腦／MCP 對模型只取 description／parameters，不把 env 等工具側欄位送給模型。
+add 時工具定義 env 陣列列的 hub 若不在當下環境與這次 env-file／envs，印一行 warning，照樣登記退 0。
+工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收，只有 add 另驗選填 env 是合法變數名陣列。
+工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--replace 蓋掉（使用者 11-10 N3「旗標改叫 --replace」）。
+不符合要求一律報錯、不猜（add／get／call 碰到登記了但壞掉的工具報錯，訊息帶工具名）；ls 例外（11-12 tool-path-broken）：
+  一支自己壞（路徑不在、定義缺或壞）＝略過那支、stderr 一行 warning（登記名、代號、怎麼修，不帶絕對路徑），其他照列、退 0；
+  文字輸出把它標成 broken（短版「名 TAB broken: …」、-l 的 KIND＝broken），--json 不列。登記檔本身壞照舊整份報錯。
+錯：stderr 一行「aos-tools: error: 代號 原因」、退 1（11-05 stdio-unify R1；錯誤行的括號只指那一層，11-06 human-cli H10：缺子命令列子命令名、子命令層接那個子命令的 usage）。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、PathMissing、
+  ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、DotenvBad、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的
+  （R8：退非 0 時 stderr 有 `aos-tools: error:` 這行＝這支錯；沒有＝工具的碼；工具被訊號殺＝128＋N）。
+`--help`＝印該層 HELP／HELPS（英文）到 stdout、退 0（子命令後印該子命令的）；不給子命令＝ArgumentsBad；Ctrl-C＝退 130、不吐 traceback。
+"""
+import json, os, re, shutil, signal, subprocess, sys, tempfile
+from aos import flags as aos_flags
+from aos.daemon_ctl.entry import is_program   # 11-10 two-machines：看內容判型（/mnt/c 每檔 0777），同 aos-exec
+from aos import directive_value   # 指示詞交給 aos-directive 解的共用版（tool_io 已由 aos_flags 載入）
+from aos.env_file import Error as EnvFileError, read_env_file
+
+NAME = "aos-tools"
+ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")              # \Z 不是 $：$ 會放過結尾的換行
+TOP_FILE = None                                      # 子命令前的 --file；子命令後也收（11-10 aos-tools-cli 甲1）
+DEFAULT_FILE = "tools.json"
+NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+TOOLDEF_TIMEOUT_S = 10
+HELP = """aos-tools - keep the list of tools an agent can call
+
+usage: aos-tools [--file F] SUBCOMMAND [FLAGS...] [ARGS...]
+       aos-tools SUBCOMMAND --help
+
+The list is one JSON file, the registry (default: ./tools.json). A tool is a folder
+with _tooldef.json, a JSON file with a _tooldef key (or FILE.json#/POINTER: the
+object there has the _tooldef key), or an executable that answers --tooldef. Agents read the list before each thought and call tools through it.
+Folders and JSON objects may also carry the definition as "tooldef" inside
+_metainfo(.json); when both exist they are merged one level deep and the
+separate _tooldef wins on the same key.
+
+A registry may carry one line, "$override": OTHER_FILE (or a list of files). It then
+holds only the differences from OTHER_FILE (which may override another file in turn).
+Files are applied in order, later wins; an entry whose value is null is not a tool.
+Each agent's own changes to its definition's tools are kept this way.
+
+subcommands:
+  add XXX          put a tool on the list (XXX = folder, JSON file, FILE.json#/POINTER
+                   or executable)
+  rm XXX           take it off the list (XXX = name, else path; tool files are kept)
+  ls               show the list
+  get XXX          print one tool's definition as JSON (XXX = name, else path)
+  call NAME [JSON] run a tool once
+  override BASE... make F a list of differences on top of BASE
+
+examples:
+  aos-tools add tools/clock                     # name = clock
+  aos-tools add --name now tools/clock          # pick the name
+  aos-tools add "$AOS_HOME/lib/tools/base/shell"     # the shell expands it now
+  aos-tools add --path-json '{"$env":"AOS_HOME","$path":"/lib/tools/base/shell"}'
+                                                # looked up on every use instead
+  aos-tools ls -l
+  aos-tools call clock '{"tz": "Asia/Taipei"}'
+
+flags (anywhere: before or after the subcommand and its XXX / NAME; a subcommand's own
+flags may go before or after its XXX / NAME too; after -- nothing is a flag):
+      --file F   the registry to read and write (default: ./tools.json;
+                 missing = no tools, with a warning for the default).
+                 add / rm write only F, never what it overrides.
+  -h, --help     show this help
+
+Relative paths are stored relative to the file they are written in, so a registry
+and its tools can move together.
+
+exit codes: 0 ok; 1 error ("aos-tools: error: CODE reason" on stderr);
+            call returns the tool's own code (killed by signal N = 128+N).
+more: proto8/py/aos/apps/tools/README.md
+"""
+HELPS = {
+    "add": """aos-tools add - put a tool on the list
+
+usage: aos-tools [--file F] add [--name N] [--replace] [--no-cache]
+                 [--env-file FILE] [--envs K=V]... (XXX | --path-json JSON)
+
+XXX is a tool folder, JSON file or executable; flags may go before or after it.
+It may also be FILE.json#/POINTER: the object at that JSON Pointer holds _entry,
+_tooldef (or _metainfo.tooldef) and optional _metainfo keys (aos-exec runs it from the JSON file's folder).
+It is stored the way you give it: absolute stays absolute; relative (to the
+current directory) is stored relative to F. --path-json stores the JSON as given - a path string or a
+directive such as {"$env": "AOS_HOME", "$path": "/lib/tools/base/shell"} - and it is
+resolved on every use.
+
+Prints: added NAME -> ABSOLUTE_PATH (FILE_WRITTEN: STORED_VALUE)
+
+flags:
+  -n, --name N        list it under this name (default: the folder name, or the file
+                      name without extension, or the last part of #/POINTER;
+                      only A-Z a-z 0-9 _ -, at most 64)
+      --replace       replace a tool already listed under that name (keys that F
+                      overrides and this add does not give are written as null)
+      --path-json J   store this JSON path value instead of XXX
+      --envs K=V      set K to V for every call of this tool (repeatable; V is stored
+                      as typed in F - not for secrets)
+      --env-file FILE remember where FILE is (stored like XXX); it is read on every
+                      call, never copied into F. Use it for secrets.
+      --no-cache      ask the executable for its definition every time
+  -h, --help          show this help
+
+On a call, later wins: the tool's own .env (fills gaps only), the caller's
+environment, --env-file, --envs. A missing env file is a warning here and an error
+on call. A tool that declares variables you have not set gives a warning; add still
+succeeds.
+
+exit codes: 0 added; 1 error (PathMissing, ToolDefMissing, ToolDefBad, NameBad, ToolExists...).
+""",
+    "rm": """aos-tools rm - take a tool off the list
+
+usage: aos-tools [--file F] rm XXX
+
+A listed name wins. Otherwise XXX is read as a path, and every name that points
+there is removed. When the tool comes from a file that F overrides, F gets "NAME": null
+(an entry whose value is null is not a tool) and that file is left alone; otherwise
+the name's key is deleted from F. Prints one line per name:
+removed NAME (F: key deleted | F: set to null over FILE). The tool's own files are never deleted.
+
+flags:
+  -h, --help   show this help
+
+exit codes: 0 removed; 1 error (ToolMissing, RegistryBad, WriteFailed...).
+""",
+    "ls": """aos-tools ls - show the list
+
+usage: aos-tools [--file F] ls [-l | --json]
+
+One line per tool, sorted by name: NAME TAB the first sentence of its description
+(see one tool in full with get NAME). Every tool is checked. A broken tool (its
+path is gone, its definition is missing or bad) is skipped with a warning naming it,
+and the others are listed as usual: shown as "NAME TAB broken: CODE (...)", with
+KIND broken in -l, and left out of --json. get NAME or call NAME on it still fails
+with its own error. Executables are asked with --tooldef (answers are cached in
+$AOS_STACK/tooldef_cache.json when AOS_STACK is a folder).
+
+flags:
+  -l, --long     NAME TAB KIND TAB PATH (absolute) TAB FROM (the file and key its
+                 path comes from) TAB STORED (the path as written there, as JSON)
+                 TAB ENV (variable names and @ the env file; never values).
+                 KIND is dir (folder), json (JSON file), exe (executable) or
+                 broken (skipped, see above).
+                 Also lists names turned off with null:
+                 NAME null PATH-IT-HIDES FILE-THAT-SAYS-NULL#/tools/NAME null -
+  -j, --json     one JSON array with name, kind, path, tooldef and optional metainfo
+  -h, --help     show this help
+
+exit codes: 0 listed (also when some tools were skipped as broken);
+            1 error (RegistryBad, DirectiveBad, CommandMissing...: the registry itself).
+""",
+    "get": """aos-tools get - print one tool's definition as JSON
+
+usage: aos-tools [--file F] get XXX
+
+A listed name wins; otherwise XXX is read as a path. Prints one JSON object per
+match: name, kind, path, tooldef and optional metainfo. Variable values are not
+printed (see ls -l).
+
+flags:
+  -h, --help   show this help
+
+exit codes: 0 printed; 1 error (ToolMissing, RegistryBad, ToolDefBad...).
+""",
+    "call": """aos-tools call - run a tool once
+
+usage: aos-tools [--file F] call NAME [ARGS_JSON]
+       echo ARGS_JSON | aos-tools [--file F] call NAME
+
+The tool gets ARGS_JSON on its stdin (given on the command line as is, or read from
+stdin when omitted); its stdout is the result. The variables registered with add
+are set for the call; a registered env file is read now, and a missing one is an
+error (the tool does not run). The tool runs through aos-exec in its own scratch
+folder: $AOS_STACK/tools/NAME/ when AOS_STACK is set (not created beforehand: a
+tool that writes there creates it), otherwise aos-exec's default (.stack/ in the
+current directory). With AOS_STACK set the tool also gets
+AOS_STACK_IN_CALLER=tools/NAME (where its folder sits in your stack), so a path
+it prints as $AOS_STACK/tools/NAME/... can be opened from your stack as written.
+
+flags:
+  -h, --help   show this help
+
+exit codes: the tool's code (killed by signal N = 128+N);
+            1 with "aos-tools: error:" on stderr = aos-tools itself failed.
+""",
+    "override": """aos-tools override - make F a list of differences on top of other registries
+
+usage: aos-tools [--file F] override (BASE... | --path-json JSON)
+
+Writes "$override": BASE into F (creating F when missing; several BASEs make a list).
+From then on F shows BASE with F applied on top: files are applied in order, later
+wins (a list of BASEs in its order, then F); an entry whose value is null is not a tool.
+BASE is stored like a tool path: absolute stays absolute, relative is stored
+relative to F, --path-json is stored as given and resolved on every use. BASE may
+itself override another file. Prints: F $override -> STORED_VALUE
+
+flags:
+      --path-json J   store this JSON value (a path, a directive or a list) instead
+  -h, --help          show this help
+
+exit codes: 0 written; 1 error (RegistryBad when F already lists tools of its own
+            without $override or the chain loops, PathMissing, WriteFailed...).
+""",
+}
+aos_flags.HELP = HELP
+
+
+USAGE_STOP = ("aos-tools ", "echo ")   # help 裡第二種寫法的開頭：usage 接到這裡停
+
+
+def usage(sub):
+    """子命令 help 的第一種 usage 接成一行（規則在 aos_flags.usage_of）。"""
+    return aos_flags.usage_of(HELPS[sub], USAGE_STOP)
+
+
+class Fail(Exception):
+    def __init__(self, code, reason):
+        super().__init__(reason)
+        self.code = code
+
+
+def parse_sub(sub, args, flags=None, switches=None, multi=None, short=None):
+    """子命令的旗標；--file 子命令前後都收，前後都給且不同＝ArgumentsBad（11-10 aos-tools-cli 甲1）。
+    回 (登記檔, opts, rest)；兩邊都沒給＝./tools.json，那時 ls／get／call／rm 碰到檔不在印一行提醒（甲3）。"""
+    opts, rest = aos_flags.parse(args, dict(flags or {}, **{"--file": "file"}), switches, multi,
+                                 help=HELPS[sub], short=short)
+    here = opts.pop("file", None)
+    if here is not None and not here:
+        raise Fail("ArgumentsBad", "--file must not be empty")
+    if here is not None and TOP_FILE is not None and os.path.abspath(here) != os.path.abspath(TOP_FILE):
+        raise Fail("ArgumentsBad", "--file given before and after %s with different values (%s, %s)" % (sub, TOP_FILE, here))
+    reg = here or TOP_FILE
+    if reg is None:
+        reg = DEFAULT_FILE
+        if sub not in ("add", "override") and not os.path.exists(reg):
+            aos_flags.warn(NAME, "./%s not found; no tools (use --file F)" % DEFAULT_FILE)
+    return reg, opts, rest
+
+
+def has_directive(v):
+    if isinstance(v, dict):
+        return "$ref" in v or "$env" in v or any(has_directive(x) for x in v.values())
+    if isinstance(v, list):
+        return any(has_directive(x) for x in v)
+    return False
+
+
+def read_json(path, key, bad):
+    """讀 path（key＝None 讀整份，否則讀頂層那個 key）；有指示詞就交給 aos-json 解（只解讀的那一格，N-45）。
+    回 (原文整份, 值)；key 不在＝值是 None。讀不了、不是 JSON＝bad 代號。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, ValueError) as e:
+        raise Fail(bad, "%s is unreadable or not JSON: %s" % (path, e))
+    if not has_directive(raw):
+        if key is None:
+            return raw, raw
+        return raw, (raw.get(key) if isinstance(raw, dict) else None)
+    if key is not None and isinstance(raw, dict) and key not in raw and "$ref" not in raw:
+        return raw, None
+    target = path + ("#/" + key if key is not None else "")
+    try:
+        r = subprocess.run(["aos-json", "get", "--follow", "--resolve", target], stdout=subprocess.PIPE,
+                           stdin=subprocess.DEVNULL, text=True)     # stderr 不吞：aos-json 自己說哪裡解不開
+    except OSError as e:
+        raise Fail("CommandMissing", "%s has directives that need aos-json, but aos-json cannot start: %s" % (path, e))
+    if r.returncode != 0:
+        raise Fail("DirectiveBad", "%s: directives cannot be resolved (aos-json exited %d)" % (target, r.returncode))
+    return raw, json.loads(r.stdout)
+
+
+def check_tooldef(td, where):
+    if not isinstance(td, dict):
+        raise Fail("ToolDefBad", "%s: tool definition must be a JSON object" % where)
+    if "description" in td and not isinstance(td["description"], str):
+        raise Fail("ToolDefBad", "%s: tool definition description must be a string" % where)
+    if "parameters" in td and not isinstance(td["parameters"], dict):
+        raise Fail("ToolDefBad", "%s: tool definition parameters must be an object (JSON Schema)" % where)
+    return td
+
+
+def read_meta(read):
+    """讀 _metainfo（read() 照 read_json 丟 Fail）→ (值, None) 或讀不了時 (None, 那個 Fail)：壞掉的 _metainfo 先不報，交給 merge_tooldef 決定。"""
+    try:
+        return read(), None
+    except Fail as e:
+        return None, e
+
+
+def merge_tooldef(meta, mwhere, outside, owhere, meta_err=None):
+    """11-12 metainfo（N-69 推薦讀法）：_metainfo 裡的 tooldef 為底、獨立的 _tooldef 蓋上去——頂層鍵淺合併，同名整鍵外面贏
+    （parameters 整鍵換、不往下合 schema）。兩處各自先驗形狀（錯的句子指明哪一處）；兩處都沒有＝None。
+    _metainfo 壞了（讀不了、tooldef 不是物件；meta_err＝讀的時候的錯）而外面那份可用＝提醒一行、略過裡面（比照使用者 11-12
+    對 index_view 的裁定「_metainfo.json 壞掉時，index_view 對那個資料夾不該直接報錯。」）；外面沒有＝照舊丟那個錯。"""
+    if outside is not None:
+        outside = check_tooldef(outside, owhere)
+    try:
+        if meta_err is not None:
+            raise meta_err
+        inside = check_tooldef(meta["tooldef"], mwhere) if isinstance(meta, dict) and "tooldef" in meta else None
+    except Fail as e:
+        if outside is None:
+            raise
+        aos_flags.warn(NAME, "%s; skipped, using %s" % (e, owhere))
+        return outside
+    if inside is None:
+        return outside
+    return inside if outside is None else {**inside, **outside}
+
+
+def stamp(path):
+    st = os.stat(path)
+    return "%d-%d" % (st.st_mtime_ns, st.st_size)
+
+
+def run_tooldef(path):
+    # 自成行程群組：逾時整群收掉（只殺直接的子行程會把它起的孫行程留著繼續跑，11-04 夜 C 線）
+    try:
+        p = subprocess.Popen([path, "--tooldef"], cwd=os.path.dirname(path), stdin=subprocess.DEVNULL,
+                             stdout=subprocess.PIPE, start_new_session=True)
+    except OSError as e:
+        raise Fail("ToolDefBad", "%s --tooldef cannot run (an executable needs a #! line): %s" % (path, e))
+    try:
+        out, _ = p.communicate(timeout=TOOLDEF_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except OSError:
+            pass
+        p.wait()
+        raise Fail("ToolDefBad", "%s --tooldef did not finish within %d s (process group killed)" % (path, TOOLDEF_TIMEOUT_S))
+    if p.returncode != 0:
+        raise Fail("ToolDefBad", "%s --tooldef exited %d (no --tooldef support?)" % (path, p.returncode))
+    try:
+        return json.loads(out.decode("utf-8"))
+    except ValueError as e:
+        raise Fail("ToolDefBad", "%s --tooldef output is not JSON: %s" % (path, e))
+
+
+def split_ptr(path):
+    """位置 檔.json#/指標（11-10 深夜 tools-def，使用者「2.收」）→ (檔, "/指標")；沒有 #/＝(path, None)。指標原樣（RFC 6901，~1＝/、~0＝~）。"""
+    f, sep, p = path.partition("#/")
+    return (f, "/" + p) if sep else (path, None)
+
+
+def norm_loc(folder, value):
+    """相對從 folder 算、normpath 只動檔那段；#/ 後面原樣接回（跟 aos-exec 一樣：指標指的是檔裡那個物件）。"""
+    f, ptr = split_ptr(value)
+    f = os.path.normpath(os.path.join(folder, f))
+    return f if ptr is None else f + "#" + ptr
+
+
+def ptr_name(ptr):
+    """檔#/指標 的預設工具名＝指標最後一段（解 ~1、~0）。"""
+    return ptr.rsplit("/", 1)[-1].replace("~1", "/").replace("~0", "~")
+
+
+def read_object(path):
+    """檔#/指標 那個物件（解指示詞，aos-json get --follow --resolve）；指不到＝PathMissing、不是物件＝ToolDefMissing。"""
+    try:
+        r = subprocess.run(["aos-json", "get", "--follow", "--resolve", path], stdout=subprocess.PIPE,
+                           stdin=subprocess.DEVNULL, text=True)     # stderr 不吞：aos-json 自己說哪一段不在
+    except OSError as e:
+        raise Fail("CommandMissing", "%s needs aos-json to read the object, which cannot start: %s" % (path, e))
+    if r.returncode != 0:
+        raise Fail("PathMissing", "%s does not exist (aos-json get exited %d)" % (path, r.returncode))
+    obj = json.loads(r.stdout)
+    if not isinstance(obj, dict):
+        raise Fail("ToolDefMissing", "%s is not a JSON object (a tool there needs a _tooldef key)" % path)
+    return obj
+
+
+def kind_of(path):
+    f, ptr = split_ptr(path)
+    if ptr is not None:                              # 檔#/指標：檔裡那個物件，跟 JSON 檔同一類（叫＝aos-exec 檔#/指標，cwd＝檔的資料夾）
+        if os.path.isfile(f):
+            return "json"
+        raise Fail("PathMissing", "%s does not exist (the file before #/ is missing)" % path)
+    if os.path.isdir(path):
+        return "dir"
+    if os.path.isfile(path):
+        return "exe" if is_program(path) else "json"
+    raise Fail("PathMissing", "%s does not exist (or is neither a file nor a dir)" % path)
+
+
+def first_file(d, names):
+    for n in names:
+        if os.path.isfile(os.path.join(d, n)):
+            return os.path.join(d, n)
+    return None
+
+
+CACHE_FILE = "tooldef_cache.json"
+
+
+def cache_file():
+    """可執行檔定義快取的位置：$AOS_STACK/tooldef_cache.json（11-10 aos-tools-cli 步 2，使用者 Q2「快取搬到 stack 裡」）。
+    AOS_STACK 沒設、或不是資料夾＝None（不讀不寫不建）。"""
+    stack = os.environ.get("AOS_STACK")
+    if not stack or not os.path.isdir(stack):
+        return None
+    return os.path.join(stack, CACHE_FILE)
+
+
+def read_cache(cf):
+    """快取檔 → {絕對路徑: {stamp, tooldef}}；不在、壞了（不是 JSON、不是物件）＝當沒有（可重建，下次整份重寫）。"""
+    try:
+        with open(cf, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def write_cache(cf, data):
+    """先寫暫存再改名；寫不了只是少了快取，不算這支的錯（不印、不退非 0）。"""
+    tmp = "%s.%d.tmp" % (cf, os.getpid())
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(data, ensure_ascii=False) + "\n")
+        os.replace(tmp, cf)
+    except OSError:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def exe_tooldef(path):
+    """可執行檔的定義：stack 有快取且 stamp（mtime 奈秒＋大小）相符就用，否則重跑 --tooldef 並寫回快取檔。"""
+    cf = cache_file()
+    if cf is None:
+        return run_tooldef(path)
+    key, s = os.path.abspath(path), stamp(path)
+    data = read_cache(cf)
+    hit = data.get(key)
+    if isinstance(hit, dict) and hit.get("stamp") == s and isinstance(hit.get("tooldef"), dict):
+        return hit["tooldef"]
+    td = run_tooldef(path)
+    data = read_cache(cf)                            # 跑 --tooldef 的這段時間別人可能寫過，重讀再併
+    data[key] = {"stamp": s, "tooldef": td}
+    write_cache(cf, data)
+    return td
+
+
+def inspect(path, cache=None):
+    """登記對象 → {kind, tooldef, metainfo?}；不符合要求丟 Fail。cache＝登記格的 cache（只收 False）：
+    False＝不用快取（11-03 --no-cache）：exe 每次重跑 --tooldef、不讀不寫快取檔；dir／json 碰到 False＝RegistryBad。
+    其餘 exe 的快取在 $AOS_STACK/tooldef_cache.json（exe_tooldef）。"""
+    kind = kind_of(path)
+    if cache is False and kind != "exe":
+        raise Fail("RegistryBad", "%s is %s; \"cache\": false is only for executables (exe)" % (path, kind))
+    out = {"kind": kind}
+    if kind == "dir":
+        m = first_file(path, ("_metainfo.json",))
+        meta, err = read_meta(lambda: read_json(m, None, "ToolDefBad")[1]) if m else (None, None)
+        p = first_file(path, ("_tooldef.json",))   # 11-04 起只認帶 .json 的（資料檔帶副檔名；_entry 是程式才不帶）
+        td = merge_tooldef(meta, "%s#/tooldef" % m, read_json(p, None, "ToolDefBad")[1] if p else None, p, err)
+        if td is None:
+            raise Fail("ToolDefMissing", "%s is a dir and needs _tooldef.json inside, or a tooldef key in _metainfo.json (_tooldef without .json is not accepted)" % path)
+        out["tooldef"] = td
+    elif kind == "json" and split_ptr(path)[1] is not None:
+        obj = read_object(path)
+        meta = obj.get("_metainfo")
+        td = merge_tooldef(meta, path + "/_metainfo/tooldef", obj.get("_tooldef"), path + "/_tooldef")
+        if td is None:
+            raise Fail("ToolDefMissing", "%s is a JSON object and needs a _tooldef key (or _metainfo.tooldef)" % path)
+        out["tooldef"] = td
+    elif kind == "json":
+        try:
+            raw, td = read_json(path, "_tooldef", "ToolDefBad")
+        except Fail as e:
+            if e.code != "ToolDefBad":
+                raise
+            raise Fail(e.code, "%s; a file without exec permission is read as JSON (python/executables need chmod +x and a #! line)" % e)
+        meta, err = read_meta(lambda: read_json(path, "_metainfo", "ToolDefBad")[1]) if isinstance(raw, dict) and "_metainfo" in raw else (None, None)
+        td = merge_tooldef(meta, path + "#/_metainfo/tooldef", td, path + "#/_tooldef", err)
+        if not isinstance(raw, dict) or td is None:
+            raise Fail("ToolDefMissing", "%s is a JSON file (no exec permission) and needs a top-level _tooldef or _metainfo.tooldef (python/executables need chmod +x)" % path)
+        out["tooldef"] = td
+    else:
+        td = run_tooldef(path) if cache is False else exe_tooldef(path)
+        out["tooldef"] = check_tooldef(td, path + " --tooldef")
+        meta = None
+    if isinstance(meta, dict):
+        out["metainfo"] = meta
+    return out
+
+
+OVERRIDE_KEY = "$override"     # 覆蓋檔指向底檔的 key（使用者 11-10 K1「現在就寫 $override」；收成一個常數，只改這裡與 help）
+
+
+def blame(path, where, err):
+    """整格解指示詞失敗時，逐個工具再解一次，說出是哪一個（11-10 aos-tools-cli 甲8；只在失敗路徑做，仍整份報錯）。
+    第一次的 aos-json 已經說過哪裡解不開，這裡再解時不再印它的 stderr。找不到是誰＝什麼都不做（照原錯報）。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, ValueError):
+        return
+    group = raw.get(where) if isinstance(raw, dict) else None
+    if not isinstance(group, dict):
+        return
+    for name in sorted(group):
+        target = "%s#/%s/%s" % (path, where, name)
+        try:
+            r = subprocess.run(["aos-json", "get", "--follow", "--resolve", target], stdin=subprocess.DEVNULL,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError:
+            return
+        if r.returncode != 0:
+            raise Fail("DirectiveBad", "tool %s (%s): directives cannot be resolved (aos-json exited %d)" % (name, target, r.returncode))
+
+
+def read_layer(reg, raw=None):
+    """一份登記檔 → (原文整份, 解完指示詞的 tools 物件, 底檔指標原樣值或 None)。檔不在＝空的。
+    tools 只解 #/tools 那一格（aos-json get --follow --resolve；$ref 拆檔照 lv0），$override 由這支自己解（read_bases）。"""
+    if raw is None:
+        if not os.path.exists(reg):
+            return {}, {}, None
+        try:
+            raw, tools = read_json(reg, "tools", "RegistryBad")
+        except Fail as e:
+            if e.code == "DirectiveBad":
+                blame(reg, "tools", e)
+            raise
+    else:
+        tools = raw.get("tools") if isinstance(raw, dict) else None
+    if not isinstance(raw, dict):
+        raise Fail("RegistryBad", "%s must be a JSON object ({\"tools\": {...}})" % reg)
+    if "add" in raw or "rm" in raw:
+        raise Fail("RegistryBad", "%s: top-level add / rm are not registry keys (a registry is {\"%s\"?: BASE, \"tools\": {...}}; "
+                   "an entry whose value is null is not a tool)" % (reg, OVERRIDE_KEY))
+    if tools is None:
+        tools = {}
+    if not isinstance(tools, dict):
+        raise Fail("RegistryBad", "%s: tools must be an object (name -> {\"path\": ...} or null)" % reg)
+    return raw, tools, raw.get(OVERRIDE_KEY)
+
+
+def read_bases(reg, pointer):
+    """$override 的值 → [底檔絕對路徑…]。單一路徑或陣列（使用者 11-10「$override希望能支援array…跟$ref一樣」）；
+    每個元素收字串（相對從 reg 的資料夾算、絕對）或指示詞物件（每次用到才交 aos-directive 解）。空陣列＝沒有底檔。"""
+    where = "%s#/%s" % (reg, OVERRIDE_KEY)
+    items = pointer if isinstance(pointer, list) else [pointer]
+    folder = os.path.dirname(os.path.abspath(reg))
+    out = []
+    for i, item in enumerate(items):
+        at = where + ("/%d" % i if isinstance(pointer, list) else "")
+        if isinstance(item, dict):
+            try:
+                item = directive_value.resolve({"v": item}, folder, reg).get("v")   # #/… ＝ reg 自己；stderr 不吞：aos-directive 自己說哪裡解不開
+            except directive_value.Error as e:
+                if e.code == "CommandMissing":
+                    raise Fail(e.code, "%s has directives that need aos-directive, which cannot start: %s" % (at, e.cause))
+                raise Fail("DirectiveBad", "%s: directives cannot be resolved (aos-directive exited %d)" % (at, e.returncode)
+                           if e.returncode is not None else "%s: directives cannot be resolved (%s)" % (at, e))
+        if not isinstance(item, str) or not item or "\0" in item:
+            raise Fail("RegistryBad", "%s must be a path string, a directive resolving to one, or an array of those" % at)
+        base = os.path.normpath(os.path.join(folder, item))
+        if not os.path.isfile(base):
+            raise Fail("PathMissing", "%s: %s does not exist" % (at, base))
+        out.append((base, at))
+    return out
+
+
+def patch(acc, layer, reg):
+    """一層疊上去（補丁式往下合）：物件逐 key 合，其餘（字串、數字、null…）整個蓋過去。合併沒有刪除：
+    null 跟別的值一樣蓋過去、key 還在（使用者 11-10 改口：「null就是null，我們不做rm功能」「寫成 null，讀的人當它不是工具」）；
+    值是 null 的工具格在 finish 才當「不是工具」。acc＝{名: {"entry": 合好的格, "origin": {格名: 寫它的那份檔}, "last": 檔} 或 {"null": 檔}}。"""
+    for name, e in layer.items():
+        if e is None:
+            acc[name] = {"null": reg}
+            continue
+        if not isinstance(e, dict):
+            raise Fail("RegistryBad", "%s: tools/%s must be an object ({\"path\": ...}) or null" % (reg, name))
+        cur = acc.get(name)
+        if cur is None or "null" in cur:             # 前面沒有、或被 null 蓋過：從空的開始（null 不是物件，不往下合）
+            cur = acc[name] = {"entry": {}, "origin": {}}
+        for k, v in e.items():
+            if isinstance(v, dict) and isinstance(cur["entry"].get(k), dict):
+                merged = dict(cur["entry"][k])
+                merged.update(v)                     # env 之類再往下一層；裡面的 null 也只是值
+                cur["entry"][k] = merged
+            else:
+                cur["entry"][k] = v
+            cur["origin"][k] = reg
+        cur["last"] = reg
+
+
+def layers(reg, raw=None, chain=()):
+    """reg 展開成照順序的疊加序列 [(檔, tools)…]：每個底檔先遞迴展開成它自己的序列，照 $override 陣列順序接起來，最後接 reg 自己的
+    （使用者 11-10「照順序疊，後面蓋前面」）。同一份經兩條路被引到（菱形）＝序列裡出現兩次、照樣疊，不算環；
+    環以真實路徑判，只看往上那幾層（跟 $ref 陣列同）。"""
+    real = os.path.realpath(reg)
+    if real in chain:
+        raise Fail("RegistryBad", "%s chain loops: %s" % (OVERRIDE_KEY, " -> ".join(list(chain[chain.index(real):]) + [real])))
+    raw, tools, pointer = read_layer(reg, raw)
+    seq = []
+    if pointer is not None:
+        for base, at in read_bases(reg, pointer):
+            try:
+                seq += layers(base, None, chain + (real,))
+            except Fail as e:
+                if e.code == "RegistryBad" and "chain loops" in str(e):
+                    raise
+                raise Fail(e.code, "%s (from %s)" % (e, at))
+    return seq + [(reg, tools)]
+
+
+def merged_tools(reg, raw=None):
+    """reg 疊完整條序列之後的 {名: 合好的格}（含被 null 蓋過的名字）。"""
+    acc = {}
+    for f, tools in layers(reg, raw):
+        patch(acc, tools, f)
+    return acc
+
+
+def finish(merged):
+    """合好的格 → {名: {path(絕對，從寫 path 的那份檔算), entry, field, src, stored, env_file?…}}；壞的＝RegistryBad。
+    值是 null 的工具格不算工具；工具格裡值是 null 的欄位（env、env_file、cache、env 裡的變數）＝當沒設。"""
+    out = {}
+    for name, t in merged.items():
+        if "null" in t:
+            continue
+        origin = t["origin"]
+        e = {k: v for k, v in t["entry"].items() if v is not None}
+        if isinstance(e.get("env"), dict):
+            e["env"] = {k: v for k, v in e["env"].items() if v is not None}
+        where = "%s#/tools/%s" % (t["last"], name)
+        if not isinstance(e.get("path"), str) or not e["path"]:
+            raise Fail("RegistryBad", "%s: tools/%s needs \"path\": non-empty string (after merging what it overrides)" % (t["last"], name))
+        if "cache" in e and e["cache"] is not False:     # 11-10 步 2：快取搬到 $AOS_STACK/tooldef_cache.json，登記格只記 false
+            raise Fail("RegistryBad", "%s/cache must be false (no cache); cached definitions live in $AOS_STACK/%s"
+                       % (where, CACHE_FILE))
+        env = e.get("env", {})
+        if not isinstance(env, dict) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) and isinstance(v, str) and "\0" not in v
+                                              for k, v in env.items()):
+            raise Fail("RegistryBad", "%s/env must be an object of NAME -> string without NUL (NAME like LANG)" % where)
+        ef = e.get("env_file")                       # 11-10 步 3：只記位置，call 才讀（指示詞已跟整格一起解開）
+        if "env_file" in e and (not isinstance(ef, str) or not ef or "\0" in ef):
+            raise Fail("RegistryBad", "%s/env_file must be a non-empty path string (or a directive resolving to one)" % where)
+        pfile = origin["path"]
+        out[name] = {"path": norm_loc(os.path.dirname(os.path.abspath(pfile)), e["path"]), "entry": e,
+                     "field": "%s#/tools/%s/path" % (pfile, name), "src": "%s#/tools/%s" % (pfile, name),
+                     "stored": stored_value(pfile, name, "path", e["path"])}
+        if ef:
+            efile = origin["env_file"]
+            out[name]["env_file"] = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(efile)), ef))
+            out[name]["env_file_src"] = "%s#/tools/%s" % (efile, name)
+            out[name]["env_file_stored"] = stored_value(efile, name, "env_file", ef)
+    return out
+
+
+def stored_value(reg, name, key, resolved):
+    """ls -l 的 STORED：那份檔裡寫的原樣值（指示詞就是那段 JSON）；那格是 $ref 之類拿不到原文時用解完的。"""
+    try:
+        with open(reg, encoding="utf-8") as f:
+            raw = json.load(f)
+        v = raw["tools"][name][key]
+        return v if v is not None else resolved
+    except (OSError, ValueError, KeyError, TypeError):
+        return resolved
+
+
+def nulled(reg):
+    """ls -l 用（11-10 晚使用者「3.顯示」）：疊完仍是 null 的名字 → (寫 null 的那份檔, 它蓋掉的那格解成的絕對路徑或 None)。"""
+    acc, out = {}, {}
+    for f, tools in layers(reg):
+        before = {n: dict(acc[n]) for n in tools if n in acc}
+        patch(acc, tools, f)
+        for n, e in tools.items():
+            if e is None:
+                hid = None
+                if n in before and "null" not in before[n]:
+                    try:
+                        hid = finish({n: before[n]})[n]["path"]
+                    except Fail:
+                        hid = None
+                elif n in out:
+                    hid = out[n][1]
+                out[n] = (f, hid)
+            else:
+                out.pop(n, None)
+    return {n: v for n, v in out.items() if n in acc and "null" in acc[n]}
+
+
+def load_tools(reg):
+    """用的那份：reg 疊完它 $override 的底檔（沒有＝就是 reg；檔不在＝空的）。"""
+    return finish(merged_tools(reg))
+
+
+def base_tools(reg):
+    """reg 的底檔們疊起來的樣子（不含 reg 自己的、不含被 null 蓋過的）；add --replace 用它找要用 null 蓋掉的欄位，rm 用它判要寫 null 還是刪 key。"""
+    raw, _tools, pointer = read_layer(reg)
+    if pointer is None:
+        return {}
+    return {n: t for n, t in merged_tools(reg, dict(raw, tools={})).items() if "null" not in t}
+
+
+def own_tools(reg):
+    """reg 自己 tools 那格的原文（不解指示詞；$ref 拆檔時那格不是名字表＝回 None，寫入照舊交 aos-json --follow）。"""
+    try:
+        with open(reg, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    t = raw.get("tools") if isinstance(raw, dict) else None
+    if t is None:
+        return {}
+    return t if isinstance(t, dict) and "$ref" not in t else None
+
+
+def describe(name, t):
+    try:
+        info = inspect(t["path"], t["entry"].get("cache"))
+    except Fail as e:
+        raise Fail(e.code, "tool %s (%s, from %s): %s" % (name, t["path"], t.get("field", "?"), e))
+    out = {"name": name, "kind": info["kind"], "path": t["path"], "tooldef": info["tooldef"]}
+    if "metainfo" in info:
+        out["metainfo"] = info["metainfo"]
+    return out
+
+
+def match(tools, xxx):
+    """名字優先；不是登記過的名字就當路徑（從 cwd 算），找指到那裡的。"""
+    if xxx in tools:
+        return [xxx]
+    p = norm_loc(os.getcwd(), xxx)
+    names = sorted(n for n, t in tools.items() if t["path"] == p)
+    if not names:
+        raise Fail("ToolMissing", "%s is not a registered tool name, and no tool points to that path" % xxx)
+    return names
+
+
+def aos_json(args):
+    try:
+        r = subprocess.run(["aos-json"] + args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    except OSError as e:
+        raise Fail("CommandMissing", "editing the registry needs aos-json, which cannot start: %s" % e)
+    if r.returncode != 0:
+        raise Fail("WriteFailed", "aos-json %s exited %d" % (args[0], r.returncode))
+
+
+def write_new(reg, obj):
+    tmp = os.path.join(os.path.dirname(os.path.abspath(reg)), ".%s.%d.tmp" % (os.path.basename(reg), os.getpid()))
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(obj, ensure_ascii=False, indent=1) + "\n")
+        os.replace(tmp, reg)                         # N-05：先寫暫存再改名
+    except OSError as e:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise Fail("WriteFailed", "cannot write %s: %s" % (reg, e))
+
+
+def resolve_path_value(value, folder):
+    """登記格的 path 值（字串或指示詞物件）→ 絕對路徑；指示詞交給 aos-directive 解（每次用到才解、不寫回），解完的相對路徑從 folder 算。"""
+    if isinstance(value, dict):
+        try:
+            value = directive_value.resolve({"path": value}, folder).get("path")   # stderr 不吞：aos-directive 自己說哪裡解不開
+        except directive_value.Error as e:
+            if e.code == "CommandMissing":
+                raise Fail(e.code, "--path-json has directives that need aos-directive, which cannot start: %s" % e.cause)
+            raise Fail("DirectiveBad", "--path-json %s cannot be resolved (aos-directive exited %d)" % (json.dumps(value), e.returncode)
+                       if e.returncode is not None else "--path-json %s cannot be resolved (%s)" % (json.dumps(value), e))
+    if not isinstance(value, str) or not value:
+        raise Fail("ArgumentsBad", "--path-json must be a non-empty path string or a directive object resolving to one (got %s)" % json.dumps(value))
+    return norm_loc(folder, value)
+
+
+def cmd_add(args):
+    reg, opts, rest = parse_sub("add", args, {"--name": "name", "--env-file": "env_file", "--path-json": "path_json"},
+                                {"--replace": "replace", "--no-cache": "no_cache"},
+                                {"--envs": "envs"}, short=("-n",))
+    if "path_json" in opts:
+        if rest:
+            raise Fail("ArgumentsBad", "add takes either XXX or --path-json, not both")
+    elif len(rest) != 1:
+        raise Fail("ArgumentsBad", "add needs one XXX (or --path-json JSON)")
+    env = {}
+    for kv in opts.get("envs", []):
+        k, eq, v = kv.partition("=")
+        if not eq or not ENV_KEY_RE.match(k) or "\0" in v:
+            raise Fail("ArgumentsBad", "--envs needs NAME=VALUE with a valid name and no NUL")
+        env[k] = v
+    folder = os.path.dirname(os.path.abspath(reg))   # 存的相對路徑從這裡算（讀的時候也是）
+    env_file, file_names = None, {}                  # 11-10 步 3（使用者 Q1）：--env-file 只記位置，寫法同 XXX；call 才讀
+    if "env_file" in opts:
+        given = opts["env_file"]
+        if not given or "\0" in given:
+            raise Fail("ArgumentsBad", "--env-file needs a non-empty path")
+        absf = os.path.normpath(os.path.abspath(given))
+        env_file = absf if os.path.isabs(given) else os.path.relpath(absf, folder)
+        if os.path.exists(absf):
+            try:
+                file_names = read_env_file(absf)     # 只為驗格式與下面的 hub 提醒，內容不存
+            except EnvFileError as e:
+                raise Fail(e.code, str(e)) from None
+        else:
+            aos_flags.warn(NAME, "env file %s not found yet; registered anyway (it is read on every call)" % absf)
+    if "path_json" in opts:                          # 指示詞（或字串）原樣存；現在解一次只為了驗與取名
+        try:
+            stored = json.loads(opts["path_json"])
+        except ValueError as e:
+            raise Fail("ArgumentsBad", "--path-json is not JSON: %s" % e)
+        path = resolve_path_value(stored, folder)
+    else:
+        given = rest[0]
+        path = norm_loc(os.getcwd(), given)
+        if os.path.isabs(given):
+            stored = path                            # 給絕對＝存絕對
+        else:                                        # 給相對（從 cwd 算）＝存相對登記檔資料夾的相對；#/ 後面原樣
+            f, ptr = split_ptr(path)
+            stored = os.path.relpath(f, folder) + ("" if ptr is None else "#" + ptr)
+    if opts.get("no_cache") and kind_of(path) != "exe":
+        raise Fail("ArgumentsBad", "--no-cache is only for executables (exe); %s is %s, which has no cache anyway" % (path, kind_of(path)))
+    info = inspect(path, False if opts.get("no_cache") else None)
+    hubs = info["tooldef"].get("env", [])
+    if not isinstance(hubs, list) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) for k in hubs):
+        raise Fail("ToolDefBad", "%s: tool definition env must be an array of variable names" % path)
+    name = opts.get("name") or (os.path.basename(path) if info["kind"] == "dir"
+                                else ptr_name(split_ptr(path)[1]) if split_ptr(path)[1] is not None
+                                else os.path.splitext(os.path.basename(path))[0])
+    if not NAME_RE.fullmatch(name):
+        raise Fail("NameBad", "tool name %r is invalid (only [A-Za-z0-9_-], at most 64 chars; pick another with --name)" % name)
+    tools = load_tools(reg)
+    if name in tools and not opts.get("replace"):
+        raise Fail("ToolExists", "%s is already registered (points to %s); add --replace to replace it" % (name, tools[name]["path"]))
+    entry = {"path": stored}
+    if env:
+        entry["env"] = env
+    if env_file is not None:
+        entry["env_file"] = env_file
+    if opts.get("no_cache"):                         # 只有 --no-cache 才寫；定義快取在 stack，不進登記檔（步 2）
+        entry["cache"] = False
+    below = base_tools(reg).get(name)                # 步 4：補丁式往下合，要整格換就用 null 蓋過底檔那格有、這次沒給的欄位
+    if below is not None:
+        for k, v in below["entry"].items():
+            if v is not None:
+                entry.setdefault(k, None)
+    write_entry(reg, name, entry)
+    written = reg
+    missing = [k for k in dict.fromkeys(hubs) if k not in os.environ and k not in env and k not in file_names]
+    if missing:
+        aos_flags.warn(NAME, "tool %s has unset hub variables: %s" % (name, ", ".join(missing)))
+    # 甲4：說出寫進哪份檔、存的原樣值（指示詞就印那段 JSON）
+    print("added %s -> %s (%s: %s)" % (name, path, written, json.dumps(stored, ensure_ascii=False)))
+
+
+def cmd_rm(args):
+    reg, opts, rest = parse_sub("rm", args)
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "rm needs one XXX")
+    names = match(load_tools(reg), rest[0])
+    below, own = base_tools(reg), own_tools(reg)     # 步 4：只寫 reg，底檔位元組不動
+    done = []
+    for n in names:
+        if n in below:                               # 底檔有同名＝在 reg 寫 "名": null（值是 null 的那格不算工具）
+            write_entry(reg, n, None)
+            done.append((n, "set to null over %s" % below[n]["last"]))
+        else:                                        # 只有 reg 自己記的＝刪那個 key
+            aos_json(["del", "--follow", "%s#/tools/%s" % (reg, n)])
+            done.append((n, "key deleted"))
+    for n, how in done:
+        print("removed %s (%s: %s)" % (n, reg, how))
+
+
+def write_entry(reg, name, entry):
+    """只寫 reg 那一格（檔在＝aos-json set --follow --parents，穿過 $ref 改被參照的那份；不在＝新建 {"tools": {…}}）。"""
+    if os.path.exists(reg):
+        aos_json(["set", "--follow", "--parents", "%s#/tools/%s" % (reg, name), json.dumps(entry, ensure_ascii=False)])
+    else:
+        make_dir_of(reg)
+        write_new(reg, {"tools": {name: entry}})
+
+
+def make_dir_of(reg):
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(reg)), exist_ok=True)
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot create the dir of %s: %s" % (reg, e))
+
+
+def cmd_override(args):
+    """override (BASE... | --path-json JSON)：在 F 寫 "$override"（11-10 步 4，使用者 Q4／N1）。F 不在＝新建；
+    F 已有 $override＝改指標；F 沒有 $override 卻有自己的工具＝RegistryBad。寫之前先照新指標整份讀一次（指不到、環、壞檔都先報）。"""
+    reg, opts, rest = parse_sub("override", args, {"--path-json": "path_json"})
+    folder = os.path.dirname(os.path.abspath(reg))
+    if "path_json" in opts:
+        if rest:
+            raise Fail("ArgumentsBad", "override takes either BASE... or --path-json, not both")
+        try:
+            pointer = json.loads(opts["path_json"])
+        except ValueError as e:
+            raise Fail("ArgumentsBad", "--path-json is not JSON: %s" % e)
+    else:
+        if not rest:
+            raise Fail("ArgumentsBad", "override needs at least one BASE (or --path-json JSON)")
+        stored = [os.path.normpath(os.path.abspath(b)) if os.path.isabs(b)
+                  else os.path.relpath(os.path.abspath(b), folder) for b in rest]
+        pointer = stored[0] if len(stored) == 1 else stored
+    if os.path.exists(reg):
+        raw = read_layer(reg)[0]
+        own = raw.get("tools")
+        if OVERRIDE_KEY not in raw and own not in (None, {}):
+            raise Fail("RegistryBad", "%s lists tools of its own and has no %s; override would change what it means "
+                       "(start a new file with --file NEW override BASE)" % (reg, OVERRIDE_KEY))
+        new = dict({OVERRIDE_KEY: pointer}, **{k: v for k, v in raw.items() if k != OVERRIDE_KEY})
+    else:
+        new = {OVERRIDE_KEY: pointer, "tools": {}}
+    merged_tools(reg, dict(new, tools={}))           # 只驗底檔：指不到＝PathMissing、環＝RegistryBad、底檔壞＝帶來源的錯
+    make_dir_of(reg)
+    write_new(reg, new)
+    print("%s %s -> %s" % (reg, OVERRIDE_KEY, json.dumps(pointer, ensure_ascii=False)))
+
+
+def env_column(t):
+    """ls -l 的 ENV 欄：只印變數名（值不印，維持「值不給腦看」）；沒有＝-。"""
+    names = sorted(t["entry"].get("env", {}))
+    if "env_file_stored" in t:                       # 步 3：env 檔印存的原樣位置（JSON），不讀它
+        names.append("@" + json.dumps(t["env_file_stored"], ensure_ascii=False))
+    return ",".join(names) or "-"
+
+
+def first_sentence(tooldef):
+    """ls 預設用（11-10 使用者「好，有需要的再自己去看細項」；深夜「默認是給出短板」）：description 第一行、到第一個「. 接大寫」為止（含句點，e.g. 不算）；沒有＝-。"""
+    d = tooldef.get("description") if isinstance(tooldef, dict) else None
+    if not isinstance(d, str) or not d.strip():
+        return "-"
+    line = d.strip().splitlines()[0].strip()
+    m = re.search(r"\.\s+(?=[A-Z])", line)
+    return line[:m.start() + 1] if m else line
+
+
+BROKEN_WHY = {"PathMissing": "its path does not exist", "ToolDefMissing": "no tool definition there",
+              "ToolDefBad": "its tool definition is broken", "DirectiveBad": "its path directive cannot be resolved",
+              "RegistryBad": "its entry is invalid"}
+
+
+def broken_text(name, code):
+    """壞掉那支的一句（11-12 tool-path-broken）：登記名、代號、白話原因、怎麼修；不帶絕對路徑（完整原因看 get NAME）。"""
+    return "%s (%s); correct its path or take it off the list with rm %s (get %s shows the full error)" % (
+        code, BROKEN_WHY.get(code, "it cannot be read"), name, name)
+
+
+def listed(tools):
+    """ls 用：逐支 describe；一支自己的問題（路徑不在、定義缺或壞…）＝略過那支、stderr 一行 warning，其他照常
+    （11-12 tool-path-broken，比照使用者 11-12 對 index_view 的裁定「_metainfo.json 壞掉時，index_view 對那個資料夾不該直接報錯。」）。
+    CommandMissing（aos-json 起不來）不是那支自己的問題，照舊整份報錯。回 (好的 [describe…], {壞的名: 代號})。"""
+    good, broken = [], {}
+    for n in sorted(tools):
+        try:
+            good.append(describe(n, tools[n]))
+        except Fail as e:
+            if e.code == "CommandMissing":
+                raise
+            broken[n] = e.code
+            aos_flags.warn(NAME, "tool %s skipped: %s" % (n, broken_text(n, e.code)))
+    return good, broken
+
+
+def cmd_ls(args):
+    reg, opts, rest = parse_sub("ls", args, None, {"--json": "json", "--long": "long"},
+                                short={"-j": "--json", "-l": "--long"})
+    if rest:
+        raise Fail("ArgumentsBad", "ls takes no arguments")
+    if opts.get("json") and opts.get("long"):
+        raise Fail("ArgumentsBad", "ls takes one of -l, --json")
+    tools = load_tools(reg)
+    found, broken = listed(tools)                    # 壞的那支：--json 不列（叫得到的才列），文字兩種標 broken
+    if opts.get("json"):
+        print(json.dumps(found, ensure_ascii=False))
+    elif opts.get("long"):                           # 甲5：FROM（檔#/格/名）、STORED（存的原樣值）、ENV（只印名）
+        off = nulled(reg)
+        rows = [(t["name"], t) for t in found] + [(n, None) for n in off] + [(n, "broken") for n in broken]
+        for name, t in sorted(rows, key=lambda r: r[0]):
+            if t is None:                            # 被 null 關掉的格：KIND null、PATH＝它蓋掉的那支（不知道＝-）、FROM＝寫 null 的那份
+                f, hid = off[name]
+                print("\t".join((name, "null", hid or "-", "%s#/tools/%s" % (f, name), "null", "-")))
+                continue
+            src = tools[name]                        # 壞的那支：KIND＝broken，其餘欄照登記格（路徑是解出來、指不到的那個）
+            print("\t".join((name, "broken" if t == "broken" else t["kind"], src["path"], src["src"],
+                             json.dumps(src["stored"], ensure_ascii=False), env_column(src))))
+    else:
+        rows = [(t["name"], first_sentence(t["tooldef"])) for t in found] + \
+               [(n, "broken: " + broken_text(n, c)) for n, c in broken.items()]
+        for name, line in sorted(rows):
+            print("%s\t%s" % (name, line))
+
+
+def cmd_get(args):
+    reg, opts, rest = parse_sub("get", args)
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "get needs one XXX")
+    tools = load_tools(reg)
+    for n in match(tools, rest[0]):
+        print(json.dumps(describe(n, tools[n]), ensure_ascii=False))
+
+
+def stdin_from(text):
+    """call NAME ARGS_JSON（甲6）：把 ARGS_JSON 原樣（不驗）放進一個已刪掉名字的暫存檔，接到 fd 0，exec 後工具照常從 stdin 讀。"""
+    try:
+        f = tempfile.TemporaryFile()
+        f.write(text.encode("utf-8", "surrogateescape"))
+        f.seek(0)
+        os.dup2(f.fileno(), 0)
+        f.close()
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot hand ARGS_JSON to the tool's stdin: %s" % e)
+
+
+def cmd_call(args):
+    reg, opts, rest = parse_sub("call", args)
+    if len(rest) not in (1, 2):
+        raise Fail("ArgumentsBad", "call needs NAME and optional ARGS_JSON (else stdin = arguments)")
+    tools = load_tools(reg)
+    name = rest[0]
+    if name not in tools:
+        raise Fail("ToolMissing", "%s is not registered (available: %s)" % (name, ", ".join(sorted(tools)) or "none"))
+    if not NAME_RE.fullmatch(name):
+        raise Fail("RegistryBad", "registered tool name %r is invalid (only [A-Za-z0-9_-], at most 64 chars)" % name)
+    path = tools[name]["path"]
+    try:
+        kind_of(path)                                # 只驗路徑；三種工具走同一條執行路，不擴充登記對象
+    except Fail as e:
+        raise Fail(e.code, "tool %s (from %s): %s" % (name, tools[name].get("field", "?"), e))
+    env = dict(os.environ)                           # 後面的贏：呼叫者環境 < env_file < env < AOS_STACK 小格
+    ef = tools[name].get("env_file")
+    if ef is not None:                               # 步 3：每次 call 才讀；不在＝報錯不跑（使用者 11-10 N4「報錯不跑」）
+        where = tools[name]["src"] + "/env_file"
+        if not os.path.isfile(ef):
+            raise Fail("PathMissing", "tool %s: env file %s (from %s) does not exist" % (name, ef, where))
+        try:
+            env.update(read_env_file(ef))
+        except EnvFileError as e:
+            raise Fail(e.code, "tool %s (from %s): %s" % (name, where, e))
+    env.update(tools[name]["entry"].get("env", {}))
+    stack = os.environ.get("AOS_STACK")
+    lazy = []
+    if stack:
+        env["AOS_STACK"] = os.path.join(os.path.abspath(stack), "tools", name, "")
+        lazy = ["--stack-lazy"]                       # 11-11 tool-cells-lazy：小格只給路徑、不先建，工具真的要寫才自己建
+        env["AOS_STACK_IN_CALLER"] = os.path.join("tools", name)   # 11-13 fx-2：小格在叫方 stack 裡的相對位置，工具印路徑照它（tool_io.place）
+    else:
+        env.pop("AOS_STACK", None)                    # 登記格不能代替父 stack；沒設交 aos-exec 給預設
+        env.pop("AOS_STACK_IN_CALLER", None)          # 沒有父 stack＝沒有「在叫方裡的位置」；外面帶進來的舊值不往下傳
+    exe = shutil.which("aos-exec")                    # 自己找：避免 execvp 只報 PATH 最後一格
+    if exe is None:
+        raise Fail("CommandMissing", "no executable aos-exec on PATH")
+    if len(rest) == 2:
+        stdin_from(rest[1])
+    try:
+        os.execve(exe, ["aos-exec"] + lazy + [path], env)         # 三種工具都原樣保留 stdin、stdout 與結束碼
+    except OSError as e:
+        raise Fail("CommandMissing", "%s cannot start: %s" % (exe, e.strerror or e))
+
+
+COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls, "get": cmd_get, "call": cmd_call, "override": cmd_override}
+
+
+def main():
+    global TOP_FILE
+    sub = None
+    try:
+        try:
+            opts, rest = aos_flags.parse(sys.argv[1:], {"--file": "file"}, sub="root")   # 11-10 Q1：子命令的旗標寫在 XXX／NAME 後也收
+        except aos_flags.Error as e:
+            reason = str(e) if e.code == "FlagUnknown" else "%s (see %s --help)" % (e, NAME)
+            raise Fail(e.code, reason)
+        if opts.get("file") is not None:
+            if not opts["file"]:
+                raise Fail("ArgumentsBad", "--file must not be empty (see %s --help)" % NAME)
+            TOP_FILE = opts["file"]
+        choices = ", ".join(COMMANDS) + "; see " + NAME + " --help"
+        if not rest:
+            raise Fail("ArgumentsBad", "missing subcommand (%s)" % choices)
+        if rest[0] not in COMMANDS:
+            raise Fail("CommandUnknown", "unknown subcommand %s (%s)" % (rest[0], choices))
+        sub = rest[0]
+        try:
+            COMMANDS[sub](rest[1:])
+        except aos_flags.Error as e:
+            if e.code == "FlagUnknown":
+                raise Fail(e.code, "%s (see %s %s --help)" % (e, NAME, sub))
+            raise Fail(e.code, "%s (usage: %s)" % (e, usage(sub)))
+    except Fail as e:
+        reason = str(e)
+        if sub is not None:
+            reason = aos_flags.with_usage(HELPS[sub], e.code, reason, USAGE_STOP)
+        aos_flags.die(NAME, e.code, reason)
+
+
+if __name__ == "__main__":
+    aos_flags.run(main)

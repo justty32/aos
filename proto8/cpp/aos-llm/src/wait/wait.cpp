@@ -134,7 +134,7 @@ int recv(const std::string& box, const std::string& name, bool full, bool quiet)
         std::string blocked = unwritable_for(aos::join(aos::dirname(mb.root), "state.json"), rb);
         if (!blocked.empty()) {
             aos::warn("aos-llm", "no reply for " + name + ": the llm kernel cannot deliver into " + rb.root + " (" + blocked +
-                                 "); give it write access (see cmd/aos-sandbox/root/setup.sh --mailbox)");
+                                 "); give it write access (see py/aos/apps/sandbox/root/setup.sh --mailbox)");
         }
     } catch (const Error&) {
     }

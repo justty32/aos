@@ -19,7 +19,7 @@ cd <你的專案>
 export AOS_HOME=<這台 proto8 的絕對路徑>                  # 或寫進 defs/.env，就不用 export
 cp -r $AOS_HOME/templates/daemon-root defs                 # 根定義
 cp -r $AOS_HOME/templates/agent-fsm defs/ann               # 一隻 agent 的定義
-mkdir -p stacks && cp $AOS_HOME/cmd/aos-agent/stack.gitignore stacks/.gitignore   # stack 進 git 時擋掉不該帶的
+mkdir -p stacks && cp $AOS_HOME/py/aos/apps/agent/stack.gitignore stacks/.gitignore   # stack 進 git 時擋掉不該帶的
 # llms 不在專案旁邊（../llms/stacks/llm）時：export AOS_LLM_KERNEL=<llm kernel 專案的 stack>
 unset AOS_CLOCK AOS_DAEMON AOS_STACK   # 起根前一定清掉：殼裡留著 AOS_DAEMON，根會以為自己是那台的下屬（.env 清不掉，外層贏）
 aos-exec --stack stacks/root defs                          # 前景起根；stacks/、stacks/root 不在會自己建

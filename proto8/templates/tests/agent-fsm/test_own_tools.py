@@ -28,7 +28,7 @@ class OwnTools(unittest.TestCase):
         self.own.write_text(json.dumps({"$override": "../def/tools.json",
                                         "tools": {"peek_now_time": None, "clock2": {"path": str(CLOCK)}}}))
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
-        bins = [str(PROTO / "bin")] + [str(PROTO / "cmd" / "aos-tools" / "bin")]
+        bins = [str(PROTO / "bin")] + [str(PROTO / "bin")]
         env["PATH"] = os.pathsep.join(bins + [env["PATH"]])
         env.update(AOS_STACK=str(self.stack), AOS_CD=str(self.defn), AOS_WS=str(self.root),
                    AOS_LLM_KERNEL=str(kernel), PYTHONDONTWRITEBYTECODE="1")

@@ -10,7 +10,7 @@
 ```
 llm-kernel/
   _entry       ["aos-daemon", "--enable-logs", "daemon.json"]
-  daemon.json  {"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel_llm"}, {"$env": "AOS_CD", "$path": "kernel.json"}]}, "interval_ms": 300, "procs": {"_sweeper": {…}}}（身體＝kernel；procs 只帶清道夫一列（見 cmd/aos-sweeper；不要就刪）、不帶鐘列，聽外層的 `AOS_CLOCK`）
+  daemon.json  {"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel_llm"}, {"$env": "AOS_CD", "$path": "kernel.json"}]}, "interval_ms": 300, "procs": {"_sweeper": {…}}}（身體＝kernel；procs 只帶清道夫一列（見 py/aos/apps/sweeper；不要就刪）、不帶鐘列，聽外層的 `AOS_CLOCK`）
   kernel.json  slots 2、reserved＝{"high": 1}（使用者裁定 sol 審查 #7）、timeout_ms 0〔不限時，11-15 起；以前 120000〕、exec＝預設 endpoint 函數 `{"$env": "AOS_HOME", "$path": "/lib/tools/base/llm_http"}`、endpoint＝預設代號 fake、
                不設 budget（使用者選「從範本拿掉」；要限寄件人就自己加 budget.senders，例子在 03 件 5）、
                endpoints＝能力包表（下表）
@@ -30,7 +30,7 @@ llm-kernel/
 
 **包怎麼讀**（全文在 [kernel_llm docs/01](../../../py/tools/aos/kernel_llm/docs/01-用法.md)）：信與 agent 的 `llm.json` 只寫代號；kernel 自己看 `exec`／`slots`／`budget`／`speed` 與 `backend` 五個（拿掉後才交給 endpoint 函數），其餘（`url`、`model`、`fixed`、`script`、`delay_s`…）原樣交給函數。金鑰由端點小 proc 自己讀環境，kernel 不讀、不寫、不轉交。**`fixed` 是釘死的**：信的 `request` 寫了 `fixed` 裡的 key、或那包有 `model` 而信寫了 `model`＝那封回 `RequestBad`；換溫度、換模型＝換代號（多登記一包）。`cost`／`context`／`summary` 只給人與腦挑代號用，kernel 每拍寫進窗 `$AOS_STACK/endpoints.json`，`aos-llm ls` 印它。
 
-**起來**（PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的）與 `proto8/cmd/*/bin`，或 `source proto8/env.sh`；或跑過選配的 `proto8/cmd/install.sh`）：
+**起來**（PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的），或 `source proto8/env.sh`）：
 
 ```sh
 mkdir ~/llm_kernel && cd ~/llm_kernel

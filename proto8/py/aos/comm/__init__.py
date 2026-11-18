@@ -1,7 +1,7 @@
 """comm - comm/1 協議的共用庫（board-1114 批 1：布告欄）：錯誤類別與共用常數；讀寫布告欄在 board.py，時間在 times.py，找 stack 在 root.py，走表在 walk.py。
 
 不是工具（沒有 _entry）。圖紙：proto8/thinking/2026-11/14/board-1114/（02 稿＋03 計劃＋05 採納表；衝突時 05 優先）。
-CLI 入口在 proto8/cmd/aos-comm，給腦用的 board_* 五支在 proto8/py/tools/agent/board_*，都只經這個庫讀寫 board.json。
+CLI 入口在 proto8/py/aos/apps/comm，給腦用的 board_* 五支在 proto8/py/tools/agent/board_*，都只經這個庫讀寫 board.json。
 用法：`from aos.comm import board`（放 aos 套件的那層：py/ 或裝好的 lib/ 在 sys.path 上）。純標準庫。"""
 
 LEVELS = ("urgent", "normal", "low")        # 信件三級（02 §3.1）；布告欄的 accept 多一個 none

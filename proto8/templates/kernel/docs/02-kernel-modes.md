@@ -34,7 +34,7 @@
 - **寄件人的期限**：信 body 的選填 `queue_wait_ms` 必須是非負整數。`0`＝不排，沒格就拒。正值從信封 `sent_at` 起按牆鐘算，不是從站第一次看到信起算；到期不轉、回 `SlotMissing` 並收信，就算當下有格也拒，不能補掛。`queue: false` 時也先拒已過期的信。沒有期限就一直排。**期限用牆鐘；凍住期間牆鐘照走，醒來第一輪已過期的排隊信一起拒絕；要跨凍住排隊，用 `--on-queued ok`。**（使用者裁定 sol 審查 #6）`--on-queued ok` 不帶期限，表示信可能永遠排著。（使用者裁定 sol 審查 #4）
 - **有序信**：`keep_ordered` 選填布林，沒寫或 `null` 都是 `false`（使用者裁定 sol 審查 #3）。關的時候，有序信用去掉序號的尾名當一般信轉寄：**經過站不保有序，下游回信的 `in_reply_to` 是尾名，要對得上請寄一般信**。（代定、可翻案：[晚審 04](../../../../wf/workflows/refactor/reports/2026-11-07-晚審/04-要使用者裁定.md)）開的時候照有序轉寄，信名會變，站在 `$AOS_STACK/forwarded.json` 記一列防重。
 - **回信先回我**：`reply_via_me: true` 時，轉寄的信把 `reply_to` 改成站自己的 `$AOS_STACK/replies/`，並在 `forwarded.json` 記 `{轉寄後信名: {"letter": 原信名, "reply_to": 原回信箱, "sender": 原寄件人}}`。之後每輪收 `replies/`，用原信名代回原回信箱。原信沒 `reply_to` 就不改。代回寄不進去或原回信箱不在了＝一行 warning、收掉，不重試（寄件人本來就靠自己的逾時）。`keep_ordered` 與 `reply_via_me` 是兩個獨立的鍵：只開 `keep_ordered` 時下游直接回，回信對到的是轉寄後的新信名；要保有序又要回信對得上原信，兩個都開。（使用者 11-13 待裁頁 `kf-t1:A*`：兩個開關各自獨立、照字面）
-- **`aos-agent ctl` 怎麼收到拒信**（[edge-agent 題 2](../../../thinking/2026-11/05/edge-agent/README.md)，使用者選「加 --reply-to 等回信」）：`aos-agent ctl add` 等每封都帶共用回信信箱（`$AOS_STACK/daemon_reply/`，人殼＝`<daemon stack>/procs_requests/reply/`），站不放行＝立刻 `AddRejected`（start／wake 被 `max_running` 擋＝`CtlRejected`）＋站的代號與原因，不用等滿 `--timeout-s`（預設 30 秒）（[aos-agent README「等回信」](../../../cmd/aos-agent/README.md)）。
+- **`aos-agent ctl` 怎麼收到拒信**（[edge-agent 題 2](../../../thinking/2026-11/05/edge-agent/README.md)，使用者選「加 --reply-to 等回信」）：`aos-agent ctl add` 等每封都帶共用回信信箱（`$AOS_STACK/daemon_reply/`，人殼＝`<daemon stack>/procs_requests/reply/`），站不放行＝立刻 `AddRejected`（start／wake 被 `max_running` 擋＝`CtlRejected`）＋站的代號與原因，不用等滿 `--timeout-s`（預設 30 秒）（[aos-agent README「等回信」](../../../py/aos/apps/agent/README.md)）。
 
 ### `AOS_KERNEL`＝一般 proc 寄請求的地方
 
@@ -54,7 +54,7 @@ aos 不驗寄件人是誰，安全的保底是 Linux 本身（使用者、權限
 
 ### 跑法
 
-先準備（PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的）與 `proto8/cmd/*/bin`，或 `source proto8/env.sh`；或跑過選配的 `proto8/cmd/install.sh`）。下面每一段都在同一個暫存夾裡做，每台 daemon 用完就用 `aos-daemon-ctl -d <它的 stack> shutdown` 收掉。
+先準備（PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的），或 `source proto8/env.sh`）。下面每一段都在同一個暫存夾裡做，每台 daemon 用完就用 `aos-daemon-ctl -d <它的 stack> shutdown` 收掉。
 
 ```sh
 P=<repo>/proto8
@@ -270,7 +270,7 @@ kernel_gate {"op": "on"}        印出收件信箱 <它的 stack>/hooks/kernel_g
 
 - 沒開 `reply_via_me` 的無序信，防重的依據只有下一站信箱 `new/`、`cur/` 裡的同名信。下游已做完並移走那封信、站才重起，站認不出原信已經轉過，可能再轉一次。
 - 站當 loop proc 時跟 daemon 各自打拍子：轉了、daemon 還沒套的不算在跑，連著很快寄好幾封時可能多放幾個。當 daemon 身體時沒這個問題（站跑在 daemon 那一圈裡，下一圈之前 daemon 已套完）。
-- **當 loop proc 的站睡著或停著**：信照 `AOS_KERNEL` 寄、不認誰是 kernel、不預判收件者有沒有在跑；沒有回信就等寄件人期限。站睡著＝這是設計系統的人要管的風險（使用者 11-07），手動叫醒：`aos-daemon-ctl wake NAME`（停著用 `start`；這支是指名 daemon 的工具，一律直寄 daemon、不看 `AOS_KERNEL`）。程式不自動辨識、不自動叫醒、不自動繞過。逾時撤信與已轉寄後撤不回的競態見 [aos-agent 已知限制](../../../cmd/aos-agent/docs/02-已知限制.md)。
+- **當 loop proc 的站睡著或停著**：信照 `AOS_KERNEL` 寄、不認誰是 kernel、不預判收件者有沒有在跑；沒有回信就等寄件人期限。站睡著＝這是設計系統的人要管的風險（使用者 11-07），手動叫醒：`aos-daemon-ctl wake NAME`（停著用 `start`；這支是指名 daemon 的工具，一律直寄 daemon、不看 `AOS_KERNEL`）。程式不自動辨識、不自動叫醒、不自動繞過。逾時撤信與已轉寄後撤不回的競態見 [aos-agent 已知限制](../../../py/aos/apps/agent/docs/02-已知限制.md)。
 - 站自己的錯（`kernel.json` 壞、下一站三段都找不到、daemon 沒開 ctl 信箱、`on_error: stop` 的 hook 失敗）退 1。當 daemon 身體時 daemon 不停——stderr 一行 `aos-daemon: warning: body … failed (code N), retrying next round`（碼變了才印，好了印 ok again）、`state.json` 記 `body_code`、下一圈再跑（使用者裁「記一行、下一圈再跑 (Recommended)」，N-28「daemon 的身體失敗」）；那段時間站沒在跑、`requests/` 的信沒人判。當 loop proc 時那個 proc 出錯結束、表上留 `stopped`＋`reason`，修好 `start`（P-20）。
 - **留著等表態的信**：站沒有自己的「最多留多久」，只認寄件人的 `queue_wait_ms`；沒帶期限的信會一直留到有人表態。留著的信不佔 `max_running` 的格。
 - 同一個收件箱同時只能有一個站在跑：第二個會拿不到 `requests/.flock`，報 `LockFailed` 退 1。

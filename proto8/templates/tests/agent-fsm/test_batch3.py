@@ -33,7 +33,6 @@ class Batch3Integration(unittest.TestCase):
             kernel_stack.mkdir()
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
             bins = [str(PROTO / 'bin')]
-            bins += [str(path) for path in (PROTO / 'cmd').glob('*/bin')]
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
             env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'py')])
             env.update(AOS_STACK=str(daemon_stack), AOS_CD=str(root), AOS_WS=str(root),

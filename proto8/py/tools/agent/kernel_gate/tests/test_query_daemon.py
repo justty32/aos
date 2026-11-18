@@ -14,7 +14,7 @@ import unittest
 GATE = Path(__file__).resolve().parents[1]
 PROTO8 = GATE.parents[3]
 KERNEL = PROTO8 / "py" / "tools" / "aos" / "kernel" / "_entry"
-AGENT = PROTO8 / "cmd" / "aos-agent" / "bin" / "aos-agent"
+AGENT = PROTO8 / "bin" / "aos-agent"
 BINS = [str(PROTO8 / "bin")]
 
 
@@ -52,7 +52,7 @@ class QueryDaemonTest(unittest.TestCase):
         if self.daemon.poll() is None:
             self.assertEqual(os.readlink("/proc/%d/cwd" % self.daemon.pid), str(self.root))
             result = subprocess.run(
-                [str(PROTO8 / "cmd/aos-daemon-ctl/bin/aos-daemon-ctl"), "-d", str(self.stack), "shutdown"],
+                [str(PROTO8 / "bin/aos-daemon-ctl"), "-d", str(self.stack), "shutdown"],
                 cwd=self.root, env=self.env, text=True, capture_output=True, timeout=20)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.daemon.wait(timeout=20)

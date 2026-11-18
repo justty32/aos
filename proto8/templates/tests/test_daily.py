@@ -24,8 +24,8 @@ import unittest
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[2]            # 這份 proto8（複本從它抄）
 BIN = Path.home() / ".local" / "bin"
-FAKE_CLAUDE = REPO / "cmd" / "aos-eca" / "tests" / "fake_claude"
-GITIGNORE = REPO / "cmd" / "aos-agent" / "stack.gitignore"
+FAKE_CLAUDE = REPO / "py" / "tests" / "apps" / "eca" / "fake_claude"
+GITIGNORE = REPO / "py" / "aos" / "apps" / "agent" / "stack.gitignore"
 CLASSES = REPO / "thinking" / "2026-11" / "10" / "two-machines" / "gitignore_classes.json"
 PARTS = ("lib", "templates", "knowledge")
 MNTC_BASE = os.environ.get("AOS_TEST_MNTC_DIR")      # /mnt/c 上放試驗資料夾的地方（例：Windows 的 Temp），不寫死在檔裡

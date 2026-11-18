@@ -1,0 +1,360 @@
+# aos-sandbox - 照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap）
+#
+# 用法：aos-sandbox [--dry-run] [--] 設定檔 prog [args...]（形狀照 CONVENTION P-44）
+#   設定檔可寫 `檔#/指標`（例 `_metainfo.json#/sandbox`）；裡面的 {"$env", "$path", "$prefix"} 先換掉。
+#   做的事＝排好一條 chain-loading（s6 那套：每支改一下行程狀態就 exec 成剩下的），然後 exec 它，自己不留下來：
+#     [s6-softlimit 上限...] [s6-setuidgid 身分] bwrap 綁定... -- prog args...
+#   --dry-run：不跑，把那條 argv 印成一行 JSON（給 root 的人先看、測試看形狀）。
+# 設定（全選填；不認得的 key 忽略，C-48）：
+#   user     帳號名：root 用 s6-setuidgid，非 root 自動接 sudo -n -k /usr/local/bin/s6-setuidgid（拒絕＝UserBad）；uid:gid 要 root；sub:N 用 aos-asuser；沒寫＝不換身分
+#   base     路徑陣列：系統唯讀底（預設 /usr /bin /sbin /lib /lib64 /etc 裡存在的）
+#   commands 指令名陣列：照 PATH 找到它，所在資料夾唯讀看得到（例 aos-exec）
+#   ro、rw   路徑陣列：唯讀／可寫看得到（相對的從 cwd 算）。ro、rw 混在一起照路徑深淺排、淺的先綁＝**深的那條說了算**
+#            （11-13 線修 T32：rw [repo]＋ro [repo/.git]＝repo 可寫、.git 唯讀；反過來也行；同一條路徑兩邊都列＝rw）
+#            rw 裡的 $AOS_STACK 不在＝先建（11-11 tool-cells-lazy：aos-tools call 不先建工具小格）；其他路徑不在照舊 PathMissing
+#   net      布林：能不能連網（預設 false：只有自己的 loopback）
+#   mem_mb、cpu_s、procs、file_mb、files  正整數 → s6-softlimit 的 -a＋-d、-t、-p、-f、-o
+#   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個、hub 型的 AOS_DAEMON／AOS_LLM_KERNEL／AOS_KERNEL／AOS_CLOCK）；
+#            寫了＝整份取代 ENV_BASE，不是往預設上加（要預設那幾個就自己列）
+#   沒列到的路徑一律看不到；/proc、/dev、/tmp（空的、可寫、跑完就沒了）一定有。
+#   設定檔所在的資料夾（工具夾）沒被 ro／rw 蓋到＝自動唯讀綁（11-13 線修 T34：_entry 用相對路徑叫 inner，看不到工具夾就找不到）。
+#   最後把沙箱的根 / 改成唯讀（11-13 線修 T36）：寫到沒綁的地方＝Read-only file system、失敗，不再默默寫進暫存、退 0；
+#   能寫的只有 rw 列的與 /tmp。
+#   能不能用 LLM kernel 不另設開關（使用者 10-24「就是看他能不能存取檔案」）：信箱有綁進來（rw 列了 {"$env": "AOS_LLM_KERNEL", "$path": "/requests"}；
+#   AOS_LLM_KERNEL＝llm kernel 的 stack，只綁信箱、不綁整個 stack）、env 有帶 AOS_LLM_KERNEL 就能寄，
+#   沒有就看不到；再細的由信箱的擁有者、群組、權限位管（root/setup.sh --mailbox）。
+# 設定壞了（讀不了、不是 JSON、不是物件、某格型別不對、$ref、$env 沒設）＝當沒寫：不套沙箱、直接跑 prog，
+#   stderr 一行「aos-sandbox: warning: sandbox config ignored, running unsandboxed: 原因」（使用者 11-12 晚「甲，出事自己負責」；--dry-run 印的就只有 prog 那條）。
+#   設定不在（檔不在、#/ 指不到）與環境做不到（路徑不在、bwrap／s6／commands 列的指令不在、不是 root）照舊是錯。
+# 錯：stderr 一行「aos-sandbox: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、PathMissing、CommandMissing、UserBad；11-05 stdio-unify R1）。
+# 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。R8：退非 0 時 stderr 有 `aos-sandbox: error:` 這行＝這支錯；沒有＝下層（s6／bwrap／prog）的碼。
+# --help＝英文說明到 stdout、退 0（R3）。
+# 命令列形狀照 CONVENTION P-44（11-04）：用 proto8/py/aos/flags.py 解（`--dry-run=x`＝ArgumentsBad、不認得＝FlagUnknown）。
+import json, os, pwd, re, shutil, subprocess, sys
+
+from aos import flags as aos_flags  # noqa: E402
+
+BASE = ["/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc"]
+SUDO_SETUIDGID = "/usr/local/bin/s6-setuidgid"
+# 設定沒寫 env 時帶進去的環境變數（10-24 照 S12 的精神：PATH、語系、aos 自己的六個路徑；API key 一律不帶，要就在 env 明寫）
+ENV_BASE = ["PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PYTHONDONTWRITEBYTECODE", "PYTHONIOENCODING",
+            "AOS_ENTRY", "AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO",
+            "AOS_DAEMON", "AOS_LLM_KERNEL",   # hub 型（N-63）也帶：子 process 預設繼承（11-04 四元素審查）
+            "AOS_KERNEL", "AOS_CLOCK"]   # 其餘 hub 型（N-63 ③ 字面；使用者 11-06 選項框「預設補上」）
+# mem_mb 只設 -a（位址空間）與 -d（資料），不用 -m：-m 連堆疊上限也設成同一個數，glibc 開執行緒照堆疊上限配，
+# 一開執行緒就超過位址空間上限（aos-exec 退 1「Resource temporarily unavailable」；10-24 真腦實測 self-improve 撞到）
+LIMITS = [("mem_mb", ("-a", "-d"), 1024 * 1024), ("cpu_s", ("-t",), 1), ("procs", ("-p",), 1),
+          ("file_mb", ("-f",), 1024 * 1024), ("files", ("-o",), 1)]
+
+
+aos_flags.HELP = """aos-sandbox - run prog inside a sandbox built from a config: identity (s6-setuidgid), limits (s6-softlimit),
+which paths are visible and whether the network is reachable (bwrap).
+
+    aos-sandbox [--dry-run] [--] CONFIG prog [args...]
+
+CONFIG may be FILE#/pointer (e.g. _metainfo.json#/sandbox); {"$env", "$path", "$prefix"} in it are resolved first.
+It builds one chain-loading argv, [s6-softlimit LIMITS...] [s6-setuidgid USER] bwrap BINDS... -- prog args..., and execs it.
+--dry-run: do not run; print that argv as one JSON line.
+Config keys (all optional; unknown keys are ignored): user (account or uid:gid; sub:N = a subuid through aos-asuser, no root), base, commands, ro, rw (path arrays),
+  net (boolean, default false), mem_mb, cpu_s, procs, file_mb, files (positive integers), env (variable names to pass in;
+  default PATH, locale, TZ, PYTHON*, the six AOS_ run variables and the hub ones AOS_DAEMON, AOS_LLM_KERNEL, AOS_KERNEL,
+  AOS_CLOCK; an env list replaces that default as a whole, it does not add to it).
+For user, not root: an account name goes through `sudo -n -k /usr/local/bin/s6-setuidgid USER`
+  (the NOPASSWD sudoers rule from root/setup.sh); refused = UserBad. uid:gid needs root;
+  sudo refuses accounts with uid or gid 0. Account names use lowercase letters, digits, _, - and an optional final $.
+When ro and rw nest, the deeper path wins (rw [repo] + ro [repo/.git] = repo writable, .git read-only).
+The folder holding CONFIG is always visible (read-only unless an rw path covers it). After all binds / is made read-only:
+  only rw paths and /tmp (empty, gone when prog ends) are writable; a write anywhere else fails (Read-only file system).
+A broken CONFIG (unreadable, not JSON, not an object, a key of the wrong type, $ref, an unset $env) counts as not written:
+  prog runs WITHOUT a sandbox and stderr gets `aos-sandbox: warning: sandbox config ignored, running unsandboxed: reason`.
+  A CONFIG that is not there (no file, the pointer points at nothing) and things the machine lacks (a listed path,
+  bwrap, s6, a listed command, sudo permission for user) stay errors.
+Errors: one stderr line `aos-sandbox: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CfgMissing, PathMissing,
+  CommandMissing, UserBad. After the exec every exit code is prog's (killed by signal N = 128+N): exiting non-zero with an
+  `aos-sandbox: error:` line on stderr means aos-sandbox failed; without it the code comes from below."""
+
+
+def die(code, reason):
+    aos_flags.die("aos-sandbox", code, reason)
+
+
+class CfgBad(Exception):
+    """設定讀不出來或形狀不對：main 接住＝當沒寫，不套沙箱照跑、提醒一行（使用者 11-12 晚「甲，出事自己負責」）。"""
+
+
+def usage(code, reason):
+    die(code, reason + " (usage: aos-sandbox [--dry-run] [--] CONFIG prog [args...])")
+
+
+def parse_args(argv):
+    try:
+        opts, rest = aos_flags.parse(argv, {}, {"--dry-run": "dry"}, anywhere=True, keep=2)   # prog 起原樣交給它（P-44 續 11-11）
+    except aos_flags.Error as e:
+        usage(e.code, str(e))
+    dry = opts.get("dry", False)
+    if len(rest) < 2:
+        usage("ArgumentsBad", "needs a config file and a prog")
+    return dry, rest[0], rest[1:]
+
+
+def pointer(doc, ptr, where):
+    """RFC 6901：#/a/b；~1＝/、~0＝~。指不到＝CfgMissing。"""
+    if ptr == "":
+        return doc
+    if not ptr.startswith("/"):
+        raise CfgBad("%s: what follows # must start with /" % where)
+    for raw in ptr[1:].split("/"):
+        key = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(doc, dict) and key in doc:
+            doc = doc[key]
+        elif isinstance(doc, list) and key.isdigit() and int(key) < len(doc):
+            doc = doc[int(key)]
+        else:
+            die("CfgMissing", "%s points at nothing" % where)
+    return doc
+
+
+def load(spec):
+    path, _, ptr = spec.partition("#")
+    if not os.path.exists(path) and os.path.exists(path + ".json"):
+        path += ".json"
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except FileNotFoundError:
+        die("CfgMissing", "config file does not exist: %s" % path)
+    except (OSError, UnicodeDecodeError) as e:
+        raise CfgBad("cannot read config file: %s (%s)" % (path, e.__class__.__name__))
+    if text.startswith("#!"):                       # 第一行 #! 跳過（同 aos-exec 讀 JSON）
+        text = text[text.find("\n") + 1:] if "\n" in text else ""
+    try:
+        doc = json.loads(text)
+    except ValueError as e:
+        raise CfgBad("config file is not JSON: %s (%s)" % (path, e))
+    cfg = pointer(doc, ptr, spec)
+    if not isinstance(cfg, dict):
+        raise CfgBad("%s must be a JSON object" % spec)
+    return resolve(cfg, spec), os.path.dirname(os.path.abspath(path))
+
+
+def resolve(v, where):
+    """只解 $env（可帶 $path 字串接後面、$prefix 接前面）；其他指示詞（$ref）不支援＝CfgBad。"""
+    if isinstance(v, list):
+        return [resolve(x, where) for x in v]
+    if not isinstance(v, dict):
+        return v
+    if "$ref" in v:
+        raise CfgBad("%s: aos-sandbox resolves only $env, not $ref" % where)
+    if "$env" in v:
+        name = v["$env"]
+        if not isinstance(name, str) or name not in os.environ:
+            raise CfgBad("%s: $env %s is not set" % (where, name))
+        val = os.environ[name]
+        if isinstance(v.get("$path"), str):
+            val += v["$path"]
+        if isinstance(v.get("$prefix"), str):
+            val = v["$prefix"] + val
+        return val
+    return {k: resolve(x, where) for k, x in v.items()}
+
+
+def paths(cfg, key, default=None):
+    v = cfg.get(key, default)
+    if v is None:
+        return []
+    if not isinstance(v, list) or not all(isinstance(p, str) and p for p in v):
+        raise CfgBad("%s must be an array of non-empty strings" % key)
+    return [os.path.abspath(p) for p in v]
+
+
+def which(name, dry):
+    found = shutil.which(name)
+    if found is None:
+        if dry:
+            return name
+        die("CommandMissing", "%s not found on PATH" % name)
+    return os.path.abspath(found)
+
+
+def bind(opts, flag, path, dry):
+    """綁一個路徑到沙箱裡同一個位置。是符號連結的：沙箱裡也做同一條連結，再綁它指到的地方。"""
+    if not os.path.lexists(path):
+        if dry:
+            opts += [flag, path, path]
+            return
+        die("PathMissing", "path does not exist: %s" % path)
+    if os.path.islink(path):
+        opts += ["--symlink", os.readlink(path), path]
+        path = os.path.realpath(path)
+        if not os.path.exists(path):
+            die("PathMissing", "the link points to a missing path: %s" % path)
+        for i in range(len(opts) - 2):              # 指到的地方已用同一種方式綁過（例 /bin → /usr/bin 已在 /usr 裡）就不再綁
+            if opts[i] == flag and (path == opts[i + 1] or path.startswith(opts[i + 1].rstrip("/") + "/")):
+                return
+    opts += [flag, path, path]
+
+
+def depth(p):
+    """路徑有幾層（照實際位置：是符號連結的看它指到的地方，那才是掛載點）。"""
+    real = os.path.realpath(p) if os.path.lexists(p) else p
+    return len([x for x in real.split("/") if x])
+
+
+def ordered_binds(ro, rw):
+    """ro、rw 混在一起、淺的先綁（bwrap 後綁的蓋前面的＝深的說了算；T32）；同深度 ro 先、rw 後（同一條兩邊都列＝rw，同舊）。"""
+    items = [("--ro-bind", p) for p in ro] + [("--bind", p) for p in rw]
+    return sorted(items, key=lambda it: (depth(it[1]), it[0] == "--bind"))
+
+
+def covered(d, listed):
+    """d 已經在某條 ro／rw 裡（同一條或在它底下；照字面與實際位置各比一次）。"""
+    cands = {os.path.abspath(d), os.path.realpath(d)}
+    for p in listed:
+        for q in {os.path.abspath(p), os.path.realpath(p)}:
+            q = q.rstrip("/") or "/"
+            for c in cands:
+                if c == q or c.startswith(q.rstrip("/") + "/"):
+                    return True
+    return False
+
+
+def euid():
+    return os.geteuid()
+
+
+def precheck_sudo(sudo, user):
+    if euid() == 0:
+        return
+    true = next((path for path in ("/usr/bin/true", "/bin/true")
+                 if os.path.isfile(path) and os.access(path, os.X_OK)), None)
+    if true is None:
+        die("CommandMissing", "true not found in /usr/bin or /bin")
+    try:
+        result = subprocess.run([sudo, "-n", "-k", SUDO_SETUIDGID, user, true],
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.PIPE, text=True, errors="replace", timeout=10)
+        if result.returncode == 0:
+            return
+        lines = [line.strip() for line in (result.stderr or "").splitlines() if line.strip()]
+        reason = lines[0] if lines else "exit %d" % result.returncode
+    except subprocess.TimeoutExpired:
+        reason = "sudo timed out"
+    except OSError as exc:
+        reason = "cannot run sudo: %s" % exc.strerror
+    die("UserBad", "sudo -n -k %s %s refused or failed (%s); this needs the NOPASSWD sudoers rule and the account from root/setup.sh, or run as root" %
+        (SUDO_SETUIDGID, user, reason))
+
+
+def build(cfg, prog, dry, cfg_dir=None):
+    if "net" in cfg and type(cfg["net"]) is not bool:
+        raise CfgBad("net must be true or false")
+    chain = []
+    limits = []
+    for key, flags, mult in LIMITS:
+        if key in cfg:
+            v = cfg[key]
+            if type(v) is not int or v <= 0:
+                raise CfgBad("%s must be a positive integer" % key)
+            for flag in flags:
+                limits += [flag, str(v * mult)]
+    if limits:
+        chain += [which("s6-softlimit", dry)] + limits
+    user = cfg.get("user")
+    via_sudo = False
+    if user is not None:
+        if not isinstance(user, str) or not user:
+            raise CfgBad("user must be a non-empty string (account name or uid:gid)")
+        if user.startswith("sub:"):
+            number = user[4:]
+            if (not number.isascii() or not number.isdecimal() or number.startswith("0")
+                    or len(number) > 5 or not 1 <= int(number) <= 60000):
+                raise CfgBad("user sub:N needs N from 1 to 60000")
+            chain = [which("aos-asuser", dry), "--env-all", user, "--"] + chain
+        else:
+            account = len(user) <= 32 and re.fullmatch(r"[a-z_][a-z0-9_-]*[$]?", user)
+            numeric = re.fullmatch(r"[0-9]+:[0-9]+", user)
+            if not account and not numeric:
+                raise CfgBad("user must be an account name, uid:gid or sub:N")
+            if euid() != 0:
+                if numeric:
+                    die("UserBad", "uid:gid needs root; give an account name to go through sudo")
+                try:
+                    entry = pwd.getpwnam(user)
+                except KeyError:
+                    die("UserBad", "unknown account %s" % user)
+                if entry.pw_uid == 0 or entry.pw_gid == 0:
+                    die("UserBad", "refusing to switch to %s through sudo (uid or gid 0)" % user)
+                via_sudo = True
+            else:
+                which("s6-applyuidgid", dry)                # s6-setuidgid 照 PATH exec 它
+                chain += [which("s6-setuidgid", dry), user]
+    opts = ["--unshare-all", "--die-with-parent"]
+    if cfg.get("net", False):
+        opts.append("--share-net")
+    opts += ["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
+    names = cfg.get("env", ENV_BASE)                # 環境白名單（10-24；API key 不跟著進沙箱）
+    if not isinstance(names, list) or not all(isinstance(n, str) and n and "=" not in n for n in names):
+        raise CfgBad("env must be an array of environment variable names")
+    base = paths(cfg, "base") if "base" in cfg else [p for p in BASE if os.path.lexists(p)]
+    for p in base:
+        bind(opts, "--ro-bind", p, dry)
+    cmds = cfg.get("commands", [])
+    if not isinstance(cmds, list) or not all(isinstance(c, str) and c for c in cmds):
+        raise CfgBad("commands must be an array of non-empty strings")
+    for c in cmds:
+        found = which(c, dry)
+        real_dir = os.path.dirname(os.path.realpath(found))
+        for d in dict.fromkeys([os.path.dirname(found), real_dir]):
+            if d:
+                bind(opts, "--ro-bind", d, dry)
+        # <家>/bin/ 的 Python 命令跑同一個家 lib/ 裡的 aos 套件（入口是 install.py 生的，11-18 S5），整夾唯讀綁。
+        lib_dir = os.path.join(os.path.dirname(real_dir), "lib")
+        if os.path.basename(real_dir) == "bin" and os.path.isfile(os.path.join(lib_dir, "aos", "__init__.py")):
+            bind(opts, "--ro-bind", lib_dir, dry)
+    ro, rw = paths(cfg, "ro"), paths(cfg, "rw")
+    stack = os.environ.get("AOS_STACK")
+    for p in rw:
+        if stack and not dry and not os.path.lexists(p) and os.path.abspath(p) == os.path.abspath(stack):
+            try:                                    # 11-11 tool-cells-lazy：小格不先建，綁給裡面寫的 $AOS_STACK 由這支先建
+                os.makedirs(p)
+            except OSError as e:
+                die("PathMissing", "cannot create %s: %s" % (p, e.strerror or e))
+    if cfg_dir and not covered(cfg_dir, ro + rw):   # T34：工具夾自己沒列到＝唯讀綁
+        ro = ro + [cfg_dir]
+    for flag, p in ordered_binds(ro, rw):
+        bind(opts, flag, p, dry)
+    opts += ["--remount-ro", "/"]                   # T36：根唯讀，沒綁的地方寫不進去（綁定都在這之前）
+    opts.append("--clearenv")
+    for n in dict.fromkeys(names):
+        if n in os.environ:
+            opts += ["--setenv", n, os.environ[n]]
+    chain += [which("bwrap", dry)] + opts + ["--"] + prog
+    if via_sudo:
+        sudo = which("sudo", dry)
+        if not dry and not (os.path.isfile(SUDO_SETUIDGID) and os.access(SUDO_SETUIDGID, os.X_OK)):
+            die("CommandMissing", "%s not found (install it with root/setup.sh)" % SUDO_SETUIDGID)
+        chain = [sudo, "-n", "-k", SUDO_SETUIDGID, user] + chain
+    return chain
+
+
+def main():
+    dry, spec, prog = parse_args(sys.argv[1:])
+    try:
+        cfg, cfg_dir = load(spec)
+        chain = build(cfg, prog, dry, cfg_dir)
+    except CfgBad as e:                             # 設定是觀點：壞了＝當沒寫＝不套沙箱，直接跑 prog（照 PATH 找）
+        aos_flags.warn("aos-sandbox", "sandbox config ignored, running unsandboxed: %s" % e)
+        chain = [which(prog[0], dry)] + prog[1:]
+    if dry:
+        print(json.dumps(chain, ensure_ascii=False))
+        return
+    if chain[1:4] == ["-n", "-k", SUDO_SETUIDGID]:
+        precheck_sudo(chain[0], chain[4])
+    try:
+        os.execv(chain[0], chain)
+    except OSError as e:
+        die("CommandMissing", "cannot start %s: %s" % (chain[0], e))
+
+
+if __name__ == "__main__":
+    main()

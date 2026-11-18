@@ -56,7 +56,7 @@ class DoTaskFold(unittest.TestCase):
         cls.daemon_stack.mkdir()
         kernel_stack.mkdir()
         env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-        bins = [str(PROTO / 'bin')] + [str(p) for p in (PROTO / 'cmd').glob('*/bin')]
+        bins = [str(PROTO / 'bin')]
         env['PATH'] = os.pathsep.join(bins + [env['PATH']])
         env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'py')])
         env.update(AOS_STACK=str(cls.daemon_stack), AOS_CD=str(root), AOS_WS=str(root), AOS_HOME=str(PROTO),

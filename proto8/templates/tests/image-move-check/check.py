@@ -198,9 +198,9 @@ class Check:
         # Apply the documented per-stack filters only after the whole tree sleeps.
         source = self.image
         for stack in (self.root, self.kernel, self.foreman):
-            self.run(["cp", str(self.repo / "cmd/aos-agent/stack.gitignore"),
+            self.run(["cp", str(self.repo / "py/aos/apps/agent/stack.gitignore"),
                       str(stack / ".gitignore")])
-        self.run(["cp", str(self.repo / "cmd/aos-agent/stack.gitattributes"),
+        self.run(["cp", str(self.repo / "py/aos/apps/agent/stack.gitattributes"),
                   str(source / ".gitattributes")])
         (source / ".gitignore").write_text("ws/.trash/\n")
         self.run(["git", "init", "-b", "main", str(source)])

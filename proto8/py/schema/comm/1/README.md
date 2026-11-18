@@ -25,7 +25,7 @@ aos-comm check FILE --builtin                # 不用 Python jsonschema，用內
 
 ## samples/
 
-每份至少一個該過（`-ok`）、一個該不過（`-bad`）；`proto8/cmd/aos-comm/tests/` 兩種驗證器都跑一遍，名字帶 `-ok` 的要過、帶 `-bad` 的要不過。
+每份至少一個該過（`-ok`）、一個該不過（`-bad`）；`proto8/py/tests/apps/comm/` 兩種驗證器都跑一遍，名字帶 `-ok` 的要過、帶 `-bad` 的要不過。
 
 | 樣本 | 該 | 為什麼 |
 |---|---|---|

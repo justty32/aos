@@ -173,7 +173,7 @@ class PathsMove(unittest.TestCase):
         out = "AOS_HOME %s" % {"env": "exported"}.get(mode, "in .env: " + (proj / "defs" / ".env").read_text().split("AOS_HOME=", 1)[1].split("\n", 1)[0])
         for stacks in (proj / "stacks", llms / "stacks"):
             stacks.mkdir()
-            shutil.copyfile(REPO / "cmd" / "aos-agent" / "stack.gitignore", stacks / ".gitignore")
+            shutil.copyfile(REPO / "py" / "aos" / "apps" / "agent" / "stack.gitignore", stacks / ".gitignore")
         log("built %s (%s):\n    %s" % (base, mode, out.strip().replace("\n", "\n    ")))
         return proj, llms
 

@@ -15,7 +15,7 @@ BASE = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
 
 
 def run(prog, *argv, env=None):
-    exe = {'aos-eca-screen': PROTO / 'cmd' / 'aos-eca' / 'bin' / 'aos-eca-screen'}.get(prog, PROTO / 'cmd' / prog / 'bin' / prog)
+    exe = PROTO / 'bin' / prog
     return subprocess.run([sys.executable, str(exe), *argv], env=dict(BASE, **(env or {})),
                           capture_output=True, text=True, timeout=30)
 

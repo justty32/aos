@@ -10,7 +10,7 @@ import unittest
 
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[2]
-sys.path[:0] = [str(PROTO / "py"), str(PROTO / "cmd" / "aos-agent" / "tests")]
+sys.path[:0] = [str(PROTO / "py"), str(PROTO / "py" / "tests" / "apps" / "agent")]
 from aos import ws as aos_ws  # noqa: E402
 
 L1, L2 = "000000000001.q", "000000000002.q"

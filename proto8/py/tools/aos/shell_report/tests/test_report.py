@@ -29,7 +29,7 @@ class ShellReportTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        self.env = patch.dict(os.environ, {'PATH': str(HERE.parents[3] / 'cmd/aos-tools/bin') + os.pathsep + os.environ['PATH']})
+        self.env = patch.dict(os.environ, {'PATH': str(HERE.parents[3] / 'bin') + os.pathsep + os.environ['PATH']})
         self.env.start()
 
     def tearDown(self):

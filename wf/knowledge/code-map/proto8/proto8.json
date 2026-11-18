@@ -3,6 +3,6 @@
  "generated_by": "wf/tools/index_gen.py",
  "tree": {
   "env.sh": "aos environment: run \"source <proto8>/env.sh\" (bash or zsh) in every window before using aos; AOS_HOME becomes this proto8 folder.",
-  "install.py": "build and install aos in place: checks dependencies, builds cpp/ with make, fills bin/, lib/ and include/."
+  "install.py": "build and install aos in place: checks dependencies, builds cpp/ with make, fills bin/, lib/ and include/, writes the Python commands' entries."
  }
 }

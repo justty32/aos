@@ -1327,13 +1327,13 @@ class HomeFolders(Base):
     def setUp(self):
         super().setUp()
         self.home = os.path.join(self.tmp.name, "aoshome")
-        for p in ("lib", "cmd", "templates", "knowledge", "ws"):
+        for p in ("lib", "bin", "templates", "knowledge", "ws"):
             os.makedirs(os.path.join(self.home, p))
         self.allow = [self.home]
         self.env = {"AOS_HOME": self.home}
 
     def test_product_folders_blocked(self):
-        for p in ("lib", "cmd", "templates", "knowledge"):
+        for p in ("lib", "bin", "templates", "knowledge"):
             with self.subTest(folder=p):
                 out = self.blocked("write", {"path": os.path.join(self.home, p, "x", "y.py")}, env_extra=self.env)
                 self.assertIn("no agent may write (%s, from AOS_HOME)" % os.path.join(self.home, p), out)

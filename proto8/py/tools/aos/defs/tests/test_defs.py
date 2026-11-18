@@ -10,7 +10,7 @@ import unittest
 
 ENTRY = Path(__file__).resolve().parents[1] / '_entry'
 PROTO = ENTRY.parents[4]
-TOOLS_BIN = PROTO / 'cmd' / 'aos-tools' / 'bin'
+TOOLS_BIN = PROTO / 'bin'
 
 
 class DefinitionsTest(unittest.TestCase):

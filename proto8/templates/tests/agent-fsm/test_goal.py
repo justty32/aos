@@ -47,7 +47,7 @@ class Base(unittest.TestCase):
         (self.d / "procs_state.json").write_text(json.dumps(
             {"procs": {"bob": {"phase": "running", "stack": "procs/bob", "ws": "../ws", "def": str(self.defn)}}}))
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        bins = [str(PROTO / "bin")] + [str(p) for p in sorted(PROTO.glob("cmd/*/bin"))]
+        bins = [str(PROTO / "bin")]
         self.env = dict(env, PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_HOME=str(PROTO),
                         PYTHONPATH=os.pathsep.join([str(PROTO / "py")]), PYTHONDONTWRITEBYTECODE="1",
                         AOS_STACK=str(self.stack), AOS_CD=str(self.defn), AOS_WS=str(self.ws), AOS_DAEMON=str(self.d),

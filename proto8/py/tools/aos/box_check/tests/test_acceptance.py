@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[5]
-BOXED = ROOT / 'cmd/aos-sandbox/examples/shell-boxed'
+BOXED = ROOT / 'py/aos/apps/sandbox/examples/shell-boxed'
 CHECK = ROOT / 'py/tools/aos/box_check'
 # The box-probe case that used to live in proto8/cases/box-probe: five escape probes run through tools/shell.
 PROBE = '\n'.join([
@@ -25,7 +25,7 @@ class Acceptance(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.env = {key: value for key, value in os.environ.items() if not key.startswith('AOS_')}
-        bins = [str(path) for path in [ROOT / 'bin'] + sorted((ROOT / 'cmd').glob('*/bin'))]
+        bins = [str(ROOT / 'bin')]
         s6 = Path.home() / 'code/try/sandbox/s6-root/bin'
         self.env['PATH'] = os.pathsep.join(bins + [str(s6), self.env['PATH']])
         self.env['PYTHONPATH'] = str(ROOT / 'py')

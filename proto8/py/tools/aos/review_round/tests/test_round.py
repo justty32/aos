@@ -38,7 +38,7 @@ class ReviewRound(unittest.TestCase):
             path.mkdir()
         self.env = {key: value for key, value in os.environ.items()
                     if not key.startswith('AOS_')}
-        bins = [str(path) for path in [PROTO / 'bin'] + sorted((PROTO / 'cmd').glob('*/bin'))]
+        bins = [str(PROTO / 'bin')]
         self.env.update(PATH=os.pathsep.join(bins + [self.env['PATH']]),
                         PYTHONPATH=os.pathsep.join([str(PROTO / 'py')]),
                         PYTHONDONTWRITEBYTECODE='1',

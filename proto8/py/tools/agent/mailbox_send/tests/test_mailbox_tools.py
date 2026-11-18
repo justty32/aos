@@ -29,7 +29,7 @@ class MailboxTools(unittest.TestCase):
         (bin_ / "aos-agent").chmod(0o755)
         for n in ("ws", "alice", "bob"):
             (self.tmp / n).mkdir()
-        path = "%s:%s:%s" % (bin_, PROTO / "cmd" / "aos-mailbox" / "bin", os.environ["PATH"])
+        path = "%s:%s:%s" % (bin_, PROTO / "bin", os.environ["PATH"])
         self.env = dict(os.environ, PATH=path, AOS_WS=str(self.tmp / "ws"), AOS_STACK=str(self.tmp / "alice" / "tools" / "x"),
                         PYTHONDONTWRITEBYTECODE="1")
 

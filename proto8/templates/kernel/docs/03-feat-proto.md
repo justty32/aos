@@ -4,7 +4,7 @@
 
 使用者 11-05 午：「讓agent給自己改tool，把endpoint打包成smart-high, stupid-fast, ...這類，並且附上各種屬性(各種temperature也固定)，讓kernel能根據信件中額外附送的priority之類資訊做排程，讓agent利用aos指令產出另一個agent」「啊，還有，會想要限制特定aos proc所占用的資源。以及daemon/kernel自己本身被限制占用資源，並且會分配份額給proc」。設計：[thinking feat-proto](../../../thinking/2026-11/05/feat-proto/README.md)。
 
-下面四段都是假腦（[01](01-llm-kernel.md) 的 `fake-demo-*` 包照劇本回答），零成本、可重跑；每段從空的 `/tmp/feat-s9-*` 起、各起自己的 llm daemon（背景，`K=$!`／`D=$!` 記 pid），跑完 `kill` 收工。PATH 放 `proto8/cpp/*/bin`、`proto8/cmd/*/bin`（或 `source proto8/env.sh`；或跑過選配的 `proto8/cmd/install.sh`）；`P` 換成你的 repo。
+下面四段都是假腦（[01](01-llm-kernel.md) 的 `fake-demo-*` 包照劇本回答），零成本、可重跑；每段從空的 `/tmp/feat-s9-*` 起、各起自己的 llm daemon（背景，`K=$!`／`D=$!` 記 pid），跑完 `kill` 收工。PATH 放 `proto8/bin`（或 `source proto8/env.sh`）；`P` 換成你的 repo。
 
 ### 件 1：agent 給自己加工具（`self_tools`）
 

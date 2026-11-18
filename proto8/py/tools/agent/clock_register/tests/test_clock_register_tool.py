@@ -29,7 +29,7 @@ class ClockRegisterTool(unittest.TestCase):
         (bin_ / "aos-agent").chmod(0o755)
         for n in ("ws", "root", "ann"):
             (self.tmp / n).mkdir()
-        path = "%s:%s:%s" % (bin_, PROTO / "cmd" / "aos-clock-register" / "bin", os.environ["PATH"])
+        path = "%s:%s:%s" % (bin_, PROTO / "bin", os.environ["PATH"])
         self.clock = self.tmp / "root" / "clock"
         self.env = dict(os.environ, PATH=path, AOS_WS=str(self.tmp / "ws"), AOS_STACK=str(self.tmp / "ann" / "tools" / "x"),
                         AOS_CLOCK=str(self.clock), FAKE_STACK=str(self.tmp / "ann"), PYTHONDONTWRITEBYTECODE="1")
@@ -51,7 +51,7 @@ class ClockRegisterTool(unittest.TestCase):
         table = json.loads((self.tmp / "root" / "clock_register.json").read_text())["letters"]
         self.assertEqual(table["wake"]["by"], "ann")
         for _ in range(2):
-            subprocess.run([sys.executable, str(PROTO / "cmd" / "aos-clock" / "bin" / "aos-clock"), str(self.clock)],
+            subprocess.run([sys.executable, str(PROTO / "bin" / "aos-clock"), str(self.clock)],
                            check=True, env=self.env)
         new = self.tmp / "ann" / "queue" / "new"
         letters = [json.loads((new / n / "letter.json").read_text()) for n in os.listdir(new)]
@@ -72,7 +72,7 @@ class ClockRegisterTool(unittest.TestCase):
         self.assertIn("at\tat 20", ls)
         self.assertIn("mon\tcron 0 9 * * 1 next 20", ls)
         for _ in range(3):
-            subprocess.run([sys.executable, str(PROTO / "cmd" / "aos-clock" / "bin" / "aos-clock"), str(self.clock)],
+            subprocess.run([sys.executable, str(PROTO / "bin" / "aos-clock"), str(self.clock)],
                            check=True, env=self.env)
         new = self.tmp / "ann" / "queue" / "new"
         self.assertEqual([json.loads((new / n / "letter.json").read_text())["body"]["content"] for n in os.listdir(new)],

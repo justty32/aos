@@ -1,0 +1,26 @@
+{
+ "description": "The Python commands: install.py writes one bin/<command> per line (a few lines that put lib/ on sys.path and run the module as __main__). Add a command here, then rerun install.py.",
+ "commands": {
+  "aos-agent": "aos.apps.agent.main",
+  "aos-asuser": "aos.apps.asuser.main",
+  "aos-clock": "aos.apps.clock.main",
+  "aos-clock-register": "aos.apps.clock_register.main",
+  "aos-comm": "aos.apps.comm.main",
+  "aos-daemon-ctl": "aos.apps.daemon_ctl.main",
+  "aos-eca-screen": "aos.apps.eca.main_screen",
+  "aos-eca-turn": "aos.apps.eca.main_turn",
+  "aos-feedback": "aos.apps.feedback.main",
+  "aos-grow": "aos.apps.grow.main",
+  "aos-json-view": "aos.apps.json_view.main",
+  "aos-kit": "aos.apps.kit.main",
+  "aos-mailbox": "aos.apps.mailbox.main",
+  "aos-mcp": "aos.apps.mcp.main",
+  "aos-mcp-import": "aos.apps.mcp_import.main",
+  "aos-mcp-launch": "aos.apps.mcp_launch.main",
+  "aos-sandbox": "aos.apps.sandbox.main",
+  "aos-share": "aos.apps.share.main",
+  "aos-sweeper": "aos.apps.sweeper.main",
+  "aos-tools": "aos.apps.tools.main",
+  "aos-tree-start": "aos.apps.tree_start.main"
+ }
+}

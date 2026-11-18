@@ -58,7 +58,7 @@ class FakeAgentMeasure(unittest.TestCase):
                 stack.mkdir()
             defs = root / 'defs'
             defs.mkdir()
-            bins = [str(path) for path in [PROTO / 'bin'] + sorted((PROTO / 'cmd').glob('*/bin'))]
+            bins = [str(PROTO / 'bin')]
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
             env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'py')])
@@ -118,7 +118,7 @@ class FakeAgentMeasure(unittest.TestCase):
             # Log actual public API invocations while forwarding every command unchanged.
             shim = root / 'bin'
             shim.mkdir()
-            real_agent = str(PROTO / 'cmd/aos-agent/bin/aos-agent')
+            real_agent = str(PROTO / 'bin/aos-agent')
             control_log = root / 'control.jsonl'
             forwarding = shim / 'aos-agent'
             forwarding.write_text('#!/usr/bin/env python3\n# Forward and record real agent control calls.\n'

@@ -1,0 +1,370 @@
+"""aos-json-view [旗標] FILE[#/指標] — 只讀：把一份 json（或其中一段）印成人好讀的樣子，不改任何檔。
+出處：11-13 晚使用者「直接看json當然不好讀。建議幫我弄個程式，把json內的換行弄好，格式這塊稍微緊湊些。」
+縮排每層兩格，第一格畫 `|`（導引線，上色時顏色隨深度 6 色輪換；折行的續行照畫，不斷線）；上色時值依型別各一色（11-13 晚使用者「彩色字，就是bool一個顏色，int一個顏色。然後縮排這塊，不是兩個空格嗎，第一個空格幫我換成|，然後顏色要隨着深度不同而變換」）。
+印法：物件＝`鍵: 值` 一行一鍵、同層鍵名對齊；短的物件／陣列擠成一行（`{a: 1, b: x}`、`[a, b]`）；陣列元素前面 `- `。
+字串不加引號；字串裡的 `\\n` 真的換行；字串陣列（非空、每個元素都是字串，thinking/2026-11/13/text-as-string-array 那條認法）當一段文字，一個元素一行。
+長的一行照終端寬度折行（中日文算兩格），折出來的續行多縮兩格，看得出哪裡是元素邊界。`$ref` 的值前面加 `→ `，原字串照印、不展開。
+字串裡的控制字元（換行以外）印成 `\\xNN`，不讓檔案內容改到終端。
+給了指標＝開頭先印一行 `# FILE#/指標`（看的是哪一段）。`--depth N`：只展開到第 N 層，再深的物件／陣列摺成 `{…3 keys}`／`[…5 items]`，字串陣列是一段文字、不摺（11-13 晚使用者「都按照推薦」）。
+旗標：`--color`／`--no-color`（預設：stdout 是終端且沒設 NO_COLOR 才上色）、`--width N`（預設終端寬，不是終端＝COLUMNS 或 100）。
+指標：`FILE#/a/0/b`（RFC 6901，`~0`＝~、`~1`＝/），或第二個位置參數 `#/a/0/b`；FILE 本身就叫 `x#y` 而且存在＝照字面當檔名。
+錯：stderr 一行 `aos-json-view: error: 代號 原因`、退 1。代號 ArgumentsBad、FlagUnknown、FileBad（讀不到或不是 json）、PointerBad（指標指不到）。"""
+import json
+import os
+import re
+import shutil
+import sys
+import unicodedata
+
+from aos import flags as aos_flags
+
+PROG = "aos-json-view"
+USAGE = "aos-json-view [FLAGS] FILE[#/POINTER] [#/POINTER]"
+FLAGS = {"--width": "width", "--depth": "depth"}
+SWITCHES = {"--color": "color", "--no-color": "no_color"}
+aos_flags.HELP = """aos-json-view - print a JSON file (or one part of it) in a compact, readable layout. Read only.
+
+    aos-json-view [FLAGS] FILE[#/POINTER] [#/POINTER]
+
+Layout: objects become `key: value` lines with aligned keys; short objects and arrays stay on one
+line ({a: 1, b: x}, [a, b]); longer arrays list items after `- `. Strings are printed without quotes,
+"\\n" inside a string starts a new line, and an array of strings is shown as one block of text, one
+element per line. Long lines wrap at the terminal width (wide CJK characters count as 2); a wrapped
+continuation is indented 2 more columns. Each indent level is "| " (a guide line); with colour the
+guides change colour by depth (6 colours, cycling) and values are coloured by type: string green,
+integer yellow, float orange, true/false magenta, null red, $ref underlined sky blue, keys bold cyan. A "$ref" value is shown as `-> target`, not followed.
+Control characters in strings are shown as \\xNN.
+
+    --color / --no-color   colour on or off (default: on when stdout is a terminal and NO_COLOR is unset)
+    --width N              wrap width (default: terminal width, else $COLUMNS, else 100)
+    --depth N              expand only N levels; deeper objects/arrays show as {…3 keys} / […5 items]
+                           (arrays of strings are text and are never folded)
+
+With a POINTER, the first line is `# FILE#POINTER` (which part you are looking at).
+
+POINTER is a JSON pointer (RFC 6901): FILE#/a/0/b, or a second argument #/a/0/b.
+Errors: one stderr line `aos-json-view: error: CODE reason`, exit 1.
+Codes: ArgumentsBad, FlagUnknown, FileBad (cannot read / not JSON), PointerBad (nothing there)."""
+
+# 顏色（11-13 晚使用者「彩色字，就是bool一個顏色，int一個顏色。」）：16 色裡避開藍（深底看不清）與黑白，
+# 細分的用 256 色的中亮度色，深底淺底都看得到。README 有對照表。
+STYLE = {"key": "1;36",            # 鍵名：粗體青
+         "str": "32",              # 字串：綠
+         "int": "33",              # 整數：黃
+         "float": "38;5;208",      # 浮點：橘
+         "bool": "35",             # true／false：洋紅
+         "null": "31",             # null：紅
+         "ref": "4;38;5;75",       # $ref：底線天藍
+         "fold": "3;38;5;245",     # --depth 摺起來的：斜體灰
+         "punct": "38;5;245",      # 括號、冒號、逗號、`- `：灰
+         "head": "1"}              # 指標標頭行：粗體
+# 縮排導引線 `|` 隨深度輪換的 6 色（第 1 層起循環）
+GUIDE = ["38;5;203", "38;5;214", "38;5;113", "38;5;80", "38;5;111", "38;5;177"]
+INLINE_MAX = 72        # 擠成一行的物件／陣列最多幾格寬（再寬就拆行，比較好讀）
+TAG_MAX = 24           # 字串陣列裡每個元素都不超過這寬才擠成 [a, b]，否則當一段文字
+KEY_PAD_MAX = 24       # 鍵名對齊最多補到這寬
+HANG = 2               # 折行的續行多縮幾格
+
+
+class Folded:
+    """--depth 摺起來的物件／陣列：印成 {…N keys}／[…N items]。"""
+    def __init__(self, v):
+        n = len(v)
+        if isinstance(v, dict):
+            self.text = "{…%d key%s}" % (n, "" if n == 1 else "s")
+        else:
+            self.text = "[…%d item%s]" % (n, "" if n == 1 else "s")
+
+
+def fold(v, depth, level=0):
+    """第 depth 層（最外層＝0）起的非空物件／陣列換成 Folded（字串陣列除外）。"""
+    if isinstance(v, (dict, list)) and v:
+        if text_lines(v) is not None:                     # 字串陣列＝一段文字，跟字串一樣不摺
+            return v
+        if level >= depth:
+            return Folded(v)
+        if isinstance(v, dict):
+            return {k: fold(x, depth, level + 1) for k, x in v.items()}
+        return [fold(x, depth, level + 1) for x in v]
+    return v
+
+
+def die(code, msg):
+    aos_flags.die(PROG, code, msg)
+
+
+def dw(s):
+    """顯示寬度：東亞全形／寬字算 2、組合字元算 0。"""
+    n = 0
+    for ch in s:
+        if unicodedata.combining(ch):
+            continue
+        n += 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+    return n
+
+
+_CTRL = re.compile(r"[\x00-\x09\x0b-\x1f\x7f]")
+
+
+def clean(s):
+    """控制字元（換行以外）→ \\xNN；TAB 也算（排版會亂）。"""
+    return _CTRL.sub(lambda m: "\\x%02x" % ord(m.group()), s)
+
+
+def wrap(s, w):
+    """把一行（不含換行）折成每行不超過 w 格；英數字詞不拆（比一行還長才硬拆），中日文字字可斷。"""
+    w = max(w, 8)
+    lines, cur, cw = [], "", 0
+    for tok in re.findall(r" +|[\x21-\x7e]+|.", s):
+        tw = dw(tok)
+        if tok.startswith(" "):
+            if not cur:
+                continue
+            if cw + tw <= w:
+                cur, cw = cur + tok, cw + tw
+            else:
+                lines.append(cur.rstrip())
+                cur, cw = "", 0
+            continue
+        if cw + tw <= w:
+            cur, cw = cur + tok, cw + tw
+            continue
+        if tw <= w and cur:
+            lines.append(cur.rstrip())
+            cur, cw = tok, tw
+            continue
+        for ch in tok:
+            c = dw(ch)
+            if cw + c > w and cur:
+                lines.append(cur.rstrip())
+                cur, cw = "", 0
+            cur, cw = cur + ch, cw + c
+    lines.append(cur.rstrip())
+    return lines
+
+
+def text_lines(v):
+    """這個值是一段文字嗎：字串（帶換行才算多行）或非空、全是字串的陣列 → 回各行；否則 None。"""
+    if isinstance(v, str):
+        return v.split("\n")
+    if isinstance(v, list) and v and all(isinstance(x, str) for x in v):
+        out = []
+        for x in v:
+            out.extend(x.split("\n"))
+        return out
+    return None
+
+
+class View:
+    """排版：每行先存成 (縮排欄數, 內容)，最後才把縮排畫成導引線（每層兩格的第一格是 `|`，顏色隨深度輪換）。
+    折行的續行同樣帶它那一行的縮排欄數，導引線不會斷。"""
+    def __init__(self, width=100, color=False):
+        self.width, self.color = width, color
+        self.out = []
+
+    def p(self, text, style):
+        if not self.color or style is None or not text:   # style 0＝第 0 層導引線的顏色，不是「不上色」
+            return text
+        code = STYLE[style] if isinstance(style, str) else GUIDE[style % len(GUIDE)]
+        return "\x1b[%sm%s\x1b[0m" % (code, text)
+
+    def guides(self, n):
+        """縮排 n 欄：每兩欄一層，第一欄畫 `|`（第 i 層一個顏色），第二欄空白；n 是奇數的最後一欄補空白。"""
+        return "".join(self.p("|", i) + " " for i in range(n // 2)) + " " * (n % 2)
+
+    # ---- 一行的形（回 (純文字寬, 上過色的字) 或 None） ----
+    def scalar(self, v, in_container=False, ref=False):
+        if isinstance(v, Folded):
+            return dw(v.text), self.p(v.text, "fold")
+        if isinstance(v, bool):
+            t = json.dumps(v)
+            return dw(t), self.p(t, "bool")
+        if v is None:
+            return 4, self.p("null", "null")
+        if isinstance(v, (int, float)):
+            t = json.dumps(v)
+            return dw(t), self.p(t, "int" if isinstance(v, int) else "float")
+        s = clean(v)
+        if ref:
+            t = "-> " + s
+            return dw(t), self.p(t, "ref")
+        if s == "" or (in_container and (re.search(r"[,\[\]{}]|: ", s) or s != s.strip())):
+            s = json.dumps(s, ensure_ascii=False)
+        return dw(s), self.p(s, "str")
+
+    def inline(self, v, budget, ref=False, in_container=False):
+        if isinstance(v, str):
+            if "\n" in v:
+                return None
+            r = self.scalar(v, in_container, ref)
+            return r if r[0] <= budget else None
+        if not isinstance(v, (list, dict)):
+            r = self.scalar(v)
+            return r if r[0] <= budget else None
+        budget = min(budget, INLINE_MAX)
+        if not v:
+            t = "[]" if isinstance(v, list) else "{}"
+            return 2, self.p(t, "punct")
+        if isinstance(v, list) and all(isinstance(x, str) for x in v) and (
+                any(dw(x) > TAG_MAX or not x.strip() or "\n" in x for x in v) or v[0].startswith("# ")):
+            return None                                   # 像一段文字的字串陣列（有長句、空行、md 標題）不擠
+        parts, total = [], 2
+        items = v.items() if isinstance(v, dict) else ((None, x) for x in v)
+        for k, x in items:
+            r = self.inline(x, budget, ref=(k == "$ref"), in_container=True)
+            if r is None:
+                return None
+            pw, pt = r
+            if k is not None:
+                kt = clean(k) or '""'
+                pw += dw(kt) + 2
+                pt = self.p(kt, "key") + self.p(":", "punct") + " " + pt
+            total += pw + (2 if parts else 0)
+            if total > budget:
+                return None
+            parts.append(pt)
+        o, c = ("[", "]") if isinstance(v, list) else ("{", "}")
+        return total, self.p(o, "punct") + self.p(", ", "punct").join(parts) + self.p(c, "punct")
+
+    # ---- 多行的形 ----
+    def emit_text(self, lines, ind, head=("", 0), style="str", hang=HANG):
+        """一段文字，縮排 ind。head＝(第一行縮排後先印的字〔已上色〕, 它的寬)；續行從 ind＋head 寬＋hang 起。"""
+        first = True
+        for line in lines:
+            line = clean(line)
+            pre, pw = head if first else ("", 0)
+            pieces = wrap(line, self.width - ind - pw) if line else [""]
+            self.out.append((ind, pre + self.p(pieces[0], style)))
+            for piece in pieces[1:]:
+                self.out.append((ind, " " * (pw + hang) + self.p(piece, style)))
+            first = False
+
+    def block(self, v, ind, dash=False):
+        """v 放在縮排 ind 的位置。dash＝陣列的一項：第一行退兩欄、前面加 `- `。"""
+        start = len(self.out)
+        r = None if (ind == 0 and not dash and isinstance(v, (dict, list)) and v) else \
+            self.inline(v, self.width - ind)              # 最外層的物件／陣列一律展開
+        lines = text_lines(v)
+        if r is not None:
+            self.out.append((ind, r[1]))
+        elif lines is not None:
+            self.emit_text(lines, ind)
+        elif isinstance(v, dict):
+            self.obj(v, ind)
+        else:
+            self.arr(v, ind)
+        if dash and len(self.out) > start:
+            n, text = self.out[start]
+            self.out[start] = (ind - 2, self.p("-", "punct") + " " + " " * (n - ind) + text)
+
+    def obj(self, d, ind):
+        flat = [k for k, x in d.items()
+                if not isinstance(x, (dict, list)) and not (isinstance(x, str) and "\n" in x)
+                or self.inline(x, self.width) is not None]
+        pad = min(max([dw(clean(k) or '""') for k in flat] or [0]), KEY_PAD_MAX)
+        for k, x in d.items():
+            kt = clean(k) or '""'
+            kw = dw(kt)
+            head = self.p(kt, "key") + self.p(":", "punct")
+            vw = max(kw, pad if k in flat else 0) + 2      # 值從縮排後第幾欄開始
+            r = self.inline(x, self.width - ind - vw, ref=(k == "$ref"))
+            if r is not None:
+                self.out.append((ind, head + " " * (vw - kw - 1) + r[1]))
+                continue
+            if isinstance(x, str) and "\n" not in x and ind + vw <= self.width * 0.4:
+                ref = k == "$ref"
+                self.emit_text([("-> " if ref else "") + x], ind, (head + " " * (vw - kw - 1), vw),
+                               "ref" if ref else "str", hang=0)
+                continue
+            self.out.append((ind, head))
+            self.block(x, ind + 2)
+
+    def arr(self, a, ind):
+        for x in a:
+            self.block(x, ind + 2, dash=True)
+
+    def render(self, v):
+        self.out = []
+        self.block(v, 0)
+        lines = []
+        for n, text in self.out:
+            line = (self.guides(n) + text).rstrip(" ")
+            lines.append(line)
+        return "\n".join(lines) + "\n"
+
+
+def resolve(doc, ptr, where):
+    """RFC 6901 指標；ptr 是 `#` 後面那段（'' 或 '/…'）。"""
+    if ptr in ("", "/"):
+        return doc
+    if not ptr.startswith("/"):
+        die("PointerBad", "pointer must start with #/: #%s" % ptr)
+    cur, walked = doc, ""
+    for raw in ptr[1:].split("/"):
+        part = raw.replace("~1", "/").replace("~0", "~")
+        walked += "/" + raw
+        if isinstance(cur, dict) and part in cur:
+            cur = cur[part]
+        elif isinstance(cur, list) and re.fullmatch(r"0|[1-9][0-9]*", part) and int(part) < len(cur):
+            cur = cur[int(part)]
+        else:
+            die("PointerBad", "nothing at %s#%s" % (where, walked))
+    return cur
+
+
+def split_target(arg):
+    if "#" in arg and not os.path.exists(arg):
+        path, ptr = arg.split("#", 1)
+        return path, ptr
+    return arg, None
+
+
+def main():
+    try:
+        opts, rest = aos_flags.parse(sys.argv[1:], FLAGS, SWITCHES, anywhere=True)
+    except aos_flags.Error as e:
+        die(e.code, "%s (usage: %s)" % (e, USAGE))
+    if not rest:
+        die("ArgumentsBad", "no file given (usage: %s)" % USAGE)
+    path, ptr = split_target(rest[0])
+    if len(rest) == 2 and rest[1].startswith("#") and ptr is None:
+        ptr = rest[1][1:]
+    elif len(rest) > 1:
+        die("ArgumentsBad", "unexpected argument: %s (usage: %s)" % (rest[1], USAGE))
+    depth = opts.get("depth")
+    if depth is not None:
+        if not re.fullmatch(r"[1-9][0-9]*", depth):
+            die("ArgumentsBad", "--depth needs a positive number, got: %s" % depth)
+        depth = int(depth)
+    width = opts.get("width")
+    if width is not None:
+        if not re.fullmatch(r"[1-9][0-9]*", width):
+            die("ArgumentsBad", "--width needs a positive number, got: %s" % width)
+        width = max(int(width), 20)
+    elif sys.stdout.isatty():
+        width = shutil.get_terminal_size((100, 24)).columns
+    else:
+        c = os.environ.get("COLUMNS", "")
+        width = int(c) if c.isdigit() and int(c) > 0 else 100
+    if opts.get("color") and opts.get("no_color"):
+        die("ArgumentsBad", "--color and --no-color together")
+    color = opts.get("color") or (not opts.get("no_color") and sys.stdout.isatty() and not os.environ.get("NO_COLOR"))
+    try:
+        with open(path, encoding="utf-8") as f:
+            doc = json.load(f)
+    except OSError as e:
+        die("FileBad", "cannot read %s: %s" % (path, e.strerror or e))
+    except (ValueError, UnicodeDecodeError) as e:
+        die("FileBad", "%s is not JSON: %s" % (path, e))
+    if ptr is not None:
+        doc = resolve(doc, ptr, path)
+    if depth is not None:
+        doc = fold(doc, depth)
+    view = View(width, bool(color))
+    if ptr is not None:
+        sys.stdout.write(view.p(clean("# %s#%s" % (path, ptr)), "head") + "\n")
+    sys.stdout.write(view.render(doc))
+
+
+if __name__ == "__main__":
+    aos_flags.run(main)

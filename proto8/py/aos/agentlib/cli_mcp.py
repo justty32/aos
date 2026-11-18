@@ -76,7 +76,7 @@ def _launcher(servers):
         return None
     path = shutil.which("aos-mcp-launch")
     if path is None:
-        cli_base.die("CliMissing", "aos-mcp-launch is not on PATH (an stdio MCP server is listed in mcp_servers; add proto8/cmd/aos-mcp-launch/bin to PATH)")
+        cli_base.die("CliMissing", "aos-mcp-launch is not on PATH (an stdio MCP server is listed in mcp_servers; add proto8/bin to PATH)")
     return os.path.abspath(path)
 
 
@@ -217,7 +217,7 @@ def sub_agents(cfg, ws, stack):
     """--agents 的 JSON：蓋掉 general-purpose——拿掉主 agent 那台（mcp__aos）、內嵌只有它連得到的 aos_sub（aos-mcp 接 tools_sub 那份登記檔；
     同一個工作區與 stack、有宣告 hooks 照帶 --hooks、tools_flags 照插；不帶 --own：這隻自己加減的工具不進子 agent 那台）。"""
     if shutil.which("aos-mcp") is None:
-        cli_base.die("CliMissing", "aos-mcp is not on PATH (tools_sub is set; add proto8/cmd/aos-mcp/bin to PATH)")
+        cli_base.die("CliMissing", "aos-mcp is not on PATH (tools_sub is set; add proto8/bin to PATH)")
     args = ["--ws", ws, "--stack", stack] + (["--hooks", cfg["hooks_def"]] if cfg.get("hooks_def") else []) \
         + cfg.get("tools_flags", []) + [cfg["sub_registry"]]
     return {SUB_AGENT: {"description": SUB_DESCRIPTION, "prompt": SUB_PROMPT, "disallowedTools": ["mcp__aos"],
@@ -252,7 +252,7 @@ def _aos_server(cfg, ws, stack, reg):
     if not os.path.isfile(reg):                       # load_cfg 之後才被刪掉
         cli_base.die("ToolsMissing", "registry file not found: %s" % reg)
     if shutil.which("aos-mcp") is None:
-        cli_base.die("CliMissing", "aos-mcp is not on PATH (tools are attached; add proto8/cmd/aos-mcp/bin to PATH)")
+        cli_base.die("CliMissing", "aos-mcp is not on PATH (tools are attached; add proto8/bin to PATH)")
     args = ["--ws", ws, "--stack", stack] + (["--hooks", cfg["hooks_def"]] if cfg.get("hooks_def") else []) \
         + (["--own", os.path.abspath(cfg["own_registry"])] if cfg.get("own_registry") else []) \
         + cfg.get("tools_flags", []) + [reg]

@@ -28,7 +28,7 @@ class RealDaemon(unittest.TestCase):
         self.dstack.mkdir(parents=True)
         (self.tmp / "daemon.json").write_text('{"interval_ms": 200}')
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        bins = [str(PROTO / "bin")] + [str(p) for p in sorted((PROTO / "cmd").glob("*/bin"))]
+        bins = [str(PROTO / "bin")]
         env.update(PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_HOME=str(PROTO), PYTHONDONTWRITEBYTECODE="1")
         self.log = open(self.tmp / "d.log", "w")
         self.daemon = subprocess.Popen(["aos-daemon", "daemon.json"], cwd=self.tmp, env=dict(env, AOS_STACK=str(self.dstack)),

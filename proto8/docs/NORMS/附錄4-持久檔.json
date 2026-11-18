@@ -102,7 +102,7 @@
    "image": "看情況：定義＝原始碼、不算 image（C-79）；登記檔存絕對 path 是已知代價（N-67 ⑦）",
    "on_bad": "不是物件、tools 形狀錯、頂層有 add／rm＝RegistryBad；不在＝沒登記任何工具；值是 null 的工具格不算工具、null 欄位＝沒設",
    "note": "11-10 aos-tools-cli：登記格不再存 cache 物件（只收 false；快取搬到 $AOS_STACK/tooldef_cache.json）、多選填 env_file（只記位置）、可寫 \"$override\" 疊在別份上；有 cache 物件的舊檔＝RegistryBad，刪那格或重登記",
-   "evidence": "proto8/cmd/aos-tools/bin/aos-tools（read_layer、finish）、proto8/lib/agent/agent_def/_entry（rebase_tools）"
+   "evidence": "proto8/py/aos/apps/tools/main.py（read_layer、finish）、proto8/lib/agent/agent_def/_entry（rebase_tools）"
   },
   {
    "path": "$AOS_STACK/<宣告的 tools 路徑>（這隻自己那份）",
@@ -112,7 +112,7 @@
    "image": "進",
    "on_bad": "寫壞、$override 環狀、底檔不是物件＝RegistryBad；底檔指不到＝PathMissing；不在＝用定義那份",
    "note": "stack.gitignore 明寫要留。11-10 aos-tools-cli 步 4 改形狀：{\"$override\": 定義那份, \"tools\": {名: 登記, 不要的: null（null 那格不算工具）}}（同一般登記檔）；舊形狀 {\"add\",\"rm\"}＝RegistryBad，要 aos-agent tools reset 後重加",
-   "evidence": "proto8/cmd/aos-tools/bin/aos-tools（merged_tools）、proto8/cmd/aos-agent/aos_agent/tools.py、proto8/cmd/aos-agent/stack.gitignore"
+   "evidence": "proto8/py/aos/apps/tools/main.py（merged_tools）、proto8/py/aos/apps/agent/tools.py、proto8/py/aos/apps/agent/stack.gitignore"
   },
   {
    "path": "<定義資料夾>/llm.json",
@@ -142,7 +142,7 @@
    "image": "進",
    "on_bad": "同定義那份：brain CfgBad、wait 當 {}",
    "note": "只放改過的鍵；rm 拿光了就刪檔。11-10 晚 show 換成 ls、加 rm；鍵 endpoint 改名 model（同定義那份）；不在 llm_keys 單子上的鍵照存、stderr 一行 warning",
-   "evidence": "proto8/templates/agent-fsm/brain.py（read_cfg）、proto8/cmd/aos-agent/aos_agent/llm.py（llm_paths、cmd）"
+   "evidence": "proto8/templates/agent-fsm/brain.py（read_cfg）、proto8/py/aos/apps/agent/llm.py（llm_paths、cmd）"
   },
   {
    "path": "<定義資料夾>/subagents.json、$AOS_STACK/subagents.json（配額設定）",
@@ -162,7 +162,7 @@
    "image": "看情況：工具資料夾是定義／原始碼，不算 image",
    "on_bad": "_tooldef.json 不在＝ToolDefMissing、壞＝ToolDefBad；_metainfo 壞＝FileBad",
    "note": "",
-   "evidence": "proto8/cmd/aos-tools/bin/aos-tools（inspect、read_meta、check_tooldef）、proto8/lib/metainfo.py（read）"
+   "evidence": "proto8/py/aos/apps/tools/main.py（inspect、read_meta、check_tooldef）、proto8/lib/metainfo.py（read）"
   },
   {
    "path": "$AOS_STACK/procs_state.json（＋procs_state_procs/ 分檔）",
@@ -232,7 +232,7 @@
    "image": "進",
    "on_bad": "不在＝warning 一次、當 0；壞＝ClockBad（aos-clock 也 ClockBad 不動檔）",
    "note": "image 醒來從這裡接著數",
-   "evidence": "proto8/cpp/aos-util/src/clock.cpp（warn_missing_clock、now_cycle）、proto8/cmd/aos-clock/bin/aos-clock（main）"
+   "evidence": "proto8/cpp/aos-util/src/clock.cpp（warn_missing_clock、now_cycle）、proto8/py/aos/apps/clock/main.py（main）"
   },
   {
    "path": "<根 daemon stack>/clock_register.json（時鐘檔旁的 <時鐘檔名>_register.json）",
@@ -242,7 +242,7 @@
    "image": "進",
    "on_bad": "不在＝不寄；整份不是物件或 letters 不是物件＝aos-clock 一行 warning 跳過整份、時鐘照樣退 0；單格壞或寄不到＝那格一行 warning 跳過",
    "note": "11-10 晚 clock-letters 新增：{\"letters\": {名: {every, box, text}}}，cycle % every == 0 的格各寄一封；跟時鐘檔一起帶走（two-machines 分類 G094），暫存 .clock_register.json.<pid> 不帶（G095）。新檔，不用重建",
-   "evidence": "proto8/py/aos_clock_register.py（path_for、load、fire）、proto8/cmd/aos-clock/bin/aos-clock（letters）"
+   "evidence": "proto8/py/aos_clock_register.py（path_for、load、fire）、proto8/py/aos/apps/clock/main.py（letters）"
   },
   {
    "path": "$AOS_STACK/stage.txt",
@@ -262,7 +262,7 @@
    "image": "進",
    "on_bad": "brain／act 遇壞行＝HistoryBad 退 1；aos_ws 壞行提醒一次後跳過；不在＝空；aos 鍵不是物件＝當成沒有",
    "note": "只往後加但要帶（醒來接著用），不是 ⑩ 的 log。列可以多一個 aos 物件鍵（reply-match-1114）：收信那列 {\"letter\": 信名}、最終回答 {\"answer_to\": [信名…]}；寫的時候蓋掉信或端點自帶的 aos 鍵，agent-fsm 送端點前每列剝掉（for_endpoint）。舊列沒有 aos 鍵＝讀的一方退回「等最新那則」。多一個鍵，不用重建",
-   "evidence": "proto8/templates/agent-fsm/brain.py（history_path、for_endpoint）、proto8/py/aos_ws.py（history、mark_letter、mark_answer、answer_for）、proto8/cmd/aos-eca/aos_eca/history.py（append_history）"
+   "evidence": "proto8/templates/agent-fsm/brain.py（history_path、for_endpoint）、proto8/py/aos_ws.py（history、mark_letter、mark_answer、answer_for）、proto8/py/aos/apps/eca/history.py（append_history）"
   },
   {
    "path": "$AOS_STACK/history_removed.jsonl（<history 檔名>_removed.jsonl）",
@@ -272,7 +272,7 @@
    "image": "進",
    "on_bad": "aos_ws 讀到壞行跳過；寫不進＝WriteFailed，history 不改",
    "note": "11-10 晚 self-family：改掉的原文每則一行 {removed_at, op, line, message|raw}，只往後加；stack.gitignore 明寫要留（two-machines 分類 G089 帶走）。新檔，不用重建",
-   "evidence": "proto8/cmd/aos-agent/aos_agent/history.py（keep_target）、proto8/cmd/aos-agent/stack.gitignore、proto8/py/aos_ws.py（_removed）"
+   "evidence": "proto8/py/aos/apps/agent/history.py（keep_target）、proto8/py/aos/apps/agent/stack.gitignore、proto8/py/aos_ws.py（_removed）"
   },
   {
    "path": "<信箱>/{new,cur}/<信名>/letter.json（queue/、procs_requests/、kernel requests/、think/reply/、<stack>/mailbox/）",
@@ -282,7 +282,7 @@
    "image": "進",
    "on_bad": "壞信＝收掉：daemon 記 mailbox_warning，body 壞（含 ping／procs_state_path 不是 true）且有 reply_to 回 {\"applied\": false, \"error\": {\"code\": \"BodyBad\"}}（信封壞或沒 reply_to 不回）；idle 寫 mailbox_warning.txt；kernel 回 LetterBad",
    "note": "cur/ 殘骸 daemon 起來會重做。11-10 晚 mailbox：每個 stack（agent 的，或人的 ~/.aos/stack〔11-11 前是 ~/.stack〕、$AOS_LINUX_USER_STACK）多一個 mailbox/ 箱子，跟 queue/ 分開、信不進 history；用名字寄時替收件人建、用路徑寄時不建。新檔，不用重建。11-13 daemon 多認查詢信 {\"procs_state_path\": true}：回信多帶自己那份 procs_state.json 的絕對路徑（沒開窗＝null）；信的形狀是加法，不用重建",
-   "evidence": "proto8/cpp/aos-post/src/send/send.cpp（send）、proto8/cpp/aos-post/src/take/take.cpp（see）、proto8/cpp/aos-daemon/src/daemon/mailbox.cpp（done_letters）、proto8/templates/agent-fsm/idle.py（body_of）、proto8/lib/aos/kernel_llm/llm_rules.py（check、post_reply）、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py（my_stack、cmd_peek、target_box）"
+   "evidence": "proto8/cpp/aos-post/src/send/send.cpp（send）、proto8/cpp/aos-post/src/take/take.cpp（see）、proto8/cpp/aos-daemon/src/daemon/mailbox.cpp（done_letters）、proto8/templates/agent-fsm/idle.py（body_of）、proto8/lib/aos/kernel_llm/llm_rules.py（check、post_reply）、proto8/py/aos/apps/mailbox/__init__.py（my_stack、cmd_peek、target_box）"
   },
   {
    "path": "<信箱>/archive/",
@@ -292,7 +292,7 @@
    "image": "進",
    "on_bad": "沒有程式讀",
    "note": "N-67 ⑩ 11-07 裁定歸檔跟 image 走。mailbox/archive/ 是讀完留著的信，peek 不列",
-   "evidence": "proto8/cpp/aos-post/src/take/take.cpp（done）、proto8/cpp/aos-post/src/mailbox/mailbox.cpp（Mailbox::archive）、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py（cmd_read）"
+   "evidence": "proto8/cpp/aos-post/src/take/take.cpp（done）、proto8/cpp/aos-post/src/mailbox/mailbox.cpp（Mailbox::archive）、proto8/py/aos/apps/mailbox/__init__.py（cmd_read）"
   },
   {
    "path": "<被鎖資料夾>/.lock/holder.json（＋holder.flock）",
@@ -322,7 +322,7 @@
    "image": "進",
    "on_bad": "kernel：形狀不對＝QueueBad（提示刪掉重來）；不在＝空",
    "note": "stack.gitignore 註明不擋（等待時間、隊序要帶）",
-   "evidence": "proto8/lib/aos/kernel_llm/order.py（read_queue、write_queue）、proto8/lib/aos/kernel/queue_fifo.py（queue_view、write_queue）、proto8/cmd/aos-agent/aos_agent/common.py（queue_position）"
+   "evidence": "proto8/lib/aos/kernel_llm/order.py（read_queue、write_queue）、proto8/lib/aos/kernel/queue_fifo.py（queue_view、write_queue）、proto8/py/aos/apps/agent/common.py（queue_position）"
   },
   {
    "path": "<框架站 stack>/forwarded.json",
@@ -377,12 +377,12 @@
   {
    "path": "<eca 小格>/env.json",
    "lifetime": "暫時",
-   "writer": "loop 那邊：aos-eca-turn 每一圈（cmd/aos-eca/aos_eca/turn.py one_turn）、lib/agent/cli_ask（ask 每一題）經 cli_mcp.note_env；值跟上次一樣不重寫",
+   "writer": "loop 那邊：aos-eca-turn 每一圈（py/aos/apps/eca/turn.py one_turn）、lib/agent/cli_ask（ask 每一題）經 cli_mcp.note_env；值跟上次一樣不重寫",
    "reader": "lib/agent/cli_screen（start，經 cli_mcp.screen_env：開畫面時 AOS_CLOCK 等照它給）",
    "image": "不進：這台的絕對路徑；cmd/aos-agent/stack.gitignore 擋",
    "on_bad": "不在、不是 JSON、不是物件＝當沒記過：畫面照舊用開畫面那個殼的環境、warning 一行；寫不成＝不擋",
    "note": "11-13 新增（人開的畫面拿不到 AOS_CLOCK 的 bug，thinking 2026-11/13/ops-fixes-施工結果）：{變數名: 值}，只記 AOS_HOME、AOS_DAEMON、AOS_CLOCK、AOS_CLOCK_INTERVAL、AOS_LLM_KERNEL、AOS_KERNEL、AOS_LINUX_USER_STACK 裡有設的。新檔，不用重建",
-   "evidence": "proto8/lib/agent/cli_mcp.py（note_env、noted_env、screen_env）、proto8/lib/agent/cli_screen.py（start）、proto8/cmd/aos-eca/aos_eca/turn.py（one_turn）"
+   "evidence": "proto8/lib/agent/cli_mcp.py（note_env、noted_env、screen_env）、proto8/lib/agent/cli_screen.py（start）、proto8/py/aos/apps/eca/turn.py（one_turn）"
   },
   {
    "path": "$AOS_STACK/think/（pending.txt、reply/ 信箱）",
@@ -402,7 +402,7 @@
    "image": "不進",
    "on_bad": "measure：有一行不是物件＝ValueError；寫不了＝warning 照跑",
    "note": "只往後加，stack.gitignore 擋（⑩）",
-   "evidence": "proto8/lib/observed.py（append）、proto8/lib/aos/measure/ledger.py（_records）、proto8/cmd/aos-agent/stack.gitignore"
+   "evidence": "proto8/lib/observed.py（append）、proto8/lib/aos/measure/ledger.py（_records）、proto8/py/aos/apps/agent/stack.gitignore"
   },
   {
    "path": "<kernel stack>/ledger.jsonl",
@@ -482,7 +482,7 @@
    "image": "不進",
    "on_bad": "當機留下的沒人清，也沒人讀",
    "note": "stack.gitignore 的 **/.* 擋",
-   "evidence": "proto8/cpp/aos-loop/src/engine/window.cpp（write_window）、proto8/cmd/aos-clock/bin/aos-clock（main）、proto8/cpp/aos-lock/src/lock/lock.cpp（write_holder）、proto8/py/daemon_ctl/ctl.py（put_ctl）、proto8/py/aos_clock_register.py（save）"
+   "evidence": "proto8/cpp/aos-loop/src/engine/window.cpp（write_window）、proto8/py/aos/apps/clock/main.py（main）、proto8/cpp/aos-lock/src/lock/lock.cpp（write_holder）、proto8/py/daemon_ctl/ctl.py（put_ctl）、proto8/py/aos_clock_register.py（save）"
   },
   {
    "path": "$AOS_STACK/counter_runs.txt、<kernel stack>/counter_kernel_runs.txt",
@@ -502,7 +502,7 @@
    "image": "不進",
    "on_bad": "不在＝退 11 回 think 重組",
    "note": "",
-   "evidence": "proto8/templates/agent-fsm/wait.py、proto8/cmd/aos-agent/stack.gitignore"
+   "evidence": "proto8/templates/agent-fsm/wait.py、proto8/py/aos/apps/agent/stack.gitignore"
   },
   {
    "path": "<kernel 信箱>/cur/<信名>/（request.json、reply.json、proc.json、state.json、stderr.txt）",
@@ -542,7 +542,7 @@
    "image": "不進",
    "on_bad": "沒人領的回信 10 分鐘後下一個來拿的人收掉",
    "note": "",
-   "evidence": "proto8/cmd/aos-agent/stack.gitignore、proto8/cmd/aos-agent/README.md、proto8/py/daemon_ctl/state_path.py（kernel_reply_box）"
+   "evidence": "proto8/py/aos/apps/agent/stack.gitignore、proto8/py/aos/apps/agent/README.md、proto8/py/daemon_ctl/state_path.py（kernel_reply_box）"
   },
   {
    "path": "$AOS_STACK/cooldown.json",
@@ -552,7 +552,7 @@
    "image": "不進：本機的牆鐘期限；stack.gitignore 的 **/cooldown.json 擋（two-machines gitignore_classes G003）",
    "on_bad": "不在＝沒在冷卻；寫不成＝warning 一行、照舊；殘留的舊檔 until 早過＝下一次照常（eca 是只拿一封試）",
    "note": "11-10 two-machines 06 新增：{failures, until, at, code, reason, dropped}；30 秒起加倍、封頂 30 分鐘，成功一次刪檔。新檔，不用重建",
-   "evidence": "proto8/lib/agent/cooldown.py（read、state、fail、clear）、proto8/templates/agent-fsm/wait.py（record_failure）、proto8/cmd/aos-eca/aos_eca/handoff.py（Handoff.ask、Handoff.done）、proto8/cmd/aos-eca/aos_eca/turn.py（one_turn）"
+   "evidence": "proto8/lib/agent/cooldown.py（read、state、fail、clear）、proto8/templates/agent-fsm/wait.py（record_failure）、proto8/py/aos/apps/eca/handoff.py（Handoff.ask、Handoff.done）、proto8/py/aos/apps/eca/turn.py（one_turn）"
   },
   {
    "path": "$AOS_STACK/goal.json",
@@ -562,7 +562,7 @@
    "image": "進：agent 正在做的目標，跟 history 一起走（stack.gitignore 沒擋）",
    "on_bad": "不在＝沒有 goal；壞了（不是 JSON 物件、欄位不對）＝aos-agent goal get／done／pause／resume 報 GoalBad 退 1、set 與 clear 照蓋；idle 格與 aos-eca-turn 安靜當沒有（不丟提醒）",
    "note": "11-11 goal 新增：{text, status（active／paused／done／abandoned）, reason, reminded（連續沒進展的提醒次數）, limit（預設 10）, set_by, updated_by, updated_at}；新檔，不用重建",
-   "evidence": "proto8/lib/agent/goal_state.py（read、write、clear）、proto8/cmd/aos-agent/aos_agent/goal.py（load、save）、proto8/templates/agent-fsm/idle.py（goal_turn）、proto8/cmd/aos-eca/aos_eca/turn.py（one_turn）、proto8/cmd/aos-eca/aos_eca/batch.py（goal_prompt）"
+   "evidence": "proto8/lib/agent/goal_state.py（read、write、clear）、proto8/py/aos/apps/agent/goal.py（load、save）、proto8/templates/agent-fsm/idle.py（goal_turn）、proto8/py/aos/apps/eca/turn.py（one_turn）、proto8/py/aos/apps/eca/batch.py（goal_prompt）"
   },
   {
    "path": "$AOS_STACK/tooldef_cache.json",
@@ -572,7 +572,7 @@
    "image": "不進（stack.gitignore 擋）",
    "on_bad": "不是 JSON／不是物件＝當沒有、整份重寫；AOS_STACK 沒設＝不讀不寫",
    "note": "11-10 aos-tools-cli 步 2（使用者 Q2「快取搬到 stack 裡」）：{絕對路徑: {stamp: mtime奈秒-大小, tooldef}}；可重建",
-   "evidence": "proto8/cmd/aos-tools/bin/aos-tools（exe_tooldef）、proto8/cmd/aos-agent/stack.gitignore"
+   "evidence": "proto8/py/aos/apps/tools/main.py（exe_tooldef）、proto8/py/aos/apps/agent/stack.gitignore"
   },
   {
    "path": "<定義資料夾>/hooks.json",
@@ -622,7 +622,7 @@
    "image": "看情況：定義＝原始碼、不算 image（C-79）",
    "on_bad": "不在＝空文字（fsm 不送 system、eca 不附加）；宣告的不是定義內相對檔名＝SystemBad（aos-agent）／InterfaceBad（brain）／CfgBad（cli_session）",
    "note": "11-11 self-system：原本是 fsm.json 寫死 brain.py --system system.txt，改成 interfaces.json 宣告；eca-claude 宣告了但不帶檔。新宣告，不用重建（舊 fsm.json 還帶 --system 的照舊能跑，只是看不到 stack 那份）",
-   "evidence": "proto8/templates/agent-fsm/brain.py（system_file）、proto8/lib/agent/cli_cfg.py（system_file）、proto8/cmd/aos-agent/aos_agent/system.py"
+   "evidence": "proto8/templates/agent-fsm/brain.py（system_file）、proto8/lib/agent/cli_cfg.py（system_file）、proto8/py/aos/apps/agent/system.py"
   },
   {
    "path": "$AOS_STACK/system.txt（自己那份）",
@@ -632,7 +632,7 @@
    "image": "進",
    "on_bad": "讀不了＝SystemBad（aos-agent）；空檔＝空文字（不是回到定義那份）",
    "note": "11-11 self-system 新增：整份文字、不是差異，在就蓋過定義那份；reset＝刪檔。新檔，不用重建",
-   "evidence": "proto8/cmd/aos-agent/aos_agent/system.py、proto8/lib/agent/self_system/_entry"
+   "evidence": "proto8/py/aos/apps/agent/system.py、proto8/lib/agent/self_system/_entry"
   },
   {
    "path": "$AOS_STACK/hooks/<名>/on_clock.json",
@@ -702,7 +702,7 @@
    "image": "進（stack.gitignore 沒擋）",
    "on_bad": "不在、不是 JSON、不是物件＝當成空的（pending、dropped 都空），不報錯；pending／dropped 裡型別不對的項跳過。eca 收信時寫不進＝WriteFailed，丟信或清 pending 時寫不進＝一行 warning",
    "note": "11-14 reply-match-1114 新增：{\"pending\": [交出去還沒答的信名…], \"dropped\": [{\"letter\", \"reason\", \"at\"}…]}；reason 只有 bad（壞信）、blocked（before_queue hook 擋）、failed（eca 交出去後 CLI 失敗）；dropped 只留最近 50 筆；先寫 letters.json.<pid>.tmp 再 os.replace。只有身體寫，aos-agent 只讀；fork 不抄（fork_copy 只抄 history 與覆蓋檔）。新檔，不用重建",
-   "evidence": "proto8/py/aos_ws.py（letters、letters_take、letters_answered、letters_drop、answer_for）、proto8/templates/agent-fsm/idle.py、proto8/templates/agent-fsm/wait.py、proto8/cmd/aos-eca/aos_eca/common.py、proto8/cmd/aos-eca/aos_eca/handoff.py"
+   "evidence": "proto8/py/aos_ws.py（letters、letters_take、letters_answered、letters_drop、answer_for）、proto8/templates/agent-fsm/idle.py、proto8/templates/agent-fsm/wait.py、proto8/py/aos/apps/eca/common.py、proto8/py/aos/apps/eca/handoff.py"
   }
  ]
 }

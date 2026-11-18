@@ -1,7 +1,14 @@
 {
+ "__init__.py": {
+  "description": "aos - aos 唯一的 Python 套件：指令、工具、範本格共用的模組（from aos import flags, tool_io …）；agent 層的在 aos.agentlib（11-18 S4 收成套件）。"
+ },
  "agentlib": {
   "description": "aos 套件裡 agent 層的共用模組（hooks、cooldown、quiet、goal_state、claude／codex 對話的 cli_*、cmd_call、agents_cmd、agent_files…）；S3 前在 lib/agent",
   "index": "agentlib/_index.json"
+ },
+ "apps": {
+  "description": "人在終端打的 Python 指令的本體，一支一夾（夾名＝指令名去掉 aos-；入口由 install.py 照 py/entries.json 生進 bin/）：agent、daemon_ctl、tools、clock、eca、mcp 等；要用或改這些指令時進去",
+  "index": "apps/_index.json"
  },
  "clock_register.py": {
   "description": "aos_clock_register 時鐘登記表：時鐘檔旁的 <時鐘檔名>_register.json，每格「何時往某個 aos-post 箱子寄一封信」（每 N cycle、某 cycle 一次、牆鐘某時刻一次、cron）；aos-clock 寄、aos-clock-register 改（11-…"
@@ -88,6 +95,6 @@
   "description": "給 AI 寫工具的輔助：在一支 Python 裡宣告說明、參數、特性，就產出 _tooldef／_metainfo（資料夾的兩個檔或 JSON 物件的兩個鍵），執行時照宣告驗參數再叫 run(args)。"
  },
  "ws.py": {
-  "description": "aos_ws - 「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。"
+  "description": "aos_ws - 「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/py/aos/apps/agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。"
  }
 }

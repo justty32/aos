@@ -162,7 +162,7 @@ class ExternalMcp(unittest.TestCase):
 
     def test_stdio_both_bodies(self):
         f = self.stdio(only=["peek_now_time"])
-        launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
+        launcher = str(LIB.parent / "bin" / "aos-mcp-launch")
         with patch.object(cli_mcp.shutil, "which", lambda n: launcher if n == "aos-mcp-launch" else None), \
                 patch.dict(os.environ, {"AOS_HOME": "/p8"}):
             c, err = self.cfg(["mcp/s.json"], kind="claude")
@@ -184,7 +184,7 @@ class ExternalMcp(unittest.TestCase):
 
     def test_launcher_runs_server_with_key(self):
         f = self.stdio()
-        launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
+        launcher = str(LIB.parent / "bin" / "aos-mcp-launch")
         r = subprocess.run([launcher, f], capture_output=True, text=True)
         self.assertEqual(r.stdout.strip(), "ok UTC", r.stderr)
         self.server("h.json")
@@ -199,7 +199,7 @@ class ExternalMcp(unittest.TestCase):
         """啟動失敗（command 找不到）：錯誤行只進 stderr，stdout 留空（11-12 eca_tidy 第 4 條）。"""
         (self.tmp / "mcp" / "x.json").write_text(json.dumps({"description": "fake", "mcp_server": {
             "name": "nope", "transport": "stdio", "command": "bin/does-not-exist"}}))
-        launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
+        launcher = str(LIB.parent / "bin" / "aos-mcp-launch")
         r = subprocess.run([launcher, str(self.tmp / "mcp" / "x.json")], capture_output=True, text=True)
         self.assertEqual((r.returncode, r.stdout), (1, ""), r.stderr)
         self.assertIn("aos-mcp-launch: error: CommandMissing", r.stderr)
@@ -214,7 +214,7 @@ class ExternalMcp(unittest.TestCase):
         (self.tmp / "mcp" / "r.json").write_text(json.dumps({"description": "fake", "mcp_server": {
             "name": "rel", "transport": "stdio", "command": "bin/run", "args": ["bin/hello.txt"]}}))
         (self.tmp / "elsewhere").mkdir()
-        launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
+        launcher = str(LIB.parent / "bin" / "aos-mcp-launch")
         r = subprocess.run([launcher, "../mcp/r.json"], capture_output=True, text=True, cwd=self.tmp / "elsewhere")
         self.assertEqual((r.returncode, r.stdout), (0, "from the server folder\n"), r.stderr)
 
@@ -227,7 +227,7 @@ class ExternalMcp(unittest.TestCase):
         noexec.write_text("not a program\n")
         self.stdio("noexec.json", name="noexec", command="./plain.txt")
         self.stdio("nokey.json", name="nokey", env_file="../keys/demo.env")
-        launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
+        launcher = str(LIB.parent / "bin" / "aos-mcp-launch")
         files = ["mcp/gone.json", "mcp/s.json", "mcp/nopath.json", "mcp/noexec.json", "mcp/nokey.json"]
         for kind in ("claude", "codex"):
             with self.subTest(kind=kind), patch.object(cli_mcp.shutil, "which", lambda n: launcher if n == "aos-mcp-launch" else None):

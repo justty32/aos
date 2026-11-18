@@ -41,7 +41,7 @@ class KernelFixture:
         self.save(self.definition / "loop.json", {"exec": {"argv": [sys.executable, str(self.definition / "reply.py")]}, "interval_ms": 100})
         self.save(self.definition / "body.json", ["aos-loop", str(self.definition / "loop.json")])
         self.env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        bins = [str(p) for p in [PROTO / "bin"] + sorted((PROTO / "cmd").glob("*/bin"))]
+        bins = [str(PROTO / "bin")]
         self.env.update(PATH=os.pathsep.join(bins + [self.env["PATH"]]), PYTHONDONTWRITEBYTECODE="1",
                         AOS_HOME=str(PROTO), AOS_WS=str(self.ws))
         self.save(self.root / "kernel.json", {"next": str(self.daemon_stack / "procs_requests")})

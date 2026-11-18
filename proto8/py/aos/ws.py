@@ -1,4 +1,4 @@
-"""aos_ws - 「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。
+"""aos_ws - 「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/py/aos/apps/agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。
 
 10-24 遷移（tool-lib 遷移清單「human、aos-ai 的放題、等答案合成一份」）：兩邊各寫了一份同樣的事，收到這裡；不是工具（沒有 _entry），
 是 lib/ 的共用模組，命令列用 realpath 找到這個資料夾再 import。
@@ -169,7 +169,7 @@ def exchanges(stack):
 # 寫的順序（讀的一方照信流向查，才不會有空窗）：收信＝先 letters_take、再附加 history（帶 aos.letter）、最後 done；
 # 回答＝先附加 history（帶 aos.answer_to）、再 letters_answered 清 pending。aos 鍵送模型端點前一定要剝掉（for_endpoint）。
 LETTERS = "letters.json"
-REMOVED = "history_removed.jsonl"   # 同 py/aos/agentlib/cli_hook.py、aos_agent/history.py
+REMOVED = "history_removed.jsonl"   # 同 py/aos/agentlib/cli_hook.py、aos/apps/agent/history.py
 DROPPED_MAX = 50
 DROP_REASONS = ("bad", "blocked", "failed")
 
