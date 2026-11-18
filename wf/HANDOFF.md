@@ -12,18 +12,27 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-18 傍晚 公司 Windows 機
+## 2026-11-18 晚（compact 前）公司 Windows 機
 
-- **授權與做法**：頂層只當調度者；普通工作 opus、簡單工作與雜活 sonnet、規劃 fable；派出去的 agent（雜活除外）先讀規矩卡；各線不 commit，頂層分件交。要使用者裁的一律跳選項。push：使用者 11-18 開工說「下班前一次推。」、下午說「可以推」，今天的都已推；新 session 要重問。這台改檔在 Windows repo，測試在 WSL 暫存複本；生成器用 `wsl` 在 `/mnt/c/...` 跑 `python3 wf/tools/index_gen.py --apply`。
-- **cpp／py 改名與安裝包形狀：S1～S7 全做完、已推**（S3 `fc7430adf`、S4 `521036a64`、S5 `269cca6bf`、S6＋S7 `96b3e2e8c`）。proto8 頂層進 git 的：`cpp py templates knowledge docs thinking archive frontend`＋`README.md`、`env.sh`、`install.py`；安裝產物（不進 git）：`bin lib include`。
-  - 原始碼：C++ 在 `cpp/`；Python 在 `py/`（套件 `py/aos/`、`py/aos/agentlib/`、各指令本體 `py/aos/apps/<名>/main.py`、工具 `py/tools/{base,aos,agent}/`、測試 `py/tests/` 與 `py/tests/apps/<名>/`，後者要逐夾跑）。`cmd/` 整夾收掉了。
-  - `python3 proto8/install.py`：編 C++、把 `py/` 抄成 `lib/`、照 `py/entries.json` 在 `bin/` 生入口（共 30 支）。**改了 `py/`、`cpp/` 要重跑 install.py 才生效**（「改 repo＝改活樹」不成立了）。
-  - `env.sh` 不再自己設 `AOS_HOME`，沒設報一行 `EnvBad`；`~/.bashrc` 要先寫好 `AOS_HOME`。PATH 是 `bin/`＋`frontend/bin`（使用者 11-18：「照留，等前端大修 (Recommended)」）。
-  - 起手範本 `templates/start-api`、`start-eca`（逐字抄本，`templates/tests/test_start.py` 守同步）。
-  - [重建步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)＝第 0 步＋安裝六步＋更新五步。獨立驗證線（verify-1118）在 HEAD `96b3e2e8c` 的乾淨 clone＋假 HOME＋假腦逐字走過，每步對得上；全部測試紅的都在已知清單（清單在 `8514d5e3b` 的 commit 訊息）。沒驗：第 0 步、start-eca、真模型、家機。
-  - 裁定逐字：[08-要裁的題](../proto8/thinking/2026-11/17/cpp-py-改名/08-要裁的題.md) 文末「11-18 施工當天的題」（含施工線代定、可翻案的三點）。
-- **wf 整理今天做完的**：`WAIT_USER.md`、`wait-user/`、`gotchas.md` 退場（`3256c6cae`），三軸變兩軸（信、進度）；進度檔 `SESSION-LOG.md` 轉成 [`wf/progress.json`](progress.json)（`d1a0dbb8d`；交件工具的 op 改叫 `progress_upsert`／`progress_delete`）；出廠範本 `proto8/knowledge/wf` 跟著改成兩軸。逐字在 [wf-整理規劃/05](../proto8/thinking/2026-11/17/wf-整理規劃/05-要裁的題.md) 文末。
-- **等使用者自己做**（使用者 11-18：「你自己照步驟單做 (Recommended)」，agent 不碰）：公司 WSL 的第 0 步（移走舊 `aos-proto8.pth`、刪 `~/.local/bin` 舊 `aos-*` 連結、`~/.bashrc` 加 `AOS_HOME`）、`~/repo/aos` 拉新版後跑 `install.py`、重建 `~/aos-home`。家機同理，`git pull` 後舊的 `proto8/impls/`、`proto8/cmd/` 殘留夾可整夾刪。
-- **在跑的線**：沒有。
-- **還留著的尾巴**（細節在 progress.json）：`proto8/docs` 條文句子裡的舊字樣約 67 處與 `docs/zh/*.html` 舊安裝法（已裁先不動）；約 37 個檔還寫 `source proto8/env.sh`（`AOS_HOME` 有設就能用）；code map 專案依賴表是空的（先放著）；前端測試 `test_slash` 把暫存夾寫死（跑法寫在 testing.md，前端等大修）；`STRUCTURE.md` 超過 8 KB；`aos-user` 不在 repo；`wf-整理規劃.md` 主檔標題還寫「還沒裁」。
-- **暫存（repo 外，沒刪）**：WSL `~/.aos/scratch/{s3,s4,s5,s67,verify,tail2,progress-json}-1118/`；桌面 `aos-全景-1117\index.html` 畫的是改名前的樣子。
+- **授權與做法**：頂層只當調度者；普通工作 opus、簡單工作與雜活 sonnet、規劃 fable；派出去的 agent（雜活除外）先讀規矩卡；各線不 commit，頂層分件交（`git commit --only -- <路徑>`，因為工作樹同時有好幾條線的改動）。要使用者裁的一律跳選項。push：使用者下午說「可以推」，已推到 `16558491a`；之後的 commit **還沒推、要再問**。這台改檔在 Windows repo，測試在 WSL 暫存複本；生成器用 `wsl -e bash -c 'cd /mnt/c/code/mine/simple_tools/aos && python3 wf/tools/index_gen.py --apply'`（頂層交件前跑）。
+- **今天上半場（都已推）**：cpp／py 改名與安裝包形狀 S1～S7 全做完；`WAIT_USER`、`gotchas.md` 退場；進度檔改成 [`wf/progress.json`](progress.json)；出廠範本跟著改兩軸；獨立驗證線照步驟單走通。proto8 頂層進 git：`cpp py templates knowledge docs thinking archive frontend`＋`README.md env.sh install.py`；產物 `bin lib include`。原始碼 `py/aos/`、`py/aos/agentlib/`、`py/aos/apps/<名>/`、`py/tools/{base,aos,agent}/`、測試 `py/tests/`、`py/tests/apps/<名>/`（逐夾跑）。改了 `py/`、`cpp/` 要重跑 `python3 proto8/install.py` 才生效；`AOS_HOME` 要自己先設（沒設 `env.sh` 報 `EnvBad`）。裁定逐字在 [cpp-py-改名/08](../proto8/thinking/2026-11/17/cpp-py-改名/08-要裁的題.md) 文末與 [wf-整理規劃/05](../proto8/thinking/2026-11/17/wf-整理規劃/05-要裁的題.md) 文末。
+- **下半場，使用者的話（逐字）**：「好，就如你所說。然後code map也可以開始重建。前端相關先不動。公司WSL的東西整個清掉，重建，然後你幫我試跑，跑完之後再整個清掉，並留下相關紀錄，我之後單開一個session對著這份紀錄，一步一步教我。桌面那份全景網頁看要不要也更新一下。」「能做的先做，七件都做。」
+- **下半場已交、還沒推**：`b05e59368` 公司 WSL 清掉→重建→試跑→再清掉，教學本 [公司WSL-重建試跑紀錄](../proto8/thinking/2026-11/18/公司WSL-重建試跑紀錄.md)（WSL 現在沒有 aos；舊樹備份在 WSL `~/.aos/scratch/wsl-rebuild-1118/old-aos-home-backup.tgz`；start-eca 用真 claude 問一句有回）；`5ca59952e` 進度檔 20 條舊線核對現況；`96ae93b81` 三件小的（two_machines 孤兒修好、kernel 範本 README 寫明只能當最後一站、StateBad 補測試）；加上本檔這次的 commit。
+- **已回報、改動在工作樹、還沒交**（工作樹混著四條線的改動，交之前先分清各線的檔；等還在跑的兩條回來再一起跑生成器、分件交）：
+  - `doc-tail-1118`：37 檔 40 處 `source proto8/env.sh` 改成 `source "$AOS_HOME/env.sh"`（含根 `README.md`、約 20 支程式的錯誤字串／註解、`test_defs.py`、`test_todo.py`）；`wf/STRUCTURE.md` 拆成主檔＋`wf/STRUCTURE/` 四份；`wf-整理規劃.md` 標題；`index_gen_desc.json` 加 `wf/STRUCTURE` 鍵。
+  - `codemap-1118`：新檔 `wf/tools/codemap_deps.py`、`tests/test_codemap_deps.py`；改 `codemap_lib.py`、`index_gen.py`、`index_gen.json`、`wf/knowledge/code-map.json`（手寫主檔）、`tests/test_codemap_json.py`、`index_gen_desc.json` 20 個鍵、`py/aos/apps/daemon_ctl/main.py` 檔頭一句。生成器跑完會多 `wf/knowledge/code-map/deps/{cpp,py,bin}.json`。
+  - `mid2-1118`（兩件分開交）：件 A `py/tools/aos/kernel/` 新檔 `forwarding.py`、改 `letters.py`、`procs_rules.py`、`README.md`（同夾 `runner.py`、`tests/test_runner.py` 是別條線的）；件 B `py/aos/apps/sandbox/` 的 `main.py`、README、`examples/` 六個檔、`py/tests/apps/sandbox/test_sandbox.py`。B 把沙箱改成「aos 命令帶進整個家唯讀、預設放行 `AOS_HOME`」，只驗了 dry-run 與單元測試，真隔離沒驗。
+- **還在跑的線（compact 後等通知，不輪詢）**：
+  - `code-tidy-1118`（opus）：件 A 程式碼整理 5 題落地、件 B 重構盤點（拆 `py/aos/apps/tools` 大檔成 `common.py`／`helps.py`／`registry.py`／`tooldef.py`、測試共用 helper `env_helper.py`、`read_json`、舊退路）；A、B 分開交。
+  - `agent2-1118`（opus）：件 A set-def 新做法（讓 `test_set_def.py` 兩支 expectedFailure 轉綠）；件 B `ctl stop` 延後關、`set-def --restart`、`test_stop_linger`；會改行為，回報要有「以前怎樣、現在怎樣」；分開交。
+  - 工作樹裡 `proto8/cpp/aos-daemon/src/{child,daemon}/…` 的 C++ 也有改動，是這兩條其中一條的（看回報確認是哪條、有沒有授權範圍內）。
+- **各線回來後頂層要做的**：分件交、交件前跑生成器；然後派一條收尾線：(1) 修 `test_aos_ws_reply_match…test_pre_change_aos_ws_reads_the_same`（只在帶 `.git` 的 clone 才跑到，`ImportError: cannot import name 'ws' from 'aos'`）；(2) 步驟單補漏（再起時視窗 B 的 `cd llms` 會失敗、關樹那行根已停時第二句不跑、`~/aos-home` 已存在時 `cp -r` 會抄到裡面、`.pth` 可直接 rm、耗時改「約 1～1.5 分鐘」、跑測試前要 `source $AOS_HOME/env.sh`；詳見教學本文末）；(3) `wf/workflows/common/conventions/02-導航index維護鏈.md` 補 code map 依賴表四句；(4) 幾處不準的字：`py/docs/01-分層等/02` 第 9 條「source env.sh 讓 sys.path 找得到」、`templates/tests/image-move-check/README.md` 還寫 `~/.local/bin`、`proto8/docs/NORMS/附錄4-持久檔.json` 第 335 行 evidence 的 `letters.py` 該是 `forwarding.py`（只改路徑）、`py/aos/tool_io.py` 第 8 行註解講沙箱 ro；(5) `wf/progress.json` 照各線回報更新（`wrapup-1115`、`kernel-limits`、`old-lines-1112`、`path-rules-tail`、`code-tidy-5`、`refactor-tidy-inventory`、`set-def-fx1`、`cpp-py-rename`、`rebuild-aos-home`；各線建議的字在它們的回報裡，compact 後看不到就照 commit 訊息與本檔重寫）。最後更新本檔、問使用者推不推。
+- **要問使用者的（還沒問，跳選項）**：
+  1. 進度檔 `company-w6-w8` 跟 `codex-trust-company` 是同一件，刪前者？
+  2. kernel 範本要不要能直接當中間站（要他定 `count_daemon` 指哪台；現在只寫說明、不補）。
+  3. 沙箱的家怎麼認：甲 看命令的真位置（現在的做法，`commands` 沒列 aos 命令就不綁家）；乙 只要 `AOS_HOME` 有設就一律綁（較寬）。
+  4. 沙箱看得到整個家（含 `thinking/`、`docs/`、`py/`、`cpp/`）接不接受：甲 接受、照規劃；乙 只綁 `bin lib include templates knowledge`（偏離「綁一個夾」）。
+  5. 之後兩條線回報裡新列的題。
+- **桌面成品（repo 外）**：桌面 `aos-全景-1118/index.html`（六頁新版，沒人眼看過；產生腳本在同夾 `_build/`）；舊的 `aos-全景-1117` 原樣留著。
+- **還留著的尾巴**（細節在 progress.json）：`proto8/docs` 條文舊字樣、`docs/zh`（已裁先不動）；前端全部（等大修）；家機沒驗；真模型（API 端點）沒驗；kernel 骨架三處不順（修了會改行為，原文「等有需要再動」）；等活樹、等家機、等使用者裁的各批見進度檔。
+- **暫存（repo 外，沒刪）**：WSL `~/.aos/scratch/*-1118/`。
