@@ -73,7 +73,7 @@
       "title": "全景頁剩的",
       "status": "open",
       "flow": "",
-      "what": "地圖方向鍵、Ctrl+K 原始碼已做（`06cf02300`）；P5 文字、按鈕字「（排隊中）」核不到：網頁 `dist/` 11-17 起不進 git，要有 Node 的機器重建一次看（原始碼 `ui/v2/src/inspector/ReadButtons.tsx` 仍有「（排隊中）」那格）；沒驗 /context 真畫面、Firefox、手機單欄等（要活樹與使用者）；`frontend/bin/aos-frontend` 仍寫死 `~/aos-home/ws/tools`（`VIEW_TOOLS`），改讀設定沒做，跟前端大修一起",
+      "what": "地圖方向鍵、Ctrl+K 原始碼已做（`06cf02300`）；P5 文字、按鈕字「（排隊中）」核不到：網頁 `dist/` 11-17 起不進 git，要有 Node 的機器重建一次看（原始碼 `ui/v2/src/inspector/ReadButtons.tsx` 仍有「（排隊中）」那格）；沒驗 /context 真畫面、Firefox、手機單欄等（要活樹與使用者）；`frontend/bin/aos-frontend` 仍寫死 `~/aos-home/ws/tools`（`VIEW_TOOLS`），改讀設定沒做，跟前端大修一起；前端三個小毛病（`8e0cf5caa` 回報：起前端要自設 AOS_DAEMON 否則錯誤訊息不清、前端去活樹找 aos-user、首頁 / 轉到已刪 v1 的路徑）使用者 11-18 晚：「前端的三個小毛病這塊都還好，，先留着。」→ 先留著不修",
       "next": "",
       "see": [
         "[留底 41](../proto8/thinking/2026-11/17/session-log-瘦身留底/05-第39到42條.md#t41)",
@@ -131,11 +131,11 @@
       "since": "2026-11-18"
     },
     "two-machines-t7-1-7": {
-      "title": "two-machines T7 第 1～7 步：家機已跑，剩一題要裁",
-      "status": "等使用者",
+      "title": "two-machines T7 第 1～7 步：家機已跑，自動記憶那題已裁",
+      "status": "open",
       "flow": "",
-      "what": "11-18 晚線 t7-home-1118 在家機用真 claude（haiku）跑完第 1～4、6、7 步：1、2、4、6 過；3 不符預期（claude 2.1.327 換資料夾也接得回，aos 比它嚴、只是保守，沒改）；7 發現 claude 用的是 Claude Code 自己的自動記憶（~/.claude/projects/…/memory/，不在樹裡、換台帶不走），要不要在 eca-claude 範本關掉等使用者裁；第 5 步 codex 跳過（使用者打算拿 pi 代替）",
-      "next": "使用者裁自動記憶那題；第 8、9 步見上一條（那兩步內文要先照現況改）",
+      "what": "11-18 晚線 t7-home-1118 在家機用真 claude（haiku）跑完第 1～4、6、7 步：1、2、4、6 過；3 不符預期（claude 2.1.327 換資料夾也接得回，aos 比它嚴、只是保守，沒改）；7 發現 claude 用的是 Claude Code 自己的自動記憶（~/.claude/projects/…/memory/，不在樹裡、換台帶不走），使用者 11-18 晚已裁、不做：「自動記憶那塊我們管不着，要的話就是使用者自己去設定或定義關掉。」；第 5 步 codex 跳過（使用者打算拿 pi 代替）",
+      "next": "第 8、9 步見上一條（那兩步內文要先照現況改）；本條只剩這個指向，那兩步處理完即可刪",
       "see": [
         "[14-真機驗證 家機實跑結果](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md#家機實跑結果11-18-晚線-t7-home-1118)"
       ],
@@ -299,6 +299,18 @@
       "what": "使用者 11-18 晚裁「刪掉」。`proto8/impls/`（11-17 改名 `cpp/` 後留下的舊編譯產物，未追蹤、不在 git）頂層判斷家機活樹還沒重建、可能還在用（舊 `cmd/install.sh` 的連結指進 `impls/`），先不刪；等家機 `~/aos-home` 重建（rebuild-aos-home）後再刪",
       "next": "家機重建完再刪",
       "see": [],
+      "since": "2026-11-18"
+    },
+    "default-stack": {
+      "title": "預設 stack：走丁（agent 的 stack 放路標）＋乙，之後再做",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-18 晚裁：走丁（agent 的 stack 裡加一個路標，表示在哪個 daemon 底下）、路標由 daemon 寫（不是 ctl add）、丁順便帶乙（改錯誤訊息）；之後再做，尚未派線。丁要改 N-63 一列、為 AOS_AGENT 開退路，daemon 寫路標要改 C++ daemon",
+      "next": "使用者說開工時派線",
+      "see": [
+        "[04-使用者裁定](../proto8/thinking/2026-11/18/default-stack-1118/04-使用者裁定.md)",
+        "[調查入口](../proto8/thinking/2026-11/18/default-stack-1118/README.md)"
+      ],
       "since": "2026-11-18"
     }
   }
