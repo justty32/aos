@@ -15,7 +15,7 @@ eca-claude 小試驗教學的目錄：使用者 11-18 陸續提的疑問，一�
 | [05](05-aos-lock鎖信箱.md) | 用 aos-lock 鎖信箱、試 aos-post、解鎖 | 鎖信箱夾本身擋不住。aos-post 只認 `<信箱>/order.lock`，而且只在 `--ordered` 時。鎖住時 say 無聲一直等，解鎖後自己寄進去。命令列拿的鎖不會自己放 |
 | [06](06-不用aos-tree-start起daemon.md) | 不用 aos-tree-start 啟動停著、有掛 proc 的 daemon | `aos-tree-start` 只是檢查環境再叫 `aos-exec`。`cd ~/aos-home && source env.sh && aos-exec root` 結果一樣。running／sleeping 的自己醒，stopped 的要 `start`。aos-tree-start 已於 11-18 移除，直接用 aos-exec |
 | [07](07-aos-mailbox寄信收信.md) | 用 aos-mailbox 寄信給 agent、收信 | 寄進的是 agent 的 `mailbox/`，不是 `queue/`。agent 要等 `mail_notify` 每分鐘巡一次才看到。回信用 `in_reply_to` 對上，收信要自己輪詢 |
-| [08](08-不用aos-kit.md) | 不用 aos-kit 做出 aos-kit 的功能 | aos-kit 只換定義裡的 `system.txt`、`tools.json`，並另存 `.before-kit`。手動 cp 的結果逐檔相同。出廠的 kit 現在裝不起來（`MakeMissing`），也不支援 eca-claude |
+| [08](08-不用aos-kit.md) | 不用 aos-kit 做出 aos-kit 的功能 | aos-kit 只換定義裡的 `system.txt`、`tools.json`，並另存 `.before-kit`。手動 cp 的結果逐檔相同。出廠的 kit 現在裝不起來（`MakeMissing`），也不支援 eca-claude。aos-kit 已於 11-18 移除，套 kit 改用 `aos-agent ctl add／set-def --kit`，見 [aos-kit-併進ctl](../aos-kit-併進ctl.md) |
 | [09](09-aos-sandbox限制資源.md) | 用 aos-sandbox 限制 CPU%、核心數、資料夾、網路、記憶體 | 資料夾、網路由沙箱本身擋。記憶體、CPU 時間這台要走 daemon 的 `--limits`。CPU%、核心數沒有欄位，要在外面包 `systemd-run --user`＋`taskset` |
 | [10](10-aos-asuser.md) | 試 aos-asuser（不行就寫缺什麼、模擬假設） | 參數檢查都實跑過了。真換身分缺 `newuidmap`，要使用者自己 `sudo apt install uidmap`。裝好之後的步驟標成「預期，未實測」 |
 | [11](11-aos-share.md) | aos-share 也試試看 | 檔案系統支援 ACL，`check` 能用。真的分享、收回缺 `setfacl`，要使用者自己 `sudo apt install acl uidmap`。裝好之後的步驟標成「預期，未實測」 |
