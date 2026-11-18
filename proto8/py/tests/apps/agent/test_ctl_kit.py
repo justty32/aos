@@ -99,6 +99,22 @@ class CtlKit(unittest.TestCase):
         self.assertEqual(g.returncode, 0, g.stderr)
         self.assertTrue(g.stdout.startswith("agent\t"), g.stdout)
 
+    def test_tools_ls_after_kit_does_not_ask_whether_the_stack_was_copied(self):
+        """setdef-night-1118: the kit's tools.json layers straight on the stock packs; tools ls used to ask 'was the stack copied
+        from another agent?'. AOS_HOME is set so the kit's $env pointers resolve (without it there is nothing to compare)."""
+        self.assertEqual(self.agent("ctl", "add", "-n", "ann", "-w", str(self.ws), "--kit", str(KITS / "gather"), "fsmish").returncode, 0)
+        r = subprocess.run([str(BIN), "--daemon", str(self.d), "tools", "--target", "ann", "ls"], cwd=self.tmp,
+                           env=dict(ENV, AOS_HOME=str(PROTO)), capture_output=True, text=True, timeout=90)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("board_read", r.stdout)                      # the kit's tools are what it lists
+        self.assertNotIn("copied from another agent", r.stderr)
+        st = self.d / "procs" / "ann" / "tools.json"              # a copy that points at another definition's file still warns
+        other = self.definition("other")
+        st.write_text(json.dumps({"$override": str(other / "tools.json"), "tools": {}}))
+        r = subprocess.run([str(BIN), "--daemon", str(self.d), "tools", "--target", "ann", "ls"], cwd=self.tmp,
+                           env=dict(ENV, AOS_HOME=str(PROTO)), capture_output=True, text=True, timeout=90)
+        self.assertIn("was the stack copied from another agent?", r.stderr)
+
     def test_add_kit_missing_or_incomplete(self):
         r = self.agent("ctl", "add", "-n", "ann", "--kit", str(self.tmp / "nope"), "fsmish")
         self.assertEqual((r.returncode, self.code(r)), (1, "KitMissing"), r.stderr)

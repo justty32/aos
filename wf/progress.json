@@ -46,18 +46,6 @@
       ],
       "since": "2026-11-17"
     },
-    "set-def-fx1": {
-      "title": "set-def 新做法（fx-1）與改名兩步（em-Q4）",
-      "status": "open",
-      "flow": "",
-      "what": "已交 `43a07ea85`：set-def＝關畫面→停→從表上拔→同名同 stack 掛回新定義（表馬上換、daemon 重啟不掉），`--restart` 拿掉（傳了報 `FlagUnknown`），改名兩步寫進 README 與知識庫，`test_set_def` 兩支 expectedFailure 轉綠。真 eca 畫面 11-18 下午驗過；走 kernel 排隊的 11-18 晚驗過（verify-night-1118）：有空格時跑著／停著／睡著都照說明，工作區欄變 `-`、到期單殘留兩個小毛病已被 `2b4320644` 修好、這條路徑也沒出現；**格滿會出事**：站把掛回那封 `procs_added` 當要一格（停著／睡著的也算），信進隊、set-def 逾時報 `DaemonFailed`、agent 不在表上，之後信才套上，還會把照提示手動掛回的那隻停掉；名字不在 `allowed` 時先拔才被拒，錯誤行的手動掛回提示沒帶 `-d`、照抄會再被同一站擋。剩：這題甲／乙／丙等使用者裁",
-      "next": "",
-      "see": [
-        "[misc-1114](../proto8/thinking/2026-11/14/misc-1114.md#1-fx-1set-def-改成停拔同一個-stack-掛回)",
-        "[verify-night-1118](../proto8/thinking/2026-11/18/verify-night-1118.md#要你裁的)"
-      ],
-      "since": "2026-11-17"
-    },
     "wrapup-1115": {
       "title": "11-15 收尾剩的",
       "status": "暫停",
@@ -242,19 +230,6 @@
       "see": [
         "[交接](../proto8/thinking/2026-11/18/交接-各線/eca-lab-1118.md)",
         "[交接-各線](../proto8/thinking/2026-11/18/交接-各線/README.md)"
-      ],
-      "since": "2026-11-18"
-    },
-    "lines-1118-decide": {
-      "title": "11-18 被打斷那幾條線留下的待裁題",
-      "status": "等使用者",
-      "flow": "",
-      "what": "cooldown-1118（已交 2b4320644）：listen 的字少了 aos-llm: error: 前綴、SendFailed 少了 aos-llm 原話可不可以；關畫面順手清到期單（set-def、ctl rm、aos-agent close 都清）要不要只限 set-def。——兩小題已裁：使用者 11-18 晚選項框「前綴補回、清單只限 set-def (Recommended)」，另一條線改程式。rm-treestart-1118（已交 93e0acc0c）：跳過 source env.sh 直接打 aos-exec root 沒人擋殼裡別棵樹的 AOS_*——已裁：使用者 11-18 晚「不補」（甲）。kit-merge-1118（已交）：寫到哪、eca 能不能套、換包能不能直接蓋——已裁：使用者 11-18 晚選項框「寫進 stack (Recommended)」、「eca 定義也能套 kit」要、「換包可以直接蓋」要，都已做進程式。還沒問：套 kit 後 tools ls 那行誤導的提醒要不要修",
-      "next": "",
-      "see": [
-        "[cooldown 交接](../proto8/thinking/2026-11/18/交接-各線/cooldown-1118.md)",
-        "[rm-treestart 交接](../proto8/thinking/2026-11/18/交接-各線/rm-treestart-1118.md)",
-        "[kit-merge 交接](../proto8/thinking/2026-11/18/交接-各線/kit-merge-1118.md)"
       ],
       "since": "2026-11-18"
     },

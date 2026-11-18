@@ -129,9 +129,18 @@ def pointer_for(a, orig, over, rel):
     return os.path.relpath(orig, os.path.dirname(os.path.abspath(over)))
 
 
+def pack_dirs():
+    """出廠工具包（lib/packs，原始碼裡是 py/packs）的資料夾：這支所在那份，與 $AOS_HOME 那份。"""
+    dirs = {os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "packs"))}
+    if os.environ.get("AOS_HOME"):
+        dirs.add(os.path.realpath(os.path.join(os.environ["AOS_HOME"], "lib", "packs")))
+    return dirs
+
+
 def check_pointer(over, orig):
     """stack 那份的 $override 解出來不是這隻定義的那份＝一行 warning（04 N2 後果：stack 被 cp 去配另一個定義時，指標不會跟著變）。
-    只讀、解不開就不說（讀它的 aos-tools 自己會報）。"""
+    只讀、解不開就不說（讀它的 aos-tools 自己會報）。指的全是出廠工具包（lib/packs）＝不說：那是 ctl add／set-def --kit
+    寫進來的 kit（kit 的 tools.json 直接疊在工具包上），不是從別隻抄來的（setdef-night-1118，kit 寫進 stack 是 62940fb7c 定的正常做法）。"""
     try:
         with open(over, encoding="utf-8") as f:
             v = json.load(f).get(OVERRIDE_KEY)
@@ -149,7 +158,7 @@ def check_pointer(over, orig):
                 item = None
         if isinstance(item, str) and item:
             found.append(os.path.realpath(os.path.join(folder, item)))
-    if found and os.path.realpath(orig) not in found:
+    if found and os.path.realpath(orig) not in found and not all(os.path.dirname(t) in pack_dirs() for t in found):
         note("this agent's %s overrides %s, not its definition's %s (was the stack copied from another agent?)"
              % (over, ", ".join(found), orig))
 

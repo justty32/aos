@@ -26,7 +26,7 @@
 
 每次要用時現疊，不存結果，疊法只在 aos-tools 一處（[aos-tools](../../tools/README.md)）：呼叫者的共同規則是「`<stack>/<tools 路徑>` 是檔就只傳它（`aos-tools --file 它`，它的 `$override` 指回定義那份），否則傳定義那份」；`ls`／`get`／`call` 都看疊好的那份，`add`／`rm` 只寫自己那份、不碰定義。用它的：
 
-- `aos-agent tools ls／get／add／rm`（stderr 一行說用的是自己那份還是定義那份；自己那份的 `$override` 解出來不是這隻定義的那份時多印一行 warning——stack 被 cp 去配另一個定義時指標不會跟著變）。
+- `aos-agent tools ls／get／add／rm`（stderr 一行說用的是自己那份還是定義那份；自己那份的 `$override` 解出來不是這隻定義的那份時多印一行 warning——stack 被 cp 去配另一個定義時指標不會跟著變；指的全是出廠工具包 `lib/packs/` 的不印：那是 `ctl add／set-def --kit` 寫進來的 kit，不是抄來的，setdef-night-1118）。
 - agent-fsm 的身體 `brain.py`（給腦看的工具清單）、`act.py`（叫工具）：沒給 `--tools` 時照上面的共同規則選一份；每格重讀＝下一題生效。
 - eca agent：`proto8/py/aos/agentlib/cli_cfg.py` 的 `stack_copies`（cli.json 沒明寫 `tools` 時）同樣依宣告，自己那份在就把它當登記檔交給 `aos-mcp`；每次起 CLI 重接。
 - `aos-agent ctl state` 的 tools 那行：`own: N listed, M set to null (+名, null:名…) over <$override 原樣值>`。
