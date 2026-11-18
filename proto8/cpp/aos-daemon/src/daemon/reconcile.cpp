@@ -369,6 +369,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 c.stuck_after_ms = spec["stuck_after_ms"].get<long long>();
             }
             c.stack = cell_of(n, spec);
+            c.ws = spec.is_object() ? spec.value("ws", Json()) : Json();   // 11-18 cooldown-1118：表上那列也寫 ws（以前只在 launch 裡，ls 看到 -；set-def 掛回停著／睡著的就是這條）
             c.exec = exec_of(spec, cwd_);
             c.def = def_of(spec);
             c.limits = limits_of(spec, Json());

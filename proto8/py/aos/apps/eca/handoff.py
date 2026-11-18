@@ -82,7 +82,7 @@ class Handoff:
                 letters_drop(self.stack, self.left, "failed")       # 回答配對：已收掉的信不會有回答了（還在 cur/ 的下一輪再交）
                 fire("brain_failed", {"name": e.code, "reason": str(e)}, self.template, self.stack)   # hook 停下＝HookFailed，冷卻不記（同 agent-fsm wait）
                 try:
-                    cooldown.fail(self.stack, e.code, e, dropped=len(self.good))
+                    cooldown.fail(self.stack, e.code, e, dropped=len(self.good), retry=False)   # 照舊報錯退 1：停在這個錯上（cooldown-1118 的 retry 欄）
                 except OSError as w:
                     aos_flags.warn(NAME, "cannot write %s: %s" % (cooldown.path(self.stack), w))
             raise
@@ -136,7 +136,7 @@ class Handoff:
                 event["cause"] = info["cause"]
         fire("brain_failed", event, self.template, self.stack)
         try:
-            cooldown.fail(self.stack, e.code, e, dropped=dropped)
+            cooldown.fail(self.stack, e.code, e, dropped=dropped, retry=temporary)   # 暫時＝退 0、冷卻完自己接著試；永久＝退 1 停下
         except OSError as w:
             aos_flags.warn(NAME, "cannot write %s: %s" % (cooldown.path(self.stack), w))
         if temporary:

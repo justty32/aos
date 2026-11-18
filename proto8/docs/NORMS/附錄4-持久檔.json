@@ -548,10 +548,10 @@
    "path": "$AOS_STACK/cooldown.json",
    "lifetime": "暫時",
    "writer": "py/aos/agentlib/cooldown.py（templates/agent-fsm wait.py、aos-eca-turn）",
-   "reader": "同左",
+   "reader": "同左；aos-agent ctl ls（-l、--json）、aos-agent listen／ask（hints.brain_failure）",
    "image": "不進：本機的牆鐘期限；stack.gitignore 的 **/cooldown.json 擋（two-machines gitignore_classes G003）",
    "on_bad": "不在＝沒在冷卻；寫不成＝warning 一行、照舊；殘留的舊檔 until 早過＝下一次照常（eca 是只拿一封試）",
-   "note": "11-10 two-machines 06 新增：{failures, until, at, code, reason, dropped}；30 秒起加倍、封頂 30 分鐘，成功一次刪檔。新檔，不用重建",
+   "note": "11-10 two-machines 06 新增：{failures, until, at, code, reason, dropped}；30 秒起加倍、封頂 30 分鐘，成功一次刪檔。新檔，不用重建。11-18 cooldown-1118（使用者裁「寫進狀態檔」）只加兩個選配欄：retry（寫的身體會不會自己重送）、error（下層的 {code, msg}，fsm 才有）；沒有這兩欄照讀，型別不對只丟那欄",
    "evidence": "proto8/py/aos/agentlib/cooldown.py（read、state、fail、clear）、proto8/templates/agent-fsm/wait.py（record_failure）、proto8/py/aos/apps/eca/handoff.py（Handoff.ask、Handoff.done）、proto8/py/aos/apps/eca/turn.py（one_turn）"
   },
   {

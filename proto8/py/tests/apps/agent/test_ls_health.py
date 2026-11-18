@@ -106,6 +106,18 @@ class LsHealth(unittest.TestCase):
         self.assertEqual(rows["dan"]["busy"], "cli")
         self.assertEqual(json.loads(self.ls("-j", "-l")), json.loads(self.ls("-j")))
 
+    def test_lower_error_fields(self):
+        # cooldown-1118：冷卻檔有 retry／error＝--json 照帶，-l 的 LAST ERROR 用下層原話代替「aos-llm recv exited 1」
+        rec = dict(DUE, reason="aos-llm recv exited 1", retry=False,
+                   error={"code": "EndpointFailed", "msg": "HTTP 400: model not supported"})
+        (self.d / "procs" / "cat" / "cooldown.json").write_text(json.dumps(rec))
+        rows = {r["name"]: r for r in json.loads(self.ls("-j"))}
+        self.assertIs(rows["cat"]["cooldown"]["retry"], False)
+        self.assertEqual(rows["cat"]["cooldown"]["error"], rec["error"])
+        self.assertNotIn("retry", rows["ann"]["cooldown"])
+        self.assertEqual(self.ls("-l").splitlines()[2].split("\t")[8],
+                         "BrainFailed EndpointFailed HTTP 400: model not supported")
+
     def test_bad_cooldown_is_none(self):
         (self.d / "procs" / "ann" / "cooldown.json").write_text("not json")
         rows = {r["name"]: r for r in json.loads(self.ls("--json"))}

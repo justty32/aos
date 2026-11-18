@@ -448,7 +448,7 @@ time.sleep(12)
         reply = dc.ask(str(f.stack), {'procs_added': {'job': spec}, 'procs_stopped': ['job']})
         self.assertTrue(reply['applied'])
         row = f.phase('stopped')
-        self.assertNotIn('ws', row)
+        self.assertEqual(os.path.normpath(os.path.join(f.stack, row['ws'])), str(ws))   # 11-18 cooldown-1118：never-started rows carry ws too
         self.assertEqual(os.path.normpath(os.path.join(f.stack, row['launch']['ws'])), str(ws))
         self.assertFalse(f.cell.exists())
         f.close()

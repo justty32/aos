@@ -571,6 +571,55 @@ with open(os.environ['EVENT_LOG'], 'a') as f:
         sent = [json.loads(line) for line in (self.root / 'requests.jsonl').read_text().splitlines()]
         self.assertEqual(sent, [request, request])
 
+    # ---- cooldown-1118: retry and error fields (使用者 11-18 裁「寫進狀態檔」)
+    def fields(self):
+        rec = self.record()
+        return rec.get('retry'), rec.get('error')
+
+    def test_fields_permanent_brain_failed_records_kernel_error_and_retry_false(self):
+        self.wait(10)
+        reply = json.dumps({'error': {'code': 'EndpointFailed', 'msg': 'HTTP 400:\n model not supported', 'retry': False,
+                                      'status': 400}})
+        self.wait(1, FAKE_RECV='1', FAKE_REPLY=reply)
+        rec = self.record()
+        self.assertEqual((rec['code'], rec['reason']), ('BrainFailed', 'aos-llm recv exited 1'))   # old fields unchanged
+        self.assertEqual(self.fields(), (False, {'code': 'EndpointFailed', 'msg': 'HTTP 400: model not supported'}))
+
+    def test_fields_temporary_brain_failed_is_retry_true(self):
+        self.wait(10)
+        self.temporary(code='EndpointFailed', msg='HTTP 503: unavailable')
+        self.assertEqual(self.fields(), (True, {'code': 'EndpointFailed', 'msg': 'HTTP 503: unavailable'}))
+
+    def test_fields_unreadable_reply_is_retry_false_without_error(self):
+        self.wait(10)
+        self.wait(1, FAKE_RECV='1', FAKE_REPLY='not json')
+        self.assertEqual(self.fields(), (False, None))
+
+    def test_fields_send_failed_and_budget_missing_are_retry_true(self):
+        self.wait(10, FAKE_SEND='3')
+        self.assertEqual(self.fields(), (True, None))
+        cooldown.clear(str(self.stack))
+        self.refuse()
+        self.assertEqual(self.fields(), (True, {'code': 'BudgetMissing', 'msg': self.MSG}))
+
+    def test_fields_are_optional_when_read(self):
+        stack = str(self.stack)
+        rec = cooldown.fail(stack, 'X', 'r', now=1000)
+        self.assertNotIn('retry', rec)
+        self.assertNotIn('error', rec)
+        self.assertEqual(cooldown.read(stack), rec)              # a file without them reads as before
+        rec = cooldown.fail(stack, 'X', 'r', now=1001, retry=True, error={'code': 'E', 'msg': 'm', 'status': 1})
+        self.assertEqual((rec['retry'], rec['error']), (True, {'code': 'E', 'msg': 'm'}))
+        rec = cooldown.fail(stack, 'X', 'r', now=1002)            # each failure rewrites the whole record
+        self.assertNotIn('retry', rec)
+        for bad in ({'retry': 'yes'}, {'error': 'E'}, {'error': {'msg': 'no code'}}, {'error': {'code': 'E', 'msg': 3}}):
+            with self.subTest(bad=bad):
+                (self.stack / cooldown.NAME).write_text(json.dumps(dict(rec, **bad)))
+                got = cooldown.read(stack)
+                self.assertEqual(got, rec)                       # only the bad optional field is dropped
+        self.assertIsNone(cooldown.error_of({'code': ''}))
+        self.assertEqual(cooldown.error_of({'code': 'E'}), {'code': 'E', 'msg': ''})
+
 
 if __name__ == '__main__':
     unittest.main()

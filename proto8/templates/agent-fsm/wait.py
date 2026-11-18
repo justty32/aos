@@ -29,6 +29,8 @@
 #   先用 py/aos/agentlib/cooldown.py 記一筆 $AOS_STACK/cooldown.json（30 秒起、加倍到 30 分鐘；dropped 一直是 0——重寄同一份請求、不掉信）；
 #   寫不成只 warning 一行、不改原本的結果。寄之前（沒 pending、request.json 在、endpoint 對得上）冷卻中＝不寄、退 10 留在 wait；
 #   冷卻到了（due）或沒有＝照寄。好的回信接進 history 之後刪 cooldown.json（刪不掉＝warning）。ReplyBad、WriteFailed 等不寫冷卻。
+#   冷卻檔另寫兩欄（cooldown-1118，使用者 11-18 裁「寫進狀態檔」）：retry＝這格之後會不會自己重送（SendFailed、BudgetMissing、
+#     retry true 的 BrainFailed＝true；退 1 停下的 BrainFailed＝false），error＝kernel 回信的 error.code／msg（解得到才寫）；listen 讀這兩欄。
 #   BudgetMissing（kernel 額度拒絕）：brain_failed 的 name＝BudgetMissing、reason＝kernel 的 msg，記同代號冷卻、warning、退 10；
 #     冷卻到期重寄同一份 request.json，不寫 observed、不加 history。只認 recv --full 的 JSON error.code，不讀 stderr。
 #     冷卻檢查過後、正要寄時，priority.deadline 可解且已過或 5 秒內到期＝只 warning、退 11 回 think 重組；
@@ -137,6 +139,8 @@ that has passed or passes within 5 s causes one warning and exit 11 to rebuild i
 request.json and cooldown.json stay unchanged, with no brain_failed event.
 A SendFailed cooldown recorded while the kernel folder was missing counts as due as soon as
 $AOS_LLM_KERNEL resolves to a folder.
+cooldown.json also says "retry" (true = this cell sends again by itself, false = it stopped with
+exit 1) and, when the kernel's error was parsed, "error": {"code", "msg"} (aos-agent listen reads them).
 A good reply deletes cooldown.json. Rebuilding because the endpoint or tuning changed also
 clears BudgetMissing and BrainFailed cooldowns (failure to clear only warns); other rebuilds do not.
 Hooks: brain_failed runs on LlmKernelMissing, BudgetMissing, BrainFailed, SendFailed and ReplyBad
@@ -238,10 +242,11 @@ def brain_failed(code, reason, error=None, extra=None):
         die(type(e).__name__, str(e))
 
 
-def record_failure(code, reason):
-    """外面服務的錯或額度拒絕：記一筆冷卻（dropped 0）；寫不成只提醒，呼叫的人決定退出碼。"""
+def record_failure(code, reason, retry, error=None):
+    """外面服務的錯或額度拒絕：記一筆冷卻（dropped 0）；寫不成只提醒，呼叫的人決定退出碼。
+    retry＝這格之後會不會自己重送、error＝kernel 回信的 error 物件（cooldown-1118：寫進冷卻的 retry、error 兩欄，listen 讀）。"""
     try:
-        cooldown.fail(stack, code, reason)
+        cooldown.fail(stack, code, reason, retry=retry, error=error)
     except OSError as e:
         aos_flags.warn("agent-fsm", "cannot write %s: %s" % (cooldown.path(stack), e))
 
@@ -479,7 +484,7 @@ if not name:                                     # 還沒寄
         gone = kernel_dir() is None
         reason = "aos-llm send exited %d" % r.returncode + (" " + KERNEL_GONE if gone else "")
         brain_failed("SendFailed", reason)
-        record_failure("SendFailed", reason)
+        record_failure("SendFailed", reason, True)
         aos_flags.warn("agent-fsm", "aos-llm send exited %d (its reason is above); the request stays and is sent again "
                        "%s" % (r.returncode, "once AOS_LLM_KERNEL is a folder or the cooldown ends" if gone
                                else "when the cooldown ends"))
@@ -557,9 +562,9 @@ if r.returncode != 0:                            # kernel 回錯：只從 --full
         until = budget_until(error, now)
         try:
             if until is None:
-                cooldown.fail(stack, "BudgetMissing", msg)
+                cooldown.fail(stack, "BudgetMissing", msg, retry=True, error=error)
             else:
-                cooldown.fail_until(stack, "BudgetMissing", msg, until, now=now)
+                cooldown.fail_until(stack, "BudgetMissing", msg, until, now=now, retry=True, error=error)
         except OSError as e:
             aos_flags.warn("agent-fsm", "cannot write %s: %s" % (cooldown.path(stack), e))
         if until is None:
@@ -592,16 +597,16 @@ if r.returncode != 0:                            # kernel 回錯：只從 --full
         now = time.time()
         try:
             if wait_s == step_s:
-                cooldown.fail(stack, "BrainFailed", reason, now=now)
+                cooldown.fail(stack, "BrainFailed", reason, now=now, retry=True, error=error)
             else:
-                cooldown.fail_until(stack, "BrainFailed", reason, now + wait_s, now=now)
+                cooldown.fail_until(stack, "BrainFailed", reason, now + wait_s, now=now, retry=True, error=error)
         except OSError as e:
             aos_flags.warn("agent-fsm", "cannot write %s: %s" % (cooldown.path(stack), e))
         aos_flags.warn("agent-fsm", "%s %s; attempt %d, the same request is sent again in %s s"
                        % (error.get("code", "BrainFailed"), " ".join(str(error.get("msg", reason)).split()), attempt, wait_s))
         sys.exit(NOT_YET)
     brain_failed("BrainFailed", reason, error, extra=extra)
-    record_failure("BrainFailed", "aos-llm recv exited %d" % r.returncode)
+    record_failure("BrainFailed", "aos-llm recv exited %d" % r.returncode, False, error)
     die("BrainFailed", "aos-llm recv exited %d (its reason is above)" % r.returncode)
 try:
     reply = json.loads(r.stdout)

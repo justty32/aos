@@ -112,10 +112,12 @@ def stderr_tail(a, size=8192):
 
 def brain_failure(a):
     """問腦失敗的紀錄（small-1118，使用者 11-18 小題一包「listen 出錯時把理由帶出來」）：只讀，任何錯都當沒有＝None。
-    cooldown.json（成功一次就刪，所以在＝最後一次問腦沒成）給代號、原因、第幾次、冷卻到幾點；stderr 檔結尾的錯誤行給下層原話
-    （fsm 只把「aos-llm recv exited 1」寫進冷卻，端點回的原因只在 stderr）。stopped＝身體停在這個錯上：stderr 裡最後一行
-    「名: error: 同代號 …」之後，同一支沒再印 warning，而且沒有正在問的腦（think/pending.txt 不在）；只印 warning 繼續重送的
-    （retry true、BudgetMissing）不算。
+    cooldown.json（成功一次就刪，所以在＝最後一次問腦沒成）給代號、原因、第幾次、冷卻到幾點。
+    先讀欄位（cooldown-1118，使用者 11-18 裁「寫進狀態檔」）：冷卻有布林 retry＝寫的身體自己說了會不會重送，
+    stopped＝retry false 而且沒有正在問的腦（think/pending.txt 不在）；下層原話＝error 欄的 code＋msg（沒有＝冷卻的代號＋原因）。
+    沒有 retry 欄＝退回認 stderr 檔結尾的錯誤行（這條退路是給自己寫冷卻檔、沒寫這兩欄的自寫 body 用的，不是為了舊版 fsm／eca）：
+    stopped＝stderr 裡最後一行「名: error: 同代號 …」之後，同一支沒再印 warning，而且沒有 think/pending.txt；
+    只印 warning 繼續重送的不算；下層原話＝那幾行錯誤行。
     回 {code, reason, failures, until, lines, stopped}。"""
     try:
         from aos.agentlib import cooldown
@@ -123,14 +125,24 @@ def brain_failure(a):
         rec = cooldown.read(a.stack)
         if not rec:
             return None
+        until = time.strftime("%H:%M:%S", time.localtime(cooldown.parse(rec["until"])))
+        out = {"code": str(rec.get("code") or "?"), "reason": str(rec.get("reason") or ""), "failures": rec.get("failures", 0),
+               "until": until}
+        thinking = os.path.exists(os.path.join(a.stack, "think", "pending.txt"))
+        if isinstance(rec.get("retry"), bool):    # 欄位：身體自己寫的，不認輸出格式
+            err = rec.get("error")
+            lines = ["%s %s" % (err["code"], err.get("msg", "")) if err else "%s %s" % (out["code"], out["reason"])]
+            stopped = rec["retry"] is False and not thinking
+            if stopped and err:                   # 停下的再接上身體自己那句（例：EndpointFailed HTTP 400 … / BrainFailed aos-llm recv exited 1）
+                lines.append("%s %s" % (out["code"], out["reason"]))
+            return dict(out, lines=[" ".join(l.split())[:300] for l in lines], stopped=stopped)
         code = str(rec.get("code") or "")
         tail = stderr_tail(a)
         # 身體停下的那行＝最後一行「名: error: 冷卻代號 …」；它之後同一支印過 warning（例：retry 的「sent again in 30 s」）＝又接著重送了，不算停。
         # 它之後別支的行照常會有（aos-loop 的 RunFailed、brain_notify 的 warning；11-18 small-1118 實跑看到的）。
         at = max((i for i, l in enumerate(tail) if (ERROR_LINE.match(l) or [None, None])[1] == code), default=-1)
         prog = tail[at].split(":", 1)[0] if at >= 0 else ""
-        stopped = at >= 0 and not any(l.startswith(prog + ": warning: ") for l in tail[at + 1:]) \
-            and not os.path.exists(os.path.join(a.stack, "think", "pending.txt"))
+        stopped = at >= 0 and not any(l.startswith(prog + ": warning: ") for l in tail[at + 1:]) and not thinking
         lines = []
         if stopped:                               # 停下那行往上連著的 error 行（跳過 warning），例：aos-llm 的 EndpointFailed 那行＋fsm 的 BrainFailed 那行
             for l in reversed(tail[:at + 1]):
@@ -142,15 +154,13 @@ def brain_failure(a):
                     break
         else:                                     # 會自己重送的：最後一行 error（例：aos-llm 的 EndpointFailed timed out connecting …）
             lines = [l for l in tail if ERROR_LINE.match(l)][-1:]
-        until = time.strftime("%H:%M:%S", time.localtime(cooldown.parse(rec["until"])))
-        return {"code": str(rec.get("code") or "?"), "reason": str(rec.get("reason") or ""), "failures": rec.get("failures", 0),
-                "until": until, "lines": [" ".join(l.split())[:300] for l in lines], "stopped": stopped}
+        return dict(out, lines=[" ".join(l.split())[:300] for l in lines], stopped=stopped)
     except Exception:
         return None
 
 
 def failure_text(f):
-    """brain_failure 的一句：stderr 有錯誤行就用原話，不然用冷卻的代號＋原因；後面接冷卻到幾點、第幾次。"""
+    """brain_failure 的一句：有原話（欄位或 stderr 錯誤行）就用原話，不然用冷卻的代號＋原因；後面接冷卻到幾點、第幾次。"""
     said = " / ".join(f["lines"]) if f["lines"] else "%s %s" % (f["code"], f["reason"])
     return "%s (failure %s in a row; cooldown until %s)" % (said, f["failures"], f["until"])
 

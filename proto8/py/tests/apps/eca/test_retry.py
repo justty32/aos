@@ -67,6 +67,8 @@ class ClaudeRetry(RetryBase):
         self.assertEqual((rec["letters"], rec["attempt"], rec["tools"]), (sigs, 1, 0))
         cool = cooldown.read(str(self.stack))
         self.assertEqual((cool["failures"], cool["dropped"], cool["code"]), (1, 0, "CliFailed"))
+        self.assertIs(cool["retry"], True)                # cooldown-1118：暫時錯＝自己接著試
+        self.assertNotIn("error", cool)
         self.assert_sum_noted()
         event = self.events()[-1]
         self.assertEqual({key: event[key] for key in ("name", "code", "retry", "attempt", "dropped", "wait_s", "status", "cause")},
@@ -234,6 +236,7 @@ class ClaudeRetry(RetryBase):
         self.assertFalse((self.stack / "retry.json").exists())
         self.assert_failed_letters(sigs)
         self.assertEqual(cooldown.read(str(self.stack))["dropped"], 1)
+        self.assertIs(cooldown.read(str(self.stack))["retry"], False)   # cooldown-1118：永久錯＝退 1 停下
         event = self.events()[-1]
         self.assertEqual((event["retry"], event["attempt"], event["dropped"]), (False, 1, 1))
         self.assertNotIn("wait_s", event)

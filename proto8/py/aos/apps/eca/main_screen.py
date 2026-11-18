@@ -25,7 +25,7 @@ aos_flags.parse（P-44：長旗標與共用短名 -h；子命令前不認得的�
 import contextlib, io, json, os, sys, time
 
 from aos import flags as aos_flags  # noqa: E402
-from aos.agentlib import cli_base, cli_cell, cli_cfg, cli_screen  # noqa: E402
+from aos.agentlib import cli_base, cli_cell, cli_cfg, cli_linger, cli_screen  # noqa: E402
 from aos.apps.eca.slash import slash_status, slash_usage  # noqa: E402  peek 用（11-16 ok-small）
 from aos.apps.eca.common import Fail as EcaFail  # noqa: E402
 from aos import daemon_ctl as dc  # noqa: E402
@@ -76,6 +76,7 @@ usage: aos-eca-screen --eca ECA_DIR close
 
 Closes the screen in AOS_STACK; aos-eca-turn can still resume the conversation.
 Prints "closed" or "no screen (already closed)". Refuses while the cell is answering.
+Also removes the delayed-close order (screen_close.json) that ctl stop left, if any.
 Works even when cli.json is not valid (one warning line).
 
 flags:
@@ -187,6 +188,7 @@ def cmd_close(eca, opts):
             if not ok:
                 die("SessionBad", "busy answering; close it after the answer finishes")
             closed = cli_cell.close(cell) or closed
+            cli_linger.drop(cell)                # cooldown-1118：ctl stop 留下的延後關到期單一併收掉（計時在剛關掉的 tmux 裡，不會再來收）
     print("closed" if closed else "no screen (already closed)")
 
 

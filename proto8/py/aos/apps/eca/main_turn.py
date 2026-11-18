@@ -60,6 +60,7 @@
      （cur/ 先、照 letter_key；new/ 用 aos-post take 一次認領一封；壞信照舊丟、記 mailbox_warning，再往下找一封好信）；none＝照舊整批。
      交出去之後的失敗（CliFailed、ReplyMissing；看 handed 有沒有被叫過）＝cooldown.fail（dropped＝這批的封數）再照舊報錯退 1；
      交出去之前的錯不寫冷卻、SessionBad 退讓不算失敗；寫冷卻檔失敗只多一行 warning。成功（assistant 接進 history 之後）＝cooldown.clear。
+     冷卻檔多寫 retry 一欄（cooldown-1118）：claude 的暫時錯（退 0、冷卻完自己接著試）＝true，其他（退 1 停下）＝false；listen 讀它判斷停了沒。
   ⑪ hook（11-10 晚 self-family/hook，圖紙 § 6 eca 縮水版；py/aos/agentlib/hooks.py，定義＝DEF_DIR、stack＝$AOS_STACK）：好信讀出來、交出去之前每封
      before_queue（可改 content；攔下＝aos-post done 收掉、不交、不進 history、mailbox_warning.txt 寫 `letter SIG dropped by hook HOOK`；整批都被丟＝同整批壞信）；
      交出去之前 tool_added（這輪生效的登記檔比上次多的名字；有這種 hook 才多叫一次 aos-tools ls --json）；handed 裡信接進 history、收掉之後每封 after_queue；

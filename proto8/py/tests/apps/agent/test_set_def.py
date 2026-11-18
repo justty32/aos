@@ -154,6 +154,47 @@ class SetDef(unittest.TestCase):
         self.assertEqual(self.agent("ctl", "wake", "ann").returncode, 0)
         until(lambda: self.ran() == ["old", "new"])
 
+    def ls_row(self, n="ann"):
+        r = self.agent("ctl", "ls")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return next(l.split("\t") for l in r.stdout.splitlines() if l.split("\t")[0] == n)
+
+    def test_set_def_on_stopped_or_sleeping_keeps_the_workspace_on_the_row(self):
+        """cooldown-1118: the row attached again stopped / asleep still has ws (it used to be only in launch: ctl ls showed -)."""
+        for how, phase in (("stop", "stopped"), ("sleep", "sleeping")):
+            with self.subTest(how=how):
+                before = until(lambda: self.row().get("phase") == "running" and self.row())
+                self.assertEqual(self.agent("ctl", how, "ann").returncode, 0)
+                self.assertEqual(self.ls_row()[2], str(self.ws))
+                r = self.agent("ctl", "set-def", "ann", "new")
+                self.assertEqual(r.returncode, 0, r.stderr)
+                row = self.row()
+                self.assertEqual(row["phase"], phase)
+                self.assertEqual(row.get("ws"), before["ws"])
+                self.assertEqual(self.ls_row()[:3], ["ann", phase, str(self.ws)])
+                self.assertEqual(self.agent("ctl", "start" if how == "stop" else "wake", "ann").returncode, 0)
+                until(lambda: self.row().get("phase") == "running")
+                self.assertEqual(self.row().get("ws"), before["ws"])
+
+    def test_set_def_drops_the_delayed_close_order(self):
+        """cooldown-1118: set-def closes the screen itself, so the order ctl stop left (screen_close.json) goes too."""
+        eca = self.definition("eca")
+        (eca / "screen").mkdir()
+        (eca / "interfaces.json").write_text('{"aos-agent": {"screen": "screen"}}\n')
+        (eca / "screen" / "interfaces.json").write_text('{"aos-agent/screen": {}}\n')
+        (eca / "screen" / "_entry").write_text(json.dumps([sys.executable, str(PROTO / "bin" / "aos-eca-screen"), "--eca", str(eca)]) + "\n")
+        (eca / "cli.json").write_text('{"kind": "claude"}\n')
+        self.assertEqual(self.agent("ctl", "add", "-n", "sam", "-w", str(self.ws), str(eca)).returncode, 0)
+        until(lambda: self.row("sam").get("phase") == "running")
+        self.assertEqual(self.agent("ctl", "stop", "sam").returncode, 0)
+        order = self.d / "procs" / "sam" / "claude" / "screen_close.json"
+        order.parent.mkdir(parents=True, exist_ok=True)
+        order.write_text('{"token": "t", "by": "after_stop"}\n')           # what screen_linger_stop leaves behind
+        r = self.agent("ctl", "set-def", "sam", str(eca))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.row("sam")["phase"], "stopped")
+        self.assertFalse(order.exists())
+
     def test_a_stop_that_times_out_changes_nothing(self):
         stubborn = self.tmp / "stubborn"
         stubborn.mkdir()

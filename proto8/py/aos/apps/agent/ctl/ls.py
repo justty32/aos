@@ -24,8 +24,10 @@ flags:
 Rows: NAME STATE WORKSPACE QUEUED REASON. An empty table prints nothing.
 With -l each row also has: QUEUE (letters in queue/new/), RESTARTS (failures in a row,
 from the stack's cooldown.json), COOLDOWN ("until HH:MM (N)" local time, "due (N)" when
-it has passed, "-" none), LAST ERROR (cooldown code and reason, else the table reason).
---json rows always carry auto_restart, queue, cooldown and busy (think, act, cli or null).
+it has passed, "-" none), LAST ERROR (cooldown code and reason, or the cooldown code and the
+lower layer's error when the cooldown records one, else the table reason).
+--json rows always carry auto_restart, queue, cooldown and busy (think, act, cli or null);
+cooldown also has retry and error when the stack's cooldown.json has them.
 With $AOS_KERNEL set (and no --daemon) it first asks AOS_KERNEL where the table is (a
 procs_state_path letter) and reads that file; no answer within --timeout-s = KernelFailed
 (AOS_DAEMON is not read instead).
@@ -46,12 +48,15 @@ def new_count(a):
 
 
 def cooling(a):
-    """cooldown.json → None 或 {failures, until, code, reason, dropped, state}；讀寫格式只經 py/cooldown。"""
+    """cooldown.json → None 或 {failures, until, code, reason, dropped, state}，檔裡有選配的 retry、error 就照帶（cooldown-1118）；
+    讀寫格式只經 py/cooldown。"""
     st, rec = cooldown.state(a.stack)
     if rec is None:
         return None
-    return {"failures": rec["failures"], "until": rec["until"], "code": rec.get("code"),
-            "reason": rec.get("reason"), "dropped": rec["dropped"], "state": st}
+    out = {"failures": rec["failures"], "until": rec["until"], "code": rec.get("code"),
+           "reason": rec.get("reason"), "dropped": rec["dropped"], "state": st}
+    out.update({k: rec[k] for k in ("retry", "error") if k in rec})
+    return out
 
 
 def busy(a):
@@ -90,7 +95,9 @@ def long_cols(a):
             cd = "until %s (%d)" % (time.strftime("%H:%M", time.localtime(cooldown.parse(c["until"]))), c["failures"])
         else:
             cd = "due (%d)" % c["failures"]
-        err = one_line(" ".join(x for x in (c["code"] or "", c["reason"] or "") if x))
+        low = c.get("error")                    # 下層的原話比 fsm 那句「aos-llm recv exited 1」有用：有就接在代號後面
+        said = "%s %s" % (low["code"], low.get("msg", "")) if low else c["reason"] or ""
+        err = one_line(" ".join(x for x in (c["code"] or "", said) if x))
     return ["-" if q is None else str(q), str(c["failures"] if c else 0), cd, clip(err) if err else "-"]
 
 
