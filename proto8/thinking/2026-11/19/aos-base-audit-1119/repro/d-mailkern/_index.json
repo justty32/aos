@@ -1,0 +1,65 @@
+{
+ "agent_cooldown.sh": {
+  "description": "測 agent-fsm 問腦失敗的冷卻：端點回 retry:true 的錯（failjson）會不會照冷卻重送、多久一次；端點硬失敗（fail，非 retry）agent 會不會停；BudgetMissing（once 包用完）。"
+ },
+ "agent_hooks.sh": {
+  "description": "測 agent 的 hook 掛掉／卡住：before_queue 的 hook 卡住（timeout_ms 2000、on_error continue）與退 1（on_error stop）時，這則訊息與整隻 agent 會怎樣。"
+ },
+ "agent_kernel_dead.sh": {
+  "description": "測 agent-fsm（假腦）掛在 llm kernel 上：正常一問一答；kernel 被 kill -9 後再問，agent 卡在哪、表上與 listen 看到什麼；kernel 重起後會不會接上。"
+ },
+ "clock.sh": {
+  "description": "測時鐘：clock_register 的 every／after／at 定時信會不會到、收件 proc 停著或被刪時怎樣、daemon 收工期間到期的、daemon 重起後登記還在不在。"
+ },
+ "common.sh": {
+  "description": "共用函式：在 d-mailkern/run/<名> 起一台只帶 stack 的暫存 daemon、等它開門、收它（只用 shutdown 或自己記的 pid）。"
+ },
+ "daemon_ctlbox_bad.sh": {
+  "description": "測 daemon 的 ctl 信箱（procs_requests）收到壞信、以及一封認領不了（夾權限 000）的信時：好信還套不套、daemon 會不會卡住或重讀。"
+ },
+ "daemon_ctlbox_stuck_after.sh": {
+  "description": "測一封認領不了的信排在好信「後面」時：take-all 已搬進 cur/ 的好信會不會被套、還是卡在 cur/ 直到 daemon 重起。"
+ },
+ "exec_fail.sh": {
+  "description": "測 aos-exec 型 proc 起不來的各種情形（程式不存在、沒執行權、argv 壞、envs 壞、cwd 不存在、exec 失敗）在 daemon 表上與 stderr.txt 怎麼顯示。"
+ },
+ "fsm_fail.sh": {
+  "description": "測 aos-fsm 一格掛掉（退 1、逾時、壞 next 表、壞 JSON、stage.txt 指不在表上的狀態）時 loop／daemon 表怎麼顯示；以及 ctl stop 一個卡在身體裡的 loop。"
+ },
+ "kstation.sh": {
+  "description": "測框架站（daemon-kernel 範本，daemon 的身體＝kernel 站）：白名單、max_running＋排隊期限、after_verdict hold 沒人表態（有期限／沒期限）、"
+ },
+ "kstation2.sh": {
+  "description": "測框架站 hold：after_verdict hold 有期限沒人表態、沒期限、表態 pass；站被 kill -9 時寄來的請求；requests/new 裡一封認領不了的信。"
+ },
+ "llmk_badletters.sh": {
+  "description": "測 llm kernel 收到壞信（四種壞信與一個同步 ask 在同一輪；這組合曾連續 3 次讓身體退 141 一次，之後重跑沒再出現＝偶發）：letter.json 壞 JSON、只有夾、缺 body.request、reply_to 指到已刪的信箱；會不會卡住、重讀、後面的好信照不照答。"
+ },
+ "llmk_basic.sh": {
+  "description": "測 llm kernel 基本：假腦問答、端點失敗／壞回信／錯誤 JSON、逾時、卡住不回（佔格）、記帳檔 used.json 與 ledger.jsonl 在哪。"
+ },
+ "llmk_budget.sh": {
+  "description": "測 llm kernel 額度：總額 max_calls 3（window all）用完後的回信、包額度 once、寄件人額度、used.json／ledger 會不會一直長、壞掉的 used.json。"
+ },
+ "llmk_common.sh": {
+  "description": "共用：照 templates/kernel/llm-kernel 抄一台 llm kernel 到 d-mailkern/run/<名>/llm，kernel.json 換成只有假腦（不碰 127.0.0.1:4000），起／收這台。"
+ },
+ "llmk_crash.sh": {
+  "description": "測 llm kernel 掛掉／重起：kill -9 這台 llm daemon 時在途（已掛上、正在跑）與剛收（還在 new/）的問腦信會怎樣、會不會重打端點、帳會不會重算；"
+ },
+ "llmk_shutdown_two.sh": {
+  "description": "測 llm kernel 正常收工（shutdown）時在途問腦會不會重打端點、帳會不會多記；以及同一個 stack 起第二台 llm daemon、兩台 kernel 各自一個 stack 時會怎樣。"
+ },
+ "loop_fsm_fail.sh": {
+  "description": "測 aos-loop／aos-fsm 一格掛掉：退非 0、逾時、卡住不回、loop.json／fsm.json 壞、stage 壞、on_start／on_stop 掛掉或卡住、auto_restart 下慢失敗會不會無限重起。"
+ },
+ "mail_badletters.sh": {
+  "description": "測壞信：letter.json 壞 JSON／缺欄／二進位／只有夾／半寫／new 裡一般檔／letter.json 是夾／權限 000，aos-mailbox read 與 mail_notify（peek）會不會卡住、重讀。"
+ },
+ "mail_recipients.sh": {
+  "description": "測 aos-mailbox send --to 在收件人：在跑、停著、已 rm、stack 被刪、--box 不存在時的結果（寄件人看到什麼、信落在哪）。"
+ },
+ "mail_volume.sh": {
+  "description": "測信箱量與並發：一個行程連寄 200 封的順序／不丟／不重複；兩個行程同時各寄 150 封給同一信箱；5 MB 正文；多附件（信夾裡多放檔）。"
+ }
+}
