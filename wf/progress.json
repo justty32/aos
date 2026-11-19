@@ -329,10 +329,11 @@
       "title": "基底體檢（daemon 到 kernel）",
       "status": "等使用者",
       "flow": "",
-      "what": "報告已交（只查不修）：問題清單依嚴重度排、實測表、舊帳表、測試涵蓋、Argon 採納表。使用者 11-19 已答第 1 題（身體同步，自行承擔）與第 3 題（改定義夾＝特性）。",
-      "next": "等使用者：第 2 題「我是誰」要不要繞過 kernel、第 4 題要不要開修補線（P1、P2、P5、P12、P18 等）、第 5 題同帳號邊界；頂層用選項框問。",
+      "what": "報告已交（只查不修）。使用者 11-19 答完五題：身體同步自行承擔、改定義夾＝特性、修補線選 P2／P5／P12／P18（P1 另線）、「我是誰」與同帳號邊界都「維持、只寫明」。修補線 aos-base-fix-1119 已交四刀（2093df09f、400f9775d、0b23509a1、36602ed9b）與知識庫兩件。",
+      "next": "等使用者：NORMS N-28「沒有 backoff」「adopt 拿不到結束碼下表」兩句要不要照新行為改；退避參數要不要開成設定；procs_ctl 宣告的列在 daemon 不在時死掉要不要照宣告再起。P8 送 TERM 那半、P3／P4／P6／P7／P13／P15／P16 等其餘條目照留。",
       "see": [
-        "[aos-base-audit-1119](../proto8/thinking/2026-11/19/aos-base-audit-1119/README.md)"
+        "[aos-base-audit-1119](../proto8/thinking/2026-11/19/aos-base-audit-1119/README.md)",
+        "[aos-base-fix](../proto8/thinking/2026-11/19/aos-base-fix.md)"
       ],
       "since": "2026-11-19"
     }

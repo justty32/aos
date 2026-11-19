@@ -5,6 +5,9 @@
  "aos-base-audit-1119": {
   "description": "先講結論"
  },
+ "aos-base-fix.md": {
+  "description": "使用者原話（11-19 下午選項框，頂層轉）"
+ },
  "aos-compile-庚": {
   "description": "庚的設計稿（11-19）：一支 `agent.py` 宣告 SYSTEM／TOOLS／LLM／FSM、生出 agent 定義夾裡的 json——長相、打架規則（C 與 .o）、邊緣狀況、範圍切法"
  },
