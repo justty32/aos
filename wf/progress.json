@@ -288,12 +288,12 @@
       "title": "aos 命名空間與標準庫：走 B 資料夾即命名空間",
       "status": "等使用者",
       "flow": "",
-      "what": "使用者 11-19 選項框裁定：走向 B（庫＝固定長相的資料夾，std 隨 aos 發；agent.py 寫 std.pack／ag.lib，生成時展開包、別的庫工具帶 庫名_、撞了報錯，執行期不動）、std 短名別的庫加前綴、std 先不搬、照叫 std；C-87 現在算以後、只做看得見的機制（由第 1 題題目文字帶出）；別的庫放哪（agent.py 明寫路徑）、包生成時抄沒單獨問，暫照推薦。C-74、C-87 條文加註待補（建議字句在 07）。",
-      "next": "使用者說開工後做第一刀：只改 agent_spec、不搬檔、執行期不動，用一個放在別處也有 read 的小庫驗收；C-74、C-87 加註問過使用者或跟這刀一起改。繼承深挖另外派。",
+      "what": "第一刀做完（線 aos-ns-cut1-1119，11-19）：agent.py 有庫 std（std.pack／std.tool／std.fsm／std.hooks，取代 ag.pack／ag.stock_fsm／ag.stock_hooks、不留舊名）與 ag.lib(名, 根)；包在生成時展開成一支支工具寫進 tools.json，別的庫工具帶 庫名_、std 短名，展開後同名又不同、讀不到庫根都報 SpecBad；只改 agent_spec 與骨架、執行期一行沒動、沒搬檔。第 6 題（agent.py 明寫庫路徑）、第 7 題（包生成時抄）仍是暫照推薦。",
+      "next": "等使用者：第 6、7 題要不要正式定；C-74、C-87 照 07 的字句補加註與否。之後的刀：std 搬進 lib/std（第 4 題已裁先不搬）、agent_def new 收 std/名與 defs check 查手寫 json 的同名包（第三刀）。繼承深挖另外派。",
       "see": [
+        "[第一刀紀錄](../proto8/thinking/2026-11/19/aos-ns-第一刀.md)",
         "[07-使用者裁定](../proto8/thinking/2026-11/19/aos-ns-1119/07-使用者裁定.md)",
-        "[設計稿 README](../proto8/thinking/2026-11/19/aos-ns-1119/README.md)",
-        "[七題與邊緣狀況](../proto8/thinking/2026-11/19/aos-ns-1119/05-邊緣狀況與要拍板的題.md)"
+        "[設計稿 README](../proto8/thinking/2026-11/19/aos-ns-1119/README.md)"
       ],
       "since": "2026-11-19"
     }

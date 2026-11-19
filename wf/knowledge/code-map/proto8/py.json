@@ -5,6 +5,7 @@
   "aos": {
    "__init__.py": "aos - aos 唯一的 Python 套件：指令、工具、範本格共用的模組（from aos import flags, tool_io …）；agent 層的在 aos.agentlib（11-18 S4 收成套件）。",
    "agent_spec.py": "給人寫 agent 定義的輔助：在一支 agent.py 裡宣告說明、system、工具、腦設定、狀態機、hook、其他檔，就生出一份掛得上去的定義夾；不宣告狀態機時只填一份現成定義夾的內容檔（eca 版）。",
+   "agent_spec_lib.py": "agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 ag.lib(\"名\", 根) 宣告的別的庫（工具自動帶「名_」）；包在生成時讀出來、展開成一支支工具抄進 tools.json。",
    "agent_spec_parts.py": "agent_spec 的零件：各份定義檔怎麼從宣告算出來、怎麼先驗（tools.json、llm.json、interfaces.json、hooks.json、FILES），以及不宣告 FSM 時照夾裡現有的 interfaces.json 找檔名。",
    "agentlib": {
     "__init__.py": "aos.agentlib - agent 層的共用模組（hooks、cooldown、claude／codex 對話的 cli_*、cmd_call …；S3 前在 lib/agent）。",

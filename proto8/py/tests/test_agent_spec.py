@@ -1,4 +1,4 @@
-"""Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files, SpecBad before any write, overwrite rules (C and .o), HOOKS / FILES / no-FSM (eca) mode, templates/reviewer rewritten as one agent.py, and the skeleton's committed files matching its agent.py."""
+"""Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files, SpecBad before any write, overwrite rules (C and .o), HOOKS / FILES / no-FSM (eca) mode, libraries (std, ag.lib: packs copied in, other libraries prefixed, clashes SpecBad), templates/reviewer rewritten as one agent.py, and the skeleton's committed files matching its agent.py."""
 import json
 import os
 from pathlib import Path
@@ -21,9 +21,10 @@ HEAD = "import sys\nsys.path.insert(0, %r)\nfrom aos import agent_spec as ag\n" 
 BODY = '''\
 DESCRIPTION = "Answer questions about the weather."
 SYSTEM = "You answer questions about the weather.\\n"
-TOOLS = [ag.pack("look"), ag.tool("peek", ag.home("/lib/tools/base/peek_now_time")), ag.no("grep")]
+std = ag.std
+TOOLS = [std.pack("look"), ag.tool("peek", ag.home("/lib/tools/base/peek_now_time")), ag.no("grep")]
 LLM = {"model": "luna"}
-FSM = ag.stock_fsm()
+FSM = std.fsm()
 ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)
 '''
 GENERATED = ["_entry", "_metainfo.json", "body.json", "fsm.json", "interfaces.json", "llm.json", "loop.json", "system.txt", "tools.json"]
@@ -34,11 +35,9 @@ DESCRIPTION = "Review measured definition costs and prescribe a fix or split whe
 META = {"cost": {"time_ms": 60000}, "resource": ["llm"]}
 SYSTEM = ag.by_hand("system.txt")
 
-def lib(name):
-    return ag.tool(name.rsplit("/", 1)[-1], ag.home("/lib/tools/" + name))
-
-TOOLS = [lib("aos/" + n) for n in ("review_round", "watch", "promote", "rollback", "measure")] \\
-      + [lib("base/" + n) for n in ("json_get", "json_ls", "json_set", "json_del", "read", "ls")]
+std = ag.std
+TOOLS = [std.tool("aos/" + n) for n in ("review_round", "watch", "promote", "rollback", "measure")] \\
+      + [std.tool("base/" + n) for n in ("json_get", "json_ls", "json_set", "json_del", "read", "ls")]
 LLM = {}
 
 def cell(name):
@@ -64,9 +63,9 @@ ECA = '''\
 DESCRIPTION = %(summary)r
 META = {"cost": {"time_ms": 60000}, "resource": ["llm"]}
 SYSTEM = "You are the docs team's writer.\\n"
-TOOLS = [ag.pack(p) for p in ("gadgets", "events", "self", "def", "mailbox", "json", "jsonx", "index")] + [ag.no("do_task")]
+TOOLS = [ag.std.pack(p) for p in ("gadgets", "events", "self", "def", "mailbox", "json", "jsonx", "index")] + [ag.no("do_task")]
 LLM = %(llm)r
-HOOKS = ag.stock_hooks(%(template)r)
+HOOKS = ag.std.hooks(%(template)r)
 ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, meta=META, hooks=HOOKS)
 '''
 
@@ -105,10 +104,45 @@ def run_agent(script, *argv, home=None):
     return subprocess.run([sys.executable, str(script), *argv], text=True, capture_output=True, timeout=30, env=env_with(home))
 
 
-class Declaration(unittest.TestCase):
+def resolve(value, home):
+    """a {"$env": "AOS_HOME", "$path": ...} directive (or a plain path) -> the path on this machine."""
+    return str(home) + value["$path"] if isinstance(value, dict) else value
+
+
+def borrowed(tools_json, home):
+    """the tools a hand-written tools.json gives after aos-tools stacks its $override packs (field by field, null = not a tool);
+    the generated tools.json must give the same table without $override."""
+    acc = {}
+    for base in tools_json.get("$override", []):
+        for name, entry in json.loads(Path(resolve(base, home)).read_text())["tools"].items():
+            acc[name] = entry
+    for name, entry in tools_json.get("tools", {}).items():
+        acc[name] = entry if entry is None or name not in acc or acc[name] is None else dict(acc[name], **entry)
+    return {n: e for n, e in acc.items() if e is not None}
+
+
+def look(*drop):
+    """the tools of std.pack("look"), as agent.py copies them in."""
+    tools = json.loads((LIB / "packs" / "look.json").read_text())["tools"]
+    return {n: e for n, e in tools.items() if n not in drop}
+
+
+class WithHome(unittest.TestCase):
+    """AOS_HOME = a fake home (lib = py/, templates = the repo's), as std.pack / std.tool / std.hooks read it when agent.py runs."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="agent-spec-")
+        self.addCleanup(self.temp.cleanup)
+        self.home = fake_home(self.temp.name)
+        patch = unittest.mock.patch.dict(os.environ, {"AOS_HOME": str(self.home)})
+        patch.start()
+        self.addCleanup(patch.stop)
+
+
+class Declaration(WithHome):
     def test_stock_shape(self):
-        files = ag.defs("Do it.", "sys\n", [ag.pack("look"), ag.tool("x", "tools/x", env={"A": "1"}), ag.no("grep")],
-                        {"model": "m"}, ag.stock_fsm())
+        files = ag.defs("Do it.", "sys\n", [ag.std.pack("look"), ag.tool("x", "tools/x", env={"A": "1"}), ag.no("grep")],
+                        {"model": "m"}, ag.std.fsm())
         self.assertEqual(list(files), ["_entry", "body.json", "loop.json", "fsm.json", "interfaces.json", "tools.json",
                                        "llm.json", "system.txt", "_metainfo.json", "README.md"])
         self.assertEqual(files["_entry"]["argv"], ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}])
@@ -117,14 +151,15 @@ class Declaration(unittest.TestCase):
         self.assertEqual(files["fsm.json"]["states"]["act"]["exec"]["timeout_ms"], 0)
         self.assertEqual(files["fsm.json"]["states"]["wait"]["exec"]["argv"][1],
                          {"$env": "AOS_HOME", "$path": "/templates/agent-fsm/wait.py"})
-        self.assertEqual(files["tools.json"]["$override"], [{"$env": "AOS_HOME", "$path": "/lib/packs/look.json"}])
-        self.assertEqual(files["tools.json"]["tools"], {"x": {"path": "tools/x", "env": {"A": "1"}}, "grep": None})
+        self.assertNotIn("$override", files["tools.json"])                  # the pack is copied in, tool by tool
+        self.assertEqual(files["tools.json"]["tools"], dict(look("grep"), x={"path": "tools/x", "env": {"A": "1"}}))
+        self.assertIn("std.pack('look')", files["tools.json"]["description"])
         self.assertEqual(files["llm.json"]["model"], "m")
         self.assertEqual(files["_metainfo.json"], {"summary": "Do it."})
         self.assertEqual(files["README.md"], "Do it.\n")
 
     def test_by_hand_meta_and_interfaces(self):
-        files = ag.defs("D.", ag.by_hand("prompt.txt"), [], {}, ag.stock_fsm(), meta={"cost": {"time_ms": 1}},
+        files = ag.defs("D.", ag.by_hand("prompt.txt"), [], {}, ag.std.fsm(), meta={"cost": {"time_ms": 1}},
                         interfaces={"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}})
         self.assertNotIn("system.txt", files)
         self.assertEqual(files["interfaces.json"]["aos-agent"]["system"], "prompt.txt")
@@ -140,7 +175,7 @@ class Declaration(unittest.TestCase):
         self.assertEqual(files["fsm.json"]["states"]["b"]["next"], "a")
 
     def test_spec_bad(self):
-        fine = dict(description="D.", system="", tools=[], llm={}, fsm=ag.stock_fsm())
+        fine = dict(description="D.", system="", tools=[], llm={}, fsm=ag.std.fsm())
         cases = {"empty description": dict(description=" "),
                  "next not in table": dict(fsm=ag.fsm("a", [ag.state("a", ["x"], {0: "nowhere"})])),
                  "start not in table": dict(fsm=ag.fsm("z", [ag.state("a", ["x"], {0: "a"})])),
@@ -150,8 +185,8 @@ class Declaration(unittest.TestCase):
                  "empty argv": dict(fsm=ag.fsm("a", [ag.state("a", [], "a")])),
                  "tool without path": dict(tools=[ag.tool("x", None)]),
                  "tool twice": dict(tools=[ag.tool("x", "a"), ag.no("x")]),
-                 "pack twice": dict(tools=[ag.pack("look"), ag.pack("look")]),
-                 "bad pack name": dict(tools=[ag.pack("../x")]),
+                 "pack twice": dict(tools=[ag.std.pack("look"), ag.std.pack("look")]),
+                 "bad pack name": dict(tools=[ag.std.pack("../x")]),
                  "not a tool item": dict(tools=["look"]),
                  "model not a string": dict(llm={"model": 3}),
                  "llm key not in llm_keys": dict(llm={"temp": 1}),
@@ -165,8 +200,8 @@ class Declaration(unittest.TestCase):
                  "hook clock key on other event": dict(hooks={"h": {"event": "after_tool", "handler": "x", "every_ms": 5}}),
                  "HOOKS not a table": dict(hooks="hooks.json"),
                  "HOOKS list item not a table": dict(hooks=[{"h": None}, 3]),
-                 "HOOKS holds a tool": dict(hooks=[ag.pack("look")]),
-                 "stock_hooks bad name": dict(hooks=ag.stock_hooks("../x")),
+                 "HOOKS holds a tool": dict(hooks=[ag.std.pack("look")]),
+                 "stock_hooks bad name": dict(hooks=ag.std.hooks("../x")),
                  "interfaces sets hooks": dict(hooks={}, interfaces={"aos-agent": {"hooks": "h.json"}}),
                  "by_hand hooks clashes": dict(hooks=ag.by_hand("loop.json")),
                  "FILES not a dict": dict(files=["ladder.json"]),
@@ -200,7 +235,7 @@ class Declaration(unittest.TestCase):
 
     def test_holes_from_argon_review(self):
         """geng-patch-1119 (thinking/2026-11/19/aos-compile-庚/12, class 1): META keys, by_hand("agent.py"), the entry message."""
-        fine = dict(description="D.", system="", tools=[], llm={}, fsm=ag.stock_fsm())
+        fine = dict(description="D.", system="", tools=[], llm={}, fsm=ag.std.fsm())
         with self.assertRaisesRegex(ag.SpecBad, "META keys must be strings"):                  # ① was TypeError
             ag.defs(**dict(fine, meta={1: "a"}))
         for what in ("system", "fsm", "tools", "llm", "hooks"):                                 # ② agent.py is not a by_hand file
@@ -215,7 +250,7 @@ class Declaration(unittest.TestCase):
 
     def test_rename_order_and_cleanup(self):
         """geng-patch-1119 ③ files pointed at are renamed before the index files; ④ one failed unlink does not stop the cleanup."""
-        out = ag.defs("D.", "", [], {}, ag.stock_fsm())
+        out = ag.defs("D.", "", [], {}, ag.std.fsm())
         with tempfile.TemporaryDirectory(prefix="agent-spec-") as d:
             order, replace = [], os.replace
             with unittest.mock.patch("os.replace", lambda a, b: (order.append(os.path.basename(b)), replace(a, b))):
@@ -242,7 +277,7 @@ class Declaration(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="agent-spec-") as tmp, \
                 unittest.mock.patch.dict(os.environ, {"AOS_HOME": str(fake_home(tmp))}):
             mine = {"event": "before_tool", "condition": "shell", "handler": ag.home("/lib/tools/agent/hook_noop")}
-            files = ag.defs("D.", "", [], {}, ag.stock_fsm(), hooks=[ag.stock_hooks(), {"timer": None, "mine": mine}],
+            files = ag.defs("D.", "", [], {}, ag.std.fsm(), hooks=[ag.std.hooks(), {"timer": None, "mine": mine}],
                             files={"ladder.json": {"repeat": 3}, "notes.txt": "plain text\n"})
             stock = json.loads((TEMPLATES / "agent-fsm" / "hooks.json").read_text())["hooks"]
         self.assertEqual(list(files), ["_entry", "body.json", "loop.json", "fsm.json", "interfaces.json", "tools.json",
@@ -264,19 +299,19 @@ class Declaration(unittest.TestCase):
 
     def test_hooks_loop_matches_agent_fsm_template(self):
         """with HOOKS, loop.json is the agent-fsm template's loop.json (apart from its description)."""
-        files = ag.defs("D.", "", [], {}, ag.stock_fsm(), hooks={})
+        files = ag.defs("D.", "", [], {}, ag.std.fsm(), hooks={})
         loop = json.loads((TEMPLATES / "agent-fsm" / "loop.json").read_text())
         self.assertEqual(plain(files["loop.json"]), plain(loop))
         self.assertEqual(files["hooks.json"]["hooks"], {})
 
     def test_no_hooks_no_hooks_key(self):
-        files = ag.defs("D.", "", [], {}, ag.stock_fsm())
+        files = ag.defs("D.", "", [], {}, ag.std.fsm())
         self.assertNotIn("hooks", files["interfaces.json"]["aos-agent"])
         self.assertNotIn("on_start", files["loop.json"])
         self.assertNotIn("hooks.json", files)
 
     def test_by_hand_hooks(self):
-        files = ag.defs("D.", "", [], {}, ag.stock_fsm(), hooks=ag.by_hand("my_hooks.json"))
+        files = ag.defs("D.", "", [], {}, ag.std.fsm(), hooks=ag.by_hand("my_hooks.json"))
         self.assertNotIn("my_hooks.json", files)
         self.assertEqual(files["interfaces.json"]["aos-agent"]["hooks"], "my_hooks.json")
         self.assertIn("on_start", files["loop.json"])
@@ -284,13 +319,13 @@ class Declaration(unittest.TestCase):
     def test_stock_hooks_needs_a_home_with_the_template(self):
         with unittest.mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("AOS_HOME", None)
-            self.assertIn("AOS_HOME is not set", ag.stock_hooks()["bad"])
+            self.assertIn("AOS_HOME is not set", ag.std.hooks()["bad"])
         with tempfile.TemporaryDirectory(prefix="agent-spec-") as tmp, \
                 unittest.mock.patch.dict(os.environ, {"AOS_HOME": str(fake_home(tmp))}):
-            bad = ag.stock_hooks("reviewer")
+            bad = ag.std.hooks("reviewer")
             self.assertIn("templates with hooks: ", bad["bad"])
             self.assertIn("agent-fsm", bad["bad"])
-            self.assertRaises(ag.SpecBad, ag.defs, "D.", "", [], {}, ag.stock_fsm(), hooks=bad)
+            self.assertRaises(ag.SpecBad, ag.defs, "D.", "", [], {}, ag.std.fsm(), hooks=bad)
 
 
 class Script(unittest.TestCase):
@@ -300,7 +335,7 @@ class Script(unittest.TestCase):
         self.dir = Path(self.temp.name) / "weather"
         self.dir.mkdir()
         self.write(BODY)
-        self.env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        self.env = env_with(fake_home(self.temp.name))
 
     def write(self, body):
         (self.dir / "agent.py").write_text(HEAD + body)
@@ -338,7 +373,7 @@ class Script(unittest.TestCase):
         before = snapshot(self.dir)
         del before["agent.py"]
         cases = {"next state not in the table":
-                     ('FSM = ag.stock_fsm()', 'FSM = ag.fsm("idle", [ag.state("idle", ["true"], {0: "thnik"})])',
+                     ('FSM = std.fsm()', 'FSM = ag.fsm("idle", [ag.state("idle", ["true"], {0: "thnik"})])',
                       "SpecBad state idle: next state 'thnik' is not one of the states (idle)"),
                  "tool without a path":
                      ('ag.tool("peek", ag.home("/lib/tools/base/peek_now_time"))', 'ag.tool("peek", "")',
@@ -450,7 +485,8 @@ class NoFsm(unittest.TestCase):
                     if name not in written:
                         self.assertEqual(after.get(name), before.get(name), name)
                 load = lambda name, files: json.loads(files[name])  # noqa: E731
-                self.assertEqual(plain(load("tools.json", after)), plain(load("tools.json", before)))
+                self.assertNotIn("$override", load("tools.json", after))      # packs copied in: the same tools as the template's
+                self.assertEqual(load("tools.json", after)["tools"], borrowed(load("tools.json", before), self.home))
                 self.assertEqual(plain(load("llm.json", after)), plain(load("llm.json", before)))
                 self.assertEqual(load("hooks.json", after)["hooks"], load("hooks.json", before)["hooks"])
                 self.assertEqual(load("_metainfo.json", after), load("_metainfo.json", before))
@@ -497,6 +533,107 @@ class NoFsm(unittest.TestCase):
         self.assertEqual(ag.defs("S.", "", [], {}, folder=str(dest), files={"cli.json": {"a": 1}})["cli.json"], {"a": 1})
         self.assertRaises(ag.SpecBad, ag.defs, "S.", "", [], {}, folder=str(dest), files={"prompt.md": "x"})
         self.assertRaises(ag.SpecBad, ag.defs, "S.", "", [], {}, folder=str(dest), files={"loop.json": {}})
+
+
+class Namespace(WithHome):
+    """namespace first cut (aos-ns-cut1-1119): ag.std and ag.lib; packs copied in tool by tool; another library's tools get
+    "<library>_"; two packs giving one name with different entries = SpecBad; a library root that cannot be read = SpecBad."""
+
+    def make_lib(self, name="mylib", packs=None, tools=("read",)):
+        root = Path(self.temp.name) / name
+        for t in tools:
+            (root / "tools" / t).mkdir(parents=True)
+        (root / "packs").mkdir(parents=True)
+        for pack, table in (packs or {"look": {"read": {"path": "../tools/read"}}}).items():
+            (root / "packs" / (pack + ".json")).write_text(json.dumps(table if "tools" in table or "$override" in table
+                                                                      else {"tools": table}))
+        return root
+
+    def tools(self, items):
+        return ag.defs("D.", "", items, {}, ag.std.fsm())["tools.json"]["tools"]
+
+    def test_two_reads_each_its_own(self):
+        root = self.make_lib()
+        my = ag.lib("my", str(root))
+        got = self.tools([ag.std.pack("look"), my.pack("look")])
+        self.assertEqual(got["read"], {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/read"}})
+        self.assertEqual(got["my_read"], {"path": str(root / "tools" / "read")})
+        self.assertEqual(list(got), list(look()) + ["my_read"])
+        with unittest.mock.patch.dict(os.environ, {"AOS_NS_TEST_WS": self.temp.name}):       # root as a directive: written as one
+            got = self.tools([ag.lib("my", ag.env("AOS_NS_TEST_WS", "/mylib")).pack("look")])
+        self.assertEqual(got, {"my_read": {"path": {"$env": "AOS_NS_TEST_WS", "$path": "/mylib/tools/read"}}})
+
+    def test_lib_tool_and_names(self):
+        my = ag.lib("my", str(self.make_lib()))
+        self.assertEqual(self.tools([ag.std.tool("base/read"), my.tool("read"), my.tool("read", name="other", env={"A": "1"})]),
+                         {"read": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/read"}},
+                          "my_read": {"path": str(self.temp.name) + "/mylib/tools/read"},
+                          "other": {"path": str(self.temp.name) + "/mylib/tools/read", "env": {"A": "1"}}})
+        got = self.tools([my.pack("look", prefix="x-"), ag.std.pack("look", prefix="s_", exclude=["grep"], rename={"read": "cat"})])
+        self.assertEqual(sorted(got), sorted(["x-read", "cat"] + ["s_" + n for n in look("read", "grep")]))
+
+    def test_clash_is_spec_bad_and_the_ways_out(self):
+        my = ag.lib("my", str(self.make_lib()))
+        with self.assertRaisesRegex(ag.SpecBad, r"tool read comes from both std.pack\('look'\) and my.pack\('look'\)"):
+            self.tools([ag.std.pack("look"), my.pack("look", prefix="")])
+        mine = {"path": str(Path(self.temp.name) / "mylib" / "tools" / "read")}
+        std_read = {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/read"}}
+        self.assertEqual(self.tools([ag.std.pack("look"), my.pack("look", prefix="", exclude=["read"])])["read"], std_read)
+        self.assertEqual(self.tools([ag.std.pack("look"), my.pack("look", prefix="", rename={"read": "read2"})])["read2"], mine)
+        self.assertEqual(self.tools([ag.std.pack("look"), my.pack("look", prefix=""), ag.tool("read", my.tool("read"))])["read"], mine)
+        self.assertNotIn("read", self.tools([ag.std.pack("look"), my.pack("look", prefix=""), ag.no("read")]))
+
+    def test_same_entry_from_two_packs_is_one_tool(self):
+        """a diamond: both packs point at the same tool, with the same entry -> not a clash."""
+        same = self.make_lib("same", {"look": {"read": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/read"}}}})
+        got = self.tools([ag.std.pack("look"), ag.lib("same", str(same)).pack("look", prefix="")])
+        self.assertEqual(list(got), list(look()))
+        other = self.make_lib("other", {"look": {"read": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/read"},
+                                                          "env": {"A": "1"}}}})
+        self.assertRaises(ag.SpecBad, self.tools, [ag.std.pack("look"), ag.lib("other", str(other)).pack("look", prefix="")])
+
+    def test_spec_bad(self):
+        my = ag.lib("my", str(self.make_lib()))
+        odd = ag.lib("odd", str(self.make_lib("odd", {"base": {"$override": "x.json", "tools": {}},
+                                                       "out": {"read": {"path": "../../elsewhere/read"}}})))
+        cases = {"root is not a folder": ([ag.lib("my", str(Path(self.temp.name) / "nowhere")).pack("look")], "is not a folder"),
+                 "root variable not set": ([ag.lib("my", ag.env("AOS_NS_TEST_UNSET", "/x")).tool("read")], "AOS_NS_TEST_UNSET is not set"),
+                 "root relative": ([ag.lib("my", "mylib").pack("look")], "must be an absolute path"),
+                 "library named std": ([ag.lib("std", str(self.temp.name)).pack("look")], "std comes with aos"),
+                 "bad library name": ([ag.lib("My lib", "/").pack("look")], "library name must be"),
+                 "no such pack": ([my.pack("net")], r"there is no .*/packs/net.json \(packs of my: look\)"),
+                 "pack with $override": ([odd.pack("base")], "no \\$override"),
+                 "pack path leaves the root": ([odd.pack("out")], "leaves the library root"),
+                 "prefix with a dot": ([my.pack("look", prefix="my.")], "prefix must be letters"),
+                 "rename an unknown tool": ([my.pack("look", rename={"cat": "x"})], "the pack has no tool cat"),
+                 "exclude an unknown tool": ([ag.std.pack("look", exclude=["cat"])], "the pack has no tool cat"),
+                 "rename and exclude": ([my.pack("look", rename={"read": "x"}, exclude=["read"])], "in both rename and exclude"),
+                 "name too long": ([my.pack("look", prefix="p" * 64)], "must be 1-64 letters"),
+                 "no such tool folder": ([ag.std.tool("base/nope")], "there is no tool folder \\$AOS_HOME/lib/tools/base/nope"),
+                 "tool folder outside": ([my.tool("../read")], "relative to the library's tools folder"),
+                 "ag.no of nothing": ([ag.std.pack("look"), ag.no("cat")], r"ag.no\('cat'\).*no pack in TOOLS has a tool cat"),
+                 "same pack twice": ([my.pack("look"), my.pack("look")], r"my.pack\('look'\) is listed twice"),
+                 "a library is not a tool": ([my], "each item of TOOLS")}
+        for why, (items, line) in cases.items():
+            with self.subTest(why=why):
+                self.assertRaisesRegex(ag.SpecBad, line, self.tools, items)
+        self.assertRaisesRegex(ag.SpecBad, "std has one state machine", ag.defs, "D.", "", [], {}, ag.std.fsm("eca"))
+        with unittest.mock.patch.dict(os.environ, {}):
+            os.environ.pop("AOS_HOME")
+            self.assertIn("AOS_HOME is not set", ag.std.pack("look")["bad"])
+            self.assertIn("AOS_HOME is not set", ag.std.tool("base/read")["bad"])
+
+    def test_clash_through_agent_py_is_one_line_and_writes_nothing(self):
+        dest = Path(self.temp.name) / "clash"
+        dest.mkdir()
+        (dest / "agent.py").write_text(HEAD + BODY.replace(
+            "std = ag.std\n", "std = ag.std\nmy = ag.lib(\"my\", %r)\n" % str(self.make_lib())).replace(
+            'std.pack("look"), ', 'std.pack("look"), my.pack("look", prefix=""), '))
+        r = run_agent(dest / "agent.py", "--write-defs", home=self.home)
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+        self.assertTrue(r.stderr.startswith("clash: error: SpecBad tool read comes from both"), r.stderr)
+        self.assertEqual(os.listdir(dest), ["agent.py"])
 
 
 class Reviewer(unittest.TestCase):

@@ -6,12 +6,16 @@
 各份檔怎麼算、怎麼驗在 aos/agent_spec_parts.py（第三刀拆出去）；這裡是宣告用的小函式、defs、write_defs、main。
 
 宣告用的小函式（寫錯不在當下丟，記成 bad，defs()／main 再報 SpecBad）：
-  pack(名)            疊一個工具包＝tools.json 的 $override 加 {"$env": "AOS_HOME", "$path": "/lib/packs/名.json"}
-  tool(名, 路徑, **其他) 單一個工具＝tools.json 的 tools[名]＝{"path": 路徑, **其他}
-  no(名)              從包裡拿掉＝tools[名]＝null
+  std                 隨 aos 發的庫（aos/agent_spec_lib.py；命名空間第一刀 aos-ns-cut1-1119）：
+    std.pack(名, prefix=, rename=, exclude=)  讀 $AOS_HOME/lib/packs/名.json，展開成一支支工具抄進 tools.json（不寫 $override）
+    std.tool("base/read", name=None, **其他)  一支工具 $AOS_HOME/lib/tools/base/read，名字預設＝夾名
+    std.fsm()＝借 agent-fsm 範本的四格；std.hooks(範本="agent-fsm")＝那個範本 hooks.json 的那組 hook（生成時讀、抄進來）
+  lib(庫名, 根)        別的庫：my = ag.lib("my", ag.env("AOS_WS", "/lib/my"))；my.pack／my.tool 同上，工具名自動帶「庫名_」
+  tool(名, 路徑, **其他) 單一個工具＝tools.json 的 tools[名]＝{"path": 路徑, **其他}；路徑也可給 my.tool(...)（只拿它的路徑）；同名蓋掉包裡那支
+  no(名)              從展開的包裡拿掉那支（tools.json 裡就沒有那格）
+  （包展開後兩支同名、內容又不同＝SpecBad，不再悄悄蓋；tools_json 在 agent_spec_parts）
   home(路徑)／env(變數, 路徑)  指示詞 {"$env": …, "$path": …}，原樣吐、不展開
-  state(名, argv, next, timeout_ms=None)、fsm(起點, [state…])、stock_fsm()＝借 agent-fsm 範本的四格
-  stock_hooks(範本="agent-fsm")  那個範本 hooks.json 的那組 hook（生成時從 $AOS_HOME/templates/範本/hooks.json 讀、抄進來；hooks 不能指到夾外）
+  state(名, argv, next, timeout_ms=None)、fsm(起點, [state…])
   by_hand(檔名)        這份檔自己手寫：interfaces.json 指到它、不生、不蓋（SYSTEM／TOOLS／LLM／FSM／HOOKS 都可用）
 兩個可單獨叫的函式：
   defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None)
@@ -25,11 +29,8 @@ import json, os, sys
 from aos import flags
 from aos import agent_spec_parts as parts
 from aos.agent_spec_parts import SpecBad, DefBad, WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FILES  # noqa: F401（對外的名字）
+from aos.agent_spec_lib import std, lib  # noqa: F401（對外的名字：ag.std、ag.lib）
 
-STOCK_CELLS = (("idle", "idle", {0: "think", 10: "idle"}, None),       # templates/agent-fsm/fsm.json 那四格，格的程式借範本那份
-               ("think", "brain", {0: "wait", 10: "idle"}, None),
-               ("wait", "wait", {0: "act", 10: "wait", 11: "think"}, None),
-               ("act", "act", {0: "think", 10: "idle"}, 0))
 HOOK_FIRE = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}   # loop.json 的 on_start／on_stop（照 agent-fsm 範本）
 RENAME_LAST = {"loop.json": 1, "body.json": 2, "interfaces.json": 3, "_entry": 4, "_metainfo.json": 5}   # 改名時被指的檔先換、索引檔最後（其他＝0）
 HELP = """\
@@ -44,6 +45,8 @@ Make an aos agent definition from the declarations in agent.py.
 With FSM declared, agent.py writes the whole definition (skeleton included). Without FSM
 (ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM)), it fills only the content files (system, tools, llm,
 hooks) of a definition that already has its skeleton, under the names its interfaces.json gives.
+Packs (std.pack, or .pack of a library from ag.lib) are read when agent.py runs and their tools are
+copied into tools.json, so AOS_HOME, and any variable a library root uses, must be set.
 Then mount it: aos-agent ctl add FOLDER.
 On a wrong declaration: one line "NAME: error: SpecBad ..." on stderr, exit 1, nothing written.
 """
@@ -71,19 +74,17 @@ def env(var, path):
     return {"$env": var, "$path": path}
 
 
-def pack(name):
-    """疊一個工具包（$AOS_HOME/lib/packs/<name>.json）。"""
-    if not isinstance(name, str) or not parts.PACK_RE.match(name):
-        return _bad("pack name %r must be a pack file name without .json, like \"look\"" % (name,))
-    return {"kind": "pack", "name": name}
-
-
 def tool(name, path, **more):
-    """單一個工具；more（env、env_file…）原樣寫進那一格；aos-tools 合併時會擋的（env、env_file、cache）這裡先擋。"""
+    """單一個工具；more（env、env_file…）原樣寫進那一格；aos-tools 合併時會擋的（env、env_file、cache）這裡先擋。
+    path 也可以是某個庫的 .tool(...)：只拿它的路徑（ag.tool("read", my.tool("read"))＝用 my 那支、叫 read）。"""
     if not isinstance(name, str) or not parts.TOOL_RE.match(name):
         return _bad("tool name %r must be 1-64 letters, digits, _ or -" % (name,))
+    if parts.kind(path) == "bad":
+        return path
+    if parts.kind(path) == "tool":
+        path = path["entry"]["path"]
     if not _is_path(path):
-        return _bad("tool %s must have a path: a string, or ag.home(\"/lib/tools/...\") / ag.env(VAR, PATH)" % name)
+        return _bad("tool %s must have a path: a string, or ag.home(\"/lib/tools/...\") / ag.env(VAR, PATH) / std.tool(\"base/read\")" % name)
     e = more.get("env", {})
     if not isinstance(e, dict) or not all(isinstance(k, str) and parts.ENV_KEY_RE.match(k) and isinstance(v, str) for k, v in e.items()):
         return _bad("tool %s: env must be a dict of NAME -> string, like {\"LANG\": \"C\"}" % name)
@@ -95,7 +96,7 @@ def tool(name, path, **more):
 
 
 def no(name):
-    """把包裡的某個工具拿掉（tools.json 的 tools[name] = null）。"""
+    """把展開的包裡的某個工具拿掉（腦看到的名字；tools.json 裡就沒有那格）。"""
     if not isinstance(name, str) or not parts.TOOL_RE.match(name):
         return _bad("ag.no(%r): the tool name must be 1-64 letters, digits, _ or -" % (name,))
     return {"kind": "no", "name": name}
@@ -163,35 +164,6 @@ def fsm(start, states):
     return {"kind": "fsm", "start": start, "states": table}
 
 
-def stock_fsm():
-    """agent-fsm 範本那四格（idle、think、wait、act），格的程式借 $AOS_HOME/templates/agent-fsm/ 那份（不抄）。"""
-    return fsm("idle", [state(n, ["python3", home("/templates/agent-fsm/%s.py" % prog)], nxt, timeout_ms=t)
-                        for n, prog, nxt, t in STOCK_CELLS])
-
-
-def stock_hooks(template="agent-fsm"):
-    """某個範本 hooks.json 的那組 hook（agent-fsm、eca-claude、eca-pi）。interfaces.json 的 hooks 只能指夾內的檔，所以借不了，
-    生成時從 $AOS_HOME/templates/<template>/hooks.json 讀出來抄進這夾的 hooks.json（範本改了，下次重生跟著變）。"""
-    if not isinstance(template, str) or not parts.PACK_RE.match(template):
-        return _bad("ag.stock_hooks(%r): give a template name, like \"agent-fsm\"" % (template,))
-    home_dir = os.environ.get("AOS_HOME")
-    if not home_dir:
-        return _bad("ag.stock_hooks(%r) reads $AOS_HOME/templates/%s/hooks.json, but AOS_HOME is not set" % (template, template))
-    where = os.path.join(home_dir, "templates")
-    try:
-        with open(os.path.join(where, template, "hooks.json"), encoding="utf-8") as f:
-            table = json.load(f).get("hooks")
-    except FileNotFoundError:
-        have = sorted(t for t in os.listdir(where) if os.path.isfile(os.path.join(where, t, "hooks.json"))) \
-            if os.path.isdir(where) else []
-        return _bad("there is no $AOS_HOME/templates/%s/hooks.json (templates with hooks: %s)" % (template, ", ".join(have) or "none"))
-    except (OSError, ValueError, AttributeError) as e:
-        return _bad("cannot read $AOS_HOME/templates/%s/hooks.json: %s" % (template, e))
-    if not isinstance(table, dict):
-        return _bad("$AOS_HOME/templates/%s/hooks.json has no hooks object" % template)
-    return {"kind": "stock_hooks", "template": template, "hooks": table}
-
-
 def _names(decl, fsm, hooks, interfaces, folder):
     """回四樣：{種類: 這次用的檔名}、{種類: by_hand 的檔名}、FILES 不能用的檔名、llm_keys（有 FSM＝None，之後照生成的 interfaces.json）。"""
     hand = {w: v["file"] for w, v in decl.items() if parts.kind(v) == "by_hand"}
@@ -231,7 +203,7 @@ def defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
     decl = {"system": system, "tools": tools, "llm": llm, "fsm": fsm, "hooks": hooks}
     for value in decl.values():
         parts.raise_bad(value)
-    if fsm is not None and parts.pick(fsm, "FSM must come from ag.fsm(...), ag.stock_fsm() or ag.by_hand(\"fsm.json\") (or leave it out: no FSM)",
+    if fsm is not None and parts.pick(fsm, "FSM must come from ag.fsm(...), std.fsm() or ag.by_hand(\"fsm.json\") (or leave it out: no FSM)",
                                       lambda v: parts.kind(v) == "fsm"):
         fsm_out = None
     else:
@@ -245,8 +217,9 @@ def defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
         keys = face.get("aos-agent", {}).get("llm_keys", LLM_KEYS)
         if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
             raise SpecBad("INTERFACES aos-agent llm_keys must be a list of strings")
-    tools_out = None if parts.pick(tools, "TOOLS must be a list of ag.pack(...), ag.tool(...), ag.no(...), or ag.by_hand(\"tools.json\")",
-                                   lambda v: isinstance(v, (list, tuple))) else parts.tools_json(tools, os.environ.get("AOS_HOME"))
+    tools_out = None if parts.pick(tools, "TOOLS must be a list of std.pack(...), std.tool(...), ag.tool(...), ag.no(...) "
+                                          "(or a library's .pack / .tool), or ag.by_hand(\"tools.json\")",
+                                   lambda v: isinstance(v, (list, tuple))) else parts.tools_json(tools)
     llm_out = None if parts.pick(llm, "LLM must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or ag.by_hand(\"llm.json\")",
                                  lambda v: isinstance(v, dict)) else parts.llm_json(llm, keys)
     hooks_out = None if hooks is None or "hooks" in hand else parts.hooks_json(hooks)

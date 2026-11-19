@@ -17,3 +17,4 @@
 | [aos-gdb-lib-第一版](aos-gdb-lib-第一版.md) | aos-gdb 第一版（乙案）：aos-gdb NAME 開接上 agent 的 Python REPL，aos.gdb 下條件觸發器（普通 hook，成立就 ctl pause 並留字條）、看為什麼停、檢閱、續；hook 與 cpp 沒動；Argon 審過沒推翻先乙；假腦實跑 6 個情境過 |
 | [aos-ns-1119](aos-ns-1119/README.md) | 命名空間與標準庫調查設計稿：今天沒有全域名字表，工具名同名會悄悄蓋（實測）；使用者 11-19 選項框裁走 B 資料夾即命名空間（std 隨 aos 發、短名，別的庫工具帶 庫名_、撞了生成時報錯、執行期不動）、std 先不搬、照叫 std；別的庫放哪與包改成抄暫照推薦；C-74、C-87 加註待補；第一刀（只改 agent_spec）等使用者說開工 |
 | [aos-gdb-lib-第二版](aos-gdb-lib-第二版.md) | aos-gdb 第二版：stop_before_tool 改成工具跑之前真的停住（觸發器在 hook 裡扣住等放行，續＝照原樣跑或跳過），另做丙（掛在 daemon 表上的觀察者 proc，輪詢目標、成立就 pause）；hook 與 cpp 沒動；Argon 審 A1～A10 八條照改；假腦實跑 12 個情境過；要拍板兩題 11-19 已裁（表上不顯示扣住＝解耦合、sh 退 10 規則維持） |
+| [aos-ns-第一刀](aos-ns-第一刀.md) | 命名空間第一刀施工完（只改 agent_spec、執行期沒動、沒搬檔）：agent.py 改寫 std.pack／std.tool／std.fsm／std.hooks，別的庫 ag.lib(名, 根)；包生成時展開進 tools.json（不寫 $override），別的庫工具自動帶 庫名_、std 短名，撞名與讀不到庫根報 SpecBad；工作區小庫驗收與假腦起樹實跑都過、test_agent_spec 33 支過；第 6、7 題仍暫照推薦，C-74、C-87 加註待使用者點頭 |

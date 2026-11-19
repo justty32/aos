@@ -26,7 +26,7 @@ WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl ad
         "tools.json": "Tools this agent can call.",
         "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",
         "hooks.json": "Hooks of this agent: aos functions run when an event happens; the stack copy of this file overrides it by name, null turns one off."}
-HOOKS_SHAPE = ("HOOKS must be a dict {hook name: entry}, ag.stock_hooks(...), a list of those (later ones win, None drops a hook), "
+HOOKS_SHAPE = ("HOOKS must be a dict {hook name: entry}, std.hooks(...), a list of those (later ones win, None drops a hook), "
                "or ag.by_hand(\"hooks.json\")")
 
 
@@ -39,7 +39,7 @@ class DefBad(ValueError):
 
 
 def kind(value):
-    """宣告小函式回的記號種類（"bad"、"by_hand"、"stock_hooks"…）；普通值＝None。hook 表裡叫 kind 的 hook 值是 dict，不會被認錯。"""
+    """宣告小函式回的記號種類（"bad"、"by_hand"、"stock_hooks"（std.hooks 回的）…）；普通值＝None。hook 表裡叫 kind 的 hook 值是 dict，不會被認錯。"""
     return value.get("kind") if isinstance(value, dict) and isinstance(value.get("kind"), str) else None
 
 
@@ -58,33 +58,55 @@ def pick(value, what, ok):
     return None
 
 
-def tools_json(tools, home_dir):
-    """TOOLS → tools.json 的內容。home_dir＝$AOS_HOME（有才查包在不在）。"""
-    packs, entries = [], {}
+def tools_json(tools):
+    """TOOLS → tools.json 的內容。包在宣告時已讀出、展開好（aos/agent_spec_lib.py），這裡疊起來：明寫的 ag.tool／庫的 .tool 整格換掉包裡同名那支（故意），
+    ag.no 拿掉；兩個包展開出同一個名字＝解完的整格完全相同才算同一支（菱形），否則 SpecBad，不再悄悄蓋（命名空間第一刀；設計稿 aos-ns-1119/05 第 7 條）。
+    出的 tools.json 只有 tools 表、沒有 $override：哪幾支、各叫什麼在生成時定死（07 第 7 題暫照推薦）。"""
+    order, packed, own, nos, packs = [], {}, {}, [], []
     for t in tools:
         raise_bad(t)
         if kind(t) not in ("pack", "tool", "no"):
-            raise SpecBad("each item of TOOLS must come from ag.pack(...), ag.tool(...) or ag.no(...), got %r" % (t,))
+            raise SpecBad("each item of TOOLS must come from std.pack(...), std.tool(...), ag.tool(...) or ag.no(...) "
+                          "(or .pack / .tool of a library from ag.lib), got %r" % (t,))
         if t["kind"] == "pack":
-            if t["name"] in packs:
-                raise SpecBad("pack %s is listed twice" % t["name"])
-            where = os.path.join(home_dir, "lib", "packs") if home_dir else None
-            if where and not os.path.isfile(os.path.join(where, t["name"] + ".json")):
-                have = sorted(f[:-5] for f in os.listdir(where) if f.endswith(".json")) if os.path.isdir(where) else []
-                raise SpecBad("there is no pack %s in $AOS_HOME/lib/packs (packs: %s)" % (t["name"], ", ".join(have) or "none"))
-            packs.append(t["name"])
+            label = "%s.pack(%r)" % (t["lib"], t["name"])
+            if label in packs:
+                raise SpecBad("%s is listed twice" % label)
+            packs.append(label)
+            for name, entry in t["tools"].items():
+                packed.setdefault(name, []).append((label, entry))
+                if name not in order:
+                    order.append(name)
             continue
-        if t["name"] in entries:
+        if t["name"] in own or t["name"] in nos:
             raise SpecBad("tool %s is listed twice" % t["name"])
-        entries[t["name"]] = t["entry"] if t["kind"] == "tool" else None
-    if None in entries.values() and not packs:
-        raise SpecBad("ag.no(...) takes a tool out of a pack, but TOOLS has no ag.pack(...): add the pack or drop the ag.no")
-    out = {"description": WHAT["tools.json"]}
+        if t["kind"] == "tool":
+            own[t["name"]] = t["entry"]
+        else:
+            nos.append(t["name"])
+        if t["name"] not in order:
+            order.append(t["name"])
+    for name in nos:
+        if name not in packed:
+            raise SpecBad("ag.no(%r) takes a tool out of the packs, but no pack in TOOLS has a tool %s%s" % (
+                name, name, " (packs give: %s)" % ", ".join(sorted(packed)) if packed else ""))
+    out = {}
+    for name in order:
+        if name in nos:
+            continue
+        if name in own:
+            out[name] = own[name]
+            continue
+        (first, entry), rest = packed[name][0], packed[name][1:]
+        for label, other in rest:
+            if other != entry:
+                raise SpecBad("tool %s comes from both %s and %s, and they differ: rename one (prefix= or rename=), "
+                              "leave one out (exclude=), or pick one with ag.tool(%r, ...)" % (name, first, label, name))
+        out[name] = entry
+    desc = WHAT["tools.json"]
     if packs:
-        out["$override"] = [{"$env": "AOS_HOME", "$path": "/lib/packs/%s.json" % p} for p in packs]
-    if entries or not packs:
-        out["tools"] = entries
-    return out
+        desc += " agent.py copied in the tools of %s." % ", ".join(packs)
+    return {"description": desc, "tools": out}
 
 
 def llm_json(llm, keys):
@@ -131,7 +153,7 @@ def interfaces_json(over, files, description):
 
 
 def hooks_json(hooks):
-    """HOOKS（一張表、ag.stock_hooks(...)、或它們的串列：後面的同名蓋前面、None 拿掉）→ hooks.json 的內容；每格照 agent 的 hooks.py 驗。"""
+    """HOOKS（一張表、std.hooks(...)、或它們的串列：後面的同名蓋前面、None 拿掉）→ hooks.json 的內容；每格照 agent 的 hooks.py 驗。"""
     layers = list(hooks) if isinstance(hooks, (list, tuple)) else [hooks]
     table, stock = {}, []
     for layer in layers:

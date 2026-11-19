@@ -30,7 +30,7 @@
    "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",
    "loop.json": "Run the state machine in fsm.json every tick and expose public control, state and state flux files.",
    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-   "tools.json": "Tools this agent can call."
+   "tools.json": "Tools this agent can call. agent.py copied in the tools of std.pack('look'), std.pack('mailbox'), std.pack('json')."
   },
   "agent-python/": "Look things up in the workspace and answer by mail.",
   "daemon-root": {

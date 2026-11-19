@@ -27,10 +27,12 @@ SYSTEM = """You are an assistant that looks things up in the workspace.
 Answer each letter with mailbox_send to its reply_to.
 """
 
-TOOLS = [ag.pack("look"), ag.pack("mailbox"), ag.pack("json")]
+std = ag.std                # the library that comes with aos; another one: my = ag.lib("my", ag.env("AOS_WS", "/lib/my"))
+
+TOOLS = [std.pack("look"), std.pack("mailbox"), std.pack("json")]   # copied into tools.json tool by tool
 
 LLM = {}                    # {} = the llm kernel's default brain; {"model": "luna"} picks one of its brain packs
 
-FSM = ag.stock_fsm()        # the four cells of the agent-fsm template: idle, think, wait, act
+FSM = std.fsm()             # the four cells of the agent-fsm template: idle, think, wait, act
 
 ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)

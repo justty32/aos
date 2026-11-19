@@ -47,11 +47,15 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
 - `DESCRIPTION`: one English sentence: what the agent does. It becomes `summary` in `_metainfo.json`.
 - `SYSTEM`: the system text as a string, or `ag.by_hand("system.txt")` to keep writing that file yourself.
 - `TOOLS`: a list of
-  - `ag.pack("look")`: add a tool pack (`$AOS_HOME/lib/packs/look.json`);
-  - `ag.tool("read", ag.home("/lib/tools/base/read"))`: add one tool by its path;
-  - `ag.no("shell")`: take one tool out of the packs.
+  - `std.pack("look")`: the tools of a pack of `std`, the library that comes with aos (`$AOS_HOME/lib/packs/look.json`). The pack is read when `agent.py` runs and its tools are written into `tools.json` one by one (no `$override`), so a tool added to the pack later shows up after the next `--write-defs`;
+  - `std.tool("base/read")`: one tool of `std` (`$AOS_HOME/lib/tools/base/read`), named after its folder (`name="..."` picks another name);
+  - `ag.tool("read", ag.home("/lib/tools/base/read"))`: one tool by its path; it replaces a tool of the same name from the packs. The path can also be a library tool: `ag.tool("read", my.tool("read"))`;
+  - `ag.no("shell")`: take one tool out of the packs;
+  - the `.pack(...)` / `.tool(...)` of another library (see "Libraries" below).
+  - `std.pack(...)` and the `.pack(...)` of a library also take `prefix="..."` (put before every tool name), `rename={"read": "cat"}` (the name of one tool, instead of prefix + its name) and `exclude=["grep"]` (leave tools out).
+  - When two packs give the same name and the tools are not exactly the same, `--write-defs` stops with `SpecBad` instead of letting one hide the other. Use `prefix=`, `rename=`, `exclude=`, or pick one with `ag.tool(name, ...)`.
 - `LLM`: a dict. `{}` = the llm kernel's default brain; `{"model": "luna"}` picks a brain pack of the kernel. Other keys must be in `llm_keys` (`temperature`, `max_tokens`, ...).
-- `FSM`: `ag.stock_fsm()` borrows the four cells of the `agent-fsm` template (`idle`, `think`, `wait`, `act`; the cell programs stay in `$AOS_HOME/templates/agent-fsm/`). Your own machine:
+- `FSM`: `std.fsm()` borrows the four cells of the `agent-fsm` template (`idle`, `think`, `wait`, `act`; the cell programs stay in `$AOS_HOME/templates/agent-fsm/`). Your own machine:
 
   ```python
   def cell(name):
@@ -71,8 +75,8 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
   - `INTERFACES`: laid over the default `interfaces.json`, like `{"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}}` (`None` removes a default key);
   - `HOOKS`: writes `hooks.json`, adds `"hooks": "hooks.json"` to `interfaces.json` and the `on_start` / `on_stop` lines (they fire `after_start` / `after_stop`) to `loop.json`. Write it as
     - a dict `{hook name: entry}`, the entries as in any `hooks.json` (`event`, `handler`, `condition`, `every_ms`, `config`, ...);
-    - `ag.stock_hooks()`: the hooks of the `agent-fsm` template (`ag.stock_hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/<template>/hooks.json` and copied in, so the next `--write-defs` follows a changed template;
-    - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `HOOKS = [ag.stock_hooks(), {"timer": None, "mine": {...}}]`;
+    - `std.hooks()`: the hooks of the `agent-fsm` template (`std.hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/<template>/hooks.json` and copied in, so the next `--write-defs` follows a changed template;
+    - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `HOOKS = [std.hooks(), {"timer": None, "mine": {...}}]`;
     - or `ag.by_hand("hooks.json")`.
   - `FILES`: other files written as they are, like `{"ladder.json": {...}}` (a dict or list is written as JSON, a string as it is). The name is one file in this folder; it cannot be a file that agent.py, the skeleton or the running agent writes.
 
@@ -88,7 +92,21 @@ Then `--write-defs` writes only the content files (`SYSTEM`, `TOOLS`, `LLM`, `HO
 
 Paths: write paths outside this folder as `ag.home("/...")` (under `$AOS_HOME`) or `ag.env("AOS_WS", "/...")`; they are written as `{"$env": ..., "$path": ...}` and work on any machine and after any copy. Do not write `../` paths: they break when the folder is copied somewhere else.
 
-`agent.py` is ordinary Python: use loops and small functions to build the lists. It should not use the network or read files outside this folder.
+`agent.py` is ordinary Python: use loops and small functions to build the lists. It should not use the network or read files outside this folder, apart from what the libraries read (packs, tool folders, `std.hooks`).
+
+## Libraries
+
+A library is a folder of a fixed shape: `packs/<name>.json` (tool packs, like `$AOS_HOME/lib/packs`) and `tools/<folder>/` (tools). `std` comes with aos (`std = ag.std`); its root is `$AOS_HOME`, with its packs in `lib/packs`, its tools in `lib/tools` and its hooks and state machine cells in `templates/`. Declare another library with its root, an absolute path or a directive:
+
+```python
+my = ag.lib("my", ag.env("AOS_WS", "/lib/my"))      # the name "my" is only for this agent.py
+TOOLS = [std.pack("look"), my.pack("look")]          # the brain sees read, ls, ... and my_read
+```
+
+- The tools of another library get the library name and `_` in front (`my_read`); the tools of `std` keep their short names (`read`). The brain allows only letters, digits, `_` and `-` in a tool name.
+- `tools.json` holds only full paths (`{"$env": "AOS_WS", "$path": "/lib/my/tools/read"}`), never the library name. A path written relative in a library's pack (`"../tools/read"`) is rewritten under the library root; it cannot leave the root.
+- The root must be readable when `agent.py` runs: a variable that is not set, or a root that is not a folder, is `SpecBad`. Running `agent.py` therefore needs `AOS_HOME`, and for a root under `$AOS_WS`, `AOS_WS` too.
+- In this first step a library has packs and tools only; hooks and state machines come from `std`.
 
 ## When a declaration is wrong
 

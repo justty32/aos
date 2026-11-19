@@ -21,14 +21,21 @@
    "kind": "lib",
    "module": "aos.agent_spec",
    "unit": "proto8/py/aos/agent_spec.py",
-   "used_by": "proto8/templates/agent-python",
-   "uses": "aos.agent_spec_parts aos.flags"
+   "used_by": "proto8/py/aos/agent_spec_lib.py proto8/templates/agent-python",
+   "uses": "aos.agent_spec_lib aos.agent_spec_parts aos.flags"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.agent_spec_lib",
+   "unit": "proto8/py/aos/agent_spec_lib.py",
+   "used_by": "proto8/py/aos/agent_spec.py",
+   "uses": "aos.agent_spec aos.agent_spec_parts"
   },
   {
    "kind": "lib",
    "module": "aos.agent_spec_parts",
    "unit": "proto8/py/aos/agent_spec_parts.py",
-   "used_by": "proto8/py/aos/agent_spec.py",
+   "used_by": "proto8/py/aos/agent_spec.py proto8/py/aos/agent_spec_lib.py",
    "uses": "aos.agentlib.hooks aos.declared_files aos.hook_run"
   },
   {
