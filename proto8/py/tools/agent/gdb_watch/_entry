@@ -39,7 +39,7 @@ def main():
     try:
         spec = trigger.read_json(spec_path)
         if spec is None:
-            tool_io.die("SpecMissing", "no %s (start watchers with aos.gdb watch)" % spec_path, prog=NAME, echo=False)
+            tool_io.die("SpecMissing", "no %s (start watchers with aos.gdb: a.bp.add(\"watch\", ...))" % spec_path, prog=NAME, echo=False)
         watch.validate(spec)
         state = trigger.read_json(state_path, {})
     except (OSError, ValueError) as e:

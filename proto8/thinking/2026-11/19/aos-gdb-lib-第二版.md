@@ -123,3 +123,62 @@
 2. **第 2 題＝a 維持 N-43**：sh 條件退 0＝成立、退 10＝不成立、其他＝條件壞了（只 warning、記 `last_error`）。`grep -q`、`test -f` 照舊要寫 `|| exit 10`。
 
 目前沒有待使用者拍板的題。
+
+## 介面照使用者意見改（線 aosgdb-api-1119）
+
+使用者 2026-11-19 原話（兩段，逐字）：
+
+1. 「斷點這塊我提一些意見：a.stop(), a.stop.before_tool()，像這種，他會返回一個斷點id(string)。a.stop()和a.resume()對應，a.resume()就是a.resume()，他的args不應該有東西。a.wait_paused是啥？」
+2. 「就是說，斷點這塊，我覺得他的架構就是以斷點為核心， 增刪改查。然後a.xxx這塊，感覺就是aos-agent xxxx。斷點就是給他aos-agent breakpoint xxxx，所以stop和resume似乎不該有。或者說他應該是a.bp.stop(),a.bp.resume()。對斷點增刪改查，包括以id查詢斷點...」
+
+第 2 段取代第 1 段的寫法（`a.stop.before_tool` 作廢，那一版沒交）。只改介面的長相，底層做法（hook handler 扣住／放行、觀察者 proc、字條、檔的格式）沒動；aos-agent、daemon、hook 機制、cpp 都沒改（守「兩者解耦合」，**沒有**去 aos-agent 加 `breakpoint` 子指令）。
+
+### 現在的長相：兩層
+
+- `a.xxx`＝`aos-agent xxx`：`a.say`、`a.listen`、`a.ctl(*args)`（新）、`a.state`、`a.agent(*args)`；加上讀 stack 的檔（`a.where`、`a.history`、`a.observed`、`a.request`、`a.queue`、`a.stderr`、`a.file`）。`a` 上不再有任何斷點的東西。
+- `a.bp`＝斷點，以斷點為核心增刪改查，每個斷點一個 id（str）：
+  - 增 `a.bp.add(on, tool=, sh=, py=, times=1, once=False, name=, replace=False, every_ms=500, also=())` → 回 id。`on`＝hook 事件（before_tool、after_tool、before_queue、brain_failed、tool_added…）、`"tool_error"` 或 `"watch"`（觀察者也是一種斷點，同一套 id：`watch_1`；daemon 表上是 `gdbw_watch_1`）。
+  - 刪 `a.bp.rm(id)`、`a.bp.clear()`。
+  - 改 `a.bp.set(id, enabled=, times=, once=)` → 回改完的 `get(id)`。停用＝觸發器把 hook 拿下、設定與計數留著（啟用＝照設定裝回去）；觀察者＝`aos-daemon-ctl stop`／`start`。**改不了**：事件（on）、條件（sh／py）、tool、every_ms、看誰——同 id 重下 `add(..., name=ID, replace=True)`。
+  - 查 `a.bp.ls()`、`a.bp.get(id)`（定義＋狀態：enabled、seen、fired、spent、last_error、`here`＝現在是不是停在它這裡）；REPL 裡直接打 `a.bp` 一個斷點一行。
+  - 停／續／跳過：`a.bp.stop()`（現在就停＝`ctl pause`；已扣在斷點上就不送、回一行說明）、`a.bp.resume()`（**不收參數**）、`a.bp.skip(text=None)`（扣在 before_tool：放行但那次工具不跑；名字暫定）。
+  - 停在哪、為什麼：`a.bp.why()`（多了 `.breakpoint`＝停在哪個 id）、`a.bp.held()`、`a.bp.stopped()`、`a.bp.wait_stopped(timeout_s=30)`、`a.bp.notes()`。
+
+`add` 選「一個方法、第一個參數說什麼時候判」（`a.bp.add("before_tool", tool="x")`），不選 `a.bp.add.before_tool("x")`：理由是一個入口就對得上一條 shell 指令（`… bp add before_tool --tool x`），所有事件與觀察者同一個形狀、不用替每個事件各寫一個方法，`help(a.bp.add)` 一頁講完；代價是事件名打錯要到執行才知道（錯了會列出能用的）。另一種留給使用者挑。
+
+### 改名對照（舊 → 新）
+
+| 舊 | 新 |
+|---|---|
+| `a.stop_before_tool("x", ...)` | `a.bp.add("before_tool", tool="x", ...)` |
+| `a.stop_after_tool("x", ...)` | `a.bp.add("after_tool", tool="x", ...)` |
+| `a.stop_on_tool_error(...)` | `a.bp.add("tool_error", ...)` |
+| `a.stop_on_brain_failed(code)` | `a.bp.add("brain_failed", tool=code)` |
+| `a.stop_when(event, ...)` | `a.bp.add(event, ...)` |
+| `a.watch(...)`、`g.watch([..], ...)` | `a.bp.add("watch", ..., also=[...])`（觀察者 id 由 `w1` 改成 `watch_1`） |
+| `a.triggers()`、`a.watchers()`、`g.watchers(d)` | `a.bp.ls()`、`a.bp.get(id)` |
+| `a.remove(name)`、`a.unwatch(name)`、`g.unwatch(name, d)` | `a.bp.rm(id)` |
+| `a.clear()` | `a.bp.clear()`（也拿掉看著它的觀察者） |
+| （沒有） | `a.bp.set(id, enabled=, times=, once=)` |
+| `a.pause()` | `a.bp.stop()`（或 `a.ctl("pause")`） |
+| `a.resume()` | `a.bp.resume()`（不收參數） |
+| `a.resume(skip=True, text=...)` | `a.bp.skip(text=...)`（暫定名） |
+| `a.why()`、`a.held()` | `a.bp.why()`、`a.bp.held()` |
+| `a.is_paused()` | `a.bp.stopped()` |
+| `a.wait_paused()` | `a.bp.wait_stopped()`（暫定名） |
+| `a.notes()` | `a.bp.notes()` |
+| （沒有） | `a.ctl(*args)`＝`aos-agent ctl ...` |
+
+舊名都直接拿掉、不留別名（proto8 當沒有舊版）。觸發器的 id 本來就是 str，觀察者也是；`a.say` 回的信名去掉尾巴的換行（一樣是 str）。
+
+### 暫定、待使用者挑的
+
+- `a.bp.skip()`、`a.bp.wait_stopped()` 兩個名字。`wait_paused` 的其他候選：`a.bp.wait()`、`a.bp.wait_until_stopped()`、`a.bp.until_stopped()`。
+- `add` 的寫法（上面）。
+- shell 那邊：要真的 `aos-agent breakpoint …`（要 aos-agent 認得 gdb，跟「兩者解耦合」打架），還是 `aos-gdb bp add/rm/set/ls/get/stop/resume/skip/why …`（做在 aos-gdb 自己這邊，aos-agent 照舊不知道）。這次沒做，只寫成提案：每個 `a.bp.*` 一個子指令、旗標照 `add` 的參數名，`py=` 只收運算式字串。
+
+### 測試（git archive 乾淨複本疊改動、清 AOS_*、install 後跑；暫存 `~/.aos/scratch/aosgdb-api-1119/`）
+
+- `test_gdb_trigger.py` 26 個全過（原 22 個＋介面長相 4 個：a 上沒有斷點的方法、g 上沒有 watch／watchers／unwatch、a.bp 的方法齊、`resume`／`stop` 不收參數、`skip` 只收 text、aos-gdb 的 --help 與 banner 用新名字、hook／proc 名轉 id）。
+- `test_gdb_live.py` 13 個全過（約 110 秒，假腦真 daemon）：原 12 個改用新名字照過；新的 10＝`a.bp.stop()` 停、`a.bp.resume()` 續、沒扣住時 `skip` 拒絕；`add` 三種回 str id（`before_tool_1`、自取的 `mine`、`watch_1`）、`ls`／`get`／`repr(a.bp)`、同 id 不換、查不到的 id 拒絕；停用觸發器＝hook 拿下、不停，啟用回來（帶 once）照停、`get` 的 here 對、扣著時 `stop` 不再送；改 times（觸發器與觀察者）、停用／啟用觀察者（表上 stopped）；`rm` 後查不到、表上沒了；`clear` 後全空。
+- 第一次跑抓到兩處照改：觀察者停用後表上的 phase 要等 daemon 收信才變（`enabled` 改成以 watch.json 記的為準）；`aos-daemon-ctl rm` 是寄信，`a.bp.rm` 改成等表上真的沒了才回。

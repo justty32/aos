@@ -1,4 +1,4 @@
-"""aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent 跑：pause 型發 pause、留字條；hold 型扣住等放行（run 退 0、skip 印字退 10、shell 的 ctl resume 也放行、被 TERM 留 hold_ended 且同一次再來時直接再扣住）；條件壞了只 warning 退 0。"""
+"""aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent 跑：pause 型發 pause、留字條；hold 型扣住等放行（run 退 0、skip 印字退 10、shell 的 ctl resume 也放行、被 TERM 留 hold_ended 且同一次再來時直接再扣住）；條件壞了只 warning 退 0；介面長相（a.bp、resume 不收參數、說明字串）。"""
 import json
 import os
 from pathlib import Path
@@ -285,6 +285,42 @@ class Handler(unittest.TestCase):
         notes = trigger.read_log(str(self.stack))
         self.assertEqual(notes[0]["kind"], "pause_failed")
         self.assertIn("PhaseBad", notes[0]["why"])
+
+
+
+class Shape(unittest.TestCase):
+    """介面的長相（線 aosgdb-api-1119）：a.xxx＝aos-agent xxx、斷點全在 a.bp；resume 不收參數；aos-gdb 的說明字串跟著改。"""
+
+    def test_agent_has_no_breakpoint_methods(self):
+        import aos.gdb as g
+        for old in ("stop", "resume", "skip", "remove", "why", "held", "wait_paused", "is_paused", "triggers", "clear",
+                    "watch", "watchers", "unwatch", "notes", "pause", "stop_before_tool", "stop_after_tool",
+                    "stop_on_tool_error", "stop_on_brain_failed", "stop_when"):
+            self.assertFalse(hasattr(g.Agent, old), old)
+        for old in ("watch", "watchers", "unwatch"):
+            self.assertFalse(hasattr(g, old), old)
+        for name in ("say", "listen", "ctl", "state", "agent", "where", "history", "observed", "file"):
+            self.assertTrue(callable(getattr(g.Agent, name)), name)
+
+    def test_bp_methods(self):
+        import inspect
+        import aos.gdb as g
+        for name in ("add", "rm", "set", "ls", "get", "stop", "resume", "skip", "why", "held", "stopped", "wait_stopped", "notes", "clear"):
+            self.assertTrue(callable(getattr(g.Breakpoints, name)), name)
+        self.assertEqual(list(inspect.signature(g.Breakpoints.resume).parameters), ["self"])
+        self.assertEqual(list(inspect.signature(g.Breakpoints.stop).parameters), ["self"])
+        self.assertEqual(list(inspect.signature(g.Breakpoints.skip).parameters), ["self", "text"])
+
+    def test_help_text_uses_the_new_names(self):
+        from aos.apps import gdb as app
+        for text in (app.HELP, app.BANNER):
+            self.assertIn("a.bp", text)
+            for old in ("stop_before_tool", "skip=True", "wait_paused", "a.watch(", "a.why(", "a.resume(", "a.triggers("):
+                self.assertNotIn(old, text)
+
+    def test_bp_id(self):
+        from aos.gdb.look import bp_id
+        self.assertEqual((bp_id("gdb_before_tool_1"), bp_id("gdbw_watch_1"), bp_id(None)), ("before_tool_1", "watch_1", None))
 
 
 if __name__ == "__main__":

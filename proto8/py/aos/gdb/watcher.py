@@ -188,7 +188,7 @@ def round_(spec, state, warn=None):
     return state
 
 
-# ---- 庫：起、列、拿掉（aos.gdb 的 watch／watchers／unwatch 叫這些）----
+# ---- 庫：起、列、拿掉（aos.gdb 的 a.bp.add("watch")／ls／rm 叫這些）----
 
 def _table(daemon):
     out = run(["aos-daemon-ctl", "--daemon", daemon, "ls", "-j"], echo=False)
@@ -199,8 +199,16 @@ def stack_dir(daemon, proc):
     return os.path.join(daemon, "procs", proc)
 
 
+def about(spec):
+    """觀察者一句英文說明（watch.json 的 about；aos.gdb 的 a.bp.set 改了 times／once 也用這個重寫）。"""
+    times = spec.get("times", 1)
+    return "%s on %s%s%s" % ("sh `%s` exits 0" % spec.get("sh") if spec.get("kind") == "sh" else "the py condition is true",
+                             ", ".join(spec.get("targets") or []), " (%d checks in a row)" % times if times > 1 else "",
+                             ", once" if spec.get("once") else "")
+
+
 def add(daemon, targets, sh=None, py=None, times=1, once=False, every_ms=500, name=None, replace=False, echo=True):
-    """起一個觀察者（aos-daemon-ctl add）；回它的短名（不含 gdbw_）。"""
+    """起一個觀察者（aos-daemon-ctl add）；回它的 id（str，不含 gdbw_；aos.gdb 的 a.bp.add("watch") 叫這個）。"""
     if isinstance(targets, str):
         targets = [targets]
     targets = list(targets or [])
@@ -225,8 +233,7 @@ def add(daemon, targets, sh=None, py=None, times=1, once=False, every_ms=500, na
             spec["sh"] = sh
         else:
             spec["py"] = trigger.pack_py(py, var="t", what="the target t")
-        spec["about"] = "%s on %s%s%s" % ("sh `%s` exits 0" % sh if sh is not None else "the py condition is true", ", ".join(targets),
-                                          " (%d checks in a row)" % times if times > 1 else "", ", once" if once else "")
+        spec["about"] = about(spec)
         validate(spec)
     except trigger.Bad as e:
         raise Failed("watch", str(e)) from None

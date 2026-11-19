@@ -16,23 +16,26 @@ flags:
   -h, --help       show this help
 
 Opens Python with `import aos.gdb as g` and `a = g.attach(NAME, daemon=D)` done.
-In it, for example:
-  a.stop_before_tool("write")      hold it before the tool runs; a.resume() runs that call,
-                                   a.resume(skip=True) skips it
-  a.stop_after_tool("write")       pause after the tool ran, before the brain sees the result
-  a.stop_on_tool_error()           the same, when any tool exits non-zero or times out
-  a.stop_when("after_tool", sh="grep -q secret", times=2)
-  a.watch(py=lambda t: len(t.history(0)) > 20)   another proc looks every 0.5 s and pauses it
-  a.say("hi"); a.wait_paused(); a.why(); a.where(); a.history(3)
-  a.resume(); a.triggers(); a.remove("before_tool_1"); a.clear(); a.watchers(); a.unwatch("w1")
+In it, a.xxx is aos-agent xxx (a.say, a.listen, a.ctl, a.state) plus reading the stack
+(a.where, a.history, a.observed, a.file); every breakpoint thing is under a.bp:
+  b = a.bp.add("before_tool", tool="write")   hold it before write runs; returns the id "before_tool_1"
+  a.bp.add("after_tool", tool="write")        pause after the tool ran, before the brain sees the result
+  a.bp.add("tool_error", times=2)             the same, when tools exit non-zero or time out twice in a row
+  a.bp.add("after_tool", sh="grep -q secret || exit 10")
+  a.bp.add("watch", py=lambda t: len(t.history(0)) > 20)   another proc looks every 0.5 s and pauses it
+  a.say("hi"); a.bp.wait_stopped(); a.bp.why(); a.where(); a.history(3)
+  a.bp.resume()            go on (a held tool call runs as it was); takes no arguments
+  a.bp.skip()              let a held before_tool call go, but do not run that tool
+  a.bp.ls(); a.bp.get(b); a.bp.set(b, enabled=False, times=3, once=True); a.bp.rm(b); a.bp.clear()
+  a.bp.stop()              pause it now, without a breakpoint (a.bp.resume() goes on)
 Every call prints the aos command behind it ($ ...); set g.echo = False to stop that.
 The same library works in any python3 with $AOS_HOME/lib on sys.path.
 More: proto8/py/aos/apps/gdb/README.md
 exit codes: 0 left the REPL; 1 error (ArgumentsBad, TargetMissing, HooksMissing...); 130 Ctrl-C.
 """
 BANNER = """aos-gdb: attached to %s (stack %s)
-  g = aos.gdb, a = the agent.  Try: a.triggers(), a.stop_before_tool(), a.why(), help(a)
-  Ctrl-D leaves; triggers stay on the agent and watchers on the daemon until a.clear() / a.unwatch()."""
+  g = aos.gdb, a = the agent, a.bp = its breakpoints.  Try: a.bp, a.bp.add("before_tool"), a.bp.why(), help(a.bp)
+  Ctrl-D leaves; breakpoints stay (triggers on the agent, watchers on the daemon) until a.bp.rm(id) / a.bp.clear()."""
 
 
 def main():

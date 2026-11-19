@@ -9,7 +9,7 @@
 | [aos-agent](../aos/apps/agent/README.md) | 給人用的 agent 介面：add、say／listen／chat、畫面、tools 覆蓋層、搬家範本 |
 | [aos-daemon-ctl](../aos/apps/daemon_ctl/README.md) | 掛上 proc、起停、暫停；prune 自檢與清理舊列；poke 叫 daemon 立刻看檔 |
 | [aos-feedback](../aos/apps/feedback/README.md) | 收集指令／函數意見；從 AI 評分與工具帳計算舒適度 |
-| [aos-gdb](../aos/apps/gdb/README.md) | 開一個接上某隻 agent 的 Python REPL（庫 `aos.gdb`）：下條件觸發器（hook：工具要跑之前扣住、其他事件那一格做完暫停）或起觀察者（另一支 proc 輪詢、成立就 ctl pause），都留字條；看為什麼停、檢閱 stack、續（扣住的可跳過那次工具） |
+| [aos-gdb](../aos/apps/gdb/README.md) | 開一個接上某隻 agent 的 Python REPL（庫 `aos.gdb`）：下條件觸發器（hook：工具要跑之前扣住、其他事件那一格做完暫停）或起觀察者（另一支 proc 輪詢、成立就 ctl pause），都留字條；斷點全在 `a.bp`（以 id 增刪改查、停、續、跳過那次工具、看為什麼停），`a.xxx`＝`aos-agent xxx` |
 | [aos-tools](../aos/apps/tools/README.md) | 一個 agent 資料夾一份工具註冊檔（tools.json） |
 | [aos-clock](../aos/apps/clock/README.md) | 把時鐘檔的回合數往前走一格 |
 | [aos-clock-register](../aos/apps/clock_register/README.md) | 時鐘登記表（add／rm／ls）：每 N 個 cycle 往一個 aos-post 箱子寄一句（定時叫醒 agent） |

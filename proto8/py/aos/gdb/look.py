@@ -60,26 +60,38 @@ def _tail_jsonl(path, n):
     return out
 
 
+def bp_id(name):
+    """hook 名 gdb_<id>／觀察者 proc 名 gdbw_<id> → 斷點 id。"""
+    s = name or ""
+    for p in ("gdbw_", "gdb_"):                  # gdbw_ 先比（它也以 gdb 開頭）
+        if s.startswith(p):
+            return s[len(p):]
+    return s or None
+
+
 class Why:
     """why() 的結果：paused（停著沒：ctl pause 已套用，或扣在斷點上）、held（扣住的那份 hold.json 或 None）、
-    current（最後一張字條是不是這次停的原因）、notes（上次 resume 之後的字條）、pending（扣住之後又來的 ctl 指令 (seq, cmd) 或 None）。"""
+    current（最後一張字條是不是這次停的原因）、notes（上次 resume 之後的字條）、pending（扣住之後又來的 ctl 指令 (seq, cmd) 或 None）、
+    breakpoint（現在停在哪個斷點的 id，str；不是停在斷點上＝None）。"""
 
     def __init__(self, name, paused, current, notes, held=None, pending=None):
         self.name, self.paused, self.current, self.notes, self.held, self.pending = name, paused, current, notes, held, pending
+        last = notes[-1] if notes else {}
+        self.breakpoint = (bp_id(held.get("trigger")) if held else bp_id(last.get("trigger")) if paused and current and notes else None)
 
     def __bool__(self):
         return bool(self.notes)
 
     def __repr__(self):
         last = self.notes[-1] if self.notes else {}
-        who = "watcher %s" % last.get("trigger") if last.get("by") == "watch" else "trigger %s" % last.get("trigger")
+        who = "breakpoint %s (%s)" % (bp_id(last.get("trigger")), "a watcher" if last.get("by") == "watch" else "a trigger")
         if self.held:
             h = self.held
             d = h.get("detail", {})
             thing = ("tool %s has not run yet" % d.get("name") if h.get("event") == "before_tool"
                      else "letter %s is not taken in yet" % d.get("letter") if h.get("event") == "before_queue" else "the event has not happened yet")
-            head = "%s is held at a breakpoint (trigger %s): %s; a.resume() lets it go on as it was%s" % (
-                self.name, h.get("trigger"), thing, ", a.resume(skip=True) skips that call" if h.get("skippable") else "")
+            head = "%s is held at breakpoint %s: %s; a.bp.resume() lets it go on as it was%s" % (
+                self.name, bp_id(h.get("trigger")), thing, ", a.bp.skip() skips that call" if h.get("skippable") else "")
             if self.pending:
                 head += ("\n  then it %ss: aos-agent ctl %s (seq %s) came while held, and the loop applies it after this step"
                          % (self.pending[1], self.pending[1], self.pending[0]))
@@ -153,8 +165,3 @@ class Look:
         """stderr.txt 最後 n 行。"""
         t = self.file("stderr.txt")
         return Text("") if t is None else Text("\n".join(t.splitlines()[-n:]) + "\n")
-
-    def notes(self):
-        """gdb/log.jsonl 全部（字條與 resume 紀錄，舊的在前）。"""
-        from aos.gdb import trigger
-        return trigger.read_log(self.stack)
