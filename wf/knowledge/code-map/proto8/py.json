@@ -666,6 +666,7 @@
     "box_check/": "Verify probe markers, executable visibility and host probe paths.",
     "defs": {
      "catalog.py": "Inspect public definition declarations and group agents by tools and endpoint.",
+     "refs_check.py": "defs check 的「叫的東西在不在」：工具路徑、會被執行的程式（入口、loop、狀態格、hook）、腦設定的型別（線 aos-check-refs-1119）。",
      "tests": {
       "test_defs.py": "Verify public definition discovery, three-axis identity, references and check failures."
      }

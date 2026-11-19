@@ -84,24 +84,60 @@ def tools(path, agent):
 HOME_OF_LIB = Path(__file__).resolve().parents[4]   # 放這份 lib/ 的資料夾：proto8，或抄出去的樹（沒有 cmd/）
 
 
-def stacked(table):
-    """tools.json 疊了 "$override"（11-10 tool-packs，範本疊 py/packs）：交給 aos-tools ls -l 合併，取每格寫的 path 原樣（STORED 欄）。
-    合併規則只在 aos-tools 一處；aos-tools 從 PATH 找（同 def_edit、cli_mcp：lib 可以被抄到沒有 cmd/ 的樹）；
-    沒設 AOS_HOME 時用放這份 lib 的資料夾（底檔多半寫 {"$env": "AOS_HOME", …}）。"""
+class Unresolved(ValueError):
+    """A {"$env": NAME} the definition names is not set where check runs: what it points at is only known where the agent runs.
+    check reports it as a warning, not a problem (11-19 aos-check-refs: 解不了的環境變數照實說而不是誤報)."""
+    def __init__(self, what, name):
+        super().__init__('%s not checked: environment variable %s is not set here (it is read when the agent runs)' % (what, name))
+        self.name = name
+
+
+UNSET_RE = re.compile(r'environment variable (\S+) is not set')
+
+
+def run_env():
+    """The environment check resolves things in: the caller's, AOS_HOME defaulting to the folder holding this lib (tool-packs);
+    no AOS_STACK, so aos-tools keeps no tooldef cache anywhere (check only reads)."""
     env = dict(os.environ)
     env.setdefault('AOS_HOME', str(HOME_OF_LIB))
+    env.pop('AOS_STACK', None)
+    env.pop('AOS_STACK_IN_CALLER', None)
+    return env
+
+
+_listed = {}
+
+
+def tools_ls(table):
+    """aos-tools --file TABLE ls -l, the same reader the agent uses when it runs (merges $override, resolves paths, marks
+    broken tools); once per table per run. Returns (stdout, stderr). aos-tools from PATH (lib may be copied to a tree without cmd/)."""
+    key = str(table)
+    if key in _listed:
+        return _listed[key]
     tools = shutil.which('aos-tools')
     if not tools:
         raise ValueError('cannot merge %s: aos-tools is not on PATH (source $AOS_HOME/env.sh)' % table)
     try:
         r = subprocess.run([tools, '--file', str(table), 'ls', '-l'], stdin=subprocess.DEVNULL,
-                           capture_output=True, text=True, env=env, timeout=60)
+                           capture_output=True, text=True, env=run_env(), timeout=60)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise ValueError('cannot merge %s with aos-tools: %s' % (table, e))
     if r.returncode:
+        unset = UNSET_RE.search(r.stderr or '')
+        if unset:
+            raise Unresolved('tool paths in %s' % Path(table).name, unset.group(1))
         raise ValueError(' '.join((r.stderr or r.stdout).strip().splitlines()[-1:]) or 'aos-tools ls failed')
+    _listed[key] = (r.stdout, r.stderr)
+    return _listed[key]
+
+
+def stacked(table):
+    """tools.json 疊了 "$override"（11-10 tool-packs，範本疊 py/packs）：交給 aos-tools ls -l 合併，取每格寫的 path 原樣（STORED 欄）。
+    合併規則只在 aos-tools 一處；aos-tools 從 PATH 找（同 def_edit、cli_mcp：lib 可以被抄到沒有 cmd/ 的樹）；
+    沒設 AOS_HOME 時用放這份 lib 的資料夾（底檔多半寫 {"$env": "AOS_HOME", …}）。指示詞的變數沒設＝Unresolved。"""
+    stdout, _ = tools_ls(table)
     entries = {}
-    for line in r.stdout.splitlines():
+    for line in stdout.splitlines():
         cols = line.split('\t')
         if len(cols) < 5 or cols[1] == 'null':
             continue
@@ -153,9 +189,12 @@ def signature(row):
 
 
 def check(path, root):
-    problems = []
+    """Returns (problems, warnings): problems make check fail; warnings are what could not be checked here."""
+    problems, warnings = [], []
     def problem(reason):
         problems.append({'path': relative(path, root), 'reason': reason})
+    def warn(reason):
+        warnings.append({'path': relative(path, root), 'reason': reason})
     parts = path.relative_to(root).parts
     if not parts:                                # root 本身就是定義（agent_def check 一份）：它自己的名字照查（11-12 Q10）
         if not re.fullmatch('[a-z0-9_-]+', path.name):
@@ -177,9 +216,18 @@ def check(path, root):
     try:
         read(path / 'interfaces.json')
         describe(path, root)
+    except Unresolved as error:
+        warn(str(error))
     except (OSError, ValueError, TypeError, UnicodeError) as error:
         problem(str(error))
-    return problems
+    try:
+        agent = declared(path)
+    except (OSError, ValueError, TypeError, UnicodeError):
+        agent = None                             # already reported above
+    if isinstance(agent, dict):                  # 11-19 aos-check-refs（使用者選「只放進檢查指令」）：叫的東西在不在、腦設定的型別
+        import refs_check                        # 同夾（_entry 把本夾放在 sys.path 最前面）；用到才載
+        refs_check.check(path, agent, problem, warn)
+    return problems, warnings
 
 
 def run(args):
@@ -189,7 +237,12 @@ def run(args):
     paths = list(definitions(root))
     op = args['op']
     if op == 'check':
-        return {'problems': [p for path in paths for p in check(path, root)]}
+        problems, warnings = [], []
+        for path in paths:
+            p, w = check(path, root)
+            problems += p
+            warnings += w
+        return dict({'problems': problems}, **({'warnings': warnings} if warnings else {}))
     if op == 'refs':
         target = args.get('def')
         if not isinstance(target, str) or not target:

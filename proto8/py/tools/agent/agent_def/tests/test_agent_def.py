@@ -233,6 +233,25 @@ class AgentDef(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
         self.assertEqual(json.loads(r.stdout), {"problems": []})
 
+    def test_check_finds_what_the_copy_calls_but_is_not_there(self):
+        """11-19 aos-check-refs（G1，使用者選「只放進檢查指令」）：寫錯的工具路徑、不在的格程式、型別錯的腦設定，check 報 DefBad。"""
+        r = self.new(str(PROTO / "templates" / "agent-fsm"), "helper")
+        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+        d = self.ws / "helper"
+        tools = json.loads((d / "tools.json").read_text())
+        tools.setdefault("tools", {})["ghost"] ={"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/nope"}}
+        (d / "tools.json").write_text(json.dumps(tools))
+        (d / "wait.py").unlink()
+        (d / "llm.json").write_text('{"temperature": "hot"}')
+        r = self.run_tool({"op": "check", "path": "helper"})
+        self.assertEqual(r.returncode, 1, r.stderr + r.stdout)
+        reasons = [p["reason"] for p in json.loads(r.stdout.splitlines()[0])["problems"]]
+        self.assertEqual(len(reasons), 3, reasons)
+        self.assertIn("tool ghost cannot be used (PathMissing", reasons[0])
+        self.assertIn('fsm.json#/states/wait/exec/argv/1: script "wait.py" does not exist', reasons[1])
+        self.assertEqual(reasons[2], 'temperature in llm.json must be a number, not "hot"')
+        self.assertTrue(r.stdout.splitlines()[-1].startswith("%s: error: DefBad 3 definition problems found" % NAME), r.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

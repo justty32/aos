@@ -99,9 +99,11 @@ class DefinitionsTest(unittest.TestCase):
         home = Path(tempfile.mkdtemp(prefix='defs-home-'))
         self.addCleanup(shutil.rmtree, home, True)
         skip = shutil.ignore_patterns('tests', '__pycache__')
-        for part in ('tools/aos/defs', 'packs', 'tools/base'):
+        for part in ('tools/aos/defs', 'packs', 'tools/base', 'tools/agent/do_task'):   # 11-19：check 也查包裡的工具在不在（gadgets 有 do_task）
             shutil.copytree(PROTO / 'py' / part, home / 'lib' / part, ignore=skip)
         shutil.copytree(PROTO / 'py' / 'aos', home / 'lib' / 'aos', ignore=skip)
+        (home / 'templates' / 'agent-fsm').mkdir(parents=True)                # 11-19：腦設定照這份規則查
+        shutil.copy(PROTO / 'templates' / 'agent-fsm' / 'llm_settings.py', home / 'templates' / 'agent-fsm')
         self.assertFalse((home / 'cmd').exists())
         result, data = self.call('check', entry=home / 'lib' / 'tools' / 'aos' / 'defs' / '_entry')
         self.assertEqual(data, {'problems': []}, result.stderr)
@@ -264,6 +266,144 @@ class DefinitionsTest(unittest.TestCase):
         result = subprocess.run([str(ENTRY), '--help'], text=True, capture_output=True)
         self.assertEqual(result.returncode, 0)
         self.assertIn('--root', result.stdout)
+
+    # ---- 11-19 aos-check-refs（使用者選「只放進檢查指令」）：叫的東西在不在、腦設定的型別 ----
+    def reasons(self, **env):
+        result, data = self.call('check', **env)
+        return result, [p['reason'] for p in data['problems']], [w['reason'] for w in data.get('warnings', [])]
+
+    def runnable(self, name='a', fsm=None, loop=None, hooks=None):
+        """A definition with an entry → aos-loop loop.json → fsm.json, like the agent-fsm template, and a hooks file."""
+        path = self.definition(name)
+        self.write(path / 'interfaces.json', {'aos-agent': {'entry': 'body.json', 'tools': 'tools.json', 'llm': 'llm.json',
+                                                            'llm_keys': ['model', 'temperature', 'max_tokens', 'top_p'], 'hooks': 'hooks.json'}})
+        self.write(path / 'body.json', {'argv': ['aos-loop', 'loop.json']})
+        self.write(path / 'loop.json', loop or {'exec': 'fsm.json', 'interval_ms': 300})
+        self.write(path / 'fsm.json', fsm or {'start': 'idle', 'states': {'idle': {'exec': {'argv': ['python3', 'idle.py']}, 'next': {'0': 'idle'}}}})
+        self.write(path / 'idle.py', 'print(1)\n')
+        self.write(path / 'hooks.json', hooks or {'hooks': {}})
+        return path
+
+    def test_check_tool_path_that_does_not_exist(self):
+        """G1：寫錯的工具路徑——執行時被 aos-tools 略過、腦看不到；check 照 aos-tools ls 的讀法報出來。"""
+        self.definition('a', tool={'ghost': {'path': {'$env': 'AOS_HOME', '$path': '/lib/tools/base/nope'}},
+                                   'rel': {'path': 'not/there'},
+                                   'read': {'path': {'$env': 'AOS_HOME', '$path': '/lib/tools/base/read'}}})
+        result, problems, warnings = self.reasons()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertEqual(len(problems), 2, problems)
+        self.assertIn('tool ghost cannot be used (PathMissing', problems[0])
+        self.assertIn('/lib/tools/base/nope', problems[0])
+        self.assertIn('tools.json#/tools/ghost', problems[0])
+        self.assertIn('tool rel cannot be used (PathMissing', problems[1])
+        self.assertEqual(warnings, [])
+
+    def test_check_tool_path_with_an_unset_variable_is_a_warning(self):
+        """變數這裡沒設：照實說沒查，不當成 problem（執行時那個變數可能有）。"""
+        self.definition('a', tool={'lib': {'path': {'$env': 'AOS_CHECK_REFS_NOT_SET', '$path': '/tools/x'}}})
+        result, problems, warnings = self.reasons()
+        self.assertEqual((result.returncode, problems), (0, []), result.stdout + result.stderr)
+        self.assertEqual(len(warnings), 1, warnings)
+        self.assertIn('environment variable AOS_CHECK_REFS_NOT_SET is not set here', warnings[0])
+        b = self.definition('b')                      # 疊 $override 的也一樣（describe 那邊不再報成 problem）
+        self.write(b / 'tools.json', {'$override': {'$env': 'AOS_CHECK_REFS_NOT_SET', '$path': '/packs/x.json'}, 'tools': {}})
+        result, problems, warnings = self.reasons()
+        self.assertEqual((result.returncode, problems), (0, []), result.stdout + result.stderr)
+        self.assertEqual(len(warnings), 2, warnings)
+
+    def test_check_tool_paths_without_aos_tools_is_a_warning(self):
+        self.definition('a', tool={'x': {'path': 'not/there'}})
+        empty = self.root.parent / (self.root.name + '-bin2')
+        empty.mkdir()
+        self.addCleanup(shutil.rmtree, empty, True)
+        result, problems, warnings = self.reasons(path=str(empty))
+        self.assertEqual((result.returncode, problems), (0, []), result.stdout)
+        self.assertIn('tool paths not checked: aos-tools is not on PATH', warnings[0])
+
+    def test_check_programs_the_agent_runs(self):
+        """G1：狀態格、loop、hook 指到的程式不在——執行時一起來就停；check 找出分得出是檔的位置。"""
+        home = {'$env': 'AOS_HOME', '$path': '/lib/tools/agent/nope'}
+        self.runnable(fsm={'start': 'idle', 'states': {
+            'idle': {'exec': {'argv': ['python3', 'idle.py']}, 'next': {'0': 'think'}},
+            'think': {'exec': {'argv': ['python3', '-u', 'nocell.py', 'out.txt']}, 'next': {'0': 'idle'}},
+            'mod': {'exec': {'argv': ['python3', '-m', 'json.tool']}, 'next': {'0': 'idle'}},
+            'std': {'exec': {'argv': ['python3', {'$env': 'AOS_HOME', '$path': '/templates/agent-fsm/nope.py'}]}, 'next': {'0': 'idle'}},
+            'sub': {'exec': {'argv': ['./gone.sh'], 'cwd': 'cells'}, 'next': {'0': 'idle'}},
+            'tool': {'exec': 'missing_tool', 'next': {'0': 'idle'}}}},
+            loop={'exec': 'fsm.json', 'on_start': {'argv': [home, 'after_start', {'$env': 'AOS_CD'}]}},
+            hooks={'hooks': {'gone': {'event': 'on_clock', 'handler': 'hooks/gone'}, 'off': None,
+                             'ok': {'event': 'on_clock', 'handler': {'$env': 'AOS_HOME', '$path': '/lib/tools/agent/hook_noop'}}}})
+        result, problems, warnings = self.reasons()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        text = '\n'.join(problems)
+        for want in ('fsm.json#/states/think/exec/argv/2: script "nocell.py" does not exist',
+                     'fsm.json#/states/std/exec/argv/1: script {"$env": "AOS_HOME", "$path": "/templates/agent-fsm/nope.py"} does not exist',
+                     'fsm.json#/states/sub/exec/argv/0: program "./gone.sh" does not exist (looked for cells/gone.sh)',
+                     'fsm.json#/states/tool/exec: target "missing_tool" does not exist',
+                     'loop.json#/on_start/argv/0: program {"$env": "AOS_HOME", "$path": "/lib/tools/agent/nope"} does not exist',
+                     'hooks.json#/hooks/gone/handler: handler "hooks/gone" does not exist'):
+            self.assertIn(want, text)
+        self.assertEqual(len(problems), 6, text)       # idle.py、-m、out.txt、AOS_CD、null 的 hook、在的 handler 都不報
+        self.assertEqual(warnings, [])
+
+    def test_check_follows_the_loop_and_reports_a_missing_table(self):
+        path = self.runnable(loop={'exec': 'table.json'})
+        result, problems, _ = self.reasons()
+        self.assertEqual(problems, ['loop.json#/exec: target "table.json" does not exist (looked for table.json)'])
+        self.write(path / 'body.json', {'argv': ['aos-loop', 'nowhere.json']})
+        result, problems, _ = self.reasons()
+        self.assertEqual(problems, ['body.json#/argv/1: config file "nowhere.json" does not exist (looked for nowhere.json)'])
+        self.write(path / 'body.json', ['aos-loop', 'nowhere.json'])          # agent-fsm 的寫法：整份就是 argv
+        result, problems, _ = self.reasons()
+        self.assertEqual(problems, ['body.json#/1: config file "nowhere.json" does not exist (looked for nowhere.json)'])
+        (path / 'body.json').unlink()
+        result, problems, _ = self.reasons()
+        self.assertEqual(problems, ['aos-agent.entry "body.json" does not exist'])
+
+    def test_check_program_with_an_unset_variable_or_off_path_command(self):
+        self.runnable(fsm={'start': 'idle', 'states': {
+            'idle': {'exec': {'argv': ['python3', {'$env': 'AOS_CHECK_REFS_NOT_SET', '$path': '/cell.py'}]}, 'next': {'0': 'idle'}},
+            'x': {'exec': {'argv': ['aos-check-refs-no-such-command', 'a']}, 'next': {'0': 'idle'}},
+            'st': {'exec': {'argv': ['python3', {'$env': 'AOS_STACK', '$path': '/made.py'}]}, 'next': {'0': 'idle'}}}})
+        result, problems, warnings = self.reasons()
+        self.assertEqual((result.returncode, problems), (0, []), result.stdout)
+        self.assertEqual(len(warnings), 2, warnings)
+        self.assertIn('fsm.json#/states/idle/exec/argv/1: script {"$env": "AOS_CHECK_REFS_NOT_SET", "$path": "/cell.py"} not checked: '
+                      'environment variable AOS_CHECK_REFS_NOT_SET is not set here', warnings[0])
+        self.assertIn('command "aos-check-refs-no-such-command" is not on PATH here', warnings[1])
+
+    def test_check_brain_settings_types(self):
+        """G1：LLM 值型別錯——執行時 brain.py 報 CfgBad；check 用同一份 llm_settings 轉型。model 名對不對不查（要問 kernel）。"""
+        path = self.runnable()
+        for cfg, want in (({'model': 'no-such-brain', 'temperature': '0.5', 'max_tokens': 100}, []),
+                          ({'model': 'fake', 'temperature': 'hot'}, ['temperature in llm.json must be a number, not "hot"']),
+                          ({'max_tokens': -5}, ['llm.json: max_tokens must be at least 1, not -5']),
+                          ({'max_tokens': 1.5}, ['max_tokens in llm.json must be an integer, not 1.5']),
+                          ({'top_p': 2}, ['llm.json: top_p must be between 0 and 1, not 2']),
+                          ({'model': ''}, ['model in llm.json must be a non-empty string (a brain pack name of the llm kernel)']),
+                          ({'temperature': True}, ['temperature in llm.json must be a number, not true'])):
+            with self.subTest(cfg=cfg):
+                self.write(path / 'llm.json', dict(cfg, description='Brain settings'))
+                result, problems, warnings = self.reasons()
+                self.assertEqual(problems, want)
+                self.assertEqual(result.returncode, 1 if want else 0)
+                self.assertEqual(warnings, [])
+        self.write(path / 'llm.json', {'model': 'fake', 'seed': 'x', 'colour': 'blue'})   # 不在 llm_keys 的：body 不讀＝warning
+        result, problems, warnings = self.reasons()
+        self.assertEqual((result.returncode, problems), (0, []), result.stdout)
+        self.assertEqual(warnings, ['llm.json: key "colour" is not one of llm_keys in interfaces.json (model, temperature, max_tokens, top_p), so the body does not read it',
+                                    'llm.json: key "seed" is not one of llm_keys in interfaces.json (model, temperature, max_tokens, top_p), so the body does not read it'])
+
+    def test_check_stock_templates_have_no_findings(self):
+        """骨架與範本照抄出去 check：沒有 problem、沒有 warning（範本自己的指令都在 PATH 上、路徑都在）。"""
+        for name in ('agent-fsm', 'agent-python', 'reviewer', 'eca-claude'):
+            with self.subTest(template=name):
+                root = self.root / ('t-' + name)
+                shutil.copytree(PROTO / 'templates' / name, root / 'd', ignore=shutil.ignore_patterns('__pycache__'))
+                old, self.root = self.root, root / 'd'
+                result, data = self.call('check')
+                self.root = old
+                self.assertEqual((result.returncode, data), (0, {'problems': []}), result.stdout + result.stderr)
 
 
 if __name__ == '__main__':

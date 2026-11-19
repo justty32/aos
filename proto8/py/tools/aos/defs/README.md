@@ -21,6 +21,13 @@ stdin：`{"op":"ls|dup|refs|check","root":"/absolute/defs","match":"optional sub
 - `dup` 回 `{"groups":[{"key":"canonical JSON signature","members":["category/a","category/b"]}]}`。只算 `aos-agent`；工具解析真實路徑、去重排序，不比登記名與 env；端點未提供時為 `default`，明給空字串照空字串。輸出路徑相對 root。
 - `refs` 必須給 `def`，回 `{"refs":["category/caller"]}`；讀各 agent 公開工具宣告的 `path`，相對工具表所在夾；env 裡寫的路徑不算引用。回引用者路徑，排序去重，不包含自己。
 - `check` 回 `{"problems":[{"path":"category/a","reason":"English reason"}]}`。README 第一行非空、meta 有非空 summary、interfaces 是物件；agent 宣告的 tools／llm 必須存在且可讀。tools.json 有 `"$override"`（範本疊 `py/packs`）時交給 `aos-tools ls -l` 合併再看，只帶 `env` 的格沿用底檔的 `path`；`aos-tools` 從 PATH 找（不假設 `bin/` 在哪），找不到＝那份定義一條 problem `cannot merge …: aos-tools is not on PATH (source $AOS_HOME/env.sh)`；沒設 `AOS_HOME` 用放這份 lib 的資料夾（tool-packs）。定義路徑各段符合 `[a-z0-9_-]+`。不要求 lineage 親代還在。
+- `check` 也查**叫的東西在不在**（11-19 線 aos-check-refs，使用者對照 C 第 1 題選「只放進檢查指令」：「編譯不管，跑 agent_def check 才查。要記得跑。」；`agent.py --compile` 不查這些；缺口出處 [aos-vs-c-1119 G1](../../../../thinking/2026-11/19/aos-vs-c-1119/02-缺口清單.md)；細則在 `refs_check.py` 檔頭）。規則照執行時：
+  - 工具：tools 檔交給 `aos-tools ls -l`（agent 跑時拿清單的同一支，`$override` 照疊、指示詞照解），它標 broken 的那支＝problem（執行時那支被略過、腦看不到）。
+  - 會被執行的程式：`aos-agent.entry` 的 argv；入口是 `aos-loop`／`aos-fsm` 時跟著讀 loop 的 `exec`、`on_start`、`on_stop` 與狀態表每格的 `exec`；`aos-agent.hooks` 每格的 `handler`。argv 只查分得出是檔的位置：argv[0]、`python3`／`bash` 等直譯器後第一個不是旗標的字（`-m`、`-c` 之後不查）、`aos-loop`／`aos-fsm` 的設定檔、任何位置寫成 `{"$env": "AOS_HOME", "$path": …}` 的。相對路徑照執行時的基準（單子從 `cwd` 欄、沒寫從寫它的檔的資料夾；字串目標與 handler 從寫它的檔的資料夾），「補找 `.json`」「`檔#/指標`」照 aos-exec 認。
+  - 腦設定：llm 檔每個鍵照執行時 `brain.py` 用的 `llm_settings.body_fields` 轉型（`$AOS_HOME/templates/agent-fsm/llm_settings.py`；不執行定義夾裡的程式），轉不了＝problem（例 `temperature in llm.json must be a number, not "hot"`）；`max_tokens` < 1、`temperature` < 0、`top_p` 不在 0～1＝problem；有 `llm_keys` 時不在裡面的鍵（`description` 以外）＝warning（body 不讀它）。
+  - **不查**：`model` 的名字對不對（要問 kernel 的 endpoint 包才知道）；argv 其他位置的字串（分不出是不是檔名）；stack 裡那份疊上去的設定（只看定義）。
+  - 查不了的照實說、放進 `warnings`（跟 `problems` 同形狀 `{"path", "reason"}`，有才出現、不讓 check 失敗）：指示詞的變數這裡沒設（`AOS_STACK`、`AOS_CO` 只在執行時有、不查也不提；`AOS_CD`／`AOS_CF` 用寫它的檔的資料夾／檔）、指令名不在這裡的 PATH 上、`aos-tools` 不在 PATH（沒疊 `$override` 的表；疊了的照上面報 problem）。`AOS_WS` 這類照 check 當下的值解，跟 agent 跑時的工作區不同時結果可能不同。
+  - 一樣只讀：`aos-tools` 不給 `AOS_STACK`（不留 tooldef 快取）；`exe` 類工具照 aos-tools 的讀法會被叫一次 `--tooldef`。
 - `check` 發現問題仍保留 JSON stdout，stderr 一行 `defs: error: DefBad ...`，退 1；正常退 0。根不在為 `RootMissing`，其他壞宣告為 `DefBad`。所有 op 只讀；根指向空目錄時回空清單。
 - **root 本身就是一份定義**（`agent_def` 的 check 就這樣叫，[defs-check-align](../../../../thinking/2026-11/12/defs-check-align.md) Q10）：路徑照「相對 root」印成 `.`；名字檢查改查這個資料夾自己的名字（樹的根不是定義時，根自己的名字不查）；root 底下找不到任何定義（空夾、只有 README）＝空清單，`check` 也算過——「它是不是一份定義」不歸這支判。
 
