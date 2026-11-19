@@ -57,6 +57,13 @@
 - 另跑 `test_tool_spec`、`test_tool_io_metainfo`、`apps/tools/test_metainfo_tooldef`、`apps/agent/test_state_parts` 都過。
 - 都在 `git archive HEAD` 抄出的乾淨複本（`~/.aos/scratch/aos-check-refs-1119/src`）疊改動、複本裡 `install.py` 後跑；所有指令先 unset `AOS_*`；只用假腦、沒起 stack。repo 裡沒跑 `install.py`。
 
+## 文件（第二筆，等線 aos-bpfix-1119 交了骨架與教學才改）
+
+- 骨架 `templates/agent-python/README.md`：開頭「Static and dynamic linking」那點與「Linking tool packs」兩處，「next start」「every time the agent starts」改成每次問腦前讀、不用重起（實測與 `--compile` 自己印的話一致，aos-vs-c G6）；兩處都補「靜態連結只固定名單，工具程式、`_tooldef.json`、格程式仍從 `$AOS_HOME`（或庫）讀，升級會影響已編譯的 agent」；「Then check the folder」那句補「只有 check 查叫的東西在不在」。
+- 教學 `04-寫原始碼`「檢查這夾定義」補一段「check 才會查叫的東西存不存在」；`06-接著開發-2` 的 6.4 結論句「agent 每次起來才讀」改成每次問腦前讀，並加一點「靜態連結只固定工具名單」。
+- C-87 的 11-19 加註只加字：在「要改名的包只能靜態連結」那個括號裡接一句「兩種連結都只固定有哪些工具、各在哪條路徑……靜態連結不等於之後庫怎麼改都不影響這隻」。原文一字未動。
+- 交之前用本線的 check 跑過 bpfix 交後的骨架（帶新的 `hooks.json`）：`{"problems": []}`。
+
 ## 沒做到、沒驗到
 
 - 沒掛起 agent 實跑對照「check 報的」與「執行時真的停／少工具」是同一件事；對照靠 aos-vs-c 報告的實跑結果與兩邊用同一支讀法（aos-tools、llm_settings）。

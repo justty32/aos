@@ -4,7 +4,7 @@ This folder is one working agent definition. **`agent.py` is its source; every o
 
 - **What compiling is.** `python3 agent.py --compile` runs `agent.py` and writes the definition files (`fsm.json`, `tools.json`, ...) into this folder. From then on aos runs those files, not `agent.py`: like a `.o` file, they no longer need their source.
 - **Compiling again overwrites.** Recompiling writes every declared file again as a whole, without asking, so a change made directly in a compiled file is gone. Change `agent.py` and recompile instead.
-- **Static and dynamic linking.** Some things are copied into the compiled files when you compile, like a library linked statically into a program: `std.hooks()`, everything taken from another `agent.py` with `defs.load`, and by default the tools of a pack (`std.pack`, a library's `.pack`). A change there shows up only after you recompile. Other things are only named in the compiled files and read when the agent runs, like a library linked dynamically (a `.so` loaded at start): the tool programs themselves, the state machine cells of `std.fsm()`, and the packs you link dynamically (`--dynamic`, see "Linking tool packs" below). A change there shows up at the agent's next start without recompiling.
+- **Static and dynamic linking.** Some things are copied into the compiled files when you compile, like a library linked statically into a program: `std.hooks()`, everything taken from another `agent.py` with `defs.load`, and by default the tools of a pack (`std.pack`, a library's `.pack`). A change there shows up only after you recompile. Other things are only named in the compiled files and read when the agent runs, like a library linked dynamically (a `.so`): the tool programs themselves and their `_tooldef.json` (what the brain is told about them), the state machine cells of `std.fsm()`, and the packs you link dynamically (`--dynamic`, see "Linking tool packs" below). A change there shows up before the agent's next brain call, without recompiling or restarting. So static linking fixes only the list of tools (names and paths), not the tools: when `$AOS_HOME` (or a library) is upgraded, an agent you already compiled reads the new tool programs and descriptions, loses a tool that was taken out, and stops if a cell it runs was taken out.
 
 ## Make your own agent from it
 
@@ -146,8 +146,8 @@ python3 agent.py --dry-run --dynamic   # look first
 TOOLS = [std.pack("look", link="dynamic"), std.pack("mailbox")]   # one pack its own way; link="static" too
 ```
 
-- **Static (the default).** The tools of the pack are copied into `tools.json` one by one, with full paths. A tool added to the pack later shows up only after you recompile.
-- **Dynamic.** `tools.json` names the pack file (`"$override": [{"$env": "AOS_HOME", "$path": "/lib/packs/look.json"}]`) and aos reads it every time the agent starts. A tool added to the pack later shows up at the agent's next start, without recompiling.
+- **Static (the default).** The tools of the pack are copied into `tools.json` one by one, with full paths. A tool added to the pack later shows up only after you recompile. Only the list is fixed: each path still points into `$AOS_HOME` (or the library), and the tool program and its `_tooldef.json` there are read when the agent runs, so an upgrade of `$AOS_HOME` changes them for this agent too.
+- **Dynamic.** `tools.json` names the pack file (`"$override": [{"$env": "AOS_HOME", "$path": "/lib/packs/look.json"}]`) and aos reads it before every brain call. A tool added to the pack later shows up from the agent's next brain call, without recompiling or restarting.
 - A `link=` on a pack wins over `--static` / `--dynamic`. Either way the pack is read when you compile, and the same checks run (a name two packs give with different tools is `SpecBad`).
 - What only static linking can do:
   - **renamed tools.** A pack with `prefix=` or `rename=`, which includes every pack of a library other than `std` (its tools get `<name>_` by default), cannot be linked dynamically: at run time aos reads the pack as it is. Under `--dynamic` such a pack is linked statically and you get one `warning` line; `link="dynamic"` on it is `SpecBad`. `my.pack("look", prefix="", link="dynamic")` works (its tools keep their names).
@@ -178,4 +178,4 @@ TOOLS = [std.pack("look"), my.pack("look")]          # the brain sees read, ls, 
 my_agent: error: SpecBad state think: next state 'wiat' is not one of the states (idle, think, wait, act) (fix the declaration in agent.py)
 ```
 
-Then check the folder as usual: `agent_def` with `{"op": "check", "path": "my_agent"}` should answer `{"problems": []}`.
+Then check the folder as usual: `agent_def` with `{"op": "check", "path": "my_agent"}` should answer `{"problems": []}`. Only check looks at whether what the definition calls is there: tool paths, the programs its states, loop and hooks run, and the types of `LLM` values (`--compile` does not check these); what it cannot check on this machine, like a variable that is not set, comes in `"warnings"`.
