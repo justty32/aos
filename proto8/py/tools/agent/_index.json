@@ -42,7 +42,10 @@
   "description": "fork 工具（子 agent 包）：把當下的自己連對話複製一份給一個 goal，只拿回短結論"
  },
  "gdb_trigger": {
-  "description": "gdb_trigger（不是給腦的工具）：aos-gdb 觸發器的 hook handler，讀小格的 trigger.json 判條件，成立就 ctl pause --no-wait、留字條"
+  "description": "gdb_trigger（不是給腦的工具）：aos-gdb 觸發器的 hook handler，讀小格的 trigger.json 判條件，成立時 before_tool／before_queue 就自己扣住等放行（續＝照跑或跳過），其他事件就 ctl pause --no-wait；都留字條"
+ },
+ "gdb_watch": {
+  "description": "gdb_watch（不是給腦的工具）：aos-gdb 觀察者的 loop 本體，每圈讀 watch.json 判每個目標 agent，成立就 ctl pause 目標、留字條（by watch）"
  },
  "goal": {
   "description": "goal 工具（目標包，eca 不掛）：自己的一句目標，分 get／set／done／pause／resume；自己停下又沒信時身體會丟 goal 提醒"

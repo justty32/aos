@@ -1,11 +1,13 @@
-"""aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent 跑：停的那次發 pause、留字條、block 退 10、條件壞了只 warning 退 0。"""
+"""aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent 跑：pause 型發 pause、留字條；hold 型扣住等放行（run 退 0、skip 印字退 10、shell 的 ctl resume 也放行、被 TERM 留 hold_ended 且同一次再來時直接再扣住）；條件壞了只 warning 退 0。"""
 import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 PROTO = Path(__file__).resolve().parents[4]
@@ -16,8 +18,9 @@ ENTRY = PROTO / "py" / "tools" / "agent" / "gdb_trigger" / "_entry"
 
 
 def spec(**kw):
-    s = {"kind": "always", "event": "before_tool", "tools": None, "times": 1, "once": False, "block": False, "agent": "ann", "daemon": None}
+    s = {"kind": "always", "event": "before_tool", "tools": None, "times": 1, "once": False, "agent": "ann", "daemon": None}
     s.update(kw)
+    s.setdefault("how", trigger.how(s["event"]))
     trigger.validate(s)
     return s
 
@@ -57,6 +60,12 @@ class Steps(unittest.TestCase):
         self.assertFalse(trigger.check(s, {"code": 0}))
         with self.assertRaises(trigger.Bad):
             spec(kind="tool_error", event="before_tool")
+
+    def test_how_follows_the_event(self):
+        self.assertEqual([trigger.how(e) for e in ("before_tool", "before_queue", "after_tool", "brain_failed")],
+                         ["hold", "hold", "pause", "pause"])
+        with self.assertRaises(trigger.Bad):
+            spec(how="pause")                    # before_tool 不能選 pause：一個名字一種意思
 
     def test_sh(self):
         self.assertTrue(trigger.check(spec(kind="sh", sh="echo noise; grep -q write"), {"name": "write"}))
@@ -111,8 +120,8 @@ class Py(unittest.TestCase):
 class Log(unittest.TestCase):
     def test_since_resume(self):
         entries = [{"kind": "stop", "trigger": "a"}, {"kind": "resume"}, {"kind": "stop", "trigger": "b"},
-                   {"kind": "pause_failed", "trigger": "c"}, {"kind": "other"}]
-        self.assertEqual([e["trigger"] for e in trigger.since_resume(entries)], ["b", "c"])
+                   {"kind": "pause_failed", "trigger": "c"}, {"kind": "hold_ended", "trigger": "d"}, {"kind": "other"}]
+        self.assertEqual([e["trigger"] for e in trigger.since_resume(entries)], ["b", "c", "d"])
 
 
 class Handler(unittest.TestCase):
@@ -145,22 +154,118 @@ class Handler(unittest.TestCase):
         return p.read_text().splitlines() if p.exists() else []
 
     def test_pause_note_and_count(self):
-        s = spec(times=2, daemon="/d", tools=["write"])
-        r = self.fire(s, {"event": "before_tool", "name": "write"})
+        s = spec(event="after_tool", times=2, daemon="/d", tools=["write"])
+        r = self.fire(s, {"event": "after_tool", "name": "write", "code": 0})
         self.assertEqual((r.returncode, r.stdout, self.calls()), (0, "", []))
-        r = self.fire(s, {"event": "before_tool", "name": "write", "arguments": {"path": "a"}})
+        r = self.fire(s, {"event": "after_tool", "name": "write", "code": 0, "content": "ok"})
         self.assertEqual((r.returncode, r.stdout), (0, ""))
         self.assertEqual(self.calls(), ["--daemon /d ctl pause --no-wait ann"])
         notes = trigger.read_log(str(self.stack))
         self.assertEqual(len(notes), 1)
-        self.assertEqual((notes[0]["kind"], notes[0]["trigger"], notes[0]["ctl_seq"], notes[0]["blocked"]), ("stop", "gdb_x", 7, False))
-        self.assertEqual(notes[0]["detail"]["arguments"], {"path": "a"})
+        self.assertEqual((notes[0]["kind"], notes[0]["trigger"], notes[0]["ctl_seq"], notes[0]["how"]), ("stop", "gdb_x", 7, "pause"))
+        self.assertEqual(notes[0]["detail"]["content"], "ok")
         self.assertEqual(json.loads((self.cell / trigger.COUNT).read_text())["fired"], 1)
 
-    def test_block_exits_10(self):
-        r = self.fire(spec(block=True), {"event": "before_tool", "name": "write"})
+    # ---- hold（before_tool）----
+    def start(self, s, event):
+        trigger.write_json(str(self.cell / trigger.SPEC), s)
+        doc = dict({"hook": "gdb_x", "stack": str(self.stack)}, **event)
+        p = subprocess.Popen([str(ENTRY)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=self.env)
+        p.stdin.write(json.dumps(doc))
+        p.stdin.close()
+        self.addCleanup(lambda: p.poll() is None and (p.kill(), p.wait()))
+        end = time.monotonic() + 10
+        while time.monotonic() < end and trigger.read_hold(str(self.stack)) is None:
+            self.assertIsNone(p.poll(), p.stderr.read() if p.poll() is not None else "")
+            time.sleep(0.05)
+        h = trigger.read_hold(str(self.stack))
+        self.assertIsNotNone(h)
+        return p, h
+
+    def finish(self, p):
+        p.wait(timeout=10)
+        with p.stdout, p.stderr:
+            return p.returncode, p.stdout.read(), p.stderr.read()
+
+    def test_hold_then_run(self):
+        p, h = self.start(spec(tools=["write"]), {"event": "before_tool", "name": "write", "id": "c1", "arguments": {"path": "a"}})
+        self.assertEqual((h["event"], h["key"], h["skippable"]), ("before_tool", "c1", True))
+        self.assertEqual(self.calls(), [])                         # hold 不發 ctl pause
+        time.sleep(0.5)
+        self.assertIsNone(p.poll())                                # 還扣著
+        trigger.write_release(str(self.stack), h["token"], "run")
+        self.assertEqual(self.finish(p)[:2], (0, ""))
+        self.assertIsNone(trigger.read_hold(str(self.stack)))
+        self.assertIsNone(json.loads((self.cell / trigger.COUNT).read_text())["pending"])
+        self.assertEqual(trigger.read_log(str(self.stack))[0]["how"], "hold")
+
+    def test_hold_then_skip_prints_and_exits_10(self):
+        p, h = self.start(spec(), {"event": "before_tool", "name": "write", "id": "c2"})
+        trigger.write_release(str(self.stack), "not-this-one", "run")   # token 對不上＝不理
+        time.sleep(0.5)
+        self.assertIsNone(p.poll())
+        trigger.write_release(str(self.stack), h["token"], "skip")
+        code, out, _ = self.finish(p)
+        self.assertEqual(code, 10)
+        self.assertIn("skipped at a breakpoint", out)
+
+    def test_shell_ctl_resume_releases(self):
+        (self.stack / "ctl.json").write_text('{"cmd": "pause", "seq": 3}\n')
+        p, h = self.start(spec(), {"event": "before_tool", "name": "write", "id": "c3"})
+        (self.stack / "ctl.json").write_text('{"cmd": "pause", "seq": 4}\n')    # 別人 pause：不放行
+        time.sleep(0.5)
+        self.assertIsNone(p.poll())
+        (self.stack / "ctl.json").write_text('{"cmd": "resume", "seq": 5}\n')
+        self.assertEqual(self.finish(p)[0], 0)
+        log = trigger.read_log(str(self.stack))
+        self.assertEqual((log[-1]["kind"], log[-1]["by"]), ("resume", "ctl"))
+
+    def test_term_leaves_pending_and_the_same_call_is_held_again(self):
+        s = spec(once=True)
+        p, h = self.start(s, {"event": "before_tool", "name": "write", "id": "c4"})
+        p.send_signal(signal.SIGTERM)
+        self.assertEqual(self.finish(p)[0], 143)
+        self.assertIsNone(trigger.read_hold(str(self.stack)))
+        log = trigger.read_log(str(self.stack))
+        self.assertEqual(log[-1]["kind"], "hold_ended")
+        count = json.loads((self.cell / trigger.COUNT).read_text())
+        self.assertEqual((count["pending"], count["fired"]), ("c4", 0))          # 沒放行＝這次不算（once 沒用掉）
+        p, h = self.start(s, {"event": "before_tool", "name": "write", "id": "c4"})  # 同一次回來：直接再扣
+        self.assertTrue(h["again"])
+        trigger.write_release(str(self.stack), h["token"], "run")
+        self.assertEqual(self.finish(p)[0], 0)
+        count = json.loads((self.cell / trigger.COUNT).read_text())
+        self.assertEqual((count["pending"], count["fired"], count["decided"]["go"]), (None, 1, "run"))
+        r = self.fire(s, {"event": "before_tool", "name": "write", "id": "c5"})     # once 用掉了：別的呼叫不扣
+        self.assertEqual(r.returncode, 0)
+
+    def test_a_decided_call_coming_back_keeps_the_decision(self):
+        s = spec()
+        p, h = self.start(s, {"event": "before_tool", "name": "write", "id": "c6"})
+        trigger.write_release(str(self.stack), h["token"], "skip")
+        self.assertEqual(self.finish(p)[0], 10)
+        log = trigger.read_log(str(self.stack))
+        self.assertEqual((log[-1]["kind"], log[-1]["by"], log[-1]["token"]), ("resume", "repl", h["token"]))   # handler 自己寫
+        r = self.fire(s, {"event": "before_tool", "name": "write", "id": "c6"})     # 那一格被收掉後重跑同一個呼叫：照樣跳過、不再扣
         self.assertEqual(r.returncode, 10)
-        self.assertTrue(trigger.read_log(str(self.stack))[0]["blocked"])
+        self.assertIn("skipped at a breakpoint", r.stdout)
+
+    def test_an_old_resume_in_ctl_does_not_release(self):
+        (self.stack / "ctl.json").write_text('{"cmd": "resume", "seq": 9}\n')   # 扣住之前就在的 resume
+        time.sleep(0.05)
+        p, h = self.start(spec(), {"event": "before_tool", "name": "write", "id": "c7"})
+        time.sleep(0.6)
+        self.assertIsNone(p.poll())
+        trigger.write_release(str(self.stack), h["token"], "run")
+        self.assertEqual(self.finish(p)[0], 0)
+
+    def test_letter_cannot_be_skipped(self):
+        p, h = self.start(spec(event="before_queue"), {"event": "before_queue", "letter": "L1", "content": "hi"})
+        self.assertFalse(h["skippable"])
+        trigger.write_release(str(self.stack), h["token"], "skip")
+        code, out, err = self.finish(p)
+        self.assertEqual((code, out), (0, ""))                  # 照收那封信
+        self.assertIn("cannot be skipped", err)
 
     def test_broken_condition_warns_and_exits_0(self):
         r = self.fire(spec(kind="sh", sh="exit 4"), {"event": "before_tool", "name": "write"})
@@ -175,7 +280,7 @@ class Handler(unittest.TestCase):
 
     def test_pause_failure_is_noted(self):
         (self.tmp / "bin" / "aos-agent").write_text("#!/bin/sh\necho 'aos-agent: error: PhaseBad ann is stopped' >&2\nexit 1\n")
-        r = self.fire(spec(), {"event": "before_tool", "name": "write"})
+        r = self.fire(spec(event="after_tool"), {"event": "after_tool", "name": "write", "code": 0})
         self.assertEqual(r.returncode, 0)
         notes = trigger.read_log(str(self.stack))
         self.assertEqual(notes[0]["kind"], "pause_failed")

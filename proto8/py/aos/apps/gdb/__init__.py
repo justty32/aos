@@ -6,7 +6,7 @@ import sys
 from aos import flags as aos_flags
 
 NAME = "aos-gdb"
-HELP = """aos-gdb - open a Python REPL attached to one agent, to put stop triggers on it
+HELP = """aos-gdb - open a Python REPL attached to one agent, to stop it when a condition holds
 
 usage: aos-gdb [--daemon D] NAME
        aos-gdb --help
@@ -17,11 +17,14 @@ flags:
 
 Opens Python with `import aos.gdb as g` and `a = g.attach(NAME, daemon=D)` done.
 In it, for example:
-  a.stop_before_tool("write")      stop when the tool is about to run (that step finishes first)
-  a.stop_on_tool_error()           stop when any tool exits non-zero or times out
+  a.stop_before_tool("write")      hold it before the tool runs; a.resume() runs that call,
+                                   a.resume(skip=True) skips it
+  a.stop_after_tool("write")       pause after the tool ran, before the brain sees the result
+  a.stop_on_tool_error()           the same, when any tool exits non-zero or times out
   a.stop_when("after_tool", sh="grep -q secret", times=2)
+  a.watch(py=lambda t: len(t.history(0)) > 20)   another proc looks every 0.5 s and pauses it
   a.say("hi"); a.wait_paused(); a.why(); a.where(); a.history(3)
-  a.resume(); a.triggers(); a.remove("before_tool_1"); a.clear()
+  a.resume(); a.triggers(); a.remove("before_tool_1"); a.clear(); a.watchers(); a.unwatch("w1")
 Every call prints the aos command behind it ($ ...); set g.echo = False to stop that.
 The same library works in any python3 with $AOS_HOME/lib on sys.path.
 More: proto8/py/aos/apps/gdb/README.md
@@ -29,7 +32,7 @@ exit codes: 0 left the REPL; 1 error (ArgumentsBad, TargetMissing, HooksMissing.
 """
 BANNER = """aos-gdb: attached to %s (stack %s)
   g = aos.gdb, a = the agent.  Try: a.triggers(), a.stop_before_tool(), a.why(), help(a)
-  Ctrl-D leaves; triggers stay on the agent until a.remove() / a.clear()."""
+  Ctrl-D leaves; triggers stay on the agent and watchers on the daemon until a.clear() / a.unwatch()."""
 
 
 def main():

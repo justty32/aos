@@ -1,7 +1,7 @@
 """aos.gdb.look - aos-gdb 的檢閱薄殼與小零件：跑一條指令（印出來、失敗丟 Failed）、讀 stack 裡的檔（stage、history、observed、最後一次問腦、信箱、stderr）、why() 的結果長相。
 
 停住時人看的全在 stack 的普通檔（thinking/2026-11/19/aos-gdb-1119/07 第三節）；這裡每個方法只讀一個檔或跑一條 aos 指令，不解讀、不改。
-Look 是 aos.gdb.Agent 的底：需要 self.stack、self.agent()。丙（外面的觀察者）之後可以把同一個物件交給條件函式用（Argon A8）。"""
+Look 是 aos.gdb.Agent 的底：需要 self.stack、self.agent()。觀察者（aos.gdb.watcher）交給條件函式的 t 也是它（Argon A8）。"""
 import json
 import os
 import shlex
@@ -61,30 +61,46 @@ def _tail_jsonl(path, n):
 
 
 class Why:
-    """why() 的結果：paused（現在停著沒）、current（最後一張字條是不是這次停的原因）、notes（上次 resume 之後的字條）。"""
+    """why() 的結果：paused（停著沒：ctl pause 已套用，或扣在斷點上）、held（扣住的那份 hold.json 或 None）、
+    current（最後一張字條是不是這次停的原因）、notes（上次 resume 之後的字條）、pending（扣住之後又來的 ctl 指令 (seq, cmd) 或 None）。"""
 
-    def __init__(self, name, paused, current, notes):
-        self.name, self.paused, self.current, self.notes = name, paused, current, notes
+    def __init__(self, name, paused, current, notes, held=None, pending=None):
+        self.name, self.paused, self.current, self.notes, self.held, self.pending = name, paused, current, notes, held, pending
 
     def __bool__(self):
         return bool(self.notes)
 
     def __repr__(self):
-        if not self.paused:
+        last = self.notes[-1] if self.notes else {}
+        who = "watcher %s" % last.get("trigger") if last.get("by") == "watch" else "trigger %s" % last.get("trigger")
+        if self.held:
+            h = self.held
+            d = h.get("detail", {})
+            thing = ("tool %s has not run yet" % d.get("name") if h.get("event") == "before_tool"
+                     else "letter %s is not taken in yet" % d.get("letter") if h.get("event") == "before_queue" else "the event has not happened yet")
+            head = "%s is held at a breakpoint (trigger %s): %s; a.resume() lets it go on as it was%s" % (
+                self.name, h.get("trigger"), thing, ", a.resume(skip=True) skips that call" if h.get("skippable") else "")
+            if self.pending:
+                head += ("\n  then it %ss: aos-agent ctl %s (seq %s) came while held, and the loop applies it after this step"
+                         % (self.pending[1], self.pending[1], self.pending[0]))
+        elif not self.paused:
             head = "%s is not paused" % self.name
         elif self.current:
-            head = "%s is paused by a trigger" % self.name
+            head = "%s is paused by %s" % (self.name, who)
         elif self.notes:
-            head = "%s is paused, but ctl was used after the last trigger note (by hand or by someone else); the notes may be old" % self.name
+            head = "%s is paused, but ctl was used after the last note (by hand or by someone else); the notes may be old" % self.name
         else:
-            head = "%s is paused, with no trigger note (paused by hand, or by something that leaves no note)" % self.name
+            head = "%s is paused, with no note (paused by hand, or by something that leaves no note)" % self.name
         lines = [head]
         for n in self.notes:
             d = n.get("detail", {})
-            what = " ".join("%s=%s" % (k, json.dumps(d[k], ensure_ascii=False)) for k in ("name", "code", "arguments", "content") if k in d)
-            lines.append("  %s %s %s: %s%s%s" % (n.get("at", "?"), n.get("by", "?"), n.get("trigger", "?"), n.get("about") or n.get("event"),
-                                                " [blocked]" if n.get("blocked") else "",
-                                                " (pause failed: %s)" % n.get("why") if n.get("kind") == "pause_failed" else ""))
+            what = " ".join("%s=%s" % (k, json.dumps(d[k], ensure_ascii=False)) for k in ("name", "code", "arguments", "content", "letter", "stage")
+                            if k in d)
+            lines.append("  %s %s %s: %s%s%s%s" % (n.get("at", "?"), n.get("by", "?"), n.get("trigger", "?"), n.get("about") or n.get("event"),
+                                                  " [held before it]" if n.get("how") == "hold" and n.get("kind") == "stop" else "",
+                                                  " [held again: the earlier hold was cut off]" if n.get("again") else "",
+                                                  " (pause failed: %s)" % n.get("why") if n.get("kind") == "pause_failed" else
+                                                  " (hold ended without release: %s; %s)" % (n.get("why"), n.get("next")) if n.get("kind") == "hold_ended" else ""))
             if what:
                 lines.append("      " + what)
         return "\n".join(lines)

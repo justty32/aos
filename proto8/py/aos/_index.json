@@ -47,7 +47,7 @@
   "description": "aos_flags：命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 …"
  },
  "gdb": {
-  "description": "aos-gdb 的 Python 庫（aos.gdb）：對已在跑的 agent 下條件觸發器（一個 hook，條件成立就 ctl pause 並留字條）、列出／拿掉、看為什麼停、檢閱 stack、續"
+  "description": "aos-gdb 的 Python 庫（aos.gdb）：對已在跑的 agent 下條件觸發器（一個 hook：工具要跑之前扣住，或事件後暫停）或起觀察者（另一支 proc 輪詢、成立就暫停目標）、列出／拿掉、看為什麼停、檢閱 stack、續"
  },
  "hook_run.py": {
   "description": "hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。"

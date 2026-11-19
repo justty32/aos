@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-# gdb_trigger - aos-gdb 條件觸發器的 hook handler：讀自己小格的 trigger.json 判條件，成立（連續 times 次）就留字條、叫 aos-agent ctl pause --no-wait 把這隻停下來。
-# 使用者 11-19：斷點＝「特定條件發生時，暫停loop或fsm，停下來等待檢閱」，條件主要由 hook 承載、「hook不用動」——所以這支就是一個普通 hook handler，
-#   由 aos.gdb（REPL 那邊）用 aos-agent hook add 掛上；判法、字條、計數都在 py/aos/gdb/trigger.py（兩邊共用）。
+# gdb_trigger - aos-gdb 條件觸發器的 hook handler：讀自己小格的 trigger.json 判條件，成立（連續 times 次）時，事件還沒發生的（before_tool、before_queue）就自己不回、扣住等人放行，已經發生的就叫 aos-agent ctl pause --no-wait；兩種都留字條。
+# 使用者 11-19：斷點＝「特定條件發生時，暫停loop或fsm，停下來等待檢閱」，條件主要由 hook 承載、「hook不用動」；第二版：「stop_before_tool不就是在工具開始前停下嗎？」。
+#   所以這支就是一個普通 hook handler，由 aos.gdb（REPL 那邊）用 aos-agent hook add 掛上；判法、字條、計數、扣住檔都在 py/aos/gdb/trigger.py（共用）。
 # 介面：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、事件自己的欄）；$AOS_STACK＝這個 hook 的小格（<agent stack>/hooks/<名>/），
 #   設定 trigger.json、計數 count.json 都在那裡；字條往 <agent stack>/gdb/log.jsonl 加一行。
-# 不改事件（stdout 不印）；只有 block 為真的觸發器在停的那一次退 10 擋下（before_tool＝那個工具不跑；掛的時候才開 intercept），其餘掛成 --no-intercept。
-# 順序：先記數、再發停、再留字條（帶 ctl.json 的 seq）。條件自己壞了（sh 退 0／10 以外、py 函式丟例外）＝不算、stderr 一行 warning、記進 count.json 的 last_error；
+# hold（trigger.json 的 how）：寫 <agent stack>/gdb/hold.json（帶 token、自己的 pid），每 0.2 秒看一次放行單 gdb/release.json（token 對得上：
+#   run＝退 0、工具照原樣跑；skip＝stdout 印給腦的一句、退 10，工具不跑），或 ctl.json 出現比扣住時新的 resume（在 shell 下 aos-agent ctl resume）＝run。
+#   掛的時候 timeout_ms 0（不限時）、intercept 開（skip 的退 10 才擋得下）。被 TERM（agent 被 sleep、daemon 收工、rm）或 act 那一格死了（父行程換人）
+#   ＝不放行、留一張 hold_ended，count.json 的 pending 留著：重跑同一個工具呼叫 id 時直接再扣住（工具始終沒跑）。
+# pause：先記數、再發停、再留字條（帶 ctl.json 的 seq）。
+# 條件自己壞了（sh 退 0／10 以外、py 函式丟例外）＝不算、stderr 一行 warning、記進 count.json 的 last_error；
 #   這支自己壞了（讀不到設定、寫不了檔）＝stderr 一行 error、退 1；掛的時候是 on_error continue，所以 agent 只多一行 warning，不會掛掉、不會連環重起。
-import json, os, subprocess, sys
+import json, os, signal, subprocess, sys, time
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # 放 aos 套件的那層：py/（或裝好的 lib/）
@@ -16,15 +20,23 @@ from aos import tool_io  # noqa: E402
 
 NAME = "gdb_trigger"
 HELP = """usage: gdb_trigger < EVENT.json   (a hook handler put in place by aos.gdb; $AOS_STACK = this hook's own cell)
-Read the trigger settings in $AOS_STACK/trigger.json, check the condition against the event, and
-when it holds (times in a row) append a note to <agent stack>/gdb/log.jsonl, then run:
-aos-agent -d DAEMON ctl pause --no-wait AGENT. Never changes the event; a trigger with block true
-exits 10 that one time (before_tool only: the tool does not run).
+Read the trigger settings in $AOS_STACK/trigger.json and check the condition against the event.
+When it holds (times in a row):
+  how "hold" (before_tool, before_queue: the event has not happened yet): write <agent stack>/gdb/hold.json,
+    append a note to <agent stack>/gdb/log.jsonl, and wait until released: gdb/release.json with the same
+    token ("go": "run" = exit 0, the tool runs as it was; "skip" = print the text for the brain, exit 10,
+    the tool does not run), or a newer "resume" in the agent's ctl.json (aos-agent ctl resume) = run.
+    Stopped by a signal, or its parent step died = no release; the same call is held again when it comes back.
+  how "pause" (other events): append the note, then run aos-agent -d DAEMON ctl pause --no-wait AGENT.
 A broken condition counts as no hit and prints one warning line.
-exit codes: 0 done (hit or not); 1 error ("gdb_trigger: error: CODE reason").
+exit codes: 0 done (no hit, paused, or released to run); 10 released with skip; 1 error ("gdb_trigger: error: CODE reason").
 """
 PAUSE_S = 10
-BLOCKABLE = ("before_tool",)                      # 只擋工具；before_queue 也能擋，但擋了那封信就不收了，第一版不給
+POLL_S = 0.2
+
+
+class Cut(Exception):
+    """扣住時收到 TERM／HUP／INT：這一格被收掉了。"""
 
 
 def die(code, why):
@@ -49,7 +61,54 @@ def pause(spec):
     return "sent"
 
 
+def note_of(spec, event, count, agent_stack, kind):
+    return {"kind": kind, "at": trigger.now(), "by": "hook", "trigger": event.get("hook"), "event": event.get("event"),
+            "how": spec["how"], "about": spec.get("about"), "times": spec.get("times", 1), "fired": count["fired"],
+            "ctl_seq": trigger.ctl_seq(agent_stack), "detail": trigger.brief(event)}
+
+
+def ctl_mtime(agent_stack):
+    try:
+        return os.stat(os.path.join(agent_stack, "ctl.json")).st_mtime_ns
+    except OSError:
+        return None
+
+
+def hold(event, agent_stack, token, parent, start_ns):
+    """扣住，等放行（hold.json 已寫好、訊號已接好）。回 ("run" | "skip" | None, skip 的字, 誰放的或怎麼結束的)。
+    None＝沒放行（父行程不在）；被訊號收掉＝丟 Cut。shell 的 ctl resume 只認扣住之後才寫的（ctl.json 的修改時間比扣住晚，Argon A5）。"""
+    release_path = os.path.join(agent_stack, trigger.LOG_DIR, trigger.RELEASE)
+    skippable = event.get("event") in trigger.SKIPPABLE
+    while True:
+        try:
+            rel = trigger.read_json(release_path)
+        except (OSError, ValueError):
+            rel = None
+        if isinstance(rel, dict) and rel.get("token") == token:
+            go = rel.get("go") if rel.get("go") in ("run", "skip") else "run"
+            if go == "skip" and not skippable:
+                warn("trigger %s: %s cannot be skipped; it goes on as it was" % (event.get("hook"), event.get("event")))
+                go = "run"
+            try:
+                os.remove(release_path)
+            except FileNotFoundError:
+                pass
+            return go, rel.get("text"), rel.get("by") or "repl"
+        seq, cmd = trigger.ctl_doc(agent_stack)
+        m = ctl_mtime(agent_stack)
+        if cmd == "resume" and m is not None and m > start_ns:
+            return "run", None, "ctl"
+        if os.getppid() != parent:
+            return None, None, "its step is gone (the hook's parent process ended)"
+        time.sleep(POLL_S)
+
+
+def skip_text(event, text):
+    return text if isinstance(text, str) and text.strip() else "[aos] gdb: tool %s was skipped at a breakpoint; it did not run." % (event.get("name") or "?")
+
+
 def main():
+    parent = os.getppid()                        # 一開頭就記（Argon A4：跑條件時父行程死了也認得出）
     if sys.argv[1:] in (["--help"], ["-h"]):
         sys.stdout.write(HELP)
         return
@@ -73,30 +132,112 @@ def main():
         count = trigger.read_json(count_path, {})
     except (OSError, ValueError) as e:
         die("SpecBad", "%s: %s" % (spec_path, e))
-    count, hit, broken = trigger.step(spec, count if isinstance(count, dict) else {}, event)
+    count = count if isinstance(count, dict) else {}
+    agent_stack = event.get("stack") or os.path.dirname(os.path.dirname(os.path.abspath(cell)))
+    held = spec["how"] == "hold" and event.get("event") in trigger.HOLD_EVENTS
+    key = trigger.key_of(event) if held else None
+    decided = count.get("decided") if isinstance(count.get("decided"), dict) else {}
+    if held and key and decided.get("key") == key:
+        # 這一次已經放行過（照跑或跳過），那一格被收掉後重跑：照上次的決定，不再扣、不再數（Argon A1、A2）
+        if decided.get("go") == "skip":
+            sys.stdout.write(skip_text(event, decided.get("text")))
+            sys.stdout.flush()
+            sys.exit(trigger.NO)
+        return
+    if held and count.get("pending") and count.get("pending") != key:
+        count["pending"] = None                  # 扣住被打斷的那一次沒再回來：過期了
+    again = bool(held and key and count.get("pending") == key)
+    if again:                                    # 上次扣住這一次時被收掉了：工具始終沒跑，直接再扣住
+        hit, broken = True, None
+    else:
+        count, hit, broken = trigger.step(spec, count, event)
     if broken:
         warn("trigger %s: %s (counted as no hit)" % (event.get("hook"), broken))
-    agent_stack = event.get("stack") or os.path.dirname(os.path.dirname(os.path.abspath(cell)))
-    block = hit and spec.get("block") and event.get("event") in BLOCKABLE
+    if not held:
+        try:
+            trigger.write_json(count_path, count)
+            if not hit:
+                return
+            # 先發停、再留字條（帶 pause 實際用的 ctl seq）：hook 是同步跑在格裡的，pause 要等這一格做完 loop 才套用，
+            # 所以字條一定比「表上變 paused」早寫好（Argon A4；見 08-Argon審與採納）。
+            result = pause(spec)
+            note = note_of(spec, event, count, agent_stack, "stop" if result == "sent" else "pause_failed")
+            if result != "sent":
+                note["why"] = result
+                warn("trigger %s: cannot pause %s: %s" % (event.get("hook"), spec.get("agent"), result))
+            trigger.append_log(agent_stack, note)
+        except OSError as e:
+            die("WriteFailed", str(e))
+        return
+    if not hit:
+        try:
+            trigger.write_json(count_path, count)
+        except OSError as e:
+            die("WriteFailed", str(e))
+        return
+    if parent == 1 or os.getppid() != parent:
+        return                                   # 那一格已經不在了：不扣（扣了也沒人等）
+    # ---- 扣住：先接好訊號，再寫任何東西（Argon A4）----
+    def cut(signum, frame):
+        raise Cut(signal.Signals(signum).name)
+    for s in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+        signal.signal(s, cut)
+    hold_path = os.path.join(agent_stack, trigger.LOG_DIR, trigger.HOLD)
+    token = "%d-%d" % (os.getpid(), time.time_ns())
+    start_ns = time.time_ns()
+    go, text, via = None, None, None
     try:
-        trigger.write_json(count_path, count)    # 先記數（once 不會在同一格又停一次）
-        if not hit:
-            return
-        # 先發停、再留字條（帶 pause 實際用的 ctl seq）：hook 是同步跑在格裡的，pause 要等這一格做完 loop 才套用，
-        # 所以字條一定比「表上變 paused」早寫好（Argon A4 擔心的順序在這裡不會反過來；見 08-Argon審與採納）。
-        result = pause(spec)
-        note = {"kind": "stop" if result == "sent" else "pause_failed", "at": trigger.now(), "by": "hook",
-                "trigger": event.get("hook"), "event": event.get("event"), "about": spec.get("about"),
-                "times": spec.get("times", 1), "fired": count["fired"], "blocked": bool(block),
-                "ctl_seq": trigger.ctl_seq(agent_stack), "detail": trigger.brief(event)}
-        if result != "sent":
-            note["why"] = result
-            warn("trigger %s: cannot pause %s: %s" % (event.get("hook"), spec.get("agent"), result))
-        trigger.append_log(agent_stack, note)
+        try:
+            count["pending"] = key
+            trigger.write_json(count_path, count)
+            note = note_of(spec, event, count, agent_stack, "stop")
+            note.update(again=again, token=token)
+            trigger.append_log(agent_stack, note)
+            trigger.write_json(hold_path, {"token": token, "pid": os.getpid(), "at": trigger.now(), "trigger": event.get("hook"),
+                                           "event": event.get("event"), "about": spec.get("about"), "key": key, "again": again,
+                                           "ctl_seq": trigger.ctl_seq(agent_stack), "skippable": event.get("event") in trigger.SKIPPABLE,
+                                           "detail": trigger.brief(event)})
+        except OSError as e:
+            die("WriteFailed", str(e))
+        go, text, via = hold(event, agent_stack, token, parent, start_ns)
+    except Cut as e:
+        via = "the step was stopped (%s: the agent was put to sleep, removed, or its daemon stopped)" % e
+    for s in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+        signal.signal(s, signal.SIG_IGN)         # 收尾時不再被打斷
+    # 收尾：先記數與字條（resume／hold_ended 由這裡寫，act 還在等這支，下一個 hook 還沒起），最後才刪 hold.json（Argon A2）。
+    # 寫不了只 warning：skip 的退 10 一定要退（Argon A1）。
+    try:
+        count = trigger.read_json(count_path, count) or count
+        if go is None:
+            if not again:
+                count["fired"] = max(0, count.get("fired", 1) - 1)   # 沒放行＝這次不算（once 沒用掉；同一次回來會再扣住）
+            trigger.write_json(count_path, count)
+            trigger.append_log(agent_stack, {"kind": "hold_ended", "at": trigger.now(), "by": "hook", "trigger": event.get("hook"),
+                                             "event": event.get("event"), "why": via, "token": token, "detail": trigger.brief(event),
+                                             "next": "not released: the %s did not go on; it is held again when the agent runs it again"
+                                                     % ("tool" if event.get("event") == "before_tool" else "letter")})
+        else:
+            if again:
+                count["fired"] = count.get("fired", 0) + 1
+            count["pending"] = None
+            count["decided"] = {"key": key, "go": go, "text": text}
+            trigger.write_json(count_path, count)
+            trigger.append_log(agent_stack, {"kind": "resume", "at": trigger.now(), "by": via, "go": go, "token": token,
+                                             "trigger": event.get("hook")})
     except OSError as e:
-        die("WriteFailed", str(e))
-    if block:
-        sys.exit(trigger.NO)                     # 10＝擋下這一次（before_tool：工具不跑；before_queue：信不收）
+        warn("trigger %s: cannot write %s or the note: %s" % (event.get("hook"), count_path, e))
+    try:
+        doc = trigger.read_json(hold_path)
+        if isinstance(doc, dict) and doc.get("token") == token:
+            os.remove(hold_path)
+    except (OSError, ValueError):
+        pass
+    if go is None:
+        sys.exit(143 if via.startswith("the step was stopped") else 0)
+    if go == "skip":
+        sys.stdout.write(skip_text(event, text))
+        sys.stdout.flush()
+        sys.exit(trigger.NO)                     # 10＝擋下這一次（before_tool：工具不跑，腦收到上面那句）
 
 
 if __name__ == "__main__":

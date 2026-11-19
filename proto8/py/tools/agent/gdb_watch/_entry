@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+# gdb_watch - aos-gdb 觀察者（丙）的 loop 本體：aos-loop 每一圈叫它一次，讀 $AOS_STACK/watch.json，把每個目標 agent 判一次，成立（連續 times 次）就 ctl pause 目標、在它的 gdb/log.jsonl 留字條（by watch）。
+# 使用者 11-19：條件可以「另外開個proc，觸發之後直接把要debug的那個proc停下來」；「丙可以繼續」。判法與庫在 py/aos/gdb/watcher.py；由 aos.gdb.watch() 經 aos-daemon-ctl add 掛上表。
+# 不碰目標的定義與 hook；它自己壞了只影響自己：條件壞了＝stderr 一行 warning、記進 watch_state.json 的 last_error、退 0（下一圈照看）；
+#   設定讀不了＝stderr 一行 error、退 1（loop 收工，表上這一列 stopped 帶原因），目標照跑。
+import os, sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # 放 aos 套件的那層：py/（或裝好的 lib/）
+from aos.gdb import trigger, watcher as watch  # noqa: E402
+from aos import tool_io  # noqa: E402
+
+NAME = "gdb_watch"
+HELP = """usage: gdb_watch   (the loop body of an aos.gdb watcher; $AOS_STACK = the watcher's stack)
+Read $AOS_STACK/watch.json, check each target agent once, and when the condition holds
+(times rounds in a row) run aos-agent ctl pause --no-wait on that target and append a note
+(by "watch") to <target stack>/gdb/log.jsonl. Counts go to $AOS_STACK/watch_state.json.
+Targets that are paused or held at a breakpoint are not checked.
+A broken condition counts as no hit and prints one warning line.
+exit codes: 0 one round done; 1 error ("gdb_watch: error: CODE reason").
+"""
+
+
+def warn(text):
+    sys.stderr.write("%s: warning: %s\n" % (NAME, text))
+    sys.stderr.flush()
+
+
+def main():
+    if sys.argv[1:] in (["--help"], ["-h"]):
+        sys.stdout.write(HELP)
+        return
+    if sys.argv[1:]:
+        tool_io.die("ArgumentsBad", "takes no arguments (see --help)", prog=NAME, echo=False)
+    stack = os.environ.get("AOS_STACK", "")
+    if not stack:
+        tool_io.die("StackMissing", "AOS_STACK is not set (run it as the body of the watcher's loop)", prog=NAME, echo=False)
+    spec_path, state_path = os.path.join(stack, watch.SPEC), os.path.join(stack, watch.STATE)
+    try:
+        spec = trigger.read_json(spec_path)
+        if spec is None:
+            tool_io.die("SpecMissing", "no %s (start watchers with aos.gdb watch)" % spec_path, prog=NAME, echo=False)
+        watch.validate(spec)
+        state = trigger.read_json(state_path, {})
+    except (OSError, ValueError) as e:
+        tool_io.die("SpecBad", "%s: %s" % (spec_path, e), prog=NAME, echo=False)
+    state = watch.round_(spec, state if isinstance(state, dict) else {}, warn=warn)
+    try:
+        trigger.write_json(state_path, state)
+    except OSError as e:
+        tool_io.die("WriteFailed", str(e), prog=NAME, echo=False)
+
+
+if __name__ == "__main__":
+    main()

@@ -23,7 +23,7 @@
   "description": "aos-feedback 的測試（本體在 py/aos/apps/feedback；多半經 bin/ 的入口當子行程跑）"
  },
  "gdb": {
-  "description": "aos-gdb 與 aos.gdb 的測試：觸發器判法與 handler（不起 daemon），以及抄一棵 start-api 樹用假腦實跑下斷點、停、看字條、續"
+  "description": "aos-gdb 與 aos.gdb 的測試：觸發器判法與 handler（不起 daemon，含扣住與放行），以及抄一棵 start-api 樹用假腦實跑：工具前扣住、續、跳過、扣著時被 pause／sleep、觀察者停住目標與拿掉"
  },
  "json_view": {
   "description": "aos-json-view 的測試（本體在 py/aos/apps/json_view；多半經 bin/ 的入口當子行程跑）"
