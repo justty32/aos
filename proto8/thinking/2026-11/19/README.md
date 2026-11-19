@@ -15,3 +15,4 @@
 | [aos-compile-庚-第三刀](aos-compile-庚-第三刀.md) | 庚第三刀施工完：agent.py 多 HOOKS（ag.stock_hooks 抄範本那組）、FILES、不宣告 FSM 的 eca 模式；reviewer 寫成一支 agent.py 跟手寫等價；test_agent_spec 24 支過、假腦實跑帶 hook 有回；沒動 agent_def／知識庫／現有範本；repo 還沒 install.py；兩題使用者 11-19 裁定維持現狀（骨架不帶 hook、stock_hooks 用抄） |
 | [aos-compile-庚/12-Argon審與採納](aos-compile-庚/12-Argon審與採納.md) | 庚補正統流程的 Argon 審：設計稿、第一刀程式各送一次共 29 點，核實後多半已處理或不符事實；開著的六個小洞（META 鍵、by_hand agent.py、改名順序等）第三刀版仍在，列給施工線；第二刀使用者 11-19 裁定劃掉；除錯插入要不要落在 stack 還沒裁；沒改程式 |
 | [aos-gdb-lib-第一版](aos-gdb-lib-第一版.md) | aos-gdb 第一版（乙案）：aos-gdb NAME 開接上 agent 的 Python REPL，aos.gdb 下條件觸發器（普通 hook，成立就 ctl pause 並留字條）、看為什麼停、檢閱、續；hook 與 cpp 沒動；Argon 審過沒推翻先乙；假腦實跑 6 個情境過 |
+| [aos-ns-1119](aos-ns-1119/README.md) | 命名空間與標準庫調查設計稿：今天沒有全域名字表，工具名同名會悄悄蓋（實測）；四個走向推薦 B 路徑即命名空間（std 隨 aos 發、生成時展開包、別的庫工具帶 庫名_、撞了報錯、執行期不動、第一刀只改 agent_spec）；繼承淺想；Argon 審後改成展開包；七題待使用者拍板，沒改程式 |
