@@ -308,6 +308,17 @@
         "[要拍板的題](../proto8/thinking/2026-11/19/aos-inherit-1119/06-邊緣狀況與要拍板的題.md)"
       ],
       "since": "2026-11-19"
+    },
+    "aos-pylib": {
+      "title": "整套 Python 庫版面（aos.py 入口＋通用代理＋把手）",
+      "status": "等使用者",
+      "flow": "",
+      "what": "設計稿交了（線 aos-pylib-1119），只寫文件。五題待使用者拍板（入口名、是哪一隻、建斷點寫法、隨手 python3 找不找得到、讀檔收進 a.look），都能照推薦先走；第零刀（install.py 抄完刪孤兒）＋第一刀（新增 py/aos/py/ 四檔＋測試，現有檔 0）尚未開工，等使用者說。",
+      "next": "使用者答題或說開工後派施工線；第二刀（把手接 a.bp）等建斷點寫法那題",
+      "see": [
+        "[aos-pylib-1119](../proto8/thinking/2026-11/19/aos-pylib-1119/README.md)"
+      ],
+      "since": "2026-11-19"
     }
   }
 }
