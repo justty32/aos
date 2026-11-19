@@ -53,17 +53,18 @@ class Failed(RuntimeError):
 
 
 class Timeout(Failed, TimeoutError):
-    """庫自己等的事情等太久（例 a.bp.wait_stopped()）；except TimeoutError 也接得到。"""
+    """庫自己等的事情等太久（例 a.bp.timeout_s 設了、a.bp.resume() 等過頭）；except TimeoutError 也接得到。"""
 
 
-def call(argv, input=None, quiet=False):
-    """跑一條指令（stdin 不給就接 /dev/null），回 stdout（Text，可能是空的）；退非 0 丟 Failed（帶它最後一行錯誤）。quiet＝不 echo。"""
+def call(argv, input=None, quiet=False, detach=False):
+    """跑一條指令（stdin 不給就接 /dev/null），回 stdout（Text，可能是空的）；退非 0 丟 Failed（帶它最後一行錯誤）。quiet＝不 echo。
+    detach＝指令自己一個 session：終端機的 Ctrl-C 打不到它（a.bp 送控制指令時用，不會送一半）。"""
     argv = [str(a) for a in argv]
     if not quiet:
         show("$ " + shlex.join(argv))
     try:
         p = subprocess.run(argv, input=input, stdin=None if input is not None else subprocess.DEVNULL,
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=detach)
     except OSError as e:
         raise Failed(argv[0], "cannot run it (source $AOS_HOME/env.sh to put aos on PATH): %s" % e,
                      code="CommandMissing", argv=argv) from None

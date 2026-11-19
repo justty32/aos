@@ -364,7 +364,7 @@
      "test_feedback.py": "Verify feedback CLI storage, comfort calculations and the real aos-exec tool boundary."
     },
     "gdb": {
-     "test_gdb_live.py": "入口 aos.py 的把手與 aos.gdb 斷點（a.bp、a.look）對真的 aos 樹（start-api 抄一份、假腦）實跑：a.bp 的增刪改查與 stop／resume 一對；工具要跑之前扣住→看→續＝工具真的跑了；skip＝不跑；扣著時別人 pause、sleep 再 wake、s…",
+     "test_gdb_live.py": "入口 aos.py 的把手與 aos.gdb 斷點（a.bp、a.look）對真的 aos 樹（start-api 抄一份、假腦）實跑：a.bp 的增刪改查；控制 resume／step／stop 都等到停下才回、回停在哪（沒停著時 resume 只等、step 走一格、閒著或行程不在就回「沒停」…",
      "test_gdb_trigger.py": "aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent…"
     },
     "json_view": {

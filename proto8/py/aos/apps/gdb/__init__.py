@@ -29,11 +29,17 @@ every breakpoint thing is under a.bp:
   a.bp.add.after_tool(sh="grep -q secret || exit 10")
   a.bp.add.watch(py=lambda t: len(t.history(0)) > 20)   another proc looks every 0.5 s and pauses it
   a.bp.add                                     lists every kind (tab completes them)
-  a.say("hi"); a.bp.wait_stopped(); a.bp.why()
-  a.bp.resume()            go on (a held tool call runs as it was); takes no arguments
-  a.bp.skip()              let a held before_tool call go, but do not run that tool
+the three controls take no arguments; each waits until it stops again and shows where:
+  a.say("hi"); a.bp.resume()
+                           # stopped at before_tool_1 (write)
+  a.bp.resume()            go on (a held tool call runs as it was) and wait for the next stop;
+                           not stopped (just after a.say) = sends nothing, only waits
+  a.bp.step()              go one step of its fsm (idle, think, wait or act) and stop again
+  a.bp.stop()              stop it now, without a breakpoint
+  It never stops: idle with nothing queued for a.bp.idle_s seconds = "did not stop: it is idle";
+  a line on stderr every a.bp.report_s seconds; Ctrl-C = stop waiting, the agent goes on.
+  a.bp.why(); a.bp.held(); a.bp.stopped(); a.bp.notes()   where and why it stopped
   a.bp.ls(); a.bp.get(b); a.bp.set(b, enabled=False, times=3, once=True); a.bp.rm(b); a.bp.clear()
-  a.bp.stop()              pause it now, without a breakpoint (a.bp.resume() goes on)
 Every call prints the aos command behind it on stderr ($ ...); aos.py.echo = False stops that.
 The same names work in any python3 with $AOS_HOME/lib on sys.path (there echo is off).
 More: proto8/py/aos/apps/gdb/README.md
@@ -65,7 +71,7 @@ def main():
             aos_flags.die(NAME, "AttachFailed", str(e))
         here["a"] = a
         head, more, tries = "attached to %s (stack %s)" % (a.name, stack), ", a = %s, a.bp = its breakpoints, a.look = its files" % a.name, \
-            "a.bp, a.bp.add.before_tool(\"x\"), a.bp.why(), a.look.history(3), help(a.bp)"
+            "a.bp.add.before_tool(\"x\"), a.say(\"hi\"), a.bp.resume(), a.bp.step(), a.look.history(3), help(a.bp)"
     else:
         head, more, tries = "no agent attached (a = agent.attach(NAME) to get one)", "", "agent.ctl.ls(), a = agent.attach(\"NAME\")"
     aos.py.echo = True

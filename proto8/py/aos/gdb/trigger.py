@@ -5,7 +5,7 @@
 所以這裡不改 hook 機制：觸發器就是一個普通 hook，handler 是同一支 gdb_trigger，它讀自己小格（$AOS_STACK＝<agent stack>/hooks/<名>/）裡的
 trigger.json 判條件，成立時照事件分兩種停法（how）：
     hold   before_tool、before_queue（事件還沒發生、hook 是同步跑的）：handler 自己不回、等人放行——工具還沒跑、信還沒進 history；
-           放行＝那次照原樣跑（run），或 before_tool 選不跑（skip，腦收到一句「被跳過」）。agent 這段時間卡在那一格裡，表上照寫 running。
+           放行＝那次照原樣跑（「放行但那次工具不跑」使用者 11-19 說「不該有這個方法」，線 aosgdb-verbs-1119 拿掉）。agent 這段時間卡在那一格裡，表上照寫 running。
     pause  其他事件（事件已經發生）：叫 `aos-agent ctl pause --no-wait`，loop 在這一格做完、下一格開頭停住。
 
 檔：
@@ -18,9 +18,9 @@ trigger.json 判條件，成立時照事件分兩種停法（how）：
                                                  daemon 重起）＝那次沒跑，重跑同一個 id 時直接再扣住（不再判條件、不算新的一次、once 也照扣）。
     <agent stack>/gdb/log.jsonl                  字條（只往後加）：{"kind": "stop" | "pause_failed" | "hold_ended" | "resume", "at", "by", "trigger", ...}；
                                                  by＝誰寫的（"hook"＝觸發器、"repl"＝aos.gdb、"ctl"＝在 shell 下 ctl resume 放行的、"watch"＝觀察者）。
-    <agent stack>/gdb/hold.json                  正在扣住時才有：{"token", "pid", "trigger", "event", "key", "detail", "ctl_seq", "skippable", ...}；
+    <agent stack>/gdb/hold.json                  正在扣住時才有：{"token", "pid", "trigger", "event", "key", "detail", "ctl_seq", ...}；
                                                  pid 不在了＝過時（is_held 會查）。
-    <agent stack>/gdb/release.json               放行單：{"token": 同 hold.json, "go": "run" | "skip", "text": skip 時給腦的字或 null}。
+    <agent stack>/gdb/release.json               放行單：{"token": 同 hold.json}（那一次照原樣跑）。
 條件：always＝事件來了就算；tool_error＝after_tool 的 code 不是 0 或逾時（看 agent-fsm 交給 hook 的 code／timed_out，不猜內容）；
     sh＝`sh -c 字串`、事件 JSON 在 stdin、stdout 丟掉，退 0＝算、退 10＝不算、其他＝條件壞了；
     py＝函式 f(event)（REPL 的 def／lambda，marshal 帶過去）或運算式字串（變數 ev），回真值＝算；看得到 json、re、os 與內建。
@@ -39,7 +39,6 @@ import types
 
 KINDS = ("always", "tool_error", "sh", "py")
 HOLD_EVENTS = ("before_tool", "before_queue")   # 事件還沒發生、hook 同步跑：扣住（hold）
-SKIPPABLE = ("before_tool",)                     # 放行時能選「這次不跑」的（before_queue 不給：跳過＝那封信丟了）
 SPEC = "trigger.json"
 COUNT = "count.json"
 LOG_DIR = "gdb"
@@ -47,7 +46,7 @@ LOG = "log.jsonl"
 HOLD = "hold.json"
 RELEASE = "release.json"
 PREFIX = "gdb_"                                  # 觸發器的 hook 名一律以此開頭（ls 時認得出是誰裝的）
-NO = 10                                          # sh 條件：10＝查了不算（N-43）；handler 跳過工具（skip）也是退 10
+NO = 10                                          # sh 條件：10＝查了不算（N-43）
 SH_TIMEOUT_S = 20                                # sh 條件自己的上限；pause 型 hook 的 timeout_ms 給得比它大
 MODULES = {"json": json, "re": re, "os": os}     # py 條件看得到的模組（其餘只有內建）
 
@@ -323,7 +322,7 @@ def since_resume(entries):
     return tail
 
 
-def _alive(pid):
+def alive(pid):
     if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
         return False
     try:
@@ -341,14 +340,14 @@ def read_hold(agent_stack):
         doc = read_json(os.path.join(agent_stack, LOG_DIR, HOLD))
     except (OSError, ValueError):
         return None
-    if not isinstance(doc, dict) or not _alive(doc.get("pid")):
+    if not isinstance(doc, dict) or not alive(doc.get("pid")):
         return None
     return doc
 
 
-def write_release(agent_stack, token, go, text=None):
-    """放行單：handler 看到 token 對得上就照 go 走（run＝照跑、skip＝不跑）。"""
-    write_json(os.path.join(agent_stack, LOG_DIR, RELEASE), {"token": token, "go": go, "text": text})
+def write_release(agent_stack, token):
+    """放行單：handler 看到 token 對得上就放行（那一次照原樣跑）。"""
+    write_json(os.path.join(agent_stack, LOG_DIR, RELEASE), {"token": token})
 
 
 def read_json(path, default=None):

@@ -47,26 +47,38 @@ def bp_id(name):
 class Why:
     """why() 的結果：paused（停著沒：ctl pause 已套用，或扣在斷點上）、held（扣住的那份 hold.json 或 None）、
     current（最後一張字條是不是這次停的原因）、notes（上次 resume 之後的字條）、pending（扣住之後又來的 ctl 指令 (seq, cmd) 或 None）、
-    breakpoint（現在停在哪個斷點的 id，str；不是停在斷點上＝None）。"""
+    breakpoint（現在停在哪個斷點的 id，str；不是停在斷點上＝None）。
+    a.bp.resume()／step()／stop() 回的也是它，另有 outcome（stopped＝停了、idle＝閒著不會停、gone＝行程不在、interrupted＝Ctrl-C 不等了）
+    與 head（印出來的第一行，例 "stopped at before_tool_1 (write)"）；a.bp.why() 回的這兩個是 None。"""
 
     def __init__(self, name, paused, current, notes, held=None, pending=None):
         self.name, self.paused, self.current, self.notes, self.held, self.pending = name, paused, current, notes, held, pending
         last = notes[-1] if notes else {}
         self.breakpoint = (bp_id(held.get("trigger")) if held else bp_id(last.get("trigger")) if paused and current and notes else None)
+        self.outcome = self.head = None
 
     def __bool__(self):
         return bool(self.notes)
 
     def __repr__(self):
+        body = self._body()
+        if self.head is None:
+            return body
+        if self.outcome != "stopped":
+            return self.head
+        return self.head + "\n" + body
+
+    def _body(self):
         last = self.notes[-1] if self.notes else {}
-        who = "breakpoint %s (%s)" % (bp_id(last.get("trigger")), "a watcher" if last.get("by") == "watch" else "a trigger")
+        who = ("a.bp.%s()" % last.get("by") if last.get("by") in ("step", "stop")
+               else "breakpoint %s (%s)" % (bp_id(last.get("trigger")), "a watcher" if last.get("by") == "watch" else "a trigger"))
         if self.held:
             h = self.held
             d = h.get("detail", {})
             thing = ("tool %s has not run yet" % d.get("name") if h.get("event") == "before_tool"
                      else "letter %s is not taken in yet" % d.get("letter") if h.get("event") == "before_queue" else "the event has not happened yet")
-            head = "%s is held at breakpoint %s: %s; a.bp.resume() lets it go on as it was%s" % (
-                self.name, bp_id(h.get("trigger")), thing, ", a.bp.skip() skips that call" if h.get("skippable") else "")
+            head = "%s is held at breakpoint %s: %s; a.bp.resume() lets it go on as it was, a.bp.step() runs it and stops after this step" % (
+                self.name, bp_id(h.get("trigger")), thing)
             if self.pending:
                 head += ("\n  then it %ss: aos-agent ctl %s (seq %s) came while held, and the loop applies it after this step"
                          % (self.pending[1], self.pending[1], self.pending[0]))
@@ -83,7 +95,7 @@ class Why:
             d = n.get("detail", {})
             what = " ".join("%s=%s" % (k, json.dumps(d[k], ensure_ascii=False)) for k in ("name", "code", "arguments", "content", "letter", "stage")
                             if k in d)
-            lines.append("  %s %s %s: %s%s%s%s" % (n.get("at", "?"), n.get("by", "?"), n.get("trigger", "?"), n.get("about") or n.get("event"),
+            lines.append("  %s %s %s: %s%s%s%s" % (n.get("at", "?"), n.get("by", "?"), n.get("trigger") or "-", n.get("about") or n.get("event"),
                                                   " [held before it]" if n.get("how") == "hold" and n.get("kind") == "stop" else "",
                                                   " [held again: the earlier hold was cut off]" if n.get("again") else "",
                                                   " (pause failed: %s)" % n.get("why") if n.get("kind") == "pause_failed" else

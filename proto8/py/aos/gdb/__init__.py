@@ -8,14 +8,17 @@
 
 兩層（把手在入口 aos.py.agent；這裡是它的延伸 a.bp 與 a.look 的本體）：
     a.xxx＝aos-agent xxx（aos.py 的通用代理）；a.look＝讀 stack 的檔（Look：where、history、observed、request、queue、stderr、file）。
-    a.bp＝斷點（class Breakpoints）：增 a.bp.add.<種類>(...)（回 id，str）、rm／set／ls／get、stop／resume／skip、why／held／stopped／wait_stopped、notes、clear。
+    a.bp＝斷點（class Breakpoints）：增 a.bp.add.<種類>(...)（回 id，str）、rm／set／ls／get；控制 resume／step／stop（不收參數、等到停下才回）；
+    查 why／held／stopped、notes；clear。
+控制動作（使用者 11-19「我記得有step into還是啥的，參考那些ide」，選項框選「resume/step 自己等到停」；「不該有這個方法」＝skip 拿掉；
+    線 aosgdb-verbs-1119，紀錄 thinking/2026-11/19/aos-gdb-動詞-1119.md）：resume＝繼續跑、等下一次停；step＝走 fsm 一格就停；stop＝現在停。
 建斷點的寫法（使用者 11-19 選項框選「a.bp.add.before_tool("x")」，thinking/2026-11/19/aos-pylib-1119/07 第 3 題；字串式 a.bp.add("before_tool") 不留）：
     a.bp.add.<種類>([主詞], *, 條件, 選項) → id。種類＝hook 事件（before_tool、after_tool、before_queue、after_queue、brain_failed、tool_added、
     after_start、after_stop；on_clock 不收）、tool_error、watch；tab 補得出、打錯當場 AttributeError；主詞＝能篩名字的事件才有（工具名，brain_failed 是錯誤代號）。
 斷點兩種，同一套 id：
     觸發器（a.bp.add.before_tool(...) 等事件）：agent 身上一個 hook（gdb_<id>），事件來了判條件。
-        事件還沒發生（before_tool、before_queue）＝扣住（hold）：hook handler 自己不回，工具還沒跑；a.bp.resume() 照原樣跑、a.bp.skip() 那次工具不跑。
-        其他事件（已經發生）＝暫停（pause）：ctl pause，loop 在這一格做完、下一格開頭停住；a.bp.resume()＝ctl resume。
+        事件還沒發生（before_tool、before_queue）＝扣住（hold）：hook handler 自己不回，工具還沒跑；a.bp.resume() 放行、照原樣跑。
+        其他事件（已經發生）＝暫停（pause）：ctl pause，loop 在這一格做完、下一格開頭停住；a.bp.resume() 背後是 ctl resume。
     觀察者（a.bp.add.watch(...)）：另一支掛在 daemon 表上的 proc（gdbw_<id>），每隔一陣子看目標的檔，成立就 ctl pause 目標（晚一格）（aos.gdb.watcher）。
 
 每一步背後是一條 aos 指令（aos-agent …、aos-daemon-ctl …）或讀寫 stack 裡的一個檔；aos.py.echo 為真時先在 stderr 印出那條指令（或 "# read 路徑"）
@@ -29,15 +32,21 @@
     a.bp.add.after_tool(sh="grep -q secret || exit 10")   # 自訂條件：一段 shell（事件 JSON 在 stdin，退 0＝算）
     a.bp.add.before_tool(py=lambda ev: ev["arguments"].get("path", "").endswith(".env"))
     a.bp.add.watch(py=lambda t: len(t.history(0)) > 20)   # 觀察者：另一支 proc 每 0.5 秒看一次；回 "watch_1"
-    a.say("hi"); a.bp.wait_stopped(); a.bp.why(); a.look.where(); a.look.history(3)
-    a.bp.resume()      # 或 a.bp.skip()（扣在工具前：那次不跑）
+    a.say("write a note")
+    a.bp.resume()      # 沒停著：不送東西，等到停在斷點才回，印 "stopped at before_tool_1 (write)"
+    a.bp.why(); a.look.where(); a.look.history(3)
+    a.bp.step()        # 走一格（那次 write 照跑，這一格做完）又停
+    a.bp.resume()      # 繼續，等下一次停（閒著了＝回 "did not stop: it is idle"）
     a.bp.ls(); a.bp.get(b); a.bp.set(b, enabled=False); a.bp.rm(b); a.bp.clear()
-    a.bp.stop(); a.bp.resume()                            # 不靠斷點：現在就停／續
+    a.bp.stop()        # 不靠斷點：現在停（等到真的停下才回）
 
 觸發器的檔、字條、扣住檔、條件怎麼判在 aos.gdb.trigger；hook handler 是 lib/tools/agent/gdb_trigger；觀察者在 aos.gdb.watcher 與 lib/tools/agent/gdb_watch。"""
 import inspect
 import json
 import os
+import signal
+import subprocess
+import sys
 import time
 
 from aos.agentlib import hooks as _hooks
@@ -52,6 +61,32 @@ TOOL_ERROR, WATCH = "tool_error", "watch"         # a.bp.add 的種類除了 EVE
 KINDS = EVENTS + (TOOL_ERROR, WATCH)
 SUBJECT = {e: ("code" if e == "brain_failed" else "tool") for e in NAMED + (TOOL_ERROR,)}   # 有主詞的種類 → 主詞的參數名
 RELEASE_WAIT_S = 10
+POLL_S = 0.05
+_SHARED = {}                                      # (daemon, 名字) → 那一隻的等的設定與自己送出的 pause（a.bp 每次取都是新的）
+
+
+def _num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+class _Defer:
+    """送指令的那一小段裡先不理 Ctrl-C（記下來，送完再算「不等了」）：指令不會送一半。只在主執行緒有用（signal 的限制）。"""
+
+    def __enter__(self):
+        self.hit, self._old = False, None
+        try:
+            self._old = signal.signal(signal.SIGINT, self._on)
+        except ValueError:
+            pass
+        return self
+
+    def _on(self, signum, frame):
+        self.hit = True
+
+    def __exit__(self, *exc):
+        if self._old is not None:
+            signal.signal(signal.SIGINT, self._old)
+        return False
 
 
 class Target:
@@ -73,9 +108,9 @@ class Target:
             self._stack = s
         return self._stack
 
-    def agent(self, *args, quiet=False):
-        """aos-agent --daemon D --target NAME ARGS...；回 stdout（Text，可能是空的）。"""
-        return call(["aos-agent", "--daemon", self.daemon, "--target", self.name] + [str(x) for x in args], quiet=quiet)
+    def agent(self, *args, quiet=False, detach=False):
+        """aos-agent --daemon D --target NAME ARGS...；回 stdout（Text，可能是空的）。detach＝自己一個 session（終端機的 Ctrl-C 打不到它）。"""
+        return call(["aos-agent", "--daemon", self.daemon, "--target", self.name] + [str(x) for x in args], quiet=quiet, detach=detach)
 
 
 class StackLook(Look):
@@ -141,7 +176,7 @@ def _maker(bp, kind):
 
 
 _KIND_DOC = {
-    "before_tool": "觸發器：工具要跑之前扣住（工具還沒跑；a.bp.resume() 照跑、a.bp.skip() 不跑）。tool＝只算這個（或這些）工具。",
+    "before_tool": "觸發器：工具要跑之前扣住（工具還沒跑；a.bp.resume()／a.bp.step() 放行、照跑）。tool＝只算這個（或這些）工具。",
     "before_queue": "觸發器：一封信要收進來之前扣住（a.bp.resume() 照收）。",
     "after_tool": "觸發器：工具跑完、腦還沒看到結果時停（那一格做完暫停）。tool＝只算這個（或這些）工具。",
     "tool_error": "觸發器：工具跑完而且回錯（退出碼不是 0 或逾時）就停（after_tool 的一種）。tool＝只算這個（或這些）工具。",
@@ -156,16 +191,38 @@ times＝連續幾次才算；once＝只停一次；id＝自己取名（不給＝
 
 
 class Breakpoints:
-    """a.bp：以斷點為核心——增 add.<種類>(...)、刪 rm、改 set、查 ls／get（都以 id，str）；停 stop、續 resume、跳過 skip；
-    停在哪、為什麼 why／held、停了沒 stopped、等到停下來 wait_stopped；字條 notes；全拿掉 clear。"""
+    """a.bp：以斷點為核心——增 add.<種類>(...)、刪 rm、改 set、查 ls／get（都以 id，str）；
+    控制 resume（繼續跑）、step（走一格）、stop（現在停），三個都不收參數、都等到停下才回、回停在哪；
+    查 why（停在哪、為什麼）／held（扣住的那一次）／stopped（停著沒）；字條 notes；全拿掉 clear。
+    等的設定（屬性，不是參數）：idle_s＝閒著多久算「不會停了」、report_s＝每幾秒印一行現況（0＝不印）、timeout_s＝最多等幾秒（None＝不限）。
+    a.bp 每次取都是新的物件，所以設定與「自己送出的 pause」記在模組裡、以 (daemon, 名字) 為鍵：同一隻的每個 a.bp 共用。"""
+
+    DEFAULTS = {"idle_s": 1.0, "report_s": 10, "timeout_s": None}
 
     def __init__(self, target):
         self._a = target
         self.add = Add(self)
+        self._s = _SHARED.setdefault((target.daemon, target.name), {"mine": set()})
+        self._mine = self._s["mine"]              # 自己（step／stop）送出的 pause 的 seq：認得出「這是我送的」
+
+    def _setting(name, check, what):
+        def get(self):
+            return self._s.get(name, Breakpoints.DEFAULTS[name])
+
+        def put(self, v):
+            if not check(v):
+                raise Failed("a.bp.%s" % name, "must be %s" % what, code="ArgumentsBad")
+            self._s[name] = v
+        return property(get, put, doc=what)
+
+    idle_s = _setting("idle_s", lambda v: _num(v) and v > 0, "a number of seconds > 0: idle this long with no stop = return 'did not stop'")
+    report_s = _setting("report_s", lambda v: _num(v) and v >= 0, "a number of seconds >= 0: one line on stderr this often while waiting (0 = never)")
+    timeout_s = _setting("timeout_s", lambda v: v is None or (_num(v) and v > 0), "None or a number of seconds > 0: wait at most this long, then Timeout")
+    del _setting
 
     def __repr__(self):
         rows = self.ls(quiet=True)
-        head = "<a.bp of %s: %d breakpoint(s); add.<kind>(...) / rm / set / ls / get, stop / resume / skip, why / wait_stopped>" % (self._a.name, len(rows))
+        head = "<a.bp of %s: %d breakpoint(s); add.<kind>(...) / rm / set / ls / get, resume / step / stop, why / held / stopped>" % (self._a.name, len(rows))
         return "\n".join([head] + ["  %s%s  %s%s" % (r["id"], "" if r["enabled"] else " (disabled)", r["about"], "  <- stopped here" if r["here"] else "")
                                    for r in rows])
 
@@ -218,7 +275,7 @@ class Breakpoints:
     # ---- 刪 ----
     def rm(self, id):
         """拿掉一個斷點。觸發器：aos-agent hook rm gdb_ID（小格裡的設定與計數留著給人看，標成 removed）；正扣在它上面的那一次不受影響，
-        照樣等 a.bp.resume()／a.bp.skip()。觀察者：aos-daemon-ctl rm gdbw_ID（先停、等行程退出、再從表上拿掉；它也看別隻的話別隻也不看了）。"""
+        照樣等 a.bp.resume()／a.bp.step()。觀察者：aos-daemon-ctl rm gdbw_ID（先停、等行程退出、再從表上拿掉；它也看別隻的話別隻也不看了）。"""
         kind = self._kind(id)
         if kind == WATCH:
             out = _watch.rm(self._a.daemon, id, echo=True)
@@ -302,37 +359,52 @@ class Breakpoints:
         row.update(tools=spec.get("tools"), condition=_condition(spec))
         return row
 
-    # ---- 停、續、跳過 ----
-    def stop(self):
-        """現在就停（不靠斷點）：aos-agent ctl pause（loop 這一格做完、下一格開頭停住，最多等 5 秒套用），回那條指令的一行結果。
-        已經扣在斷點上＝已經停著，不再送 pause（送了會在放行後再停一次），回一行說明。"""
-        a = self._a
-        h = self.held()
-        if h is not None:
-            return Text("%s is already held at breakpoint %s; nothing sent; a.bp.resume() lets it go on\n" % (a.name, bp_id(h.get("trigger"))))
-        return a.agent("ctl", "pause")
-
+    # ---- 控制：resume、step、stop（都不收參數、都等到停下才回；使用者 11-19 選「resume/step 自己等到停」）----
     def resume(self):
-        """續（跟 a.bp.stop() 一對，不收參數）。扣在斷點上：放行那一次、照原樣跑，等 handler 收到放行才回（字條的 resume 由 handler 寫）；
-        暫停著：aos-agent ctl resume，字條記一筆 resume（why() 從這之後算）。要放行但那次工具不跑用 a.bp.skip()。"""
-        a = self._a
-        h = self.held()
-        if h is None:
-            out = a.agent("ctl", "resume")
-            trigger.append_log(a.stack, {"kind": "resume", "at": trigger.now(), "by": "repl"})
-            return out
-        return self._release(h, "run", None, "bp.resume")
+        """繼續跑，等到下一次停下才回（像 gdb 的 continue；不收參數）。回的是 why() 那份，第一行說停在哪（"stopped at before_tool_1 (write)"）。
+        扣在斷點上：放行那一次（照原樣跑）；暫停著：aos-agent ctl resume；沒停著（例如剛 a.say 完）：什麼都不送，直接等它停。
+        它不會停時不卡死：閒著（stage idle、信箱與 cur 都空、沒有在途的 pause）連續 a.bp.idle_s 秒＝回 "did not stop: idle"；
+        行程不在＝回 "did not stop: not running"；等的時候每 a.bp.report_s 秒在 stderr 印一行現況；a.bp.timeout_s 有給才會逾時（丟 Timeout）。
+        Ctrl-C＝只是不等了：agent 照跑、什麼都不留（先前 a.bp.step() 送出還沒套用的 pause 一併收回），回一句說明。"""
+        h, sig0 = self.held(), self._sig()
+        with _Defer() as d:
+            if h is not None:
+                self._release(h, "bp.resume")
+            elif self._paused():
+                self._resume_cmd()
+        return self._wait(sig0, "resume", d.hit)
 
-    def skip(self, text=None):
-        """放行扣在 before_tool 斷點上的那一次，但那次工具不跑：腦收到一句「被跳過」（text＝給腦的那句，不給用預設）。
-        只有扣在工具之前才行（暫停是事件已經發生之後，沒東西可跳）；等 handler 收到放行才回。"""
+    def step(self):
+        """只走一格就再停（一格＝fsm 的一格：idle、think、wait、act 之一跑一次；wait 等腦時是 wait 一格接一格），等到停下才回（不收參數）。
+        暫停著：ctl resume，loop 一套用就馬上 ctl pause --no-wait（這一格做完、下一格開頭停）；
+        扣在 before_tool 上：先 ctl pause --no-wait 再放行（那次工具照跑，這一格做完才停）；
+        沒停著：ctl pause --no-wait（跑到這一格做完就停）。這一格裡又碰到別的斷點＝停在那裡（回的第一行說是哪個）。
+        Ctrl-C＝不等了，這次送的 pause 收回（aos-agent ctl resume），agent 照跑。"""
         a = self._a
-        h = self.held()
-        if h is None:
-            raise Failed("bp.skip", "%s is not held before a tool; a.bp.skip() only works there (a pause comes after the event happened; a.bp.resume() goes on)" % a.name)
-        if not h.get("skippable"):
-            raise Failed("bp.skip", "%s is held at %s, which cannot be skipped (skipping would drop it); a.bp.resume() lets it go on" % (a.name, h.get("event")))
-        return self._release(h, "skip", text, "bp.skip")
+        h, sig0 = self.held(), self._sig()
+        with _Defer() as d:
+            if h is not None:
+                pend = trigger.ctl_unapplied(a.stack)
+                if pend and pend[1] == "pause":
+                    own = pend[0]                    # 已經有一個還沒套用的 pause（先前的 step 或別人）：放行後這一格做完就停，不再多送
+                else:
+                    own = self._pause_cmd()
+                self._release(h, "bp.step")
+            elif self._paused():
+                own = self._resume_then_pause()
+            else:
+                own = self._pause_cmd()
+        return self._wait(sig0, "step", d.hit, own=own)
+
+    def stop(self):
+        """現在停（不靠斷點）：aos-agent ctl pause --no-wait（這一格做完、下一格開頭停住），等到真的停下才回，回的跟 resume() 一樣（第一行說停在哪）。
+        已經停著（暫停或扣在斷點上）＝什麼都不送，回現在停在哪。Ctrl-C＝不等了，但 pause 已經送出：這一格做完它就停。"""
+        if self.stopped():
+            return self._result("stopped", "already " + self._stopped_head(self.why()))
+        sig0 = self._sig()
+        with _Defer() as d:
+            own = self._pause_cmd()
+        return self._wait(sig0, "stop", d.hit, own=own)
 
     # ---- 停在哪、為什麼 ----
     def held(self):
@@ -343,15 +415,6 @@ class Breakpoints:
         """停著等檢閱沒：ctl pause 已套用（state.json 的 paused），或扣在斷點上（held）。"""
         st = trigger.read_json(os.path.join(self._a.stack, "state.json"), {}) or {}
         return st.get("paused") is True or self.held() is not None
-
-    def wait_stopped(self, timeout_s=30, every_s=0.1):
-        """等到它真的停住（暫停已套用或已扣住；不是看字條，Argon A4）。回 True；逾時丟 Timeout（也是 TimeoutError）。"""
-        end = time.monotonic() + timeout_s
-        while time.monotonic() < end:
-            if self.stopped():
-                return True
-            time.sleep(every_s)
-        raise Timeout("a.bp.wait_stopped", "%s did not stop in %g s" % (self._a.name, timeout_s), code="Timeout")
 
     def why(self):
         """為什麼停：上一次 resume（經 aos.gdb，或在 shell 下 ctl resume 放行的）之後的字條（觸發器與觀察者的），
@@ -427,17 +490,15 @@ class Breakpoints:
         raise Failed("bp", "%s has no breakpoint %s (a.bp.ls() lists them)" % (self._a.name, id))
 
     def _install(self, id, spec, replace):
-        # hold：不限時（等人放行）、讀回話（skip 的退 10 才擋得下；handler 平常什麼都不印）；
-        # pause：有上限、不讀回話（handler 印了什麼都不會變成 hook 失敗，Argon A1）。兩種都 on_error continue。
+        # hold：不限時（等人放行）；pause：有上限。兩種都不讀回話（handler 印了什麼都不會變成 hook 失敗、也擋不下工具，Argon A1；
+        # 「放行但那次工具不跑」使用者 11-19 說「不該有這個方法」，線 aosgdb-verbs-1119 拿掉，hold 也就不必讀回話）、都 on_error continue。
         how, tools = spec["how"], spec.get("tools")
         limit = 0 if how == "hold" else 40000 if spec["kind"] in ("sh", "py") else 15000
         args = ["hook", "add", "--event", spec["event"], "--name", trigger.PREFIX + id, "--path-json", json.dumps(HANDLER),
-                "--on-error", "continue", "--timeout-ms", limit]
+                "--on-error", "continue", "--timeout-ms", limit, "--no-intercept"]
         if tools and spec.get("times", 1) == 1:   # 只篩工具名、不數連續時才交給 hook 的 condition 省行程（Argon A6）
             for t in tools:
                 args += ["--condition", t]
-        if how == "pause":
-            args.append("--no-intercept")
         if replace:
             args.append("--replace")
         self._a.agent(*args)
@@ -464,12 +525,11 @@ class Breakpoints:
                 "seen": mine.get("seen", 0), "streak": mine.get("streak", 0), "fired": mine.get("fired", 0),
                 "spent": bool(spec.get("once") and mine.get("fired")), "last_error": mine.get("last_error"), "here": here == w["name"]}
 
-    def _release(self, h, go, text, what):
-        """寫放行單、等 handler 收到；go＝run（照跑）或 skip（不跑）。"""
+    def _release(self, h, what):
+        """寫放行單（gdb/release.json，token 同 hold.json）、等 handler 收到（扣住結束）；那一次照原樣跑。"""
         a = self._a
-        pending = self.why().pending                # 扣著時又來的 ctl pause／stop：放行後這一格做完就套用（Argon A10）
-        show("$ release %s: %s (writes %s)" % (h.get("trigger"), go, os.path.join(a.stack, trigger.LOG_DIR, trigger.RELEASE)))
-        trigger.write_release(a.stack, h["token"], go, text)
+        show("$ release %s (writes %s)" % (h.get("trigger"), os.path.join(a.stack, trigger.LOG_DIR, trigger.RELEASE)))
+        trigger.write_release(a.stack, h["token"])
         end = time.monotonic() + RELEASE_WAIT_S
         while time.monotonic() < end:
             now = self.held()
@@ -487,10 +547,209 @@ class Breakpoints:
             os.remove(os.path.join(a.stack, trigger.LOG_DIR, trigger.RELEASE))
         except FileNotFoundError:
             pass
-        d = h.get("detail", {})
-        tail = "; then it %ss: ctl %s (seq %s) came while held" % (pending[1], pending[1], pending[0]) if pending else ""
-        return Text("%s: %s %s (by %s)%s\n" % (a.name, "skipped tool" if go == "skip" else "released; going on with",
-                                              d.get("name") or d.get("letter") or h.get("event"), mine[-1].get("by"), tail))
+
+    def _state(self):
+        return trigger.read_json(os.path.join(self._a.stack, "state.json"), {}) or {}
+
+    def _paused(self):
+        return self._state().get("paused") is True
+
+    def _applied(self):
+        """loop 最後套用的 ctl seq（state_flux.json）。"""
+        v = (trigger.read_json(os.path.join(self._a.stack, "state_flux.json"), {}) or {}).get("ctl_seq")
+        return v if isinstance(v, int) and not isinstance(v, bool) else None
+
+    def _sig(self):
+        """現在停的「是哪一次」：(扣住的 token, 暫停著沒, 套用到的 ctl seq)。跟開始時不一樣而且停著＝新的一次停。"""
+        h = self.held()
+        return (h.get("token") if h else None, self._paused(), self._applied())
+
+    def _pause_cmd(self):
+        """aos-agent ctl pause --no-wait（自己一個 session：Ctrl-C 不會打斷它）；回它寫的 seq，記進 _mine。"""
+        a = self._a
+        a.agent("ctl", "pause", "--no-wait", detach=True)
+        seq, cmd = trigger.ctl_doc(a.stack)
+        if cmd == "pause" and seq is not None:
+            self._mine.add(seq)
+        return seq
+
+    def _resume_cmd(self):
+        """aos-agent ctl resume（等套用），字條記一筆 resume（why() 從這之後算）。"""
+        a = self._a
+        a.agent("ctl", "resume", detach=True)
+        trigger.append_log(a.stack, {"kind": "resume", "at": trigger.now(), "by": "repl"})
+
+    def _resume_then_pause(self):
+        """step 從暫停起：ctl resume 一被 loop 套用（state_flux 的 ctl_seq 追上它）就馬上 ctl pause --no-wait，
+        這一格做完、下一格開頭停。ctl 窗只放得下一道指令，兩道不能一起寫，所以只能這樣接力；空檔約是 pause 那條指令起來的時間（實測約 0.04 秒）。"""
+        a = self._a
+        before, _ = trigger.ctl_doc(a.stack)
+        argv = ["aos-agent", "--daemon", a.daemon, "--target", a.name, "ctl", "resume"]
+        show("$ " + " ".join(argv))
+        p = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
+                             start_new_session=True)
+        end = time.monotonic() + RELEASE_WAIT_S
+        seq = None
+        while time.monotonic() < end:
+            s, cmd = trigger.ctl_doc(a.stack)
+            if seq is None and cmd == "resume" and s is not None and (before is None or s > before):
+                seq = s
+            if seq is not None and (self._applied() or -1) >= seq:
+                break
+            if p.poll() is not None:
+                break
+            time.sleep(0.005)
+        own = self._pause_cmd()
+        _, err = p.communicate()
+        if p.returncode:
+            lines = [x for x in (err or "").splitlines() if x.strip()]
+            raise Failed(lines[-1] if lines else "aos-agent: ctl resume exited %d" % p.returncode, argv=argv, exit=p.returncode)
+        trigger.append_log(a.stack, {"kind": "resume", "at": trigger.now(), "by": "repl", "for": "step"})
+        return own
+
+    def _body(self):
+        """不是停著時它在做什麼：gone（行程不在）、idle（stage idle、信箱 new 與 cur 都空、沒有還沒套用的 pause）、busy。"""
+        st = self._state()
+        if not trigger.alive(st.get("pid")):
+            return "gone"
+        if trigger.ctl_unapplied(self._a.stack):
+            return "busy"
+        stack = self._a.stack
+        try:
+            with open(os.path.join(stack, "stage.txt"), encoding="utf-8") as f:
+                stage = f.read().strip()
+        except OSError:
+            return "busy"                          # 沒有 stage.txt（例如 eca 身）：認不出閒著，只靠定期那一行與 timeout_s
+        if stage != "idle":
+            return "busy"
+        for box in ("new", "cur"):
+            try:
+                if any(not n.startswith(".") for n in os.listdir(os.path.join(stack, "queue", box))):
+                    return "busy"
+            except FileNotFoundError:
+                pass
+        return "idle"
+
+    def _wait(self, sig0, what, hit, own=None):
+        """resume／step／stop 共用的等：停著而且跟開始時不是同一次＝停了；閒著或行程不在連續 idle_s 秒＝沒停；Ctrl-C＝不等了。"""
+        a = self._a
+        start = last = time.monotonic()
+        quiet = None
+        try:
+            if hit:
+                raise KeyboardInterrupt
+            while True:
+                if self.stopped():
+                    sig = self._sig()
+                    if sig != sig0:
+                        if (what == "resume" and sig[0] is None and sig[1] and sig[2] in self._mine
+                                and trigger.ctl_doc(a.stack)[0] == sig[2]):
+                            # 先前 a.bp.step() 扣在別的斷點時送出的 pause，現在才套用：不是這次要的停，收回、接著等
+                            self._mine.discard(sig[2])
+                            self._resume_cmd()
+                            sig0 = self._sig()
+                            continue
+                        return self._stopped(what, own)
+                now = time.monotonic()
+                body = self._body()
+                if body in ("idle", "gone"):
+                    quiet = quiet if quiet and quiet[0] == body else (body, now)
+                    if now - quiet[1] >= self.idle_s:
+                        return self._result(body, None)
+                else:
+                    quiet = None
+                if self.timeout_s is not None and now - start >= self.timeout_s:
+                    self._take_back(what)
+                    raise Timeout("a.bp.%s" % what, "%s did not stop in %g s (a.bp.timeout_s); it goes on as it was" % (a.name, self.timeout_s),
+                                  code="Timeout")
+                if self.report_s and now - last >= self.report_s:
+                    last = now
+                    sys.stderr.write("# a.bp.%s: still waiting for %s to stop (%d s): %s; Ctrl-C stops waiting, %s goes on\n"
+                                     % (what, a.name, now - start, self._doing(), a.name))
+                    sys.stderr.flush()
+                time.sleep(POLL_S)
+        except KeyboardInterrupt:
+            if self.stopped() and self._sig() != sig0:
+                return self._stopped(what, own)
+            took = self._take_back(what)
+            if what == "stop":
+                tail = "; the pause is sent already: %s stops when this step ends" % a.name
+            else:
+                tail = "; the pause a.bp.step() sent is taken back" if took else ""
+            return self._result("interrupted", "stopped waiting (Ctrl-C); %s goes on as it was%s" % (a.name, tail))
+
+    def _take_back(self, what):
+        """不等了（Ctrl-C、逾時）時收回自己送出、還沒套用的 pause（stop 不收：要停是使用者要的）。回收回了沒。"""
+        if what == "stop":
+            return False
+        pend = trigger.ctl_unapplied(self._a.stack)
+        if not pend or pend[1] != "pause" or pend[0] not in self._mine or self.held() is not None:
+            return False
+        argv = ["aos-agent", "--daemon", self._a.daemon, "--target", self._a.name, "ctl", "resume"]
+        show("$ " + " ".join(argv) + "   (in the background: takes back the pause)")
+        subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        self._mine.discard(pend[0])
+        return True
+
+    def _doing(self):
+        """定期那一行：在哪一格、信箱幾封。"""
+        stack = self._a.stack
+        try:
+            with open(os.path.join(stack, "stage.txt"), encoding="utf-8") as f:
+                stage = f.read().strip() or "?"
+        except OSError:
+            stage = "?"
+        try:
+            n = len([x for x in os.listdir(os.path.join(stack, "queue", "new")) if not x.startswith(".")])
+        except FileNotFoundError:
+            n = 0
+        return "at %s, %d letter(s) queued" % (stage, n)
+
+    def _stopped(self, what, own):
+        """停了：自己送的 pause 停下的（step／stop）留一張字條（by step／stop，帶那個 seq），回 why() 加上第一行。"""
+        a = self._a
+        if own is not None and self.held() is None and self._applied() == own and trigger.ctl_doc(a.stack)[0] == own:
+            trigger.append_log(a.stack, {"kind": "stop", "at": trigger.now(), "by": what if what in ("step", "stop") else "repl",
+                                         "trigger": None, "ctl_seq": own,
+                                         "about": "a.bp.step(): one step" if what == "step" else "a.bp.stop()",
+                                         "detail": {"stage": self._stage()}})
+            self._mine.discard(own)
+        w = self.why()
+        return self._result("stopped", self._stopped_head(w), w)
+
+    def _stage(self):
+        try:
+            with open(os.path.join(self._a.stack, "stage.txt"), encoding="utf-8") as f:
+                return f.read().strip() or None
+        except OSError:
+            return None
+
+    def _stopped_head(self, w):
+        """第一行：停在哪。"""
+        if w.held:
+            d = w.held.get("detail", {})
+            return "stopped at %s (%s)" % (w.breakpoint, d.get("name") or d.get("letter") or w.held.get("event"))
+        last = w.notes[-1] if w.notes else {}
+        stage = self._stage() or "?"
+        if w.breakpoint:
+            d = last.get("detail", {})
+            return "stopped at %s (%s), before %s" % (w.breakpoint, d.get("name") or d.get("code") or d.get("letter") or d.get("target")
+                                                       or last.get("event"), stage)
+        if w.current and last.get("by") == "step":
+            return "stopped after one step, before %s" % stage
+        if w.current and last.get("by") == "stop":
+            return "stopped before %s (a.bp.stop())" % stage
+        return "stopped before %s (paused, not by a breakpoint)" % stage
+
+    def _result(self, outcome, head, w=None):
+        """resume／step／stop 回的東西：why() 那份，outcome＝stopped／idle／gone／interrupted，第一行 head。"""
+        a = self._a
+        w = w or self.why()
+        if head is None:
+            head = {"idle": "%s did not stop: it is idle (nothing queued, no step running); give it work (a.say(...)) and a.bp.resume() waits again" % a.name,
+                    "gone": "%s did not stop: it is not running (its loop process is gone: stopped, asleep, or removed); aos-agent ctl state says why" % a.name}[outcome]
+        w.outcome, w.head = outcome, head
+        return w
 
 
 def _condition(spec):

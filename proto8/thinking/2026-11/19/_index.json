@@ -23,6 +23,9 @@
  "aos-gdb-lib-第二版.md": {
   "description": "aos-gdb 第二版（11-19）：`stop_before_tool` 改成真的在工具跑之前停住、續了照原樣跑（觸發器在 hook 裡自己扣住等放行），另做了丙（掛在 daemon 表上的觀察者 proc）；hook 機制與 cpp 都沒動，假腦實跑 12 個情境過"
  },
+ "aos-gdb-動詞-1119.md": {
+  "description": "aos-gdb 的控制動作改成 IDE 那一組（11-19）：`a.bp.resume()`、`a.bp.step()`、`a.bp.stop()` 都不收參數、都等到停下才回並說停在哪；`wait_stopped`、`skip` 拿掉；aos-agent、daemon、hook 機制、cpp 沒動"
+ },
  "aos-inherit-1119": {
   "description": "繼承深挖（線 aos-inherit-1119，11-19）：「繼承」在 aos 是哪幾件事、今天已有的機制實測、別人怎麼做、四條走向（推薦在 agent.py 重生時衍生、執行期不動）、跑著長出來的收不收回；使用者 11-19 已裁（走乙、「繼承」進規範只限生成時＝N-70、長出來的不收回、狀態機每隻一層先不做）"
  },

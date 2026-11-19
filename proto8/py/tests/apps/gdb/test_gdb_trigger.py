@@ -1,4 +1,4 @@
-"""aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent 跑：pause 型發 pause、留字條；hold 型扣住等放行（run 退 0、skip 印字退 10、shell 的 ctl resume 也放行、被 TERM 留 hold_ended 且同一次再來時直接再扣住）；條件壞了只 warning 退 0；介面長相（a.bp、resume 不收參數、說明字串）。"""
+"""aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent 跑：pause 型發 pause、留字條；hold 型扣住等放行（放行退 0、什麼都不印；shell 的 ctl resume 也放行；被 TERM 留 hold_ended 且同一次再來時直接再扣住；放行過的同一次再來不再扣）；條件壞了只 warning 退 0；介面長相（a.bp、resume／step／stop 不收參數、沒有 skip 與 wait_stopped、說明字串）。"""
 import json
 import os
 from pathlib import Path
@@ -189,25 +189,24 @@ class Handler(unittest.TestCase):
 
     def test_hold_then_run(self):
         p, h = self.start(spec(tools=["write"]), {"event": "before_tool", "name": "write", "id": "c1", "arguments": {"path": "a"}})
-        self.assertEqual((h["event"], h["key"], h["skippable"]), ("before_tool", "c1", True))
+        self.assertEqual((h["event"], h["key"]), ("before_tool", "c1"))
+        self.assertNotIn("skippable", h)
         self.assertEqual(self.calls(), [])                         # hold 不發 ctl pause
         time.sleep(0.5)
         self.assertIsNone(p.poll())                                # 還扣著
-        trigger.write_release(str(self.stack), h["token"], "run")
+        trigger.write_release(str(self.stack), h["token"])
         self.assertEqual(self.finish(p)[:2], (0, ""))
         self.assertIsNone(trigger.read_hold(str(self.stack)))
         self.assertIsNone(json.loads((self.cell / trigger.COUNT).read_text())["pending"])
         self.assertEqual(trigger.read_log(str(self.stack))[0]["how"], "hold")
 
-    def test_hold_then_skip_prints_and_exits_10(self):
+    def test_release_needs_the_same_token(self):
         p, h = self.start(spec(), {"event": "before_tool", "name": "write", "id": "c2"})
-        trigger.write_release(str(self.stack), "not-this-one", "run")   # token 對不上＝不理
+        trigger.write_release(str(self.stack), "not-this-one")          # token 對不上＝不理
         time.sleep(0.5)
         self.assertIsNone(p.poll())
-        trigger.write_release(str(self.stack), h["token"], "skip")
-        code, out, _ = self.finish(p)
-        self.assertEqual(code, 10)
-        self.assertIn("skipped at a breakpoint", out)
+        trigger.write_release(str(self.stack), h["token"])
+        self.assertEqual(self.finish(p)[:2], (0, ""))
 
     def test_shell_ctl_resume_releases(self):
         (self.stack / "ctl.json").write_text('{"cmd": "pause", "seq": 3}\n')
@@ -232,23 +231,24 @@ class Handler(unittest.TestCase):
         self.assertEqual((count["pending"], count["fired"]), ("c4", 0))          # 沒放行＝這次不算（once 沒用掉）
         p, h = self.start(s, {"event": "before_tool", "name": "write", "id": "c4"})  # 同一次回來：直接再扣
         self.assertTrue(h["again"])
-        trigger.write_release(str(self.stack), h["token"], "run")
+        trigger.write_release(str(self.stack), h["token"])
         self.assertEqual(self.finish(p)[0], 0)
         count = json.loads((self.cell / trigger.COUNT).read_text())
-        self.assertEqual((count["pending"], count["fired"], count["decided"]["go"]), (None, 1, "run"))
+        self.assertEqual((count["pending"], count["fired"], count["decided"]), (None, 1, {"key": "c4"}))
         r = self.fire(s, {"event": "before_tool", "name": "write", "id": "c5"})     # once 用掉了：別的呼叫不扣
         self.assertEqual(r.returncode, 0)
 
-    def test_a_decided_call_coming_back_keeps_the_decision(self):
+    def test_a_released_call_coming_back_is_not_held_again(self):
         s = spec()
         p, h = self.start(s, {"event": "before_tool", "name": "write", "id": "c6"})
-        trigger.write_release(str(self.stack), h["token"], "skip")
-        self.assertEqual(self.finish(p)[0], 10)
+        trigger.write_release(str(self.stack), h["token"])
+        self.assertEqual(self.finish(p)[:2], (0, ""))
         log = trigger.read_log(str(self.stack))
         self.assertEqual((log[-1]["kind"], log[-1]["by"], log[-1]["token"]), ("resume", "repl", h["token"]))   # handler 自己寫
-        r = self.fire(s, {"event": "before_tool", "name": "write", "id": "c6"})     # 那一格被收掉後重跑同一個呼叫：照樣跳過、不再扣
-        self.assertEqual(r.returncode, 10)
-        self.assertIn("skipped at a breakpoint", r.stdout)
+        self.assertNotIn("go", log[-1])
+        r = self.fire(s, {"event": "before_tool", "name": "write", "id": "c6"})     # 那一格被收掉後重跑同一個呼叫：照跑、不再扣
+        self.assertEqual((r.returncode, r.stdout), (0, ""))
+        self.assertIsNone(trigger.read_hold(str(self.stack)))
 
     def test_an_old_resume_in_ctl_does_not_release(self):
         (self.stack / "ctl.json").write_text('{"cmd": "resume", "seq": 9}\n')   # 扣住之前就在的 resume
@@ -256,16 +256,14 @@ class Handler(unittest.TestCase):
         p, h = self.start(spec(), {"event": "before_tool", "name": "write", "id": "c7"})
         time.sleep(0.6)
         self.assertIsNone(p.poll())
-        trigger.write_release(str(self.stack), h["token"], "run")
+        trigger.write_release(str(self.stack), h["token"])
         self.assertEqual(self.finish(p)[0], 0)
 
-    def test_letter_cannot_be_skipped(self):
+    def test_letter_hold_then_release(self):
         p, h = self.start(spec(event="before_queue"), {"event": "before_queue", "letter": "L1", "content": "hi"})
-        self.assertFalse(h["skippable"])
-        trigger.write_release(str(self.stack), h["token"], "skip")
-        code, out, err = self.finish(p)
-        self.assertEqual((code, out), (0, ""))                  # 照收那封信
-        self.assertIn("cannot be skipped", err)
+        self.assertEqual((h["event"], h["key"]), ("before_queue", "L1"))
+        trigger.write_release(str(self.stack), h["token"])
+        self.assertEqual(self.finish(p)[:2], (0, ""))            # 照收那封信
 
     def test_broken_condition_warns_and_exits_0(self):
         r = self.fire(spec(kind="sh", sh="exit 4"), {"event": "before_tool", "name": "write"})
@@ -314,11 +312,36 @@ class Shape(unittest.TestCase):
     def test_bp_methods(self):
         import inspect
         import aos.gdb as g
-        for name in ("rm", "set", "ls", "get", "stop", "resume", "skip", "why", "held", "stopped", "wait_stopped", "notes", "clear"):
+        for name in ("rm", "set", "ls", "get", "resume", "step", "stop", "why", "held", "stopped", "notes", "clear"):
             self.assertTrue(callable(getattr(g.Breakpoints, name)), name)
-        self.assertEqual(list(inspect.signature(g.Breakpoints.resume).parameters), ["self"])
-        self.assertEqual(list(inspect.signature(g.Breakpoints.stop).parameters), ["self"])
-        self.assertEqual(list(inspect.signature(g.Breakpoints.skip).parameters), ["self", "text"])
+        for name in ("resume", "step", "stop"):                         # 使用者 11-19「a.resume()就是a.resume()，他的args不應該有東西」
+            self.assertEqual(list(inspect.signature(getattr(g.Breakpoints, name)).parameters), ["self"], name)
+        for gone in ("skip", "wait_stopped"):                           # 11-19「不該有這個方法」；等停下併進 resume／step
+            self.assertFalse(hasattr(g.Breakpoints, gone), gone)
+        self.assertFalse(hasattr(trigger, "SKIPPABLE"))
+        b = g.Breakpoints(g.Target("cara", "/d"))
+        self.assertEqual((b.idle_s, b.report_s, b.timeout_s), (1.0, 10, None))   # 等的設定是屬性，不是參數
+        b.idle_s, b.timeout_s = 5, 30
+        again = g.Breakpoints(g.Target("cara", "/d"))                   # a.bp 每次取都是新的：同一隻共用設定
+        self.assertEqual((again.idle_s, again.timeout_s), (5, 30))
+        self.assertEqual(g.Breakpoints(g.Target("dora", "/d")).idle_s, 1.0)
+        for name, bad in (("idle_s", 0), ("report_s", -1), ("timeout_s", "x"), ("idle_s", True)):
+            with self.assertRaises(g.Failed):
+                setattr(b, name, bad)
+
+    def test_result_reads_like_where_it_stopped(self):
+        from aos.gdb.look import Why
+        w = Why("ann", True, True, [{"kind": "stop", "by": "step", "trigger": None, "about": "a.bp.step(): one step"}])
+        self.assertIsNone((w.outcome, w.head)[0])
+        self.assertIn("ann is paused by a.bp.step()", repr(w))
+        w.outcome, w.head = "stopped", "stopped after one step, before think"
+        self.assertTrue(repr(w).startswith("stopped after one step, before think\nann is paused by a.bp.step()"))
+        w.outcome, w.head = "idle", "ann did not stop: it is idle"
+        self.assertEqual(repr(w), "ann did not stop: it is idle")
+        h = Why("ann", True, True, [], held={"trigger": "gdb_before_tool_1", "event": "before_tool", "detail": {"name": "write"}})
+        self.assertEqual(h.breakpoint, "before_tool_1")
+        self.assertIn("a.bp.step() runs it", repr(h))
+        self.assertNotIn("skip", repr(h))
 
     def test_add_kinds_one_shape(self):
         import inspect
@@ -351,8 +374,10 @@ class Shape(unittest.TestCase):
         from aos.apps import gdb as app
         self.assertIn("a.bp.add.before_tool(", app.HELP)
         self.assertIn("a.look.history", app.HELP)
+        for verb in ("a.bp.resume()", "a.bp.step()", "a.bp.stop()"):
+            self.assertIn(verb, app.HELP)
         for text in (app.HELP, app.BANNER):
-            for old in ("stop_before_tool", "skip=True", "wait_paused", "a.watch(", "a.why(", "a.resume(", "a.triggers(",
+            for old in ("stop_before_tool", "skip=True", "wait_paused", "a.watch(", "a.why(", "a.resume(", "a.triggers(", "skip(", "wait_stopped",
                         "a.bp.add(\"", "import aos.gdb", "g.attach", "a.where()", "a.history(", "import ag,", "import ag\n", "ag.tool"):
                 self.assertNotIn(old, text)
 
