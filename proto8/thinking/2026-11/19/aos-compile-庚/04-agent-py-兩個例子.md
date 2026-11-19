@@ -32,27 +32,27 @@ ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)
 
 `python3 agent.py --write-defs` 之後夾裡長這樣：
 
-| 檔 | 內容 | 歸誰 |
+| 檔 | 內容 | 重生時 |
 |---|---|---|
-| `agent.py` | 上面那支 | 你 |
-| `_entry` | `{"argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}], "cwd": {"$env": "AOS_WS"}}` | 生成 |
-| `body.json` | `{"argv": ["aos-loop", "loop.json"]}` | 生成 |
-| `loop.json` | 每拍跑 `fsm.json`、間隔 300 毫秒、三個窗的檔名 | 生成 |
-| `fsm.json` | 四格；格的程式指到 `{"$env": "AOS_HOME", "$path": "/templates/agent-fsm/idle.py"}` 等（跟 reviewer 今天的寫法一樣） | 生成 |
-| `interfaces.json` | `entry`、`tools`、`llm`、`llm_keys`、`history`、`system` | 生成 |
-| `tools.json` | `{"$override": [look、mailbox、json 三包的指示詞]}` | 生成 |
-| `llm.json` | `{"model": "luna"}` | 生成 |
-| `system.txt` | 那兩行字 | 生成 |
-| `_metainfo.json` | `summary` 與記帳的 `generated` | 只動自己的鍵 |
-| `README.md` | 一行 `DESCRIPTION` | 種子，之後歸你 |
+| `agent.py` | 上面那支 | 不碰 |
+| `_entry` | `{"argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}], "cwd": {"$env": "AOS_WS"}}` | 直接蓋 |
+| `body.json` | `{"argv": ["aos-loop", "loop.json"]}` | 直接蓋 |
+| `loop.json` | 每拍跑 `fsm.json`、間隔 300 毫秒、三個窗的檔名 | 直接蓋 |
+| `fsm.json` | 四格；格的程式指到 `{"$env": "AOS_HOME", "$path": "/templates/agent-fsm/idle.py"}` 等（跟 reviewer 今天的寫法一樣） | 直接蓋 |
+| `interfaces.json` | `entry`、`tools`、`llm`、`llm_keys`、`history`、`system` | 直接蓋 |
+| `tools.json` | `{"$override": [look、mailbox、json 三包的指示詞]}` | 直接蓋 |
+| `llm.json` | `{"model": "luna"}` | 直接蓋 |
+| `system.txt` | 那兩行字 | 直接蓋 |
+| `_metainfo.json` | `summary` | 只設自己的鍵 |
+| `README.md` | 一行 `DESCRIPTION` | 不在才寫 |
 
-每份生成的 json 都帶一個 `description`，結尾固定一句「Generated from agent.py: change it there, then run agent_def check.」。用 `description` 而不另立新 key，是因為 reviewer 的每一種檔今天都已經帶這個鍵、所有讀的程式都吃得下；`system.txt` 整份會送給模型，所以不放記號。
+每份 json 帶一個 `description`（照 reviewer 範本的慣例，說這份檔是做什麼的）。夾裡不放任何「我是生成的」記號：產出之後它就是普通的定義夾（[10](10-使用者裁定.md)）。
 
 接著 `aos-agent ctl add <這個夾>` 就掛上去。對照今天：`agent_def new` 抄 19 個檔、再分別去改三份。
 
 ## 完整例子：reviewer
 
-對照 `templates/reviewer/`（10 檔）。這支重生出來的 json，內容要跟今天手寫的那 8 份等價。
+對照 `templates/reviewer/`（10 檔）。這支重生出來的 json，內容要跟今天手寫的那 8 份等價；這是第三刀的驗收，只拿來比對，範本本身不換（使用者第 5 題）。
 
 ```python
 #!/usr/bin/env python3
@@ -108,7 +108,7 @@ ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM, meta=META, interfaces=INTERFACES, 
 
 ## eca 版（沒有狀態機的身體）會長怎樣
 
-排在第三刀，這裡只示意。不宣告 `FSM`，骨架（`_entry`、`loop.json`、`cli.json`、`screen/`）照舊用 `agent_def new` 從 eca-claude 抄來，`agent.py` 只接管三份內容檔：
+排在第三刀，這裡只示意。不宣告 `FSM`，骨架（`_entry`、`loop.json`、`cli.json`、`screen/`）照舊用 `agent_def new` 從 eca-claude 抄來，`agent.py` 只寫三份內容檔：
 
 ```python
 DESCRIPTION = "Run Claude Code as an aos agent for the docs team."
@@ -120,4 +120,4 @@ LLM = {"model": "sonnet"}
 ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM)
 ```
 
-這時它是「把 `agent_def tools`／`llm`／`system` 三個動作寫成一份檔」，`interfaces.json`、`loop.json` 都還是手寫檔，重生不碰。
+這時它是「把 `agent_def tools`／`llm`／`system` 三個動作寫成一份檔」，`interfaces.json`、`loop.json` 重生不碰。

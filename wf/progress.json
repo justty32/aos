@@ -262,13 +262,13 @@
       "title": "aos-compile：用 Python 寫、編譯成 aos 夾",
       "status": "open",
       "flow": "",
-      "what": "使用者 11-18 晚裁定：庚（agent 版 tool_spec，一支 agent.py 宣告 SYSTEM／TOOLS／LLM／FSM 重生 json）先做、己（從樹濃縮一頁總覽，只看不必精細）後做；除錯以 loop 那層為主。11-19 庚的設計稿寫完（線 compile-geng-1119，沒改程式）：agent.py 長相與例子、打架規則（agent.py 永遠贏；記指紋分過時與被手改；agent_def check 重生、defs check 只報）、邊緣狀況、五刀範圍；六題待使用者拍板（第 1 題：手改過的生成檔是直接蓋還是停下來講；第 2 題：agent_def tools／llm／system 碰到生成檔擋不擋）",
-      "next": "第一刀（只加 py/aos/agent_spec.py 與 templates/agent-python/，不改現有程式）不必等六題，可交 opus 細化成施工計劃；第二刀（接進 agent_def 與 defs check）要等第 1、2 題的答案",
+      "what": "使用者 11-18 晚裁定：庚（一支 agent.py 宣告 SYSTEM／TOOLS／LLM／FSM 生出定義夾的 json）先做、己（一頁總覽）後做；除錯以 loop 那層為主。11-19 庚的設計稿寫完、六題已裁（線 compile-geng-1119，沒改程式）：定調「C 與 .o」——重生直接蓋、不記指紋、產出後的 json 照常能改（agent_def tools／llm／system 不擋）、改過的下次重生就沒了；eca 版第三刀；先只給人用；現有範本不換、只新增骨架；四格用借的。還沒做的：第一刀施工。攤給使用者、沒要他馬上答的一件：agent_def check 要不要順手重生（會把剛用 agent_def tools 改的當場蓋掉），先不做",
+      "next": "第一刀施工：只加 proto8/py/aos/agent_spec.py、templates/agent-python/、py/tests/test_agent_spec.py，不改現有程式；範圍說明在 08-範圍切法，交 opus 細化成施工計劃",
       "see": [
+        "[第一刀範圍說明](../proto8/thinking/2026-11/19/aos-compile-庚/08-範圍切法.md)",
         "[庚設計稿 README](../proto8/thinking/2026-11/19/aos-compile-庚/README.md)",
-        "[要使用者拍板的題](../proto8/thinking/2026-11/19/aos-compile-庚/09-要使用者拍板的題.md)",
-        "[07-使用者裁定](../proto8/thinking/2026-11/18/aos-compile-1118/07-使用者裁定.md)",
-        "[11-18 調查 README](../proto8/thinking/2026-11/18/aos-compile-1118/README.md)"
+        "[11-19 六題裁定](../proto8/thinking/2026-11/19/aos-compile-庚/10-使用者裁定.md)",
+        "[11-18 使用者裁定](../proto8/thinking/2026-11/18/aos-compile-1118/07-使用者裁定.md)"
       ],
       "since": "2026-11-18"
     },
