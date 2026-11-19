@@ -35,6 +35,9 @@
  "aos-pylib-1119": {
   "description": "aos 整套 Python 庫的版面（11-19 調查設計稿）：現況盤點、一天的流程、三個走向（推薦甲「把手式＋通用代理」）、別人怎麼做、五題（11-19 已裁四題，見 07）、Argon 審"
  },
+ "aos-pylib-施工.md": {
+  "description": "整套 Python 庫三刀施工（線 aos-pylib-cut-1119）：install.py 改成抄完刪孤兒、新增入口 aos.py（通用代理＋把手 a = agent.attach(名)）、把手接上 a.bp 與 a.look 並把建斷點改成 a.bp.add.(...)；aos-agent、daemon、cpp 一行沒動"
+ },
  "litellm-1.109.1-實測.md": {
   "description": "公司 WSL 的 `~/litellm-proxy/`（LiteLLM 1.109.1）11-19 起起來、三個 ChatGPT 模型非串流與串流都實打通、aos 整條線真模型回字的紀錄；附「能不能放進 repo」的盤點與兩種做法。"
  },
