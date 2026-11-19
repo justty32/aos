@@ -180,7 +180,7 @@ $ pgrep -af aos-
 
 ## 沒做、留給之後的
 
-- 第二刀（`agent_def check` 順手重生）：照 08 先不排。
+- 第二刀（`agent_def check` 順手重生）：照 08 先不排。（使用者 11-19 後來裁定劃掉，見 [10](aos-compile-庚/10-使用者裁定.md) 末節）
 - 第四刀（行號對照、除錯開關）、第五刀（知識庫、己）。
 - eca 版的骨架（`_entry`、`loop.json`、`cli.json`、`screen/`）不歸 `agent.py` 生，照設計稿「骨架照舊抄」，所以 eca 版還是要先 `agent_def new` 一次。
 - eca 版沒用真的 Claude Code／pi 跑過（不叫真模型），只做到 `agent_def check`。
@@ -191,7 +191,7 @@ $ pgrep -af aos-
 
 ## 要你拍板的題（不擋現在能用）
 
-**一、`agent-python` 骨架要不要預設帶範本那組 hook？**
+**一、`agent-python` 骨架要不要預設帶範本那組 hook？**（**已裁：a，不帶**，使用者 11-19「其他兩題維持現狀」，見 [10](aos-compile-庚/10-使用者裁定.md) 末節）
 
 骨架現在沒有 hook，所以沒有 `mail_notify`（新信進來時提醒腦）、`brain_notify`（腦失敗時寄 BLOCKED 信）、`context_wrap`（脈絡快滿時提醒）。agent-fsm 範本三個都有。
 
@@ -200,7 +200,7 @@ $ pgrep -af aos-
 | a. 不帶（現在這樣） | 骨架最小，跟第一刀一樣；要的人自己加一行 `HOOKS = ag.stock_hooks()` |
 | b. 帶 | 抄骨架就有 agent-fsm 那四個 hook。骨架進 git 的生成檔會多一份 `hooks.json`，`loop.json`、`interfaces.json` 也會跟著變 |
 
-**二、`ag.stock_hooks()` 現在是「重生時抄進來」，要不要改成「借」？**
+**二、`ag.stock_hooks()` 現在是「重生時抄進來」，要不要改成「借」？**（**已裁：a，抄**，同上）
 
 | 選項 | 後果 |
 |---|---|
