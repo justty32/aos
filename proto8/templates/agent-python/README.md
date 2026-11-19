@@ -39,6 +39,8 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
 | `system.txt` | the system text | `SYSTEM` |
 | `_metainfo.json` | `summary` and `META` keys | `DESCRIPTION`, `META` |
 | `README.md` | this file | written only when missing |
+| `hooks.json` (not in this skeleton) | the hooks | `HOOKS` |
+| any other name (not in this skeleton) | as given | `FILES` |
 
 ## What you write in agent.py
 
@@ -64,9 +66,25 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
   ```
 
   `next` maps an exit code (0-255, or `"*"` for any other) to the next state; every state needs `0` or `"*"`.
-- Optional, passed as `ag.main(..., meta=META, interfaces=INTERFACES)`:
+- Optional, passed as `ag.main(..., meta=META, interfaces=INTERFACES, hooks=HOOKS, files=FILES)`:
   - `META`: more keys for `_metainfo.json`, like `{"cost": {"time_ms": 60000}, "resource": ["llm"]}`;
-  - `INTERFACES`: laid over the default `interfaces.json`, like `{"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}}` (`None` removes a default key).
+  - `INTERFACES`: laid over the default `interfaces.json`, like `{"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}}` (`None` removes a default key);
+  - `HOOKS`: writes `hooks.json`, adds `"hooks": "hooks.json"` to `interfaces.json` and the `on_start` / `on_stop` lines (they fire `after_start` / `after_stop`) to `loop.json`. Write it as
+    - a dict `{hook name: entry}`, the entries as in any `hooks.json` (`event`, `handler`, `condition`, `every_ms`, `config`, ...);
+    - `ag.stock_hooks()`: the hooks of the `agent-fsm` template (`ag.stock_hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/<template>/hooks.json` and copied in, so the next `--write-defs` follows a changed template;
+    - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `HOOKS = [ag.stock_hooks(), {"timer": None, "mine": {...}}]`;
+    - or `ag.by_hand("hooks.json")`.
+  - `FILES`: other files written as they are, like `{"ladder.json": {...}}` (a dict or list is written as JSON, a string as it is). The name is one file in this folder; it cannot be a file that agent.py, the skeleton or the running agent writes.
+
+## Without FSM (eca bodies: Claude Code, pi)
+
+An eca definition has no state machine: its skeleton (`_entry`, `loop.json`, `cli.json`, `screen/`, `interfaces.json`) comes from its template. Copy the template first, put an `agent.py` in it, and leave `FSM` out:
+
+```python
+ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, hooks=HOOKS)      # no FSM
+```
+
+Then `--write-defs` writes only the content files (`SYSTEM`, `TOOLS`, `LLM`, `HOOKS`, and `FILES`, `META`) under the names the folder's `interfaces.json` gives, and checks `LLM` against its `llm_keys` (eca: `model` only). The skeleton is not touched; `INTERFACES` cannot be used. A folder without `interfaces.json`, or one that declares no file for something you declare, gets one `DefBad` line and nothing is written.
 
 Paths: write paths outside this folder as `ag.home("/...")` (under `$AOS_HOME`) or `ag.env("AOS_WS", "/...")`; they are written as `{"$env": ..., "$path": ...}` and work on any machine and after any copy. Do not write `../` paths: they break when the folder is copied somewhere else.
 

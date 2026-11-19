@@ -12,7 +12,7 @@
 
 給 AI 寫新工具用 [`tool_spec.py`](aos/tool_spec.py)（[tools-def](../thinking/2026-11/10/tools-def/README.md)）：一支 Python 裡宣告說明、參數（`ts.param`）、特性（`META`）和 `run(args)`，它產 `_tooldef`／`_metainfo`（資料夾的兩個檔，或 JSON 物件的兩個鍵）、執行時接 `tool_io` 驗參數；骨架在 [`templates/tool-python`](../templates/tool-python/README.md)，腦用 [`tools_def`](tools/agent/tools_def/) 的 `new`／`check`。現有工具不必遷移。
 
-給人寫 agent 定義用 [`agent_spec.py`](aos/agent_spec.py)（[aos-compile-庚](../thinking/2026-11/19/aos-compile-庚/README.md) 第一刀）：一支 `agent.py` 裡宣告 `DESCRIPTION`、`SYSTEM`、`TOOLS`（`ag.pack`／`ag.tool`／`ag.no`）、`LLM`、`FSM`（`ag.fsm`／`ag.state`／`ag.stock_fsm`），`--write-defs` 生出整個定義夾、`--defs` 只印不寫；寫錯在動筆前報一行 `SpecBad`。產出後跟 `agent.py` 無關、重生直接蓋（使用者 11-19「好比C語言和.o之間的關係」），不記指紋、不留記號。骨架在 [`templates/agent-python`](../templates/agent-python/README.md)，測試 [`tests/test_agent_spec.py`](tests/test_agent_spec.py)。`agent_def`、知識庫沒動（先只給人用）。
+給人寫 agent 定義用 [`agent_spec.py`](aos/agent_spec.py)（[aos-compile-庚](../thinking/2026-11/19/aos-compile-庚/README.md) 第一刀、第三刀；各份檔怎麼算拆在 [`agent_spec_parts.py`](aos/agent_spec_parts.py)）：一支 `agent.py` 裡宣告 `DESCRIPTION`、`SYSTEM`、`TOOLS`（`ag.pack`／`ag.tool`／`ag.no`）、`LLM`、`FSM`（`ag.fsm`／`ag.state`／`ag.stock_fsm`），選填 `HOOKS`（`ag.stock_hooks`）、`FILES`、`META`、`INTERFACES`；不宣告 `FSM`＝只填現成定義夾（eca 版）的內容檔。`--write-defs` 生出整個定義夾、`--defs` 只印不寫；寫錯在動筆前報一行 `SpecBad`。產出後跟 `agent.py` 無關、重生直接蓋（使用者 11-19「好比C語言和.o之間的關係」），不記指紋、不留記號。骨架在 [`templates/agent-python`](../templates/agent-python/README.md)，測試 [`tests/test_agent_spec.py`](tests/test_agent_spec.py)。`agent_def`、知識庫沒動（先只給人用）。
 
 機讀的協議定義（JSON Schema，例如 comm/1）在 [`schema/`](schema/README.md)，不是工具；`aos/comm` 的 check 從自己的位置往上找它（11-17 從 proto8 頂層的 `schema/` 搬進來，活樹也跟著有了）。
 

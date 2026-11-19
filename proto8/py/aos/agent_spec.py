@@ -1,8 +1,9 @@
-"""agent_spec - 給人寫 agent 定義的輔助：在一支 agent.py 裡宣告說明、system、工具、腦設定、狀態機，就生出一份掛得上去的定義夾（_entry、body.json、loop.json、fsm.json、interfaces.json、tools.json、llm.json、system.txt、_metainfo.json 的自己的鍵、README.md 種子）。
+"""agent_spec - 給人寫 agent 定義的輔助：在一支 agent.py 裡宣告說明、system、工具、腦設定、狀態機、hook、其他檔，就生出一份掛得上去的定義夾；不宣告狀態機時只填一份現成定義夾的內容檔（eca 版）。
 
 使用者 11-18：「讓我不必在那邊mkdir半天」；11-19 定調：「agent.py產出東西後，產出後的東西就跟他沒關係了。好比C語言和.o之間的關係。」
 所以重生＝直接蓋：不記指紋、不寫記號、沒有 --force／--status；產出後的 json 誰都能照常改，下次重生被蓋回去（設計稿 thinking/2026-11/19/aos-compile-庚/ 03～06、10）。
-純標準庫；寫法與分層照同夾的 tool_spec（宣告寫錯先記著、生成前報一行 SpecBad；每份檔暫存檔＋改名）。找法同 tool_spec：骨架 templates/agent-python/agent.py 的開頭幾行。
+寫法與分層照同夾的 tool_spec（宣告寫錯先記著、生成前報一行 SpecBad；每份檔暫存檔＋改名）。找法同 tool_spec：骨架 templates/agent-python/agent.py 的開頭幾行。
+各份檔怎麼算、怎麼驗在 aos/agent_spec_parts.py（第三刀拆出去）；這裡是宣告用的小函式、defs、write_defs、main。
 
 宣告用的小函式（寫錯不在當下丟，記成 bad，defs()／main 再報 SpecBad）：
   pack(名)            疊一個工具包＝tools.json 的 $override 加 {"$env": "AOS_HOME", "$path": "/lib/packs/名.json"}
@@ -10,32 +11,26 @@
   no(名)              從包裡拿掉＝tools[名]＝null
   home(路徑)／env(變數, 路徑)  指示詞 {"$env": …, "$path": …}，原樣吐、不展開
   state(名, argv, next, timeout_ms=None)、fsm(起點, [state…])、stock_fsm()＝借 agent-fsm 範本的四格
-  by_hand(檔名)        這份檔自己手寫：interfaces.json 指到它、不生、不蓋（SYSTEM／TOOLS／LLM／FSM 都可用）
+  stock_hooks(範本="agent-fsm")  那個範本 hooks.json 的那組 hook（生成時從 $AOS_HOME/templates/範本/hooks.json 讀、抄進來；hooks 不能指到夾外）
+  by_hand(檔名)        這份檔自己手寫：interfaces.json 指到它、不生、不蓋（SYSTEM／TOOLS／LLM／FSM／HOOKS 都可用）
 兩個可單獨叫的函式：
-  defs(description, system, tools, llm, fsm, meta=None, interfaces=None) → {檔名: 內容}（驗完才回；錯丟 SpecBad）
+  defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None)
+      → {檔名: 內容}（驗完才回；宣告錯丟 SpecBad、夾不對丟 DefBad）。fsm=None＝不宣告狀態機：照 folder 裡現有的
+        interfaces.json 找檔名，只出內容檔（system、tools、llm、hooks）、FILES、_metainfo.json、README.md，骨架不碰（第三刀）
   write_defs(folder, files) → 寫了哪些（字串串列）；宣告到的檔直接蓋，_metainfo.json 只設自己的鍵，README.md 不在才寫，其他檔不碰
-main(...)：agent.py 最後一行；--write-defs [資料夾]、--defs、--help，都沒有＝ArgumentsBad 帶用法（P-44）。"""
-import json, os, re, sys
+main(...)：agent.py 最後一行；--write-defs [資料夾]、--defs、--help，都沒有＝ArgumentsBad 帶用法（P-44）。
+之後的除錯開關（aos-gdb-1119、庚第四刀）要加就加在 defs 的關鍵字參數，不動現有參數的意思。"""
+import json, os, sys
 
 from aos import flags
+from aos import agent_spec_parts as parts
+from aos.agent_spec_parts import SpecBad, DefBad, WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FILES  # noqa: F401（對外的名字）
 
-LLM_KEYS = ["model", "temperature", "top_p", "max_tokens", "seed", "presence_penalty", "frequency_penalty", "stop"]
 STOCK_CELLS = (("idle", "idle", {0: "think", 10: "idle"}, None),       # templates/agent-fsm/fsm.json 那四格，格的程式借範本那份
                ("think", "brain", {0: "wait", 10: "idle"}, None),
                ("wait", "wait", {0: "act", 10: "wait", 11: "think"}, None),
                ("act", "act", {0: "think", 10: "idle"}, 0))
-PACK_RE = re.compile(r"[a-z0-9][a-z0-9_-]*\Z")
-TOOL_RE = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")                        # aos-tools 的 NAME_RE
-ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")                  # aos-tools 的 ENV_KEY_RE
-RUNTIME_FILES = ("ctl.json", "state.json", "state_flux.json", "history.jsonl")   # loop／腦跑起來寫的檔名，by_hand 不能用
-OWN_FILES = {"tools": "tools.json", "llm": "llm.json", "system": "system.txt", "fsm": "fsm.json"}
-SKELETON = ("_entry", "body.json", "loop.json", "interfaces.json")
-WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl add).",
-        "body.json": "Run this agent's loop: aos-loop with loop.json.",
-        "loop.json": "Run the state machine in %s every tick and expose public control, state and state flux files.",
-        "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
-        "tools.json": "Tools this agent can call.",
-        "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default)."}
+HOOK_FIRE = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}   # loop.json 的 on_start／on_stop（照 agent-fsm 範本）
 HELP = """\
 usage: python3 agent.py --write-defs [FOLDER] | --defs | --help
 Make an aos agent definition from the declarations in agent.py.
@@ -45,13 +40,12 @@ Make an aos agent definition from the declarations in agent.py.
                          when it is missing; every other file is left alone.
   --defs                 print everything --write-defs would write, as one JSON object
                          {"file name": content}, and write nothing.
+With FSM declared, agent.py writes the whole definition (skeleton included). Without FSM
+(ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM)), it fills only the content files (system, tools, llm,
+hooks) of a definition that already has its skeleton, under the names its interfaces.json gives.
 Then mount it: aos-agent ctl add FOLDER.
 On a wrong declaration: one line "NAME: error: SpecBad ..." on stderr, exit 1, nothing written.
 """
-
-
-class SpecBad(Exception):
-    """宣告本身寫錯；訊息寫成怎麼改。"""
 
 
 def _bad(msg):
@@ -78,19 +72,19 @@ def env(var, path):
 
 def pack(name):
     """疊一個工具包（$AOS_HOME/lib/packs/<name>.json）。"""
-    if not isinstance(name, str) or not PACK_RE.match(name):
+    if not isinstance(name, str) or not parts.PACK_RE.match(name):
         return _bad("pack name %r must be a pack file name without .json, like \"look\"" % (name,))
     return {"kind": "pack", "name": name}
 
 
 def tool(name, path, **more):
     """單一個工具；more（env、env_file…）原樣寫進那一格；aos-tools 合併時會擋的（env、env_file、cache）這裡先擋。"""
-    if not isinstance(name, str) or not TOOL_RE.match(name):
+    if not isinstance(name, str) or not parts.TOOL_RE.match(name):
         return _bad("tool name %r must be 1-64 letters, digits, _ or -" % (name,))
     if not _is_path(path):
         return _bad("tool %s must have a path: a string, or ag.home(\"/lib/tools/...\") / ag.env(VAR, PATH)" % name)
     e = more.get("env", {})
-    if not isinstance(e, dict) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) and isinstance(v, str) for k, v in e.items()):
+    if not isinstance(e, dict) or not all(isinstance(k, str) and parts.ENV_KEY_RE.match(k) and isinstance(v, str) for k, v in e.items()):
         return _bad("tool %s: env must be a dict of NAME -> string, like {\"LANG\": \"C\"}" % name)
     if "env_file" in more and not _is_path(more["env_file"]):
         return _bad("tool %s: env_file must be a non-empty path string or ag.home(...) / ag.env(...)" % name)
@@ -101,14 +95,15 @@ def tool(name, path, **more):
 
 def no(name):
     """把包裡的某個工具拿掉（tools.json 的 tools[name] = null）。"""
-    if not isinstance(name, str) or not TOOL_RE.match(name):
+    if not isinstance(name, str) or not parts.TOOL_RE.match(name):
         return _bad("ag.no(%r): the tool name must be 1-64 letters, digits, _ or -" % (name,))
     return {"kind": "no", "name": name}
 
 
 def by_hand(filename):
     """這份檔自己手寫：interfaces.json 指到它，agent.py 不生、不蓋。"""
-    if not isinstance(filename, str) or not filename or os.path.isabs(filename) or ".." in filename.split("/")             or os.path.normpath(filename) == ".":
+    if (not isinstance(filename, str) or not filename or os.path.isabs(filename) or ".." in filename.split("/")
+            or os.path.normpath(filename) == "."):
         return _bad("by_hand(%r): give a file name relative to the definition folder, like \"system.txt\"" % (filename,))
     return {"kind": "by_hand", "file": os.path.normpath(filename)}
 
@@ -150,9 +145,9 @@ def fsm(start, states):
         return _bad("fsm needs a non-empty list of ag.state(...)")
     table = {}
     for s in states:
-        if isinstance(s, dict) and s.get("kind") == "bad":
+        if parts.kind(s) == "bad":
             return s
-        if not isinstance(s, dict) or s.get("kind") != "state":
+        if parts.kind(s) != "state":
             return _bad("each item of fsm states must come from ag.state(...), got %r" % (s,))
         if s["name"] in table:
             return _bad("state %s is declared twice" % s["name"])
@@ -173,133 +168,113 @@ def stock_fsm():
                         for n, prog, nxt, t in STOCK_CELLS])
 
 
-def _pick(value, what, kinds):
-    if isinstance(value, dict) and value.get("kind") == "bad":
-        raise SpecBad(value["bad"])
-    if isinstance(value, dict) and value.get("kind") == "by_hand":
-        return value
-    if not kinds(value):
-        raise SpecBad(what)
-    return None
+def stock_hooks(template="agent-fsm"):
+    """某個範本 hooks.json 的那組 hook（agent-fsm、eca-claude、eca-pi）。interfaces.json 的 hooks 只能指夾內的檔，所以借不了，
+    生成時從 $AOS_HOME/templates/<template>/hooks.json 讀出來抄進這夾的 hooks.json（範本改了，下次重生跟著變）。"""
+    if not isinstance(template, str) or not parts.PACK_RE.match(template):
+        return _bad("ag.stock_hooks(%r): give a template name, like \"agent-fsm\"" % (template,))
+    home_dir = os.environ.get("AOS_HOME")
+    if not home_dir:
+        return _bad("ag.stock_hooks(%r) reads $AOS_HOME/templates/%s/hooks.json, but AOS_HOME is not set" % (template, template))
+    where = os.path.join(home_dir, "templates")
+    try:
+        with open(os.path.join(where, template, "hooks.json"), encoding="utf-8") as f:
+            table = json.load(f).get("hooks")
+    except FileNotFoundError:
+        have = sorted(t for t in os.listdir(where) if os.path.isfile(os.path.join(where, t, "hooks.json"))) \
+            if os.path.isdir(where) else []
+        return _bad("there is no $AOS_HOME/templates/%s/hooks.json (templates with hooks: %s)" % (template, ", ".join(have) or "none"))
+    except (OSError, ValueError, AttributeError) as e:
+        return _bad("cannot read $AOS_HOME/templates/%s/hooks.json: %s" % (template, e))
+    if not isinstance(table, dict):
+        return _bad("$AOS_HOME/templates/%s/hooks.json has no hooks object" % template)
+    return {"kind": "stock_hooks", "template": template, "hooks": table}
 
 
-def _tools_json(tools):
-    if _pick(tools, "TOOLS must be a list of ag.pack(...), ag.tool(...), ag.no(...), or ag.by_hand(\"tools.json\")",
-             lambda v: isinstance(v, (list, tuple))):
-        return None
-    packs, entries = [], {}
-    for t in tools:
-        if isinstance(t, dict) and t.get("kind") == "bad":
-            raise SpecBad(t["bad"])
-        if not isinstance(t, dict) or t.get("kind") not in ("pack", "tool", "no"):
-            raise SpecBad("each item of TOOLS must come from ag.pack(...), ag.tool(...) or ag.no(...), got %r" % (t,))
-        if t["kind"] == "pack":
-            if t["name"] in packs:
-                raise SpecBad("pack %s is listed twice" % t["name"])
-            home_dir = os.environ.get("AOS_HOME")
-            if home_dir and not os.path.isfile(os.path.join(home_dir, "lib", "packs", t["name"] + ".json")):
-                have = sorted(f[:-5] for f in os.listdir(os.path.join(home_dir, "lib", "packs")) if f.endswith(".json")) \
-                    if os.path.isdir(os.path.join(home_dir, "lib", "packs")) else []
-                raise SpecBad("there is no pack %s in $AOS_HOME/lib/packs (packs: %s)" % (t["name"], ", ".join(have) or "none"))
-            packs.append(t["name"])
-            continue
-        if t["name"] in entries:
-            raise SpecBad("tool %s is listed twice" % t["name"])
-        entries[t["name"]] = t["entry"] if t["kind"] == "tool" else None
-    if None in entries.values() and not packs:
-        raise SpecBad("ag.no(...) takes a tool out of a pack, but TOOLS has no ag.pack(...): add the pack or drop the ag.no")
-    out = {"description": WHAT["tools.json"]}
-    if packs:
-        out["$override"] = [home("/lib/packs/%s.json" % p) for p in packs]
-    if entries or not packs:
-        out["tools"] = entries
-    return out
+def _names(decl, fsm, hooks, interfaces, folder):
+    """回四樣：{種類: 這次用的檔名}、{種類: by_hand 的檔名}、FILES 不能用的檔名、llm_keys（有 FSM＝None，之後照生成的 interfaces.json）。"""
+    hand = {w: v["file"] for w, v in decl.items() if parts.kind(v) == "by_hand"}
+    if fsm is None:
+        if interfaces is not None:
+            raise SpecBad("INTERFACES needs FSM: without FSM, interfaces.json belongs to the skeleton you copied; change it by hand")
+        if folder is None:
+            raise SpecBad("FSM is not declared, so agent.py fills the content files of an existing definition: give its folder")
+        have, keys = parts.existing_names(folder)
+        files = {}
+        for what in parts.CONTENT:
+            if what == "hooks" and hooks is None:
+                continue
+            if what not in have:
+                raise DefBad("%s/interfaces.json declares no %s file, so %s has nowhere to go: add \"%s\" to its aos-agent, "
+                             "or declare FSM" % (folder, what, what.upper(), what))
+            if what in hand and hand[what] != have[what]:
+                raise SpecBad("by_hand(%r) for %s, but interfaces.json names %r for it; use that name"
+                              % (hand[what], what.upper(), have[what]))
+            files[what] = have[what]
+        return files, hand, set(have.values()) | set(files.values()), keys
+    files = {w: f for w, f in OWN_FILES.items() if w != "hooks" or hooks is not None}
+    files.update(hand)
+    made = set(SKELETON) | set(RUNTIME_FILES) | {"_metainfo.json", "README.md"} | {files[w] for w in files if w not in hand}
+    for what, name in hand.items():
+        if name in made or list(hand.values()).count(name) > 1:
+            raise SpecBad("by_hand(%r) for %s clashes with a file agent.py writes, a file the running agent writes, or another by_hand; pick another name" % (name, what.upper()))
+    return files, hand, set(files.values()), None
 
 
-def _llm_json(llm, keys):
-    if _pick(llm, "LLM must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or ag.by_hand(\"llm.json\")",
-             lambda v: isinstance(v, dict)):
-        return None
-    for k in llm:
-        if k != "description" and k not in keys:
-            raise SpecBad("LLM key %r is not one of llm_keys (%s)" % (k, ", ".join(keys)))
-    if "model" in llm and (not isinstance(llm["model"], str) or not llm["model"]):
-        raise SpecBad("LLM model must be a non-empty string: the name of a brain pack of the llm kernel, like \"luna\"")
-    return dict({"description": WHAT["llm.json"]}, **llm)
-
-
-def _interfaces(over, files, description):
-    agent = {"entry": "body.json", "tools": files["tools"], "llm": files["llm"], "llm_keys": list(LLM_KEYS),
-             "history": "history.jsonl", "system": files["system"]}
-    out = {"description": description, "aos-agent": agent}
-    if over is None:
-        return out
-    if not isinstance(over, dict):
-        raise SpecBad("INTERFACES must be a dict laid over the default interfaces.json, like {\"aos-observed\": {\"file\": \"observed.jsonl\"}}")
-    for key, value in over.items():
-        if key == "aos-agent" and value is None:
-            raise SpecBad("INTERFACES cannot remove aos-agent: without it the folder is not an agent")
-        if key == "aos-agent":
-            if not isinstance(value, dict):
-                raise SpecBad("INTERFACES aos-agent must be a dict (a value of None removes a default key)")
-            for k, v in value.items():
-                if k in ("entry", "tools", "llm", "system"):
-                    raise SpecBad("INTERFACES aos-agent %s is set by agent.py; to point it at a file you write yourself use ag.by_hand(...)" % k)
-                if v is None:
-                    agent.pop(k, None)
-                else:
-                    agent[k] = v
-        elif value is None:
-            out.pop(key, None)
-        else:
-            out[key] = value
-    return out
-
-
-def defs(description, system, tools, llm, fsm, meta=None, interfaces=None):
-    """宣告 → {檔名: 內容}（json 是 dict、文字是字串；_metainfo.json 只有 agent.py 設的鍵、README.md 是種子）。全部驗完才回，錯丟 SpecBad。"""
+def defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None):
+    """宣告 → {檔名: 內容}（json 是 dict、文字是字串；_metainfo.json 只有 agent.py 設的鍵、README.md 是種子）。全部驗完才回，錯丟 SpecBad／DefBad。
+    fsm=None＝不宣告狀態機：要給 folder（照它現有的 interfaces.json 找檔名），骨架不出。"""
     if not isinstance(description, str) or not description.strip():
         raise SpecBad("DESCRIPTION must be a non-empty string: one sentence saying what the agent does")
     description = description.strip()
-    files = dict(OWN_FILES)
-    hand = {}
-    for what, value in (("system", system), ("tools", tools), ("llm", llm), ("fsm", fsm)):
-        if isinstance(value, dict) and value.get("kind") == "by_hand":
-            files[what] = hand[what] = value["file"]
-    names = set(SKELETON) | set(RUNTIME_FILES) | {"_metainfo.json", "README.md"} | {OWN_FILES[w] for w in OWN_FILES if w not in hand}
-    for what, name in hand.items():
-        if name in names or list(hand.values()).count(name) > 1:
-            raise SpecBad("by_hand(%r) for %s clashes with a file agent.py writes, a file the running agent writes, or another by_hand; pick another name" % (name, what.upper()))
-    if _pick(system, "SYSTEM must be a string (the system text) or ag.by_hand(\"system.txt\")", lambda v: isinstance(v, str)):
+    decl = {"system": system, "tools": tools, "llm": llm, "fsm": fsm, "hooks": hooks}
+    for value in decl.values():
+        parts.raise_bad(value)
+    if fsm is not None and parts.pick(fsm, "FSM must come from ag.fsm(...), ag.stock_fsm() or ag.by_hand(\"fsm.json\") (or leave it out: no FSM)",
+                                      lambda v: parts.kind(v) == "fsm"):
+        fsm_out = None
+    else:
+        fsm_out = fsm
+    names, hand, taken, keys = _names(decl, fsm, hooks, interfaces, folder)
+    if parts.pick(system, "SYSTEM must be a string (the system text) or ag.by_hand(\"system.txt\")", lambda v: isinstance(v, str)):
         system = None
-    if _pick(fsm, "FSM must come from ag.fsm(...), ag.stock_fsm() or ag.by_hand(\"fsm.json\")",
-             lambda v: isinstance(v, dict) and v.get("kind") == "fsm"):
-        fsm = None
-    face = _interfaces(interfaces, files, description)
-    keys = face.get("aos-agent", {}).get("llm_keys", LLM_KEYS)
-    if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
-        raise SpecBad("INTERFACES aos-agent llm_keys must be a list of strings")
-    tools_out, llm_out = _tools_json(tools), _llm_json(llm, keys)
+    face = None
+    if fsm is not None:
+        face = parts.interfaces_json(interfaces, names, description)
+        keys = face.get("aos-agent", {}).get("llm_keys", LLM_KEYS)
+        if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
+            raise SpecBad("INTERFACES aos-agent llm_keys must be a list of strings")
+    tools_out = None if parts.pick(tools, "TOOLS must be a list of ag.pack(...), ag.tool(...), ag.no(...), or ag.by_hand(\"tools.json\")",
+                                   lambda v: isinstance(v, (list, tuple))) else parts.tools_json(tools, os.environ.get("AOS_HOME"))
+    llm_out = None if parts.pick(llm, "LLM must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or ag.by_hand(\"llm.json\")",
+                                 lambda v: isinstance(v, dict)) else parts.llm_json(llm, keys)
+    hooks_out = None if hooks is None or "hooks" in hand else parts.hooks_json(hooks)
+    extra = parts.extra_files(files, taken | set(hand.values())) if files is not None else {}
     if meta is not None and not isinstance(meta, dict):
         raise SpecBad("META must be a dict like {\"cost\": {\"time_ms\": 60000}, \"resource\": [\"llm\"]}")
     for k in ("summary", "lineage"):
         if meta and k in meta:
             raise SpecBad("META must not set %s (%s)" % (k, "it comes from DESCRIPTION" if k == "summary" else "agent_def new writes it"))
-    out = {"_entry": {"description": WHAT["_entry"], "argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}],
-                      "cwd": {"$env": "AOS_WS"}},
-           "body.json": {"description": WHAT["body.json"], "argv": ["aos-loop", "loop.json"]},
-           "loop.json": {"description": WHAT["loop.json"] % files["fsm"], "exec": files["fsm"], "interval_ms": 300,
-                         "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}}
+    out = {}
     if fsm is not None:
-        out["fsm.json"] = {"description": WHAT["fsm.json"], "_entry": ["aos-fsm", {"$env": "AOS_CF"}],
-                           "start": fsm["start"], "states": fsm["states"]}
-    out["interfaces.json"] = face
-    if tools_out is not None:
-        out["tools.json"] = tools_out
-    if llm_out is not None:
-        out["llm.json"] = llm_out
-    if system is not None:
-        out["system.txt"] = system
+        loop = {"description": WHAT["loop.json"] % names["fsm"], "exec": names["fsm"], "interval_ms": 300,
+                "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}
+        if hooks is not None:
+            loop["description"] += WHAT["loop_hooks"]
+            loop["on_start"] = {"argv": [HOOK_FIRE, "after_start", {"$env": "AOS_CD"}]}
+            loop["on_stop"] = {"argv": [HOOK_FIRE, "after_stop", {"$env": "AOS_CD"}]}
+        out["_entry"] = {"description": WHAT["_entry"], "argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}],
+                         "cwd": {"$env": "AOS_WS"}}
+        out["body.json"] = {"description": WHAT["body.json"], "argv": ["aos-loop", "loop.json"]}
+        out["loop.json"] = loop
+        if fsm_out is not None:
+            out["fsm.json"] = {"description": WHAT["fsm.json"], "_entry": ["aos-fsm", {"$env": "AOS_CF"}],
+                               "start": fsm_out["start"], "states": fsm_out["states"]}
+        out["interfaces.json"] = face
+    for what, value in (("tools", tools_out), ("llm", llm_out), ("system", system), ("hooks", hooks_out)):
+        if value is not None:
+            out[names[what]] = value
+    out.update(extra)
     out["_metainfo.json"] = dict({"summary": description}, **(meta or {}))
     out["README.md"] = description + "\n"
     try:                                    # 跟宣告的物件脫鉤（之後改宣告不影響回傳值）；也確認都能寫成合法 JSON（NaN 不算）
@@ -314,7 +289,7 @@ def _text(value):
 
 def write_defs(folder, files):
     """files（defs() 的回傳）寫進 folder；回給人看的字串串列。先讀好 _metainfo.json、全部寫成暫存檔，最後連著改名；
-    寫暫存檔時失敗＝刪掉暫存檔、夾裡不變；改名時才失敗（極少）＝前面幾份已換上、每份各自完整，重跑一次就好（設計稿 07）。OSError 照丟（main 報 WriteFailed）；_metainfo.json 不是 JSON 物件＝ValueError（main 報 DefBad）。"""
+    寫暫存檔時失敗＝刪掉暫存檔、夾裡不變；改名時才失敗（極少）＝前面幾份已換上、每份各自完整，重跑一次就好（設計稿 07）。OSError 照丟（main 報 WriteFailed）；_metainfo.json 不是 JSON 物件＝DefBad。"""
     if not os.path.isdir(folder):
         raise OSError("%s is not a folder" % folder)
     plan = []
@@ -328,9 +303,9 @@ def write_defs(folder, files):
                 with open(path, encoding="utf-8") as f:
                     old = json.load(f)
             except (OSError, ValueError, UnicodeError) as e:
-                raise ValueError("cannot read %s, so its other keys cannot be kept: %s" % (path, e))
+                raise DefBad("cannot read %s, so its other keys cannot be kept: %s" % (path, e))
             if not isinstance(old, dict):
-                raise ValueError("%s is not a JSON object, so its other keys cannot be kept" % path)
+                raise DefBad("%s is not a JSON object, so its other keys cannot be kept" % path)
             old.update(value)
             value = old
         plan.append((name, path, _text(value)))
@@ -355,8 +330,8 @@ def write_defs(folder, files):
     return done
 
 
-def main(description, system, tools, llm, fsm, meta=None, interfaces=None):
-    """agent.py 的最後一行：ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)。"""
+def main(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None):
+    """agent.py 的最後一行：ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)；不宣告狀態機＝ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM)。"""
     script = os.path.realpath(sys._getframe(1).f_code.co_filename)
     base = os.path.basename(script)
     prog = os.path.basename(os.path.dirname(script)) if base == "agent.py" else os.path.splitext(base)[0]
@@ -371,17 +346,19 @@ def main(description, system, tools, llm, fsm, meta=None, interfaces=None):
         flags.die(prog, "FlagUnknown", "%s (%s)" % (argv[0], usage))
     if len(argv) > (2 if argv[0] == "--write-defs" else 1):
         flags.die(prog, "ArgumentsBad", "too many arguments: %s (%s)" % (" ".join(argv), usage))
-    try:
-        files = defs(description, system, tools, llm, fsm, meta, interfaces)
-    except SpecBad as e:
-        flags.die(prog, "SpecBad", "%s (fix the declaration in %s)" % (e, base))
-    if argv[0] == "--defs":
-        print(json.dumps(files, ensure_ascii=False, indent=2))
-        sys.exit(0)
     folder = argv[1] if len(argv) > 1 else os.path.dirname(script)
     try:
-        lines = write_defs(folder, files)
-    except ValueError as e:
+        out = defs(description, system, tools, llm, fsm, meta, interfaces, hooks, files, folder)
+    except SpecBad as e:
+        flags.die(prog, "SpecBad", "%s (fix the declaration in %s)" % (e, base))
+    except DefBad as e:
+        flags.die(prog, "DefBad", str(e))
+    if argv[0] == "--defs":
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        sys.exit(0)
+    try:
+        lines = write_defs(folder, out)
+    except DefBad as e:
         flags.die(prog, "DefBad", str(e))
     except OSError as e:
         flags.die(prog, "WriteFailed", "cannot write the definition into %s: %s" % (folder, e))
