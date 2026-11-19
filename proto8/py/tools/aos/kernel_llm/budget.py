@@ -3,6 +3,7 @@ import json
 import os
 import time
 
+import ledger
 import runner
 from aos import tool_io
 from aos.tool_io import Error
@@ -178,6 +179,7 @@ def _roll(used, window):
     since = window_since(window, time.time())
     if used["window"] != window or used["since"] != since:
         used.update(window=window, since=since, calls=0, tokens=0, packs={}, senders={})
+        used.pop("recounted", None)                  # 重算的那一窗過了：新窗的數不是重算來的
 
 
 def _cells_ok(cells):
@@ -209,11 +211,57 @@ def read_used(stack, window):
                         ("counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"))
         ok = ok and all(key not in doc or _cells_ok(doc[key]) for key in ("packs", "senders"))
         if not ok:
-            raise Error("UsedBad", "%s must be %s (delete it to count from 0)" % (path, USED_SHAPE))
+            return _recount(stack, window, path, "not " + USED_SHAPE)
         used.update(window=doc["window"], since=doc.get("since"), calls=doc["counter_calls"],
                     tokens=doc["counter_tokens"], all_calls=doc["counter_all_calls"],
                     all_tokens=doc["counter_all_tokens"], packs=doc.get("packs", {}), senders=doc.get("senders", {}))
+        if "recounted" in doc:
+            used["recounted"] = doc["recounted"]
     _roll(used, window)
+    return used
+
+
+def _recount(stack, window, path, why):
+    """used.json 在但壞了（11-19 基底體檢 P5，使用者選「額度帳本壞掉全樹卡住」：從流水帳重算並報出來）：
+    從 ledger.jsonl 重算這一窗與開機以來的帳（壞行跳過、同 id 算一次，照 ledger 的讀法）；壞檔改名留底
+    used.json.bad-<UTC 時刻>，新帳多一格 recounted 說明，stderr 印一行 warning。ledger 不在或讀不了＝算不出來，
+    照舊 UsedBad（不從 0 算：那等於額度歸零、繼續花錢）。"""
+    got = ledger.read_rows(stack)
+    if got is None:
+        raise Error("UsedBad", "%s is bad (%s) and %s is missing or unreadable, so the usage cannot be recounted; "
+                               "fix used.json, or delete it to count from 0"
+                    % (path, why, os.path.join(stack, "ledger.jsonl")))
+    rows, skipped = got
+    now = time.time()
+    start = None if window == "all" else _start(window, now)
+    used = {"window": window, "since": window_since(window, now), "calls": 0, "tokens": 0, "all_calls": 0,
+            "all_tokens": 0, "packs": {}, "senders": {}}
+    for row in rows:
+        amount = tokens_of({"usage": row.get("usage")}) or 0
+        used["all_calls"] += 1
+        used["all_tokens"] += amount
+        finished = row.get("finished_at")
+        if start is not None and not (isinstance(finished, (int, float)) and not isinstance(finished, bool)
+                                      and finished >= start):
+            continue
+        used["calls"] += 1
+        used["tokens"] += amount
+        if isinstance(row.get("endpoint"), str) and row["endpoint"]:
+            _count_in(used["packs"], row["endpoint"], amount)
+        if isinstance(row.get("sender"), str) and row["sender"]:
+            _count_in(used["senders"], sender_key(row["sender"], stack), amount)
+    bad = "%s.bad-%s" % (path, time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(now)))
+    try:
+        os.replace(path, bad)
+    except OSError as error:
+        raise Error("UsedBad", "%s is bad (%s) and cannot be kept aside as %s: %s"
+                    % (path, why, bad, error.strerror)) from None
+    used["recounted"] = {"at": _iso(now), "from": "ledger.jsonl", "bad_file": os.path.basename(bad),
+                         "reason": why, "ledger_lines_skipped": skipped}
+    _write(stack, used)
+    tool_io.warn("%s was bad (%s); kept it as %s and recounted from ledger.jsonl: %d calls, %d tokens in this window "
+                 "(%d bad ledger lines skipped; a call whose ledger line was lost is not counted)"
+                 % (path, why, os.path.basename(bad), used["calls"], used["tokens"], skipped))
     return used
 
 
@@ -237,11 +285,18 @@ def add_used(stack, used, tokens, endpoint="", sender=""):
         _count_in(used["packs"], endpoint, amount)
     if sender:
         _count_in(used["senders"], sender_key(sender, stack), amount)
+    _write(stack, used)
+
+
+def _write(stack, used):
+    """寫回 used.json；重算過的這一窗帶著 recounted 那格。"""
+    doc = {"window": used["window"], "since": used["since"], "counter_calls": used["calls"],
+           "counter_tokens": used["tokens"], "counter_all_calls": used["all_calls"],
+           "counter_all_tokens": used["all_tokens"], "packs": used["packs"], "senders": used["senders"]}
+    if "recounted" in used:
+        doc["recounted"] = used["recounted"]
     try:
-        runner.write_json(os.path.join(stack, "used.json"), {
-            "window": used["window"], "since": used["since"], "counter_calls": used["calls"],
-            "counter_tokens": used["tokens"], "counter_all_calls": used["all_calls"],
-            "counter_all_tokens": used["all_tokens"], "packs": used["packs"], "senders": used["senders"]})
+        runner.write_json(os.path.join(stack, "used.json"), doc)
     except runner.Failed as error:
         raise Error(error.code, error.msg) from None
 

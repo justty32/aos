@@ -1,4 +1,4 @@
-# 問腦的逐封帳 ledger.jsonl：只留成本與時間，不存請求內容。
+# 問腦的逐封帳 ledger.jsonl：只留成本與時間，不存請求內容；used.json 壞了時從它重算。
 import json
 import os
 import time
@@ -26,3 +26,26 @@ def append(stack, name, proc, reply):
             stream.write(line)
     except (OSError, ValueError, TypeError) as error:
         tool_io.warn("cannot append ledger: %s (%s)" % (path, error))
+
+
+def read_rows(stack):
+    """讀整份 ledger.jsonl 給重算用量（used.json 壞了時；11-19 基底體檢 P5）：照本檔的讀法，跳過壞行、同 id 只留最後一行。
+    回 (各行, 跳過的壞行數)；檔不在或讀不了回 None（算不出來，不能當成 0）。"""
+    path = os.path.join(stack, "ledger.jsonl")
+    try:
+        with open(path, "rb") as stream:
+            lines = stream.read().splitlines()
+    except OSError:
+        return None
+    rows, skipped = {}, 0
+    for raw in lines:
+        try:
+            row = json.loads(raw)
+        except (ValueError, UnicodeError):
+            row = None
+        if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+            skipped += 1 if raw.strip() else 0
+            continue
+        rows.pop(row["id"], None)                   # 同 id 重收：留最後一行
+        rows[row["id"]] = row
+    return list(rows.values()), skipped

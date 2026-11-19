@@ -1,4 +1,4 @@
-# Check send's warning, when no llm daemon runs at AOS_LLM_KERNEL, names the letter and where it was written (two-machines B10).
+# Check send's warning, when no llm daemon runs at AOS_LLM_KERNEL (or its kernel round fails, 11-19), names the letter and where it was written (two-machines B10).
 import json
 import os
 from pathlib import Path
@@ -40,6 +40,16 @@ class SendHint(unittest.TestCase):
         (self.kernel / 'state.json').write_text(json.dumps({'phase': 'waiting', 'pid': os.getpid()}))
         p = self.send()
         self.assertEqual((p.returncode, p.stderr), (0, ''))
+
+    def test_failing_kernel_round_warns(self):
+        # 11-19 audit P5: the daemon runs but its body (the llm kernel) failed its last round, so letters just wait
+        (self.kernel / 'state.json').write_text(json.dumps({'phase': 'waiting', 'pid': os.getpid(), 'body_code': 1}))
+        p = self.send()
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("aos-llm: warning: %s: the llm kernel's last round failed (state.json body_code 1;" % self.kernel,
+                      p.stderr)
+        (self.kernel / 'state.json').write_text(json.dumps({'phase': 'waiting', 'pid': os.getpid(), 'body_code': 0}))
+        self.assertEqual(self.send().stderr, '')
 
 
 if __name__ == '__main__':

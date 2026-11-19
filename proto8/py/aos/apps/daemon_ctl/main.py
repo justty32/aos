@@ -266,7 +266,9 @@ usage: aos-daemon-ctl [--daemon D] ls [-j]
 One line per proc: NAME TAB PHASE TAB PID TAB CODE TAB WS TAB REASON (none = -); paths are
 absolute. The last line starts with "# " and says what the supervisor thinks of this daemon
 ("# root daemon (no supervisor)" for a root), after a line saying whether this daemon itself is
-running ("# daemon: running (pid N)" or "# daemon: not running (...)"; --json: "running").
+running ("# daemon: running (pid N)" or "# daemon: not running (...)"; --json: "running"). A daemon
+with a body (llm kernel, kernel station) whose last round failed adds "; its body failed last round
+(code N; ...)" (--json: "body_code", null without a body or before its first round).
 Only reads files and /proc; it does not ping.
 
 flags:
@@ -583,14 +585,21 @@ def cmd_ls(opts, args):
     st = dc.state(d)
     procs = st["procs"]
     up, phase, detail = dc.supervisor(d, st)
+    body_code = None
     try:                                   # 11-10 cli-sweep 甲3：說出這台 daemon 自己活著沒（只看 state 窗＋/proc，不 ping）
-        pid, _ = dc.check_alive(d, dc.read_state(d))
+        own = dc.read_state(d)
+        body_code = own.get("body_code")
+        pid, _ = dc.check_alive(d, own)
         alive, alive_line = True, "# daemon: running (pid %d)" % pid
+        # 11-19 基底體檢 P5：身體（llm kernel、框架站）每輪出錯時 daemon 照跑、表看起來正常；state 窗的 body_code 不是 0 就說出來
+        if isinstance(body_code, int) and not isinstance(body_code, bool) and body_code != 0:
+            alive_line += "; its body failed last round (code %d; the reason is in the daemon's stderr)" % body_code
     except Fail as e:
         alive, alive_line = False, "# daemon: not running (%s); the table above is what it left" % str(e).replace("no aos-daemon running at %s" % d, "").strip(" ;()") or "not running"
     if o.get("json"):
         sup = None if up is None else {"phase": phase, "reason": detail if phase is not None else None, "note": detail if phase is None else None}
-        print(json.dumps({"procs": procs, "daemon": up, "supervisor": sup, "running": alive}, ensure_ascii=False))
+        print(json.dumps({"procs": procs, "daemon": up, "supervisor": sup, "running": alive, "body_code": body_code},
+                         ensure_ascii=False))
         return
     for n, r in procs.items():
         reason = r.get("reason")

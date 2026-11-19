@@ -328,6 +328,7 @@
      "test_auto_restart.py": "Verify --auto-restart: add_letter puts \"auto_restart\": true on the row for loop, exec and envs types, and both add commands take the switch.",
      "test_envs_portable.py": "Verify add_letter's --envs single: with the daemon stack given, the target is {\"$env\": \"AOS_DAEMON\", \"$path\": relative}, so a moved tree still starts…",
      "test_limits_keys.py": "ctl add --limits 的鍵：daemon 認得的 cgroup 鍵 mem_total_mb、procs_total（B5）Python 這邊也要認；nofile 照舊報錯（ok-limits 11-14）。",
+     "test_ls_body.py": "身體（llm kernel、框架站）最後一輪出錯時，ls 的「# daemon:」那行說出來、-j 帶 body_code（11-19 基底體檢 P5）。",
      "test_path_json.py": "add 的 --ws-json／--stack-json／--path-json：指示詞原樣進信（表上記原形、每次起再解；11-10 B01）。",
      "test_registered_envs.py": "Verify registered_envs / add_letter for parent and notify_box (ok-devt-1114 05 修訂 1): only an add that carries envs records them; without envs the le…",
      "test_shutdown_timeout.py": "shutdown 等不到 daemon 退出＝StillRunning 錯誤（11-10 two-machines：退 0 會讓人以為可以 commit／push）。"
@@ -704,7 +705,7 @@
     "kernel/": "通用 kernel 的站：讀參數與環境，把掛 proc 那一包交給骨架做一輪。",
     "kernel_llm": {
      "budget.py": "問腦的額度與用量帳：總額、每包、每寄件人的上限與窗，used.json 的讀寫。",
-     "ledger.py": "問腦的逐封帳 ledger.jsonl：只留成本與時間，不存請求內容。",
+     "ledger.py": "問腦的逐封帳 ledger.jsonl：只留成本與時間，不存請求內容；used.json 壞了時從它重算。",
      "llm_rules.py": "問腦那一包的五個口：收成品、收拾與看信、排序、放不放、掛去跑；回信、撤回與記帳也在這裡。",
      "order.py": "問腦的排隊：priority 與期限、aging、排序與後端黏著，窗 queue.json 的讀寫。",
      "packs.py": "問腦的設定與能力包：讀 kernel.json（指示詞用到才解）、查代號、釘死的參數、窗 endpoints.json。",
@@ -722,7 +723,8 @@
       "test_retry_flag.py": "Verify kernel retry flags, transparent error fields, and non-retryable refusals.",
       "test_session_key.py": "Check the endpoint pack switch session_key: off = the request object untouched; on = one fixed id per sender.",
       "test_stopped_slot.py": "Check a brain call someone stopped on the daemon frees its slot after STOPPED_GIVE_UP_S (設計-56).",
-      "test_two_machines.py": "Check two-machines kernel fixes: in-flight brain calls never pin an absolute endpoint path; budget.senders keys that are not folders warn, and sender…"
+      "test_two_machines.py": "Check two-machines kernel fixes: in-flight brain calls never pin an absolute endpoint path; budget.senders keys that are not folders warn, and sender…",
+      "test_used_recount.py": "Check a bad used.json is kept aside and recounted from ledger.jsonl (not zeroed), and UsedBad stays when there is no ledger (11-19 audit P5)."
      }
     },
     "kernel_llm/": "問腦總機：讀參數與環境，把問腦那一包交給通用 kernel 的骨架做一輪。",
