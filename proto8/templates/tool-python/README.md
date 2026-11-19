@@ -8,10 +8,10 @@ This folder is one working tool. It adds two numbers. To make your own tool, cha
 |---|---|---|
 | `tool.py` | the tool: description, parameters, `run` | **yes** |
 | `_entry.json` | tells aos-exec to run `python3 tool.py` | no |
-| `_tooldef.json` | what the model sees (made from `tool.py`) | no, it is generated |
-| `_metainfo.json` | facts about the tool (made from `tool.py`) | no, it is generated |
+| `_tooldef.json` | what the model sees (compiled from `tool.py`) | no, it is compiled |
+| `_metainfo.json` | facts about the tool (compiled from `tool.py`) | no, it is compiled |
 
-After you change `tool.py`, run `tools_def` with `{"op": "check", "path": "<this folder>"}`. It remakes `_tooldef.json` and `_metainfo.json` from `tool.py` and tells you what is wrong. Then add the tool: `self_tools` with `{"op": "add", "path": "<this folder>"}`. It works at once: call it by its name in your next reply. Its name is the folder name.
+After you change `tool.py`, run `tools_def` with `{"op": "check", "path": "<this folder>"}`. It recompiles `_tooldef.json` and `_metainfo.json` from `tool.py` and tells you what is wrong. Then add the tool: `self_tools` with `{"op": "add", "path": "<this folder>"}`. It works at once: call it by its name in your next reply. Its name is the folder name.
 
 ## The four things you write in tool.py
 
@@ -58,5 +58,5 @@ Check it, and try it once: `tools_def` with `{"op": "check", "path": "my_tools/m
 
 - Wrong type, missing required key, unknown key, value not in `enum`: the tool answers `mul: error: ArgumentsBad ...` without calling `run`.
 - If `run` crashes, the answer is `mul: error: RunFailed run() raised ZeroDivisionError: division by zero (tool.py line 33)`.
-- `python3 tool.py --tooldef` / `--metainfo` print the generated JSON; `python3 tool.py --write-defs` writes the two files (this is what `check` runs).
+- `python3 tool.py --compile` compiles `tool.py` into the two files (this is what `check` runs); `python3 tool.py --dry-run` prints both and writes nothing; `--tooldef` / `--metainfo` print one of them. Compiling again overwrites both, so a change made directly in them is gone: change `tool.py` instead.
 - The lines above `# ---- your tool` find the `aos` package (it holds `tool_spec`): an `aos/` folder next to `tool.py`, then `$AOS_HOME/lib` (it no longer looks for a `lib/` above this folder). So the folder works anywhere when `AOS_HOME` is set; without it you get `HomeMissing`.

@@ -170,7 +170,7 @@ class ToolsDef(unittest.TestCase):
         self.assertIn("stage 1 of 3 (entry, _metainfo, _tooldef); missing: _metainfo, _tooldef", r.stdout)
         r = self.run_tool({"op": "check", "path": str(PROTO / "py" / "tools" / "base" / "math"), "sample": {"expr": "6*7"}})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertNotIn("made", r.stdout)                                               # 手寫的工具不重產
+        self.assertNotIn("made", r.stdout)                                               # 手寫的工具不重新編譯
         self.assertIn("exit 0: 42", r.stdout)
 
     def test_tooldef_inside_metainfo_counts(self):

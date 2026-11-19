@@ -1,4 +1,4 @@
-"""Test py/aos/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, write_defs into a folder and a JSON pointer, and main() at run time."""
+"""Test py/aos/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, --compile into a folder and a JSON pointer, --dry-run, and main() at run time."""
 import json
 import os
 from pathlib import Path
@@ -119,14 +119,25 @@ class Runtime(unittest.TestCase):
         self.assertIn("--times N", self.call("--help").stdout)
         self.assertEqual(json.loads(self.call("--metainfo").stdout)["summary"], "Repeat a word")
 
-    def test_write_defs_folder_and_pointer(self):
-        r = self.call("--write-defs")
+    def test_compile_folder_and_pointer(self):
+        dry = self.call("--dry-run")                                                  # 只印不寫：兩份放一個物件
+        self.assertEqual(dry.returncode, 0, dry.stderr)
+        self.assertEqual(sorted(p.name for p in self.dir.iterdir()), ["tool.py"])
+        dry = json.loads(dry.stdout)
+        self.assertEqual(sorted(dry), ["_metainfo.json", "_tooldef.json"])
+        r = self.call("--compile")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads((self.dir / "_tooldef.json").read_text()), json.loads(self.call("--tooldef").stdout))
-        self.assertTrue((self.dir / "_metainfo.json").is_file())
+        self.assertEqual(json.loads((self.dir / "_tooldef.json").read_text()), dry["_tooldef.json"])
+        self.assertEqual(json.loads((self.dir / "_metainfo.json").read_text()), dry["_metainfo.json"])
+        for argv in (["--dry-run", "x"], ["--compile", "a", "b"]):
+            with self.subTest(argv=argv):
+                r = self.call(*argv)
+                self.assertEqual(r.returncode, 1)
+                self.assertIn("rep: error: ArgumentsBad too many arguments", r.stdout)
         box = Path(self.temp.name) / "box.json"
         box.write_text('{"tools": {"rep": {"_entry": ["python3", "rep/tool.py"]}}}')
-        r = self.call("--write-defs", "%s#/tools/rep" % box)
+        r = self.call("--compile", "%s#/tools/rep" % box)
         self.assertEqual(r.returncode, 0, r.stderr)
         got = json.loads(box.read_text())["tools"]["rep"]
         self.assertEqual(got["_entry"], ["python3", "rep/tool.py"])

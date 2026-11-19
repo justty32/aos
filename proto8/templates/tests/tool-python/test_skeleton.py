@@ -1,4 +1,4 @@
-"""Test the tool-python skeleton: its generated _tooldef.json/_metainfo.json match tool.py, and a copy outside the repo runs with only AOS_HOME or with a copy of the aos package next to it."""
+"""Test the tool-python skeleton: its compiled _tooldef.json/_metainfo.json match tool.py, and a copy outside the repo runs with only AOS_HOME or with a copy of the aos package next to it."""
 import json
 import os
 from pathlib import Path
@@ -26,10 +26,10 @@ class Skeleton(unittest.TestCase):
         return subprocess.run(["aos-exec", str(folder)], input=stdin, text=True, capture_output=True,
                               env=dict(self.env, **env), timeout=30)
 
-    def test_generated_files_are_fresh(self):
+    def test_compiled_files_are_fresh(self):
         for flag, name in (("--tooldef", "_tooldef.json"), ("--metainfo", "_metainfo.json")):
             r = subprocess.run([sys.executable, str(SKEL / "tool.py"), flag], capture_output=True, text=True, timeout=30)
-            self.assertEqual(json.loads(r.stdout), json.loads((SKEL / name).read_text()), "run tool.py --write-defs in the skeleton")
+            self.assertEqual(json.loads(r.stdout), json.loads((SKEL / name).read_text()), "run tool.py --compile in the skeleton")
 
     def test_no_tests_or_cache_in_skeleton(self):
         self.assertEqual(sorted(p.name for p in SKEL.iterdir()), ["README.md", "_entry.json", "_metainfo.json", "_tooldef.json", "tool.py"])

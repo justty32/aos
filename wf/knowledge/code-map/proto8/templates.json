@@ -256,7 +256,7 @@
    "test_screen_linger.py": "驗 eca 範本的延後關畫面 hook 兩格存在、驗格成功且啟動撤單排第一。",
    "test_start.py": "the two starter templates (start-api, start-eca) stay verbatim copies of the templates they were made from, except the few files their README names, …",
    "tool-python": {
-    "test_skeleton.py": "Test the tool-python skeleton: its generated _tooldef.json/_metainfo.json match tool.py, and a copy outside the repo runs with only AOS_HOME or with …"
+    "test_skeleton.py": "Test the tool-python skeleton: its compiled _tooldef.json/_metainfo.json match tool.py, and a copy outside the repo runs with only AOS_HOME or with a…"
    }
   },
   "tool-python": {

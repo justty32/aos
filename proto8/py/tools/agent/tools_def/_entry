@@ -4,11 +4,11 @@
 #   粗版、照 agent_def：只複製與檢查；改內容用一般的檔案工具，掛上去用 self_tools add。
 # 介面（py/docs/01 的契約）：stdin 收 {"op": "new"|"check", …}；別的鍵＝ArgumentsBad：
 #   new {path, description?}  骨架整夾複製到 path（先寫同層暫存夾 .<名>.new-<pid> 再改名，略過 __pycache__）；path 哪裡都行、
-#       能不能寫交給 Linux 權限；已經在＝PathExists。description＝先填進 tool.py 的 DESCRIPTION。最後叫 tool.py --write-defs
+#       能不能寫交給 Linux 權限；已經在＝PathExists。description＝先填進 tool.py 的 DESCRIPTION。最後叫 tool.py --compile
 #       讓 _tooldef.json／_metainfo.json 跟 tool.py 一致。成功印一行 made tool folder … 與下一步。
 #   check {path, sample?}  path＝資料夾、JSON 檔或 檔.json#/指標（同 aos-exec 的入口位置，N-61、N-62）。一行一項：
 #       entry（資料夾的 _entry／_entry.json，或 JSON 物件的 _entry 鍵；argv 裡的 .py 要在、編得過）→
-#       用 tool_spec 的腳本先跑 `腳本 --write-defs 位置` 重產兩份定義 → metainfo（tool_spec.metainfo_problems）→
+#       用 tool_spec 的腳本先跑 `腳本 --compile 位置` 重新編譯兩份定義 → metainfo（tool_spec.metainfo_problems）→
 #       tooldef（tool_spec.tooldef_problems；資料夾與 JSON 檔另經 aos-tools 暫存登記檔 add＋get 驗一次）→
 #       給了 sample 就 aos-exec 試叫一次 → 最後一行 stage（只是能跑的函數／有 metainfo／有 tooldef＝可當工具）。
 #       有 bad＝最後再一行錯誤行 ToolBad、退 1（報告留在 stdout）。
@@ -27,8 +27,8 @@ HELP = """\
 usage: %s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Make tools: op new copies the Python tool skeleton (templates/tool-python) to a new folder
 (or into a JSON object: FILE.json#/POINTER, the script goes next to the JSON file);
-op check checks one tool location (folder, JSON file or FILE.json#/POINTER), remakes the
-generated _tooldef/_metainfo from a tool_spec script, can try one call, and says the stage.
+op check checks one tool location (folder, JSON file or FILE.json#/POINTER), recompiles
+_tooldef/_metainfo from a tool_spec script, can try one call, and says the stage.
 Step by step instead: add_entry, then add_metainfo, then add_tooldef (same locations).
 Result on stdout, one line per item. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.
 """ % (NAME, NAME)
@@ -173,7 +173,7 @@ def part_to_change(script):
 
 
 def new_object(loc, desc):
-    """new 進 JSON 物件：物件寫 _entry 鍵（["python3", "<名>.py"]），腳本放 JSON 檔旁邊，再 --write-defs 進物件。"""
+    """new 進 JSON 物件：物件寫 _entry 鍵（["python3", "<名>.py"]），腳本放 JSON 檔旁邊，再 --compile 進物件。"""
     script = os.path.join(loc["base"], loc["name"] + ".py")
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", loc["name"]):
         die("ArgumentsBad", "tool name %r (the last part of the pointer, or the file name) may use only A-Z a-z 0-9 _ -" % loc["name"])
@@ -186,9 +186,9 @@ def new_object(loc, desc):
     ensure_json_file(loc)
     copy_script(script, desc)
     aos_json(["set", "--parents", key_at(loc, "_entry"), json.dumps(["python3", loc["name"] + ".py"])], key_at(loc, "_entry"))
-    code, out, err = run([sys.executable, script, "--write-defs", loc["full"]], loc["base"])
+    code, out, err = run([sys.executable, script, "--compile", loc["full"]], loc["base"])
     if code != 0:
-        die("WriteFailed", "made, but %s --write-defs failed: %s" % (os.path.basename(script), last_line(err, out)))
+        die("WriteFailed", "made, but %s --compile failed: %s" % (os.path.basename(script), last_line(err, out)))
     shown = os.path.relpath(script, tool_io.workspace()) if not os.path.isabs(args["path"]) else script
     print("made tool %s: the object has _entry, _tooldef, _metainfo keys, and %s next to the JSON file runs it\n"
           "(a copy of the tool-python skeleton: a working tool that adds two numbers).\n"
@@ -232,9 +232,9 @@ def op_new():
     except BaseException:
         shutil.rmtree(tmp, ignore_errors=True)
         raise
-    code, out, err = run([sys.executable, "tool.py", "--write-defs"], dest)
+    code, out, err = run([sys.executable, "tool.py", "--compile"], dest)
     if code != 0:
-        die("WriteFailed", "copied, but tool.py --write-defs failed: %s" % last_line(err, out))
+        die("WriteFailed", "copied, but tool.py --compile failed: %s" % last_line(err, out))
     shown = args["path"]
     with open(os.path.join(dest, "tool.py"), encoding="utf-8") as f:
         part = f.read().split(MARK, 1)[-1].strip("\n")
@@ -342,7 +342,7 @@ def check_entry(obj, base):
     return True, script
 
 
-def regenerate(script, location, base):
+def recompile(script, location, base):
     try:
         with open(script, encoding="utf-8") as fh:
             uses = "tool_spec" in fh.read()
@@ -355,9 +355,9 @@ def regenerate(script, location, base):
             return False
         line("note", "defs: %s does not use tool_spec; _tooldef and _metainfo are kept by hand" % os.path.basename(script))
         return True
-    code, out, err = run([sys.executable, script, "--write-defs", location], base)
+    code, out, err = run([sys.executable, script, "--compile", location], base)
     if code != 0:
-        line("bad", "made: %s --write-defs failed: %s" % (os.path.basename(script), last_line(err, out) if code is not None else err))
+        line("bad", "made: %s --compile failed: %s" % (os.path.basename(script), last_line(err, out) if code is not None else err))
         return False
     line("made", "_tooldef and _metainfo from %s" % os.path.basename(script))
     return True
@@ -441,9 +441,9 @@ def op_check():
     runnable, script = check_entry(obj, base)
     made = True
     if runnable and script:
-        made = regenerate(script, full, base)
+        made = recompile(script, full, base)
         if made and obj is not None:
-            obj, base = read_location(path, ptr)          # 重產進物件之後重讀
+            obj, base = read_location(path, ptr)          # 重新編譯進物件之後重讀
     has_mi, mi = load_part(obj, base, "_metainfo")
     if has_mi and mi is not None:
         probs = tool_spec.metainfo_problems(mi)
@@ -619,7 +619,7 @@ def write_part(key):
     if probs:
         die("ArgumentsBad", "; ".join(probs))
     try:
-        where = tool_spec.write_defs(loc["full"], value if key == "_tooldef" else None, value if key == "_metainfo" else None)
+        where = tool_spec.write(loc["full"], value if key == "_tooldef" else None, value if key == "_metainfo" else None)
     except (OSError, tool_spec.SpecBad) as e:
         die("WriteFailed", str(e))
     return loc, where[0], how

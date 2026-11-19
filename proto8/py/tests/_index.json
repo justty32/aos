@@ -160,7 +160,7 @@
   "description": "Test tool_io.place and tool_io.os_reason: error lines name program-made paths relative to $AOS_STACK / $AOS_DAEMON / $AOS_WS (counted from the caller…"
  },
  "test_tool_spec.py": {
-  "description": "Test py/aos/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, write_defs into a folder and a JSON pointer, and main() at run time."
+  "description": "Test py/aos/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, --compile into a folder and a JSON pointer, --dry-run, and main() at run time."
  },
  "test_user_zone_guard.py": {
   "description": "user_zone_guard（before_tool 的 hook handler）：參數路徑落在專區、不在 mailbox/、工具不是唯讀＝退 10 擋；mailbox/ 裡、專區外、唯讀工具、相對路徑接 $AOS_WS、~ 展開、JSON 指標、巢狀參數、捷徑都照算；壞事件退 1。"

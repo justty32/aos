@@ -1,16 +1,19 @@
-"""tool_spec - 給 AI 寫工具的輔助：在一支 Python 裡宣告說明、參數、特性，就產出 _tooldef／_metainfo（資料夾的兩個檔或 JSON 物件的兩個鍵），執行時照宣告驗參數再叫 run(args)。
+"""tool_spec - 給 AI 寫工具的輔助：在一支 Python 裡宣告說明、參數、特性，就編譯出 _tooldef／_metainfo（資料夾的兩個檔或 JSON 物件的兩個鍵），執行時照宣告驗參數再叫 run(args)。
 
 使用者 11-10 深夜（thinking 2026-11/10/tools-def）：「給python一種，順便弄個好用的lib，方便AI弄json schema, metainfo啥的。」
 純標準庫；接在 tool_io 上（錯誤行、--help、旗標、不認得的鍵＝ArgumentsBad 都走 tool_io，這裡不另拼）。
 找法同 tool_io（py/docs/01 規則 9）＋ $AOS_HOME/lib：骨架 templates/tool-python/tool.py 的開頭幾行照這個順序找。
 
-三條路（各自可單獨用，產出都落在「位置」裡）：
+三條路（各自可單獨用，編譯產物都落在「位置」裡）：
   tooldef(description, params, errors)  → dict（OpenAI function 去掉 name，外加 tool_io 讀的 errors）
   metainfo(description, meta)            → dict（N-68 的通用 key，沒給的補保守預設）
-  write_defs(location, td, mi)           位置＝資料夾（寫 _tooldef.json／_metainfo.json，暫存檔＋改名）
+  write(location, td, mi)                位置＝資料夾（寫 _tooldef.json／_metainfo.json，暫存檔＋改名）
                                          或 檔.json／檔.json#/指標（經 aos-json set 寫 _tooldef／_metainfo 鍵）
-  main(run, description, params, meta)   工具的入口：--tooldef／--metainfo 印 JSON、--write-defs [位置] 寫檔，
+  main(run, description, params, meta)   工具的入口：--compile [位置] 編譯＋寫、--dry-run 只印不寫（兩份放一個物件）、
+                                         --tooldef／--metainfo 只印那一份（aos-tools 問可執行檔 --tooldef 的協定，留著），
                                          其餘照 tool_io 跑：驗參數（型別、必填、enum、不認得的鍵）、補預設、叫 run、印結果。
+旗標與名字照 agent_spec（使用者 11-19 選項框「開一刀對齊 (Recommended)」，線 aos-defs-rename3-1119，thinking/2026-11/19/aos-pylib-1119/07 末節）：
+指令 --compile／--dry-run、Python write()；算的兩支本來就叫 tooldef()／metainfo()，不另加 compile()。
 run 回字串＝原樣印；dict／list／數字／布林＝印一行 JSON；None＝不印。fail(代號, 原因)＝錯誤行退 1；
 run 裡其他例外＝RunFailed（帶例外與行號，給腦改程式用）。"""
 import json, os, re, subprocess, sys, traceback
@@ -203,7 +206,7 @@ def _write_file(path, value):
             os.unlink(tmp)
 
 
-def write_defs(location, td=None, mi=None):
+def write(location, td=None, mi=None):
     """把 td／mi 寫進位置；回寫了哪些（給人看的字串串列）。資料夾＝兩個檔；JSON 檔或 檔#/指標＝兩個鍵（aos-json set）。"""
     path, ptr = split_location(location)
     done = []
@@ -263,10 +266,16 @@ def main(run, description, params=(), meta=None, errors=(), name=None):
     if argv[:1] in (["--tooldef"], ["--metainfo"]):
         print(json.dumps(td if argv[0] == "--tooldef" else mi, ensure_ascii=False, indent=2))
         sys.exit(0)
-    if argv[:1] == ["--write-defs"]:
+    if argv[:1] in (["--compile"], ["--dry-run"]) and len(argv) > (2 if argv[0] == "--compile" else 1):
+        tool_io.die("ArgumentsBad", "too many arguments: %s (usage: python3 %s --compile [LOCATION] | --dry-run)"
+                    % (" ".join(argv), os.path.basename(script)))
+    if argv[:1] == ["--dry-run"]:
+        print(json.dumps({"_tooldef.json": td, "_metainfo.json": mi}, ensure_ascii=False, indent=2))
+        sys.exit(0)
+    if argv[:1] == ["--compile"]:
         location = argv[1] if len(argv) > 1 else os.path.dirname(script)
         try:
-            for target in write_defs(location, td, mi):
+            for target in write(location, td, mi):
                 print("wrote %s" % target)
         except (OSError, SpecBad) as e:
             tool_io.die("WriteFailed", str(e), echo=False)
