@@ -271,6 +271,17 @@
         "[11-18 調查 README](../proto8/thinking/2026-11/18/aos-compile-1118/README.md)"
       ],
       "since": "2026-11-18"
+    },
+    "subuid-1119": {
+      "title": "子帳號：daemon 認 sub:N（linux-as-hw 乙案）",
+      "status": "等使用者",
+      "flow": "",
+      "what": "daemon 已能把 limits.user 寫 sub:N 的 proc 免 root 換成 subuid（每支一個 user ns、一台 daemon 一個 group、小格 0700＋ACL、清環境、走得到檢查），commit 368719e7a；假 helper 與回歸都過，真換身分沒驗（公司 WSL 缺 newuidmap）。",
+      "next": "使用者：sudo apt install uidmap；拍板 Q1（家目錄 750 怎麼開門：b setfacl -m g:160000:x ~ 推薦／a chmod o+x ~／c 搬出家目錄）；然後跑 bash ~/.aos/scratch/subuid-1119/tools/run-tests.sh test_subuid.py 補驗。之後的刀：信箱用 aos-share 開、K9 信夾擁有者認寄件人、K18 子 daemon 沿用父 group、清道夫。",
+      "see": [
+        "[subuid-1119](../proto8/thinking/2026-11/19/subuid-1119.md)"
+      ],
+      "since": "2026-11-19"
     }
   }
 }
