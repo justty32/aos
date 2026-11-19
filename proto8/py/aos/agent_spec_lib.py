@@ -1,10 +1,11 @@
-"""agent_spec_lib - agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 defs.lib("名", 根) 宣告的別的庫（工具自動帶「名_」）；包在編譯時讀出來、展開成一支支工具抄進 tools.json。
+"""agent_spec_lib - agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 defs.lib("名", 根) 宣告的別的庫（工具自動帶「名_」）；包在編譯時讀出來、展開成一支支工具（靜態連結進 tools.json；動態連結見 pack 的 link）。
 
 設計稿 thinking/2026-11/19/aos-ns-1119/（03 的 B、05、07 使用者裁定）；施工紀錄 thinking/2026-11/19/aos-ns-第一刀.md。
 庫＝一個長相固定的資料夾：<根>/packs/<名>.json（工具包）、<根>/tools/<路徑>/（工具夾）。std 先不搬（07 第 4 題 b）：根＝$AOS_HOME，
 包在 lib/packs、工具在 lib/tools、hook 組與 fsm 格在 templates/<範本>/（Argon A6：不搬時 std 是三個固定位置的特例）。
-解析全在編譯時做完（「C 與 .o」）：編譯時一定要讀得到庫根，讀不到＝SpecBad（Argon A3）；json 裡只寫全路徑（指示詞或絕對路徑），不留庫名。
-別的庫的路徑在 agent.py 明寫、包編譯時抄——這兩點是 07 第 6、7 題「暫照推薦、使用者未單獨裁」。
+解析全在編譯時做完（「C 與 .o」）：編譯時一定要讀得到庫根，讀不到＝SpecBad（Argon A3）；json 裡只寫全路徑（指示詞或絕對路徑），不留庫名；動態連結時 $override 寫的是包檔的全路徑，名字照包裡的（所以只有不改名的包能動態）。
+別的庫的路徑在 agent.py 明寫（07 第 6 題：使用者 11-19「先明寫，以後有需要再去弄-I。」）；包怎麼連結是編譯選項
+（07 第 7 題：「或者說，用選項吧，gcc那樣」），預設靜態（選項框「預設靜態 (Recommended)」）。
 寫錯照 agent_spec 的規矩：回 {"kind": "bad"} 記著，compile()／main 再報一行 SpecBad。
 """
 import json, os, posixpath, re
@@ -70,12 +71,16 @@ class Lib:
             return None, "%s: path %r leaves the library root; write it inside the library or as a directive" % (call, value)
         return _join(self.root, rel), None
 
-    def pack(self, name, prefix=None, rename=None, exclude=None):
+    def pack(self, name, prefix=None, rename=None, exclude=None, link=None):
         """讀這個庫的 packs/<name>.json，展開成 {腦看到的名字: 工具格}。名字＝rename 給的、否則 prefix＋包裡的名字（prefix 預設：std 空、別的庫「庫名_」）；
-        exclude＝不要的（包裡的名字）。編譯時抄進 tools.json：包之後多加的工具要重新編譯才拿得到（07 第 7 題暫照推薦）。"""
+        exclude＝不要的（包裡的名字）。link＝這個包怎麼連結（None＝照整支 agent.py 的選項 --static／--dynamic，預設靜態）：
+        靜態＝編譯時把工具一支支複製進 tools.json，包之後多加的要重新編譯才拿得到；動態＝tools.json 只寫 $override 指這個包、執行時才讀
+        （使用者 11-19「或者說，用選項吧，gcc那樣」；怎麼寫進 tools.json 在 agent_spec_parts.tools_json）。不論哪種，編譯時都讀包、查撞名。"""
         call = "%s.pack(%r)" % (self.name, name)
         if self.bad:
             return _bad(self.bad)
+        if link not in (None, "static", "dynamic"):
+            return _bad("%s: link must be \"static\" or \"dynamic\" (or left out: the --static / --dynamic option of agent.py)" % call)
         if not isinstance(name, str) or not parts.PACK_RE.match(name):
             return _bad("%s: the pack name must be a pack file name without .json, like \"look\"" % call)
         prefix = self.prefix if prefix is None else prefix
@@ -109,18 +114,23 @@ class Lib:
                     return _bad("%s: %s %r: the pack has no tool %s (tools: %s)" % (call, what, n, n, ", ".join(sorted(tools))))
         if set(rename) & set(exclude):
             return _bad("%s: %s is in both rename and exclude" % (call, sorted(set(rename) & set(exclude))[0]))
-        out = {}
+        out, left_out = {}, {}
         for n, e in tools.items():
-            if e is None or n in exclude:               # null ＝ 不是工具（照 aos-tools）
+            if e is None:                               # null ＝ 不是工具（照 aos-tools）
                 continue
             if not isinstance(e, dict):
+                if n in exclude:
+                    continue
                 return _bad("%s: tool %s in %s must be an object ({\"path\": ...})" % (call, n, shown))
             entry = dict(e)
             for key in ("path", "env_file"):
                 if key in entry:
                     entry[key], err = self._full(entry[key], "%s, tool %s" % (call, n))
-                    if err:
+                    if err and n not in exclude:
                         return _bad(err)
+            if n in exclude:                            # 動態連結時執行期照樣讀得到它：記著，tools_json 要寫 null 拿掉
+                left_out[n] = entry
+                continue
             final = rename.get(n, prefix + n)
             if final in out:
                 return _bad("%s: two tools of the pack end up as %s; rename one of them" % (call, final))
@@ -128,7 +138,10 @@ class Lib:
             if t["kind"] == "bad":
                 return _bad("%s, tool %s: %s" % (call, n, t["bad"]))
             out[final] = t["entry"]
-        return {"kind": "pack", "lib": self.name, "name": name, "tools": out}
+        return {"kind": "pack", "lib": self.name, "name": name, "tools": out, "link": link,
+                "file": _join(self.root, "%s/%s.json" % (self.packs_sub, name)),     # 動態連結時 $override 寫這個
+                "as_is": prefix == "" and not rename,                                  # 名字跟包裡一樣：動態連結才做得到
+                "left_out": left_out}
 
     def tool(self, path, name=None, **more):
         """這個庫的一支工具（tools/<path>，例 std.tool("base/read")）；名字預設＝prefix＋夾名。也可當 defs.tool 的路徑：defs.tool("read", my.tool("read"))。"""

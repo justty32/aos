@@ -4,7 +4,7 @@ This folder is one working agent definition. **`agent.py` is its source; every o
 
 - **What compiling is.** `python3 agent.py --compile` runs `agent.py` and writes the definition files (`fsm.json`, `tools.json`, ...) into this folder. From then on aos runs those files, not `agent.py`: like a `.o` file, they no longer need their source.
 - **Compiling again overwrites.** Recompiling writes every declared file again as a whole, without asking, so a change made directly in a compiled file is gone. Change `agent.py` and recompile instead.
-- **Static and dynamic linking.** Some things are copied into the compiled files when you compile, like a library linked statically into a program: the tools of a pack (`std.pack`, a library's `.pack`), `std.hooks()`, and everything taken from another `agent.py` with `defs.load`. A change there shows up only after you recompile. Other things are only named in the compiled files and read when the agent runs, like a library linked dynamically (a `.so` loaded at start): the tool programs themselves and the state machine cells of `std.fsm()`. A change there shows up without recompiling.
+- **Static and dynamic linking.** Some things are copied into the compiled files when you compile, like a library linked statically into a program: `std.hooks()`, everything taken from another `agent.py` with `defs.load`, and by default the tools of a pack (`std.pack`, a library's `.pack`). A change there shows up only after you recompile. Other things are only named in the compiled files and read when the agent runs, like a library linked dynamically (a `.so` loaded at start): the tool programs themselves, the state machine cells of `std.fsm()`, and the packs you link dynamically (`--dynamic`, see "Linking tool packs" below). A change there shows up at the agent's next start without recompiling.
 
 ## Make your own agent from it
 
@@ -51,7 +51,7 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
 - `DESCRIPTION`: one English sentence: what the agent does. It becomes `summary` in `_metainfo.json`.
 - `SYSTEM`: the system text as a string, or `defs.by_hand("system.txt")` to keep writing that file yourself.
 - `TOOLS`: a list of
-  - `std.pack("look")`: the tools of a pack of `std`, the library that comes with aos (`$AOS_HOME/lib/packs/look.json`). The pack is read when `agent.py` runs and its tools are written into `tools.json` one by one (no `$override`), so a tool added to the pack later shows up after you recompile;
+  - `std.pack("look")`: the tools of a pack of `std`, the library that comes with aos (`$AOS_HOME/lib/packs/look.json`). The pack is read when `agent.py` runs and, linked statically (the default), its tools are written into `tools.json` one by one (no `$override`), so a tool added to the pack later shows up after you recompile (dynamic linking: see "Linking tool packs");
   - `std.tool("base/read")`: one tool of `std` (`$AOS_HOME/lib/tools/base/read`), named after its folder (`name="..."` picks another name);
   - `defs.tool("read", defs.home("/lib/tools/base/read"))`: one tool by its path; it replaces a tool of the same name from the packs. The path can also be a library tool: `defs.tool("read", my.tool("read"))`;
   - `defs.no("shell")`: take one tool out of the packs;
@@ -129,6 +129,30 @@ defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM, hooks=HOOKS)
 - A wrong base (a missing folder, an error in its `agent.py`, a wrong declaration there) is one line, for example `strict: error: SpecBad defs.load('../reviewer'): ...`, and nothing is written.
 - Do not `import` another `agent.py` instead: its `defs.main(...)` then only prints a warning and does nothing (it used to write the other folder with your arguments).
 - In a Python prompt (`from aos.py.agent import defs`): `r = defs.load("/ws/agents/reviewer")`, then `defs.compile(...)` / `defs.write(...)` with `r.SYSTEM`, `[r.TOOLS, ...]` and so on. A folder written that way has no `agent.py` and cannot be recompiled; keep the lines in an `agent.py` if you want to.
+
+## Linking tool packs: static or dynamic
+
+How the tools of a pack get into `tools.json` is a compile option, like `gcc -static`:
+
+```sh
+python3 agent.py --compile             # the default, the same as --compile --static
+python3 agent.py --compile --dynamic   # every pack that can be, linked dynamically
+python3 agent.py --dry-run --dynamic   # look first
+```
+
+```python
+TOOLS = [std.pack("look", link="dynamic"), std.pack("mailbox")]   # one pack its own way; link="static" too
+```
+
+- **Static (the default).** The tools of the pack are copied into `tools.json` one by one, with full paths. A tool added to the pack later shows up only after you recompile.
+- **Dynamic.** `tools.json` names the pack file (`"$override": [{"$env": "AOS_HOME", "$path": "/lib/packs/look.json"}]`) and aos reads it every time the agent starts. A tool added to the pack later shows up at the agent's next start, without recompiling.
+- A `link=` on a pack wins over `--static` / `--dynamic`. Either way the pack is read when you compile, and the same checks run (a name two packs give with different tools is `SpecBad`).
+- What only static linking can do:
+  - **renamed tools.** A pack with `prefix=` or `rename=`, which includes every pack of a library other than `std` (its tools get `<name>_` by default), cannot be linked dynamically: at run time aos reads the pack as it is. Under `--dynamic` such a pack is linked statically and you get one `warning` line; `link="dynamic"` on it is `SpecBad`. `my.pack("look", prefix="", link="dynamic")` works (its tools keep their names).
+  - **the `TOOLS` of `defs.load`.** They are the base's tools after its own changes, not a pack file, and the compiled files never name the base; under `--dynamic` they are linked statically, with a `warning` line.
+- `exclude=` and `defs.no(...)` on a dynamically linked pack write `"name": null` in `tools.json` (null = not a tool).
+- Replacing one tool of a dynamically linked pack (`defs.tool("read", ...)`) works when your tool gives every field the pack's tool has: at run time aos lays your entry over the pack's field by field, so a field you leave out would stay. When that would happen, compiling is `SpecBad`: link that pack statically.
+- What compiling cannot check: a tool added to a dynamically linked pack after you compiled. If it has the name of another tool of this agent, at run time the two are merged without a word, field by field, the later one winning (the packs in `$override` order, then the table). Recompile now and then, or link statically, if that matters.
 
 ## Libraries
 

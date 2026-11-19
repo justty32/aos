@@ -133,14 +133,75 @@ def stack_tools(tools):
     return out, origins
 
 
-def tools_json(tools):
-    """TOOLS → tools.json 的內容：stack_tools 疊完、濾掉墓碑。只有 tools 表、沒有 $override：哪幾支、各叫什麼在編譯時定死（07 第 7 題暫照推薦）；
-    說明只列抄進來的包（std.pack、庫的 .pack），不提 defs.load 的底（json 不留上一層）。"""
+def _patch(acc, layer):
+    """照 aos-tools 的 registry.patch 疊一層（執行期 tools.json 的 $override 就是這樣合）：格逐欄蓋、欄是物件再往下一層，null＝不是工具。"""
+    for name, e in layer.items():
+        if e is None:
+            acc[name] = None
+            continue
+        cur = acc.get(name)
+        if cur is None:
+            cur = acc[name] = {}
+        for k, v in e.items():
+            if isinstance(v, dict) and isinstance(cur.get(k), dict):
+                cur[k] = dict(cur[k], **v)
+            else:
+                cur[k] = v
+
+
+def _link_of(t, link, warn):
+    """一個包這次怎麼連結："static"／"dynamic"。t["link"]＝包上明寫的（std.pack(..., link=...)），沒寫照整支的 link。
+    動態做不到的（名字要改、或 defs.load 的底）：明寫 dynamic＝SpecBad；只是整支 --dynamic＝改靜態並 warn，不悄悄退化。"""
+    mode = t.get("link") or link
+    if mode != "dynamic":
+        return "static"
+    label = t.get("label") or "%s.pack(%r)" % (t["lib"], t["name"])
+    if "file" not in t:                         # defs.load 的 TOOLS：底的工具疊完的結果，不是一份包檔；編出的 json 不記上一層（N-70）
+        warn("%s is linked statically: it is the tools of another agent.py, not a pack file, "
+             "and the compiled files do not name the base (N-70)" % label)
+        return "static"
+    if not t["as_is"]:
+        if t.get("link") == "dynamic":
+            raise SpecBad("%s: link=\"dynamic\" cannot rename its tools (prefix= or rename=): when the agent runs, aos reads the pack "
+                          "as it is; link it statically, or give prefix=\"\" and no rename (a library other than std gets the "
+                          "prefix \"<name>_\" unless you give prefix=\"\")" % label)
+        warn("%s is linked statically: its tools are renamed (a prefix or rename=), which only static linking can do" % label)
+        return "static"
+    return "dynamic"
+
+
+def tools_json(tools, link="static", warn=None):
+    """TOOLS → tools.json 的內容：stack_tools 疊完、濾掉墓碑。link＝整支的連結方式（"static" 預設、"dynamic"；使用者 11-19「或者說，用選項吧，gcc那樣」）。
+    全靜態：只有 tools 表、沒有 $override，哪幾支、各叫什麼在編譯時定死。有動態連結的包：$override 依 TOOLS 的順序列那些包檔，
+    tools 表只寫包給不出的（靜態的包、自己寫的、拿掉的＝null）；寫完照執行期的合法（_patch）在編譯時算一遍，
+    算出來跟全靜態那份不一樣（逐欄合併會留下包那格的欄位）＝SpecBad，叫人把那個包改靜態。說明列靜態連結的包、動態連結的包，不提 defs.load 的底。"""
+    warn = warn or (lambda msg: None)
     table, origins = stack_tools(tools)
+    final = {n: e for n, e in table.items() if e is not None}
+    dynamic = [t for t in tools if kind(t) == "pack" and _link_of(t, link, warn) == "dynamic"]
+    labels = [t.get("label") or "%s.pack(%r)" % (t["lib"], t["name"]) for t in dynamic]
     desc = WHAT["tools.json"]
-    if origins:
-        desc += " agent.py copied in the tools of %s." % ", ".join(origins)
-    return {"description": desc, "tools": {n: e for n, e in table.items() if e is not None}}
+    copied = [o for o in origins if o not in labels]
+    if copied:
+        desc += " agent.py copied in the tools of %s." % ", ".join(copied)
+    if not dynamic:
+        return {"description": desc, "tools": final}
+    desc += " It links %s dynamically: aos reads %s when the agent runs." % (", ".join(labels), "that pack" if len(labels) == 1 else "those packs")
+    from_packs = {}
+    for t in dynamic:
+        _patch(from_packs, json.loads(json.dumps(dict(t["left_out"], **t["tools"]))))
+    own = {n: e for n, e in final.items() if from_packs.get(n) != e}
+    own.update({n: None for n in from_packs if n not in final})
+    got = json.loads(json.dumps(from_packs))
+    _patch(got, json.loads(json.dumps(own)))
+    got = {n: e for n, e in got.items() if e is not None}
+    for name in sorted(set(got) | set(final)):
+        if got.get(name) != final.get(name):
+            by = [label for label, t in zip(labels, dynamic) if name in t["tools"] or name in t["left_out"]]
+            raise SpecBad("tool %s: with %s linked dynamically, aos would merge the pack's tool %s with the one agent.py gives, field by "
+                          "field, when the agent runs, and get something else; link %s statically (link=\"static\")"
+                          % (name, ", ".join(by), name, "it" if len(by) == 1 else "them"))
+    return {"description": desc, "$override": [t["file"] for t in dynamic], "tools": own}
 
 
 def llm_json(llm, keys):

@@ -1,4 +1,4 @@
-"""Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files, SpecBad before any write, overwrite rules (C and .o), HOOKS / FILES / no-FSM (eca) mode, libraries (std, defs.lib: packs copied in, other libraries prefixed, clashes SpecBad), templates/reviewer rewritten as one agent.py, and the skeleton's committed files matching its agent.py."""
+"""Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files, SpecBad before any write, overwrite rules (C and .o), HOOKS / FILES / no-FSM (eca) mode, libraries (std, defs.lib: packs copied in, other libraries prefixed, clashes SpecBad), packs linked statically or dynamically (--static / --dynamic, link=), templates/reviewer rewritten as one agent.py, and the skeleton's committed files matching its agent.py."""
 import json
 import os
 from pathlib import Path
@@ -442,7 +442,7 @@ class Script(unittest.TestCase):
         r = self.call()
         self.assertEqual(r.returncode, 1)
         self.assertIn("weather: error: ArgumentsBad", r.stderr)
-        self.assertIn("usage: python3 agent.py --compile [FOLDER]", r.stderr)
+        self.assertIn("usage: python3 agent.py --compile [--static | --dynamic] [FOLDER]", r.stderr)
         self.assertEqual(self.call("--nope").returncode, 1)
         r = self.call("--help")
         self.assertEqual(r.returncode, 0)
@@ -921,6 +921,150 @@ class Skeleton(unittest.TestCase):
                     self.assertEqual((dest / name).read_bytes(), (SKEL / name).read_bytes(),
                                      "run python3 agent.py --compile in templates/agent-python")
 
+
+def at_run_time(tools_json, home, folder):
+    """what aos-tools makes of a tools.json when the agent runs: its $override packs, then its own table, merged field by field
+    (aos.apps.tools.registry.patch itself; null = not a tool), each path made absolute from the file that wrote it."""
+    from aos.apps.tools import registry
+    acc = {}
+    for base in tools_json.get("$override", []):
+        f = resolve(base, home)
+        registry.patch(acc, json.loads(Path(f).read_text())["tools"], f)
+    own = {n: (dict(e, path=resolve(e["path"], home)) if e else e) for n, e in tools_json.get("tools", {}).items()}
+    registry.patch(acc, own, str(Path(folder) / "tools.json"))
+    out = {}
+    for name, t in acc.items():
+        if "null" in t:
+            continue
+        e = dict(t["entry"])
+        p = e["path"]
+        e["path"] = os.path.normpath(os.path.join(os.path.dirname(t["origin"]["path"]), resolve(p, home)))
+        out[name] = e
+    return out
+
+
+class Linking(WithHome):
+    """tool packs linked statically (copied into tools.json, the default) or dynamically ($override, read when the agent runs):
+    a compile option, like gcc (user 11-19 "或者說，用選項吧，gcc那樣"; default static: "預設靜態 (Recommended)" picked). Whatever the option,
+    the agent gets the same tools when it runs; what dynamic linking cannot give is SpecBad or a warning, never a silent change."""
+
+    make_lib = Namespace.make_lib
+
+    def compile(self, items, link="static"):
+        said = []
+        out = defs.compile("D.", "", items, {}, defs.std.fsm(), link=link, warn=said.append)["tools.json"]
+        return out, said
+
+    def same_at_run_time(self, items, link="dynamic"):
+        static, _ = self.compile(items)
+        dyn, said = self.compile(items, link)
+        self.assertEqual(at_run_time(dyn, self.home, self.temp.name), at_run_time(static, self.home, self.temp.name))
+        return dyn, said
+
+    def test_dynamic_names_the_packs_and_gives_the_same_tools(self):
+        dyn, said = self.same_at_run_time([defs.std.pack("look"), defs.std.pack("mailbox"), defs.std.pack("json")])
+        self.assertEqual(dyn["$override"], [{"$env": "AOS_HOME", "$path": "/lib/packs/%s.json" % p} for p in ("look", "mailbox", "json")])
+        self.assertEqual(dyn["tools"], {})
+        self.assertIn("links std.pack('look'), std.pack('mailbox'), std.pack('json') dynamically", dyn["description"])
+        self.assertNotIn("copied in", dyn["description"])
+        self.assertEqual(said, [])
+        static, _ = self.compile([defs.std.pack("look")])
+        self.assertNotIn("$override", static)                                           # the default: static, as before
+
+    def test_one_pack_can_say_how(self):
+        dyn, _ = self.same_at_run_time([defs.std.pack("look", link="dynamic"), defs.std.pack("mailbox")], link="static")
+        self.assertEqual(dyn["$override"], [{"$env": "AOS_HOME", "$path": "/lib/packs/look.json"}])
+        self.assertIn("mailbox_send", dyn["tools"])
+        self.assertIn("copied in the tools of std.pack('mailbox')", dyn["description"])
+        dyn, _ = self.same_at_run_time([defs.std.pack("look", link="static"), defs.std.pack("mailbox")])
+        self.assertEqual(dyn["$override"], [{"$env": "AOS_HOME", "$path": "/lib/packs/mailbox.json"}])
+        self.assertIn("read", dyn["tools"])
+
+    def test_left_out_tools_are_null(self):
+        dyn, _ = self.same_at_run_time([defs.std.pack("look", exclude=["grep"]), defs.no("glob")])
+        self.assertEqual(dyn["tools"], {"grep": None, "glob": None})
+
+    def test_replacing_a_tool_of_a_dynamic_pack(self):
+        peek = defs.home("/lib/tools/base/peek_now_time")
+        dyn, _ = self.same_at_run_time([defs.std.pack("look"), defs.tool("read", peek)])
+        self.assertEqual(dyn["tools"], {"read": {"path": peek}})
+        rich = self.make_lib("rich", {"look": {"read": {"path": "../tools/read", "env": {"A": "1"}}}})
+        items = [defs.lib("rich", str(rich)).pack("look", prefix="", link="dynamic"), defs.tool("read", peek)]
+        self.compile(items[:1] + [defs.tool("read", peek, env={"A": "1"})])            # every field given: the merge gives just that
+        with self.assertRaisesRegex(defs.SpecBad, r"tool read: with rich.pack\('look'\) linked dynamically, aos would merge .*"
+                                                  r"field by field.*link it statically"):
+            self.compile(items)
+        self.compile([defs.lib("rich", str(rich)).pack("look", prefix=""), defs.tool("read", peek)])   # static: replaced as a whole
+
+    def test_renamed_tools_need_static_linking(self):
+        root = self.make_lib()
+        my = defs.lib("my", str(root))
+        dyn, said = self.same_at_run_time([defs.std.pack("look"), my.pack("look"), defs.std.pack("json", rename={"json_get": "query"})])
+        self.assertEqual(dyn["$override"], [{"$env": "AOS_HOME", "$path": "/lib/packs/look.json"}])
+        self.assertEqual(sorted(dyn["tools"]), sorted(["my_read", "query"] + [n for n in json.loads(
+            (LIB / "packs" / "json.json").read_text())["tools"] if n != "json_get"]))
+        self.assertEqual(len(said), 2)
+        self.assertIn("my.pack('look') is linked statically: its tools are renamed", said[0])
+        self.assertIn("std.pack('json') is linked statically", said[1])
+        with self.assertRaisesRegex(defs.SpecBad, r"my.pack\('look'\): link=\"dynamic\" cannot rename its tools"):
+            self.compile([my.pack("look", link="dynamic")])
+        dyn, said = self.compile([my.pack("look", prefix="", link="dynamic")])           # no prefix: the pack as it is
+        self.assertEqual(dyn["$override"], [str(root / "packs" / "look.json")])
+        self.assertEqual(at_run_time(dyn, self.home, self.temp.name), {"read": {"path": str(root / "tools" / "read")}})
+
+    def test_clashes_are_still_spec_bad(self):
+        my = defs.lib("my", str(self.make_lib()))
+        with self.assertRaisesRegex(defs.SpecBad, r"tool read comes from both std.pack\('look'\) and my.pack\('look'\)"):
+            self.compile([defs.std.pack("look"), my.pack("look", prefix="")], link="dynamic")
+        dyn, _ = self.compile([defs.std.pack("look"), my.pack("look", prefix="", exclude=["read"])], link="dynamic")
+        self.assertEqual(at_run_time(dyn, self.home, self.temp.name)["read"]["path"], str(self.home) + "/lib/tools/base/read")
+        self.assertEqual(dyn["tools"], {"read": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/read"}}})  # both packs give read: written
+
+    def test_bad_link(self):
+        with self.assertRaisesRegex(defs.SpecBad, "link must be \"static\" or \"dynamic\""):
+            self.compile([defs.std.pack("look", link="shared")])
+        with self.assertRaisesRegex(defs.SpecBad, "link must be \"static\" or \"dynamic\""):
+            self.compile([defs.std.pack("look")], link="shared")
+
+    def test_the_options_of_agent_py(self):
+        folder = Path(self.temp.name) / "w"
+        folder.mkdir()
+        (folder / "agent.py").write_text(HEAD + BODY)
+        call = lambda *argv: run_agent(folder / "agent.py", *argv, home=self.home)  # noqa: E731
+        r = call("--compile", "--dynamic")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads((folder / "tools.json").read_text())["$override"],
+                         [{"$env": "AOS_HOME", "$path": "/lib/packs/look.json"}])
+        self.assertNotIn("$override", json.loads(call("--dry-run", "--static").stdout)["tools.json"])
+        self.assertNotIn("$override", json.loads(call("--dry-run").stdout)["tools.json"])
+        self.assertIn("$override", json.loads(call("--dry-run", "--dynamic").stdout)["tools.json"])
+        other = Path(self.temp.name) / "other"
+        other.mkdir()
+        self.assertEqual(call("--compile", "--dynamic", str(other)).returncode, 0)
+        self.assertEqual(call("--compile", str(other), "--static").returncode, 0)
+        self.assertNotIn("$override", json.loads((other / "tools.json").read_text()))
+        r = call("--compile", "--static", "--dynamic")
+        self.assertEqual((r.returncode, r.stderr.split(" (")[0]), (1, "w: error: ArgumentsBad give one of --static and --dynamic, not --static --dynamic"))
+        r = call("--compile", "--shared")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("w: error: FlagUnknown --shared", r.stderr)
+        self.assertEqual(call("--dry-run", "--dynamic", str(other)).returncode, 1)          # --dry-run takes no folder
+
+    def test_the_tools_of_defs_load_are_linked_statically(self):
+        base = Path(self.temp.name) / "base"
+        base.mkdir()
+        (base / "agent.py").write_text(HEAD + BODY)
+        strict = Path(self.temp.name) / "strict"
+        strict.mkdir()
+        (strict / "agent.py").write_text(HEAD + 'base = defs.load("../base")\n'
+                                         'defs.main("Strict.", base.SYSTEM, [base.TOOLS, defs.std.pack("json")], base.LLM, base.FSM)\n')
+        r = run_agent(strict / "agent.py", "--dry-run", "--dynamic", home=self.home)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("strict: warning: defs.load('../base') is linked statically: it is the tools of another agent.py", r.stderr)
+        tools_json = json.loads(r.stdout)["tools.json"]
+        self.assertEqual(tools_json["$override"], [{"$env": "AOS_HOME", "$path": "/lib/packs/json.json"}])
+        self.assertIn("peek", tools_json["tools"])
+        self.assertNotIn("grep", tools_json["tools"])                                    # the base took grep out of std.pack("look")
 
 if __name__ == "__main__":
     unittest.main()

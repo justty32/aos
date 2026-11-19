@@ -6,7 +6,7 @@
   "description": "給人寫 agent 定義的輔助：在一支 agent.py 裡宣告說明、system、工具、腦設定、狀態機、hook、其他檔，就編出一份掛得上去的定義夾；不宣告狀態機時只填一份現成定義夾的內容檔（eca 版）。"
  },
  "agent_spec_lib.py": {
-  "description": "agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 defs.lib(\"名\", 根) 宣告的別的庫（工具自動帶「名_」）；包在編譯時讀出來、展開成一支支工具抄進 tools.json。"
+  "description": "agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 defs.lib(\"名\", 根) 宣告的別的庫（工具自動帶「名_」）；包在編譯時讀出來、展開成一支支工具（靜態連結進 tools.json；動態連結見 pack 的 link）。"
  },
  "agent_spec_load.py": {
   "description": "defs.load(路徑)：一支 agent.py 衍生自另一支（繼承第一刀，線 aos-inherit-cut1-1119）：跑底那支，它最後的 defs.main 只交出九個欄位，正規化成一份「底」交回。"

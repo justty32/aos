@@ -289,8 +289,8 @@
       "title": "aos 命名空間與標準庫：走 B 資料夾即命名空間",
       "status": "等使用者",
       "flow": "",
-      "what": "第一刀做完（線 aos-ns-cut1-1119，11-19）：agent.py 有庫 std（std.pack／std.tool／std.fsm／std.hooks，取代 ag.pack／ag.stock_fsm／ag.stock_hooks、不留舊名）與 ag.lib(名, 根)（之後改名 defs.lib）；包在生成時展開成一支支工具寫進 tools.json，別的庫工具帶 庫名_、std 短名，展開後同名又不同、讀不到庫根都報 SpecBad；只改 agent_spec 與骨架、執行期一行沒動、沒搬檔。第 6 題（agent.py 明寫庫路徑）、第 7 題（包生成時抄）仍是暫照推薦。C-74／C-87 加註已做（線 aos-c74-c87-1119，11-19，使用者選項框「補，改完貼給我看」）：C-74 記「標準庫／std」同詞兩義，C-87 記只做看得見的命名空間，原文沒動。",
-      "next": "等使用者：第 6、7 題要不要正式定；名詞表要不要多一列 std（庫）；std 算 C-74 哪一層待釐清。之後的刀：std 搬進 lib/std（第 4 題已裁先不搬）、agent_def new 收 std/名與 defs check 查手寫 json 的同名包（第三刀）。繼承深挖另外派。",
+      "what": "第一刀做完（線 aos-ns-cut1-1119，11-19）：agent.py 有庫 std（std.pack／std.tool／std.fsm／std.hooks）與 defs.lib(名, 根)；包在編譯時展開成一支支工具寫進 tools.json，別的庫工具帶 庫名_、std 短名，展開後同名又不同、讀不到庫根都報 SpecBad；只改 agent_spec 與骨架、執行期一行沒動、沒搬檔。C-74／C-87 加註已做（線 aos-c74-c87-1119）。11-19 下午補裁：第 6 題明寫路徑（「先明寫，以後有需要再去弄-I。」，-I 不做、不留鉤子）；第 7 題兩種連結都有、做成編譯選項、預設靜態（「或者說，用選項吧，gcc那樣」「預設靜態 (Recommended)」），線 aos-defs-rename2-1119 做完：--compile [--static|--dynamic]、std.pack(名, link=)；要改名的包與 defs.load 的 TOOLS 只能靜態（整支 --dynamic 時 warning、明寫 link=dynamic 時 SpecBad）。",
+      "next": "等使用者：名詞表要不要多一列 std（庫）；std 算 C-74 哪一層先留著（使用者「先留著。以後搞不好可以統合，因為這些東西搞不好也可以在aos.py.std中找到。或是aos.std。」，想法不是裁定）。之後的刀：std 搬進 lib/std（第 4 題已裁先不搬）、agent_def new 收 std/名與 defs check 查手寫 json 的同名包（第三刀）。繼承深挖另外派。",
       "see": [
         "[第一刀紀錄](../proto8/thinking/2026-11/19/aos-ns-第一刀.md)",
         "[07-使用者裁定](../proto8/thinking/2026-11/19/aos-ns-1119/07-使用者裁定.md)",

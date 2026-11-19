@@ -10,7 +10,8 @@ agent.py→那一夾 json 叫「編譯」（compile）；defs.compile 算出、�
 
 宣告用的小函式（寫錯不在當下丟，記成 bad，compile()／main 再報 SpecBad）：
   std                 隨 aos 發的庫（aos/agent_spec_lib.py；命名空間第一刀 aos-ns-cut1-1119）：
-    std.pack(名, prefix=, rename=, exclude=)  讀 $AOS_HOME/lib/packs/名.json，展開成一支支工具抄進 tools.json（不寫 $override）
+    std.pack(名, prefix=, rename=, exclude=, link=)  讀 $AOS_HOME/lib/packs/名.json，展開成一支支工具；靜態連結＝複製進 tools.json（不寫 $override），
+                      動態連結（link="dynamic" 或整支 --dynamic）＝tools.json 的 $override 指這個包、執行時才讀（工具包連結選項，線 aos-defs-rename2-1119）
     std.tool("base/read", name=None, **其他)  一支工具 $AOS_HOME/lib/tools/base/read，名字預設＝夾名
     std.fsm()＝借 agent-fsm 範本的四格；std.hooks(範本="agent-fsm")＝那個範本 hooks.json 的那組 hook（編譯時讀、抄進來）
   lib(庫名, 根)        別的庫：my = defs.lib("my", defs.env("AOS_WS", "/lib/my"))；my.pack／my.tool 同上，工具名自動帶「庫名_」
@@ -24,11 +25,11 @@ agent.py→那一夾 json 叫「編譯」（compile）；defs.compile 算出、�
                        它的 defs.main 只交出九個欄位；TOOLS 寫 [base.TOOLS, defs.no(...), ...]、HOOKS 寫 [base.HOOKS, {名: {**base.HOOKS[名], 鍵: 值}}]、
                        FSM 寫 defs.fsm(base.FSM, [defs.state(名, 只給要換的)], drop=[...])；只在編譯時算，編出的 json 整份、不記上一層（N-70）
 兩個可單獨叫的函式（REPL 裡 defs.compile(...) 再 defs.write(夾, 結果)＝指令 --compile）：
-  compile(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None)
+  compile(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None, link="static", warn=None)
       → {檔名: 內容}（驗完才回；宣告錯丟 SpecBad、夾不對丟 DefBad）。fsm=None＝不宣告狀態機：照 folder 裡現有的
         interfaces.json 找檔名，只出內容檔（system、tools、llm、hooks）、FILES、_metainfo.json、README.md，骨架不碰（第三刀）
   write(folder, files) → 寫了哪些（字串串列）；宣告到的檔直接蓋，_metainfo.json 只設自己的鍵，README.md 不在才寫，其他檔不碰
-main(...)：agent.py 最後一行；--compile [資料夾]、--dry-run、--help，都沒有＝ArgumentsBad 帶用法（P-44）。
+main(...)：agent.py 最後一行；--compile [資料夾]、--dry-run、--help，都沒有＝ArgumentsBad 帶用法（P-44）；前兩個可加 --static（預設）／--dynamic。
 之後的除錯開關（aos-gdb-1119、庚第四刀）要加就加在 compile 的關鍵字參數，不動現有參數的意思。
 compile 蓋掉了模組裡內建的 compile()：這個模組自己不用內建那支，要用寫 builtins.compile。"""
 import json, os, sys
@@ -43,7 +44,7 @@ from aos.agent_spec_load import load  # noqa: F401（對外的名字：defs.load
 HOOK_FIRE = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}   # loop.json 的 on_start／on_stop（照 agent-fsm 範本）
 RENAME_LAST = {"loop.json": 1, "body.json": 2, "interfaces.json": 3, "_entry": 4, "_metainfo.json": 5}   # 改名時被指的檔先換、索引檔最後（其他＝0）
 HELP = """\
-usage: python3 agent.py --compile [FOLDER] | --dry-run | --help
+usage: python3 agent.py --compile [--static | --dynamic] [FOLDER] | --dry-run [--static | --dynamic] | --help
 Compile agent.py into an aos agent definition (a folder of JSON files), like a C compiler
 turning a .c file into a .o file.
   --compile [FOLDER]  compile and write the definition files into FOLDER (default: the folder
@@ -52,11 +53,19 @@ turning a .c file into a .o file.
                       written only when it is missing; every other file is left alone.
   --dry-run           compile and print everything --compile would write, as one JSON object
                       {"file name": content}, and write nothing.
+  --static            (the default) link tool packs statically: their tools are copied into
+                      tools.json one by one; a tool added to a pack later needs a recompile.
+  --dynamic           link tool packs dynamically: tools.json names the pack files ($override)
+                      and aos reads them when the agent runs; a tool added to a pack later shows
+                      up at the agent's next start, without recompiling. A pack whose tools get
+                      a prefix or rename= (a library other than std, by default), and the TOOLS
+                      of defs.load, are still linked statically, with a warning.
+                      One pack: std.pack("look", link="dynamic") / link="static".
 With FSM declared, agent.py writes the whole definition (skeleton included). Without FSM
 (defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM)), it fills only the content files (system, tools, llm,
 hooks) of a definition that already has its skeleton, under the names its interfaces.json gives.
-Packs (std.pack, or .pack of a library from defs.lib) are read when agent.py runs and their tools are
-copied into tools.json, so AOS_HOME, and any variable a library root uses, must be set.
+Packs (std.pack, or .pack of a library from defs.lib) are read when agent.py runs (also when they are
+linked dynamically, to check the tool names), so AOS_HOME, and any variable a library root uses, must be set.
 To build on another agent.py: base = defs.load("../other") runs it (its defs.main only hands over its
 fields) and you write [base.TOOLS, defs.no("x")], [base.HOOKS, {...}], defs.fsm(base.FSM, [...]); it is
 worked out now, so the files written are whole and do not name the other one (README: "Build on").
@@ -273,9 +282,16 @@ def _names(decl, fsm, hooks, interfaces, folder):
     return files, hand, set(files.values()), None
 
 
-def compile(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None):
+def compile(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None,
+            link="static", warn=None):
     """宣告 → {檔名: 內容}（json 是 dict、文字是字串；_metainfo.json 只有 agent.py 設的鍵、README.md 是種子）。全部驗完才回，錯丟 SpecBad／DefBad。
-    fsm=None＝不宣告狀態機：要給 folder（照它現有的 interfaces.json 找檔名），骨架不出。"""
+    fsm=None＝不宣告狀態機：要給 folder（照它現有的 interfaces.json 找檔名），骨架不出。
+    link＝工具包怎麼連結："static"（預設）複製進 tools.json；"dynamic" 寫 $override 指包、執行時才讀；包上明寫的 link= 優先。
+    warn＝收提醒的函式（整支 dynamic 時某個包只能靜態之類）；不給＝印一行 "defs.compile: warning: …" 到 stderr。"""
+    if link not in ("static", "dynamic"):
+        raise SpecBad("link must be \"static\" or \"dynamic\", got %r" % (link,))
+    if warn is None:
+        warn = lambda msg: flags.warn("defs.compile", msg)  # noqa: E731
     if not isinstance(description, str) or not description.strip():
         raise SpecBad("DESCRIPTION must be a non-empty string: one sentence saying what the agent does")
     description = description.strip()
@@ -300,7 +316,7 @@ def compile(description, system, tools, llm, fsm=None, meta=None, interfaces=Non
     tools_out = None if parts.pick(tools, "TOOLS must be a list of std.pack(...), std.tool(...), defs.tool(...), defs.no(...) "
                                           "(or a library's .pack / .tool, or the TOOLS of defs.load(...): [base.TOOLS, ...]), "
                                           "or defs.by_hand(\"tools.json\")",
-                                   lambda v: isinstance(v, (list, tuple))) else parts.tools_json(tools)
+                                   lambda v: isinstance(v, (list, tuple))) else parts.tools_json(tools, link, warn)
     llm_out = None if parts.pick(llm, "LLM must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or defs.by_hand(\"llm.json\")",
                                  lambda v: isinstance(v, dict)) else parts.llm_json(llm, keys)
     hooks_out = None if hooks is None or "hooks" in hand else parts.hooks_json(hooks)
@@ -404,7 +420,7 @@ def main(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
                          "use base = defs.load(\"its folder\")" % script)
         return
     argv = sys.argv[1:]
-    usage = "usage: python3 %s --compile [FOLDER] | --dry-run | --help" % base
+    usage = "usage: python3 %s --compile [--static | --dynamic] [FOLDER] | --dry-run [--static | --dynamic] | --help" % base
     if argv[:1] in (["--help"], ["-h"]):
         sys.stdout.write(HELP.replace("agent.py", base))
         sys.exit(0)
@@ -412,11 +428,20 @@ def main(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
         flags.die(prog, "ArgumentsBad", "give --compile or --dry-run (%s)" % usage)
     if argv[0] not in ("--compile", "--dry-run"):
         flags.die(prog, "FlagUnknown", "%s (%s)" % (argv[0], usage))
-    if len(argv) > (2 if argv[0] == "--compile" else 1):
+    links = [a for a in argv[1:] if a in ("--static", "--dynamic")]
+    rest = [a for a in argv[1:] if a not in ("--static", "--dynamic")]
+    if len(links) > 1:
+        flags.die(prog, "ArgumentsBad", "give one of --static and --dynamic, not %s (%s)" % (" ".join(links), usage))
+    unknown = [a for a in rest if a.startswith("-")]
+    if unknown:
+        flags.die(prog, "FlagUnknown", "%s (%s)" % (unknown[0], usage))
+    if len(rest) > (1 if argv[0] == "--compile" else 0):
         flags.die(prog, "ArgumentsBad", "too many arguments: %s (%s)" % (" ".join(argv), usage))
-    folder = argv[1] if len(argv) > 1 else os.path.dirname(script)
+    folder = rest[0] if rest else os.path.dirname(script)
+    link = links[0][2:] if links else "static"            # 預設靜態（使用者 11-19 選項框「預設靜態 (Recommended)」）
     try:
-        out = compile(description, system, tools, llm, fsm, meta, interfaces, hooks, files, folder)
+        out = compile(description, system, tools, llm, fsm, meta, interfaces, hooks, files, folder,
+                      link=link, warn=lambda msg: flags.warn(prog, msg))
     except SpecBad as e:
         flags.die(prog, "SpecBad", "%s (fix the declaration in %s)" % (e, base))
     except DefBad as e:
