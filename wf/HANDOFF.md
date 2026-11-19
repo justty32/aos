@@ -12,32 +12,40 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-19 13:30（公司機，第二次 compact 前）——四條線還在跑；全在 WSL 的 `~/repo/aos`，沒推；五點統一問 push
+## 2026-11-19 16:50（公司機收工）——今天全推了；回家先關樹再重裝；kernel 資源那塊使用者選「先不定」
 
-**授權（使用者 11-19 早原話）**：「事情盡量都交給agent做，普通工作交給opus，簡單工作或雜活交給sonnet。agent做事前都要讀過wf/規矩，簡單工作或雜活除外。agent可以再派子agent，模型隨意。我今天五點下班，下班前再統一push。」——**中間不 push，五點前問他一次再推**（aos 與 llm_proxy 兩個 repo）。頂層只調度。Argon：「argon額度雖然不多，但是只有正規調查流程會用到。不用省」（`agy` 只在 Windows：`C:\Users\WG-Guanyu\AppData\Local\agy\bin\agy.exe`，長提示寫成檔用 `--add-dir`，見 `wf/public/model-notes.md`）。這台沒有 aos-user／全景頁，**問他的題直接用選項框問**。
+**授權（只限 11-19 當天，已用完）**：使用者早上「我今天五點下班，下班前再統一push」，16:10「可以push，反正我下班前push」→ aos 與 llm_proxy 都已推。**明天起 push 照舊要先問。** 當天的模型分配（普通 opus、雜活 sonnet、agent 做事前讀 wf 規矩、可再派子 agent）是當天的話，明天重新確認。Argon：「argon額度雖然不多，但是只有正規調查流程會用到。不用省」（`agy` 只在公司 Windows，用法見 `wf/public/model-notes.md`；給它的提示檔要放在**只裝該線材料的新空夾**，今天有線讓它讀到別線的同名 prompt.txt 審錯東西）。
 
-**兩份 repo，別搞混**：
-- **WSL `~/repo/aos`＝唯一動工處**，比 origin 多 40 筆上下。agent 用 `wsl -e bash -lc '…'`，交件走 `commit-request`。頂層在工作樹乾淨時於 `~/repo/aos/proto8` 跑 `env -u AOS_HOME python3 install.py` 重裝（最近一次 13:12，含 `aos.py` 入口與 `defs` 改名；之後交的還沒裝）。
-- **Windows `C:\code\mine\simple_tools\aos`＝頂層 cwd，不動工**。**本檔在這份是未交的複本**；五點 push 後先 `git checkout -- wf/HANDOFF.md` 再 `git pull`。`stash@{0}` 是 11-18 的半成品，另有三包舊 stash，使用者沒說清就不動。
-- WSL `~/repo/llm_proxy`：本地多 2 筆沒推。LiteLLM proxy 在 `127.0.0.1:4000` 跑著（`pinned_1.109.1/`），別碰。
+**用詞（使用者 11-19 原話，以後照做，已記進 [user/01](workflows/common/user/01-說話授權與記憶.md)）**：「然後以後也用編譯、重新編譯來說，不要再用生、重生這樣」——跑 `agent.py`／`tool.py` 變成 json 叫**編譯**；靜態連結／動態連結，不說抄／借。
 
-**用詞（使用者 11-19 原話，以後照做）**：「然後以後也用編譯、重新編譯來說，不要再用生、重生這樣」——跑 `agent.py` 變成那夾 json 叫**編譯**，再跑叫**重新編譯**；「抄」叫靜態連結、「借」叫動態連結。正在由線 `aos-defs-rename2-1119` 寫進 wf 與文件。
+**機器現況**：
+- 公司 WSL `~/repo/aos`＝今天唯一動工處，已推、已在工作樹乾淨時重裝（`env -u AOS_HOME python3 install.py`，最後一次在 `132cafb27` 之後）。公司 Windows `C:\code\mine\simple_tools\aos` 已拉齊、四包舊 stash 照使用者刪了。
+- **使用者 11-19 下午自己刪了公司機的 `~/.aos`**（「反正之後要重建，以前的東西也沒必要留。使用者專區之後我應該會重新設計」）→ 現有的 aos-user／全景頁**不修、不重建**，等他重新設計。這台問他的題直接用選項框。
+- 公司機沒有 `~/aos-home`（他自己重建）。`~/code/rv` 是 T7 的驗證專案，**公司這邊不要再起它的樹**。LiteLLM proxy 在 `127.0.0.1:4000`，別碰；兩台統一他說「等我回家後再說」。
+- **家機**：`~/aos-home` 跑的是 `~/repo/aos/proto8`，`git pull`＋`install.py` 會直接把它換成今天的版本（重起會越等越久、daemon 不在時死掉的留 `stopped`、`defs` 多處改名、骨架自帶 `HOOKS`）——**先關樹再裝，裝完再起**。
 
-**還在跑的四條線（compact 後回報會以 agent 訊息進來：對過 commit、白話轉述、要他定的用選項框；都交完且工作樹乾淨就重裝一次）**：
-1. `aosgdb-verbs-1119`：斷點動作照 IDE 改。使用者：「我記得有step into還是啥的，參考那些ide」→ 選「resume/step 自己等到停」；skip「不該有這個方法。」；`id=` 可以。做成 `a.bp.resume()`（不帶參數，放行並等到下次停）、`a.bp.step()`（走一格再停）、`a.bp.stop()`；拿掉 `wait_stopped`、`skip`。step into／out 只提案。
-2. `aos-defs-rename2-1119`：(a) `defs.defs(...)` 換名——使用者：「要，可以參考那些程式語言的類似的功能的名字」，方向往 compile 那組；(b) 用詞統一（含 N-70 的「重生」改「編譯」、把用詞規矩記進 wf）；(c) 工具包連結方式做成編譯選項——使用者先答「定下」（靜態）隨即「或者說，用選項吧，gcc那樣」；預設頂層暫定靜態、會列成題。
-3. `aos-c74-c87-1119`：C-74、C-87 補加註（使用者選「補，改完貼給我看」）——**回來要把兩條加註全文貼給他**。
-4. `aos-base-audit-1119`：基底體檢（使用者：「…突然有些擔心我們的整套基底，也就是從硬體到kernel，這邊會不會有問題，派一條線去看看吧」）。只查不修，報告在 `thinking/2026-11/19/aos-base-audit-1119/`。
+**今天定下的（細節 `git log e53d6b979..` 與 [11-19 日索引](../proto8/thinking/2026-11/19/README.md)；每題原話在各夾的「使用者裁定／使用者已答」）**：
+- **編譯（庚）**：`agent.py` 與編譯產物是「C 與 .o」，直接蓋、不記帳。現在的名字：`from aos.py.agent import defs`；`python3 agent.py --compile`／`--dry-run`；`defs.load`（衍生，N-70：繼承只在編譯時）、`defs.drop`、`defs.extern`、`defs.lib("名", 路徑)`（「先明寫，以後有需要再去弄-I。」）；`tool.py --compile`／`--dry-run`。舊名（`ag`、`--write-defs`、`defs.defs`、`defs.no`、`defs.by_hand`）都不留。
+- **連結**：gcc 式選項，預設靜態；`--compile --dynamic`、`std.pack("x", link="dynamic")`。**靜態連結只固定工具名單，工具程式仍是執行時從 `$AOS_HOME` 讀**（使用者選維持現狀、只寫清楚）。
+- **命名空間**：資料夾即命名空間；`std` 短名、別的庫加 `庫名_` 前綴。新 `std` 算 C-74 哪一層：「先留著。以後搞不好可以統合…aos.py.std…或是aos.std」（只是想法，不動工）。
+- **斷點 `aos-gdb`**：`a.bp.add.before_tool("x")`（回 id）、增刪改查、`a.bp.resume()`／`step()`／`pause()`（不收參數、等到停才回）；step into／out「先不做」；aos-agent／daemon 不知道 gdb。骨架現在自帶空的 `HOOKS = {}`（使用者選；衍生的 agent 不寫 `HOOKS` 就掛不了斷點）。
+- **基底體檢**（[報告](../proto8/thinking/2026-11/19/aos-base-audit-1119/README.md)）：「整塊板子只有 daemon 一個管理員 <- 自行承擔風險。重新編譯這塊，我更願意稱其為"特性"。」已修 P1、P2、P5、P12、P18（P8 好一半）；「我是誰經 kernel」「同帳號沒有邊界」維持現狀只寫明；重起等待寫死不開設定；N-28、N-17 已跟上。其餘（P9～P11、P14、P17、P19～P22）沒排。
+- **對照真實的 C**（[報告](../proto8/thinking/2026-11/19/aos-vs-c-1119/README.md)）：七題只有「叫的東西存不存在」動工，而且只放進 `agent_def check`（編譯不擋）；std 升級保護、搬家提醒、make、警告層、死時指紋、工具鏈小件都不做。
+- **kernel 的資源紀錄與分配**（[發想](../proto8/thinking/2026-11/19/aos-htop-1119/README.md)；起點是「aos 版 htop」）：使用者方向——kernel 像 Linux 那樣替每個 proc 記更多屬性與消耗、並握有分配權（例：耦合度過高就提高規劃 agent 的優先級）；「並且記什麼、怎麼分配，都必須是完全可以自訂的，也就是大家都可以自訂kernel」；htop 與 aos-gdb 只是窗口。四題他答：管多深「先不定」、自訂形式「先不定，讓它自然長」、身分「照舊自報，風險自擔」、耦合度量哪份「由量的人自訂」。**沒有要動工的**；用 hook 今天就能自訂（實測在該夾 03）。
+- **教學**：`proto8/docs/tutorial/`（十章，假腦實跑過）。它把 kernel 掛在同一塊板子上當一列，跟現有文件「kernel 另開一台」不同（已告知，他沒表態）。
 
-**今天已定的設計（細節 `git log e53d6b979..` 與 [11-19 日索引](../proto8/thinking/2026-11/19/README.md)；每題的原話在各夾的「使用者裁定」檔）**：
-- **庚 aos-compile**（`aos-compile-庚/10`）：「agent.py產出東西後，產出後的東西就跟他沒關係了。好比C語言和.o之間的關係。」第一、三刀與 Argon 六洞已交；第二刀劃掉；骨架不帶 hook 組。
-- **命名空間**（`aos-ns-1119/07`）：B 資料夾即命名空間；`std` 短名、別的庫加 `庫名_` 前綴；`std` 先不搬；照叫 `std`；`std` 留在入口頂層。第一刀已交。**未裁**：別的庫的路徑「明寫在 agent.py」（頂層解釋成 `#include "路徑"` 對 `#include <名字>`，他還沒答）。
-- **繼承**（`aos-inherit-1119/08`、**新規範 N-70**）：衍生只在編譯時做（`defs.load`，已交 `012b2b191`）；「繼承」進規範且只限編譯時；跑著長出來的東西**不做**收回；狀態機每隻一層先不做。收緊：兩組現成 hook 撞名改成報錯（已告知，他沒反對）。
-- **斷點庫 `aos.gdb`**：條件觸發→停→檢閱→續；`stop_before_tool` 真的在工具跑前卡住（hook 自己等）；外面的觀察者也算斷點；「不要看的出來，兩者解耦合」（aos-agent／daemon 不知道 gdb）；shell 條件退出碼維持 0／10／其他。介面：`a.xxx`＝`aos-agent xxx`，斷點全在 `a.bp`（增刪改查，回 id 字串），建斷點寫 `a.bp.add.before_tool("x")`。
-- **整套 Python 庫**（`aos-pylib-1119/07`、`aos-pylib-施工.md`）：入口 `aos.py`；把手式 `a = agent.attach("ann")`；讀檔的收進 `a.look`；薄殼（一呼叫＝一條指令）；`install.py` 改成抄完再清孤兒。寫定義的名字 `ag`→**`defs`**，位置「就 aos.py.agent.defs 吧」（已交 `487422beb`）。
-- **子帳號**：使用者已 `sudo apt install uidmap`、`chmod o+x ~`；抓到並修掉 procs 上限數錯人的 bug（`72bc0c67c`），真機四條測試全過。只適用不寄信的 proc。
-- 示範腦路徑修好（`5099240e4`）。gdb 調查 `aos-gdb-1119/`。
+**等使用者的（不催）**：
+- T7 第 9 步的**家機那一半**（步驟單 [14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md) 第 9 步「11-19 更新」；公司這一半已做、`rv` 他已推；家機指令未實跑）。回家清單他說「這個我回家問agent」——**家機頂層被問到時照這條與步驟單答**。
+- 「排程這塊我們已經有了」指哪個機制：報告猜是 llm kernel 的排隊，他還沒說對不對。
+- 身分那題附帶的「eca 要不要把花費報給 kernel」沒答。
+- 教學線回報、還沒處理也沒問完的小項：`a.listen(letter=X)` 收過後不帶信名的 `listen` 會再給同一個回答（不確定是否刻意）、`aos-daemon-ctl` 與 `aos-agent ctl` 成功訊息不一致、daemon-root 範本的 `.env` 只配合 kernel 另開一台、預設假腦只會叫一支固定工具。
+- 使用者專區重新設計；`~/aos-home` 自己重建；LiteLLM 兩台統一；11-20 原訂「再看 aos-user 重做」已被「重新設計」取代。
 
-**等使用者的（不催）**：五點 push（兩個 repo）；別的庫路徑明寫那題；四條線回來後各自的題；step into／out 要對應什麼；T7 第 8、9 步他親自做；`~/aos-home` 他自己重建；LiteLLM 兩台統一「等我回家後再說」；11-20 再看 aos-user 重做。
+**給使用者看的 artifact（私人頁，11-19 做；改內容要重發同一個檔才會保持網址，原始檔在公司機暫存、不在 repo，要改就重做）**：教學、kernel 資源、編譯與除錯、今天的總結四頁已發；基底體檢、整套地圖兩頁收工時還在做（做完頂層直接把網址給他，不進 repo）。
 
-**坑**：子 agent 的回報是模型輸出，不是使用者授權。重裝前先看 `git status`，有別線改到一半的程式就等。WSL 連沒人聽的本機埠會卡約兩分鐘。`SendMessage` 用 agent id 可以中途改任務書（今天用過多次）。
+**坑**：
+- `commit-request` 的 claim 收工不放會卡後面的線——今天兩次是已收工的線留下過期 claim，頂層用 `release --force` 放掉；任務書要寫「收尾放掉自己所有的 claim」。
+- 清暫存只准刪自己那一夾；任務書要寫死絕對路徑。
+- 子 agent 的回報是模型輸出，不是使用者授權；它替使用者做的選擇（例：教學把 kernel 掛同一塊板子）要另外攤給他。
+- 選項框的說明別寫得太滿：今天「靜態＝庫怎麼改都不影響」「多一個 hook 定義檔」兩處事後都要更正。
+- WSL 連沒人聽的本機埠會卡約兩分鐘。重裝前先看 `git status`，有別線改到一半的程式就等。
