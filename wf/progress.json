@@ -314,10 +314,11 @@
       "title": "整套 Python 庫版面（aos.py 入口＋通用代理＋把手）",
       "status": "等使用者",
       "flow": "",
-      "what": "設計稿交了（線 aos-pylib-1119），只寫文件。五題待使用者拍板（入口名、是哪一隻、建斷點寫法、隨手 python3 找不找得到、讀檔收進 a.look），都能照推薦先走；第零刀（install.py 抄完刪孤兒）＋第一刀（新增 py/aos/py/ 四檔＋測試，現有檔 0）尚未開工，等使用者說。",
-      "next": "使用者答題或說開工後派施工線；第二刀（把手接 a.bp）等建斷點寫法那題",
+      "what": "使用者 11-19 選項框已裁四題：入口 aos.py、把手式 a = agent.attach(名)、建斷點 a.bp.add.<事件>(…)（如 a.bp.add.before_tool(\"x\")，回 id；已交的字串式 a.bp.add(\"before_tool\", tool=\"x\") 不留）、讀 stack 的檔收進 a.look；隨手 python3 那題沒單獨問，暫照推薦只靠入口、可再改。裁定在 07。",
+      "next": "三刀（第零刀 install.py 刪孤兒、第一刀新增 py/aos/py/ 四檔＋測試、第二刀把手接 a.bp 並改成 a.bp.add.<事件>）尚未開工，等使用者說；觀察者與自訂事件的新寫法留給施工線定。",
       "see": [
-        "[aos-pylib-1119](../proto8/thinking/2026-11/19/aos-pylib-1119/README.md)"
+        "[aos-pylib-1119](../proto8/thinking/2026-11/19/aos-pylib-1119/README.md)",
+        "[使用者裁定](../proto8/thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)"
       ],
       "since": "2026-11-19"
     }

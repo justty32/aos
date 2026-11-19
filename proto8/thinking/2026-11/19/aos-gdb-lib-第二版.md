@@ -144,7 +144,7 @@
   - 停／續／跳過：`a.bp.stop()`（現在就停＝`ctl pause`；已扣在斷點上就不送、回一行說明）、`a.bp.resume()`（**不收參數**）、`a.bp.skip(text=None)`（扣在 before_tool：放行但那次工具不跑；名字暫定）。
   - 停在哪、為什麼：`a.bp.why()`（多了 `.breakpoint`＝停在哪個 id）、`a.bp.held()`、`a.bp.stopped()`、`a.bp.wait_stopped(timeout_s=30)`、`a.bp.notes()`。
 
-`add` 選「一個方法、第一個參數說什麼時候判」（`a.bp.add("before_tool", tool="x")`），不選 `a.bp.add.before_tool("x")`：理由是一個入口就對得上一條 shell 指令（`… bp add before_tool --tool x`），所有事件與觀察者同一個形狀、不用替每個事件各寫一個方法，`help(a.bp.add)` 一頁講完；代價是事件名打錯要到執行才知道（錯了會列出能用的）。另一種留給使用者挑。
+`add` 選「一個方法、第一個參數說什麼時候判」（`a.bp.add("before_tool", tool="x")`），不選 `a.bp.add.before_tool("x")`：理由是一個入口就對得上一條 shell 指令（`… bp add before_tool --tool x`），所有事件與觀察者同一個形狀、不用替每個事件各寫一個方法，`help(a.bp.add)` 一頁講完；代價是事件名打錯要到執行才知道（錯了會列出能用的）。另一種留給使用者挑。（11-19 使用者選了另一種 `a.bp.add.before_tool("x")`，見下面「暫定、待使用者挑的」與 [aos-pylib-1119/07](aos-pylib-1119/07-使用者裁定.md)。）
 
 ### 改名對照（舊 → 新）
 
@@ -174,7 +174,7 @@
 ### 暫定、待使用者挑的
 
 - `a.bp.skip()`、`a.bp.wait_stopped()` 兩個名字。`wait_paused` 的其他候選：`a.bp.wait()`、`a.bp.wait_until_stopped()`、`a.bp.until_stopped()`。
-- `add` 的寫法（上面）。
+- `add` 的寫法（上面）。**已裁：`a.bp.add.before_tool("x")`**（使用者 11-19 選項框，見 [aos-pylib-1119/07](aos-pylib-1119/07-使用者裁定.md)）：字串式 `a.bp.add("before_tool", tool="x")` 不留，改在 Python 庫第二刀做；觀察者與自訂事件怎麼寫留給施工線。
 - shell 那邊：要真的 `aos-agent breakpoint …`（要 aos-agent 認得 gdb，跟「兩者解耦合」打架），還是 `aos-gdb bp add/rm/set/ls/get/stop/resume/skip/why …`（做在 aos-gdb 自己這邊，aos-agent 照舊不知道）。這次沒做，只寫成提案：每個 `a.bp.*` 一個子指令、旗標照 `add` 的參數名，`py=` 只收運算式字串。
 
 ### 測試（git archive 乾淨複本疊改動、清 AOS_*、install 後跑；暫存 `~/.aos/scratch/aosgdb-api-1119/`）
