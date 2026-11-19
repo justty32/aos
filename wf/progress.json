@@ -107,29 +107,6 @@
       ],
       "since": "2026-11-17"
     },
-    "two-machines-t7-8-9": {
-      "title": "two-machines T7 第 8、9 步（公司機）",
-      "status": "等使用者",
-      "flow": "",
-      "what": "11-19 線 aos-t7-1119 代跑：第 8 步 /mnt/c 起一棵假腦全過（say 0.29 秒、listen 5.8 秒）；第 9 步公司這一半跑到 ~/code/rv 本地 commit bfec146（bob 真 claude 回 ok），沒建 repo、沒 push；步驟單第 8、9 步各補一節 11-19 更新",
-      "next": "使用者：公司機建私有 repo、git remote add、git push；回家照步驟單做家機那一半（未實跑），看 machine-id、bob 答不答得出 kiwi、git status",
-      "see": [
-        "[14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md#第-9-步-11-19-更新線-aos-t7-1119-實跑)",
-        "[aos-t7](../proto8/thinking/2026-11/19/aos-t7.md)"
-      ],
-      "since": "2026-11-18"
-    },
-    "two-machines-t7-1-7": {
-      "title": "two-machines T7 第 1～7 步：家機已跑，自動記憶那題已裁",
-      "status": "open",
-      "flow": "",
-      "what": "11-18 晚線 t7-home-1118 在家機用真 claude（haiku）跑完第 1～4、6、7 步：1、2、4、6 過；3 不符預期（claude 2.1.327 換資料夾也接得回，aos 比它嚴、只是保守，沒改）；7 發現 claude 用的是 Claude Code 自己的自動記憶（~/.claude/projects/…/memory/，不在樹裡、換台帶不走），使用者 11-18 晚已裁、不做：「自動記憶那塊我們管不着，要的話就是使用者自己去設定或定義關掉。」；第 5 步 codex 跳過（使用者打算拿 pi 代替）",
-      "next": "第 8、9 步見上一條（那兩步內文要先照現況改）；本條只剩這個指向，那兩步處理完即可刪",
-      "see": [
-        "[14-真機驗證 家機實跑結果](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md#家機實跑結果11-18-晚線-t7-home-1118)"
-      ],
-      "since": "2026-11-18"
-    },
     "codex-trust-company": {
       "title": "公司 WSL Codex 設定檔的舊信任紀錄",
       "status": "等使用者",
