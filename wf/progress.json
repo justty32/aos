@@ -262,15 +262,15 @@
       "title": "aos-compile：用 Python 寫、編譯成 aos 夾",
       "status": "等使用者",
       "flow": "",
-      "what": "使用者 11-18 晚裁定：庚（一支 agent.py 宣告 SYSTEM／TOOLS／LLM／FSM 生出定義夾的 json）先做、己（一頁總覽）後做；除錯以 loop 那層為主。11-19 設計稿與六題裁定（定調「C 與 .o」：重生直接蓋、不記指紋、產出後的 json 照常能改）。11-19 第一刀施工完（線 compile-geng-s1-1119）：py/aos/agent_spec.py、templates/agent-python（agent.py＋生成檔＋英文 README）、py/tests/test_agent_spec.py，七條驗收在乾淨複本全過；沒動 agent_def、知識庫、現有範本。11-19 寫定義的名字 ag 改叫 defs（線 aos-defs-rename-1119，使用者「就 aos.py.agent.defs 吧」）：agent.py 開頭 from aos.py.agent import defs、其後 defs.main／defs.tool／defs.load…；實作檔 agent_spec*.py 不搬、生出的檔一字不變。",
-      "next": "使用者：點頭後在 ~/repo/aos/proto8 跑 install.py（會換掉使用中的 bin/lib），照紀錄「使用者怎麼試」抄骨架、改 agent.py、--write-defs、ctl add 試用。之後：第二刀（agent_def check 順手重生）使用者 11-19 劃掉、不做；第三刀 HOOKS／FILES／eca 模式；知識庫最後",
+      "what": "使用者 11-18 晚裁定：庚（一支 agent.py 宣告 SYSTEM／TOOLS／LLM／FSM 編譯成定義夾的 json）先做、己（一頁總覽）後做；除錯以 loop 那層為主。11-19 設計稿與六題裁定（定調「C 與 .o」：重新編譯直接蓋、不記指紋、產出後的 json 照常能改）。11-19 第一刀施工完（線 compile-geng-s1-1119）：py/aos/agent_spec.py、templates/agent-python（agent.py＋編譯產物＋英文 README）、py/tests/test_agent_spec.py，七條驗收在乾淨複本全過；沒動 agent_def、知識庫、現有範本。11-19 寫定義的名字 ag 改叫 defs（線 aos-defs-rename-1119，使用者「就 aos.py.agent.defs 吧」）：agent.py 開頭 from aos.py.agent import defs、其後 defs.main／defs.tool／defs.load…。11-19 換成編譯用語（線 aos-defs-rename2-1119，使用者「要，可以參考那些程式語言的類似的功能的名字」「然後以後也用編譯、重新編譯來說，不要再用生、重生這樣」）：指令 --compile／--dry-run、Python defs.compile／defs.write；編譯產物一字不變。",
+      "next": "使用者：點頭後在 ~/repo/aos/proto8 跑 install.py（會換掉使用中的 bin/lib），照紀錄「使用者怎麼試」複製骨架、改 agent.py、python3 agent.py --compile、ctl add 試用。之後：工具包靜態／動態連結做成編譯選項（線 aos-defs-rename2-1119 第二筆）；第二刀（agent_def check 順手重新編譯）使用者 11-19 劃掉、不做；知識庫最後",
       "see": [
         "[第一刀施工紀錄](../proto8/thinking/2026-11/19/aos-compile-庚-第一刀.md)",
         "[第一刀範圍說明](../proto8/thinking/2026-11/19/aos-compile-庚/08-範圍切法.md)",
         "[庚設計稿 README](../proto8/thinking/2026-11/19/aos-compile-庚/README.md)",
         "[11-19 六題裁定](../proto8/thinking/2026-11/19/aos-compile-庚/10-使用者裁定.md)",
         "[11-18 使用者裁定](../proto8/thinking/2026-11/18/aos-compile-1118/07-使用者裁定.md)",
-        "[ag 改叫 defs](../proto8/thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md#補寫定義的名字-ag-改叫-defs11-19線-aos-defs-rename-1119)"
+        "[ag 改叫 defs、換成編譯用語](../proto8/thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)"
       ],
       "since": "2026-11-18"
     },

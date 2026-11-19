@@ -1,33 +1,36 @@
-"""agent_spec - 給人寫 agent 定義的輔助：在一支 agent.py 裡宣告說明、system、工具、腦設定、狀態機、hook、其他檔，就生出一份掛得上去的定義夾；不宣告狀態機時只填一份現成定義夾的內容檔（eca 版）。
+"""agent_spec - 給人寫 agent 定義的輔助：在一支 agent.py 裡宣告說明、system、工具、腦設定、狀態機、hook、其他檔，就編出一份掛得上去的定義夾；不宣告狀態機時只填一份現成定義夾的內容檔（eca 版）。
 
 使用者 11-18：「讓我不必在那邊mkdir半天」；11-19 定調：「agent.py產出東西後，產出後的東西就跟他沒關係了。好比C語言和.o之間的關係。」
-所以重生＝直接蓋：不記指紋、不寫記號、沒有 --force／--status；產出後的 json 誰都能照常改，下次重生被蓋回去（設計稿 thinking/2026-11/19/aos-compile-庚/ 03～06、10）。
-寫法與分層照同夾的 tool_spec（宣告寫錯先記著、生成前報一行 SpecBad；每份檔暫存檔＋改名）。找法同 tool_spec：骨架 templates/agent-python/agent.py 的開頭幾行。
+所以再編譯＝直接蓋：不記指紋、不寫記號、沒有 --force／--status；產出後的 json 誰都能照常改，下次編譯被蓋回去（設計稿 thinking/2026-11/19/aos-compile-庚/ 03～06、10）。
+用語照編譯器（使用者 11-19「要，可以參考那些程式語言的類似的功能的名字」，線 aos-defs-rename2-1119，aos-pylib-1119/07 末節）：
+agent.py→那一夾 json 叫「編譯」（compile）；defs.compile 算出、不寫，defs.write 寫進夾；指令 --compile 編譯＋寫、--dry-run 只印不寫。
+寫法與分層照同夾的 tool_spec（宣告寫錯先記著、編譯前報一行 SpecBad；每份檔暫存檔＋改名）。找法同 tool_spec：骨架 templates/agent-python/agent.py 的開頭幾行。
 寫 agent.py 的人拿到這個模組的名字叫 defs：from aos.py.agent import defs（使用者 11-19「就 aos.py.agent.defs 吧」，線 aos-defs-rename-1119；檔不搬、模組名不改），下面的 defs.xxx 都是它。
-各份檔怎麼算、怎麼驗在 aos/agent_spec_parts.py（第三刀拆出去）；這裡是宣告用的小函式、defs、write_defs、main。
+各份檔怎麼算、怎麼驗在 aos/agent_spec_parts.py（第三刀拆出去）；這裡是宣告用的小函式、compile、write、main。
 
-宣告用的小函式（寫錯不在當下丟，記成 bad，defs()／main 再報 SpecBad）：
+宣告用的小函式（寫錯不在當下丟，記成 bad，compile()／main 再報 SpecBad）：
   std                 隨 aos 發的庫（aos/agent_spec_lib.py；命名空間第一刀 aos-ns-cut1-1119）：
     std.pack(名, prefix=, rename=, exclude=)  讀 $AOS_HOME/lib/packs/名.json，展開成一支支工具抄進 tools.json（不寫 $override）
     std.tool("base/read", name=None, **其他)  一支工具 $AOS_HOME/lib/tools/base/read，名字預設＝夾名
-    std.fsm()＝借 agent-fsm 範本的四格；std.hooks(範本="agent-fsm")＝那個範本 hooks.json 的那組 hook（生成時讀、抄進來）
+    std.fsm()＝借 agent-fsm 範本的四格；std.hooks(範本="agent-fsm")＝那個範本 hooks.json 的那組 hook（編譯時讀、抄進來）
   lib(庫名, 根)        別的庫：my = defs.lib("my", defs.env("AOS_WS", "/lib/my"))；my.pack／my.tool 同上，工具名自動帶「庫名_」
   tool(名, 路徑, **其他) 單一個工具＝tools.json 的 tools[名]＝{"path": 路徑, **其他}；路徑也可給 my.tool(...)（只拿它的路徑）；同名蓋掉包裡那支
   no(名)              從展開的包裡拿掉那支（tools.json 裡就沒有那格）
   （包展開後兩支同名、內容又不同＝SpecBad，不再悄悄蓋；tools_json 在 agent_spec_parts）
   home(路徑)／env(變數, 路徑)  指示詞 {"$env": …, "$path": …}，原樣吐、不展開
   state(名, argv, next, timeout_ms=None)、fsm(起點, [state…])
-  by_hand(檔名)        這份檔自己手寫：interfaces.json 指到它、不生、不蓋（SYSTEM／TOOLS／LLM／FSM／HOOKS 都可用）
+  by_hand(檔名)        這份檔自己手寫：interfaces.json 指到它、不編、不蓋（SYSTEM／TOOLS／LLM／FSM／HOOKS 都可用）
   load(路徑)           衍生（繼承第一刀 aos-inherit-cut1-1119，本體 aos/agent_spec_load.py）：base = defs.load("../reviewer") 跑那支 agent.py，
                        它的 defs.main 只交出九個欄位；TOOLS 寫 [base.TOOLS, defs.no(...), ...]、HOOKS 寫 [base.HOOKS, {名: {**base.HOOKS[名], 鍵: 值}}]、
-                       FSM 寫 defs.fsm(base.FSM, [defs.state(名, 只給要換的)], drop=[...])；只在重生時算，生出的 json 整份、不記上一層（N-70）
-兩個可單獨叫的函式：
-  defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None)
+                       FSM 寫 defs.fsm(base.FSM, [defs.state(名, 只給要換的)], drop=[...])；只在編譯時算，編出的 json 整份、不記上一層（N-70）
+兩個可單獨叫的函式（REPL 裡 defs.compile(...) 再 defs.write(夾, 結果)＝指令 --compile）：
+  compile(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None)
       → {檔名: 內容}（驗完才回；宣告錯丟 SpecBad、夾不對丟 DefBad）。fsm=None＝不宣告狀態機：照 folder 裡現有的
         interfaces.json 找檔名，只出內容檔（system、tools、llm、hooks）、FILES、_metainfo.json、README.md，骨架不碰（第三刀）
-  write_defs(folder, files) → 寫了哪些（字串串列）；宣告到的檔直接蓋，_metainfo.json 只設自己的鍵，README.md 不在才寫，其他檔不碰
-main(...)：agent.py 最後一行；--write-defs [資料夾]、--defs、--help，都沒有＝ArgumentsBad 帶用法（P-44）。
-之後的除錯開關（aos-gdb-1119、庚第四刀）要加就加在 defs 的關鍵字參數，不動現有參數的意思。"""
+  write(folder, files) → 寫了哪些（字串串列）；宣告到的檔直接蓋，_metainfo.json 只設自己的鍵，README.md 不在才寫，其他檔不碰
+main(...)：agent.py 最後一行；--compile [資料夾]、--dry-run、--help，都沒有＝ArgumentsBad 帶用法（P-44）。
+之後的除錯開關（aos-gdb-1119、庚第四刀）要加就加在 compile 的關鍵字參數，不動現有參數的意思。
+compile 蓋掉了模組裡內建的 compile()：這個模組自己不用內建那支，要用寫 builtins.compile。"""
 import json, os, sys
 
 from aos import flags
@@ -40,14 +43,15 @@ from aos.agent_spec_load import load  # noqa: F401（對外的名字：defs.load
 HOOK_FIRE = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}   # loop.json 的 on_start／on_stop（照 agent-fsm 範本）
 RENAME_LAST = {"loop.json": 1, "body.json": 2, "interfaces.json": 3, "_entry": 4, "_metainfo.json": 5}   # 改名時被指的檔先換、索引檔最後（其他＝0）
 HELP = """\
-usage: python3 agent.py --write-defs [FOLDER] | --defs | --help
-Make an aos agent definition from the declarations in agent.py.
-  --write-defs [FOLDER]  write the definition files into FOLDER (default: the folder of agent.py).
-                         Files that agent.py declares are overwritten as a whole, every time;
-                         _metainfo.json keeps keys agent.py does not set; README.md is written only
-                         when it is missing; every other file is left alone.
-  --defs                 print everything --write-defs would write, as one JSON object
-                         {"file name": content}, and write nothing.
+usage: python3 agent.py --compile [FOLDER] | --dry-run | --help
+Compile agent.py into an aos agent definition (a folder of JSON files), like a C compiler
+turning a .c file into a .o file.
+  --compile [FOLDER]  compile and write the definition files into FOLDER (default: the folder
+                      of agent.py). Compiling again overwrites, as a whole, every file agent.py
+                      declares; _metainfo.json keeps keys agent.py does not set; README.md is
+                      written only when it is missing; every other file is left alone.
+  --dry-run           compile and print everything --compile would write, as one JSON object
+                      {"file name": content}, and write nothing.
 With FSM declared, agent.py writes the whole definition (skeleton included). Without FSM
 (defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM)), it fills only the content files (system, tools, llm,
 hooks) of a definition that already has its skeleton, under the names its interfaces.json gives.
@@ -79,7 +83,7 @@ def home(path):
 
 
 def env(var, path):
-    """某個環境變數底下的路徑：env("AOS_WS", "/tools/x") → {"$env": "AOS_WS", "$path": "/tools/x"}；生成時不展開。"""
+    """某個環境變數底下的路徑：env("AOS_WS", "/tools/x") → {"$env": "AOS_WS", "$path": "/tools/x"}；編譯時不展開。"""
     return {"$env": var, "$path": path}
 
 
@@ -112,7 +116,7 @@ def no(name):
 
 
 def by_hand(filename):
-    """這份檔自己手寫：interfaces.json 指到它，agent.py 不生、不蓋。"""
+    """這份檔自己手寫：interfaces.json 指到它，agent.py 不編、不蓋。"""
     if (not isinstance(filename, str) or not filename or os.path.isabs(filename) or ".." in filename.split("/")
             or os.path.normpath(filename) == "."):
         return _bad("by_hand(%r): give a file name relative to the definition folder, like \"system.txt\"" % (filename,))
@@ -240,7 +244,7 @@ def _checked(start, table):
 
 
 def _names(decl, fsm, hooks, interfaces, folder):
-    """回四樣：{種類: 這次用的檔名}、{種類: by_hand 的檔名}、FILES 不能用的檔名、llm_keys（有 FSM＝None，之後照生成的 interfaces.json）。"""
+    """回四樣：{種類: 這次用的檔名}、{種類: by_hand 的檔名}、FILES 不能用的檔名、llm_keys（有 FSM＝None，之後照編譯出的 interfaces.json）。"""
     hand = {w: v["file"] for w, v in decl.items() if parts.kind(v) == "by_hand"}
     if fsm is None:
         if interfaces is not None:
@@ -269,7 +273,7 @@ def _names(decl, fsm, hooks, interfaces, folder):
     return files, hand, set(files.values()), None
 
 
-def defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None):
+def compile(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None):
     """宣告 → {檔名: 內容}（json 是 dict、文字是字串；_metainfo.json 只有 agent.py 設的鍵、README.md 是種子）。全部驗完才回，錯丟 SpecBad／DefBad。
     fsm=None＝不宣告狀態機：要給 folder（照它現有的 interfaces.json 找檔名），骨架不出。"""
     if not isinstance(description, str) or not description.strip():
@@ -340,8 +344,8 @@ def _text(value):
     return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, indent=2) + "\n"
 
 
-def write_defs(folder, files):
-    """files（defs() 的回傳）寫進 folder；回給人看的字串串列。先讀好 _metainfo.json、全部寫成暫存檔，最後連著改名；
+def write(folder, files):
+    """files（compile() 的回傳）寫進 folder；回給人看的字串串列。先讀好 _metainfo.json、全部寫成暫存檔，最後連著改名；
     寫暫存檔時失敗＝刪掉暫存檔、夾裡不變；改名時才失敗（極少）＝前面幾份已換上、每份各自完整，重跑一次就好（設計稿 07）。OSError 照丟（main 報 WriteFailed）；_metainfo.json 不是 JSON 物件＝DefBad。"""
     if not os.path.isdir(folder):
         raise OSError("%s is not a folder" % folder)
@@ -400,28 +404,28 @@ def main(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
                          "use base = defs.load(\"its folder\")" % script)
         return
     argv = sys.argv[1:]
-    usage = "usage: python3 %s --write-defs [FOLDER] | --defs | --help" % base
+    usage = "usage: python3 %s --compile [FOLDER] | --dry-run | --help" % base
     if argv[:1] in (["--help"], ["-h"]):
         sys.stdout.write(HELP.replace("agent.py", base))
         sys.exit(0)
     if not argv:
-        flags.die(prog, "ArgumentsBad", "give --write-defs or --defs (%s)" % usage)
-    if argv[0] not in ("--write-defs", "--defs"):
+        flags.die(prog, "ArgumentsBad", "give --compile or --dry-run (%s)" % usage)
+    if argv[0] not in ("--compile", "--dry-run"):
         flags.die(prog, "FlagUnknown", "%s (%s)" % (argv[0], usage))
-    if len(argv) > (2 if argv[0] == "--write-defs" else 1):
+    if len(argv) > (2 if argv[0] == "--compile" else 1):
         flags.die(prog, "ArgumentsBad", "too many arguments: %s (%s)" % (" ".join(argv), usage))
     folder = argv[1] if len(argv) > 1 else os.path.dirname(script)
     try:
-        out = defs(description, system, tools, llm, fsm, meta, interfaces, hooks, files, folder)
+        out = compile(description, system, tools, llm, fsm, meta, interfaces, hooks, files, folder)
     except SpecBad as e:
         flags.die(prog, "SpecBad", "%s (fix the declaration in %s)" % (e, base))
     except DefBad as e:
         flags.die(prog, "DefBad", str(e))
-    if argv[0] == "--defs":
+    if argv[0] == "--dry-run":
         print(json.dumps(out, ensure_ascii=False, indent=2))
         sys.exit(0)
     try:
-        lines = write_defs(folder, out)
+        lines = write(folder, out)
     except DefBad as e:
         flags.die(prog, "DefBad", str(e))
     except OSError as e:

@@ -23,7 +23,7 @@
   },
   "agent-fsm/": "Run an aos agent with loop and FSM cells.",
   "agent-python": {
-   "agent.py": "一支 agent.py 宣告一隻 agent（說明、system、工具、腦設定、狀態機），python3 agent.py --write-defs 生出這夾的定義檔（說明看 README.md）。",
+   "agent.py": "一支 agent.py 宣告一隻 agent（說明、system、工具、腦設定、狀態機），python3 agent.py --compile 編譯成這夾的定義檔（說明看 README.md）。",
    "body.json": "Run this agent's loop: aos-loop with loop.json.",
    "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
    "interfaces.json": "Look things up in the workspace and answer by mail.",

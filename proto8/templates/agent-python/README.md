@@ -1,6 +1,10 @@
 Look things up in the workspace and answer by mail (agent-python skeleton: an agent definition written as one agent.py).
 
-This folder is one working agent definition. Everything in it except this README is made from **`agent.py`**: you change `agent.py`, run one command, and the other files are written for you. You do not `mkdir` or edit the JSON files one by one.
+This folder is one working agent definition. **`agent.py` is its source; every other file here (except this README) is compiled from it**, the way a C compiler turns a `.c` file into a `.o` file. You change `agent.py`, run one command, and the JSON files are written for you; you do not `mkdir` or edit them one by one.
+
+- **What compiling is.** `python3 agent.py --compile` runs `agent.py` and writes the definition files (`fsm.json`, `tools.json`, ...) into this folder. From then on aos runs those files, not `agent.py`: like a `.o` file, they no longer need their source.
+- **Compiling again overwrites.** Recompiling writes every declared file again as a whole, without asking, so a change made directly in a compiled file is gone. Change `agent.py` and recompile instead.
+- **Static and dynamic linking.** Some things are copied into the compiled files when you compile, like a library linked statically into a program: the tools of a pack (`std.pack`, a library's `.pack`), `std.hooks()`, and everything taken from another `agent.py` with `defs.load`. A change there shows up only after you recompile. Other things are only named in the compiled files and read when the agent runs, like a library linked dynamically (a `.so` loaded at start): the tool programs themselves and the state machine cells of `std.fsm()`. A change there shows up without recompiling.
 
 ## Make your own agent from it
 
@@ -9,20 +13,20 @@ This folder is one working agent definition. Everything in it except this README
 cp -r $AOS_HOME/templates/agent-python my_agent
 cd my_agent
 # change the part of agent.py under "# ---- your agent", then:
-python3 agent.py --defs          # optional: print what would be written, write nothing
-python3 agent.py --write-defs    # write the definition files into this folder
+python3 agent.py --dry-run       # optional: compile and print what would be written, write nothing
+python3 agent.py --compile       # compile: write the definition files into this folder
 aos-agent ctl add .              # mount it (add -d DAEMON, -w WORKSPACE as usual)
 ```
 
 Keep the lines above `# ---- your agent` as they are: they find the `aos` package (`$AOS_HOME/lib` first, then an `aos/` folder next to `agent.py`, so a file named `aos.py` next to it does not get in the way when `AOS_HOME` is set), then import `defs` with `from aos.py.agent import defs` (everything below is `defs.something`). Keep the last line `defs.main(...)`.
 
-## Read this before you run --write-defs
+## Read this before you run --compile
 
-1. **It overwrites, as a whole, every file `agent.py` declares**, every time, without asking. If you run it in a folder that already has hand-written `tools.json`, `fsm.json`, `system.txt` and so on, those are replaced. Look first with `python3 agent.py --defs`, or commit first. A file you want to keep writing by hand: declare it with `defs.by_hand("file name")`.
-2. **Changes made directly in the generated files are gone at the next `--write-defs`.** That includes changes made by `agent_def tools` / `llm` / `system` or by an editor. Like a C compiler and its `.o` files: after it writes them, the files are ordinary definition files that anyone may change, and nothing remembers what was written. To keep a change, put it in `agent.py`.
+1. **It overwrites, as a whole, every file `agent.py` declares**, every time, without asking. If you run it in a folder that already has hand-written `tools.json`, `fsm.json`, `system.txt` and so on, those are replaced. Look first with `python3 agent.py --dry-run`, or commit first. A file you want to keep writing by hand: declare it with `defs.by_hand("file name")`.
+2. **Changes made directly in the compiled files are gone when you recompile.** That includes changes made by `agent_def tools` / `llm` / `system` or by an editor. Like a C compiler and its `.o` files: after it writes them, the files are ordinary definition files that anyone may change, and nothing remembers what was written. To keep a change, put it in `agent.py`.
 3. **Renaming or removing a state of `FSM` can stop a running agent** that is sitting in that state (its `stage.txt` names a state that is no longer in `fsm.json`; aos-fsm then fails with `StateUnknown`). Rename states only when no agent using this definition is running.
 
-What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set (for example `lineage`, written by `agent_def new`); `README.md` is written only when it is missing (one line: `DESCRIPTION`); any other file in the folder is left alone, also files an older `agent.py` wrote but the current one no longer declares (delete those yourself). Nothing in the folder marks it as generated: delete `agent.py` and it is a plain definition.
+What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set (for example `lineage`, written by `agent_def new`); `README.md` is written only when it is missing (one line: `DESCRIPTION`); any other file in the folder is left alone, also files an older `agent.py` wrote but the current one no longer declares (delete those yourself). Nothing in the folder marks it as compiled: delete `agent.py` and it is a plain definition.
 
 ## Files
 
@@ -47,13 +51,13 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
 - `DESCRIPTION`: one English sentence: what the agent does. It becomes `summary` in `_metainfo.json`.
 - `SYSTEM`: the system text as a string, or `defs.by_hand("system.txt")` to keep writing that file yourself.
 - `TOOLS`: a list of
-  - `std.pack("look")`: the tools of a pack of `std`, the library that comes with aos (`$AOS_HOME/lib/packs/look.json`). The pack is read when `agent.py` runs and its tools are written into `tools.json` one by one (no `$override`), so a tool added to the pack later shows up after the next `--write-defs`;
+  - `std.pack("look")`: the tools of a pack of `std`, the library that comes with aos (`$AOS_HOME/lib/packs/look.json`). The pack is read when `agent.py` runs and its tools are written into `tools.json` one by one (no `$override`), so a tool added to the pack later shows up after you recompile;
   - `std.tool("base/read")`: one tool of `std` (`$AOS_HOME/lib/tools/base/read`), named after its folder (`name="..."` picks another name);
   - `defs.tool("read", defs.home("/lib/tools/base/read"))`: one tool by its path; it replaces a tool of the same name from the packs. The path can also be a library tool: `defs.tool("read", my.tool("read"))`;
   - `defs.no("shell")`: take one tool out of the packs;
   - the `.pack(...)` / `.tool(...)` of another library (see "Libraries" below).
   - `std.pack(...)` and the `.pack(...)` of a library also take `prefix="..."` (put before every tool name), `rename={"read": "cat"}` (the name of one tool, instead of prefix + its name) and `exclude=["grep"]` (leave tools out).
-  - When two packs give the same name and the tools are not exactly the same, `--write-defs` stops with `SpecBad` instead of letting one hide the other. Use `prefix=`, `rename=`, `exclude=`, or pick one with `defs.tool(name, ...)`.
+  - When two packs give the same name and the tools are not exactly the same, `--compile` stops with `SpecBad` instead of letting one hide the other. Use `prefix=`, `rename=`, `exclude=`, or pick one with `defs.tool(name, ...)`.
 - `LLM`: a dict. `{}` = the llm kernel's default brain; `{"model": "luna"}` picks a brain pack of the kernel. Other keys must be in `llm_keys` (`temperature`, `max_tokens`, ...).
 - `FSM`: `std.fsm()` borrows the four cells of the `agent-fsm` template (`idle`, `think`, `wait`, `act`; the cell programs stay in `$AOS_HOME/templates/agent-fsm/`). Your own machine:
 
@@ -75,7 +79,7 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
   - `INTERFACES`: laid over the default `interfaces.json`, like `{"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}}` (`None` removes a default key);
   - `HOOKS`: writes `hooks.json`, adds `"hooks": "hooks.json"` to `interfaces.json` and the `on_start` / `on_stop` lines (they fire `after_start` / `after_stop`) to `loop.json`. Write it as
     - a dict `{hook name: entry}`, the entries as in any `hooks.json` (`event`, `handler`, `condition`, `every_ms`, `config`, ...);
-    - `std.hooks()`: the hooks of the `agent-fsm` template (`std.hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/<template>/hooks.json` and copied in, so the next `--write-defs` follows a changed template;
+    - `std.hooks()`: the hooks of the `agent-fsm` template (`std.hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/<template>/hooks.json` and copied in, so recompiling follows a changed template;
     - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `HOOKS = [std.hooks(), {"timer": None, "mine": {...}}]`; but two hook groups (`std.hooks(...)` of two templates, the `HOOKS` of `defs.load`) that give one name with different entries are `SpecBad` unless a dict of yours after them names it;
     - or `defs.by_hand("hooks.json")`.
   - `FILES`: other files written as they are, like `{"ladder.json": {...}}` (a dict or list is written as JSON, a string as it is). The name is one file in this folder; it cannot be a file that agent.py, the skeleton or the running agent writes.
@@ -88,7 +92,7 @@ An eca definition has no state machine: its skeleton (`_entry`, `loop.json`, `cl
 defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, hooks=HOOKS)      # no FSM
 ```
 
-Then `--write-defs` writes only the content files (`SYSTEM`, `TOOLS`, `LLM`, `HOOKS`, and `FILES`, `META`) under the names the folder's `interfaces.json` gives, and checks `LLM` against its `llm_keys` (eca: `model` only). The skeleton is not touched; `INTERFACES` cannot be used. A folder without `interfaces.json`, or one that declares no file for something you declare, gets one `DefBad` line and nothing is written.
+Then `--compile` writes only the content files (`SYSTEM`, `TOOLS`, `LLM`, `HOOKS`, and `FILES`, `META`) under the names the folder's `interfaces.json` gives, and checks `LLM` against its `llm_keys` (eca: `model` only). The skeleton is not touched; `INTERFACES` cannot be used. A folder without `interfaces.json`, or one that declares no file for something you declare, gets one `DefBad` line and nothing is written.
 
 Paths: write paths outside this folder as `defs.home("/...")` (under `$AOS_HOME`) or `defs.env("AOS_WS", "/...")`; they are written as `{"$env": ..., "$path": ...}` and work on any machine and after any copy. Do not write `../` paths: they break when the folder is copied somewhere else.
 
@@ -112,8 +116,8 @@ FSM    = defs.fsm(base.FSM, [defs.state("think", ["python3", defs.home("/templat
 defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM, hooks=HOOKS)
 ```
 
-- **It happens only when you run `--write-defs`.** The files written are whole, like any other definition: no `extends`, no `$override`, nothing that names the base. The running agent does not know there was a base, and the base folder does not have to be there later.
-- **A changed base is followed only when you run `--write-defs` again** here. `defs.load` runs the base's `agent.py`, not its JSON files, so this folder gets what the base's `agent.py` says now, even if the base's own files were not written again.
+- **It happens only when you run `--compile`.** The files written are whole, like any other definition: no `extends`, no `$override`, nothing that names the base. The running agent does not know there was a base, and the base folder does not have to be there later.
+- **A changed base is followed only when you recompile** here. `defs.load` runs the base's `agent.py`, not its JSON files, so this folder gets what the base's `agent.py` says now, even if the base itself was not recompiled.
 - `defs.load(path)`: the folder of another `agent.py` (or the `.py` file itself). A relative path starts at the folder of this `agent.py` (in a Python prompt: the current folder); `defs.env("AOS_WS", "/agents/reviewer")` works too. It does not search anywhere. Loading the base writes nothing anywhere.
 - The base gives nine fields: `DESCRIPTION`, `SYSTEM`, `TOOLS`, `LLM`, `FSM`, `META`, `INTERFACES`, `HOOKS`, `FILES`. A base without `HOOKS` gives an empty group (no `hooks.json` here either, unless you add hooks); a base without `FSM` (an eca body) gives `FSM = None`. A field the base writes by hand (`defs.by_hand(...)`) cannot be built on: using it is one `SpecBad` line; not using it is fine.
 - **Tools.** `base.TOOLS` is one pack. `base.tools(prefix="r_", rename={...}, exclude=[...])` is the same pack with other names, as for `std.pack`. A tool you write yourself (`defs.tool`, `std.tool`) replaces the base's tool of that name; `defs.no` takes one out. A tool is always replaced as a whole: there is no "change one field of a tool".
@@ -124,7 +128,7 @@ defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM, hooks=HOOKS)
 - While the base runs, its folder comes first on `sys.path`; afterwards `sys.path` and the modules it imported (other than `aos`) are put back, so `import helper` here gets this folder's `helper.py`. Two `agent.py` files that load each other is `SpecBad`.
 - A wrong base (a missing folder, an error in its `agent.py`, a wrong declaration there) is one line, for example `strict: error: SpecBad defs.load('../reviewer'): ...`, and nothing is written.
 - Do not `import` another `agent.py` instead: its `defs.main(...)` then only prints a warning and does nothing (it used to write the other folder with your arguments).
-- In a Python prompt (`from aos.py.agent import defs`): `r = defs.load("/ws/agents/reviewer")`, then `defs.defs(...)` / `defs.write_defs(...)` with `r.SYSTEM`, `[r.TOOLS, ...]` and so on. A folder written that way has no `agent.py` and cannot be written again; keep the lines in an `agent.py` if you want to.
+- In a Python prompt (`from aos.py.agent import defs`): `r = defs.load("/ws/agents/reviewer")`, then `defs.compile(...)` / `defs.write(...)` with `r.SYSTEM`, `[r.TOOLS, ...]` and so on. A folder written that way has no `agent.py` and cannot be recompiled; keep the lines in an `agent.py` if you want to.
 
 ## Libraries
 
@@ -142,7 +146,7 @@ TOOLS = [std.pack("look"), my.pack("look")]          # the brain sees read, ls, 
 
 ## When a declaration is wrong
 
-`--write-defs` and `--defs` check everything first and write nothing when something is wrong. You get one line, for example:
+`--compile` and `--dry-run` check everything first and write nothing when something is wrong. You get one line, for example:
 
 ```
 my_agent: error: SpecBad state think: next state 'wiat' is not one of the states (idle, think, wait, act) (fix the declaration in agent.py)

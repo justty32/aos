@@ -1,7 +1,7 @@
 """agent_spec_load - defs.load(路徑)：一支 agent.py 衍生自另一支（繼承第一刀，線 aos-inherit-cut1-1119）：跑底那支，它最後的 defs.main 只交出九個欄位，正規化成一份「底」交回。
 
-設計稿 thinking/2026-11/19/aos-inherit-1119/（04 乙修正版、06、07 採納表、08 使用者裁定）；紀錄 thinking/2026-11/19/aos-inherit-第一刀.md；規範 N-70（繼承只在生成時）。
-只在 agent.py 重生時發生：生出的 json 照舊整份、沒有上一層；執行期一行不動。只收明寫的路徑（不搜尋），相對路徑從叫它的那支 agent.py 的夾算（REPL 從 cwd）。
+設計稿 thinking/2026-11/19/aos-inherit-1119/（04 乙修正版、06、07 採納表、08 使用者裁定）；紀錄 thinking/2026-11/19/aos-inherit-第一刀.md；規範 N-70（繼承只在編譯時）。
+只在 agent.py 重新編譯時發生：編出的 json 照舊整份、沒有上一層；執行期一行不動。只收明寫的路徑（不搜尋），相對路徑從叫它的那支 agent.py 的夾算（REPL 從 cwd）。
 載入期間：底在自己的一份 __main__ 下跑（runpy），載完還原 sys.path 與新進 sys.modules 的非 aos 模組（07 A4）；a 載 b、b 載 a＝SpecBad。
 底的欄位：TOOLS＝一個帶來源名的包（拿掉的留墓碑 None）、HOOKS＝agent_spec_parts.Hooks（帶標記；沒宣告＝空組、當作沒宣告）、FSM＝defs.fsm 的值（eca 版＝None）、
 META＝dict、INTERFACES／FILES＝dict 或 None；底裡的相對路徑（工具 path／env_file、hook handler、狀態格 argv 裡底那夾真有的檔）照底那夾換算（07 A5）。
@@ -87,7 +87,7 @@ def _line(error, file):
 
 
 def load(path):
-    """跑另一支 agent.py，交回它宣告的欄位（Base）。只在 agent.py 重生時用；每次重跑、不留快取。"""
+    """跑另一支 agent.py，交回它宣告的欄位（Base）。只在 agent.py 重新編譯時用；每次重跑、不留快取。"""
     _install_hook()
     caller = sys._getframe(1).f_code.co_filename
     here = os.path.dirname(os.path.realpath(caller)) if os.path.isfile(caller) else os.getcwd()

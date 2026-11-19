@@ -80,7 +80,7 @@ def tree(folder):
 
 
 def plain(value):
-    """a definition file without its top-level description (the generated sentences differ from the hand-written ones)."""
+    """a definition file without its top-level description (the compiled sentences differ from the hand-written ones)."""
     return {k: v for k, v in value.items() if k != "description"} if isinstance(value, dict) else value
 
 
@@ -111,7 +111,7 @@ def resolve(value, home):
 
 def borrowed(tools_json, home):
     """the tools a hand-written tools.json gives after aos-tools stacks its $override packs (field by field, null = not a tool);
-    the generated tools.json must give the same table without $override."""
+    the compiled tools.json must give the same table without $override."""
     acc = {}
     for base in tools_json.get("$override", []):
         for name, entry in json.loads(Path(resolve(base, home)).read_text())["tools"].items():
@@ -141,7 +141,7 @@ class WithHome(unittest.TestCase):
 
 class Declaration(WithHome):
     def test_stock_shape(self):
-        files = defs.defs("Do it.", "sys\n", [defs.std.pack("look"), defs.tool("x", "tools/x", env={"A": "1"}), defs.no("grep")],
+        files = defs.compile("Do it.", "sys\n", [defs.std.pack("look"), defs.tool("x", "tools/x", env={"A": "1"}), defs.no("grep")],
                         {"model": "m"}, defs.std.fsm())
         self.assertEqual(list(files), ["_entry", "body.json", "loop.json", "fsm.json", "interfaces.json", "tools.json",
                                        "llm.json", "system.txt", "_metainfo.json", "README.md"])
@@ -159,7 +159,7 @@ class Declaration(WithHome):
         self.assertEqual(files["README.md"], "Do it.\n")
 
     def test_by_hand_meta_and_interfaces(self):
-        files = defs.defs("D.", defs.by_hand("prompt.txt"), [], {}, defs.std.fsm(), meta={"cost": {"time_ms": 1}},
+        files = defs.compile("D.", defs.by_hand("prompt.txt"), [], {}, defs.std.fsm(), meta={"cost": {"time_ms": 1}},
                         interfaces={"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}})
         self.assertNotIn("system.txt", files)
         self.assertEqual(files["interfaces.json"]["aos-agent"]["system"], "prompt.txt")
@@ -170,7 +170,7 @@ class Declaration(WithHome):
 
     def test_own_fsm(self):
         f = defs.fsm("a", [defs.state("a", ["python3", "a.py"], {0: "b", "*": "a"}), defs.state("b", ["true"], "a")])
-        files = defs.defs("D.", "", [], {}, f)
+        files = defs.compile("D.", "", [], {}, f)
         self.assertEqual(files["fsm.json"]["states"]["a"]["next"], {"0": "b", "*": "a"})
         self.assertEqual(files["fsm.json"]["states"]["b"]["next"], "a")
 
@@ -231,30 +231,30 @@ class Declaration(WithHome):
                  "NaN": dict(meta={"x": float("nan")})}
         for why, change in cases.items():
             with self.subTest(why=why):
-                self.assertRaises(defs.SpecBad, defs.defs, **dict(fine, **change))
+                self.assertRaises(defs.SpecBad, defs.compile, **dict(fine, **change))
 
     def test_holes_from_argon_review(self):
         """geng-patch-1119 (thinking/2026-11/19/aos-compile-庚/12, class 1): META keys, by_hand("agent.py"), the entry message."""
         fine = dict(description="D.", system="", tools=[], llm={}, fsm=defs.std.fsm())
         with self.assertRaisesRegex(defs.SpecBad, "META keys must be strings"):                  # ① was TypeError
-            defs.defs(**dict(fine, meta={1: "a"}))
+            defs.compile(**dict(fine, meta={1: "a"}))
         for what in ("system", "fsm", "tools", "llm", "hooks"):                                 # ② agent.py is not a by_hand file
             with self.subTest(what=what), self.assertRaisesRegex(defs.SpecBad, r"by_hand\('agent.py'\)"):
-                defs.defs(**dict(fine, **{what: defs.by_hand("agent.py")}))
+                defs.compile(**dict(fine, **{what: defs.by_hand("agent.py")}))
         with self.assertRaises(defs.SpecBad) as e:                                                # ⑥ entry cannot take by_hand
-            defs.defs(**dict(fine, interfaces={"aos-agent": {"entry": "x.json"}}))
+            defs.compile(**dict(fine, interfaces={"aos-agent": {"entry": "x.json"}}))
         self.assertIn("entry is body.json", str(e.exception))
         self.assertNotIn("by_hand", str(e.exception))
         with self.assertRaisesRegex(defs.SpecBad, r"use defs.by_hand"):
-            defs.defs(**dict(fine, interfaces={"aos-agent": {"llm": "x.json"}}))
+            defs.compile(**dict(fine, interfaces={"aos-agent": {"llm": "x.json"}}))
 
     def test_rename_order_and_cleanup(self):
         """geng-patch-1119 ③ files pointed at are renamed before the index files; ④ one failed unlink does not stop the cleanup."""
-        out = defs.defs("D.", "", [], {}, defs.std.fsm())
+        out = defs.compile("D.", "", [], {}, defs.std.fsm())
         with tempfile.TemporaryDirectory(prefix="agent-spec-") as d:
             order, replace = [], os.replace
             with unittest.mock.patch("os.replace", lambda a, b: (order.append(os.path.basename(b)), replace(a, b))):
-                defs.write_defs(d, out)
+                defs.write(d, out)
             self.assertEqual(order[-5:], ["loop.json", "body.json", "interfaces.json", "_entry", "_metainfo.json"])
             self.assertLess(order.index("fsm.json"), order.index("loop.json"))
         with tempfile.TemporaryDirectory(prefix="agent-spec-") as d:
@@ -269,7 +269,7 @@ class Declaration(WithHome):
             def fail(a, b):
                 raise OSError("replace fails")
             with unittest.mock.patch("os.replace", fail), unittest.mock.patch("os.unlink", flaky):
-                self.assertRaisesRegex(OSError, "replace fails", defs.write_defs, d, out)
+                self.assertRaisesRegex(OSError, "replace fails", defs.write, d, out)
             self.assertEqual(len(calls), len(out))
             self.assertEqual([p for p in os.listdir(d) if ".tmp-" in p], [os.path.basename(calls[0])])
 
@@ -277,7 +277,7 @@ class Declaration(WithHome):
         with tempfile.TemporaryDirectory(prefix="agent-spec-") as tmp, \
                 unittest.mock.patch.dict(os.environ, {"AOS_HOME": str(fake_home(tmp))}):
             mine = {"event": "before_tool", "condition": "shell", "handler": defs.home("/lib/tools/agent/hook_noop")}
-            files = defs.defs("D.", "", [], {}, defs.std.fsm(), hooks=[defs.std.hooks(), {"timer": None, "mine": mine}],
+            files = defs.compile("D.", "", [], {}, defs.std.fsm(), hooks=[defs.std.hooks(), {"timer": None, "mine": mine}],
                             files={"ladder.json": {"repeat": 3}, "notes.txt": "plain text\n"})
             stock = json.loads((TEMPLATES / "agent-fsm" / "hooks.json").read_text())["hooks"]
         self.assertEqual(list(files), ["_entry", "body.json", "loop.json", "fsm.json", "interfaces.json", "tools.json",
@@ -299,19 +299,19 @@ class Declaration(WithHome):
 
     def test_hooks_loop_matches_agent_fsm_template(self):
         """with HOOKS, loop.json is the agent-fsm template's loop.json (apart from its description)."""
-        files = defs.defs("D.", "", [], {}, defs.std.fsm(), hooks={})
+        files = defs.compile("D.", "", [], {}, defs.std.fsm(), hooks={})
         loop = json.loads((TEMPLATES / "agent-fsm" / "loop.json").read_text())
         self.assertEqual(plain(files["loop.json"]), plain(loop))
         self.assertEqual(files["hooks.json"]["hooks"], {})
 
     def test_no_hooks_no_hooks_key(self):
-        files = defs.defs("D.", "", [], {}, defs.std.fsm())
+        files = defs.compile("D.", "", [], {}, defs.std.fsm())
         self.assertNotIn("hooks", files["interfaces.json"]["aos-agent"])
         self.assertNotIn("on_start", files["loop.json"])
         self.assertNotIn("hooks.json", files)
 
     def test_by_hand_hooks(self):
-        files = defs.defs("D.", "", [], {}, defs.std.fsm(), hooks=defs.by_hand("my_hooks.json"))
+        files = defs.compile("D.", "", [], {}, defs.std.fsm(), hooks=defs.by_hand("my_hooks.json"))
         self.assertNotIn("my_hooks.json", files)
         self.assertEqual(files["interfaces.json"]["aos-agent"]["hooks"], "my_hooks.json")
         self.assertIn("on_start", files["loop.json"])
@@ -325,7 +325,7 @@ class Declaration(WithHome):
             bad = defs.std.hooks("reviewer")
             self.assertIn("templates with hooks: ", bad["bad"])
             self.assertIn("agent-fsm", bad["bad"])
-            self.assertRaises(defs.SpecBad, defs.defs, "D.", "", [], {}, defs.std.fsm(), hooks=bad)
+            self.assertRaises(defs.SpecBad, defs.compile, "D.", "", [], {}, defs.std.fsm(), hooks=bad)
 
 
 class Script(unittest.TestCase):
@@ -345,11 +345,11 @@ class Script(unittest.TestCase):
                               capture_output=True, timeout=30, env=self.env)
 
     def test_write_twice_is_identical_and_has_no_machine_facts(self):
-        r = self.call("--write-defs")
+        r = self.call("--compile")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(sorted(p.name for p in self.dir.iterdir()), sorted(GENERATED + ["README.md", "agent.py"]))
         first = snapshot(self.dir)
-        r = self.call("--write-defs")
+        r = self.call("--compile")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(snapshot(self.dir), first)
         for name, data in first.items():
@@ -360,15 +360,15 @@ class Script(unittest.TestCase):
                 self.assertNotIn(fact, text, name)
 
     def test_defs_prints_what_write_writes(self):
-        printed = json.loads(self.call("--defs").stdout)
+        printed = json.loads(self.call("--dry-run").stdout)
         self.assertEqual(os.listdir(self.dir), ["agent.py"])
-        self.call("--write-defs")
+        self.call("--compile")
         for name, value in printed.items():
             text = (self.dir / name).read_text()
             self.assertEqual(text, value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, indent=2) + "\n")
 
     def test_spec_bad_is_one_line_and_writes_nothing(self):
-        self.assertEqual(self.call("--write-defs").returncode, 0)
+        self.assertEqual(self.call("--compile").returncode, 0)
         (self.dir / "tools.json").write_text("{}\n")      # a hand change that must survive a failed run
         before = snapshot(self.dir)
         del before["agent.py"]
@@ -384,7 +384,7 @@ class Script(unittest.TestCase):
             with self.subTest(why=why):
                 self.assertIn(old, BODY)
                 self.write(BODY.replace(old, new))
-                for flag in ("--write-defs", "--defs"):
+                for flag in ("--compile", "--dry-run"):
                     r = self.call(flag)
                     self.assertEqual(r.returncode, 1)
                     self.assertEqual(r.stdout, "")
@@ -396,7 +396,7 @@ class Script(unittest.TestCase):
                 self.assertEqual(after, before)
 
     def test_overwrite_rules(self):
-        self.assertEqual(self.call("--write-defs").returncode, 0)
+        self.assertEqual(self.call("--compile").returncode, 0)
         made = snapshot(self.dir)
         (self.dir / "tools.json").write_text('{"tools": {"hand": {"path": "x"}}}\n')     # hand change: overwritten, no word
         meta = json.loads((self.dir / "_metainfo.json").read_text())
@@ -404,7 +404,7 @@ class Script(unittest.TestCase):
         (self.dir / "_metainfo.json").write_text(json.dumps(meta, indent=2) + "\n")
         (self.dir / "README.md").write_text("My own readme.\n")                          # already there: not touched
         (self.dir / "notes.txt").write_text("mine\n")                                    # not declared: not touched
-        r = self.call("--write-defs")
+        r = self.call("--compile")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stderr, "")
         self.assertEqual((self.dir / "tools.json").read_bytes(), made["tools.json"])
@@ -417,14 +417,14 @@ class Script(unittest.TestCase):
     def test_by_hand_file_is_not_touched(self):
         self.write(BODY.replace('SYSTEM = "You answer questions about the weather.\\n"', 'SYSTEM = defs.by_hand("system.txt")'))
         (self.dir / "system.txt").write_text("Written by hand.\n")
-        r = self.call("--write-defs")
+        r = self.call("--compile")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((self.dir / "system.txt").read_text(), "Written by hand.\n")
         self.assertEqual(json.loads((self.dir / "interfaces.json").read_text())["aos-agent"]["system"], "system.txt")
 
     def test_broken_metainfo_is_def_bad_and_writes_nothing(self):
         (self.dir / "_metainfo.json").write_text("not json")
-        r = self.call("--write-defs")
+        r = self.call("--compile")
         self.assertEqual(r.returncode, 1)
         self.assertIn("weather: error: DefBad", r.stderr)
         self.assertEqual(sorted(os.listdir(self.dir)), ["_metainfo.json", "agent.py"])
@@ -432,7 +432,7 @@ class Script(unittest.TestCase):
     def test_unreadable_metainfo_is_write_failed_and_writes_nothing(self):
         """geng-patch-1119 ⑤: cannot read _metainfo.json (here: it is a folder) = an I/O error, WriteFailed; not DefBad."""
         (self.dir / "_metainfo.json").mkdir()
-        r = self.call("--write-defs")
+        r = self.call("--compile")
         self.assertEqual(r.returncode, 1)
         self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
         self.assertIn("weather: error: WriteFailed", r.stderr)
@@ -442,16 +442,16 @@ class Script(unittest.TestCase):
         r = self.call()
         self.assertEqual(r.returncode, 1)
         self.assertIn("weather: error: ArgumentsBad", r.stderr)
-        self.assertIn("usage: python3 agent.py --write-defs [FOLDER]", r.stderr)
+        self.assertIn("usage: python3 agent.py --compile [FOLDER]", r.stderr)
         self.assertEqual(self.call("--nope").returncode, 1)
         r = self.call("--help")
         self.assertEqual(r.returncode, 0)
-        self.assertIn("--write-defs [FOLDER]", r.stdout)
+        self.assertIn("--compile [FOLDER]", r.stdout)
 
     def test_write_into_another_folder(self):
         other = Path(self.temp.name) / "other"
         other.mkdir()
-        r = self.call("--write-defs", str(other))
+        r = self.call("--compile", str(other))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(os.listdir(self.dir), ["agent.py"])
         self.assertIn("fsm.json", os.listdir(other))
@@ -477,7 +477,7 @@ class NoFsm(unittest.TestCase):
                 meta = json.loads((dest / "_metainfo.json").read_text())
                 (dest / "agent.py").write_text(HEAD + ECA % {"summary": meta["summary"], "llm": llm, "template": template})
                 before = tree(dest)
-                r = run_agent(dest / "agent.py", "--write-defs", home=self.home)
+                r = run_agent(dest / "agent.py", "--compile", home=self.home)
                 self.assertEqual(r.returncode, 0, r.stderr)
                 after = tree(dest)
                 written = {"tools.json", "llm.json", "system.txt", "hooks.json", "_metainfo.json"}
@@ -491,14 +491,14 @@ class NoFsm(unittest.TestCase):
                 self.assertEqual(load("hooks.json", after)["hooks"], load("hooks.json", before)["hooks"])
                 self.assertEqual(load("_metainfo.json", after), load("_metainfo.json", before))
                 self.assertEqual(after["system.txt"], b"You are the docs team's writer.\n")
-                printed = json.loads(run_agent(dest / "agent.py", "--defs", home=self.home).stdout)
+                printed = json.loads(run_agent(dest / "agent.py", "--dry-run", home=self.home).stdout)
                 self.assertEqual(sorted(printed), sorted(written | {"README.md"}))
 
     def test_no_skeleton_is_def_bad_and_writes_nothing(self):
         dest = Path(self.temp.name) / "empty"
         dest.mkdir()
         (dest / "agent.py").write_text(HEAD + ECA % {"summary": "S.", "llm": {}, "template": "eca-pi"})
-        for flag in ("--write-defs", "--defs"):
+        for flag in ("--compile", "--dry-run"):
             r = run_agent(dest / "agent.py", flag, home=self.home)
             self.assertEqual(r.returncode, 1)
             self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
@@ -513,7 +513,7 @@ class NoFsm(unittest.TestCase):
         (dest / "interfaces.json").write_text(json.dumps(face))
         (dest / "agent.py").write_text(HEAD + ECA % {"summary": "S.", "llm": {}, "template": "eca-pi"})
         before = tree(dest)
-        r = run_agent(dest / "agent.py", "--write-defs", home=self.home)
+        r = run_agent(dest / "agent.py", "--compile", home=self.home)
         self.assertEqual(r.returncode, 1)
         self.assertIn("DefBad", r.stderr)
         self.assertIn("declares no hooks file", r.stderr)
@@ -524,15 +524,15 @@ class NoFsm(unittest.TestCase):
         face = json.loads((dest / "interfaces.json").read_text())
         face["aos-agent"]["system"] = "prompt.md"
         (dest / "interfaces.json").write_text(json.dumps(face))
-        files = defs.defs("S.", "Hi.\n", [], {"model": "m"}, folder=str(dest))
+        files = defs.compile("S.", "Hi.\n", [], {"model": "m"}, folder=str(dest))
         self.assertEqual(sorted(files), ["README.md", "_metainfo.json", "llm.json", "prompt.md", "tools.json"])
-        self.assertRaises(defs.SpecBad, defs.defs, "S.", "", [], {"temperature": 1}, folder=str(dest))   # eca's llm_keys: model only
-        self.assertRaises(defs.SpecBad, defs.defs, "S.", defs.by_hand("system.txt"), [], {}, folder=str(dest))
-        self.assertNotIn("prompt.md", defs.defs("S.", defs.by_hand("prompt.md"), [], {}, folder=str(dest)))
+        self.assertRaises(defs.SpecBad, defs.compile, "S.", "", [], {"temperature": 1}, folder=str(dest))   # eca's llm_keys: model only
+        self.assertRaises(defs.SpecBad, defs.compile, "S.", defs.by_hand("system.txt"), [], {}, folder=str(dest))
+        self.assertNotIn("prompt.md", defs.compile("S.", defs.by_hand("prompt.md"), [], {}, folder=str(dest)))
         # FILES may write a file the skeleton does not declare (cli.json); not one interfaces.json declares, nor a skeleton name
-        self.assertEqual(defs.defs("S.", "", [], {}, folder=str(dest), files={"cli.json": {"a": 1}})["cli.json"], {"a": 1})
-        self.assertRaises(defs.SpecBad, defs.defs, "S.", "", [], {}, folder=str(dest), files={"prompt.md": "x"})
-        self.assertRaises(defs.SpecBad, defs.defs, "S.", "", [], {}, folder=str(dest), files={"loop.json": {}})
+        self.assertEqual(defs.compile("S.", "", [], {}, folder=str(dest), files={"cli.json": {"a": 1}})["cli.json"], {"a": 1})
+        self.assertRaises(defs.SpecBad, defs.compile, "S.", "", [], {}, folder=str(dest), files={"prompt.md": "x"})
+        self.assertRaises(defs.SpecBad, defs.compile, "S.", "", [], {}, folder=str(dest), files={"loop.json": {}})
 
 
 class Namespace(WithHome):
@@ -550,7 +550,7 @@ class Namespace(WithHome):
         return root
 
     def tools(self, items):
-        return defs.defs("D.", "", items, {}, defs.std.fsm())["tools.json"]["tools"]
+        return defs.compile("D.", "", items, {}, defs.std.fsm())["tools.json"]["tools"]
 
     def test_two_reads_each_its_own(self):
         root = self.make_lib()
@@ -617,7 +617,7 @@ class Namespace(WithHome):
         for why, (items, line) in cases.items():
             with self.subTest(why=why):
                 self.assertRaisesRegex(defs.SpecBad, line, self.tools, items)
-        self.assertRaisesRegex(defs.SpecBad, "std has one state machine", defs.defs, "D.", "", [], {}, defs.std.fsm("eca"))
+        self.assertRaisesRegex(defs.SpecBad, "std has one state machine", defs.compile, "D.", "", [], {}, defs.std.fsm("eca"))
         with unittest.mock.patch.dict(os.environ, {}):
             os.environ.pop("AOS_HOME")
             self.assertIn("AOS_HOME is not set", defs.std.pack("look")["bad"])
@@ -629,7 +629,7 @@ class Namespace(WithHome):
         (dest / "agent.py").write_text(HEAD + BODY.replace(
             "std = defs.std\n", "std = defs.std\nmy = defs.lib(\"my\", %r)\n" % str(self.make_lib())).replace(
             'std.pack("look"), ', 'std.pack("look"), my.pack("look", prefix=""), '))
-        r = run_agent(dest / "agent.py", "--write-defs", home=self.home)
+        r = run_agent(dest / "agent.py", "--compile", home=self.home)
         self.assertEqual(r.returncode, 1)
         self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
         self.assertTrue(r.stderr.startswith("clash: error: SpecBad tool read comes from both"), r.stderr)
@@ -645,7 +645,7 @@ class Reviewer(unittest.TestCase):
             dest.mkdir()
             shutil.copy(TEMPLATES / "reviewer" / "system.txt", dest)
             (dest / "agent.py").write_text(HEAD + REVIEWER)
-            r = run_agent(dest / "agent.py", "--write-defs", home=fake_home(tmp))
+            r = run_agent(dest / "agent.py", "--compile", home=fake_home(tmp))
             self.assertEqual(r.returncode, 0, r.stderr)
             made = snapshot(dest)
         want = snapshot(TEMPLATES / "reviewer")
@@ -690,7 +690,7 @@ class Inherit(WithHome):
         return folder
 
     def run1(self, folder, *argv):
-        return run_agent(folder / "agent.py", *(argv or ("--write-defs",)), home=self.home)
+        return run_agent(folder / "agent.py", *(argv or ("--compile",)), home=self.home)
 
     def assert_one_line(self, r, prog, *parts):
         self.assertEqual(r.returncode, 1, r.stderr)
@@ -726,13 +726,13 @@ class Inherit(WithHome):
                 for trace in ("reviewer/", "defs.load", self.temp.name, "$override", "extends"):
                     self.assertNotIn(trace, data.decode(), name)
 
-    def test_upstream_change_follows_at_regeneration_only(self):
+    def test_upstream_change_follows_at_recompile_only(self):
         base, strict = self.agent("reviewer", BASE), self.agent("strict-reviewer", STRICT)
         self.assertEqual(self.run1(strict).returncode, 0)
         first = snapshot(strict)
         self.agent("reviewer", BASE.replace('std.pack("mailbox")]', 'std.pack("mailbox"), std.pack("json")]'))
         self.assertEqual(snapshot(strict), first)                           # nothing follows by itself
-        self.assertEqual(self.run1(strict).returncode, 0)                   # regenerate the derived one: it follows,
+        self.assertEqual(self.run1(strict).returncode, 0)                   # recompile the derived one: it follows,
         tools = json.loads((strict / "tools.json").read_text())["tools"]    # though the base's json was never written
         self.assertIn("json_get", tools)
         self.assertFalse((base / "tools.json").exists())
@@ -743,13 +743,13 @@ class Inherit(WithHome):
                                       "HOOKS = [base.HOOKS, {'timer': None}]\ndefs.main("))
         self.agent("d2", BASE.replace("defs.main(", "base = defs.load('../base')\nTOOLS = [base.TOOLS]\nHOOKS = base.HOOKS\ndefs.main("))
         d1, d2 = defs.load(str(Path(self.temp.name) / "d1")), defs.load(str(Path(self.temp.name) / "d2"))
-        tools = lambda items: defs.defs("D.", "", items, {}, defs.std.fsm())["tools.json"]["tools"]  # noqa: E731
+        tools = lambda items: defs.compile("D.", "", items, {}, defs.std.fsm())["tools.json"]["tools"]  # noqa: E731
         with self.assertRaisesRegex(defs.SpecBad, r"tool grep is taken out in defs.load\('.*d1'\) but kept in defs.load\('.*d2'\)"):
             tools([d1.TOOLS, d2.TOOLS])                                     # a tool taken out does not come back unseen
         self.assertNotIn("grep", tools([d1.TOOLS, d2.TOOLS, defs.no("grep")]))
         self.assertIn("grep", tools([d1.TOOLS, d2.TOOLS, defs.tool("grep", defs.home("/lib/tools/base/grep"))]))
         self.assertEqual(sorted(tools([d1.TOOLS, d2.TOOLS, defs.no("grep")])), sorted(set(tools([d2.TOOLS])) - {"grep"}))
-        hooks = lambda h: defs.defs("D.", "", [], {}, defs.std.fsm(), hooks=h)["hooks.json"]["hooks"]  # noqa: E731
+        hooks = lambda h: defs.compile("D.", "", [], {}, defs.std.fsm(), hooks=h)["hooks.json"]["hooks"]  # noqa: E731
         with self.assertRaisesRegex(defs.SpecBad, "hook timer comes from both"):
             hooks([d1.HOOKS, d2.HOOKS])
         self.assertNotIn("timer", hooks([d1.HOOKS, d2.HOOKS, {"timer": None}]))
@@ -794,7 +794,7 @@ class Inherit(WithHome):
         for why, (expr, *line) in cases.items():
             with self.subTest(why=why):
                 dest = self.agent("derived", "base = %s\ndefs.main('D.', '', [], {}, defs.std.fsm())\n" % expr)
-                for flag in ("--write-defs", "--defs"):
+                for flag in ("--compile", "--dry-run"):
                     r = self.run1(dest, flag)
                     self.assert_one_line(r, "derived", *line)
                     self.assertEqual(r.stdout, "")
@@ -853,7 +853,7 @@ class Inherit(WithHome):
         eca, stock = defs.std.hooks("eca-claude"), defs.std.hooks()
         both = sorted(n for n in set(eca) & set(stock) if eca[n] != stock[n])       # today: brain_notify, context_wrap
         self.assertTrue(both)
-        hooks = lambda h: defs.defs("D.", "", [], {}, defs.std.fsm(), hooks=h)["hooks.json"]  # noqa: E731
+        hooks = lambda h: defs.compile("D.", "", [], {}, defs.std.fsm(), hooks=h)["hooks.json"]  # noqa: E731
         self.assertRaisesRegex(defs.SpecBad, "hook %s comes from both std.hooks\\('agent-fsm'\\) and std.hooks\\('eca-claude'\\)"
                                % both[0], hooks, [stock, eca])
         mine = {n: stock[n] for n in both}
@@ -864,11 +864,11 @@ class Inherit(WithHome):
         h["every_ms"] = 1
         self.assertNotEqual(defs.std.hooks()["timer"]["every_ms"], 1)
         base = defs.load(str(self.agent("base", BASE.replace(", hooks=HOOKS", ""))))
-        self.assertNotIn("hooks.json", defs.defs("D.", "", [], {}, defs.std.fsm(), hooks=base.HOOKS))   # base had no HOOKS: none
-        self.assertEqual(sorted(defs.defs("D.", "", [base.tools(prefix="r_", exclude=["grep"])], {}, defs.std.fsm())["tools.json"]["tools"]),
+        self.assertNotIn("hooks.json", defs.compile("D.", "", [], {}, defs.std.fsm(), hooks=base.HOOKS))   # base had no HOOKS: none
+        self.assertEqual(sorted(defs.compile("D.", "", [base.tools(prefix="r_", exclude=["grep"])], {}, defs.std.fsm())["tools.json"]["tools"]),
                          sorted("r_" + n for n in base.TOOLS["tools"] if n != "grep"))
         self.assertIn("the base has no tool cat", base.tools(rename={"cat": "x"})["bad"])
-        self.assertRaisesRegex(defs.SpecBad, "listed twice", defs.defs, "D.", "", [base.TOOLS, base.TOOLS], {}, defs.std.fsm())
+        self.assertRaisesRegex(defs.SpecBad, "listed twice", defs.compile, "D.", "", [base.TOOLS, base.TOOLS], {}, defs.std.fsm())
 
 
 class Skeleton(unittest.TestCase):
@@ -882,7 +882,7 @@ class Skeleton(unittest.TestCase):
             dest.mkdir()
             shutil.copy(SKEL / "agent.py", dest)
             (dest / "aos.py").write_text("raise SystemExit('the wrong aos')\n")
-            r = run_agent(dest / "agent.py", "--defs", home=home)
+            r = run_agent(dest / "agent.py", "--dry-run", home=home)
             self.assertEqual(r.returncode, 0, r.stderr)
             (dest / "aos.py").unlink()
             (home / "lib").unlink()
@@ -890,12 +890,12 @@ class Skeleton(unittest.TestCase):
             (home / "lib" / "aos").mkdir()                     # an older lib: aos there, the entry aos.py not yet
             (home / "lib" / "aos" / "__init__.py").write_text("")
             (home / "lib" / "aos" / "agent_spec.py").write_text("from aos.agent_spec_lib import std\n")
-            r = run_agent(dest / "agent.py", "--defs", home=home)
+            r = run_agent(dest / "agent.py", "--dry-run", home=home)
             self.assertEqual(r.returncode, 1)
             self.assertEqual(r.stderr, "mine: error: ModuleMissing aos.py not found "
                                        "(under $AOS_HOME/lib, or next to agent.py)\n")             # one line, not a traceback
             (home / "lib" / "aos" / "py").symlink_to(LIB / "aos" / "py")   # the entry there, agent_spec_lib not yet
-            r = run_agent(dest / "agent.py", "--defs", home=home)
+            r = run_agent(dest / "agent.py", "--dry-run", home=home)
             self.assertEqual(r.returncode, 1)
             self.assertEqual(r.stderr, "mine: error: ModuleMissing aos.agent_spec_lib not found "
                                        "(under $AOS_HOME/lib, or next to agent.py)\n")             # defs is found through aos.py.agent: still one line
@@ -913,13 +913,13 @@ class Skeleton(unittest.TestCase):
             shutil.copy(SKEL / "agent.py", dest)
             env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
             env["AOS_HOME"] = str(home)
-            r = subprocess.run([sys.executable, str(dest / "agent.py"), "--write-defs"], capture_output=True, text=True,
+            r = subprocess.run([sys.executable, str(dest / "agent.py"), "--compile"], capture_output=True, text=True,
                                timeout=30, env=env)
             self.assertEqual(r.returncode, 0, r.stderr)
             for name in GENERATED:
                 with self.subTest(name=name):
                     self.assertEqual((dest / name).read_bytes(), (SKEL / name).read_bytes(),
-                                     "run python3 agent.py --write-defs in templates/agent-python")
+                                     "run python3 agent.py --compile in templates/agent-python")
 
 
 if __name__ == "__main__":

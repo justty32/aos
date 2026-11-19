@@ -134,7 +134,7 @@ def stack_tools(tools):
 
 
 def tools_json(tools):
-    """TOOLS → tools.json 的內容：stack_tools 疊完、濾掉墓碑。只有 tools 表、沒有 $override：哪幾支、各叫什麼在生成時定死（07 第 7 題暫照推薦）；
+    """TOOLS → tools.json 的內容：stack_tools 疊完、濾掉墓碑。只有 tools 表、沒有 $override：哪幾支、各叫什麼在編譯時定死（07 第 7 題暫照推薦）；
     說明只列抄進來的包（std.pack、庫的 .pack），不提 defs.load 的底（json 不留上一層）。"""
     table, origins = stack_tools(tools)
     desc = WHAT["tools.json"]
@@ -187,7 +187,7 @@ def interfaces_json(over, files, description):
 
 
 def no_hooks(hooks):
-    """底沒宣告 HOOKS（defs.load 交回的空組）單獨用、或串列裡只有這種＝沒宣告 HOOKS（None）：不生 hooks.json，跟底一樣。"""
+    """底沒宣告 HOOKS（defs.load 交回的空組）單獨用、或串列裡只有這種＝沒宣告 HOOKS（None）：不編出 hooks.json，跟底一樣。"""
     layers = list(hooks) if isinstance(hooks, (list, tuple)) else [hooks]
     if layers and all(isinstance(h, Hooks) and not h.declared for h in layers):
         return None

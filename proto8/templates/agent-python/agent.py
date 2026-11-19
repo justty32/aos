@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""agent-python 骨架 - 一支 agent.py 宣告一隻 agent（說明、system、工具、腦設定、狀態機），python3 agent.py --write-defs 生出這夾的定義檔（說明看 README.md）。"""
+"""agent-python 骨架 - 一支 agent.py 宣告一隻 agent（說明、system、工具、腦設定、狀態機），python3 agent.py --compile 編譯成這夾的定義檔（說明看 README.md）。"""
 # ---- setup: find the aos package (keep these lines as they are) ----
 import os, sys
 sys.dont_write_bytecode = True
