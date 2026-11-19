@@ -16,7 +16,8 @@ cd llms && aos-exec --stack stacks/llm def                 # 視窗 B（先做�
 aos-agent -d .stack ctl add --auto-restart -w . agents/ann # 視窗 C（同上）：把 agent 掛到根上
 aos-daemon-ctl -d .stack ls                                # _clock、_sweeper、ann 都是 running
 aos-agent -d .stack --target ann say hello && aos-agent -d .stack --target ann listen --timeout-s 20   # 假腦回 FAKE ANSWER to: hello …
-aos-daemon-ctl -d .stack shutdown && aos-daemon-ctl -d llms/stacks/llm shutdown                       # 關樹；再起＝視窗 A、B 那兩行，睡下的自己醒
+aos-daemon-ctl -d .stack shutdown                                                                      # 關樹（兩句分開打、不要用 && 串：根已停時第一句退 1，後面那句就不跑，llm kernel 會留著）
+aos-daemon-ctl -d llms/stacks/llm shutdown                                                             # 再起＝視窗 A、B 那兩行，睡下的自己醒
 ```
 
 **要把工具關進沙箱（[aos-sandbox](../../py/aos/apps/sandbox/README.md)）的話**：上面 `-w .` 讓 agent 的工作區＝整棵樹，樹的控制台（根的 `.stack/` 信箱、llm kernel 與各隻的定義）都在裡面，沙箱裡的 agent 碰得到它們、還能叫 daemon 在沙箱外再開一隻——這是使用者自己承擔的風險（使用者 11-18 晚：「好，沙箱這個基本上是使用者要自己承擔的風險吧。」）。要隔得乾淨就給它專用的工作夾：`mkdir work && aos-agent -d .stack ctl add --auto-restart -w work agents/ann`。
