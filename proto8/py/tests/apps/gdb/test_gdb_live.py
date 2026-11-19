@@ -275,15 +275,15 @@ class Live(unittest.TestCase):
     def test_10_bp_crud_and_stop_resume(self):
         a = self.a
         self.assertTrue(a.ctl.where().strip())                         # a.ctl.where()＝aos-agent ctl where
-        r = a.bp.stop()                                                # 現在停：等到真的停下才回
-        self.assertEqual((r.outcome, r.head), ("stopped", "stopped before idle (a.bp.stop())"))
+        r = a.bp.pause()                                               # 現在停：等到真的停下才回
+        self.assertEqual((r.outcome, r.head), ("stopped", "stopped before idle (a.bp.pause())"))
         self.assertTrue(a.bp.stopped())
-        self.assertIn("is paused by a.bp.stop()", repr(a.bp.why()))
+        self.assertIn("is paused by a.bp.pause()", repr(a.bp.why()))
         self.assertIsNone(a.bp.why().breakpoint)                       # 不是停在斷點上
-        self.assertEqual(a.bp.stop().head, "already stopped before idle (a.bp.stop())")   # 停著再 stop：什麼都不送
+        self.assertEqual(a.bp.pause().head, "already stopped before idle (a.bp.pause())")   # 停著再 pause：什麼都不送
         self.assertEqual(a.bp.resume().outcome, "idle")
         self.assertFalse(a.bp.stopped())
-        for gone in ("skip", "wait_stopped"):
+        for gone in ("skip", "wait_stopped", "stop"):
             self.assertFalse(hasattr(a.bp, gone))
         b1 = a.bp.add.before_tool("peek_now_time")
         b2 = a.bp.add.after_tool(sh="exit 10", times=2, id="mine")
@@ -319,7 +319,7 @@ class Live(unittest.TestCase):
         self.assertEqual(a.bp.resume().head, "stopped at before_tool_1 (peek_now_time)")
         self.assertTrue(a.bp.get(b1)["here"])
         self.assertIn("a.bp.step()", repr(a.bp.why()))
-        self.assertEqual(a.bp.stop().head, "already stopped at before_tool_1 (peek_now_time)")   # 扣著時 stop 不再送 pause
+        self.assertEqual(a.bp.pause().head, "already stopped at before_tool_1 (peek_now_time)")   # 扣著時 pause 不再送
         self.assertIsNone(trigger.ctl_unapplied(a.stack))
         self.assertEqual(a.bp.resume().outcome, "idle")
         self.assertIn("FAKE ANSWER to: ten b", a.listen(timeout_s=30, letter=y))

@@ -8,10 +8,10 @@
 
 兩層（把手在入口 aos.py.agent；這裡是它的延伸 a.bp 與 a.look 的本體）：
     a.xxx＝aos-agent xxx（aos.py 的通用代理）；a.look＝讀 stack 的檔（Look：where、history、observed、request、queue、stderr、file）。
-    a.bp＝斷點（class Breakpoints）：增 a.bp.add.<種類>(...)（回 id，str）、rm／set／ls／get；控制 resume／step／stop（不收參數、等到停下才回）；
+    a.bp＝斷點（class Breakpoints）：增 a.bp.add.<種類>(...)（回 id，str）、rm／set／ls／get；控制 resume／step／pause（不收參數、等到停下才回）；
     查 why／held／stopped、notes；clear。
 控制動作（使用者 11-19「我記得有step into還是啥的，參考那些ide」，選項框選「resume/step 自己等到停」；「不該有這個方法」＝skip 拿掉；
-    線 aosgdb-verbs-1119，紀錄 thinking/2026-11/19/aos-gdb-動詞-1119.md）：resume＝繼續跑、等下一次停；step＝走 fsm 一格就停；stop＝現在停。
+    線 aosgdb-verbs-1119，紀錄 thinking/2026-11/19/aos-gdb-動詞-1119.md）：resume＝繼續跑、等下一次停；step＝走 fsm 一格就停；pause＝現在停（使用者 11-19 選「改 a.bp.pause()」：VS Code 的「停一下」叫 Pause）。
 建斷點的寫法（使用者 11-19 選項框選「a.bp.add.before_tool("x")」，thinking/2026-11/19/aos-pylib-1119/07 第 3 題；字串式 a.bp.add("before_tool") 不留）：
     a.bp.add.<種類>([主詞], *, 條件, 選項) → id。種類＝hook 事件（before_tool、after_tool、before_queue、after_queue、brain_failed、tool_added、
     after_start、after_stop；on_clock 不收）、tool_error、watch；tab 補得出、打錯當場 AttributeError；主詞＝能篩名字的事件才有（工具名，brain_failed 是錯誤代號）。
@@ -38,7 +38,7 @@
     a.bp.step()        # 走一格（那次 write 照跑，這一格做完）又停
     a.bp.resume()      # 繼續，等下一次停（閒著了＝回 "did not stop: it is idle"）
     a.bp.ls(); a.bp.get(b); a.bp.set(b, enabled=False); a.bp.rm(b); a.bp.clear()
-    a.bp.stop()        # 不靠斷點：現在停（等到真的停下才回）
+    a.bp.pause()        # 不靠斷點：現在停（等到真的停下才回）
 
 觸發器的檔、字條、扣住檔、條件怎麼判在 aos.gdb.trigger；hook handler 是 lib/tools/agent/gdb_trigger；觀察者在 aos.gdb.watcher 與 lib/tools/agent/gdb_watch。"""
 import inspect
@@ -192,7 +192,7 @@ times＝連續幾次才算；once＝只停一次；id＝自己取名（不給＝
 
 class Breakpoints:
     """a.bp：以斷點為核心——增 add.<種類>(...)、刪 rm、改 set、查 ls／get（都以 id，str）；
-    控制 resume（繼續跑）、step（走一格）、stop（現在停），三個都不收參數、都等到停下才回、回停在哪；
+    控制 resume（繼續跑）、step（走一格）、pause（現在停），三個都不收參數、都等到停下才回、回停在哪；
     查 why（停在哪、為什麼）／held（扣住的那一次）／stopped（停著沒）；字條 notes；全拿掉 clear。
     等的設定（屬性，不是參數）：idle_s＝閒著多久算「不會停了」、report_s＝每幾秒印一行現況（0＝不印）、timeout_s＝最多等幾秒（None＝不限）。
     a.bp 每次取都是新的物件，所以設定與「自己送出的 pause」記在模組裡、以 (daemon, 名字) 為鍵：同一隻的每個 a.bp 共用。"""
@@ -203,7 +203,7 @@ class Breakpoints:
         self._a = target
         self.add = Add(self)
         self._s = _SHARED.setdefault((target.daemon, target.name), {"mine": set()})
-        self._mine = self._s["mine"]              # 自己（step／stop）送出的 pause 的 seq：認得出「這是我送的」
+        self._mine = self._s["mine"]              # 自己（step／pause）送出的 pause 的 seq：認得出「這是我送的」
 
     def _setting(name, check, what):
         def get(self):
@@ -222,7 +222,7 @@ class Breakpoints:
 
     def __repr__(self):
         rows = self.ls(quiet=True)
-        head = "<a.bp of %s: %d breakpoint(s); add.<kind>(...) / rm / set / ls / get, resume / step / stop, why / held / stopped>" % (self._a.name, len(rows))
+        head = "<a.bp of %s: %d breakpoint(s); add.<kind>(...) / rm / set / ls / get, resume / step / pause, why / held / stopped>" % (self._a.name, len(rows))
         return "\n".join([head] + ["  %s%s  %s%s" % (r["id"], "" if r["enabled"] else " (disabled)", r["about"], "  <- stopped here" if r["here"] else "")
                                    for r in rows])
 
@@ -359,7 +359,7 @@ class Breakpoints:
         row.update(tools=spec.get("tools"), condition=_condition(spec))
         return row
 
-    # ---- 控制：resume、step、stop（都不收參數、都等到停下才回；使用者 11-19 選「resume/step 自己等到停」）----
+    # ---- 控制：resume、step、pause（都不收參數、都等到停下才回；使用者 11-19 選「resume/step 自己等到停」）----
     def resume(self):
         """繼續跑，等到下一次停下才回（像 gdb 的 continue；不收參數）。回的是 why() 那份，第一行說停在哪（"stopped at before_tool_1 (write)"）。
         扣在斷點上：放行那一次（照原樣跑）；暫停著：aos-agent ctl resume；沒停著（例如剛 a.say 完）：什麼都不送，直接等它停。
@@ -396,7 +396,7 @@ class Breakpoints:
                 own = self._pause_cmd()
         return self._wait(sig0, "step", d.hit, own=own)
 
-    def stop(self):
+    def pause(self):
         """現在停（不靠斷點）：aos-agent ctl pause --no-wait（這一格做完、下一格開頭停住），等到真的停下才回，回的跟 resume() 一樣（第一行說停在哪）。
         已經停著（暫停或扣在斷點上）＝什麼都不送，回現在停在哪。Ctrl-C＝不等了，但 pause 已經送出：這一格做完它就停。"""
         if self.stopped():
@@ -404,7 +404,7 @@ class Breakpoints:
         sig0 = self._sig()
         with _Defer() as d:
             own = self._pause_cmd()
-        return self._wait(sig0, "stop", d.hit, own=own)
+        return self._wait(sig0, "pause", d.hit, own=own)
 
     # ---- 停在哪、為什麼 ----
     def held(self):
@@ -631,7 +631,7 @@ class Breakpoints:
         return "idle"
 
     def _wait(self, sig0, what, hit, own=None):
-        """resume／step／stop 共用的等：停著而且跟開始時不是同一次＝停了；閒著或行程不在連續 idle_s 秒＝沒停；Ctrl-C＝不等了。"""
+        """resume／step／pause 共用的等：停著而且跟開始時不是同一次＝停了；閒著或行程不在連續 idle_s 秒＝沒停；Ctrl-C＝不等了。"""
         a = self._a
         start = last = time.monotonic()
         quiet = None
@@ -672,15 +672,15 @@ class Breakpoints:
             if self.stopped() and self._sig() != sig0:
                 return self._stopped(what, own)
             took = self._take_back(what)
-            if what == "stop":
+            if what == "pause":
                 tail = "; the pause is sent already: %s stops when this step ends" % a.name
             else:
                 tail = "; the pause a.bp.step() sent is taken back" if took else ""
             return self._result("interrupted", "stopped waiting (Ctrl-C); %s goes on as it was%s" % (a.name, tail))
 
     def _take_back(self, what):
-        """不等了（Ctrl-C、逾時）時收回自己送出、還沒套用的 pause（stop 不收：要停是使用者要的）。回收回了沒。"""
-        if what == "stop":
+        """不等了（Ctrl-C、逾時）時收回自己送出、還沒套用的 pause（pause 不收：要停是使用者要的）。回收回了沒。"""
+        if what == "pause":
             return False
         pend = trigger.ctl_unapplied(self._a.stack)
         if not pend or pend[1] != "pause" or pend[0] not in self._mine or self.held() is not None:
@@ -706,12 +706,12 @@ class Breakpoints:
         return "at %s, %d letter(s) queued" % (stage, n)
 
     def _stopped(self, what, own):
-        """停了：自己送的 pause 停下的（step／stop）留一張字條（by step／stop，帶那個 seq），回 why() 加上第一行。"""
+        """停了：自己送的 pause 停下的（step／pause）留一張字條（by step／pause，帶那個 seq），回 why() 加上第一行。"""
         a = self._a
         if own is not None and self.held() is None and self._applied() == own and trigger.ctl_doc(a.stack)[0] == own:
-            trigger.append_log(a.stack, {"kind": "stop", "at": trigger.now(), "by": what if what in ("step", "stop") else "repl",
+            trigger.append_log(a.stack, {"kind": "stop", "at": trigger.now(), "by": what if what in ("step", "pause") else "repl",
                                          "trigger": None, "ctl_seq": own,
-                                         "about": "a.bp.step(): one step" if what == "step" else "a.bp.stop()",
+                                         "about": "a.bp.step(): one step" if what == "step" else "a.bp.pause()",
                                          "detail": {"stage": self._stage()}})
             self._mine.discard(own)
         w = self.why()
@@ -737,12 +737,12 @@ class Breakpoints:
                                                        or last.get("event"), stage)
         if w.current and last.get("by") == "step":
             return "stopped after one step, before %s" % stage
-        if w.current and last.get("by") == "stop":
-            return "stopped before %s (a.bp.stop())" % stage
+        if w.current and last.get("by") == "pause":
+            return "stopped before %s (a.bp.pause())" % stage
         return "stopped before %s (paused, not by a breakpoint)" % stage
 
     def _result(self, outcome, head, w=None):
-        """resume／step／stop 回的東西：why() 那份，outcome＝stopped／idle／gone／interrupted，第一行 head。"""
+        """resume／step／pause 回的東西：why() 那份，outcome＝stopped／idle／gone／interrupted，第一行 head。"""
         a = self._a
         w = w or self.why()
         if head is None:

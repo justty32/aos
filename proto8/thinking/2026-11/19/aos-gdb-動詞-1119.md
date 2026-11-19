@@ -115,3 +115,13 @@ ann did not stop: it is idle (nothing queued, no step running); ...
 1. `a.bp.stop()` 要不要改叫 `a.bp.pause()`（IDE 的 Stop 是結束除錯；aos 的 `ctl stop` 也是停掉 loop）？
 2. step into／step out 要不要做、對應哪一種（上面甲乙）？
 3. 閒著多久算「不會停了」先定 1 秒、定期那一行 10 秒一次，可以嗎？
+
+## 使用者 11-19 下午的裁定（選項框，逐字）與跟著改的
+
+1. 題「a.bp.stop() 是「現在讓 agent 停一下」。但在 VS Code 裡 Stop 是結束整個除錯，「停一下」叫 Pause；aos 自己的 ctl stop 也是把整隻停掉。要改名嗎？」→ 選「改 a.bp.pause() (Recommended)」。
+   → `a.bp.stop()` 改名 `a.bp.pause()`，舊名不留（`a.bp.stop` 不存在）；字條 `by: pause`、`why()` 說 `ann is paused by a.bp.pause()`、第一行 `stopped before idle (a.bp.pause())`；README、help、banner、`knowledge/aos/cli/gdb.json`、`py/docs/05-commands.md`、測試一起改。只改這個動作的名字：`a.bp.stopped()`、`why`、`held`、輸出的 `stopped at …` 都沒動。上文各節保留當時的寫法（`stop`），以這一節為準。
+2. 題「step into／out 要不要做？現在的 a.bp.step() 等於 IDE 的 step over（走一格）。」→ 選「先不做」。→ 不做；上面「step into／step out」一節的甲乙留作日後參考。
+3. 題「等停下時的兩個數字：…閒著滿 1 秒…每 10 秒印一行狀態。可以嗎？」→ 選「可以 (Recommended)」。→ 維持 `idle_s` 1、`report_s` 10。
+
+另：中途 `~/.aos` 被刪，是使用者本人刪的（他說反正之後要重建），不是事故。
+

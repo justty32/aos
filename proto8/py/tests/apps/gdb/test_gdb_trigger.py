@@ -312,11 +312,11 @@ class Shape(unittest.TestCase):
     def test_bp_methods(self):
         import inspect
         import aos.gdb as g
-        for name in ("rm", "set", "ls", "get", "resume", "step", "stop", "why", "held", "stopped", "notes", "clear"):
+        for name in ("rm", "set", "ls", "get", "resume", "step", "pause", "why", "held", "stopped", "notes", "clear"):
             self.assertTrue(callable(getattr(g.Breakpoints, name)), name)
-        for name in ("resume", "step", "stop"):                         # 使用者 11-19「a.resume()就是a.resume()，他的args不應該有東西」
+        for name in ("resume", "step", "pause"):                         # 使用者 11-19「a.resume()就是a.resume()，他的args不應該有東西」
             self.assertEqual(list(inspect.signature(getattr(g.Breakpoints, name)).parameters), ["self"], name)
-        for gone in ("skip", "wait_stopped"):                           # 11-19「不該有這個方法」；等停下併進 resume／step
+        for gone in ("skip", "wait_stopped", "stop"):                   # 11-19「不該有這個方法」；等停下併進 resume／step；stop 改名 pause
             self.assertFalse(hasattr(g.Breakpoints, gone), gone)
         self.assertFalse(hasattr(trigger, "SKIPPABLE"))
         b = g.Breakpoints(g.Target("cara", "/d"))
@@ -374,10 +374,10 @@ class Shape(unittest.TestCase):
         from aos.apps import gdb as app
         self.assertIn("a.bp.add.before_tool(", app.HELP)
         self.assertIn("a.look.history", app.HELP)
-        for verb in ("a.bp.resume()", "a.bp.step()", "a.bp.stop()"):
+        for verb in ("a.bp.resume()", "a.bp.step()", "a.bp.pause()"):
             self.assertIn(verb, app.HELP)
         for text in (app.HELP, app.BANNER):
-            for old in ("stop_before_tool", "skip=True", "wait_paused", "a.watch(", "a.why(", "a.resume(", "a.triggers(", "skip(", "wait_stopped",
+            for old in ("stop_before_tool", "skip=True", "wait_paused", "a.watch(", "a.why(", "a.resume(", "a.triggers(", "skip(", "wait_stopped", "a.bp.stop(",
                         "a.bp.add(\"", "import aos.gdb", "g.attach", "a.where()", "a.history(", "import ag,", "import ag\n", "ag.tool"):
                 self.assertNotIn(old, text)
 

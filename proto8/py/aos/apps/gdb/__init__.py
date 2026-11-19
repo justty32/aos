@@ -35,7 +35,7 @@ the three controls take no arguments; each waits until it stops again and shows 
   a.bp.resume()            go on (a held tool call runs as it was) and wait for the next stop;
                            not stopped (just after a.say) = sends nothing, only waits
   a.bp.step()              go one step of its fsm (idle, think, wait or act) and stop again
-  a.bp.stop()              stop it now, without a breakpoint
+  a.bp.pause()             stop it now, without a breakpoint (VS Code's Pause)
   It never stops: idle with nothing queued for a.bp.idle_s seconds = "did not stop: it is idle";
   a line on stderr every a.bp.report_s seconds; Ctrl-C = stop waiting, the agent goes on.
   a.bp.why(); a.bp.held(); a.bp.stopped(); a.bp.notes()   where and why it stopped

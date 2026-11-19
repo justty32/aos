@@ -70,7 +70,7 @@ class Why:
 
     def _body(self):
         last = self.notes[-1] if self.notes else {}
-        who = ("a.bp.%s()" % last.get("by") if last.get("by") in ("step", "stop")
+        who = ("a.bp.%s()" % last.get("by") if last.get("by") in ("step", "pause")
                else "breakpoint %s (%s)" % (bp_id(last.get("trigger")), "a watcher" if last.get("by") == "watch" else "a trigger"))
         if self.held:
             h = self.held
