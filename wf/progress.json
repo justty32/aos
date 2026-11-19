@@ -111,11 +111,11 @@
       "title": "two-machines T7 第 8、9 步（公司機）",
       "status": "等使用者",
       "flow": "",
-      "what": "11-14 10:50 已寄專區「下次在公司時：/mnt/c 起一棵樹、公司↔家機經 GitHub 來回一次」（01794624634355980205.3118873.1322000），使用者 11-14 回「好」，等他回公司機做；第 1～7 步見下一條",
-      "next": "",
+      "what": "11-19 線 aos-t7-1119 代跑：第 8 步 /mnt/c 起一棵假腦全過（say 0.29 秒、listen 5.8 秒）；第 9 步公司這一半跑到 ~/code/rv 本地 commit bfec146（bob 真 claude 回 ok），沒建 repo、沒 push；步驟單第 8、9 步各補一節 11-19 更新",
+      "next": "使用者：公司機建私有 repo、git remote add、git push；回家照步驟單做家機那一半（未實跑），看 machine-id、bob 答不答得出 kiwi、git status",
       "see": [
-        "[14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md)",
-        "[wait-user-rewrite-1114](../proto8/thinking/2026-11/14/wait-user-rewrite-1114.md)"
+        "[14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md#第-9-步-11-19-更新線-aos-t7-1119-實跑)",
+        "[aos-t7](../proto8/thinking/2026-11/19/aos-t7.md)"
       ],
       "since": "2026-11-18"
     },
