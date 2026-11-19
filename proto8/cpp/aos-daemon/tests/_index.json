@@ -2,6 +2,9 @@
  "support.py": {
   "description": "Build isolated real-daemon fixtures and retain evidence for the B lifecycle tests."
  },
+ "test_adopt_dead.py": {
+  "description": "Check a proc that ended while the daemon was gone (killed, power loss, reboot) stays on the table as stopped with a reason (11-19 audit P18)."
+ },
  "test_bad_letter.py": {
   "description": "Check that a bad procs letter with reply_to gets {\"applied\": false, \"error\": {\"code\": \"BodyBad\", ...}} (11-12), the rest stay silent, and an unclaima…"
  },

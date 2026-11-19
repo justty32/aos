@@ -304,9 +304,20 @@ void Daemon::adopt() {
             add(name, c);
             continue;
         }
-        // 拿不到結束碼的自然結束照舊下表；auto_restart 仍重起，收途中保留原意。
-        // 別棵樹的（foreign）不是自然結束：跟上一個 daemon 收工時一樣睡下、第一圈 wake＝照起。
+        // 別棵樹的（foreign）不是自然結束：跟上一個 daemon 收工時一樣睡下、第一圈 wake＝照起。auto_restart 仍重起，收途中保留原意。
+        // 11-19 基底體檢 P18（使用者選「斷電後 agent 從表上消失」：「改成留在表上並標明死了」）：daemon 不在的期間結束的
+        // （被殺、斷電、重開機；拿不到結束碼）不再整列下表，留 stopped＋reason、要人 start；daemon.json 寫的列照舊交給下面照宣告再起。
         if (phase == "running" && !c.auto_restart && !finishing && !foreign) {
+            if (procs_.contains(name)) {
+                continue;
+            }
+            c.held = true;
+            c.phase = "stopped";
+            c.reason = same_boot ? "ended while the daemon was not running (exit code unknown); start it to run it again"
+                                 : "the machine restarted while it was running (exit code unknown); start it to run it again";
+            stopped_.insert(name);
+            aos::warn("aos-daemon", name + " " + c.reason.get<std::string>() + "; left it stopped");
+            add(name, c);
             continue;
         }
         std::string mode = r.value("stop_mode", std::string("stop"));
