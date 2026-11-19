@@ -15,7 +15,7 @@
 ## 流程（fresh clone 後）
 
 1. **相依**：在 proto8 跑 `python3 install.py --check`（Python ≥ 3.11、只用標準庫）：必需 g++ ≥ 10、gcc、make、ar，缺了退 1；選配工具（git、tmux、bwrap、s6…）只列表、不擋。11-17 起不用 CMake、vcpkg（nlohmann json 是收進 repo 的單檔 `proto8/cpp/third_party/nlohmann/json.hpp`）。Python 選用模組清單在 `proto8/py/requirements-optional.txt`（現在只有 jsonschema；install.py 只檢查、不 pip）。
-2. 在 proto8 跑 `python3 install.py` 建一次（見 [testing「proto8」](testing.md#proto8)）：填 `proto8/bin/`（9 支 C++ 執行檔＋21 支 Python 指令入口）、`proto8/lib/`（`py/` 的抄本＋C++ 函式庫）與 `proto8/include/`，都不進 git。**執行期只認這三夾**：改了 `py/` 或 `cpp/` 要重跑 `install.py` 才生效（11-18 S3 起；不再「存檔即生效」）。
+2. 在 proto8 跑 `python3 install.py` 建一次（見 [testing「proto8」](testing.md#proto8)）：填 `proto8/bin/`（9 支 C++ 執行檔＋19 支 Python 指令入口）、`proto8/lib/`（`py/` 的抄本＋C++ 函式庫）與 `proto8/include/`，都不進 git。**執行期只認這三夾**：改了 `py/` 或 `cpp/` 要重跑 `install.py` 才生效（11-18 S3 起；不再「存檔即生效」）。
 3. 一台設一次 `export AOS_HOME=<這份 proto8 的絕對路徑>`（寫進 `~/.bashrc`；`install.py` 最後一行會印），之後每個視窗先 `source $AOS_HOME/env.sh`（或在樹裡 `source env.sh`，那份轉去家裡這份）把指令放進 PATH（見下表）。
 4. 內容 json 的 diff：跑一次 `python3 wf/tools/json_text.py --setup`（Windows 可能叫 `python`；重跑無妨，`--setup --check` 只看；`--help`／`--setup` 由同夾的 `json_text_cli.py` 做，抄到別的 repo 要兩支一起抄）——在這個 clone 的 `.git/config` 設 `diff.json_text.textconv`，`git diff`／`show`／`log -p` 碰到 `.gitattributes` 點名的知識庫與 `_index.json`／`_description.json` 就展開成逐行文字再比；沒設照原檔比。`--stat`／`--numstat`／`--shortstat` 不吃這個設定，數的是原檔的行（要看展開後改了幾行就數 `git diff` 本身的 +／- 行）。`git blame` 預設也吃這個設定（要原檔行號加 `--no-textconv`）；要做成 patch 給 `git apply` 用時加 `--no-textconv` 或用 `format-patch`。
 
