@@ -198,6 +198,46 @@ class Declaration(unittest.TestCase):
             with self.subTest(why=why):
                 self.assertRaises(ag.SpecBad, ag.defs, **dict(fine, **change))
 
+    def test_holes_from_argon_review(self):
+        """geng-patch-1119 (thinking/2026-11/19/aos-compile-庚/12, class 1): META keys, by_hand("agent.py"), the entry message."""
+        fine = dict(description="D.", system="", tools=[], llm={}, fsm=ag.stock_fsm())
+        with self.assertRaisesRegex(ag.SpecBad, "META keys must be strings"):                  # ① was TypeError
+            ag.defs(**dict(fine, meta={1: "a"}))
+        for what in ("system", "fsm", "tools", "llm", "hooks"):                                 # ② agent.py is not a by_hand file
+            with self.subTest(what=what), self.assertRaisesRegex(ag.SpecBad, r"by_hand\('agent.py'\)"):
+                ag.defs(**dict(fine, **{what: ag.by_hand("agent.py")}))
+        with self.assertRaises(ag.SpecBad) as e:                                                # ⑥ entry cannot take by_hand
+            ag.defs(**dict(fine, interfaces={"aos-agent": {"entry": "x.json"}}))
+        self.assertIn("entry is body.json", str(e.exception))
+        self.assertNotIn("by_hand", str(e.exception))
+        with self.assertRaisesRegex(ag.SpecBad, r"use ag.by_hand"):
+            ag.defs(**dict(fine, interfaces={"aos-agent": {"llm": "x.json"}}))
+
+    def test_rename_order_and_cleanup(self):
+        """geng-patch-1119 ③ files pointed at are renamed before the index files; ④ one failed unlink does not stop the cleanup."""
+        out = ag.defs("D.", "", [], {}, ag.stock_fsm())
+        with tempfile.TemporaryDirectory(prefix="agent-spec-") as d:
+            order, replace = [], os.replace
+            with unittest.mock.patch("os.replace", lambda a, b: (order.append(os.path.basename(b)), replace(a, b))):
+                ag.write_defs(d, out)
+            self.assertEqual(order[-5:], ["loop.json", "body.json", "interfaces.json", "_entry", "_metainfo.json"])
+            self.assertLess(order.index("fsm.json"), order.index("loop.json"))
+        with tempfile.TemporaryDirectory(prefix="agent-spec-") as d:
+            unlink, calls = os.unlink, []
+
+            def flaky(p):
+                calls.append(p)
+                if len(calls) == 1:
+                    raise OSError("unlink fails")
+                unlink(p)
+
+            def fail(a, b):
+                raise OSError("replace fails")
+            with unittest.mock.patch("os.replace", fail), unittest.mock.patch("os.unlink", flaky):
+                self.assertRaisesRegex(OSError, "replace fails", ag.write_defs, d, out)
+            self.assertEqual(len(calls), len(out))
+            self.assertEqual([p for p in os.listdir(d) if ".tmp-" in p], [os.path.basename(calls[0])])
+
     def test_hooks_and_files(self):
         with tempfile.TemporaryDirectory(prefix="agent-spec-") as tmp, \
                 unittest.mock.patch.dict(os.environ, {"AOS_HOME": str(fake_home(tmp))}):
@@ -352,6 +392,15 @@ class Script(unittest.TestCase):
         r = self.call("--write-defs")
         self.assertEqual(r.returncode, 1)
         self.assertIn("weather: error: DefBad", r.stderr)
+        self.assertEqual(sorted(os.listdir(self.dir)), ["_metainfo.json", "agent.py"])
+
+    def test_unreadable_metainfo_is_write_failed_and_writes_nothing(self):
+        """geng-patch-1119 ⑤: cannot read _metainfo.json (here: it is a folder) = an I/O error, WriteFailed; not DefBad."""
+        (self.dir / "_metainfo.json").mkdir()
+        r = self.call("--write-defs")
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+        self.assertIn("weather: error: WriteFailed", r.stderr)
         self.assertEqual(sorted(os.listdir(self.dir)), ["_metainfo.json", "agent.py"])
 
     def test_usage(self):

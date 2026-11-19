@@ -228,3 +228,18 @@ python3 agents/docs/agent.py --write-defs
 - 暫存樹的兩台 daemon（root、llm kernel）都用 `aos-daemon-ctl -d <絕對路徑> shutdown` 關掉，也確認它們退出了。
 - `~/aos-home` 不存在，沒建；shell 的設定檔沒動。
 - 暫存都在 `~/.aos/scratch/geng3-1119/`（`copy/` 乾淨複本、`t1/`、`tree/`、`acc1.sh`、`acc2.sh`、輸出檔），留著沒刪。
+
+## 事後補六個小洞（線 geng-patch-1119）
+
+照 [12 Argon 審](aos-compile-庚/12-Argon審與採納.md)第 1 類，六個先各自在乾淨複本重現到了，再各補一行到幾行；不重構、不加功能，「C 與 .o」不變（重生直接蓋、不記帳、沒有 `--force`／`--status`）。
+
+| # | 洞 | 怎麼補 |
+|---|---|---|
+| ① | `META = {1: "a"}` 冒 `TypeError` | 驗 `META` 時一起查鍵都是字串，不是報一行 `SpecBad META keys must be strings` |
+| ② | `ag.by_hand("agent.py")` 沒擋 | `_names` 的 `made` 加 `"agent.py"`：`SYSTEM`／`TOOLS`／`LLM`／`FSM`／`HOOKS` 用它都報 `SpecBad` |
+| ③ | 改名先換索引檔 | `write_defs` 改名照 `RENAME_LAST` 排：內容檔（含 `fsm.json`、`FILES`、`README.md`）先，再 `loop.json`、`body.json`、`interfaces.json`、`_entry`，`_metainfo.json` 最後 |
+| ④ | 清暫存檔刪一份失敗就停 | 每份各自 `try: os.unlink … except OSError: pass`（原本那個錯照丟） |
+| ⑤ | 讀 `_metainfo.json` 的 `OSError` 報成 `DefBad` | 照 12 建議的第一條改程式、不改註解：只有讀不懂（`ValueError`，含不是 utf-8）報 `DefBad`；讀不到照丟，`main` 報 `WriteFailed`，一樣什麼都沒寫 |
+| ⑥ | `INTERFACES` 改 `entry` 時叫人用 `by_hand` | `entry` 另一句：`entry is body.json, the skeleton agent.py writes; it cannot be changed`；`tools`／`llm`／`system`／`hooks` 照舊 |
+
+測試：`test_agent_spec.py` 24 支 → 27 支（`test_holes_from_argon_review` 管 ①②⑥、`test_rename_order_and_cleanup` 管 ③④、`test_unreadable_metainfo_is_write_failed_and_writes_nothing` 管 ⑤），在 `git archive` 乾淨複本疊上改動、清掉 `AOS_*` 跑，全過（`templates/agent-python` 生成檔與 `agent.py` 對得上那支也綠）。repo 的 `bin/`、`lib/` 沒換，要生效得由頂層跑 `install.py`。暫存在 `~/.aos/scratch/geng-patch-1119/`。

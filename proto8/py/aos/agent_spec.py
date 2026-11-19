@@ -31,6 +31,7 @@ STOCK_CELLS = (("idle", "idle", {0: "think", 10: "idle"}, None),       # templat
                ("wait", "wait", {0: "act", 10: "wait", 11: "think"}, None),
                ("act", "act", {0: "think", 10: "idle"}, 0))
 HOOK_FIRE = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}   # loop.json 的 on_start／on_stop（照 agent-fsm 範本）
+RENAME_LAST = {"loop.json": 1, "body.json": 2, "interfaces.json": 3, "_entry": 4, "_metainfo.json": 5}   # 改名時被指的檔先換、索引檔最後（其他＝0）
 HELP = """\
 usage: python3 agent.py --write-defs [FOLDER] | --defs | --help
 Make an aos agent definition from the declarations in agent.py.
@@ -214,7 +215,7 @@ def _names(decl, fsm, hooks, interfaces, folder):
         return files, hand, set(have.values()) | set(files.values()), keys
     files = {w: f for w, f in OWN_FILES.items() if w != "hooks" or hooks is not None}
     files.update(hand)
-    made = set(SKELETON) | set(RUNTIME_FILES) | {"_metainfo.json", "README.md"} | {files[w] for w in files if w not in hand}
+    made = set(SKELETON) | set(RUNTIME_FILES) | {"_metainfo.json", "README.md", "agent.py"} | {files[w] for w in files if w not in hand}
     for what, name in hand.items():
         if name in made or list(hand.values()).count(name) > 1:
             raise SpecBad("by_hand(%r) for %s clashes with a file agent.py writes, a file the running agent writes, or another by_hand; pick another name" % (name, what.upper()))
@@ -252,6 +253,8 @@ def defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
     extra = parts.extra_files(files, taken | set(hand.values())) if files is not None else {}
     if meta is not None and not isinstance(meta, dict):
         raise SpecBad("META must be a dict like {\"cost\": {\"time_ms\": 60000}, \"resource\": [\"llm\"]}")
+    if meta and not all(isinstance(k, str) for k in meta):
+        raise SpecBad("META keys must be strings, like {\"cost\": {\"time_ms\": 60000}}")
     for k in ("summary", "lineage"):
         if meta and k in meta:
             raise SpecBad("META must not set %s (%s)" % (k, "it comes from DESCRIPTION" if k == "summary" else "agent_def new writes it"))
@@ -302,7 +305,7 @@ def write_defs(folder, files):
             try:
                 with open(path, encoding="utf-8") as f:
                     old = json.load(f)
-            except (OSError, ValueError, UnicodeError) as e:
+            except ValueError as e:                     # 讀不懂（不是 JSON、不是 utf-8）；讀不到（OSError）照丟
                 raise DefBad("cannot read %s, so its other keys cannot be kept: %s" % (path, e))
             if not isinstance(old, dict):
                 raise DefBad("%s is not a JSON object, so its other keys cannot be kept" % path)
@@ -318,12 +321,14 @@ def write_defs(folder, files):
                 f.write(text)
             if os.path.exists(path):
                 os.chmod(tmp, os.stat(path).st_mode & 0o7777)
-        for (name, path, _), tmp in zip(plan, tmps):
+        for (name, path, _), tmp in sorted(zip(plan, tmps), key=lambda p: RENAME_LAST.get(p[0][0], 0)):
             os.replace(tmp, path)
     finally:
         for tmp in tmps:
-            if os.path.exists(tmp):
+            try:
                 os.unlink(tmp)
+            except OSError:
+                pass
     done = ["wrote %s" % os.path.join(folder, name) for name, _, _ in plan]
     if "README.md" in files and len(plan) < len(files):
         done.append("kept %s (it is already there)" % os.path.join(folder, "README.md"))

@@ -115,7 +115,9 @@ def interfaces_json(over, files, description):
             if not isinstance(value, dict):
                 raise SpecBad("INTERFACES aos-agent must be a dict (a value of None removes a default key)")
             for k, v in value.items():
-                if k in ("entry", "tools", "llm", "system", "hooks"):
+                if k == "entry":
+                    raise SpecBad("INTERFACES aos-agent entry is body.json, the skeleton agent.py writes; it cannot be changed")
+                if k in ("tools", "llm", "system", "hooks"):
                     raise SpecBad("INTERFACES aos-agent %s is set by agent.py; to point it at a file you write yourself use ag.by_hand(...)" % k)
                 if v is None:
                     agent.pop(k, None)
