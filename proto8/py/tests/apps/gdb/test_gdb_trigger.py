@@ -386,5 +386,130 @@ class Shape(unittest.TestCase):
         self.assertEqual((bp_id("gdb_before_tool_1"), bp_id("gdbw_watch_1"), bp_id(None)), ("before_tool_1", "watch_1", None))
 
 
+FAKE_AGENT = r'''#!/usr/bin/env python3
+"""a fake aos-agent for AddFails: ctl state who, hook ls/add/rm; MODE file "missing" = HooksMissing, "fail" = hook add fails"""
+import json, os, sys
+T = os.environ["FAKE_DIR"]
+args = sys.argv[sys.argv.index("--target") + 2:]
+mode = open(os.path.join(T, "MODE")).read().strip()
+table = os.path.join(T, "hooks.json")
+have = json.load(open(table)) if os.path.exists(table) else []
+if args[:2] == ["ctl", "state"]:
+    print(json.dumps({"who": {"stack": os.path.join(T, "stack")}}))
+    sys.exit(0)
+if args[0] == "hook" and mode == "missing":
+    sys.stderr.write("aos-agent: error: HooksMissing ann does not declare hooks (write {\"aos-agent\": {\"hooks\": \"hooks.json\"}} "
+                     "in the definition's interfaces.json)\n")
+    sys.exit(1)
+if args[:2] == ["hook", "ls"]:
+    print(json.dumps([{"name": n} for n in have]))
+elif args[:2] == ["hook", "add"]:
+    if mode == "fail":
+        sys.stderr.write("aos-agent: error: HooksBad the list is broken\n")
+        sys.exit(1)
+    n = args[args.index("--name") + 1]
+    json.dump(sorted(set(have) | {n}), open(table, "w"))
+    print("added " + n)
+elif args[:2] == ["hook", "rm"]:
+    if mode == "fail":
+        sys.stderr.write("aos-agent: error: HooksBad the list is broken\n")
+        sys.exit(1)
+    json.dump([x for x in have if x != args[2]], open(table, "w"))
+    print("removed " + args[2])
+'''
+FAKE_DAEMON_CTL = r'''#!/usr/bin/env python3
+"""a fake aos-daemon-ctl for AddFails: ls -j shows ann only; add is rejected"""
+import json, sys
+if "ls" in sys.argv:
+    print(json.dumps({"procs": {"ann": {"phase": "running"}}}))
+    sys.exit(0)
+sys.stderr.write("aos-daemon-ctl: error: AddRejected the daemon said no\n")
+sys.exit(1)
+'''
+
+
+class AddFails(unittest.TestCase):
+    """下斷點失敗＝什麼都不留（使用者 11-19 下午「派線修」，線 aos-bpfix-1119）：裝不上 hook（HooksMissing 等）時小格不留、a.bp 列不出、id 不跳號；
+    重下（replace）失敗＝原本的設定與計數放回去；a.bp.set 裝不上＝設定不變；觀察者掛不上表＝新建的 stack 夾不留。HooksMissing 補一句怎麼修。"""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="gdb-addfail-"))
+        (self.tmp / "stack").mkdir()
+        (self.tmp / "daemon" / "procs").mkdir(parents=True)
+        bin_ = self.tmp / "bin"
+        bin_.mkdir()
+        for name, text in (("aos-agent", FAKE_AGENT), ("aos-daemon-ctl", FAKE_DAEMON_CTL)):
+            (bin_ / name).write_text(text)
+            (bin_ / name).chmod(0o755)
+        self.mode("missing")
+        self.old = {k: os.environ.get(k) for k in ("PATH", "FAKE_DIR")}
+        os.environ["PATH"] = str(bin_) + os.pathsep + os.environ["PATH"]
+        os.environ["FAKE_DIR"] = str(self.tmp)
+        import aos.gdb as g
+        self.g = g
+        self.bp = g.Breakpoints(g.Target("ann", str(self.tmp / "daemon")))
+
+    def tearDown(self):
+        for k, v in self.old.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def mode(self, m):
+        (self.tmp / "MODE").write_text(m)
+
+    def test_hooks_missing_leaves_nothing_and_says_how_to_fix(self):
+        for _ in range(2):
+            with self.assertRaises(self.g.Failed) as e:
+                self.bp.add.before_tool("write")
+            self.assertEqual(e.exception.code, "HooksMissing")
+            self.assertIn("add HOOKS = {} to agent.py", str(e.exception))
+            self.assertIn("recompile", str(e.exception))
+            self.assertTrue(str(e.exception).startswith("aos-agent: error: HooksMissing ann does not declare hooks"))   # 原本那行原樣在前
+            self.assertFalse((self.tmp / "stack" / "hooks").exists())             # 小格（連 hooks/ 夾）都沒留
+            self.assertEqual(self.bp._trigger_ids(), set())
+        with self.assertRaises(self.g.Failed) as e:
+            self.bp.ls()                                                          # 列也是同一句
+        self.assertIn("add HOOKS = {} to agent.py", str(e.exception))
+        self.mode("ok")
+        self.assertEqual(self.bp.add.before_tool("write"), "before_tool_1")      # id 不跳號
+        self.assertEqual([(r["id"], r["enabled"]) for r in self.bp.ls()], [("before_tool_1", True)])
+
+    def test_failing_add_next_to_others_and_replace_puts_back(self):
+        self.mode("ok")
+        self.assertEqual(self.bp.add.after_tool("write", times=2), "after_tool_1")
+        cell = self.tmp / "stack" / "hooks" / "gdb_after_tool_1"
+        trigger.write_json(str(cell / trigger.COUNT), {"seen": 5, "streak": 1, "fired": 2})
+        before = {n: (cell / n).read_bytes() for n in (trigger.SPEC, trigger.COUNT)}
+        self.mode("fail")
+        with self.assertRaises(self.g.Failed):
+            self.bp.add.after_tool("read")                                       # 旁邊已有一個：新的不留、舊的不動
+        with self.assertRaises(self.g.Failed):
+            self.bp.add.after_tool("read", id="after_tool_1", replace=True)      # 重下失敗：原本的設定與計數放回去
+        self.assertEqual({n: (cell / n).read_bytes() for n in before}, before)
+        self.assertEqual(sorted(p.name for p in (self.tmp / "stack" / "hooks").iterdir()), ["gdb_after_tool_1"])
+        with self.assertRaises(self.g.Failed):
+            self.bp.set("after_tool_1", times=5)                                 # 改也一樣：裝不上＝設定不變
+        self.assertEqual((cell / trigger.SPEC).read_bytes(), before[trigger.SPEC])
+        self.mode("ok")
+        self.assertEqual(self.bp.add.after_tool("read"), "after_tool_2")
+        self.assertEqual([r["id"] for r in self.bp.ls()], ["after_tool_1", "after_tool_2"])
+
+    def test_watcher_that_cannot_go_on_the_table_leaves_no_stack(self):
+        self.mode("ok")
+        with self.assertRaises(self.g.Failed) as e:
+            self.bp.add.watch(py="False")
+        self.assertEqual(e.exception.code, "AddRejected")
+        self.assertEqual(list((self.tmp / "daemon" / "procs").iterdir()), [])
+        kept = self.tmp / "daemon" / "procs" / "gdbw_watch_1"                   # 先前 rm 過、留著給人看的夾：不動
+        kept.mkdir()
+        (kept / "old.txt").write_text("kept")
+        with self.assertRaises(self.g.Failed):
+            self.bp.add.watch(py="False")
+        self.assertEqual((kept / "old.txt").read_text(), "kept")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -111,7 +111,7 @@ gdb> a.bp.pause(); a.bp.resume()                   # stop it now without a break
 aos-agent: error: HooksMissing bob does not declare hooks (...); to fix it in an agent.py definition: add HOOKS = {} to agent.py, pass hooks=HOOKS to defs.main(...), and recompile (python3 agent.py --compile)
 ```
 
-照做、重新編譯後同一個 REPL 裡再下一次就行（不用重起 agent）。
+照做、重新編譯後同一個 REPL 裡再下一次就行（不用重起 agent）。下斷點失敗什麼都不留：`a.bp` 列不出它、id 不跳號（重下 `replace=True` 失敗＝原本那個照舊）。
 
 ## 能做什麼
 
@@ -132,9 +132,9 @@ aos-agent: error: HooksMissing bob does not declare hooks (...); to fix it in an
 
 | 方法 | 背後是 | 說明 |
 |---|---|---|
-| `a.bp.add.<種類>(...)` | 觸發器：`aos-agent hook add --event ... --name gdb_ID`；觀察者：`aos-daemon-ctl add --name gdbw_ID ...` | **增**，回 id（`"before_tool_1"`、`"tool_error_1"`、`"watch_1"`；`id=` 自己取）。寫法見上一節 |
+| `a.bp.add.<種類>(...)` | 觸發器：`aos-agent hook add --event ... --name gdb_ID`；觀察者：`aos-daemon-ctl add --name gdbw_ID ...` | **增**，回 id（`"before_tool_1"`、`"tool_error_1"`、`"watch_1"`；`id=` 自己取）。寫法見上一節。失敗（`HooksMissing`、表上掛不上…）＝什麼都不留：觸發器的小格不留、id 不被吃掉，重下失敗放回原本的設定與計數；觀察者新建的 stack 夾不留 |
 | `a.bp.rm(id)`、`a.bp.clear()` | `hook rm gdb_ID`／`aos-daemon-ctl rm gdbw_ID` | **刪**。觸發器的小格留著給人看（標 removed）；觀察者也看別隻的話別隻也不看了。`clear`＝這隻身上全部 |
-| `a.bp.set(id, enabled=None, times=None, once=None)` | 改 `trigger.json`／`watch.json`，`hook add --replace`／`hook rm`；觀察者 `aos-daemon-ctl stop／start gdbw_ID` | **改**，回改完的 `get(id)`。停用＝觸發器的 hook 拿下、設定與計數留著（啟用＝裝回去）；觀察者 stop（啟用＝start）。計數不歸零。**改不了**：種類、條件（sh／py）、主詞、every_ms、看誰——同一個 id 重下 `a.bp.add.<種類>(..., id=ID, replace=True)` |
+| `a.bp.set(id, enabled=None, times=None, once=None)` | 改 `trigger.json`／`watch.json`，`hook add --replace`／`hook rm`；觀察者 `aos-daemon-ctl stop／start gdbw_ID` | **改**，回改完的 `get(id)`。停用＝觸發器的 hook 拿下、設定與計數留著（啟用＝裝回去）；觀察者 stop（啟用＝start）。計數不歸零。觸發器裝不上／拿不下＝`trigger.json` 放回原本的。**改不了**：種類、條件（sh／py）、主詞、every_ms、看誰——同一個 id 重下 `a.bp.add.<種類>(..., id=ID, replace=True)` |
 | `a.bp.ls()`、`a.bp.get(id)`、`a.bp`（REPL 裡直接打） | `hook ls --json`、讀小格與 `aos-daemon-ctl ls -j` | **查**。一列：`id`、`kind`（trigger／watch）、`on`（種類）、`how`（hold／pause）、`about`、`enabled`、`times`、`once`、`seen`、`streak`、`fired`、`spent`、`last_error`、`here`（現在是不是停在它這裡）；`get` 另有 `condition`（sh 原文／py）、`tools`，觀察者另有 `targets`、`every_ms`、`phase`、`pid`、`per_target` |
 | `a.bp.resume()` | 扣住：寫 `gdb/release.json`；暫停：`ctl resume`；沒停著：不送 | 繼續跑，**不收參數**，等到下一次停下才回（見「控制」一節） |
 | `a.bp.step()` | `ctl resume`＋`ctl pause --no-wait`／`ctl pause --no-wait`＋放行 | 走 fsm 一格就停，等到停下才回 |

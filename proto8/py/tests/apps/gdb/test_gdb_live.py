@@ -479,7 +479,7 @@ class Live(unittest.TestCase):
         finally:
             self.sh("aos-agent -d .stack ctl rm skel", check=False)
 
-    def test_17_hooks_missing_says_how_to_fix(self):
+    def test_17_hooks_missing_leaves_nothing_and_says_how_to_fix(self):
         b = self.skeleton_agent("nohooks", drop_hooks=True)
         try:
             for _ in range(2):
@@ -487,6 +487,8 @@ class Live(unittest.TestCase):
                     b.bp.add.before_tool("ls")
                 self.assertEqual(e.exception.code, "HooksMissing")
                 self.assertIn("add HOOKS = {} to agent.py, pass hooks=HOOKS to defs.main(...), and recompile", str(e.exception))
+                self.assertFalse(os.path.exists(os.path.join(b.bp._a.stack, "hooks")))   # 小格、hooks/ 都沒留
+                self.assertEqual(b.bp._trigger_ids(), set())
         finally:
             self.sh("aos-agent -d .stack ctl rm nohooks", check=False)
 

@@ -18,6 +18,7 @@
 不印東西、不 sys.exit；錯丟 trigger.Bad（設定不對）或 look.Failed（指令失敗）。"""
 import json
 import os
+import shutil
 import signal
 
 from aos.gdb import trigger
@@ -242,11 +243,17 @@ def add(daemon, targets, sh=None, py=None, times=1, once=False, every_ms=500, na
             raise Failed("watch", "there is already a watcher named %s (replace=True to replace it)" % name)
         run(["aos-daemon-ctl", "--daemon", daemon, "rm", proc], echo=echo)
     stack = stack_dir(daemon, proc)
+    fresh = not os.path.exists(stack)
     os.makedirs(stack, exist_ok=True)
-    trigger.write_json(os.path.join(stack, SPEC), spec)
-    trigger.write_json(os.path.join(stack, STATE), {})
-    trigger.write_json(os.path.join(stack, LOOP), loop_config(every_ms))
-    run(["aos-daemon-ctl", "--daemon", daemon, "add", "--name", proc, "--stack", stack, os.path.join(stack, LOOP)], echo=echo)
+    try:
+        trigger.write_json(os.path.join(stack, SPEC), spec)
+        trigger.write_json(os.path.join(stack, STATE), {})
+        trigger.write_json(os.path.join(stack, LOOP), loop_config(every_ms))
+        run(["aos-daemon-ctl", "--daemon", daemon, "add", "--name", proc, "--stack", stack, os.path.join(stack, LOOP)], echo=echo)
+    except Failed:
+        if fresh:                                 # 掛不上表＝不留這次新建的 stack 夾（線 aos-bpfix-1119）；先前就有的（rm 過留著給人看的）不動
+            shutil.rmtree(stack, ignore_errors=True)
+        raise
     return name
 
 

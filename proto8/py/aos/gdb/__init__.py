@@ -44,6 +44,7 @@
 import inspect
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -276,9 +277,17 @@ class Breakpoints:
         if short not in self._trigger_ids() and short in have:
             raise Failed("bp.add", "%s is a watcher on this daemon (a.bp.rm it first)" % short)
         cell = self._cell(short)
+        undo = _Undo(self._a.stack, cell, (trigger.SPEC, trigger.COUNT))
         self._write_spec(short, spec)
         trigger.write_json(os.path.join(cell, trigger.COUNT), {})      # 重下＝重新數
-        self._install(short, spec, replace=True)
+        try:
+            self._install(short, spec, replace=True)
+        except BaseException as e:
+            # 裝不上（HooksMissing 等）＝什麼都不留：新建的小格整個拿掉（id 不被吃掉）、重下的放回原本的設定與計數（線 aos-bpfix-1119）。
+            # Ctrl-C 這類打斷：hook 已經裝上了就留著（它是一個真的斷點），沒裝上才收回。
+            if isinstance(e, Failed) or not self._installed(short):
+                undo()
+            raise
         return short
 
     # ---- 刪 ----
@@ -337,12 +346,18 @@ class Breakpoints:
             trigger.validate(spec)
         except trigger.Bad as e:
             raise Failed("bp.set", str(e)) from None
+        hooked = self._hooked()
+        undo = _Undo(a.stack, self._cell(id), (trigger.SPEC,))
         trigger.write_json(os.path.join(self._cell(id), trigger.SPEC), spec)   # handler 每次事件重讀 trigger.json
-        on = id in self._hooked() if enabled is None else bool(enabled)
-        if on:
-            self._install(id, spec, replace=True)  # times 變了 hook 的 condition 也跟著變（Argon A6），一律重裝
-        elif id in self._hooked():
-            a.agent("hook", "rm", trigger.PREFIX + id)
+        on = id in hooked if enabled is None else bool(enabled)
+        try:
+            if on:
+                self._install(id, spec, replace=True)  # times 變了 hook 的 condition 也跟著變（Argon A6），一律重裝
+            elif id in hooked:
+                a.agent("hook", "rm", trigger.PREFIX + id)
+        except Failed:
+            undo()                                 # 裝不上／拿不下＝設定放回原本的，不留改一半的（線 aos-bpfix-1119）
+            raise
         return self.get(id)
 
     # ---- 查 ----
@@ -465,6 +480,13 @@ class Breakpoints:
         """裝著的 gdb_ hook 的 id（啟用中的觸發器）。"""
         rows = json.loads(self._a.agent("hook", "ls", "--json", quiet=quiet))
         return {r["name"][len(trigger.PREFIX):] for r in rows if r.get("name", "").startswith(trigger.PREFIX)}
+
+    def _installed(self, id):
+        """gdb_<id> 這個 hook 裝著沒（問不到＝當沒裝）。"""
+        try:
+            return id in self._hooked()
+        except Failed:
+            return False
 
     def _trigger_ids(self):
         """有設定、沒標 removed 的觸發器 id（啟用與停用的都算）。"""
@@ -759,6 +781,43 @@ class Breakpoints:
                     "gone": "%s did not stop: it is not running (its loop process is gone: stopped, asleep, or removed); aos-agent ctl state says why" % a.name}[outcome]
         w.outcome, w.head = outcome, head
         return w
+
+
+class _Undo:
+    """下斷點之前記下小格的原狀，裝不上時 undo() 放回去：小格（或它上面那層 hooks/）原本不在＝整夾拿掉；原本在＝names 這幾個檔放回原本的內容
+    （原本沒有的刪掉）。只動這次會寫的那一夾，不碰別的。"""
+
+    def __init__(self, stack, cell, names):
+        self.top = None                                   # 這次會新建的最上層那一夾（在 stack 之下）；None＝小格已經在
+        p = os.path.abspath(cell)
+        stack = os.path.abspath(stack)
+        while p != stack and os.path.dirname(p) != p and not os.path.exists(p):
+            self.top, p = p, os.path.dirname(p)
+        self.files = {}
+        if self.top is None:
+            for n in names:
+                path = os.path.join(cell, n)
+                try:
+                    with open(path, "rb") as f:
+                        self.files[path] = f.read()
+                except FileNotFoundError:
+                    self.files[path] = None
+
+    def __call__(self):
+        if self.top is not None:
+            shutil.rmtree(self.top, ignore_errors=True)
+            return
+        for path, data in self.files.items():
+            if data is None:
+                try:
+                    os.remove(path)
+                except FileNotFoundError:
+                    pass
+            else:
+                tmp = "%s.%d.undo" % (path, os.getpid())
+                with open(tmp, "wb") as f:
+                    f.write(data)
+                os.replace(tmp, path)
 
 
 def _condition(spec):

@@ -125,3 +125,23 @@ ann did not stop: it is idle (nothing queued, no step running); ...
 
 另：中途 `~/.aos` 被刪，是使用者本人刪的（他說反正之後要重建），不是事故。
 
+## 教學途中查出的兩個斷點問題（線 aos-bpfix-1119，11-19 下午）
+
+教學線（aos-tutorial-1119）回報兩件：骨架 agent 掛不了斷點；下斷點失敗會留殘渣。頂層問「教學途中查出的斷點兩個問題，要派線修嗎？」使用者答：「派線修」。接著選項框題「骨架 agent 掛不了斷點（因為骨架沒宣告 hook）。要怎麼修？」使用者選：「骨架帶一行空的 HOOKS」（選項說明：「骨架預設寫 HOOKS = {}（空的，不帶任何現成的 hook），新的 agent 一開始就能下斷點。骨架多一行，編譯產物多一個 hook 定義檔。」）。這更新早上的「骨架不帶 hook 組」（aos-compile-庚）：仍不帶任何現成的 hook 組，只宣告一個空的。
+
+**第一筆：骨架帶 `HOOKS = {}`。**
+- `templates/agent-python/agent.py` 多一行 `HOOKS = {}`、`defs.main(..., hooks=HOOKS)`；重新編譯後多一份 `hooks.json`（`{"hooks": {}}`），另外 `interfaces.json` 多 `"hooks": "hooks.json"`、`loop.json` 多 `on_start`／`on_stop`（`hook_fire` 發 `after_start`／`after_stop`）——這兩處是 `HOOKS` 一向的編法，選項說明只提了 hook 定義檔，照實記。其餘產物一字不變；`test_agent_spec` 驗「骨架的編譯產物跟 agent.py 當場重新編譯一字不差」。
+- 用骨架起的 agent 什麼都不改：`a.bp.add.before_tool()` 回 `before_tool_1`，假腦一叫工具就扣住、工具還沒跑，拿掉後續跑答完信（`test_gdb_live` test_16）。
+- `HooksMissing`（沒宣告 hook 的定義）在 `aos.gdb` 這一側補一句英文怎麼修，原本那行原樣在前：`...; to fix it in an agent.py definition: add HOOKS = {} to agent.py, pass hooks=HOOKS to defs.main(...), and recompile (python3 agent.py --compile)`。補在 `aos.gdb` 叫 `aos-agent` 的那一處（`a.bp` 的增、列、改、刪都經過），`aos-agent` 自己的錯誤行不動（解耦裁定照舊）。實測：拿掉那行編譯、掛上、下斷點＝這句；加回、重新編譯，同一個行程裡再下一次就成（不用重起 agent）。
+- 衍生：`defs.load` 骨架拿到的 `HOOKS` 是空的一組；衍生那支不寫 `HOOKS`＝沒有 `hooks.json`（跟以前一樣，所以教學的 bob 照舊、輸出不變，但 bob 掛不了斷點——骨架 README、教學 06 之三、08 寫明），寫 `hooks=base.HOOKS` 或 `[base.HOOKS, {...}]` 照編（`test_agent_spec` 新兩支）。
+- 文件：骨架 README（檔表、`HOOKS` 一節、Build on 一句）、`templates/README.md` 一句、gdb README 最短試法後一段。教學改了五處，其餘一字沒動：04「抄骨架」的 `ls`（多 `hooks.json`）、「改原始碼」的程式碼塊與欄位表（多 `HOOKS = {}` 一行、一列）、`--compile` 輸出（多一行 `wrote …/hooks.json`）；05「看全身」的 `hooks` 行（`not available (HooksMissing …)`→`0 hooks`）與下一句；06 之三「先讓 ann 能掛斷點」整段換成「斷點掛在 hook 上：骨架已經帶了」（不再叫讀者自己加、重新編譯）；08 錯誤表 `HooksMissing` 一列；入口 README「最容易卡住」第 3 條。整份教學照教學線的腳本在乾淨複本上用假腦重跑一次，跟教學線的輸出逐檔比：除 pid、時間、記憶體小數外，只有上面那幾處變了（06 之三的 aos-gdb 畫面一字沒變）。
+
+**第二筆：下斷點失敗不留殘渣。**
+- 根因：`a.bp.add.<種類>(...)` 先寫觸發器小格（`<stack>/hooks/gdb_<id>/trigger.json`、`count.json`），再叫 `aos-agent hook add`；後者失敗（`HooksMissing` 等）時小格已經在了。`a.bp` 列斷點是看小格（有設定、沒標 removed 就算），所以列得出 `before_tool_1 (disabled)`；取新 id 也看小格，下一個就成了 `before_tool_2`。
+- 改法：寫小格前記下原狀，`hook add` 失敗就放回去——小格（連這次才建的 `hooks/` 夾）原本不在＝整夾拿掉；原本在（`replace=True` 重下、或 rm 過留著的）＝`trigger.json`、`count.json` 放回原本的內容。被 Ctrl-C 打斷時，hook 已經裝上就留著（那是一個真的斷點），沒裝上才收回。
+- 一起查出、一起修的另兩條路：(1) `a.bp.set(id, ...)` 先寫新設定再重裝 hook，裝不上／拿不下時設定已經改了一半 → 失敗就放回原本的 `trigger.json`；(2) `a.bp.add.watch(...)` 先在 daemon 的 `procs/gdbw_<id>/` 寫 stack 夾再 `aos-daemon-ctl add`，表上掛不上時夾子留著（看不見、不佔 id，但留在磁碟上）→ 這次新建的夾拿掉，先前就有的不動。
+- 沒修的：`replace=True` 重下觀察者時是先 `aos-daemon-ctl rm` 舊的再加新的，新的掛不上時舊的已經沒了（要復原得重起舊的那支 proc，這次沒做）；`aos-daemon-ctl add` 送出成功、daemon 之後才拒收的情形 aos.gdb 看不到，夾子會留著。`a.bp.clear()` 中途有一個拿不下時，前面拿掉的不回復。
+- 測試：`test_gdb_trigger` 新一類 3 支（假的 `aos-agent`／`aos-daemon-ctl`）：HooksMissing 兩次都不留、列也是同一句、改好後 id 從 1 起；旁邊已有一個時失敗不動它、重下與 set 失敗放回原本的位元組；觀察者掛不上不留新夾、舊夾不動。三支在沒修的程式上都會失敗（先驗過）。`test_gdb_live` test_17 實跑：拿掉 hook 宣告的骨架定義下兩次斷點，stack 裡沒有 `hooks/`。
+
+測試（`git archive` 乾淨複本疊改動、install 後跑；暫存在 `~/.aos/scratch/aos-bpfix-1119/`，環境先 unset 所有 `AOS_*`；假腦，沒叫真模型）：見 commit 訊息。沒碰 `~/aos-home`、沒在 `~/repo/aos/proto8` 跑 `install.py`；aos-agent、daemon、cpp 沒動。
+
