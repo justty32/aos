@@ -329,6 +329,9 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 c.failed = false;   // 11-05：剛留成 stopped＋原因的，這圈不起；下一圈起 stopped 集合已有它
                 continue;
             }
+            if (c.held && c.phase == "sleeping" && c.restart_due && Clock::now() < *c.restart_due) {
+                continue;   // 11-19 P12：auto_restart 退避中，還沒到時間
+            }
             if (c.held && stopped.count(n) == 0 && !(c.phase == "sleeping" && slept.count(n) > 0)) {   // 11-05：sleep 叫睡的不自己醒   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（子 loop 比舊 state_flux 的 ctl_seq，已套用過的不重做）
                 // 11-10 two-machines：信箱接回只留名的列，寫成指示詞的路徑欄照 daemon 現在的環境再解（「兩台各自設一次」）
                 if (spec.is_null() && !refresh(n, c)) {
@@ -343,6 +346,11 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 nc.revived_at = Clock::now();
                 if (nc.auto_restart && c.phase == "sleeping") {
                     nc.quick_exits = c.quick_exits;   // 自動重起帶著連敗數；人 start（stopped）從零開始
+                    nc.restarts = c.restarts;         // 11-19 P12：次數與連著的計數同樣帶著
+                    nc.restart_streak = c.restart_streak;
+                    if (c.restarts > 0) {
+                        nc.reason = "auto_restart: restarted " + std::to_string(c.restarts) + " times; last: " + c.last_exit;
+                    }
                 }
                 if (c.phase == "sleeping") {
                     nc.stuck_restarts = c.stuck_restarts;

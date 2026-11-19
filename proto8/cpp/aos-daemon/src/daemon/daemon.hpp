@@ -85,6 +85,12 @@ sigset_t poke_signals();
 
 inline constexpr const char* BAD_ROW_REASON = "cannot resolve directives in the daemon config";   // 11-10 晚 B07：那列 reason 的開頭（重起時認它、解得開就照常起）
 inline constexpr int REVIVE_MS = 3000;   // 起後 3 秒內退出：原因字樣與 auto_restart 連敗計數共用
+// 11-19 基底體檢 P12（使用者選「會死的 proc 無限重起」：「改成越重起等越久，並在表上看得到次數」）：auto_restart 的退避。
+// 連著重起（每次都沒撐過 RESTART_HEALTHY_MS）時，第 1 次同一拍起，第 2 次起等 RESTART_BASE_MS，之後每次加倍，最多 RESTART_MAX_MS；
+// 撐過 RESTART_HEALTHY_MS 才退＝連著的重算，下一次又是同一拍起。
+inline constexpr int RESTART_BASE_MS = 1000;
+inline constexpr int RESTART_MAX_MS = 60000;
+inline constexpr int RESTART_HEALTHY_MS = 60000;
 
 // 小格裡有活著的子 loop 時回 pid 與 ticks；adopt.cpp 與 reconcile.cpp 共用。dstack＝這個 daemon 的 stack（給 same_tree）。
 std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell, const std::string& loop_name,

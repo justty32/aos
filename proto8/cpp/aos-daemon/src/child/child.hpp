@@ -58,6 +58,10 @@ struct Child {
     std::string observed_at = aos::utc_now_ms(); // 父這次起／接回的 UTC 毫秒基準
     std::string last_response;
     int quick_exits = 0;                // 連續起後 REVIVE_MS 內退出的次數，滿 3 次留 stopped
+    int restarts = 0;                   // 11-19 P12：auto_restart 替它重起過幾次（人 add／start 起的從 0 算；表上 counter_restarts）
+    int restart_streak = 0;             // 11-19 P12：連著重起幾次（每次都沒撐過 RESTART_HEALTHY_MS），決定下一次等多久
+    std::optional<std::chrono::steady_clock::time_point> restart_due;   // 11-19 P12：退避中（列 sleeping）＝到這一刻才重起
+    std::string last_exit;              // 11-19 P12：上一次自己退的樣子（給 reason 用）
     bool reaped = false;
     std::string phase = "running";      // running／stopping（收的途中）／done（自己結束）／stopped（行程不在了）／sleeping（daemon 收工時收的，11-03）；
                                         // done 印完 log 下表；已知非 0 留 held stopped＋reason

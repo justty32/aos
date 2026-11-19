@@ -1,0 +1,50 @@
+{
+ "support.py": {
+  "description": "Build isolated real-daemon fixtures and retain evidence for the B lifecycle tests."
+ },
+ "test_bad_letter.py": {
+  "description": "Check that a bad procs letter with reply_to gets {\"applied\": false, \"error\": {\"code\": \"BodyBad\", ...}} (11-12), the rest stay silent, and an unclaima…"
+ },
+ "test_cgroup.py": {
+  "description": "此檔以獨立 transient scope 驗證 daemon 的可選 cgroup 份額與整格回收。"
+ },
+ "test_ctl.py": {
+  "description": "Exercise public controls, prune inspection and age selection, command errors and help."
+ },
+ "test_err_tail.py": {
+  "description": "Verify a failing proc with a huge stderr.txt (sparse) leaves the daemon alive, its memory flat, and the reason taken from the file's tail."
+ },
+ "test_lifecycle.py": {
+  "description": "Verify proc lifecycle, damaged-state adoption and owned-state recovery against real daemons."
+ },
+ "test_limits.py": {
+  "description": "驗證 daemon 的份額天花板、rlimit、收屍標記與重起行為。"
+ },
+ "test_poke.py": {
+  "description": "Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures."
+ },
+ "test_ref_hash.py": {
+  "description": "Check {\"$ref\": \"#/...\"} in daemon.json means daemon.json itself, also inside an inline inst moved into its cell (11-12)."
+ },
+ "test_restart_backoff.py": {
+  "description": "Check auto_restart backs off (wait grows on each restart in a row), shows it on the row (reason, counter_restarts), and resets after a long run (11-1…"
+ },
+ "test_stack_make.py": {
+  "description": "Check aos-daemon creates a missing $AOS_STACK at start (11-11, make_stack) after the config checks pass."
+ },
+ "test_stale_stop.py": {
+  "description": "Check stop → sleep → start keeps the restarted loop running instead of replaying the old stop."
+ },
+ "test_state_path.py": {
+  "description": "Check the procs_state_path query letter (11-13, K-F27): the reply carries the absolute path of procs_state.json, null without that window, BodyBad wh…"
+ },
+ "test_stop_cause.py": {
+  "description": "Verify the after_stop cause (B7) end to end: a real daemon writes stop_cause.json, its child aos-loop reads it, hook_fire reports it."
+ },
+ "test_subuid.py": {
+  "description": "驗證 daemon 認 limits.user 的 sub:N（免 root 換成 subuid，線 subuid-1119）：設定驗證、helper 找不到與失敗、小格 ACL、與 fake helper 的握手；有真的 newuidmap 才跑真換身分。"
+ },
+ "test_two_machines.py": {
+  "description": "Check two-machines daemon fixes: copies never adopt the original tree, and mailbox rows re-resolve directives on start."
+ }
+}

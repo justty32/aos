@@ -3,6 +3,7 @@
 #include "child/cgroup.hpp"
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
+#include <algorithm>
 #include <csignal>
 #include <ctime>
 #include <filesystem>
@@ -201,6 +202,25 @@ bool Daemon::look(const std::string& name, Child& c, bool stop, bool watch) {
                 c.failed = true;
                 stopped_.insert(name);
             } else {
+                // 11-19 基底體檢 P12：越重起等越久（參數見 daemon.hpp）；列 sleeping、reason 寫在等什麼、counter_restarts 記次數
+                bool brief = c.revived && Clock::now() - c.revived_at < std::chrono::milliseconds(RESTART_HEALTHY_MS);
+                c.restart_streak = brief ? c.restart_streak + 1 : 1;
+                long long wait = 0;
+                if (c.restart_streak >= 2) {
+                    wait = RESTART_BASE_MS;
+                    for (int i = 2; i < c.restart_streak && wait < RESTART_MAX_MS; ++i) {
+                        wait *= 2;
+                    }
+                    wait = std::min<long long>(wait, RESTART_MAX_MS);
+                }
+                c.last_exit = c.code.is_number_integer() && c.code.get<long long>() != 0 ? fail_reason(c)
+                              : c.code.is_null() ? std::string("exited, code unknown") : "exited with code " + aos::dumps(c.code);
+                c.restarts += 1;
+                c.restart_due = Clock::now() + std::chrono::milliseconds(wait);
+                if (wait > 0) {
+                    c.reason = "auto_restart: restart " + std::to_string(c.restarts) + " in " + std::to_string(wait / 1000) +
+                               "s (" + std::to_string(c.restart_streak) + " in a row; last: " + c.last_exit + ")";
+                }
                 hold(name, c, "sleeping", "done");
             }
             return false;

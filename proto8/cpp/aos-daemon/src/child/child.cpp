@@ -400,6 +400,9 @@ Json row(const Child& c, const std::string& dstack) {
     if (c.auto_restart) {
         r["auto_restart"] = true;
     }
+    if (c.restarts > 0) {
+        r["counter_restarts"] = c.restarts;   // 11-19 P12：auto_restart 重起過幾次，有才寫
+    }
     if (c.stuck_after_ms) {
         r["stuck_after_ms"] = *c.stuck_after_ms;
     } else if (c.stuck_after_cycles != 0) {
