@@ -29,6 +29,9 @@
  "aos-gdb-動詞-1119.md": {
   "description": "aos-gdb 的控制動作改成 IDE 那一組（11-19）：`a.bp.resume()`、`a.bp.step()`、`a.bp.stop()` 都不收參數、都等到停下才回並說停在哪；`wait_stopped`、`skip` 拿掉；aos-agent、daemon、hook 機制、cpp 沒動"
  },
+ "aos-htop-1119": {
+  "description": "aos 版 htop（線 aos-htop-1119，發想）：kernel 替每個 proc 記什麼、依此怎麼分配，兩者都要能自訂；今天不改程式就能用兩支 hook 做到「記」與「耦合度高→規劃者優先」，卡在沒有宣告、認人靠自報、優先只在擠時有效；htop 與 aos-gdb 是讀這些紀錄的窗，原型一頁"
+ },
  "aos-inherit-1119": {
   "description": "繼承深挖（線 aos-inherit-1119，11-19）：「繼承」在 aos 是哪幾件事、今天已有的機制實測、別人怎麼做、四條走向（推薦在 agent.py 重生時衍生、執行期不動）、跑著長出來的收不收回；使用者 11-19 已裁（走乙、「繼承」進規範只限生成時＝N-70、長出來的不收回、狀態機每隻一層先不做）"
  },

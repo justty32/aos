@@ -336,6 +336,17 @@
         "[aos-base-fix](../proto8/thinking/2026-11/19/aos-base-fix.md)"
       ],
       "since": "2026-11-19"
+    },
+    "aos-htop-1119": {
+      "title": "aos 版 htop：kernel 的紀錄與分配（發想）",
+      "status": "等使用者",
+      "flow": "",
+      "what": "發想做完、已交：現況盤點、兩支 hook 的最小實測、量法與騙法、窗口三方向與原型頁、Argon 審。剩：使用者看原型、答 README 四題後才往下想",
+      "next": "",
+      "see": [
+        "[README](../proto8/thinking/2026-11/19/aos-htop-1119/README.md)"
+      ],
+      "since": "2026-11-19"
     }
   }
 }

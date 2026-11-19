@@ -1,0 +1,534 @@
+<!-- aos-top 原型：一個 htop 式的頁，欄位全部來自各 kernel 自己宣告的紀錄（假資料，不接真管線） -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aos-top 原型</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1d2330; --muted:#677084; --line:#dfe3ea;
+  --accent:#2f6fde; --ok:#1f9d55; --warn:#c98a00; --bad:#d23c3c; --sleep:#7a6bd1; --off:#9aa1ad;
+  --bar:#cfe0fb; --barink:#2f6fde; --hi:#fff4d6; --code:#eef1f6; --chip:#eef2f8;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#11141a; --panel:#1a1f28; --ink:#e4e8ef; --muted:#9099aa; --line:#2c3340;
+    --accent:#6ea2ff; --ok:#4cc985; --warn:#e6b23c; --bad:#ff6b6b; --sleep:#a597ff; --off:#6c7381;
+    --bar:#24395e; --barink:#8db6ff; --hi:#3a3220; --code:#0d1016; --chip:#232a36;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI","Noto Sans TC","Microsoft JhengHei",sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:12px 16px 40px}
+h1{font-size:20px;margin:4px 0 2px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:10px}
+.mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button,select,input{font:inherit;color:inherit}
+button{background:var(--chip);border:1px solid var(--line);border-radius:7px;padding:4px 10px;cursor:pointer}
+button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+input[type=search]{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:4px 8px;min-width:0;flex:1 1 140px}
+select{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 4px;max-width:100%}
+details>summary{cursor:pointer;color:var(--accent)}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:9px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.tag.bad{background:var(--bad);color:#fff}.tag.warn{background:var(--warn);color:#111}.tag.ok{background:var(--ok);color:#fff}
+
+/* 頂部儀表 */
+.top{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:10px}
+.meter .lab{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.meter .big{font-size:22px;font-weight:600}
+.gauge{height:10px;background:var(--code);border-radius:5px;overflow:hidden;margin:4px 0}
+.gauge>i{display:block;height:100%;background:var(--accent)}
+.gauge.w>i{background:var(--warn)}.gauge.b>i{background:var(--bad)}
+.gm{display:grid;grid-template-columns:5.5em 1fr 3em;gap:6px;align-items:center;font-size:13px}
+.gm .gauge{margin:0}
+.bias{border-left:4px solid var(--warn);margin-bottom:10px}
+.bias h3{margin:0 0 6px;font-size:15px}
+.bias ul{margin:0;padding-left:18px}
+.bias li{margin:3px 0}
+
+/* 分頁 */
+.tabs{display:flex;gap:6px;margin:12px 0 8px;flex-wrap:wrap}
+.tabs button{padding:6px 14px;font-size:15px}
+.hidden{display:none!important}
+
+/* 大表 */
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-top:8px}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:middle}
+th{position:sticky;top:0;background:var(--panel);font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
+th .k{display:block;font-size:10px;opacity:.75}
+th.sorted{color:var(--accent)}
+tr.r{cursor:pointer}
+tr.r:hover td{background:var(--hi)}
+tr.dim td{opacity:.45}
+tr.open td{background:var(--hi)}
+.tw{display:inline-block;width:1.2em;text-align:center;color:var(--muted)}
+.ph{font-weight:600}
+.ph.running{color:var(--ok)}.ph.stuck{color:var(--bad)}.ph.asleep{color:var(--sleep)}.ph.stopped{color:var(--off)}
+.cell{display:flex;align-items:center;gap:6px;min-width:110px}
+.cell .b{flex:1;height:8px;background:var(--code);border-radius:4px;overflow:hidden;min-width:40px}
+.cell .b>i{display:block;height:100%;background:var(--barink)}
+.cell .v{font-variant-numeric:tabular-nums;font-size:12px;min-width:4.5em;text-align:right}
+.na{color:var(--off);font-size:12px}
+td.detail{white-space:normal;background:var(--bg)}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px;padding:6px 2px}
+.dgrid b{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.quote{background:var(--code);border-radius:6px;padding:6px 8px;white-space:pre-wrap}
+.cmdbox{margin-top:10px}
+.cmdbox pre{background:var(--code);border-radius:8px;padding:10px;margin:6px 0 0;white-space:pre-wrap;word-break:break-all;min-height:2.6em}
+.colpick{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:8px}
+.colpick fieldset{border:1px solid var(--line);border-radius:8px;margin:0;padding:6px 10px}
+.colpick legend{font-size:13px;font-weight:600}
+.colpick label{display:block;font-size:13px}
+.note{font-size:12px;color:var(--muted)}
+
+/* 卡片 */
+.summary{font-size:18px;font-weight:600;margin:6px 0 10px}
+.cards{display:grid;gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--off);border-radius:10px;padding:10px 12px}
+.card.u3{border-left-color:var(--bad)}.card.u2{border-left-color:var(--warn)}.card.u1{border-left-color:var(--accent)}
+.card .t{font-weight:600;font-size:15px}
+.card .meta{font-size:12px;color:var(--muted)}
+.card pre{background:var(--code);border-radius:6px;padding:6px 8px;margin:6px 0;white-space:pre-wrap;word-break:break-all}
+.group{font-size:13px;color:var(--muted);margin:14px 0 4px;font-weight:600}
+footer{margin-top:20px}
+footer ul{padding-left:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>aos-top <span class="tag">原型・假資料</span></h1>
+  <div class="sub">像 htop，但每一欄都是 kernel 自己宣告「我記了什麼」。<span id="clock" class="mono"></span>
+    <button id="pause" title="按了才讓假數字每 2 秒跳一次（預設不跳）">▶ 讓它跳動</button></div>
+
+  <!-- 頂部儀表 -->
+  <div class="top" id="top"></div>
+  <div class="panel bias" id="bias"></div>
+
+  <div class="tabs">
+    <button data-tab="A" class="on">一張大表</button>
+    <button data-tab="B">哪裡需要你</button>
+  </div>
+
+  <!-- 分頁 A -->
+  <section id="tabA">
+    <div class="panel">
+      <div class="row">
+        <span class="note">只看：</span>
+        <button data-f="all" class="on">全部</button>
+        <button data-f="ask">在等你的</button>
+        <button data-f="stuck">卡住的</button>
+        <button data-f="spend">花錢的</button>
+        <input type="search" id="q" placeholder="找名字…">
+      </div>
+      <details style="margin-top:8px">
+        <summary>設定欄位（像 htop 的 F2）：要看哪個 kernel 的哪些欄</summary>
+        <div class="note">欄位清單不是寫死的：是讀每個 kernel 的宣告（declares）排出來的。換一個自訂 kernel，這裡就會多出它的欄。勾選會記在這台瀏覽器。</div>
+        <div class="colpick" id="colpick"></div>
+      </details>
+    </div>
+    <div class="tablebox"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+    <div class="panel cmdbox">
+      <b>會跑的指令</b> <span class="tag warn">原型：只顯示指令，不執行</span>
+      <pre class="mono" id="cmd">（在任一列右邊的「下手」選一個動作，這裡會出現對應的指令）</pre>
+    </div>
+  </section>
+
+  <!-- 分頁 B -->
+  <section id="tabB" class="hidden">
+    <div class="summary" id="bsum"></div>
+    <div id="bcards"></div>
+    <div class="panel cmdbox">
+      <b>會跑的指令</b> <span class="tag warn">原型：只顯示指令，不執行</span>
+      <pre class="mono" id="cmdB">（點卡片上的「建議動作」，這裡會出現對應的指令）</pre>
+    </div>
+  </section>
+
+  <footer class="panel">
+    <details>
+      <summary>這頁是什麼</summary>
+      <ul>
+        <li><b>欄位來自 kernel 宣告。</b>每個 kernel（llm、procs、使用者自己寫的…）自己說「我替每隻 proc 記了哪些東西、單位是什麼」，這頁只照宣告排欄。記什麼、怎麼分配，都由 kernel 自己定，大家都能自訂 kernel。</li>
+        <li><b>共通底是 daemon 那份表。</b>每列一定有：name、phase、pid、reason、counter_restarts、stack、def，加上 agent 自己寫的 stage.txt（idle／think／wait／act）。</li>
+        <li><b>全是假資料。</b>名字、數字、金額都是編的，金額是「假價目」換算，不是帳單；沒有任何真的 key 或帳號。</li>
+        <li><b>只顯示指令，不執行。</b>「下手」選單與卡片上的建議動作，只把指令印在頁底的框。</li>
+        <li><b>真的要接的話，資料應該從這些地方來：</b>
+          <ul>
+            <li>llm kernel：<span class="mono">ledger.jsonl</span>（每次問腦一行）、<span class="mono">used.json</span>（今天額度用了多少）</li>
+            <li>daemon：<span class="mono">procs_state.json</span>（每隻的 phase、pid、重起次數…）</li>
+            <li>agent：<span class="mono">stage.txt</span>、<span class="mono">observed.jsonl</span>、<span class="mono">history.jsonl</span>（最後說的話、工具呼叫成敗、context 用量）</li>
+            <li>不顯示「被 aos-gdb 扣住」：使用者定了「表上不要看得出來，兩者解耦合」；要看去 aos-gdb 用 <span class="mono">a.bp.why()</span></li>
+          </ul></li>
+        <li><b>誰負責彙總：</b>另一支讀檔的小工具（例如 aos-top 自己），<b>不加在 daemon 身上</b>——daemon 是板子，只管起停。</li>
+        <li>欄頭可點來排序（同一層裡排，不打散樹）；點一列展開細節；▸／▾ 摺疊子樹。</li>
+      </ul>
+    </details>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ===== 各 kernel 自己宣告的紀錄（假資料）===== */
+const kernels = [
+ {name:"llm", path:"llms/stacks/llm", kind:"問腦",
+  declares:{calls:{label:"問腦次數",unit:"次"}, tokens:{label:"token",unit:"tok"}, cached:{label:"已快取",unit:"%"}, usd:{label:"金額",unit:"$",note:"假價目換算"}, wait_ms:{label:"排隊",unit:"ms"}},
+  policies:[
+   {name:"coupling-planner", by:"使用者自訂的 hook prio", text:"耦合度 0.72 > 0.60 → 角色 planner 的信升 high", active:true, affects:["pat"], uses:["coupling"]},
+   {name:"quota-guard", by:"使用者自訂的 hook prio", text:"今天額度用過 60% → kf 隊員的信降 low，隊長不降", active:true, affects:["kf-sol-1","kf-sol-2","kf-sol-3"], uses:[]},
+   {name:"idle-user-slowdown", by:"使用者自訂的 hook prio", text:"你超過 120 分鐘沒看 → 全部降一級（目前 95 分鐘，還沒觸發）", active:false, affects:[], uses:["control"]}
+  ],
+  quota:{window:"day", since:"2026-11-19T00:00:00+08:00", max_tokens:2000000, used_tokens:1340000}},
+ {name:"procs", path:"kernels/procs", kind:"起停",
+  declares:{starts:{label:"被起次數",unit:"次"}, refused:{label:"被拒",unit:"次"}, held:{label:"扣著等表態",unit:"封"}},
+  policies:[{name:"max_running", by:"內建範例策略", text:"同時最多 6 隻在跑", active:true, affects:[], uses:[]}]},
+ {name:"eca", path:"(claude CLI 自己連線)", kind:"不經過 kernel",
+  declares:{usd_equiv:{label:"等值金額",unit:"$",note:"訂閱制時是照 API 價換算，不是帳單"}, cache_read:{label:"快取讀",unit:"tok"}},
+  policies:[], blind:true}
+];
+
+/* ===== 全域指標（不是哪一列的消耗）===== */
+const globals = {
+  coupling:{label:"耦合度", val:0.72, max:1, fmt:v=>v.toFixed(2), who:"planner 角色彙總 observed.jsonl", every:"5 分鐘", last:"14:30"},
+  control:{label:"掌控度", val:0.38, max:1, fmt:v=>v.toFixed(2), who:"aos-top 讀你的最後查看時間＋各隻產出", every:"1 分鐘", last:"14:32",
+           extra:"你 95 分鐘沒看，這段時間產出 41 個 commit、7 份文件"},
+  asks:{label:"等你的題", val:3, max:10, fmt:v=>v+" 題", who:"daemon 掃 procs 的 ask 信", every:"每次有信", last:"14:31"}
+};
+
+/* ===== proc 列（假資料）。共通底 = daemon 表 + stage.txt；k = {kernel名:{欄位:值}} ===== */
+const procs = [
+ {id:"root", name:".stack", parent:null, type:"daemon", phase:"running", pid:741002, reason:null, counter_restarts:0, stack:".stack", def:"(根 daemon)", stage:"-",
+  k:{procs:{starts:1,refused:0,held:0}}, info:{last:"（daemon 不說話，只管起停）", mail:0, ctx:null, toolfail:null}},
+ {id:"ann", name:"ann", parent:"root", type:"agent", phase:"running", pid:756365, reason:null, counter_restarts:0, stack:"procs/ann", def:"../agents/ann", stage:"think",
+  k:{llm:{calls:212,tokens:318000,cached:61,usd:1.92,wait_ms:420}, procs:{starts:1,refused:0,held:0}},
+  info:{last:"把 ledger 欄位對過了，used.json 跟 ledger 加總差 0。", mail:1, ctx:44, toolfail:2, uncommitted:3, unpushed:0}},
+ {id:"bob", name:"bob", parent:"root", type:"agent", phase:"running", pid:756410, reason:null, counter_restarts:0, stack:"procs/bob", def:"../agents/bob", stage:"act",
+  k:{llm:{calls:150,tokens:201000,cached:55,usd:1.21,wait_ms:300}, procs:{starts:1,refused:0,held:0}},
+  info:{last:"子 agent bob-sub-1 已起，交它跑重新編譯。", mail:0, ctx:37, toolfail:5, uncommitted:0, unpushed:2}},
+ {id:"bob-sub-1", name:"bob-sub-1", parent:"bob", type:"agent", phase:"running", pid:756902, reason:null, counter_restarts:0, stack:"procs/bob-sub-1", def:"../agents/bob-sub", stage:"think",
+  k:{llm:{calls:96,tokens:288000,cached:12,usd:4.80,wait_ms:880}, procs:{starts:1,refused:0,held:0}},
+  info:{last:"重新編譯第 4 輪，還有 2 個測試沒過，再試一次。", mail:0, ctx:81, toolfail:18, spike:"過去一小時 $4.80（假價目），平常一小時約 $0.60", uncommitted:0, unpushed:0}},
+ {id:"pat", name:"pat", role:"planner", parent:"root", type:"agent", phase:"running", pid:756477, reason:null, counter_restarts:0, stack:"procs/pat", def:"../agents/pat", stage:"wait",
+  k:{llm:{calls:88,tokens:142000,cached:70,usd:0.86,wait_ms:90}, procs:{starts:1,refused:0,held:2}},
+  info:{last:"兩個方向都可以，要你選：先做 aos-top 的大表，還是先做「哪裡需要你」？", mail:4, ctx:52, toolfail:0, ask:2, askWaitMin:38, uncommitted:0, unpushed:0}},
+ {id:"kf", name:"kf", parent:"root", type:"daemon", phase:"running", pid:757010, reason:null, counter_restarts:0, stack:"procs/kf", def:"../teams/kf", stage:"-",
+  k:{procs:{starts:1,refused:1,held:0}}, info:{last:"（隊 daemon，只管隊內起停）", mail:0, ctx:null, toolfail:null}},
+ {id:"kf-captain", name:"kf-captain", parent:"kf", type:"agent", phase:"running", pid:757044, reason:null, counter_restarts:0, stack:"procs/kf/procs/kf-captain", def:"../agents/captain", stage:"wait",
+  k:{llm:{calls:120,tokens:176000,cached:66,usd:1.05,wait_ms:210}, procs:{starts:1,refused:0,held:1}},
+  info:{last:"sol-2 卡住 20 分鐘了，要不要我把它停掉重派？", mail:3, ctx:58, toolfail:1, ask:1, askWaitMin:12, uncommitted:5, unpushed:4}},
+ {id:"kf-sol-1", name:"kf-sol-1", parent:"kf-captain", type:"agent", phase:"running", pid:757101, reason:null, counter_restarts:0, stack:"procs/kf/procs/kf-sol-1", def:"../agents/soldier", stage:"act",
+  k:{llm:{calls:64,tokens:92000,cached:48,usd:0.55,wait_ms:1900}, procs:{starts:1,refused:0,held:0}},
+  info:{last:"表格排序寫好了，交隊長看。", mail:0, ctx:33, toolfail:3, uncommitted:2, unpushed:0}},
+ {id:"kf-sol-2", name:"kf-sol-2", parent:"kf-captain", type:"agent", phase:"stuck", pid:757130, reason:"20 分鐘沒寫 stage、沒回信", counter_restarts:0, stack:"procs/kf/procs/kf-sol-2", def:"../agents/soldier", stage:"wait",
+  k:{llm:{calls:31,tokens:40000,cached:20,usd:0.24,wait_ms:2600}, procs:{starts:1,refused:0,held:0}},
+  info:{last:"等工具回應中……", mail:6, ctx:91, toolfail:40, uncommitted:0, unpushed:0}},
+ {id:"kf-sol-3", name:"kf-sol-3", parent:"kf-captain", type:"agent", phase:"running", pid:758812, reason:"上次 exit 1（設定檔讀不到）", counter_restarts:3, stack:"procs/kf/procs/kf-sol-3", def:"../agents/soldier", stage:"idle",
+  k:{llm:{calls:12,tokens:15000,cached:5,usd:0.09,wait_ms:2400}, procs:{starts:4,refused:0,held:0}},
+  info:{last:"讀不到 ../agents/soldier/conf，先用預設值。", mail:1, ctx:9, toolfail:25, uncommitted:0, unpushed:0}},
+ {id:"kf-rev", name:"kf-rev", body:"eca", parent:"kf", type:"agent", phase:"running", pid:757220, reason:null, counter_restarts:0, stack:"procs/kf/procs/kf-rev", def:"../agents/reviewer-eca", stage:"think",
+  k:{eca:{usd_equiv:2.10,cache_read:510000}, procs:{starts:1,refused:0,held:0}},
+  info:{last:"看完 kf-sol-1 的改動，兩處小問題，已回信。", mail:0, ctx:47, toolfail:0, uncommitted:0, unpushed:0}},
+ {id:"dex", name:"dex", parent:"root", type:"agent", phase:"running", pid:756530, reason:null, counter_restarts:0, stack:"procs/dex", def:"../agents/dex", stage:"act",
+  k:{llm:{calls:40,tokens:61000,cached:58,usd:0.37,wait_ms:0}, procs:{starts:1,refused:0,held:0}},
+  info:{last:"（在 act 格，等工具回來）", mail:2, ctx:28, toolfail:0, uncommitted:0, unpushed:0}},
+ {id:"eli", name:"eli", parent:"root", type:"agent", phase:"asleep", pid:756590, reason:"自己說睡到 16:00", counter_restarts:0, stack:"procs/eli", def:"../agents/eli", stage:"idle",
+  k:{llm:{calls:22,tokens:30000,cached:40,usd:0.18,wait_ms:0}, procs:{starts:1,refused:0,held:0}},
+  info:{last:"今天的整理做完了，16:00 再起來看信。", mail:0, ctx:15, toolfail:0, uncommitted:0, unpushed:0}},
+ {id:"fay", name:"fay", parent:"root", type:"agent", phase:"stopped", pid:null, reason:"被 procs kernel 拒：同時已 6 隻在跑", counter_restarts:0, stack:"procs/fay", def:"../agents/fay", stage:"-",
+  k:{procs:{starts:0,refused:2,held:0}}, info:{last:"（還沒起來過）", mail:1, ctx:null, toolfail:null, uncommitted:0, unpushed:0}},
+ {id:"gus", name:"gus", body:"eca", parent:"root", type:"agent", phase:"running", pid:756650, reason:null, counter_restarts:0, stack:"procs/gus", def:"../agents/gus-eca", stage:"act",
+  k:{eca:{usd_equiv:1.40,cache_read:330000}, procs:{starts:1,refused:0,held:0}},
+  info:{last:"文件第二章寫好了，等 pat 排下一步。", mail:0, ctx:62, toolfail:1, uncommitted:7, unpushed:0}},
+ {id:"hal", name:"hal", parent:"root", type:"agent", phase:"running", pid:756700, reason:null, counter_restarts:0, stack:"procs/hal", def:"../agents/hal", stage:"idle",
+  k:{llm:{calls:5,tokens:6000,cached:80,usd:0.03,wait_ms:0}, procs:{starts:1,refused:0,held:0}},
+  info:{last:"沒事做，等信。", mail:0, ctx:4, toolfail:0, uncommitted:0, unpushed:0}}
+];
+
+/* ===== 小工具 ===== */
+const $ = s => document.querySelector(s);
+const byId = Object.fromEntries(procs.map(p => [p.id, p]));
+const kById = Object.fromEntries(kernels.map(k => [k.name, k]));
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function fmtNum(v, unit){
+  if (v == null) return "—";
+  if (unit === "$") return "$" + v.toFixed(2);
+  if (unit === "%") return Math.round(v) + "%";
+  if (unit === "tok") return v >= 1e6 ? (v/1e6).toFixed(2)+"M" : v >= 1e3 ? (v/1e3).toFixed(1)+"k" : String(v);
+  if (unit === "ms") return v >= 1000 ? (v/1000).toFixed(1)+" s" : Math.round(v)+" ms";
+  return String(Math.round(v)) + (unit ? " " + unit : "");
+}
+function daemonOf(p){ let x = byId[p.parent]; while (x && x.type !== "daemon") x = byId[x.parent]; return x; }
+function dstack(p){ const d = daemonOf(p); return d ? (d.id === "root" ? ".stack" : ".stack/" + d.stack) : ".stack"; }
+function spend(p){ return ((p.k.llm||{}).usd||0) + ((p.k.eca||{}).usd_equiv||0); }
+function childrenOf(id){ return procs.filter(p => p.parent === id); }
+
+/* ===== 欄位設定：從 declares 排出來，localStorage 記勾選 ===== */
+const allCols = [];
+kernels.forEach(k => Object.entries(k.declares).forEach(([f, d]) => allCols.push({key:k.name+"."+f, kernel:k.name, field:f, ...d})));
+const baseOpt = [{key:"base.pid",label:"pid"},{key:"base.restarts",label:"重起次數"},{key:"base.reason",label:"原因 reason"},{key:"base.stack",label:"stack"},{key:"base.def",label:"def"}];
+const defaultOn = ["base.pid","base.restarts","base.reason","llm.tokens","llm.usd","llm.wait_ms","procs.held","eca.usd_equiv"];
+let colOn;
+try { colOn = JSON.parse(localStorage.getItem("aos-top.cols") || "null"); } catch(e) { colOn = null; }
+if (!Array.isArray(colOn)) colOn = defaultOn.slice();
+function saveCols(){ try { localStorage.setItem("aos-top.cols", JSON.stringify(colOn)); } catch(e) {} }
+
+function renderColPick(){
+  let h = `<fieldset><legend>共通底（daemon 表）</legend><div class="note">名字、狀態、階段一定顯示</div>` +
+    baseOpt.map(c => `<label><input type="checkbox" data-col="${c.key}" ${colOn.includes(c.key)?"checked":""}> ${esc(c.label)}</label>`).join("") + `</fieldset>`;
+  kernels.forEach(k => {
+    h += `<fieldset><legend>${esc(k.name)} <span class="tag">${esc(k.kind)}</span></legend><div class="note mono">${esc(k.path)}</div>`;
+    Object.entries(k.declares).forEach(([f, d]) => {
+      const key = k.name + "." + f;
+      h += `<label><input type="checkbox" data-col="${key}" ${colOn.includes(key)?"checked":""}> ${esc(d.label)} <span class="note">(${esc(d.unit||"-")})</span>${d.note?`<br><span class="note">　${esc(d.note)}</span>`:""}</label>`;
+    });
+    h += `</fieldset>`;
+  });
+  $("#colpick").innerHTML = h;
+  $("#colpick").querySelectorAll("input").forEach(i => i.onchange = () => {
+    const c = i.dataset.col;
+    colOn = colOn.filter(x => x !== c); if (i.checked) colOn.push(c);
+    saveCols(); renderTable();
+  });
+}
+
+/* ===== 頂部儀表 + 偏向卡 ===== */
+function renderTop(){
+  const q = kById.llm.quota, pct = q.used_tokens / q.max_tokens;
+  const usd = procs.reduce((s,p)=>s+((p.k.llm||{}).usd||0),0), eq = procs.reduce((s,p)=>s+((p.k.eca||{}).usd_equiv||0),0);
+  const asks = procs.filter(p => p.info.ask).length, stuck = procs.filter(p => p.phase === "stuck").length;
+  const restarty = procs.filter(p => p.counter_restarts >= 3).length;
+  let gm = "";
+  Object.entries(globals).forEach(([k, g]) => {
+    const used = kernels.flatMap(kk => kk.policies.filter(pp => (pp.uses||[]).includes(k)).map(pp => pp.name + (pp.active?"":"（未啟用）")));
+    const r = g.val / g.max, cls = k === "control" ? (r < .5 ? "b" : "") : (r > .6 ? "w" : "");
+    gm += `<details><summary class="gm" style="color:inherit"><span>${esc(g.label)}</span><span class="gauge ${cls}"><i style="width:${Math.min(100,r*100)}%"></i></span><span class="mono">${esc(g.fmt(g.val))}</span></summary>
+      <div class="note">誰量的：${esc(g.who)}｜多久量一次：${esc(g.every)}｜上次：${esc(g.last)}<br>哪些策略在用它：${used.length?esc(used.join("、")):"沒有"}${g.extra?"<br>"+esc(g.extra):""}</div></details>`;
+  });
+  $("#top").innerHTML = `
+   <div class="panel meter"><div class="lab"><span>今天額度（llm kernel）</span><span class="mono">${(pct*100).toFixed(1)}%</span></div>
+     <div class="gauge ${pct>.8?"b":pct>.6?"w":""}"><i style="width:${pct*100}%"></i></div>
+     <div class="note">${fmtNum(q.used_tokens,"tok")} / ${fmtNum(q.max_tokens,"tok")} token，從 00:00 起算</div></div>
+   <div class="panel meter"><div class="lab"><span>今天花了（假價目）</span></div>
+     <div class="big mono">$${usd.toFixed(2)}</div><div class="note">另有 eca 等值 $${eq.toFixed(2)}（不經過 llm kernel，照 API 價換算，不是帳單）</div></div>
+   <div class="panel meter"><div class="lab"><span>要你 / 卡住</span></div>
+     <div class="big">${asks} 隻在等你 · <span style="color:var(--bad)">${stuck} 隻卡住</span></div>
+     <div class="note">另有 ${restarty} 隻一直重起（≥3 次）</div></div>
+   <div class="panel meter"><div class="lab"><span>全域指標（點開看是誰量的）</span></div>${gm}</div>`;
+
+  const act = kernels.flatMap(k => k.policies.filter(p => p.active).map(p => ({...p, kernel:k.name})));
+  const off = kernels.flatMap(k => k.policies.filter(p => !p.active).map(p => ({...p, kernel:k.name})));
+  $("#bias").innerHTML = `<h3>kernel 現在偏向誰、為什麼</h3><ul>` +
+    act.map(p => `<li><b>${esc(p.kernel)}</b> · ${esc(p.text)} ${p.affects.length?`→ 影響 ${p.affects.map(a=>`<span class="tag warn">${esc(a)}</span>`).join(" ")}`:`<span class="tag">目前沒擋到誰</span>`}
+      <span class="note">（${esc(p.name)}，${esc(p.by)}）</span></li>`).join("") +
+    `</ul>${off.length?`<details><summary>沒啟用的策略 ${off.length} 條</summary><ul>${off.map(p=>`<li class="note">${esc(p.kernel)} · ${esc(p.text)}（${esc(p.name)}）</li>`).join("")}</ul></details>`:""}`;
+}
+
+/* ===== 大表 ===== */
+let filter = "all", query = "", sortKey = null, sortDir = -1;
+const collapsed = new Set(), opened = new Set();
+function matches(p){
+  if (query && !p.name.toLowerCase().includes(query)) return false;
+  if (filter === "ask") return !!p.info.ask;
+  if (filter === "stuck") return p.phase === "stuck" || p.counter_restarts >= 3;
+  if (filter === "spend") return spend(p) >= 1;
+  return true;
+}
+function sortVal(p, key){
+  if (!key) return 0;
+  const [a, b] = key.split(".");
+  if (a === "base") return ({name:p.name, phase:p.phase, stage:p.stage, pid:p.pid||0, restarts:p.counter_restarts, reason:p.reason||"", stack:p.stack, def:p.def})[b];
+  const v = (p.k[a]||{})[b]; return v == null ? -Infinity : v;
+}
+function visibleCols(){ return [...baseOpt.filter(c => colOn.includes(c.key)), ...allCols.filter(c => colOn.includes(c.key))]; }
+function colMax(c){ return Math.max(1e-9, ...procs.map(p => (p.k[c.kernel]||{})[c.field] || 0)); }
+
+function renderTable(){
+  const cols = visibleCols();
+  const th = (key, label, sub, title) => `<th data-sort="${key}" class="${sortKey===key?"sorted":""}" title="${esc(title||"點來排序")}">${esc(label)}${sortKey===key?(sortDir>0?" ▲":" ▼"):""}${sub?`<span class="k">${esc(sub)}</span>`:""}</th>`;
+  let h = "<tr>" + th("base.name","名字","daemon 樹") + th("base.phase","狀態","phase") + th("base.stage","階段","stage.txt");
+  cols.forEach(c => { h += c.kernel ? th(c.key, c.label, c.kernel + (c.unit?" · "+c.unit:""), c.note||"") : th(c.key, c.label, "daemon"); });
+  h += "<th>下手</th></tr>";
+  $("#tbl thead").innerHTML = h;
+
+  // 哪些要顯示：符合的 + 它的祖先（祖先變淡）
+  const show = new Set(), hit = new Set();
+  procs.forEach(p => { if (matches(p)) { hit.add(p.id); let x = p; while (x) { show.add(x.id); x = byId[x.parent]; } } });
+  const maxes = Object.fromEntries(cols.filter(c=>c.kernel).map(c => [c.key, colMax(c)]));
+  const ncol = 4 + cols.length;
+  let body = "";
+  function walk(id, depth){
+    let kids = childrenOf(id).filter(p => show.has(p.id));
+    if (sortKey) kids.sort((a, b) => { const x = sortVal(a, sortKey), y = sortVal(b, sortKey); return (x > y ? 1 : x < y ? -1 : 0) * sortDir; });
+    kids.forEach(p => { body += rowHtml(p, depth, cols, maxes, hit.has(p.id), ncol); if (!collapsed.has(p.id)) walk(p.id, depth + 1); });
+  }
+  const root = byId.root;
+  if (show.has("root")) { body += rowHtml(root, 0, cols, maxes, hit.has("root"), ncol); if (!collapsed.has("root")) walk("root", 1); }
+  $("#tbl tbody").innerHTML = body || `<tr><td colspan="${ncol}" class="note">沒有符合的</td></tr>`;
+}
+
+function rowHtml(p, depth, cols, maxes, isHit, ncol){
+  const hasKids = childrenOf(p.id).length > 0;
+  const tw = hasKids ? `<span class="tw" data-tog="${p.id}">${collapsed.has(p.id)?"▸":"▾"}</span>` : `<span class="tw">·</span>`;
+  const tags = [];
+  if (p.type === "daemon") tags.push(`<span class="tag">daemon</span>`);
+  if (p.role) tags.push(`<span class="tag">${esc(p.role)}</span>`);
+  if (p.body === "eca") tags.push(`<span class="tag" title="claude CLI 自己連線，llm kernel 看不到它">eca·不經過 llm kernel</span>`);
+  if (p.info.ask) tags.push(`<span class="tag bad">等你 ${p.info.ask} 題</span>`);
+  if ((p.k.gdb||{}).held) tags.push(`<span class="tag warn" title="只有 gdb 知道">gdb 扣住</span>`);
+  let h = `<tr class="r ${isHit?"":"dim"} ${opened.has(p.id)?"open":""}" data-row="${p.id}">
+    <td><span style="padding-left:${depth*16}px"></span>${tw}<b>${esc(p.name)}</b> ${tags.join(" ")}</td>
+    <td class="ph ${p.phase}">${esc(p.phase)}</td><td class="mono">${esc(p.stage)}</td>`;
+  cols.forEach(c => {
+    if (!c.kernel) {
+      const v = {"base.pid":p.pid, "base.restarts":p.counter_restarts, "base.reason":p.reason, "base.stack":p.stack, "base.def":p.def}[c.key];
+      const warn = c.key === "base.restarts" && v >= 3 ? ` style="color:var(--bad);font-weight:600"` : "";
+      h += `<td class="mono"${warn}>${v == null ? '<span class="na">—</span>' : esc(v)}</td>`;
+      return;
+    }
+    const rec = p.k[c.kernel];
+    if (!rec || rec[c.field] == null) {
+      let why = "這個 kernel 沒記它";
+      if (c.kernel === "llm" && p.body === "eca") why = "不經過 llm kernel";
+      if (c.kernel === "eca" && p.body !== "eca") why = "不是 eca 身";
+      h += `<td><span class="na" title="${esc(why)}">—</span></td>`; return;
+    }
+    const v = rec[c.field];
+    if (c.kernel === "gdb") { h += `<td>${v ? '<span class="tag warn">扣住</span>' : ""}</td>`; return; }
+    h += `<td><div class="cell"><span class="b"><i style="width:${Math.min(100, v / maxes[c.key] * 100)}%"></i></span><span class="v mono">${esc(fmtNum(v, c.unit))}</span></div></td>`;
+  });
+  h += `<td><select data-act="${p.id}" aria-label="對 ${esc(p.name)} 下手"><option value="">下手…</option>
+    <option value="stop">停掉 stop</option><option value="${p.phase==="stopped"?"start":"pause"}">${p.phase==="stopped"?"起來 start":"暫停 pause"}</option><option value="resume">繼續 resume</option>
+    <option value="${p.phase==="asleep"?"wake":"sleep"}">${p.phase==="asleep"?"叫醒 wake":"睡 sleep"}</option>
+    <option value="mail">看信箱</option><option value="last">看它最後說什麼</option><option value="say">對它說一句</option><option value="gdb">進 aos-gdb</option></select></td></tr>`;
+  if (opened.has(p.id)) h += `<tr><td class="detail" colspan="${ncol}">${detailHtml(p)}</td></tr>`;
+  return h;
+}
+
+function detailHtml(p){
+  const i = p.info;
+  const srcs = Object.keys(p.k).map(k => `<span class="tag">${esc(k)}</span> <span class="note mono">${esc(kById[k].path)}</span>`);
+  srcs.unshift(`<span class="tag">daemon</span> <span class="note mono">procs_state.json</span>`);
+  if (p.type === "agent") srcs.push(`<span class="tag">agent 自己</span> <span class="note mono">stage.txt · observed.jsonl · history.jsonl</span>`);
+  const pctBar = v => v == null ? '<span class="na">—</span>' : `<div class="cell"><span class="b"><i style="width:${v}%;${v>80?"background:var(--bad)":""}"></i></span><span class="v mono">${v}%</span></div>`;
+  return `<div class="dgrid">
+    <div style="grid-column:1/-1"><b>它最後說的一句話</b><div class="quote">${esc(i.last)}</div></div>
+    <div><b>信箱積壓</b>${i.mail} 封${p.k.procs && p.k.procs.held ? `（其中 ${p.k.procs.held} 封被 procs kernel 扣著等表態）` : ""}</div>
+    <div><b>context 用量</b>${pctBar(i.ctx)}</div>
+    <div><b>工具呼叫失敗率</b>${pctBar(i.toolfail)}</div>
+    <div><b>未 commit／未 push</b>${i.uncommitted||0} ／ ${i.unpushed||0}</div>
+    ${p.reason ? `<div><b>daemon 記的原因</b>${esc(p.reason)}</div>` : ""}
+    ${i.spike ? `<div><b>花費</b>${esc(i.spike)}</div>` : ""}
+    ${i.gdb ? `<div><b>gdb</b>${esc(i.gdb)}</div>` : ""}
+    <div style="grid-column:1/-1"><b>它的紀錄來自哪幾個 kernel</b>${srcs.join("<br>")}</div>
+  </div>`;
+}
+
+function cmdFor(p, act){
+  const d = dstack(p), n = p.name;
+  if (p.id === "root") return act === "gdb" ? "# aos-gdb 接的是一隻 agent，不接 daemon" : (act === "stop" ? "aos-daemon-ctl -d .stack shutdown" : "aos-daemon-ctl -d .stack ls");
+  return ({
+    stop:`aos-agent -d ${d} ctl stop ${n}`, start:`aos-agent -d ${d} ctl start ${n}`,
+    pause:`aos-agent -d ${d} ctl pause ${n}`, resume:`aos-agent -d ${d} ctl resume ${n}`,
+    sleep:`aos-agent -d ${d} ctl sleep ${n}`, wake:`aos-agent -d ${d} ctl wake ${n}`,
+    mail:`aos-mailbox -s ${d}/procs/${n} peek`, last:`aos-agent -d ${d} -t ${n} listen --last 1`,
+    say:`aos-agent -d ${d} -t ${n} say "（你要說的話）"`, gdb:`aos-gdb ${n}`
+  })[act] || "";
+}
+function showCmd(target, text){ $(target).textContent = text + "\n\n# 原型：只顯示指令，不執行"; }
+
+/* 事件（委派） */
+$("#tbl").addEventListener("click", e => {
+  const th = e.target.closest("th[data-sort]");
+  if (th) { const k = th.dataset.sort; if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = -1; } renderTable(); return; }
+  if (e.target.closest("select")) return;
+  const tog = e.target.closest("[data-tog]");
+  if (tog) { const id = tog.dataset.tog; collapsed.has(id) ? collapsed.delete(id) : collapsed.add(id); renderTable(); return; }
+  const tr = e.target.closest("tr[data-row]");
+  if (tr) { const id = tr.dataset.row; opened.has(id) ? opened.delete(id) : opened.add(id); renderTable(); }
+});
+$("#tbl").addEventListener("change", e => {
+  const s = e.target.closest("select[data-act]"); if (!s || !s.value) return;
+  showCmd("#cmd", cmdFor(byId[s.dataset.act], s.value)); s.value = ""; s.blur();
+});
+document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => {
+  filter = b.dataset.f; document.querySelectorAll("[data-f]").forEach(x => x.classList.toggle("on", x === b)); renderTable();
+});
+$("#q").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); renderTable(); });
+document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-tab]").forEach(x => x.classList.toggle("on", x === b));
+  $("#tabA").classList.toggle("hidden", b.dataset.tab !== "A"); $("#tabB").classList.toggle("hidden", b.dataset.tab !== "B");
+});
+
+/* ===== 分頁 B：哪裡需要你 ===== */
+function buildCards(){
+  const cards = [];
+  procs.filter(p => p.info.ask).forEach(p => cards.push({u:3, score:100 + p.info.askWaitMin,
+    t:`${p.name} 等你決定 ${p.info.ask} 題，等了 ${p.info.askWaitMin} 分鐘`, why:`它最後說：「${p.info.last}」`,
+    act:"看它在問什麼", cmd:cmdFor(p, "last"), detail:`信箱積壓 ${p.info.mail} 封；procs kernel 扣著 ${(p.k.procs||{}).held||0} 封等你表態。`}));
+  procs.filter(p => p.phase === "stuck").forEach(p => cards.push({u:3, score:90,
+    t:`${p.name} 卡住了`, why:p.reason, act:"先看它最後說什麼，再決定要不要停掉", cmd:cmdFor(p, "last") + "\n" + cmdFor(p, "stop"),
+    detail:`context ${p.info.ctx}%、工具呼叫失敗率 ${p.info.toolfail}%、信箱積壓 ${p.info.mail} 封。它的隊長也在問要不要重派。`}));
+  procs.filter(p => p.counter_restarts >= 3).forEach(p => cards.push({u:2, score:70,
+    t:`${p.name} 已經重起 ${p.counter_restarts} 次`, why:p.reason, act:"停掉，修好設定再起", cmd:cmdFor(p, "stop"),
+    detail:`def 是 ${p.def}；daemon 會一直 auto_restart，修好前每次都會再掛。`}));
+  const g = globals.control;
+  if (g.val < 0.5) cards.push({u:2, score:60, t:`你很久沒看了，但它們做了很多`, why:g.extra,
+    act:"花 5 分鐘掃一下 pat 的總結", cmd:cmdFor(byId.pat, "last"), detail:`掌控度 ${g.val}（${g.who}，每 ${g.every} 量一次，上次 ${g.last}）。策略 idle-user-slowdown 在 120 分鐘時會讓全部降一級。`});
+  procs.filter(p => p.info.spike).forEach(p => cards.push({u:2, score:55, t:`${p.name} 花費衝高`, why:p.info.spike,
+    act:"看它是不是在空轉重試", cmd:cmdFor(p, "last"), detail:`工具呼叫失敗率 ${p.info.toolfail}%、context ${p.info.ctx}%、快取只有 ${p.k.llm.cached}%。`}));
+  const unc = procs.filter(p => p.info.uncommitted || p.info.unpushed);
+  const sc = unc.reduce((s,p)=>s+(p.info.uncommitted||0),0), sp = unc.reduce((s,p)=>s+(p.info.unpushed||0),0);
+  if (unc.length) cards.push({u:1, score:30, t:`${sc} 個檔沒 commit、${sp} 個 commit 沒 push`, why:"不急，但收工前要收",
+    act:"問最多的那隻要不要收", cmd:cmdFor(unc.sort((a,b)=>(b.info.uncommitted+b.info.unpushed)-(a.info.uncommitted+a.info.unpushed))[0], "say"),
+    detail:unc.map(p=>`${p.name}：未 commit ${p.info.uncommitted||0}、未 push ${p.info.unpushed||0}`).join("\n")});
+  procs.filter(p => p.phase === "stopped" && (p.k.procs||{}).refused).forEach(p => cards.push({u:1, score:20,
+    t:`${p.name} 起不來：被 procs kernel 拒了 ${p.k.procs.refused} 次`, why:p.reason, act:"等有人停下來會自動起；急的話先停 hal（閒著）",
+    cmd:cmdFor(byId.hal, "stop"), detail:"策略 max_running：同時最多 6 隻在跑。"}));
+  return cards.sort((a, b) => b.score - a.score);
+}
+function renderB(){
+  const cards = buildCards(), now = cards.filter(c => c.u >= 2), wait = cards.filter(c => c.u < 2);
+  $("#bsum").textContent = `現在有 ${now.length} 件要你、${wait.length} 件可以等。`;
+  const one = (c, i) => `<div class="card u${c.u}"><div class="t">${esc(c.t)}</div><div class="meta">${esc(c.why||"")}</div>
+    <div style="margin-top:6px"><button data-card="${i}">建議：${esc(c.act)}</button></div>
+    <details><summary>細節</summary><pre class="mono">${esc(c.detail)}</pre></details></div>`;
+  let h = `<div class="group">要你（依緊急程度）</div><div class="cards">${now.map(c => one(c, cards.indexOf(c))).join("")}</div>`;
+  if (wait.length) h += `<div class="group">可以等</div><div class="cards">${wait.map(c => one(c, cards.indexOf(c))).join("")}</div>`;
+  $("#bcards").innerHTML = h;
+  $("#bcards").querySelectorAll("[data-card]").forEach(b => b.onclick = () => showCmd("#cmdB", cards[+b.dataset.card].cmd));
+}
+
+/* ===== 即時跳動（假數字）===== */
+let paused = true, minute = 32;
+$("#pause").onclick = () => { paused = !paused; $("#pause").textContent = paused ? "▶ 繼續跳動" : "⏸ 暫停跳動"; };
+const rnd = (a, b) => a + Math.random() * (b - a);
+function tick(){
+  if (paused) return;
+  const q = kById.llm.quota;
+  procs.forEach(p => {
+    if (p.phase !== "running" || (p.k.gdb||{}).held) return;
+    const busy = p.stage === "think" || p.stage === "act";
+    if (p.k.llm && busy) {
+      const t = Math.round(rnd(200, p.id === "bob-sub-1" ? 4000 : 1500));
+      p.k.llm.tokens += t; q.used_tokens += t; p.k.llm.usd += t * 0.000006;
+      if (Math.random() < .4) p.k.llm.calls += 1;
+    }
+    if (p.k.llm) p.k.llm.wait_ms = Math.max(0, p.k.llm.wait_ms + rnd(-150, 150));
+    if (p.k.eca && busy) { p.k.eca.cache_read += Math.round(rnd(500, 4000)); p.k.eca.usd_equiv += rnd(0, .01); }
+  });
+  if (Math.random() < .15) minute++;
+  $("#clock").textContent = " 假時間 2026-11-19 14:" + String(minute % 60).padStart(2, "0");
+  renderTop();
+  const a = document.activeElement;
+  if (!(a && a.tagName === "SELECT")) renderTable();
+  if (!$("#tabB").classList.contains("hidden")) { /* 卡片內容多半不變，避免關掉使用者打開的細節，不重畫 */ }
+}
+
+renderColPick(); renderTop(); renderTable(); renderB();
+$("#clock").textContent = " 假時間 2026-11-19 14:32";
+setInterval(tick, 2000);
+</script>
+</body>
+</html>
