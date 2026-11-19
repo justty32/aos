@@ -35,4 +35,6 @@ LLM = {}                    # {} = the llm kernel's default brain; {"model": "lu
 
 FSM = std.fsm()             # the four cells of the agent-fsm template: idle, think, wait, act
 
-defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)
+HOOKS = {}                  # no hooks yet, but declared, so breakpoints (aos-gdb) and aos-agent hook work; std.hooks() = the agent-fsm template's hooks
+
+defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM, hooks=HOOKS)

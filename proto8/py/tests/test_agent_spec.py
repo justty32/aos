@@ -28,6 +28,7 @@ FSM = std.fsm()
 defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)
 '''
 GENERATED = ["_entry", "_metainfo.json", "body.json", "fsm.json", "interfaces.json", "llm.json", "loop.json", "system.txt", "tools.json"]
+SKEL_GENERATED = sorted(GENERATED + ["hooks.json"])   # the skeleton declares HOOKS = {} (user 11-19 "骨架帶一行空的 HOOKS")
 TEMPLATES = PROTO / "templates"
 # templates/reviewer written as one agent.py (design 04, third cut's check): compared with the hand-written files, the template is not changed
 REVIEWER = '''\
@@ -901,7 +902,43 @@ class Skeleton(unittest.TestCase):
                                        "(under $AOS_HOME/lib, or next to agent.py)\n")             # defs is found through aos.py.agent: still one line
 
     def test_files(self):
-        self.assertEqual(sorted(p.name for p in SKEL.iterdir()), sorted(GENERATED + ["README.md", "agent.py"]))
+        self.assertEqual(sorted(p.name for p in SKEL.iterdir()), sorted(SKEL_GENERATED + ["README.md", "agent.py"]))
+
+    def test_declares_empty_hooks(self):
+        """the skeleton declares HOOKS = {} (user 11-19 "骨架帶一行空的 HOOKS"): hooks.json with no hooks, named in interfaces.json, so an agent
+        made from it takes breakpoints (aos-gdb) and aos-agent hook without changing anything; still no hook group of a template."""
+        self.assertEqual(json.loads((SKEL / "hooks.json").read_text())["hooks"], {})
+        self.assertEqual(json.loads((SKEL / "interfaces.json").read_text())["aos-agent"]["hooks"], "hooks.json")
+        self.assertIn("hook_fire", (SKEL / "loop.json").read_text())
+
+    def test_built_on_the_skeleton(self):
+        """defs.load of the skeleton: its HOOKS is an empty group; a derived agent.py that writes no HOOKS gets no hooks.json, one that writes
+        HOOKS = base.HOOKS or [base.HOOKS, {...}] gets those (the inheritance examples keep working)."""
+        with tempfile.TemporaryDirectory(prefix="agent-python-") as tmp:
+            home = fake_home(tmp)
+            base = Path(tmp) / "base"
+            base.mkdir()
+            shutil.copy(SKEL / "agent.py", base)
+            mine = {"event": "after_start", "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire"}}
+            args = "base.DESCRIPTION, base.SYSTEM, [base.TOOLS], base.LLM, base.FSM"
+            tails = {"none": "defs.main(%s)\n" % args,
+                     "same": "defs.main(%s, hooks=base.HOOKS)\n" % args,
+                     "more": "defs.main(%s, hooks=[base.HOOKS, {'mine': %r}])\n" % (args, mine)}
+            want = {"none": None, "same": {}, "more": {"mine": mine}}
+            text = (SKEL / "agent.py").read_text()
+            head = text[:text.index("# ---- your agent")]
+            for name, tail in tails.items():
+                with self.subTest(derived=name):
+                    d = Path(tmp) / name
+                    d.mkdir()
+                    (d / "agent.py").write_text(head + "base = defs.load('../base')\n" + tail)
+                    r = run_agent(d / "agent.py", "--compile", home=home)
+                    self.assertEqual(r.returncode, 0, r.stderr)
+                    if want[name] is None:
+                        self.assertFalse((d / "hooks.json").exists())
+                        self.assertNotIn("hooks", json.loads((d / "interfaces.json").read_text())["aos-agent"])
+                    else:
+                        self.assertEqual(json.loads((d / "hooks.json").read_text())["hooks"], want[name])
 
     def test_committed_files_match_agent_py(self):
         with tempfile.TemporaryDirectory(prefix="agent-python-") as tmp:
@@ -916,7 +953,7 @@ class Skeleton(unittest.TestCase):
             r = subprocess.run([sys.executable, str(dest / "agent.py"), "--compile"], capture_output=True, text=True,
                                timeout=30, env=env)
             self.assertEqual(r.returncode, 0, r.stderr)
-            for name in GENERATED:
+            for name in SKEL_GENERATED:
                 with self.subTest(name=name):
                     self.assertEqual((dest / name).read_bytes(), (SKEL / name).read_bytes(),
                                      "run python3 agent.py --compile in templates/agent-python")

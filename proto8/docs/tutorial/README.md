@@ -27,4 +27,4 @@
 
 1. **`root/.env` 那一行**（第 02 章）：範本預設 kernel 在「旁邊另一個專案」；照教學把 kernel 掛上板子，就要先改成 `${AOS_STACK}/procs/llm`，而且要在開板子之前改（改了要重開板子）。
 2. **用了 `$AOS_WS` 下的庫，編譯時要帶 `AOS_WS=$PWD`**（第 06 章之二）：`env.sh` 會清掉所有 `AOS_*`，不帶就 `SpecBad`。
-3. **下斷點前 agent 要宣告 hook**（第 06 章之三）：骨架沒有，`agent.py` 加 `HOOKS = {}` 重新編譯，不然 `HooksMissing`。
+3. **別刪 `agent.py` 裡 `HOOKS = {}` 那行**（第 04 章、06 之三）：骨架帶著它，agent 才掛得了斷點；拿掉（或衍生時沒寫 `HOOKS`）＝`HooksMissing`，錯誤行後面那句就是修法。

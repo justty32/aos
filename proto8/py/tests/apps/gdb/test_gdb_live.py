@@ -446,6 +446,50 @@ class Live(unittest.TestCase):
         self.assertEqual(a.bp.resume().outcome, "idle")
         self.assertIn("FAKE ANSWER to: fifteen", a.listen(timeout_s=30, letter=x))
 
+    # ---- 骨架起的 agent（使用者 11-19 下午選「骨架帶一行空的 HOOKS」，線 aos-bpfix-1119）----
+    def skeleton_agent(self, name, drop_hooks=False):
+        """templates/agent-python 原樣抄一份（drop_hooks＝拿掉 hook 宣告，當沒帶 HOOKS 的舊定義）、掛上去（腦是 kernel 預設的假腦）。"""
+        d = self.tree / "agents" / name
+        shutil.copytree(PROTO / "templates" / "agent-python", d)
+        if drop_hooks:
+            ij = d / "interfaces.json"
+            doc = json.loads(ij.read_text())
+            del doc["aos-agent"]["hooks"]
+            ij.write_text(json.dumps(doc))
+            (d / "hooks.json").unlink()
+        self.sh("aos-agent -d .stack ctl add -w . agents/%s" % name)
+        b = agent.attach(name, daemon=self.daemon)
+        b.bp.timeout_s = 60
+        return b
+
+    def test_16_an_agent_from_the_skeleton_takes_a_breakpoint_as_it_is(self):
+        b = self.skeleton_agent("skel")
+        try:
+            self.assertEqual(b.bp.add.before_tool(), "before_tool_1")   # 什麼都沒改就下得了
+            x = b.say("sixteen")
+            r = b.bp.resume()
+            self.assertEqual(r.outcome, "stopped")
+            self.assertTrue(r.head.startswith("stopped at before_tool_1 ("), r.head)
+            h = b.bp.held()
+            call = h["detail"]["id"]
+            self.assertEqual([m for m in b.look.history(0) if m.get("tool_call_id") == call], [])   # 真的卡住：工具還沒跑
+            b.bp.rm("before_tool_1")
+            self.assertEqual(b.bp.resume().outcome, "idle")
+            self.assertIn("FAKE ANSWER to: sixteen", b.listen(timeout_s=30, letter=x))
+        finally:
+            self.sh("aos-agent -d .stack ctl rm skel", check=False)
+
+    def test_17_hooks_missing_says_how_to_fix(self):
+        b = self.skeleton_agent("nohooks", drop_hooks=True)
+        try:
+            for _ in range(2):
+                with self.assertRaises(Failed) as e:
+                    b.bp.add.before_tool("ls")
+                self.assertEqual(e.exception.code, "HooksMissing")
+                self.assertIn("add HOOKS = {} to agent.py, pass hooks=HOOKS to defs.main(...), and recompile", str(e.exception))
+        finally:
+            self.sh("aos-agent -d .stack ctl rm nohooks", check=False)
+
     # ---- (二) 觀察者 ----
     def test_20_watcher_pauses_target_with_a_note(self):
         a = self.a

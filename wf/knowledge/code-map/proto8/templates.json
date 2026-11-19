@@ -26,9 +26,10 @@
    "agent.py": "一支 agent.py 宣告一隻 agent（說明、system、工具、腦設定、狀態機），python3 agent.py --compile 編譯成這夾的定義檔（說明看 README.md）。",
    "body.json": "Run this agent's loop: aos-loop with loop.json.",
    "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
+   "hooks.json": "Hooks of this agent: aos functions run when an event happens; the stack copy of this file overrides it by name, null turns one off.",
    "interfaces.json": "Look things up in the workspace and answer by mail.",
    "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",
-   "loop.json": "Run the state machine in fsm.json every tick and expose public control, state and state flux files.",
+   "loop.json": "Run the state machine in fsm.json every tick and expose public control, state and state flux files. on_start / on_stop fire the after_start / after_s…",
    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
    "tools.json": "Tools this agent can call. agent.py copied in the tools of std.pack('look'), std.pack('mailbox'), std.pack('json')."
   },
