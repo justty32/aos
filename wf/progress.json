@@ -296,6 +296,18 @@
         "[設計稿 README](../proto8/thinking/2026-11/19/aos-ns-1119/README.md)"
       ],
       "since": "2026-11-19"
+    },
+    "aos-inherit": {
+      "title": "aos 繼承深挖：定義衍生放哪做",
+      "status": "等使用者",
+      "flow": "",
+      "what": "調查設計稿做完（線 aos-inherit-1119，11-19）：推薦乙（衍生只在 agent.py 重生時做，新函式只有 ag.load，TOOLS／HOOKS／ag.fsm 多收底，執行期不動）；Argon 審過、採納表 07。只寫文件，沒改程式。",
+      "next": "等使用者拍板 06 (d) 五題：走向、繼承進不進規範（10-14 後半句對不上）、長出來的收不收回、fsm 要不要這一隻的一層、衍生的出處記在哪。另 Argon B4（set-def 後 stack 工具仍疊舊定義）要不要另開題查。",
+      "see": [
+        "[設計稿 README](../proto8/thinking/2026-11/19/aos-inherit-1119/README.md)",
+        "[要拍板的題](../proto8/thinking/2026-11/19/aos-inherit-1119/06-邊緣狀況與要拍板的題.md)"
+      ],
+      "since": "2026-11-19"
     }
   }
 }
