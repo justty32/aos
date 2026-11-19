@@ -1,0 +1,74 @@
+{
+ "base.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "base2.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "c1.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "der2.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "derived.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e1.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e10.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e12.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e12b.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e12c.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e13.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e2.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e3.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e4.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e4b.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e5.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e6.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e6b.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e7.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "e9.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "v1.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "v2.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "x1.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ },
+ "x2.py": {
+  "description": "one agent.py body (the part under \"# ---- your agent\") that probe-a mk.sh puts into a copy of agent-python (aos-vs-c-1119)."
+ }
+}

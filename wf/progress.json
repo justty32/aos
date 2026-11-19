@@ -347,6 +347,18 @@
         "[README](../proto8/thinking/2026-11/19/aos-htop-1119/README.md)"
       ],
       "since": "2026-11-19"
+    },
+    "aos-vs-c": {
+      "title": "aos 的「C 語言」跟真實世界 C 對照，還缺什麼",
+      "status": "等使用者",
+      "flow": "",
+      "what": "線 aos-vs-c-1119（11-19）只查不修：七個面向逐項對照（語言、編譯、連結與庫、載入與執行、標準庫、工具鏈、生態），缺口 G1～G13 依痛感排序，前五是 undefined reference、靜態連結只靜態了名單、搬家依賴不跟著走、沒有 make、動態包無聲換工具；Argon 審 18 點採納 16、只留底 1、不採納 1。",
+      "next": "等使用者拍板 README 的七題（編譯時查不存在的東西、std 升級的保護、搬家與庫清單、make、警告層、死時留定義、工具鏈小件）；骨架 README 兩處「next start」實為每次問腦前讀，可直接修。",
+      "see": [
+        "[README](../proto8/thinking/2026-11/19/aos-vs-c-1119/README.md)",
+        "[02-缺口清單](../proto8/thinking/2026-11/19/aos-vs-c-1119/02-缺口清單.md)"
+      ],
+      "since": "2026-11-19"
     }
   }
 }
