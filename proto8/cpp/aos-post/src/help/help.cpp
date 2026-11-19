@@ -57,6 +57,8 @@ flags:
   -h, --help   show this help
 
 Move the next letter from new/ to cur/ and print its name.
+A letter that cannot be moved (permission, read-only) is skipped with a
+warning and left in new/.
 
 exit codes: 0 claimed; 10 no letter; 1 error.
 more: aos-post/README.md
@@ -70,6 +72,8 @@ flags:
   -h, --help   show this help
 
 Move all waiting letters from new/ to cur/; print one name per line.
+A letter that cannot be moved (permission, read-only) is skipped with a
+warning and left in new/.
 
 exit codes: 0 claimed; 10 no letters; 1 error.
 more: aos-post/README.md

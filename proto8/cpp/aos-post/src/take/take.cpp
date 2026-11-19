@@ -1,6 +1,7 @@
 // take.cpp：【take】認領、驗信封（含選填時鐘值）、回信與處理完，並提供寄信人撤回。
 //
-//   認領＝new/ 照處理順序（sort_letters），rename new/<名> → cur/<名>，成功的那個人才算（被撤、被別人拿走、cur/ 已有同名＝跳過）
+//   認領＝new/ 照處理順序（sort_letters），rename new/<名> → cur/<名>，成功的那個人才算（被撤、被別人拿走、cur/ 已有同名＝跳過）；
+//     rename 的其他錯（權限、唯讀等）也跳過那封、照樣往下認領，被跳過的回給呼叫者（Skipped）讓它說出來（11-19 基底體檢 P2）
 //   處理完＝rename cur→tmp 再刪（cur/ 裡永遠不會出現刪一半的），keep＝rename cur→archive
 //   撤回＝rename new→tmp 再刪；進了 cur/ 就撤不了（認領是界線）
 //   壞信＝letter.json 不是 JSON 物件、sender／sent_at 不是字串、沒有 body、reply_to／in_reply_to 不是字串、
@@ -20,10 +21,21 @@ static void ready_to_take(const Mailbox& mb) {
     make_dir(mb.cur());
 }
 
-std::optional<std::string> take(const Mailbox& mb) {
+// 認領 new/ 裡的一封：rename 成功＝true；競爭（被撤、被別人拿走、cur/ 已有同名）＝false；
+// 其他 rename 錯（權限、唯讀等，11-19 基底體檢 P2）＝記進 skipped、回 false——跳過這封，不讓它擋住後面的信。
+static bool claim(const Mailbox& mb, const std::string& name, std::vector<Skipped>& skipped) {
+    try {
+        return aos::move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name));
+    } catch (const Error& e) {
+        skipped.push_back({name, e.code + " " + e.msg});
+        return false;
+    }
+}
+
+std::optional<std::string> take(const Mailbox& mb, std::vector<Skipped>& skipped) {
     ready_to_take(mb);
     for (const std::string& name : names_in(mb.fresh())) {
-        if (aos::move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name))) {
+        if (claim(mb, name, skipped)) {
             return name;
         }
     }
@@ -35,11 +47,11 @@ bool take(const Mailbox& mb, const std::string& name) {
     return aos::move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name));
 }
 
-std::vector<std::string> take_all(const Mailbox& mb) {
+std::vector<std::string> take_all(const Mailbox& mb, std::vector<Skipped>& skipped) {
     ready_to_take(mb);
     std::vector<std::string> got;
     for (const std::string& name : names_in(mb.fresh())) {
-        if (aos::move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name))) {
+        if (claim(mb, name, skipped)) {
             got.push_back(name);
         }
     }

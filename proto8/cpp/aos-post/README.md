@@ -20,6 +20,7 @@ aos-post done box                                   # 收掉那一封（--keep �
 
 - `send_prepared(mb, letter, prepare)`：呼叫者先建完整信封；函式建 `tmp/.<id>`、呼叫非空 `prepare(tmp)` 放附檔，再寫 `letter.json` 並原子移進 `new/`。不做一般 `send` 的信箱可寫性、信封或名字檢查；prepare 丟 `Error`、寫檔或 rename 失敗會清暫存，rename 失敗一律 `WriteFailed`。
 - `take(mb, name)`：建 `cur/` 後直接認領指定名字，不驗名字或 `new/`。信已不在或同名衝突回 `false`；其他 rename 錯丟 `WriteFailed`，建不了 `cur/` 丟 `MkdirFailed`。
+- `take(mb, skipped)`／`take_all(mb, skipped)`：認領不了的一封（不是競爭的 rename 錯）跳過、接著認領後面的，名字與原因放進 `skipped`；呼叫者要說出來（命令列印 warning、aos-daemon 記 `mailbox_warning`）。11-19 基底體檢 P2。
 
 ## 分檔目錄
 

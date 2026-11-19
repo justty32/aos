@@ -1,5 +1,6 @@
-# Check that a bad procs letter with reply_to gets {"applied": false, "error": {"code": "BodyBad", ...}} (11-12), and the rest stay silent.
+# Check that a bad procs letter with reply_to gets {"applied": false, "error": {"code": "BodyBad", ...}} (11-12), the rest stay silent, and an unclaimable letter is skipped (11-19).
 import json
+import os
 import subprocess
 import time
 import unittest
@@ -65,6 +66,26 @@ class BadLetter(unittest.TestCase):
         self.assertEqual(self.replies(box), [])
         self.assertIsNone(f.proc.poll())        # daemon 照跑
         self.assertTrue(dc.ping(str(f.stack), 3, direct=True)['applied'])
+
+    @unittest.skipIf(os.geteuid() == 0, 'root renames a read-only folder anyway')
+    def test_unclaimable_letter_is_skipped(self):
+        # 11-19 基底體檢 P2：認領不了的一封（夾本身不可寫，rename 到 cur/ 被拒）不擋後面的信，原因進 mailbox_warning
+        f = self.fixture('bad_unclaimable')
+        box = self.box(f, 'replies')
+        stuck = f.stack / 'procs_requests' / 'new' / '000000000001.stuck'   # 有序名：排在所有信前面
+        stuck.mkdir()
+        write(stuck / 'letter.json', {'sender': 'x', 'sent_at': '2026-11-19T00:00:00Z', 'body': {'ping': True}})
+        stuck.chmod(0o555)
+        self.addCleanup(stuck.chmod, 0o755)
+        good = self.send(f, {'ping': True}, box)
+        got = until(lambda: [r for r in self.replies(box) if r['in_reply_to'] == good])
+        self.assertEqual(got[0]['body'], {'applied': True})
+        self.assertTrue(until(lambda: 'cannot take letter 000000000001.stuck, skipped: WriteFailed' in
+                              (read(f.stack / 'state_flux.json', {}).get('mailbox_warning') or '')))
+        f.ctl('add', '--name', 'job', str(f.body('script', 'stop')))   # add 也照套
+        self.assertIn('job', f.rows())
+        self.assertTrue(stuck.is_dir())          # 那封留在 new/，每圈再試
+        self.assertIsNone(f.proc.poll())
 
 
 if __name__ == '__main__':

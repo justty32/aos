@@ -33,6 +33,8 @@
 //                 （自己給的撞名 LetterExists）。sender＝aos-util 的 aos::identity()。回 new/ 裡的名字
 //   take          認領一封：new/ 照處理順序，第一個 rename 進 cur/ 成功的；沒有＝nullopt。cur/ 沒有就建（MkdirFailed）
 //   take_all      認領 new/ 裡全部，回認領到的（照處理順序）；沒有＝空。cur/ 沒有就建
+//                 take／take_all：某一封 rename 失敗而且不是競爭（權限、唯讀等）＝跳過那封、接著認領後面的，
+//                 那封的名字與原因放進 skipped（呼叫者要說出來：命令列印 warning、daemon 記 mailbox_warning）；11-19 基底體檢 P2
 //   first_in_cur  cur/ 裡照處理順序第一封；cur/ 空＝nullopt（see、done 不給信件名稱時用）
 //   see           讀 cur/<名>/letter.json、驗信封：好信 ok＝true、letter＝整份；壞信 ok＝false、reason＝原因。不在 cur/ 丟 LetterMissing。
 //                 壞信＝讀不了或不是 JSON 物件、sender／sent_at 不是字串、沒有 body、reply_to／in_reply_to 有但不是字串、
@@ -93,6 +95,12 @@ struct SendOpts {
     std::vector<std::pair<std::string, std::string>> files;
 };
 
+// take／take_all 跳過的一封：名字與原因（「代號 訊息」）。
+struct Skipped {
+    std::string name;
+    std::string reason;
+};
+
 struct Seen {
     bool ok = false;
     Json letter;          // 好信：整份 letter.json
@@ -106,10 +114,10 @@ std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts);
 // 建 tmp/、new/ 與 tmp/.<id>，呼叫非空 prepare(tmp) 準備附檔，再寫 letter.json、rename 進 new/。
 // prepare 丟 Error、寫信或 rename 失敗會清 tmp；rename 的任何失敗（含撞名）皆 WriteFailed。
 std::string send_prepared(const Mailbox& mb, const Json& letter, void (*prepare)(const std::string&));
-std::optional<std::string> take(const Mailbox& mb);
+std::optional<std::string> take(const Mailbox& mb, std::vector<Skipped>& skipped);
 // 指定認領：不驗名字或 new/；建 cur/ 後直接 rename。競爭錯回 false，其他錯丟 WriteFailed；建不了丟 MkdirFailed。
 bool take(const Mailbox& mb, const std::string& name);
-std::vector<std::string> take_all(const Mailbox& mb);
+std::vector<std::string> take_all(const Mailbox& mb, std::vector<Skipped>& skipped);
 std::optional<std::string> first_in_cur(const Mailbox& mb);
 Seen see(const Mailbox& mb, const std::string& name);
 std::optional<std::string> reply(const Mailbox& mb, const std::string& name, const Json& body);

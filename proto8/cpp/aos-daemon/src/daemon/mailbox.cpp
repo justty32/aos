@@ -5,6 +5,7 @@
 //                  底 want_（建構子已設成 daemon.json 的 procs）再加 adopt 接回、不在上面的（設定記 null：只留名，不會被重起；它結束時 drop 從 want_ 拿掉）、
 //                  cur/ 裡的殘骸（上次認領了、還沒收完就死掉）記進 redo_——片段、重做無害，所以照建議重做
 //   take_letters   每圈（stop／pause 那圈不呼叫）：redo_（照處理順序）＋take_all 認領到的（照處理順序），逐封 see 驗信封、
+//                  （認領不了的那封 take_all 跳過，記進 mailbox_warning_「cannot take letter <名>, skipped[ (and N more)]: <原因>」，留在 new/ 每圈再試；11-19 P2）
 //                  apply_letter 驗 body 並套進底；壞信的原因記進 mailbox_warning_（state_flux 的最後一封壞信；沒有壞信的圈維持原值）
 //                  這圈拿到信（好壞都算）就更新 state_flux 的 responded_at；pause／stop 那圈照舊不認領。
 //   apply_letter   body 要是物件，只認 procs_added（物件，寫法同 procs_ctl）、procs_removed、procs_stopped、procs_started、procs_slept、procs_woken（11-05，名字的陣列），其他 key 忽略；
@@ -49,11 +50,17 @@ Daemon::Letters Daemon::take_letters() {
     std::vector<std::string> names;
     names.swap(redo_);
     try {
-        for (std::string& name : aos::post::take_all(mbox_)) {
+        std::vector<aos::post::Skipped> skipped;
+        for (std::string& name : aos::post::take_all(mbox_, skipped)) {
             names.push_back(std::move(name));
         }
+        // 11-19 基底體檢 P2：認領不了的那封（權限等）跳過、其他照收；記進 mailbox_warning（只記第一封，另有幾封寫數目），下一圈再試
+        if (!skipped.empty()) {
+            std::string more = skipped.size() > 1 ? " (and " + std::to_string(skipped.size() - 1) + " more)" : "";
+            mailbox_warning_ = "cannot take letter " + skipped[0].name + ", skipped" + more + ": " + skipped[0].reason;
+        }
     } catch (const Error& e) {
-        // 11-05 第二輪：new/ 唯讀等認領不了＝原本整台 daemon 退 1；改成記進 state_flux 的 mailbox_warning、下一圈再試
+        // 11-05 第二輪：new/ 不在等認領不了＝原本整台 daemon 退 1；改成記進 state_flux 的 mailbox_warning、下一圈再試
         mailbox_warning_ = "cannot take letters: " + e.code + " " + e.msg;
     }
     if (!names.empty()) {

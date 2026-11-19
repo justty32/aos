@@ -5,6 +5,7 @@
 //                                                                印 new/ 裡的名字（--ordered＝帶序號的名字）
 //     aos-post take 信箱                                         印一個信件名稱；沒有退 10
 //     aos-post take-all 信箱                                     一行一個（照處理順序）；沒有退 10
+//                                                                認領不了的那封跳過、stderr 一封一行 warning（11-19 P2）
 //     aos-post see 信箱 [信件名稱]                               好信印 letter.json 一行；壞信退 1（LetterBad 原因）
 //     aos-post done [--keep] [--reply] 信箱 [信件名稱] [< body.json]
 //                                                                --reply＝照 reply_to 回一封、印回信的名字
@@ -107,9 +108,18 @@ int cmd_send(const Args& args) {
     return 0;
 }
 
+// take／take-all 跳過的信（認領不了、不是競爭）：一封一行 warning，結束碼照認領到的算（11-19 基底體檢 P2）。
+void warn_skipped(const std::vector<p::Skipped>& skipped) {
+    for (const p::Skipped& s : skipped) {
+        aos::warn("aos-post", "skipped letter " + s.name + " (cannot claim it, left in new/): " + s.reason);
+    }
+}
+
 int cmd_take(const Args& args) {
     aos::Cli cli = parse(args, 1, 1, {});
-    std::optional<std::string> name = p::take(p::open(cli.rest[0]));
+    std::vector<p::Skipped> skipped;
+    std::optional<std::string> name = p::take(p::open(cli.rest[0]), skipped);
+    warn_skipped(skipped);
     if (!name) {
         return 10;
     }
@@ -119,7 +129,9 @@ int cmd_take(const Args& args) {
 
 int cmd_take_all(const Args& args) {
     aos::Cli cli = parse(args, 1, 1, {});
-    std::vector<std::string> names = p::take_all(p::open(cli.rest[0]));
+    std::vector<p::Skipped> skipped;
+    std::vector<std::string> names = p::take_all(p::open(cli.rest[0]), skipped);
+    warn_skipped(skipped);
     if (names.empty()) {
         return 10;
     }
