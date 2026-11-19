@@ -25,3 +25,4 @@
 | [aos-pylib-1119/07-使用者裁定](aos-pylib-1119/07-使用者裁定.md) | 整套 Python 庫的使用者裁定（逐字）；末兩節補：寫定義的名字 ag 改叫 defs（位置 aos.py.agent.defs）；defs.defs 換名、改用編譯的說法（指令 --compile／--dry-run、Python defs.compile／defs.write，候選四組選甲，中文說編譯／重新編譯／靜態連結／動態連結）；編譯產物一字不變；std 在入口頂層的位置仍未裁。 |
 | [aos-ns-1119/07-使用者裁定](aos-ns-1119/07-使用者裁定.md) | 命名空間七題的使用者裁定；11-19 晚補上「待補的條文加註」：C-74 加註「標準庫／std」同詞兩義（這一層 vs 隨 aos 發的庫 std，不互相包含、std 算哪層待釐清），C-87 加註命名空間只做看得見的（寫在 agent.py、編譯時解完、執行時沒有），兩行摘要各補一句，原文一字未動 |
 | [aos-base-audit-1119](aos-base-audit-1119/README.md) | 基底體檢（daemon 到 kernel，只查不修）：平常的路穩、293 支測試全綠，洞在出事時（大 stderr 拖垮 daemon、一封認領不了的信堵整箱、AOS_KERNEL 不回時連信箱都讀不了、llm 帳本壞了問腦無聲卡住、沒收工就斷電動態 agent 從表上消失）；使用者答身體同步「自行承擔」、改定義夾「特性」；還沒答三題（我是誰繞過 kernel、修補線、同帳號邊界）；Argon 審過、採納表 06 |
+| [aos-p1-errtail](aos-p1-errtail.md) | 體檢 P1 修好：aos-daemon 在 proc 失敗時只讀 stderr.txt 最後 64 KB 取原因，1 GB／8 GB 記錄檔下 daemon 峰值約 3 MB、不倒（修前 2.1 GB、限 600 MB 時 bad_alloc）；新測試兩支、aos-daemon 126 支過；沒加輪替與大小上限；repo 裡沒跑 install.py |

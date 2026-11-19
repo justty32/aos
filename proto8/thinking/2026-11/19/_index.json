@@ -35,6 +35,9 @@
  "aos-ns-第一刀.md": {
   "description": "命名空間第一刀（線 aos-ns-cut1-1119）：agent.py 有了庫 std 與 ag.lib，包在生成時展開進 tools.json，別的庫的工具自動帶「庫名_」、撞名報 SpecBad；只改 agent_spec，執行期一行沒動、沒搬檔"
  },
+ "aos-p1-errtail.md": {
+  "description": "改了哪"
+ },
  "aos-pylib-1119": {
   "description": "aos 整套 Python 庫的版面（11-19 調查設計稿）：現況盤點、一天的流程、三個走向（推薦甲「把手式＋通用代理」）、別人怎麼做、五題（11-19 已裁四題，見 07）、Argon 審"
  },

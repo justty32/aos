@@ -50,6 +50,7 @@
     "test_bad_letter.py": "Check that a bad procs letter with reply_to gets {\"applied\": false, \"error\": {\"code\": \"BodyBad\", ...}} (11-12), and the rest stay silent.",
     "test_cgroup.py": "此檔以獨立 transient scope 驗證 daemon 的可選 cgroup 份額與整格回收。",
     "test_ctl.py": "Exercise public controls, prune inspection and age selection, command errors and help.",
+    "test_err_tail.py": "Verify a failing proc with a huge stderr.txt (sparse) leaves the daemon alive, its memory flat, and the reason taken from the file's tail.",
     "test_lifecycle.py": "Verify proc lifecycle, damaged-state adoption and owned-state recovery against real daemons.",
     "test_limits.py": "驗證 daemon 的份額天花板、rlimit、收屍標記與重起行為。",
     "test_poke.py": "Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures.",
