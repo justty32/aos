@@ -101,16 +101,25 @@
 ## 沒做的
 
 - 丁（一包現成觸發器）：任務書說不做。
-- 讓表上看得出「停在斷點」：要改 aos-agent 或 hook 機制，沒動（見要拍板第 1 題）。
+- 讓表上看得出「停在斷點」：要改 aos-agent 或 hook 機制，沒動；使用者 11-19 裁定不做（兩者解耦合，見下面「已裁」）。
 - eca 身（claude、codex 當腦）上的扣住沒測：before_tool 在 aos-mcp 裡跑，扣太久 CLI 那邊的 MCP 呼叫可能自己逾時。
 - 扣著時 daemon 重起只用第一輪 bash hook 測過（同 sleep 的路），正式測試只測 sleep／wake。
 - `on_clock` 觸發器。
 
-## 要你拍板的（不急，試過再說）
+## 要你拍板的（不急，試過再說）——兩題 11-19 都已裁，見下一節
 
-1. **扣住時表上要不要看得出來？** 現在 `aos-agent ctl ls`、daemon 表寫 `running`，只有 `aos.gdb`（`a.why()`、`a.is_paused()`）認得。
+1. **（已裁：a 不動）扣住時表上要不要看得出來？** 現在 `aos-agent ctl ls`、daemon 表寫 `running`，只有 `aos.gdb`（`a.why()`、`a.is_paused()`）認得。
    - a（現在）：不動。好處是 hook 機制、aos-agent 一個字沒改；代價是只用 shell 的人看不出它停在斷點（`stage.txt` 是 act、一直不動）。
    - b：讓 `aos-agent ctl state`／`ctl ls` 讀 `gdb/hold.json`，顯示 held。代價是 aos-agent 要多認一個 aos-gdb 的檔（小改，不動 hook 機制與 cpp）。
-2. **sh 條件「不成立要退 10」要不要放寬成「退 1 也算不成立」？** 現在照 N-43：0＝算、10＝不算、其他＝條件壞了（只 warning、不算）。所以 `grep -q x`、`test -f x` 不成立時退 1 會被當成「壞了」，要寫 `|| exit 10`。
+2. **（已裁：a 維持）sh 條件「不成立要退 10」要不要放寬成「退 1 也算不成立」？** 現在照 N-43：0＝算、10＝不算、其他＝條件壞了（只 warning、不算）。所以 `grep -q x`、`test -f x` 不成立時退 1 會被當成「壞了」，要寫 `|| exit 10`。
    - a（現在）：照 N-43，寫錯一眼看得到（`last_error`）。
    - b：退 1 也算不成立。好寫，但真的壞掉（例如指令打錯退 127 以外的 1）會被當成「沒中」。
+
+## 已裁（使用者 2026-11-19）
+
+原話：「卡在斷點時，表上要不要看得出來？ <- 不要看的出來，兩者解耦合。2.維持。」
+
+1. **第 1 題＝a 不動。** 理由是「兩者解耦合」：aos-agent 與 daemon 不知道 gdb 的存在，扣住時 `aos-agent ctl ls`、`ctl state`、daemon 表寫 `running` 是**刻意的**，不是缺漏；要看是不是停在斷點，用 `aos.gdb` 的 `a.why()`／`a.held()`。之後的線也守這條：不讓 aos-agent、daemon 去讀 `gdb/` 底下的檔。已寫進[用法](../../../py/aos/apps/gdb/README.md)與知識庫 `knowledge/aos/cli/gdb.json`。
+2. **第 2 題＝a 維持 N-43**：sh 條件退 0＝成立、退 10＝不成立、其他＝條件壞了（只 warning、記 `last_error`）。`grep -q`、`test -f` 照舊要寫 `|| exit 10`。
+
+目前沒有待使用者拍板的題。

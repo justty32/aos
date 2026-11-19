@@ -16,4 +16,4 @@
 | [aos-compile-庚/12-Argon審與採納](aos-compile-庚/12-Argon審與採納.md) | 庚補正統流程的 Argon 審：設計稿、第一刀程式各送一次共 29 點，核實後多半已處理或不符事實；開著的六個小洞（META 鍵、by_hand agent.py、改名順序等）第三刀版仍在，列給施工線；第二刀使用者 11-19 裁定劃掉；除錯插入要不要落在 stack 還沒裁；沒改程式 |
 | [aos-gdb-lib-第一版](aos-gdb-lib-第一版.md) | aos-gdb 第一版（乙案）：aos-gdb NAME 開接上 agent 的 Python REPL，aos.gdb 下條件觸發器（普通 hook，成立就 ctl pause 並留字條）、看為什麼停、檢閱、續；hook 與 cpp 沒動；Argon 審過沒推翻先乙；假腦實跑 6 個情境過 |
 | [aos-ns-1119](aos-ns-1119/README.md) | 命名空間與標準庫調查設計稿：今天沒有全域名字表，工具名同名會悄悄蓋（實測）；使用者 11-19 選項框裁走 B 資料夾即命名空間（std 隨 aos 發、短名，別的庫工具帶 庫名_、撞了生成時報錯、執行期不動）、std 先不搬、照叫 std；別的庫放哪與包改成抄暫照推薦；C-74、C-87 加註待補；第一刀（只改 agent_spec）等使用者說開工 |
-| [aos-gdb-lib-第二版](aos-gdb-lib-第二版.md) | aos-gdb 第二版：stop_before_tool 改成工具跑之前真的停住（觸發器在 hook 裡扣住等放行，續＝照原樣跑或跳過），另做丙（掛在 daemon 表上的觀察者 proc，輪詢目標、成立就 pause）；hook 與 cpp 沒動；Argon 審 A1～A10 八條照改；假腦實跑 12 個情境過 |
+| [aos-gdb-lib-第二版](aos-gdb-lib-第二版.md) | aos-gdb 第二版：stop_before_tool 改成工具跑之前真的停住（觸發器在 hook 裡扣住等放行，續＝照原樣跑或跳過），另做丙（掛在 daemon 表上的觀察者 proc，輪詢目標、成立就 pause）；hook 與 cpp 沒動；Argon 審 A1～A10 八條照改；假腦實跑 12 個情境過；要拍板兩題 11-19 已裁（表上不顯示扣住＝解耦合、sh 退 10 規則維持） |

@@ -13,7 +13,7 @@
 | 觀察者（另一支 proc） | 暫停：看到時 `ctl pause` 目標 | 晚一格（輪詢檔，約 every_ms＋一格） | 同上 |
 
 扣住時要知道的（都實測過，見[第二版紀錄](../../../../thinking/2026-11/19/aos-gdb-lib-第二版.md)）：
-- 表上照寫 `running`（它卡在 act 那一格裡，`stage.txt`＝act）；`a.is_paused()`、`a.why()`、`a.held()` 認得。信照收進信箱，續了再處理。
+- 表上照寫 `running`（它卡在 act 那一格裡，`stage.txt`＝act），**這是刻意的**：aos-agent 與 daemon 不知道 gdb 的存在，兩者解耦合（使用者 11-19 裁定，之後也不讓它們讀 `gdb/` 的檔）。要看是不是停在斷點，用 `a.why()`、`a.held()`（`a.is_paused()` 也認得）。信照收進信箱，續了再處理。
 - 扣著時別人下 `ctl pause`：放行後工具照跑，這一格做完才停（`why()` 會說「then it pauses」）；`ctl stop` 一樣要等放行後才真的停（這段時間表上是 `stopping`，`ctl stop` 本身會一直等到它預設的 30 秒；要馬上停用 `ctl sleep`）。
 - 扣著時 `ctl sleep`、`rm`、daemon 收工（都是 TERM）：那一格被收掉，**工具沒跑**，字條記 `hold_ended`；醒來重跑同一個工具呼叫時**直接再扣住**（不再判條件，`once` 也照扣），放行後只跑一次。
 - 拿掉觸發器（`a.remove`）不影響正扣著的那一次。
