@@ -41,6 +41,9 @@
  "fork": {
   "description": "fork 工具（子 agent 包）：把當下的自己連對話複製一份給一個 goal，只拿回短結論"
  },
+ "gdb_trigger": {
+  "description": "gdb_trigger（不是給腦的工具）：aos-gdb 觸發器的 hook handler，讀小格的 trigger.json 判條件，成立就 ctl pause --no-wait、留字條"
+ },
  "goal": {
   "description": "goal 工具（目標包，eca 不掛）：自己的一句目標，分 get／set／done／pause／resume；自己停下又沒信時身體會丟 goal 提醒"
  },

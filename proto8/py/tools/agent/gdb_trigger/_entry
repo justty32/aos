@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+# gdb_trigger - aos-gdb 條件觸發器的 hook handler：讀自己小格的 trigger.json 判條件，成立（連續 times 次）就留字條、叫 aos-agent ctl pause --no-wait 把這隻停下來。
+# 使用者 11-19：斷點＝「特定條件發生時，暫停loop或fsm，停下來等待檢閱」，條件主要由 hook 承載、「hook不用動」——所以這支就是一個普通 hook handler，
+#   由 aos.gdb（REPL 那邊）用 aos-agent hook add 掛上；判法、字條、計數都在 py/aos/gdb/trigger.py（兩邊共用）。
+# 介面：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、事件自己的欄）；$AOS_STACK＝這個 hook 的小格（<agent stack>/hooks/<名>/），
+#   設定 trigger.json、計數 count.json 都在那裡；字條往 <agent stack>/gdb/log.jsonl 加一行。
+# 不改事件（stdout 不印）；只有 block 為真的觸發器在停的那一次退 10 擋下（before_tool＝那個工具不跑；掛的時候才開 intercept），其餘掛成 --no-intercept。
+# 順序：先記數、再發停、再留字條（帶 ctl.json 的 seq）。條件自己壞了（sh 退 0／10 以外、py 函式丟例外）＝不算、stderr 一行 warning、記進 count.json 的 last_error；
+#   這支自己壞了（讀不到設定、寫不了檔）＝stderr 一行 error、退 1；掛的時候是 on_error continue，所以 agent 只多一行 warning，不會掛掉、不會連環重起。
+import json, os, subprocess, sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # 放 aos 套件的那層：py/（或裝好的 lib/）
+from aos.gdb import trigger  # noqa: E402
+from aos import tool_io  # noqa: E402
+
+NAME = "gdb_trigger"
+HELP = """usage: gdb_trigger < EVENT.json   (a hook handler put in place by aos.gdb; $AOS_STACK = this hook's own cell)
+Read the trigger settings in $AOS_STACK/trigger.json, check the condition against the event, and
+when it holds (times in a row) append a note to <agent stack>/gdb/log.jsonl, then run:
+aos-agent -d DAEMON ctl pause --no-wait AGENT. Never changes the event; a trigger with block true
+exits 10 that one time (before_tool only: the tool does not run).
+A broken condition counts as no hit and prints one warning line.
+exit codes: 0 done (hit or not); 1 error ("gdb_trigger: error: CODE reason").
+"""
+PAUSE_S = 10
+BLOCKABLE = ("before_tool",)                      # 只擋工具；before_queue 也能擋，但擋了那封信就不收了，第一版不給
+
+
+def die(code, why):
+    tool_io.die(code, why, prog=NAME, echo=False)
+
+
+def warn(text):
+    sys.stderr.write("%s: warning: %s\n" % (NAME, text))
+    sys.stderr.flush()
+
+
+def pause(spec):
+    """aos-agent ctl pause --no-wait；回 "sent" 或失敗的一句（不丟：字條照留）。"""
+    argv = ["aos-agent"] + (["--daemon", spec["daemon"]] if spec.get("daemon") else []) + ["ctl", "pause", "--no-wait", spec["agent"]]
+    try:
+        p = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, timeout=PAUSE_S)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return "failed: %s" % e
+    if p.returncode:
+        last = [x for x in p.stderr.splitlines() if x.strip()]
+        return "failed: %s" % (last[-1] if last else "exit %d" % p.returncode)
+    return "sent"
+
+
+def main():
+    if sys.argv[1:] in (["--help"], ["-h"]):
+        sys.stdout.write(HELP)
+        return
+    if sys.argv[1:]:
+        die("ArgumentsBad", "takes no arguments (the event JSON comes on stdin; see --help)")
+    cell = os.environ.get("AOS_STACK", "")
+    if not cell:
+        die("StackMissing", "AOS_STACK is not set (run it as a hook: aos-exec --stack <cell>/ ...)")
+    try:
+        event = json.load(sys.stdin)
+        if not isinstance(event, dict):
+            raise ValueError("not a JSON object")
+    except ValueError as e:
+        die("ArgumentsBad", "the event on stdin is not JSON: %s" % e)
+    spec_path, count_path = os.path.join(cell, trigger.SPEC), os.path.join(cell, trigger.COUNT)
+    try:
+        spec = trigger.read_json(spec_path)
+        if spec is None:
+            die("SpecMissing", "no %s (put the trigger in place with aos.gdb, or remove this hook)" % spec_path)
+        trigger.validate(spec)
+        count = trigger.read_json(count_path, {})
+    except (OSError, ValueError) as e:
+        die("SpecBad", "%s: %s" % (spec_path, e))
+    count, hit, broken = trigger.step(spec, count if isinstance(count, dict) else {}, event)
+    if broken:
+        warn("trigger %s: %s (counted as no hit)" % (event.get("hook"), broken))
+    agent_stack = event.get("stack") or os.path.dirname(os.path.dirname(os.path.abspath(cell)))
+    block = hit and spec.get("block") and event.get("event") in BLOCKABLE
+    try:
+        trigger.write_json(count_path, count)    # 先記數（once 不會在同一格又停一次）
+        if not hit:
+            return
+        # 先發停、再留字條（帶 pause 實際用的 ctl seq）：hook 是同步跑在格裡的，pause 要等這一格做完 loop 才套用，
+        # 所以字條一定比「表上變 paused」早寫好（Argon A4 擔心的順序在這裡不會反過來；見 08-Argon審與採納）。
+        result = pause(spec)
+        note = {"kind": "stop" if result == "sent" else "pause_failed", "at": trigger.now(), "by": "hook",
+                "trigger": event.get("hook"), "event": event.get("event"), "about": spec.get("about"),
+                "times": spec.get("times", 1), "fired": count["fired"], "blocked": bool(block),
+                "ctl_seq": trigger.ctl_seq(agent_stack), "detail": trigger.brief(event)}
+        if result != "sent":
+            note["why"] = result
+            warn("trigger %s: cannot pause %s: %s" % (event.get("hook"), spec.get("agent"), result))
+        trigger.append_log(agent_stack, note)
+    except OSError as e:
+        die("WriteFailed", str(e))
+    if block:
+        sys.exit(trigger.NO)                     # 10＝擋下這一次（before_tool：工具不跑；before_queue：信不收）
+
+
+if __name__ == "__main__":
+    main()

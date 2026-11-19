@@ -102,6 +102,13 @@
    "source": "proto8/cpp/aos-fsm/src/main.cpp"
   },
   {
+   "command": "aos-gdb",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.gdb.main",
+   "source": "proto8/py/aos/apps/gdb/main.py"
+  },
+  {
    "command": "aos-grow",
    "from": "proto8/py/entries.json",
    "lang": "Python",

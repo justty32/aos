@@ -27,6 +27,9 @@
  "feedback": {
   "description": "aos-feedback 的 Python 套件：旗標解析與顯示、意見的附加寫入與評分者分類規則、從評分與工具帳算 AI 舒適度"
  },
+ "gdb": {
+  "description": "aos-gdb 的 Python 套件：接上一隻 agent、開一個已 import aos.gdb 的 Python REPL"
+ },
  "grow": {
   "description": "aos-grow：把一個函數往上長一級或縮回一級、呼叫方跟著改的原型指令（嘗試性質，純標準庫 Python）"
  },

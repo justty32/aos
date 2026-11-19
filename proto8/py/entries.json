@@ -10,6 +10,7 @@
   "aos-eca-screen": "aos.apps.eca.main_screen",
   "aos-eca-turn": "aos.apps.eca.main_turn",
   "aos-feedback": "aos.apps.feedback.main",
+  "aos-gdb": "aos.apps.gdb.main",
   "aos-grow": "aos.apps.grow.main",
   "aos-json-view": "aos.apps.json_view.main",
   "aos-mailbox": "aos.apps.mailbox.main",

@@ -1,6 +1,7 @@
 {
  "apps": {
-  "description": "Python 指令（py/aos/apps/<名>）的測試，一個指令一夾、夾名同 apps 底下（原 cmd/<指令>/tests，11-18 S5 搬來）；不是套件，要逐夾 unittest discover"
+  "description": "Python 指令（py/aos/apps/<名>）的測試，一個指令一夾、夾名同 apps 底下（原 cmd/<指令>/tests，11-18 S5 搬來）；不是套件，要逐夾 unittest discover",
+  "index": "apps/_index.json"
  },
  "fake-mcp-http": {
   "description": "fake-mcp-http：假的 http MCP server（Bearer＋自簽 CA），給外部 MCP 測試用；只聽 127.0.0.1、只用假 token"

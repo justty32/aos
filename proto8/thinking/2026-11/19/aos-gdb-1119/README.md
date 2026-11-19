@@ -57,8 +57,12 @@
 | [05-續-兩個問號與要你先說的題](05-續-兩個問號與要你先說的題.md) | 丁、四案一覽表、推薦、沒有要你先說的題與理由（fable 寫） |
 | [06-使用者回應](06-使用者回應.md) | 看完第一輪後的回應逐字，逐條「他說了什麼 → 所以怎樣」；加法寫在哪的事實表；原七題的去留 |
 | [07-怎麼把它停下來](07-怎麼把它停下來.md) | 所有停法：hook 自己發停、外面的 proc 來停、SIGSTOP、kernel hold、冷卻；停住時看改什麼、怎麼放行；觀察者能看什麼（第二輪新測） |
+| [08-Argon審與採納](08-Argon審與採納.md) | 施工前送 Argon 審（線 aosgdb-lib-1119）：十條審查三條提案逐點採納與否；沒有一條推翻先乙；照改的是 on_error continue／不讀回話、字條記 ctl seq、連續 N 次不交給 condition、Python 條件當場驗、before_tool 可 block |
+| [08-Argon原文](08-Argon原文.md) | Argon 回的原文（逐字） |
 
 ## 這條線的邊界與留下的東西
+
+- **11-19 之後**：乙的第一版已做（線 `aosgdb-lib-1119`，`aos-gdb` 指令與 `aos.gdb` 庫），紀錄在 [aos-gdb-lib-第一版](../aos-gdb-lib-第一版.md)；施工前的 Argon 審在 08。
 
 - 沒改 repo 的程式、範本、知識庫。也沒改 [aos-compile-庚](../aos-compile-庚/README.md) 的檔。它的 `11-跟除錯那條線的接點.md` 把「插進 json 的東西重生就沒了」列成待解的邊緣狀況；照使用者的回應，本線不把它當衝突，只在 [06](06-使用者回應.md) 與 [04](04-邊緣狀況.md) 第 16 條照實指出。
 - 順手發現一個模板問題，沒修：`templates/start-api/llms/def/fake_slow/_entry` 第 43 行找 `llm_fake` 的路徑，11-18 搬家後算錯（算成 `lib/aos/base/…`），所以 `fake-demo-slow`、`fake-demo-fast` 兩個示範腦今天會失敗。本線只在暫存樹的副本改了一行做實驗，做完已抄回原樣。

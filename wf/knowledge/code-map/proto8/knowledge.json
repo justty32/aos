@@ -23,6 +23,7 @@
     "errors.json": "Errors and retries",
     "feedback.json": "aos-feedback: say what was hard",
     "flags.json": "Help and flag placement",
+    "gdb.json": "aos-gdb: stop an agent when a condition holds, look, go on",
     "goal.json": "The goal of one agent",
     "grow.json": "Function growth",
     "history.json": "Conversation history of an agent",

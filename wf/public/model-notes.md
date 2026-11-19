@@ -26,6 +26,7 @@
     cp r$i.txt out.txt; break
   done
   ```
+- **在 Windows 叫 agy、提示很長時**（11-19 線 aosgdb-lib-1119）：命令列一個參數放不下約 3 萬字以上；`--input-format stream-json` 要的訊息形狀跟 claude 不同（回 `stream input message is missing the "event"`），沒試通。可行的是 [aos-teams/05](../workflows/dispatch/aos-teams/05-同機session與Argon.md) 講的檔案法：提示寫成 `prompt.txt` 放進一個空夾，`--add-dir 那夾`，`-p` 只寫「只准用 view_file、只讀這一個檔，讀完照檔頭做」，約 16 萬位元組一次就過；提示檔第一行的「不准用工具」它照樣當成「除了讀這檔」。
 - 它提的點不一定對（例：說「沒掛 hook 就成了殭屍」，其實 `ctl ls --long` 本來就看得到冷卻）。每點都要對照事實再決定。
 - **擅長**：抓 race（檢查與刪檔之間的 TOCTOU、拿鎖前後的順序）；砍東西，讓設計變小；多層算式的漏洞。提示貼設計稿加相關原始碼約 50 KB，九條裡常有三條是真的會出事的。
 - **不可靠**：沒看過的圖紙它會照摘要瞎推，採納表要逐條對原文；系統呼叫回哪個錯誤碼這類事實會說錯，以本機小實驗為準（[設計與查證](設計與查證.md)）。
