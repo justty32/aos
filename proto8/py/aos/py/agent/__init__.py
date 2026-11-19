@@ -86,6 +86,18 @@ class Agent:
         return self._repr_name()
 
     @property
+    def bp(self):
+        """斷點（延伸，不是 aos-agent 子指令；本體 aos.gdb.Breakpoints，第一次用到才載入）。每次取都是新的（stack 在裡面問一次）。"""
+        from aos.gdb import Breakpoints, Target
+        return Breakpoints(Target(self.name, self.daemon))
+
+    @property
+    def look(self):
+        """讀 stack 的檔（延伸：where、history、observed、request、queue、stderr、file；本體 aos.gdb.look.Look）。"""
+        from aos.gdb import StackLook
+        return StackLook(self.name, self.stack)
+
+    @property
     def stack(self):
         """這隻的 stack（絕對路徑）：每次問都跑 aos-agent ctl state --json who（被 rm 再掛回來也不會讀到舊夾）。"""
         who = (_shell.run(PROG, self._head, ("ctl", "state"), ("who",), {"json": True}) or {}).get("who") or {}

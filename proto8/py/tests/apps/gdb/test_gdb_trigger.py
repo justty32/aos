@@ -289,33 +289,71 @@ class Handler(unittest.TestCase):
 
 
 class Shape(unittest.TestCase):
-    """介面的長相（線 aosgdb-api-1119）：a.xxx＝aos-agent xxx、斷點全在 a.bp；resume 不收參數；aos-gdb 的說明字串跟著改。"""
+    """介面的長相（線 aosgdb-api-1119，線 aos-pylib-cut-1119 改）：把手在 aos.py.agent（a.xxx＝aos-agent xxx、讀檔在 a.look）、斷點全在 a.bp；
+    建斷點＝a.bp.add.<種類>(...)（使用者 11-19 裁定），字串式 a.bp.add("before_tool") 不留；resume 不收參數；aos-gdb 的說明字串跟著改。"""
 
-    def test_agent_has_no_breakpoint_methods(self):
+    def bp(self):
         import aos.gdb as g
-        for old in ("stop", "resume", "skip", "remove", "why", "held", "wait_paused", "is_paused", "triggers", "clear",
-                    "watch", "watchers", "unwatch", "notes", "pause", "stop_before_tool", "stop_after_tool",
-                    "stop_on_tool_error", "stop_on_brain_failed", "stop_when"):
-            self.assertFalse(hasattr(g.Agent, old), old)
-        for old in ("watch", "watchers", "unwatch"):
+        return g.Breakpoints(g.Target("ann", "/d"))   # 不跑指令：Target 的 stack 用到才問
+
+    def test_old_names_are_gone(self):
+        import aos.gdb as g
+        import aos.gdb.look as look
+        for old in ("Agent", "attach", "echo", "sh", "watch", "watchers", "unwatch"):
             self.assertFalse(hasattr(g, old), old)
-        for name in ("say", "listen", "ctl", "state", "agent", "where", "history", "observed", "file"):
-            self.assertTrue(callable(getattr(g.Agent, name)), name)
+        self.assertFalse(hasattr(look.Look, "state"))                   # a.ctl.state() 還給指令
+        for name in ("where", "history", "observed", "request", "queue", "stderr", "file", "path"):
+            self.assertTrue(callable(getattr(look.Look, name)), name)
+
+    def test_one_failed_for_the_live_side(self):
+        import aos.gdb as g
+        from aos.py import Failed, Timeout
+        self.assertIs(g.Failed, Failed)
+        self.assertTrue(issubclass(Timeout, TimeoutError))
 
     def test_bp_methods(self):
         import inspect
         import aos.gdb as g
-        for name in ("add", "rm", "set", "ls", "get", "stop", "resume", "skip", "why", "held", "stopped", "wait_stopped", "notes", "clear"):
+        for name in ("rm", "set", "ls", "get", "stop", "resume", "skip", "why", "held", "stopped", "wait_stopped", "notes", "clear"):
             self.assertTrue(callable(getattr(g.Breakpoints, name)), name)
         self.assertEqual(list(inspect.signature(g.Breakpoints.resume).parameters), ["self"])
         self.assertEqual(list(inspect.signature(g.Breakpoints.stop).parameters), ["self"])
         self.assertEqual(list(inspect.signature(g.Breakpoints.skip).parameters), ["self", "text"])
 
+    def test_add_kinds_one_shape(self):
+        import inspect
+        import aos.gdb as g
+        from aos.agentlib import hooks
+        add = self.bp().add
+        self.assertEqual(set(dir(add)), set(e for e in hooks.EVENTS if e != hooks.CLOCK_EVENT) | {"tool_error", "watch"})
+        for kind in dir(add):
+            ps = inspect.signature(getattr(add, kind)).parameters
+            with self.subTest(kind=kind):
+                self.assertEqual([p for p in ps if ps[p].kind == ps[p].KEYWORD_ONLY][-2:], ["id", "replace"])
+                self.assertIn("sh", ps)
+                self.assertIn("py", ps)
+        self.assertEqual(list(inspect.signature(add.before_tool).parameters)[0], "tool")
+        self.assertEqual(list(inspect.signature(add.brain_failed).parameters)[0], "code")
+        self.assertEqual(list(inspect.signature(add.before_queue).parameters)[0], "sh")   # 沒有主詞
+        self.assertIn("every_ms", inspect.signature(add.watch).parameters)
+        with self.assertRaises(AttributeError):
+            add.befor_tool                                               # 打錯當場知道
+        with self.assertRaises(g.Failed) as e:
+            add("before_tool", tool="x")                                 # 字串式不留
+        self.assertEqual(e.exception.code, "ArgumentsBad")
+        with self.assertRaises(g.Failed):
+            add.before_tool("x", bogus=1)
+        with self.assertRaises(g.Failed):
+            add.before_queue("x")                                        # 沒有主詞的種類不收位置參數
+        self.assertIn("before_tool(tool=None, *", repr(add))
+
     def test_help_text_uses_the_new_names(self):
         from aos.apps import gdb as app
+        self.assertIn("a.bp.add.before_tool(", app.HELP)
+        self.assertIn("a.look.history", app.HELP)
         for text in (app.HELP, app.BANNER):
-            self.assertIn("a.bp", text)
-            for old in ("stop_before_tool", "skip=True", "wait_paused", "a.watch(", "a.why(", "a.resume(", "a.triggers("):
+            for old in ("stop_before_tool", "skip=True", "wait_paused", "a.watch(", "a.why(", "a.resume(", "a.triggers(",
+                        "a.bp.add(\"", "import aos.gdb", "g.attach", "a.where()", "a.history(", "import ag,", "import ag\n", "ag.tool"):
                 self.assertNotIn(old, text)
 
     def test_bp_id(self):

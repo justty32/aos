@@ -188,7 +188,7 @@ def round_(spec, state, warn=None):
     return state
 
 
-# ---- 庫：起、列、拿掉（aos.gdb 的 a.bp.add("watch")／ls／rm 叫這些）----
+# ---- 庫：起、列、拿掉（aos.gdb 的 a.bp.add.watch(...)／ls／rm 叫這些）----
 
 def _table(daemon):
     out = run(["aos-daemon-ctl", "--daemon", daemon, "ls", "-j"], echo=False)
@@ -208,7 +208,7 @@ def about(spec):
 
 
 def add(daemon, targets, sh=None, py=None, times=1, once=False, every_ms=500, name=None, replace=False, echo=True):
-    """起一個觀察者（aos-daemon-ctl add）；回它的 id（str，不含 gdbw_；aos.gdb 的 a.bp.add("watch") 叫這個）。"""
+    """起一個觀察者（aos-daemon-ctl add）；回它的 id（str，不含 gdbw_；aos.gdb 的 a.bp.add.watch(...) 叫這個）。"""
     if isinstance(targets, str):
         targets = [targets]
     targets = list(targets or [])

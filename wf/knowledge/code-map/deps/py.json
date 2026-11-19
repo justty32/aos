@@ -113,7 +113,7 @@
    "module": "aos.apps.gdb",
    "unit": "proto8/py/aos/apps/gdb",
    "used_by": "",
-   "uses": "aos.flags aos.gdb"
+   "uses": "aos.flags aos.py aos.py.agent aos.py.daemon_ctl"
   },
   {
    "kind": "app",
@@ -259,8 +259,8 @@
    "kind": "lib",
    "module": "aos.gdb",
    "unit": "proto8/py/aos/gdb",
-   "used_by": "proto8/py/aos/apps/gdb proto8/py/tools/agent/gdb_trigger proto8/py/tools/agent/gdb_watch",
-   "uses": "aos.agentlib.hooks"
+   "used_by": "proto8/py/aos/py proto8/py/tools/agent/gdb_trigger proto8/py/tools/agent/gdb_watch",
+   "uses": "aos.agentlib.hooks aos.py._shell aos.py.agent"
   },
   {
    "kind": "lib",
@@ -343,8 +343,8 @@
    "kind": "lib",
    "module": "aos.py",
    "unit": "proto8/py/aos/py",
-   "used_by": "",
-   "uses": "aos.apps.agent aos.apps.daemon_ctl.main"
+   "used_by": "proto8/py/aos/apps/gdb proto8/py/aos/gdb",
+   "uses": "aos.apps.agent aos.apps.daemon_ctl.main aos.gdb"
   },
   {
    "kind": "lib",

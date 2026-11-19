@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # gdb_watch - aos-gdb 觀察者（丙）的 loop 本體：aos-loop 每一圈叫它一次，讀 $AOS_STACK/watch.json，把每個目標 agent 判一次，成立（連續 times 次）就 ctl pause 目標、在它的 gdb/log.jsonl 留字條（by watch）。
-# 使用者 11-19：條件可以「另外開個proc，觸發之後直接把要debug的那個proc停下來」；「丙可以繼續」。判法與庫在 py/aos/gdb/watcher.py；由 aos.gdb.watch() 經 aos-daemon-ctl add 掛上表。
+# 使用者 11-19：條件可以「另外開個proc，觸發之後直接把要debug的那個proc停下來」；「丙可以繼續」。判法與庫在 py/aos/gdb/watcher.py；由 a.bp.add.watch(...)（aos.gdb）經 aos-daemon-ctl add 掛上表。
 # 不碰目標的定義與 hook；它自己壞了只影響自己：條件壞了＝stderr 一行 warning、記進 watch_state.json 的 last_error、退 0（下一圈照看）；
 #   設定讀不了＝stderr 一行 error、退 1（loop 收工，表上這一列 stopped 帶原因），目標照跑。
 import os, sys
@@ -39,7 +39,7 @@ def main():
     try:
         spec = trigger.read_json(spec_path)
         if spec is None:
-            tool_io.die("SpecMissing", "no %s (start watchers with aos.gdb: a.bp.add(\"watch\", ...))" % spec_path, prog=NAME, echo=False)
+            tool_io.die("SpecMissing", "no %s (start watchers with aos.gdb: a.bp.add.watch(...))" % spec_path, prog=NAME, echo=False)
         watch.validate(spec)
         state = trigger.read_json(state_path, {})
     except (OSError, ValueError) as e:

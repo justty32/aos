@@ -6,122 +6,174 @@
 或者說他應該是a.bp.stop(),a.bp.resume()。對斷點增刪改查，包括以id查詢斷點...」。
 圖紙：thinking/2026-11/19/aos-gdb-1119（乙案）、08-Argon審與採納、aos-gdb-lib-第一版.md、aos-gdb-lib-第二版.md（末節＝這次的介面）。
 
-兩層：
-    a.xxx＝aos-agent xxx（a.say、a.listen、a.ctl、a.state、a.agent）與讀 stack 的檔（a.where、a.history、a.observed、a.file…）；a 上沒有斷點的東西。
-    a.bp＝斷點（class Breakpoints）：add／rm／set／ls／get（每個斷點一個 id，str）、stop／resume／skip、why／held／stopped／wait_stopped、notes、clear。
+兩層（把手在入口 aos.py.agent；這裡是它的延伸 a.bp 與 a.look 的本體）：
+    a.xxx＝aos-agent xxx（aos.py 的通用代理）；a.look＝讀 stack 的檔（Look：where、history、observed、request、queue、stderr、file）。
+    a.bp＝斷點（class Breakpoints）：增 a.bp.add.<種類>(...)（回 id，str）、rm／set／ls／get、stop／resume／skip、why／held／stopped／wait_stopped、notes、clear。
+建斷點的寫法（使用者 11-19 選項框選「a.bp.add.before_tool("x")」，thinking/2026-11/19/aos-pylib-1119/07 第 3 題；字串式 a.bp.add("before_tool") 不留）：
+    a.bp.add.<種類>([主詞], *, 條件, 選項) → id。種類＝hook 事件（before_tool、after_tool、before_queue、after_queue、brain_failed、tool_added、
+    after_start、after_stop；on_clock 不收）、tool_error、watch；tab 補得出、打錯當場 AttributeError；主詞＝能篩名字的事件才有（工具名，brain_failed 是錯誤代號）。
 斷點兩種，同一套 id：
-    觸發器（a.bp.add("before_tool", ...) 等事件）：agent 身上一個 hook（gdb_<id>），事件來了判條件。
+    觸發器（a.bp.add.before_tool(...) 等事件）：agent 身上一個 hook（gdb_<id>），事件來了判條件。
         事件還沒發生（before_tool、before_queue）＝扣住（hold）：hook handler 自己不回，工具還沒跑；a.bp.resume() 照原樣跑、a.bp.skip() 那次工具不跑。
         其他事件（已經發生）＝暫停（pause）：ctl pause，loop 在這一格做完、下一格開頭停住；a.bp.resume()＝ctl resume。
-    觀察者（a.bp.add("watch", ...)）：另一支掛在 daemon 表上的 proc（gdbw_<id>），每隔一陣子看目標的檔，成立就 ctl pause 目標（晚一格）（aos.gdb.watcher）。
+    觀察者（a.bp.add.watch(...)）：另一支掛在 daemon 表上的 proc（gdbw_<id>），每隔一陣子看目標的檔，成立就 ctl pause 目標（晚一格）（aos.gdb.watcher）。
 
-薄殼：每個方法背後是一條 aos 指令（aos-agent …、aos-daemon-ctl …）或讀寫 stack 裡的一個檔；g.echo 為真時先印出那條指令，REPL 和 shell 可以混著用
+每一步背後是一條 aos 指令（aos-agent …、aos-daemon-ctl …）或讀寫 stack 裡的一個檔；aos.py.echo 為真時先在 stderr 印出那條指令（或 "# read 路徑"）
 （觸發器掛在 agent 的 stack、觀察者掛在 daemon 表上，REPL 關了照樣在；停住的那隻用 `aos-agent ctl resume` 也續得了，扣住的也是）。
 
-    import aos.gdb as g
-    a = g.attach("ann", daemon=".stack")                  # daemon 預設 $AOS_DAEMON
-    b = a.bp.add("before_tool", tool="write")             # write 要跑之前扣住；回 "before_tool_1"
-    a.bp.add("after_tool", tool="write")                  # write 跑完、腦還沒看到結果就停
-    a.bp.add("tool_error", times=2)                       # 任何工具連續回錯兩次
-    a.bp.add("after_tool", sh="grep -q secret || exit 10")              # 自訂條件：一段 shell（事件 JSON 在 stdin，退 0＝算）
-    a.bp.add("before_tool", py=lambda ev: ev["arguments"].get("path", "").endswith(".env"))
-    a.bp.add("watch", py=lambda t: len(t.history(0)) > 20)              # 觀察者：另一支 proc 每 0.5 秒看一次；回 "watch_1"
-    a.say("hi"); a.bp.wait_stopped(); a.bp.why(); a.where(); a.history(3)
+    from aos.py import agent
+    a = agent.attach("ann", daemon=".stack")              # a.bp 要知道 daemon：不給＝$AOS_DAEMON
+    b = a.bp.add.before_tool("write")                     # write 要跑之前扣住；回 "before_tool_1"
+    a.bp.add.after_tool("write")                          # write 跑完、腦還沒看到結果就停
+    a.bp.add.tool_error(times=2)                          # 任何工具連續回錯兩次
+    a.bp.add.after_tool(sh="grep -q secret || exit 10")   # 自訂條件：一段 shell（事件 JSON 在 stdin，退 0＝算）
+    a.bp.add.before_tool(py=lambda ev: ev["arguments"].get("path", "").endswith(".env"))
+    a.bp.add.watch(py=lambda t: len(t.history(0)) > 20)   # 觀察者：另一支 proc 每 0.5 秒看一次；回 "watch_1"
+    a.say("hi"); a.bp.wait_stopped(); a.bp.why(); a.look.where(); a.look.history(3)
     a.bp.resume()      # 或 a.bp.skip()（扣在工具前：那次不跑）
     a.bp.ls(); a.bp.get(b); a.bp.set(b, enabled=False); a.bp.rm(b); a.bp.clear()
     a.bp.stop(); a.bp.resume()                            # 不靠斷點：現在就停／續
 
 觸發器的檔、字條、扣住檔、條件怎麼判在 aos.gdb.trigger；hook handler 是 lib/tools/agent/gdb_trigger；觀察者在 aos.gdb.watcher 與 lib/tools/agent/gdb_watch。"""
+import inspect
 import json
 import os
 import time
 
 from aos.agentlib import hooks as _hooks
 from aos.gdb import trigger, watcher as _watch
-from aos.gdb.look import Look, Text, Why, bp_id, run, sh, Failed  # noqa: F401  （sh、Failed、Text 給 REPL 用）
+from aos.gdb.look import Look, Text, Why, bp_id, run, Failed  # noqa: F401
+from aos.py._shell import Timeout, call, show
 
-echo = True                                       # 為真＝每條指令先印一行 "$ ..."（看得到背後是哪條 shell）
 HANDLER = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/gdb_trigger"}
-NAMED = tuple(e for e, d in _hooks.EVENTS.items() if d["condition"] == "name")   # tool= 能篩的事件（brain_failed 的 name＝錯誤代號）
+NAMED = tuple(e for e, d in _hooks.EVENTS.items() if d["condition"] == "name")   # 能篩名字的事件（brain_failed 的 name＝錯誤代號）
 EVENTS = tuple(e for e in _hooks.EVENTS if e != _hooks.CLOCK_EVENT)               # on_clock 要給間隔，不是「事件發生」，不收
-TOOL_ERROR, WATCH = "tool_error", "watch"         # a.bp.add 的 on 除了 EVENTS 之外收這兩個
-ONS = EVENTS + (TOOL_ERROR, WATCH)
+TOOL_ERROR, WATCH = "tool_error", "watch"         # a.bp.add 的種類除了 EVENTS 之外還有這兩個
+KINDS = EVENTS + (TOOL_ERROR, WATCH)
+SUBJECT = {e: ("code" if e == "brain_failed" else "tool") for e in NAMED + (TOOL_ERROR,)}   # 有主詞的種類 → 主詞的參數名
 RELEASE_WAIT_S = 10
 
 
-def attach(name, daemon=None):
-    """接上一隻已經掛在 daemon 上的 agent（不改它任何東西）：記住名字、daemon、stack 在哪，確認它的定義宣告了 hooks。"""
-    return Agent(name, daemon)
-
-
-def _daemon(daemon):
-    d = daemon or os.environ.get("AOS_DAEMON")
-    if not d:
-        raise Failed("aos.gdb", "no daemon given and AOS_DAEMON is not set (daemon='.stack')")
-    return os.path.abspath(d)
-
-
-class Agent(Look):
-    """a.xxx＝aos-agent --daemon D --target NAME xxx 的薄殼，加上讀 stack 的檔（Look）；斷點在 a.bp。"""
+class Target:
+    """a.bp 背後的那一隻：名字、daemon（絕對路徑；把手沒給＝$AOS_DAEMON）、stack（第一次用到時問一次，這個 a.bp 用到底）。"""
 
     def __init__(self, name, daemon=None):
-        self.name, self.daemon = name, _daemon(daemon)
-        who = self._json(["ctl", "state", "--json", "who"]).get("who", {})
-        stack = who.get("stack")
-        if not isinstance(stack, str) or not stack:
-            raise Failed("attach", "cannot tell where the stack of %s is (aos-agent ctl state who)" % name)
-        self.stack = stack
-        self.agent("hook", "ls", quiet=True)      # 定義沒宣告 hooks＝這裡就說 HooksMissing（Argon A2）
-        self.bp = Breakpoints(self)
+        d = daemon or os.environ.get("AOS_DAEMON")
+        if not d:
+            raise Failed("a.bp", "no daemon: give agent.attach(name, daemon=...) or set AOS_DAEMON", code="DaemonMissing")
+        self.name, self.daemon, self._stack = name, os.path.abspath(d), None
 
-    def __repr__(self):
-        return "<aos.gdb agent %s (stack %s); breakpoints: a.bp>" % (self.name, self.stack)
+    @property
+    def stack(self):
+        if self._stack is None:
+            out = self.agent("ctl", "state", "--json", "who", quiet=True)
+            s = (json.loads(out or "{}").get("who") or {}).get("stack")
+            if not isinstance(s, str) or not s:
+                raise Failed("a.bp", "cannot tell where the stack of %s is (aos-agent ctl state who)" % self.name, code="StackMissing")
+            self._stack = s
+        return self._stack
 
     def agent(self, *args, quiet=False):
-        """aos-agent --daemon D --target NAME ARGS...；回 stdout（Text）。退非 0 丟 Failed（帶它最後一行錯誤）。"""
-        return run(["aos-agent", "--daemon", self.daemon, "--target", self.name] + [str(x) for x in args], echo=echo and not quiet)
+        """aos-agent --daemon D --target NAME ARGS...；回 stdout（Text，可能是空的）。"""
+        return call(["aos-agent", "--daemon", self.daemon, "--target", self.name] + [str(x) for x in args], quiet=quiet)
 
-    def _json(self, args):
-        return json.loads(self.agent(*args, quiet=True))
 
-    def say(self, text):
-        """aos-agent say；回信名（str，交給 listen(letter=...) 等那一封的回答）。"""
-        return Text(self.agent("say", text).strip())
+class StackLook(Look):
+    """a.look：一隻 agent 的 stack 裡的檔（只讀，一次一個）。"""
 
-    def listen(self, timeout_s=20, letter=None):
-        """aos-agent listen：等它的回答；letter＝say 回的信名：等那一封的。"""
-        return self.agent("listen", "--timeout-s", timeout_s, *(["--letter", str(letter).strip()] if letter else []))
+    def __init__(self, name, stack):
+        self.name, self.stack = name, stack
 
-    def ctl(self, *args):
-        """aos-agent ctl ARGS...（例 a.ctl("pause")、a.ctl("where")）。停在斷點的事用 a.bp（a.bp.stop()／a.bp.resume() 會留字條）。"""
-        return self.agent("ctl", *args)
+    def __repr__(self):
+        return "<a.look of %s (stack %s): where, history, observed, request, queue, stderr, file, path>" % (self.name, self.stack)
+
+
+class Add:
+    """a.bp.add：建斷點。a.bp.add.<種類>([主詞], *, sh=, py=, times=1, once=False, id=None, replace=False) 回 id（str）；
+    watch 另有 every_ms=500、also=()。種類＝KINDS（tab 補得出）；打錯當場 AttributeError；a.bp.add(...) 直接叫＝Failed，說要寫種類。"""
+
+    def __init__(self, bp):
+        self._bp = bp
+        for kind in KINDS:
+            setattr(self, kind, _maker(bp, kind))
+
+    def __getattr__(self, name):
+        raise AttributeError("a.bp.add has no kind %s (kinds: %s)" % (name, ", ".join(KINDS)))
+
+    def __dir__(self):
+        return list(KINDS)
+
+    def __call__(self, *args, **kw):
+        raise Failed("a.bp.add", "say which kind, e.g. a.bp.add.before_tool(\"write\") (kinds: %s)" % ", ".join(KINDS), code="ArgumentsBad")
+
+    def __repr__(self):
+        return "\n".join(["a.bp.add.<kind>(...) returns the new breakpoint's id; kinds:"]
+                         + ["  %s%s" % (k, inspect.signature(getattr(self, k))) for k in KINDS])
+
+
+def _maker(bp, kind):
+    """a.bp.add.<kind> 這一支：參數照種類（有主詞的才有位置參數；watch 多 every_ms、also）。"""
+    P = inspect.Parameter
+    params = []
+    subject = SUBJECT.get(kind)
+    if subject:
+        params.append(P(subject, P.POSITIONAL_OR_KEYWORD, default=None))
+    params += [P("sh", P.KEYWORD_ONLY, default=None), P("py", P.KEYWORD_ONLY, default=None),
+               P("times", P.KEYWORD_ONLY, default=1), P("once", P.KEYWORD_ONLY, default=False)]
+    if kind == WATCH:
+        params += [P("every_ms", P.KEYWORD_ONLY, default=500), P("also", P.KEYWORD_ONLY, default=())]
+    params += [P("id", P.KEYWORD_ONLY, default=None), P("replace", P.KEYWORD_ONLY, default=False)]
+    sig = inspect.Signature(params)
+
+    def add(*args, **kw):
+        try:
+            got = sig.bind(*args, **kw)
+        except TypeError as e:
+            raise Failed("a.bp.add.%s" % kind, str(e), code="ArgumentsBad") from None
+        got.apply_defaults()
+        v = dict(got.arguments)
+        return bp._add(kind, tool=v.pop(subject) if subject else None, name=v.pop("id"), **v)
+
+    add.__name__ = add.__qualname__ = kind
+    add.__signature__ = sig
+    add.__doc__ = _KIND_DOC.get(kind, "觸發器：事件 %s 來了（那一格做完暫停）。" % kind) + _COMMON_DOC
+    return add
+
+
+_KIND_DOC = {
+    "before_tool": "觸發器：工具要跑之前扣住（工具還沒跑；a.bp.resume() 照跑、a.bp.skip() 不跑）。tool＝只算這個（或這些）工具。",
+    "before_queue": "觸發器：一封信要收進來之前扣住（a.bp.resume() 照收）。",
+    "after_tool": "觸發器：工具跑完、腦還沒看到結果時停（那一格做完暫停）。tool＝只算這個（或這些）工具。",
+    "tool_error": "觸發器：工具跑完而且回錯（退出碼不是 0 或逾時）就停（after_tool 的一種）。tool＝只算這個（或這些）工具。",
+    "brain_failed": "觸發器：問腦失敗時停。code＝只算這個（或這些）錯誤代號。",
+    "tool_added": "觸發器：加了工具時停。tool＝只算這個（或這些）工具。",
+    "watch": "觀察者：另一支 proc 每 every_ms 看一次目標的檔（also＝順便也看這些 agent，同一個 daemon），條件成立就暫停（晚一格）。一定要給 sh 或 py。",
+}
+_COMMON_DOC = """
+條件：不給＝事件來了就算；sh＝一段 shell（觸發器：事件 JSON 在 stdin；觀察者：cwd＝目標 stack；退 0＝算、10＝不算、其他＝條件壞了）；
+py＝觸發器是 f(ev)／運算式字串（變數 ev），觀察者是 f(t)／運算式字串（變數 t，t.mem 跨圈留著）。
+times＝連續幾次才算；once＝只停一次；id＝自己取名（不給＝種類_N）；replace＝同 id 已有就換掉。回斷點 id（str）。"""
 
 
 class Breakpoints:
-    """a.bp：以斷點為核心——增 add、刪 rm、改 set、查 ls／get（都以 id，str）；停 stop、續 resume、跳過 skip；
+    """a.bp：以斷點為核心——增 add.<種類>(...)、刪 rm、改 set、查 ls／get（都以 id，str）；停 stop、續 resume、跳過 skip；
     停在哪、為什麼 why／held、停了沒 stopped、等到停下來 wait_stopped；字條 notes；全拿掉 clear。"""
 
-    def __init__(self, agent):
-        self._a = agent
+    def __init__(self, target):
+        self._a = target
+        self.add = Add(self)
 
     def __repr__(self):
         rows = self.ls(quiet=True)
-        head = "<a.bp of %s: %d breakpoint(s); add / rm / set / ls / get, stop / resume / skip, why / wait_stopped>" % (self._a.name, len(rows))
+        head = "<a.bp of %s: %d breakpoint(s); add.<kind>(...) / rm / set / ls / get, stop / resume / skip, why / wait_stopped>" % (self._a.name, len(rows))
         return "\n".join([head] + ["  %s%s  %s%s" % (r["id"], "" if r["enabled"] else " (disabled)", r["about"], "  <- stopped here" if r["here"] else "")
                                    for r in rows])
 
-    # ---- 增 ----
-    def add(self, on, tool=None, sh=None, py=None, times=1, once=False, name=None, replace=False, every_ms=500, also=()):
-        """下一個斷點，回它的 id（str，例 "before_tool_1"、"watch_1"；name＝自己取）。on＝什麼時候判：
-          hook 事件（before_tool、after_tool、before_queue、brain_failed、tool_added…）：觸發器，before_tool／before_queue＝扣住（事件還沒發生），其他＝那一格做完暫停；
-          "tool_error"＝after_tool 且工具回錯（退出碼不是 0 或逾時）；
-          "watch"＝觀察者：另一支 proc 每 every_ms 看一次（also＝順便也看這些 agent，同一個 daemon），成立就暫停（晚一格）。
-        條件：不給＝事件來了就算（watch 一定要給）；sh＝一段 shell（觸發器：事件 JSON 在 stdin；觀察者：cwd＝目標 stack；退 0＝算、10＝不算、其他＝條件壞了）；
-        py＝觸發器是 f(ev)／運算式字串（變數 ev），觀察者是 f(t)／運算式字串（變數 t，t.mem 跨圈留著）。
-        tool＝只算這個（或這些）工具（brain_failed 是錯誤代號）；times＝連續幾次才算；once＝只停一次；replace＝同 id 已有就換掉。"""
+    # ---- 增（a.bp.add.<種類> 叫這一支）----
+    def _add(self, on, tool=None, sh=None, py=None, times=1, once=False, name=None, replace=False, every_ms=500, also=()):
         a = self._a
-        if on not in ONS:
-            raise Failed("bp.add", "on must be one of %s" % ", ".join(ONS))
+        if on not in KINDS:
+            raise Failed("bp.add", "kind must be one of %s" % ", ".join(KINDS))
         name = None if name is None else str(name)
         if on == WATCH:
             if tool:
@@ -131,7 +183,7 @@ class Breakpoints:
             if short in self._trigger_ids():
                 raise Failed("bp.add", "%s already has a trigger breakpoint %s (a.bp.rm it first)" % (a.name, short))
             return str(_watch.add(a.daemon, [a.name] + list(also), sh=sh, py=py, times=times, once=once, every_ms=every_ms,
-                                  name=short, replace=replace, echo=echo))
+                                  name=short, replace=replace, echo=True))
         if also or every_ms != 500:
             raise Failed("bp.add", "also= and every_ms= only work on watch")
         error = on == TOOL_ERROR
@@ -169,11 +221,11 @@ class Breakpoints:
         照樣等 a.bp.resume()／a.bp.skip()。觀察者：aos-daemon-ctl rm gdbw_ID（先停、等行程退出、再從表上拿掉；它也看別隻的話別隻也不看了）。"""
         kind = self._kind(id)
         if kind == WATCH:
-            out = _watch.rm(self._a.daemon, id, echo=echo)
+            out = _watch.rm(self._a.daemon, id, echo=True)
             end = time.monotonic() + RELEASE_WAIT_S   # rm 是寄信給 daemon；等表上真的沒了才回（ls／get 才不會還看到它）
             while any(w["name"] == id for w in _watch.ls(self._a.daemon)):
                 if time.monotonic() > end:
-                    raise Failed("bp.rm", "watcher %s is still on the daemon table after %d s" % (id, RELEASE_WAIT_S))
+                    raise Timeout("bp.rm", "watcher %s is still on the daemon table after %d s" % (id, RELEASE_WAIT_S), code="Timeout")
                 time.sleep(0.1)
             return out
         spec = self._spec(id)
@@ -190,7 +242,7 @@ class Breakpoints:
     # ---- 改 ----
     def set(self, id, enabled=None, times=None, once=None):
         """改一個斷點：enabled（停用＝觸發器把 hook 拿下、設定留著；觀察者 aos-daemon-ctl stop。啟用＝裝回去／start）、times、once。
-        改了 times／once 計數照留（停過幾次不歸零）。條件、事件、tool、every_ms、看誰改不了：同一個 id 重下 a.bp.add(..., name=ID, replace=True)。回改完的 get(id)。"""
+        改了 times／once 計數照留（停過幾次不歸零）。條件、事件、tool、every_ms、看誰改不了：同一個 id 重下 a.bp.add.<種類>(..., id=ID, replace=True)。回改完的 get(id)。"""
         kind = self._kind(id)
         if times is not None and (not isinstance(times, int) or isinstance(times, bool) or times < 1):
             raise Failed("bp.set", "times must be a whole number >= 1")
@@ -207,7 +259,7 @@ class Breakpoints:
             spec["about"] = _watch.about(spec)
             trigger.write_json(path, spec)       # gdb_watch 每圈重讀 watch.json
             if enabled is not None:
-                run(["aos-daemon-ctl", "--daemon", a.daemon, "start" if enabled else "stop", _watch.PREFIX + id], echo=echo)
+                run(["aos-daemon-ctl", "--daemon", a.daemon, "start" if enabled else "stop", _watch.PREFIX + id], echo=True)
             return self.get(id)
         spec = self._spec(id)
         if times is not None:
@@ -293,13 +345,13 @@ class Breakpoints:
         return st.get("paused") is True or self.held() is not None
 
     def wait_stopped(self, timeout_s=30, every_s=0.1):
-        """等到它真的停住（暫停已套用或已扣住；不是看字條，Argon A4）。回 True；逾時丟 TimeoutError。"""
+        """等到它真的停住（暫停已套用或已扣住；不是看字條，Argon A4）。回 True；逾時丟 Timeout（也是 TimeoutError）。"""
         end = time.monotonic() + timeout_s
         while time.monotonic() < end:
             if self.stopped():
                 return True
             time.sleep(every_s)
-        raise TimeoutError("%s did not stop in %g s" % (self._a.name, timeout_s))
+        raise Timeout("a.bp.wait_stopped", "%s did not stop in %g s" % (self._a.name, timeout_s), code="Timeout")
 
     def why(self):
         """為什麼停：上一次 resume（經 aos.gdb，或在 shell 下 ctl resume 放行的）之後的字條（觸發器與觀察者的），
@@ -416,8 +468,7 @@ class Breakpoints:
         """寫放行單、等 handler 收到；go＝run（照跑）或 skip（不跑）。"""
         a = self._a
         pending = self.why().pending                # 扣著時又來的 ctl pause／stop：放行後這一格做完就套用（Argon A10）
-        if echo:
-            print("$ release %s: %s (writes %s)" % (h.get("trigger"), go, os.path.join(a.stack, trigger.LOG_DIR, trigger.RELEASE)))
+        show("$ release %s: %s (writes %s)" % (h.get("trigger"), go, os.path.join(a.stack, trigger.LOG_DIR, trigger.RELEASE)))
         trigger.write_release(a.stack, h["token"], go, text)
         end = time.monotonic() + RELEASE_WAIT_S
         while time.monotonic() < end:
@@ -426,7 +477,7 @@ class Breakpoints:
                 break
             time.sleep(0.05)
         else:
-            raise Failed(what, "the hold did not end within %d s (is %s still running?)" % (RELEASE_WAIT_S, a.name))
+            raise Timeout(what, "the hold did not end within %d s (is %s still running?)" % (RELEASE_WAIT_S, a.name), code="Timeout")
         # 字條由 handler 自己寫（resume 或 hold_ended，帶 token；Argon A2）：沒看到 resume＝它不是被這張放行單放的
         mine = [n for n in trigger.read_log(a.stack) if n.get("token") == h["token"] and n.get("kind") in ("resume", "hold_ended")]
         if not mine or mine[-1]["kind"] != "resume":

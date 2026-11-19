@@ -1,51 +1,26 @@
-"""aos.gdb.look - aos-gdb 的檢閱薄殼與小零件：跑一條指令（印出來、失敗丟 Failed）、讀 stack 裡的檔（stage、history、observed、最後一次問腦、信箱、stderr）、why() 的結果長相。
+"""aos.gdb.look - 讀 stack 裡的檔（stage、history、observed、最後一次問腦、信箱、stderr；把手上的 a.look 就是它）、why() 的結果長相、跑一條指令的小殼。
 
-停住時人看的全在 stack 的普通檔（thinking/2026-11/19/aos-gdb-1119/07 第三節）；這裡每個方法只讀一個檔或跑一條 aos 指令，不解讀、不改。
-Look 是 aos.gdb.Agent 的底：需要 self.stack、self.agent()。觀察者（aos.gdb.watcher）交給條件函式的 t 也是它（Argon A8）。"""
+停住時人看的全在 stack 的普通檔（thinking/2026-11/19/aos-gdb-1119/07 第三節）；這裡每個方法只讀一個檔，不解讀、不改。
+讀檔收進 a.look（使用者 11-19 選項框「收進 a.look」，thinking/2026-11/19/aos-pylib-1119/07 第 5 題），a.history 等名字還給 aos-agent。
+Look 只需要 self.stack；觀察者（aos.gdb.watcher）交給條件函式的 t 也是它（Argon A8）。
+跑指令、例外、Text 用入口那份（aos.py._shell）：整個活的那一邊只有一種 Failed。"""
 import json
 import os
-import shlex
-import subprocess
 
-
-class Failed(RuntimeError):
-    """一條指令失敗或 aos.gdb 拒絕：str() 是一行英文（指令自己的錯誤行，或為什麼不做）。"""
-
-    def __init__(self, what, why):
-        super().__init__(why if what is None else "%s: %s" % (what, why))
-
-
-class Text(str):
-    """在 REPL 裡直接印出原樣（不加引號、不跳脫換行）的字串。"""
-
-    def __repr__(self):
-        return str(self).rstrip("\n")
+from aos.py._shell import Failed, Text, call, show  # noqa: F401（Failed、Text 給 aos.gdb 其他檔用）
 
 
 def run(argv, echo=True, input=None):
-    """跑一條指令；echo＝先印 "$ 指令"。回 stdout（Text）；退非 0 丟 Failed（帶 stderr 最後一行）。"""
-    if echo:
-        print("$ " + " ".join(shlex.quote(a) for a in argv))
-    try:
-        p = subprocess.run(argv, input=input, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    except OSError as e:
-        raise Failed(argv[0], "cannot run it (source $AOS_HOME/env.sh to put aos on PATH): %s" % e) from None
-    if p.returncode:
-        last = [x for x in p.stderr.splitlines() if x.strip()]
-        if last and last[-1].startswith(os.path.basename(argv[0]) + ":"):
-            raise Failed(None, last[-1])           # 它自己的錯誤行已經帶程式名
-        raise Failed(argv[0], last[-1] if last else "exited %d" % p.returncode)
-    return Text(p.stdout)
+    """跑一條指令，回 stdout（Text，可能是空的）；退非 0 丟 Failed。echo＝這條可以印（aos.py.echo 開著才真的印，在 stderr）。"""
+    return call(argv, input=input, quiet=not echo)
 
 
-def sh(command, echo=True):
-    """跑一段 shell（sh -c），回 stdout；在 REPL 裡順手打 shell 指令用。"""
-    if echo:
-        print("$ " + command)
-    return run(["sh", "-c", command], echo=False)
+def _read(path):
+    show("# read %s" % path)
 
 
 def _tail_jsonl(path, n):
+    _read(path)
     try:
         with open(path, encoding="utf-8") as f:
             lines = [x for x in f.read().splitlines() if x.strip()]
@@ -119,15 +94,17 @@ class Why:
 
 
 class Look:
-    """讀 stack 的檔；需要 self.stack 與 self.agent()。"""
+    """讀 stack 的檔（a.look）；需要 self.stack。讀不到的檔＝None／[]（不是錯），JSON 壞了＝Failed（code JsonBad）。"""
 
     def path(self, rel=""):
         return os.path.join(self.stack, rel)
 
     def file(self, rel):
         """stack 裡任一個檔的內容（Text）；沒有＝None。"""
+        p = self.path(rel)
+        _read(p)
         try:
-            with open(self.path(rel), encoding="utf-8", errors="replace") as f:
+            with open(p, encoding="utf-8", errors="replace") as f:
                 return Text(f.read())
         except FileNotFoundError:
             return None
@@ -136,10 +113,6 @@ class Look:
         """停在哪一格（stage.txt）。"""
         s = self.file("stage.txt")
         return None if s is None else s.strip()
-
-    def state(self, *parts):
-        """aos-agent ctl state [PART...]（不給＝總覽；"all"＝全部）。"""
-        return self.agent("ctl", "state", *parts)
 
     def history(self, n=5):
         """history.jsonl 最後 n 則（0＝全部）。"""
@@ -152,12 +125,17 @@ class Look:
     def request(self):
         """最後一次問腦的整份（think/request.json）；沒有＝None。"""
         t = self.file(os.path.join("think", "request.json"))
-        return None if t is None else json.loads(t)
+        try:
+            return None if t is None else json.loads(t)
+        except ValueError as e:
+            raise Failed("a.look.request", "%s is not JSON: %s" % (self.path(os.path.join("think", "request.json")), e), code="JsonBad") from None
 
     def queue(self):
         """信箱裡還沒收的信（queue/new/ 的檔名）。"""
+        p = self.path(os.path.join("queue", "new"))
+        _read(p)
         try:
-            return sorted(n for n in os.listdir(self.path(os.path.join("queue", "new"))) if not n.startswith("."))
+            return sorted(n for n in os.listdir(p) if not n.startswith("."))
         except FileNotFoundError:
             return []
 

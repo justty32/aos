@@ -63,7 +63,7 @@
   "description": "Use aos-feedback to record what was hard about a command or tool and to score how comfortable it is for AIs."
  },
  "gdb.json": {
-  "description": "Use aos-gdb (Python, aos.gdb) to stop one agent when a condition holds (held before a tool runs, paused after an event, or by a watcher proc), read why, look at its stack, resume."
+  "description": "Use aos-gdb / the aos.py Python library to drive one agent (a.X.Y(...) = aos-agent X Y ...), stop it when a condition holds (a.bp.add.before_tool(...), a watcher proc...), read why, look at its stack (a.look), resume."
  },
  "parts": {
   "description": "Low-level programs the other commands are built from: aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-lock, aos-json, aos-directive, aos-llm, and the llm kernel (the tool folder lib/aos/kernel_llm)."
