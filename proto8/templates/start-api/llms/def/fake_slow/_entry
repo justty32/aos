@@ -40,7 +40,7 @@ if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdou
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "fake_slow"
-FAKE = os.path.join(os.path.dirname(os.path.realpath(tool_io.__file__)), "base", "llm_fake", "_entry")   # tool_io 與 lib 工具同層。
+FAKE = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(tool_io.__file__))), "tools", "base", "llm_fake", "_entry")   # tool_io 在 lib/aos/，lib 工具在 lib/tools/base/（11-18 S4 套件搬家後）。
 
 
 def die(code, reason):
