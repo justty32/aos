@@ -16,13 +16,13 @@ agent.py→那一夾 json 叫「編譯」（compile）；defs.compile 算出、�
     std.fsm()＝借 agent-fsm 範本的四格；std.hooks(範本="agent-fsm")＝那個範本 hooks.json 的那組 hook（編譯時讀、抄進來）
   lib(庫名, 根)        別的庫：my = defs.lib("my", defs.env("AOS_WS", "/lib/my"))；my.pack／my.tool 同上，工具名自動帶「庫名_」
   tool(名, 路徑, **其他) 單一個工具＝tools.json 的 tools[名]＝{"path": 路徑, **其他}；路徑也可給 my.tool(...)（只拿它的路徑）；同名蓋掉包裡那支
-  no(名)              從展開的包裡拿掉那支（tools.json 裡就沒有那格）
+  drop(名)            從展開的包裡拿掉那支（tools.json 裡就沒有那格）
   （包展開後兩支同名、內容又不同＝SpecBad，不再悄悄蓋；tools_json 在 agent_spec_parts）
   home(路徑)／env(變數, 路徑)  指示詞 {"$env": …, "$path": …}，原樣吐、不展開
   state(名, argv, next, timeout_ms=None)、fsm(起點, [state…])
-  by_hand(檔名)        這份檔自己手寫：interfaces.json 指到它、不編、不蓋（SYSTEM／TOOLS／LLM／FSM／HOOKS 都可用）
+  extern(檔名)         這份檔自己手寫：interfaces.json 指到它、不編、不蓋（SYSTEM／TOOLS／LLM／FSM／HOOKS 都可用）
   load(路徑)           衍生（繼承第一刀 aos-inherit-cut1-1119，本體 aos/agent_spec_load.py）：base = defs.load("../reviewer") 跑那支 agent.py，
-                       它的 defs.main 只交出九個欄位；TOOLS 寫 [base.TOOLS, defs.no(...), ...]、HOOKS 寫 [base.HOOKS, {名: {**base.HOOKS[名], 鍵: 值}}]、
+                       它的 defs.main 只交出九個欄位；TOOLS 寫 [base.TOOLS, defs.drop(...), ...]、HOOKS 寫 [base.HOOKS, {名: {**base.HOOKS[名], 鍵: 值}}]、
                        FSM 寫 defs.fsm(base.FSM, [defs.state(名, 只給要換的)], drop=[...])；只在編譯時算，編出的 json 整份、不記上一層（N-70）
 兩個可單獨叫的函式（REPL 裡 defs.compile(...) 再 defs.write(夾, 結果)＝指令 --compile）：
   compile(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None, link="static", warn=None)
@@ -67,7 +67,7 @@ hooks) of a definition that already has its skeleton, under the names its interf
 Packs (std.pack, or .pack of a library from defs.lib) are read when agent.py runs (also when they are
 linked dynamically, to check the tool names), so AOS_HOME, and any variable a library root uses, must be set.
 To build on another agent.py: base = defs.load("../other") runs it (its defs.main only hands over its
-fields) and you write [base.TOOLS, defs.no("x")], [base.HOOKS, {...}], defs.fsm(base.FSM, [...]); it is
+fields) and you write [base.TOOLS, defs.drop("x")], [base.HOOKS, {...}], defs.fsm(base.FSM, [...]); it is
 worked out now, so the files written are whole and do not name the other one (README: "Build on").
 Then mount it: aos-agent ctl add FOLDER.
 On a wrong declaration: one line "NAME: error: SpecBad ..." on stderr, exit 1, nothing written.
@@ -117,19 +117,19 @@ def tool(name, path, **more):
     return {"kind": "tool", "name": name, "entry": dict({"path": path}, **more)}
 
 
-def no(name):
+def drop(name):
     """把展開的包裡的某個工具拿掉（腦看到的名字；tools.json 裡就沒有那格）。"""
     if not isinstance(name, str) or not parts.TOOL_RE.match(name):
-        return _bad("defs.no(%r): the tool name must be 1-64 letters, digits, _ or -" % (name,))
-    return {"kind": "no", "name": name}
+        return _bad("defs.drop(%r): the tool name must be 1-64 letters, digits, _ or -" % (name,))
+    return {"kind": "drop", "name": name}
 
 
-def by_hand(filename):
+def extern(filename):
     """這份檔自己手寫：interfaces.json 指到它，agent.py 不編、不蓋。"""
     if (not isinstance(filename, str) or not filename or os.path.isabs(filename) or ".." in filename.split("/")
             or os.path.normpath(filename) == "."):
-        return _bad("by_hand(%r): give a file name relative to the definition folder, like \"system.txt\"" % (filename,))
-    return {"kind": "by_hand", "file": os.path.normpath(filename)}
+        return _bad("extern(%r): give a file name relative to the definition folder, like \"system.txt\"" % (filename,))
+    return {"kind": "extern", "file": os.path.normpath(filename)}
 
 
 def _state_name_bad(name):
@@ -253,8 +253,8 @@ def _checked(start, table):
 
 
 def _names(decl, fsm, hooks, interfaces, folder):
-    """回四樣：{種類: 這次用的檔名}、{種類: by_hand 的檔名}、FILES 不能用的檔名、llm_keys（有 FSM＝None，之後照編譯出的 interfaces.json）。"""
-    hand = {w: v["file"] for w, v in decl.items() if parts.kind(v) == "by_hand"}
+    """回四樣：{種類: 這次用的檔名}、{種類: extern 的檔名}、FILES 不能用的檔名、llm_keys（有 FSM＝None，之後照編譯出的 interfaces.json）。"""
+    hand = {w: v["file"] for w, v in decl.items() if parts.kind(v) == "extern"}
     if fsm is None:
         if interfaces is not None:
             raise SpecBad("INTERFACES needs FSM: without FSM, interfaces.json belongs to the skeleton you copied; change it by hand")
@@ -269,7 +269,7 @@ def _names(decl, fsm, hooks, interfaces, folder):
                 raise DefBad("%s/interfaces.json declares no %s file, so %s has nowhere to go: add \"%s\" to its aos-agent, "
                              "or declare FSM" % (folder, what, what.upper(), what))
             if what in hand and hand[what] != have[what]:
-                raise SpecBad("by_hand(%r) for %s, but interfaces.json names %r for it; use that name"
+                raise SpecBad("extern(%r) for %s, but interfaces.json names %r for it; use that name"
                               % (hand[what], what.upper(), have[what]))
             files[what] = have[what]
         return files, hand, set(have.values()) | set(files.values()), keys
@@ -278,7 +278,7 @@ def _names(decl, fsm, hooks, interfaces, folder):
     made = set(SKELETON) | set(RUNTIME_FILES) | {"_metainfo.json", "README.md", "agent.py"} | {files[w] for w in files if w not in hand}
     for what, name in hand.items():
         if name in made or list(hand.values()).count(name) > 1:
-            raise SpecBad("by_hand(%r) for %s clashes with a file agent.py writes, a file the running agent writes, or another by_hand; pick another name" % (name, what.upper()))
+            raise SpecBad("extern(%r) for %s clashes with a file agent.py writes, a file the running agent writes, or another extern; pick another name" % (name, what.upper()))
     return files, hand, set(files.values()), None
 
 
@@ -299,13 +299,13 @@ def compile(description, system, tools, llm, fsm=None, meta=None, interfaces=Non
     decl = {"system": system, "tools": tools, "llm": llm, "fsm": fsm, "hooks": hooks}
     for value in decl.values():
         parts.raise_bad(value)
-    if fsm is not None and parts.pick(fsm, "FSM must come from defs.fsm(...), std.fsm() or defs.by_hand(\"fsm.json\") (or leave it out: no FSM)",
+    if fsm is not None and parts.pick(fsm, "FSM must come from defs.fsm(...), std.fsm() or defs.extern(\"fsm.json\") (or leave it out: no FSM)",
                                       lambda v: parts.kind(v) == "fsm"):
         fsm_out = None
     else:
         fsm_out = fsm
     names, hand, taken, keys = _names(decl, fsm, hooks, interfaces, folder)
-    if parts.pick(system, "SYSTEM must be a string (the system text) or defs.by_hand(\"system.txt\")", lambda v: isinstance(v, str)):
+    if parts.pick(system, "SYSTEM must be a string (the system text) or defs.extern(\"system.txt\")", lambda v: isinstance(v, str)):
         system = None
     face = None
     if fsm is not None:
@@ -313,11 +313,11 @@ def compile(description, system, tools, llm, fsm=None, meta=None, interfaces=Non
         keys = face.get("aos-agent", {}).get("llm_keys", LLM_KEYS)
         if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
             raise SpecBad("INTERFACES aos-agent llm_keys must be a list of strings")
-    tools_out = None if parts.pick(tools, "TOOLS must be a list of std.pack(...), std.tool(...), defs.tool(...), defs.no(...) "
+    tools_out = None if parts.pick(tools, "TOOLS must be a list of std.pack(...), std.tool(...), defs.tool(...), defs.drop(...) "
                                           "(or a library's .pack / .tool, or the TOOLS of defs.load(...): [base.TOOLS, ...]), "
-                                          "or defs.by_hand(\"tools.json\")",
+                                          "or defs.extern(\"tools.json\")",
                                    lambda v: isinstance(v, (list, tuple))) else parts.tools_json(tools, link, warn)
-    llm_out = None if parts.pick(llm, "LLM must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or defs.by_hand(\"llm.json\")",
+    llm_out = None if parts.pick(llm, "LLM must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or defs.extern(\"llm.json\")",
                                  lambda v: isinstance(v, dict)) else parts.llm_json(llm, keys)
     hooks_out = None if hooks is None or "hooks" in hand else parts.hooks_json(hooks)
     extra = parts.extra_files(files, taken | set(hand.values())) if files is not None else {}

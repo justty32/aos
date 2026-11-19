@@ -22,7 +22,7 @@ BODY = '''\
 DESCRIPTION = "Answer questions about the weather."
 SYSTEM = "You answer questions about the weather.\\n"
 std = defs.std
-TOOLS = [std.pack("look"), defs.tool("peek", defs.home("/lib/tools/base/peek_now_time")), defs.no("grep")]
+TOOLS = [std.pack("look"), defs.tool("peek", defs.home("/lib/tools/base/peek_now_time")), defs.drop("grep")]
 LLM = {"model": "luna"}
 FSM = std.fsm()
 defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)
@@ -33,7 +33,7 @@ TEMPLATES = PROTO / "templates"
 REVIEWER = '''\
 DESCRIPTION = "Review measured definition costs and prescribe a fix or split when model downgrades fail."
 META = {"cost": {"time_ms": 60000}, "resource": ["llm"]}
-SYSTEM = defs.by_hand("system.txt")
+SYSTEM = defs.extern("system.txt")
 
 std = defs.std
 TOOLS = [std.tool("aos/" + n) for n in ("review_round", "watch", "promote", "rollback", "measure")] \\
@@ -63,7 +63,7 @@ ECA = '''\
 DESCRIPTION = %(summary)r
 META = {"cost": {"time_ms": 60000}, "resource": ["llm"]}
 SYSTEM = "You are the docs team's writer.\\n"
-TOOLS = [defs.std.pack(p) for p in ("gadgets", "events", "self", "def", "mailbox", "json", "jsonx", "index")] + [defs.no("do_task")]
+TOOLS = [defs.std.pack(p) for p in ("gadgets", "events", "self", "def", "mailbox", "json", "jsonx", "index")] + [defs.drop("do_task")]
 LLM = %(llm)r
 HOOKS = defs.std.hooks(%(template)r)
 defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, meta=META, hooks=HOOKS)
@@ -141,7 +141,7 @@ class WithHome(unittest.TestCase):
 
 class Declaration(WithHome):
     def test_stock_shape(self):
-        files = defs.compile("Do it.", "sys\n", [defs.std.pack("look"), defs.tool("x", "tools/x", env={"A": "1"}), defs.no("grep")],
+        files = defs.compile("Do it.", "sys\n", [defs.std.pack("look"), defs.tool("x", "tools/x", env={"A": "1"}), defs.drop("grep")],
                         {"model": "m"}, defs.std.fsm())
         self.assertEqual(list(files), ["_entry", "body.json", "loop.json", "fsm.json", "interfaces.json", "tools.json",
                                        "llm.json", "system.txt", "_metainfo.json", "README.md"])
@@ -158,8 +158,8 @@ class Declaration(WithHome):
         self.assertEqual(files["_metainfo.json"], {"summary": "Do it."})
         self.assertEqual(files["README.md"], "Do it.\n")
 
-    def test_by_hand_meta_and_interfaces(self):
-        files = defs.compile("D.", defs.by_hand("prompt.txt"), [], {}, defs.std.fsm(), meta={"cost": {"time_ms": 1}},
+    def test_extern_meta_and_interfaces(self):
+        files = defs.compile("D.", defs.extern("prompt.txt"), [], {}, defs.std.fsm(), meta={"cost": {"time_ms": 1}},
                         interfaces={"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}})
         self.assertNotIn("system.txt", files)
         self.assertEqual(files["interfaces.json"]["aos-agent"]["system"], "prompt.txt")
@@ -184,7 +184,7 @@ class Declaration(WithHome):
                  "state twice": dict(fsm=defs.fsm("a", [defs.state("a", ["x"], "a"), defs.state("a", ["y"], "a")])),
                  "empty argv": dict(fsm=defs.fsm("a", [defs.state("a", [], "a")])),
                  "tool without path": dict(tools=[defs.tool("x", None)]),
-                 "tool twice": dict(tools=[defs.tool("x", "a"), defs.no("x")]),
+                 "tool twice": dict(tools=[defs.tool("x", "a"), defs.drop("x")]),
                  "pack twice": dict(tools=[defs.std.pack("look"), defs.std.pack("look")]),
                  "bad pack name": dict(tools=[defs.std.pack("../x")]),
                  "not a tool item": dict(tools=["look"]),
@@ -203,24 +203,24 @@ class Declaration(WithHome):
                  "HOOKS holds a tool": dict(hooks=[defs.std.pack("look")]),
                  "stock_hooks bad name": dict(hooks=defs.std.hooks("../x")),
                  "interfaces sets hooks": dict(hooks={}, interfaces={"aos-agent": {"hooks": "h.json"}}),
-                 "by_hand hooks clashes": dict(hooks=defs.by_hand("loop.json")),
+                 "extern hooks clashes": dict(hooks=defs.extern("loop.json")),
                  "FILES not a dict": dict(files=["ladder.json"]),
                  "FILES takes a declared file": dict(files={"tools.json": {}}),
                  "FILES takes the skeleton": dict(files={"loop.json": {}}),
                  "FILES takes a runtime file": dict(files={"state.json": {}}),
                  "FILES takes agent.py": dict(files={"agent.py": "x"}),
-                 "FILES takes a by_hand file": dict(system=defs.by_hand("prompt.txt"), files={"prompt.txt": "x"}),
+                 "FILES takes an extern file": dict(system=defs.extern("prompt.txt"), files={"prompt.txt": "x"}),
                  "FILES in a sub folder": dict(files={"sub/x.json": {}}),
                  "FILES hidden": dict(files={".x.json": {}}),
                  "FILES content a number": dict(files={"x.json": 3}),
                  "meta sets summary": dict(meta={"summary": "x"}),
                  "meta sets lineage": dict(meta={"lineage": {}}),
                  "interfaces sets tools": dict(interfaces={"aos-agent": {"tools": "t.json"}}),
-                 "by_hand clashes": dict(system=defs.by_hand("tools.json")),
-                 "by_hand outside": dict(system=defs.by_hand("../x.txt")),
-                 "by_hand ./ clashes": dict(system=defs.by_hand("./tools.json")),
-                 "by_hand runtime file": dict(system=defs.by_hand("history.jsonl")),
-                 "no without a pack": dict(tools=[defs.tool("a", "x"), defs.no("b")]),
+                 "extern clashes": dict(system=defs.extern("tools.json")),
+                 "extern outside": dict(system=defs.extern("../x.txt")),
+                 "extern ./ clashes": dict(system=defs.extern("./tools.json")),
+                 "extern runtime file": dict(system=defs.extern("history.jsonl")),
+                 "drop without a pack": dict(tools=[defs.tool("a", "x"), defs.drop("b")]),
                  "tool env not strings": dict(tools=[defs.tool("x", "a", env={"A": 1})]),
                  "tool env not a dict": dict(tools=[defs.tool("x", "a", env="A")]),
                  "tool cache true": dict(tools=[defs.tool("x", "a", cache=True)]),
@@ -234,18 +234,18 @@ class Declaration(WithHome):
                 self.assertRaises(defs.SpecBad, defs.compile, **dict(fine, **change))
 
     def test_holes_from_argon_review(self):
-        """geng-patch-1119 (thinking/2026-11/19/aos-compile-庚/12, class 1): META keys, by_hand("agent.py"), the entry message."""
+        """geng-patch-1119 (thinking/2026-11/19/aos-compile-庚/12, class 1): META keys, extern("agent.py"), the entry message."""
         fine = dict(description="D.", system="", tools=[], llm={}, fsm=defs.std.fsm())
         with self.assertRaisesRegex(defs.SpecBad, "META keys must be strings"):                  # ① was TypeError
             defs.compile(**dict(fine, meta={1: "a"}))
-        for what in ("system", "fsm", "tools", "llm", "hooks"):                                 # ② agent.py is not a by_hand file
-            with self.subTest(what=what), self.assertRaisesRegex(defs.SpecBad, r"by_hand\('agent.py'\)"):
-                defs.compile(**dict(fine, **{what: defs.by_hand("agent.py")}))
-        with self.assertRaises(defs.SpecBad) as e:                                                # ⑥ entry cannot take by_hand
+        for what in ("system", "fsm", "tools", "llm", "hooks"):                                 # ② agent.py is not an extern file
+            with self.subTest(what=what), self.assertRaisesRegex(defs.SpecBad, r"extern\('agent.py'\)"):
+                defs.compile(**dict(fine, **{what: defs.extern("agent.py")}))
+        with self.assertRaises(defs.SpecBad) as e:                                                # ⑥ entry cannot take extern
             defs.compile(**dict(fine, interfaces={"aos-agent": {"entry": "x.json"}}))
         self.assertIn("entry is body.json", str(e.exception))
-        self.assertNotIn("by_hand", str(e.exception))
-        with self.assertRaisesRegex(defs.SpecBad, r"use defs.by_hand"):
+        self.assertNotIn("extern", str(e.exception))
+        with self.assertRaisesRegex(defs.SpecBad, r"use defs.extern"):
             defs.compile(**dict(fine, interfaces={"aos-agent": {"llm": "x.json"}}))
 
     def test_rename_order_and_cleanup(self):
@@ -310,8 +310,8 @@ class Declaration(WithHome):
         self.assertNotIn("on_start", files["loop.json"])
         self.assertNotIn("hooks.json", files)
 
-    def test_by_hand_hooks(self):
-        files = defs.compile("D.", "", [], {}, defs.std.fsm(), hooks=defs.by_hand("my_hooks.json"))
+    def test_extern_hooks(self):
+        files = defs.compile("D.", "", [], {}, defs.std.fsm(), hooks=defs.extern("my_hooks.json"))
         self.assertNotIn("my_hooks.json", files)
         self.assertEqual(files["interfaces.json"]["aos-agent"]["hooks"], "my_hooks.json")
         self.assertIn("on_start", files["loop.json"])
@@ -414,8 +414,8 @@ class Script(unittest.TestCase):
         self.assertEqual((self.dir / "notes.txt").read_text(), "mine\n")
         self.assertIn("kept", r.stdout)
 
-    def test_by_hand_file_is_not_touched(self):
-        self.write(BODY.replace('SYSTEM = "You answer questions about the weather.\\n"', 'SYSTEM = defs.by_hand("system.txt")'))
+    def test_extern_file_is_not_touched(self):
+        self.write(BODY.replace('SYSTEM = "You answer questions about the weather.\\n"', 'SYSTEM = defs.extern("system.txt")'))
         (self.dir / "system.txt").write_text("Written by hand.\n")
         r = self.call("--compile")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -527,8 +527,8 @@ class NoFsm(unittest.TestCase):
         files = defs.compile("S.", "Hi.\n", [], {"model": "m"}, folder=str(dest))
         self.assertEqual(sorted(files), ["README.md", "_metainfo.json", "llm.json", "prompt.md", "tools.json"])
         self.assertRaises(defs.SpecBad, defs.compile, "S.", "", [], {"temperature": 1}, folder=str(dest))   # eca's llm_keys: model only
-        self.assertRaises(defs.SpecBad, defs.compile, "S.", defs.by_hand("system.txt"), [], {}, folder=str(dest))
-        self.assertNotIn("prompt.md", defs.compile("S.", defs.by_hand("prompt.md"), [], {}, folder=str(dest)))
+        self.assertRaises(defs.SpecBad, defs.compile, "S.", defs.extern("system.txt"), [], {}, folder=str(dest))
+        self.assertNotIn("prompt.md", defs.compile("S.", defs.extern("prompt.md"), [], {}, folder=str(dest)))
         # FILES may write a file the skeleton does not declare (cli.json); not one interfaces.json declares, nor a skeleton name
         self.assertEqual(defs.compile("S.", "", [], {}, folder=str(dest), files={"cli.json": {"a": 1}})["cli.json"], {"a": 1})
         self.assertRaises(defs.SpecBad, defs.compile, "S.", "", [], {}, folder=str(dest), files={"prompt.md": "x"})
@@ -581,7 +581,7 @@ class Namespace(WithHome):
         self.assertEqual(self.tools([defs.std.pack("look"), my.pack("look", prefix="", exclude=["read"])])["read"], std_read)
         self.assertEqual(self.tools([defs.std.pack("look"), my.pack("look", prefix="", rename={"read": "read2"})])["read2"], mine)
         self.assertEqual(self.tools([defs.std.pack("look"), my.pack("look", prefix=""), defs.tool("read", my.tool("read"))])["read"], mine)
-        self.assertNotIn("read", self.tools([defs.std.pack("look"), my.pack("look", prefix=""), defs.no("read")]))
+        self.assertNotIn("read", self.tools([defs.std.pack("look"), my.pack("look", prefix=""), defs.drop("read")]))
 
     def test_same_entry_from_two_packs_is_one_tool(self):
         """a diamond: both packs point at the same tool, with the same entry -> not a clash."""
@@ -611,7 +611,7 @@ class Namespace(WithHome):
                  "name too long": ([my.pack("look", prefix="p" * 64)], "must be 1-64 letters"),
                  "no such tool folder": ([defs.std.tool("base/nope")], "there is no tool folder \\$AOS_HOME/lib/tools/base/nope"),
                  "tool folder outside": ([my.tool("../read")], "relative to the library's tools folder"),
-                 "defs.no of nothing": ([defs.std.pack("look"), defs.no("cat")], r"defs.no\('cat'\).*no pack in TOOLS has a tool cat"),
+                 "defs.drop of nothing": ([defs.std.pack("look"), defs.drop("cat")], r"defs.drop\('cat'\).*no pack in TOOLS has a tool cat"),
                  "same pack twice": ([my.pack("look"), my.pack("look")], r"my.pack\('look'\) is listed twice"),
                  "a library is not a tool": ([my], "each item of TOOLS")}
         for why, (items, line) in cases.items():
@@ -673,7 +673,7 @@ STRICT = '''\
 base = defs.load("../reviewer")
 DESCRIPTION = "Review a change and refuse anything without a test."
 SYSTEM = base.SYSTEM + "Refuse a change that has no test.\\n"
-TOOLS = [base.TOOLS, defs.no("grep"), defs.std.tool("base/peek_now_time", name="now")]
+TOOLS = [base.TOOLS, defs.drop("grep"), defs.std.tool("base/peek_now_time", name="now")]
 HOOKS = [base.HOOKS, {"timer": {**base.HOOKS["timer"], "every_ms": 60000}}]
 defs.main(DESCRIPTION, SYSTEM, TOOLS, base.LLM, base.FSM, hooks=HOOKS)
 '''
@@ -739,16 +739,16 @@ class Inherit(WithHome):
 
     def test_diamond(self):
         self.agent("base", BASE)
-        self.agent("d1", BASE.replace("defs.main(", "base = defs.load('../base')\nTOOLS = [base.TOOLS, defs.no('grep')]\n"
+        self.agent("d1", BASE.replace("defs.main(", "base = defs.load('../base')\nTOOLS = [base.TOOLS, defs.drop('grep')]\n"
                                       "HOOKS = [base.HOOKS, {'timer': None}]\ndefs.main("))
         self.agent("d2", BASE.replace("defs.main(", "base = defs.load('../base')\nTOOLS = [base.TOOLS]\nHOOKS = base.HOOKS\ndefs.main("))
         d1, d2 = defs.load(str(Path(self.temp.name) / "d1")), defs.load(str(Path(self.temp.name) / "d2"))
         tools = lambda items: defs.compile("D.", "", items, {}, defs.std.fsm())["tools.json"]["tools"]  # noqa: E731
         with self.assertRaisesRegex(defs.SpecBad, r"tool grep is taken out in defs.load\('.*d1'\) but kept in defs.load\('.*d2'\)"):
             tools([d1.TOOLS, d2.TOOLS])                                     # a tool taken out does not come back unseen
-        self.assertNotIn("grep", tools([d1.TOOLS, d2.TOOLS, defs.no("grep")]))
+        self.assertNotIn("grep", tools([d1.TOOLS, d2.TOOLS, defs.drop("grep")]))
         self.assertIn("grep", tools([d1.TOOLS, d2.TOOLS, defs.tool("grep", defs.home("/lib/tools/base/grep"))]))
-        self.assertEqual(sorted(tools([d1.TOOLS, d2.TOOLS, defs.no("grep")])), sorted(set(tools([d2.TOOLS])) - {"grep"}))
+        self.assertEqual(sorted(tools([d1.TOOLS, d2.TOOLS, defs.drop("grep")])), sorted(set(tools([d2.TOOLS])) - {"grep"}))
         hooks = lambda h: defs.compile("D.", "", [], {}, defs.std.fsm(), hooks=h)["hooks.json"]["hooks"]  # noqa: E731
         with self.assertRaisesRegex(defs.SpecBad, "hook timer comes from both"):
             hooks([d1.HOOKS, d2.HOOKS])
@@ -775,7 +775,7 @@ class Inherit(WithHome):
         self.assertIn("use base = defs.load", r.stderr)
 
     def test_load_errors_are_one_line(self):
-        self.agent("hand", BASE.replace('SYSTEM = "You review changes in the workspace.\\n"', 'SYSTEM = defs.by_hand("system.txt")'))
+        self.agent("hand", BASE.replace('SYSTEM = "You review changes in the workspace.\\n"', 'SYSTEM = defs.extern("system.txt")'))
         self.agent("broken", BASE.replace("LLM = ", "x = undefined_name\nLLM = "))
         self.agent("nomain", BASE.replace("defs.main(", "_ = (").replace("hooks=HOOKS", "HOOKS"))
         self.agent("badbase", BASE.replace('std.pack("mailbox")', 'std.pack("nope")'))
@@ -783,7 +783,7 @@ class Inherit(WithHome):
         self.agent("b", "a = defs.load('../a')\ndefs.main('D.', '', [], {}, defs.std.fsm())\n")
         cases = {"no such folder": ("defs.load('../nowhere')", "is not a folder"),
                  "no agent.py there": ("defs.load('../empty')", "there is no"),
-                 "a by_hand field used": ("defs.load('../hand').SYSTEM", "SYSTEM of", "is defs.by_hand('system.txt')"),
+                 "an extern field used": ("defs.load('../hand').SYSTEM", "SYSTEM of", "is defs.extern('system.txt')"),
                  "the base fails": ("defs.load('../broken')", "agent.py line 8: NameError"),
                  "the base never calls defs.main": ("defs.load('../nomain')", "never calls defs.main"),
                  "a wrong declaration in the base": ("defs.load('../badbase')", "std.pack('nope')", "fix the declaration in"),
@@ -799,7 +799,7 @@ class Inherit(WithHome):
                     self.assert_one_line(r, "derived", *line)
                     self.assertEqual(r.stdout, "")
                 self.assertEqual(os.listdir(dest), ["agent.py"])
-        self.assertTrue(defs.load(str(Path(self.temp.name) / "hand")).TOOLS)    # a by_hand field stops only when it is used
+        self.assertTrue(defs.load(str(Path(self.temp.name) / "hand")).TOOLS)    # an extern field stops only when it is used
 
     def test_base_paths_are_moved_and_modules_put_back(self):
         base = self.agent("base", "import helper\n" + BASE.replace(
@@ -981,7 +981,7 @@ class Linking(WithHome):
         self.assertIn("read", dyn["tools"])
 
     def test_left_out_tools_are_null(self):
-        dyn, _ = self.same_at_run_time([defs.std.pack("look", exclude=["grep"]), defs.no("glob")])
+        dyn, _ = self.same_at_run_time([defs.std.pack("look", exclude=["grep"]), defs.drop("glob")])
         self.assertEqual(dyn["tools"], {"grep": None, "glob": None})
 
     def test_replacing_a_tool_of_a_dynamic_pack(self):

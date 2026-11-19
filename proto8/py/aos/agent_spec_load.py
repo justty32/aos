@@ -5,7 +5,7 @@
 載入期間：底在自己的一份 __main__ 下跑（runpy），載完還原 sys.path 與新進 sys.modules 的非 aos 模組（07 A4）；a 載 b、b 載 a＝SpecBad。
 底的欄位：TOOLS＝一個帶來源名的包（拿掉的留墓碑 None）、HOOKS＝agent_spec_parts.Hooks（帶標記；沒宣告＝空組、當作沒宣告）、FSM＝defs.fsm 的值（eca 版＝None）、
 META＝dict、INTERFACES／FILES＝dict 或 None；底裡的相對路徑（工具 path／env_file、hook handler、狀態格 argv 裡底那夾真有的檔）照底那夾換算（07 A5）。
-by_hand 的欄位＝用到那一欄才報 SpecBad（不用就不擋）。錯一律丟 SpecBad；在 agent.py 最外層沒人接時，這裡裝的 sys.excepthook 印成一行「名: error: SpecBad …」、退 1（07 A3）。
+extern 的欄位＝用到那一欄才報 SpecBad（不用就不擋）。錯一律丟 SpecBad；在 agent.py 最外層沒人接時，這裡裝的 sys.excepthook 印成一行「名: error: SpecBad …」、退 1（07 A3）。
 """
 import json, os, posixpath, runpy, sys, traceback
 
@@ -145,18 +145,18 @@ class Base:
         description, system, tools, llm, fsm, meta, interfaces, hooks, files = values
         for field, value in zip(FIELDS, values):
             parts.raise_bad(value)
-            if parts.kind(value) == "by_hand":
+            if parts.kind(value) == "extern":
                 self._hand[field] = value["file"]
         if not isinstance(description, str) or not description.strip():
             raise SpecBad("DESCRIPTION must be a non-empty string")
         self.DESCRIPTION = description.strip()
         if "SYSTEM" not in self._hand:
             if not isinstance(system, str):
-                raise SpecBad("SYSTEM must be a string or defs.by_hand(...)")
+                raise SpecBad("SYSTEM must be a string or defs.extern(...)")
             self.SYSTEM = system
         if "TOOLS" not in self._hand:
             if not isinstance(tools, (list, tuple)):
-                raise SpecBad("TOOLS must be a list or defs.by_hand(...)")
+                raise SpecBad("TOOLS must be a list or defs.extern(...)")
             table, origins = parts.stack_tools(tools)
             for entry in table.values():
                 for key in ("path", "env_file"):
@@ -166,11 +166,11 @@ class Base:
             self.TOOLS = self.tools()
         if "LLM" not in self._hand:
             if not isinstance(llm, dict):
-                raise SpecBad("LLM must be a dict or defs.by_hand(...)")
+                raise SpecBad("LLM must be a dict or defs.extern(...)")
             self.LLM = _copy(llm)
         if "FSM" not in self._hand:
             if fsm is not None and parts.kind(fsm) != "fsm":
-                raise SpecBad("FSM must come from defs.fsm(...), std.fsm() or defs.by_hand(...)")
+                raise SpecBad("FSM must come from defs.fsm(...), std.fsm() or defs.extern(...)")
             self.FSM = None if fsm is None else _copy(fsm)
             for cell in (self.FSM or {"states": {}})["states"].values():       # argv 裡只換底那夾真有的檔（"python3" 這種指令不動）
                 run = cell.get("exec")
@@ -199,7 +199,7 @@ class Base:
     def __getattr__(self, name):
         hand = self.__dict__.get("_hand", {})
         if name in hand:
-            raise SpecBad("%s: %s of %s/agent.py is defs.by_hand(%r), a file written by hand, so there is nothing to build on: "
+            raise SpecBad("%s: %s of %s/agent.py is defs.extern(%r), a file written by hand, so there is nothing to build on: "
                           "write %s yourself" % (self.__dict__["_shown"], name, self.__dict__["path"], hand[name], name))
         raise AttributeError("%s has no %s (it has %s, and .tools(prefix=, rename=, exclude=))" % (
             self.__dict__.get("_shown", "defs.load(...)"), name, ", ".join(FIELDS)))

@@ -13,7 +13,7 @@ LLM_KEYS = ["model", "temperature", "top_p", "max_tokens", "seed", "presence_pen
 PACK_RE = re.compile(r"[a-z0-9][a-z0-9_-]*\Z")
 TOOL_RE = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")                        # aos-tools 的 NAME_RE
 ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")                  # aos-tools 的 ENV_KEY_RE
-RUNTIME_FILES = ("ctl.json", "state.json", "state_flux.json", "history.jsonl")   # loop／腦跑起來寫的檔名，by_hand、FILES 不能用
+RUNTIME_FILES = ("ctl.json", "state.json", "state_flux.json", "history.jsonl")   # loop／腦跑起來寫的檔名，extern、FILES 不能用
 OWN_FILES = {"tools": "tools.json", "llm": "llm.json", "system": "system.txt", "fsm": "fsm.json", "hooks": "hooks.json"}
 SKELETON = ("_entry", "body.json", "loop.json", "interfaces.json")
 CONTENT = ("system", "tools", "llm", "hooks")                          # 不宣告 FSM 時 agent.py 寫的內容檔（檔名照 interfaces.json）
@@ -27,7 +27,7 @@ WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl ad
         "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",
         "hooks.json": "Hooks of this agent: aos functions run when an event happens; the stack copy of this file overrides it by name, null turns one off."}
 HOOKS_SHAPE = ("HOOKS must be a dict {hook name: entry}, std.hooks(...), the HOOKS of defs.load(...), a list of those "
-               "(later ones win, None drops a hook), or defs.by_hand(\"hooks.json\")")
+               "(later ones win, None drops a hook), or defs.extern(\"hooks.json\")")
 
 
 class SpecBad(Exception):
@@ -58,7 +58,7 @@ class Hooks(dict):
 
 
 def kind(value):
-    """宣告小函式回的記號種類（"bad"、"by_hand"、"stock_hooks"（std.hooks 回的）…）；普通值＝None。hook 表裡叫 kind 的 hook 值是 dict，不會被認錯。"""
+    """宣告小函式回的記號種類（"bad"、"extern"、"stock_hooks"（std.hooks 回的）…）；普通值＝None。hook 表裡叫 kind 的 hook 值是 dict，不會被認錯。"""
     return value.get("kind") if isinstance(value, dict) and isinstance(value.get("kind"), str) else None
 
 
@@ -68,9 +68,9 @@ def raise_bad(value):
 
 
 def pick(value, what, ok):
-    """defs.by_hand 的＝回記號；寫錯的＝丟 SpecBad；形狀對＝None。"""
+    """defs.extern 的＝回記號；寫錯的＝丟 SpecBad；形狀對＝None。"""
     raise_bad(value)
-    if kind(value) == "by_hand":
+    if kind(value) == "extern":
         return value
     if not ok(value):
         raise SpecBad(what)
@@ -79,13 +79,13 @@ def pick(value, what, ok):
 
 def stack_tools(tools):
     """TOOLS 疊起來 → ({名字: 工具格，拿掉的＝None（墓碑）}, 說明裡列的包)。包在宣告時已讀出、展開好（aos/agent_spec_lib.py）：明寫的 defs.tool／庫的 .tool
-    整格換掉包裡同名那支（故意），defs.no 拿掉；兩個包展開出同一個名字＝解完的整格完全相同才算同一支（菱形），否則 SpecBad，不再悄悄蓋（命名空間第一刀；
+    整格換掉包裡同名那支（故意），defs.drop 拿掉；兩個包展開出同一個名字＝解完的整格完全相同才算同一支（菱形），否則 SpecBad，不再悄悄蓋（命名空間第一刀；
     設計稿 aos-ns-1119/05 第 7 條）。defs.load 的 TOOLS 也是一個包，它拿掉的帶著墓碑來：一邊墓碑、一邊還在＝同樣 SpecBad（繼承第一刀，aos-inherit-1119/07 A1）。"""
-    order, packed, own, nos, packs, origins = [], {}, {}, [], [], []
+    order, packed, own, drops, packs, origins = [], {}, {}, [], [], []
     for t in tools:
         raise_bad(t)
-        if kind(t) not in ("pack", "tool", "no"):
-            raise SpecBad("each item of TOOLS must come from std.pack(...), std.tool(...), defs.tool(...) or defs.no(...) "
+        if kind(t) not in ("pack", "tool", "drop"):
+            raise SpecBad("each item of TOOLS must come from std.pack(...), std.tool(...), defs.tool(...) or defs.drop(...) "
                           "(or .pack / .tool of a library from defs.lib, or the TOOLS of defs.load(...)), got %r" % (t,))
         if t["kind"] == "pack":
             label = t.get("label") or "%s.pack(%r)" % (t["lib"], t["name"])
@@ -100,21 +100,21 @@ def stack_tools(tools):
                 if name not in order:
                     order.append(name)
             continue
-        if t["name"] in own or t["name"] in nos:
+        if t["name"] in own or t["name"] in drops:
             raise SpecBad("tool %s is listed twice" % t["name"])
         if t["kind"] == "tool":
             own[t["name"]] = t["entry"]
         else:
-            nos.append(t["name"])
+            drops.append(t["name"])
         if t["name"] not in order:
             order.append(t["name"])
-    for name in nos:
+    for name in drops:
         if name not in packed:
-            raise SpecBad("defs.no(%r) takes a tool out of the packs, but no pack in TOOLS has a tool %s%s" % (
+            raise SpecBad("defs.drop(%r) takes a tool out of the packs, but no pack in TOOLS has a tool %s%s" % (
                 name, name, " (packs give: %s)" % ", ".join(sorted(packed)) if packed else ""))
     out = {}
     for name in order:
-        if name in nos:
+        if name in drops:
             out[name] = None
             continue
         if name in own:
@@ -124,7 +124,7 @@ def stack_tools(tools):
         for label, other in rest:
             if other != entry and None in (entry, other):
                 gone, kept = (first, label) if entry is None else (label, first)
-                raise SpecBad("tool %s is taken out in %s but kept in %s: say which you mean with defs.no(%r) or defs.tool(%r, ...)"
+                raise SpecBad("tool %s is taken out in %s but kept in %s: say which you mean with defs.drop(%r) or defs.tool(%r, ...)"
                               % (name, gone, kept, name, name))
             if other != entry:
                 raise SpecBad("tool %s comes from both %s and %s, and they differ: rename one (prefix= or rename=), "
@@ -235,7 +235,7 @@ def interfaces_json(over, files, description):
                 if k == "entry":
                     raise SpecBad("INTERFACES aos-agent entry is body.json, the skeleton agent.py writes; it cannot be changed")
                 if k in ("tools", "llm", "system", "hooks"):
-                    raise SpecBad("INTERFACES aos-agent %s is set by agent.py; to point it at a file you write yourself use defs.by_hand(...)" % k)
+                    raise SpecBad("INTERFACES aos-agent %s is set by agent.py; to point it at a file you write yourself use defs.extern(...)" % k)
                 if v is None:
                     agent.pop(k, None)
                 else:
