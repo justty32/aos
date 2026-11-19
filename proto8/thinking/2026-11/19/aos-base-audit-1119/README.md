@@ -55,6 +55,11 @@
   - P1（只讀錯誤記錄的檔尾）是之前另派的線 aos-p1-errtail-1119。修補紀錄：[aos-base-fix](../aos-base-fix.md)。
 - **第 2 題（「我是誰」要不要繞過 kernel）**：題「…「我是誰」、讀自己信箱、設鬧鐘現在都要經過 kernel。kernel…3 秒不回，底下的 agent 這些事全部失敗。要怎麼處理？」使用者選：「維持現狀，只寫明」。（已寫進知識庫 `knowledge/aos/kernel.json` 的 where_to_send「When the kernel is slow or busy」，錯誤頁補 `KernelFailed`。）
 - **第 5 題（同帳號下的邊界）**：題「…同一個 Linux 帳號底下，agent 之間沒有真的邊界…要收多緊？」使用者選：「維持，只寫明 (Recommended)」。（已寫進知識庫 `knowledge/aos/rules.json` 的「What does not enforce these rules」。）
+- **修補線留下的三題（P12、P18 修完後；線 aos-n28-1119 補記）**：
+  - 題「規範 N-28 有兩句跟今天修完的行為對不上：「重起沒有等待、同一拍就重起」（現在會越等越久）、「接不回的 proc 從表上拿掉」（現在留著標 stopped）。條文要改嗎？」使用者選：「改條文跟上 (Recommended)」（說明：「派一條線把這兩句改成現在的行為，引你今天勾選修補的原話；改完貼給你看。」）。（已改 NORMS N-28「adopt與結束」。）
+  - 題「重起的等待時間現在寫死在程式裡：第 1 次馬上起、第 2 次等 1 秒、之後每次加倍、最多等 60 秒；撐過 60 秒才掛就重新算。要不要開成可設定？」使用者選：「寫死就好 (Recommended)」。
+  - 題「daemon 不在時死掉的 proc，現在除了寫死在 daemon 設定檔裡的會照宣告再起，其餘都留在表上標 stopped 等人 start。其中「用宣告檔 procs_ctl 加的」那種，要不要也自動再起？」使用者選：「維持，留 stopped (Recommended)」。
+  - 原話與後續記在[修補紀錄](../aos-base-fix.md#使用者裁定11-19-下午選項框線-aos-n28-1119-補記)。
 
 ### 還沒答的
 
