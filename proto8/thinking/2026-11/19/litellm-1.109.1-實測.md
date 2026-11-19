@@ -130,3 +130,12 @@ aos 的 `llm_http` 送的是**非串流**請求（`/chat/completions`，body 不
 
 - **litellm proxy**：pid `14835`，照任務留著給使用者用。停：`~/litellm-proxy/stop.sh`。
 - 這條線的 aos 根（20852）與 llm kernel（20915）都已 shutdown，收尾核對不在。別條線（`aos-gdb-1119`）的行程沒碰。
+
+## 九、併進 llm_proxy（線 `llmproxy-merge-1119`）
+
+- **使用者 11-19**：問「話說這個litellm_proxy不能放入repo/嗎？合併進llm_proxy，或是弄個分支。」頂層建議甲（子夾）後，他回「好，併進llm_proxy當子夾」。
+- **位置**：`~/repo/llm_proxy/pinned_1.109.1/`。抄（不是搬）進 7 個檔：`start.sh`、`stop.sh`、`login.sh`、`env.sh`、`config.yaml`、`requirements.in`、`requirements.lock`；另寫子夾的 `README.md` 與 `.gitignore`（擋 `master.key`、`chatgpt/`、`logs/`、`proxy.pid`、`venv/`、`wheels/`，`git check-ignore` 六項都擋到）。根 `README.md`、`wf/INDEX.md`、`wf/workflows/common/code-map.md` 各加一行指過去。
+- **路徑**：四處寫死的 `~/litellm-proxy` 改成以腳本所在夾為準。新增兩個可選變數：`LITELLM_PINNED_REUSE` 指到已裝好的一份（借它的 `venv/`、`master.key`、`chatgpt/`，`logs/` 與 `proxy.pid` 仍寫在子夾），`LITELLM_PINNED_PORT` 換埠。這台改從 repo 起只要 `cd ~/repo/llm_proxy/pinned_1.109.1 && LITELLM_PINNED_REUSE=~/litellm-proxy ./start.sh`。`start.sh` 等待上限從 60 輪改 180 輪。
+- **驗證**：四支 `bash -n` 過；抄到暫存夾、`LITELLM_PINNED_REUSE=~/litellm-proxy LITELLM_PINNED_PORT=4010` 起，4 秒就 `up`（這次沒卡兩分鐘），`/v1/models` 不帶 key 401、帶 key 200 三個名字，自己的 `stop.sh` 收掉、pid 不在；沒 venv 時會清楚報錯退 1。`~/litellm-proxy/chatgpt/auth.json` 修改時間沒變。repo 裡搜不到 master key 的內容。
+- **llm_proxy 的 commit：還沒交**。llm_proxy 自己的規矩（`wf/workflows/common/user.md`）寫「commit 由使用者決定，agent 不自行 commit」，所以檔都留在它的工作樹（未 stage），等使用者點頭。
+- **`~/litellm-proxy/` 原夾還留著、一個檔都沒動，pid `14835` 還在 4000 上跑**（帶 key `/v1/models` 回 200）。
