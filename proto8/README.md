@@ -41,6 +41,7 @@
 
 ## 入口
 
+- **[docs/tutorial/](docs/tutorial/README.md)**：教學——從一個空資料夾架 daemon、灌 kernel、寫一份 `agent.py`、接著開發（工具、庫、連結、衍生、aos-gdb、Python 腳本），假腦、照著打就能走完（使用者 11-19「幫我弄一份教學吧」）。
 - **[CONCEPTS.md](docs/CONCEPTS.md)**：概念——aos 怎麼看世界（C-01～C-92）。
 - **[NORMS.md](docs/NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；程式符合規範但不強制。底在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62：六個環境變數、`aos-exec XXX`、找入口、`#/` 尋址）。
 - **[CONVENTION.md](docs/CONVENTION.md)**：aos agent 慣例（P-05～P-48）——我們自己人寫 agent 時照抄的標準形狀，不要求別人守。
