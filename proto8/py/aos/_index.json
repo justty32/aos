@@ -85,6 +85,9 @@
  "process_group.py": {
   "description": "收掉自己起的那一群子行程：先 TERM 整群、等一下、還在就 KILL；外面來的 TERM／Ctrl-C 變成例外，讓呼叫處先收拾再走。"
  },
+ "py": {
+  "description": "aos 給人用的 Python 入口（from aos.py import agent, daemon_ctl, std）：夾裡的＝公開的；通用代理把一個呼叫翻成一條 aos 指令（_shell），agent／daemon_ctl 是 aos-agent、aos-daemon-ctl 的薄殼"
+ },
  "refpath.py": {
   "description": "aos_refpath - `$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。"
  },

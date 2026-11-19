@@ -49,7 +49,7 @@
    "kind": "app",
    "module": "aos.apps.agent",
    "unit": "proto8/py/aos/apps/agent",
-   "used_by": "",
+   "used_by": "proto8/py/aos/py",
    "uses": "aos.agentlib.cli_a2a aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_linger aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.daemon_ctl aos.declared_files aos.directive_value aos.flags aos.ws"
   },
   {
@@ -84,7 +84,7 @@
    "kind": "app",
    "module": "aos.apps.daemon_ctl",
    "unit": "proto8/py/aos/apps/daemon_ctl",
-   "used_by": "",
+   "used_by": "proto8/py/aos/py",
    "uses": "aos.daemon_ctl aos.flags aos.sweep"
   },
   {
@@ -331,6 +331,13 @@
    "unit": "proto8/py/aos/process_group.py",
    "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/mcp proto8/py/tools/base/run_python",
    "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.py",
+   "unit": "proto8/py/aos/py",
+   "used_by": "",
+   "uses": "aos.apps.agent aos.apps.daemon_ctl.main"
   },
   {
    "kind": "lib",

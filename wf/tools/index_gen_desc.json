@@ -332,6 +332,8 @@
   "proto8/docs/notes/命名-老慣例查證": "命名-老慣例查證.md 的分檔：命名方法跟 Unix／Linux 老慣例的查證上下篇（man NAME 行、名字長短、單位後綴、nr_、epoch 秒、縮寫）與相關慣例，附原文出處（10-23）",
   "proto8/py/aos/agentlib": "aos 套件裡 agent 層的共用模組（hooks、cooldown、quiet、goal_state、claude／codex 對話的 cli_*、cmd_call、agents_cmd…）；S3 前在 lib/agent",
   "proto8/py/aos/daemon_ctl": "aos-daemon-ctl 的共用本體（aos-agent 也 import）：找 daemon 與讀狀態表、掛子信、寄信等回信、控制與停 daemon、poke 門鈴、問表檔位址",
+  "proto8/py/aos/py": "aos 給人用的 Python 入口（from aos.py import agent, daemon_ctl, std）：夾裡的＝公開的；通用代理把一個呼叫翻成一條 aos 指令（_shell），agent／daemon_ctl 是 aos-agent、aos-daemon-ctl 的薄殼",
+  "proto8/py/aos/py/agent": "aos.py.agent：agent 這個東西的 Python 那一面——把手 a = agent.attach(名)（a.X.Y(...)＝aos-agent --target 名 X Y ...，延伸 a.bp 斷點、a.look 讀 stack 的檔）與寫定義的 defs（轉匯出 aos.agent_spec）",
   "proto8/py/aos/gdb": "aos-gdb 的 Python 庫（aos.gdb）：對已在跑的 agent 下條件觸發器（一個 hook：工具要跑之前扣住，或事件後暫停）或起觀察者（另一支 proc 輪詢、成立就暫停目標）、列出／拿掉、看為什麼停、檢閱 stack、續",
   "proto8/py/requirements-optional.txt": "選用的 Python 模組清單（現在只有 jsonschema）：install.py 只檢查有沒有、不 pip，沒有也能跑",
   "proto8/templates": "複製出去用的 agent 範本：eca-claude（外部 coding agent）、agent-fsm（aos 自己的 loop／fsm agent），另有 daemon-root、judge-llm 等；開新 agent 或改範本時進去",

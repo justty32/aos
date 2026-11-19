@@ -214,6 +214,14 @@
    "observed.py": "Record public stack observations and measured downstream calls.",
    "observed_children.py": "Preserve declared child observation trees and hand their location to the caller.",
    "process_group.py": "收掉自己起的那一群子行程：先 TERM 整群、等一下、還在就 KILL；外面來的 TERM／Ctrl-C 變成例外，讓呼叫處先收拾再走。",
+   "py": {
+    "__init__.py": "aos.py - aos 給人用的 Python 入口（from aos.py import …）：這個夾裡的＝公開的，夾外的 aos.*＝內部零件。",
+    "_shell.py": "aos.py._shell - 整套 Python 庫的通用代理：一個 Python 呼叫翻成剛好一條 aos 指令（argv）、跑它、把結果照一條規則交回；也有 Text、Failed、Timeout、sh。",
+    "agent": {
+     "__init__.py": "aos.py.agent - 「agent」這個東西的 Python 那一面：對活的那隻下指令（aos-agent 的薄殼、把手 a = agent.attach(名)），加上寫定義的 defs（轉匯出 aos.agent_spec，檔不搬）。"
+    },
+    "daemon_ctl.py": "aos.py.daemon_ctl - aos-daemon-ctl 的薄殼：daemon_ctl.X(ARG, flag=v)＝aos-daemon-ctl X --flag v ARG；daemon_ctl.attach(D) 回綁好 --daemon D 的把手。"
+   },
    "refpath.py": "aos_refpath - `$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。",
    "shell_observed.py": "Reserve a writable shell ledger before execution and record the completed command.",
    "swap.py": "promote 與 rollback 兩支工具共用的換版：查過各 daemon 的公開清單、確認定義沒在用，再換上候選版或退回保留的前版。",
@@ -404,6 +412,8 @@
    "ref_path_cases.json": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per …",
    "test_agent_spec.py": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files, SpecBad before any write, overwrite rules (C and…",
    "test_aos_lib_missing.py": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。",
+   "test_aos_py.py": "入口 aos.py 的通用代理（不起 daemon）：細則表逐列翻成哪條 argv（用一支假的 aos-agent／aos-daemon-ctl 把 argv 印回來）、把手頂層照 aos-agent 子指令表擋錯、json=True 的整份／JSONL／空、Text 與 None、Failed …",
+   "test_aos_py_live.py": "入口 aos.py 對真的 aos 樹（start-api 抄一份、假腦）實跑：把手 a.ctl.state(json=True)、a.tools.ls()、a.say／a.listen、a.stack；模組層 agent.ctl.ls、daemon_ctl；指令自己擋下的（a.ctl.ls 不吃…",
    "test_aos_ws_reply_match.py": "Check aos_ws reply matching (reply-match-1114): answer_for's order queue -> history -> history_removed -> letters.json, the letters.json helpers, mar…",
    "test_cli_a2a.py": "驗畫面開著的 claude 身往 CLI 的收件 socket 投署名訊息（11-13 cli_a2a）：信封與署名、hook 記 socket 與回執、投遞、等回答；",
    "test_cli_codex_mcp.py": "驗 cli_session 起 codex 時給 aos MCP server 的設定（11-11）：明寫帶 AOS_* 環境（只帶清單裡有設的，AOS_WS／AOS_STACK 用這次的值），只對 aos 這個 server 免核准；claude 那邊不變。",
