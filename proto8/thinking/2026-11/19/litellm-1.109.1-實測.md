@@ -135,7 +135,17 @@ aos 的 `llm_http` 送的是**非串流**請求（`/chat/completions`，body 不
 
 - **使用者 11-19**：問「話說這個litellm_proxy不能放入repo/嗎？合併進llm_proxy，或是弄個分支。」頂層建議甲（子夾）後，他回「好，併進llm_proxy當子夾」。
 - **位置**：`~/repo/llm_proxy/pinned_1.109.1/`。抄（不是搬）進 7 個檔：`start.sh`、`stop.sh`、`login.sh`、`env.sh`、`config.yaml`、`requirements.in`、`requirements.lock`；另寫子夾的 `README.md` 與 `.gitignore`（擋 `master.key`、`chatgpt/`、`logs/`、`proxy.pid`、`venv/`、`wheels/`，`git check-ignore` 六項都擋到）。根 `README.md`、`wf/INDEX.md`、`wf/workflows/common/code-map.md` 各加一行指過去。
-- **路徑**：四處寫死的 `~/litellm-proxy` 改成以腳本所在夾為準。新增兩個可選變數：`LITELLM_PINNED_REUSE` 指到已裝好的一份（借它的 `venv/`、`master.key`、`chatgpt/`，`logs/` 與 `proxy.pid` 仍寫在子夾），`LITELLM_PINNED_PORT` 換埠。這台改從 repo 起只要 `cd ~/repo/llm_proxy/pinned_1.109.1 && LITELLM_PINNED_REUSE=~/litellm-proxy ./start.sh`。`start.sh` 等待上限從 60 輪改 180 輪。
+- **路徑**：四處寫死的 `~/litellm-proxy` 改成以腳本所在夾為準。新增兩個可選變數：`LITELLM_PINNED_REUSE` 指到已裝好的一份（借它的 `venv/`、`master.key`、`chatgpt/`，`logs/` 與 `proxy.pid` 仍寫在子夾），`LITELLM_PINNED_PORT` 換埠。（這台後來不用這個變數，直接把東西搬進子夾，見下面「已切換」。）`start.sh` 等待上限從 60 輪改 180 輪。
 - **驗證**：四支 `bash -n` 過；抄到暫存夾、`LITELLM_PINNED_REUSE=~/litellm-proxy LITELLM_PINNED_PORT=4010` 起，4 秒就 `up`（這次沒卡兩分鐘），`/v1/models` 不帶 key 401、帶 key 200 三個名字，自己的 `stop.sh` 收掉、pid 不在；沒 venv 時會清楚報錯退 1。`~/litellm-proxy/chatgpt/auth.json` 修改時間沒變。repo 裡搜不到 master key 的內容。
-- **llm_proxy 的 commit：還沒交**。llm_proxy 自己的規矩（`wf/workflows/common/user.md`）寫「commit 由使用者決定，agent 不自行 commit」，所以檔都留在它的工作樹（未 stage），等使用者點頭。
-- **`~/litellm-proxy/` 原夾還留著、一個檔都沒動，pid `14835` 還在 4000 上跑**（帶 key `/v1/models` 回 200）。
+- **llm_proxy 的 commit**：llm_proxy 自己的規矩寫「commit 由使用者決定」，所以先停在工作樹；使用者在選項框選「commit，不 push」後交到本地 `main`：`bf9f5ec`（子夾＋根三處導覽），切換後再一筆 `432f9a8`（照實裝改 README 的安裝步驟）。沒 push。
+
+### 11-19 已切換：proxy 現在從 repo 子夾起
+
+使用者問「~/litellm-proxy啥時能刪掉？」，頂層說明要先切換、proxy 會斷幾分鐘後，他回「現在應該沒人在用proxy，排吧」。
+
+- **現在跑的**：`~/repo/llm_proxy/pinned_1.109.1/` 起的 proxy，pid `33494`（記在子夾的 `proxy.pid`），`127.0.0.1:4000`。停：`cd ~/repo/llm_proxy/pinned_1.109.1 && ./stop.sh`；起：同夾 `./start.sh`（約 2 分 20 秒才回 `up`，鏡像網路的逾時，見第二節）。log：子夾 `logs/proxy.log`。aos 接：`export LITELLM_KEY="$(cat ~/repo/llm_proxy/pinned_1.109.1/master.key)"`。
+- **怎麼切的**：先把 `wheels/`（117 個、174 MB）搬進子夾，照子夾 README 用 `python3.12 -m venv venv` 加 `pip install --no-index --find-links wheels --require-hashes -r requirements.lock` 離線對雜湊重建 venv：117 個全裝上、litellm `1.109.1`。再用舊夾 `./stop.sh` 停 pid `14835`（停後 4000 沒人聽），把 `master.key`、`chatgpt/` 搬進子夾（權限 600／700 沒變，沒開沒讀），`git check-ignore` 確認四樣都擋住。子夾 `./start.sh` 不帶任何變數起：08:36:44 起、08:39:07 `up`；`/v1/models` 不帶 key 401、帶 key 200。斷線約 3 分鐘。
+- **實測**：三個模型非串流各一次「Reply with just: ok」：luna-low 200 `ok` 1.85 秒、terra 200 `ok` 1.31 秒、sol 200 `ok` 1.84 秒。aos 整條線（`~/.aos/scratch/llmproxy-merge-1119/aos-run.sh`，照第四節，key 改從子夾讀）：`llm set model=luna` 後問 pineapple，3 秒回 `pineapple`；兩句 shutdown 都退 0，根與 llm kernel 的 pid 都不在。暫存夾與 proxy log 搜不到 master key。
+- **README 照實裝改了**：`uv venv` 預設不帶 pip 不能照寫法跑，改成只寫 `python3.12 -m venv`；已有 `wheels/` 就跳過 `pip download`；補一行確認版本。
+- **舊夾 `~/litellm-proxy/` 剩**：`venv/`（752 MB）、`logs/`（16 KB，11-18～11-19 早的 log）、舊腳本與設定 7 個檔（共約 250 KB，路徑寫死的舊版）。秘密已經不在了（`master.key`、`chatgpt/` 已搬走）。**現在刪不影響正在跑的 proxy**：它的 venv、key、登入都在子夾；刪掉的只是舊 log 和退路（舊 `start.sh` 現在本來就起不來，key 搬走了）。刪不刪等使用者說。
+- **還寫著舊路徑的**：活的設定或腳本——沒有（aos 的範本與 kernel.json 只寫 `localhost:4000`；rc 檔、`~/.config`、`~/.local/bin`、crontab 都沒提到）。現行文件：`wf/workflows/dev-env/01-跨機與外部工具.md` 的 LiteLLM 那列原寫「公司那台未確認；不用 api_key」，已改成新位置；`02-模型端點.md` 補一句公司機要帶 key。歷史紀錄（不改，寫的是當時位置，以這一節為準）：本檔第一～八節、`19/公司WSL-環境-1119.md`、`19/README.md`、`18/litellm-proxy-接gpt帳號.md`、`18/litellm-供應鏈與選版.md`、`18/沙箱隔離-實機檢查.md`、`18/交接-各線/使用者原話-1118下午.md`、`18/README.md`、`18/_index.json`、`wf/progress.json` 的舊述。
