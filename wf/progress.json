@@ -299,13 +299,14 @@
     },
     "aos-inherit": {
       "title": "aos 繼承深挖：定義衍生放哪做",
-      "status": "等使用者",
+      "status": "open",
       "flow": "",
-      "what": "使用者 11-19 選項框已裁：方向走乙（ag.load，只在 agent.py 重生時衍生，json 整份、執行期不動）；「繼承」進規範只限生成時＝NORMS N-70；跑著長出來的收回定義不做（連唯讀差異頁也不做）；狀態機每隻一層先不做；衍生出處暫照推薦只寫在原始碼、可再改。裁定在 08。",
-      "next": "ag.load 第一刀（只動 agent_spec）尚未開工，等使用者說開工。Argon B4（set-def 後 stack 工具仍疊舊定義）仍是另開的題。",
+      "what": "使用者 11-19 選項框已裁：乙（ag.load，只在 agent.py 重生時衍生）、「繼承」進規範只限生成時（N-70）、長出來的不收回、狀態機每隻一層先不做、出處暫只寫在原始碼。第一刀已交（線 aos-inherit-cut1-1119）：ag.load＋TOOLS／HOOKS／ag.fsm 收底，只動 agent_spec*，執行期沒動；收緊「兩個範本的 hook 組互撞改報錯」待頂層告知使用者。",
+      "next": "使用者親手試（紀錄末節步驟）；要不要做讀手寫夾的 ag.from_folder 等使用者說。Argon B4（set-def 後 stack 工具仍疊舊定義）仍是另開的題。",
       "see": [
         "[設計稿 README](../proto8/thinking/2026-11/19/aos-inherit-1119/README.md)",
         "[使用者裁定](../proto8/thinking/2026-11/19/aos-inherit-1119/08-使用者裁定.md)",
+        "[第一刀紀錄](../proto8/thinking/2026-11/19/aos-inherit-第一刀.md)",
         "[N-70](../proto8/docs/NORMS/10-基礎設施-定義與工作區/12-N-70.md)"
       ],
       "since": "2026-11-19"

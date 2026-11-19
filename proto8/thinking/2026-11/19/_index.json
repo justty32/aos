@@ -1,0 +1,50 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-11-19"
+ },
+ "aos-compile-庚": {
+  "description": "庚的設計稿（11-19）：一支 `agent.py` 宣告 SYSTEM／TOOLS／LLM／FSM、生出 agent 定義夾裡的 json——長相、打架規則（C 與 .o）、邊緣狀況、範圍切法"
+ },
+ "aos-compile-庚-第一刀.md": {
+  "description": "庚第一刀施工紀錄（線 compile-geng-s1-1119）：加了 agent_spec、agent-python 骨架與測試，七條驗收都過，沒動現有程式"
+ },
+ "aos-compile-庚-第三刀.md": {
+  "description": "庚第三刀施工紀錄（線 geng3-1119）：agent.py 多了 HOOKS、FILES、不宣告 FSM 的 eca 模式；reviewer 寫成一支 agent.py 跟手寫的等價；沒動 agent_def、知識庫、現有範本"
+ },
+ "aos-gdb-1119": {
+  "description": "「aos 的 gdb 在哪」調查（11-19）：斷點＝條件成立就把 loop／fsm 停下來等人看；今天所有停得住的手段實測，以及 Python REPL＋aos-gdb 庫、程式邊跑邊長時怎麼停、怎麼看、怎麼續"
+ },
+ "aos-gdb-lib-第一版.md": {
+  "description": "aos-gdb 第一版（乙案，11-19）：`aos-gdb NAME` 開一個接上 agent 的 Python REPL，`aos.gdb` 庫下條件觸發器（一個普通 hook：條件成立就 ctl pause 並留字條）、看為什麼停、檢閱、續；hook 機制與 cpp 都沒動，假腦實跑 6 個情境過"
+ },
+ "aos-gdb-lib-第二版.md": {
+  "description": "aos-gdb 第二版（11-19）：`stop_before_tool` 改成真的在工具跑之前停住、續了照原樣跑（觸發器在 hook 裡自己扣住等放行），另做了丙（掛在 daemon 表上的觀察者 proc）；hook 機制與 cpp 都沒動，假腦實跑 12 個情境過"
+ },
+ "aos-inherit-1119": {
+  "description": "繼承深挖（線 aos-inherit-1119，11-19）：「繼承」在 aos 是哪幾件事、今天已有的機制實測、別人怎麼做、四條走向（推薦在 agent.py 重生時衍生、執行期不動）、跑著長出來的收不收回；使用者 11-19 已裁（走乙、「繼承」進規範只限生成時＝N-70、長出來的不收回、狀態機每隻一層先不做）"
+ },
+ "aos-inherit-第一刀.md": {
+  "description": "授權與範圍"
+ },
+ "aos-ns-1119": {
+  "description": "aos 的命名空間與標準庫（11-19 調查設計稿）：現況、別人怎麼做、四個走向（推薦「路徑即命名空間」）、繼承淺想、七題已答（走 B）"
+ },
+ "aos-ns-第一刀.md": {
+  "description": "命名空間第一刀（線 aos-ns-cut1-1119）：agent.py 有了庫 std 與 ag.lib，包在生成時展開進 tools.json，別的庫的工具自動帶「庫名_」、撞名報 SpecBad；只改 agent_spec，執行期一行沒動、沒搬檔"
+ },
+ "aos-pylib-1119": {
+  "description": "aos 整套 Python 庫的版面（11-19 調查設計稿）：現況盤點、一天的流程、三個走向（推薦甲「把手式＋通用代理」）、別人怎麼做、五題（11-19 已裁四題，見 07）、Argon 審"
+ },
+ "litellm-1.109.1-實測.md": {
+  "description": "公司 WSL 的 `~/litellm-proxy/`（LiteLLM 1.109.1）11-19 起起來、三個 ChatGPT 模型非串流與串流都實打通、aos 整條線真模型回字的紀錄；附「能不能放進 repo」的盤點與兩種做法。"
+ },
+ "subuid-1119": {
+  "description": "分檔夾：先講結論"
+ },
+ "subuid-1119.md": {
+  "description": "先講結論"
+ },
+ "公司WSL-環境-1119.md": {
+  "description": "11-19 公司 WSL 開工環境：aos 程式裝到 repo 這層（假腦試過）、LiteLLM 查清版本與登入現況但沒起，留給使用者拍板的事"
+ }
+}

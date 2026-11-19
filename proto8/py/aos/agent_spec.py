@@ -17,6 +17,9 @@
   home(路徑)／env(變數, 路徑)  指示詞 {"$env": …, "$path": …}，原樣吐、不展開
   state(名, argv, next, timeout_ms=None)、fsm(起點, [state…])
   by_hand(檔名)        這份檔自己手寫：interfaces.json 指到它、不生、不蓋（SYSTEM／TOOLS／LLM／FSM／HOOKS 都可用）
+  load(路徑)           衍生（繼承第一刀 aos-inherit-cut1-1119，本體 aos/agent_spec_load.py）：base = ag.load("../reviewer") 跑那支 agent.py，
+                       它的 ag.main 只交出九個欄位；TOOLS 寫 [base.TOOLS, ag.no(...), ...]、HOOKS 寫 [base.HOOKS, {名: {**base.HOOKS[名], 鍵: 值}}]、
+                       FSM 寫 ag.fsm(base.FSM, [ag.state(名, 只給要換的)], drop=[...])；只在重生時算，生出的 json 整份、不記上一層（N-70）
 兩個可單獨叫的函式：
   defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None)
       → {檔名: 內容}（驗完才回；宣告錯丟 SpecBad、夾不對丟 DefBad）。fsm=None＝不宣告狀態機：照 folder 裡現有的
@@ -30,6 +33,8 @@ from aos import flags
 from aos import agent_spec_parts as parts
 from aos.agent_spec_parts import SpecBad, DefBad, WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FILES  # noqa: F401（對外的名字）
 from aos.agent_spec_lib import std, lib  # noqa: F401（對外的名字：ag.std、ag.lib）
+from aos import agent_spec_load as loader
+from aos.agent_spec_load import load  # noqa: F401（對外的名字：ag.load）
 
 HOOK_FIRE = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}   # loop.json 的 on_start／on_stop（照 agent-fsm 範本）
 RENAME_LAST = {"loop.json": 1, "body.json": 2, "interfaces.json": 3, "_entry": 4, "_metainfo.json": 5}   # 改名時被指的檔先換、索引檔最後（其他＝0）
@@ -47,6 +52,9 @@ With FSM declared, agent.py writes the whole definition (skeleton included). Wit
 hooks) of a definition that already has its skeleton, under the names its interfaces.json gives.
 Packs (std.pack, or .pack of a library from ag.lib) are read when agent.py runs and their tools are
 copied into tools.json, so AOS_HOME, and any variable a library root uses, must be set.
+To build on another agent.py: base = ag.load("../other") runs it (its ag.main only hands over its
+fields) and you write [base.TOOLS, ag.no("x")], [base.HOOKS, {...}], ag.fsm(base.FSM, [...]); it is
+worked out now, so the files written are whole and do not name the other one (README: "Build on").
 Then mount it: aos-agent ctl add FOLDER.
 On a wrong declaration: one line "NAME: error: SpecBad ..." on stderr, exit 1, nothing written.
 """
@@ -114,15 +122,37 @@ def _state_name_bad(name):
     return not isinstance(name, str) or not name or name != name.strip() or "\n" in name
 
 
-def state(name, argv, next, timeout_ms=None):
-    """狀態機的一格：跑 argv（字串或 ag.home(...) 的串列），退出碼 → 下一格（{0: "think", 10: "idle"}；"*"＝其他碼；字串＝只有 0）。"""
+_LEFT_OUT = object()
+
+
+def state(name, argv=_LEFT_OUT, next=_LEFT_OUT, timeout_ms=None):
+    """狀態機的一格：跑 argv（字串或 ag.home(...) 的串列），退出碼 → 下一格（{0: "think", 10: "idle"}；"*"＝其他碼；字串＝只有 0）。
+    argv、next 單獨用時要給齊；在 ag.fsm(base.FSM, [...]) 裡換底的同名格時可以只給要換的（沒給的沿用底那格；繼承第一刀）。"""
     if _state_name_bad(name):
         return _bad("state name %r must be a non-empty string without leading or trailing spaces or newlines" % (name,))
-    if not isinstance(argv, (list, tuple)) or not argv or not all(_is_path(a) for a in argv):
-        return _bad("state %s: argv must be a non-empty list of strings or ag.home(...) paths, like [\"python3\", \"idle.py\"]" % name)
+    partial = argv is _LEFT_OUT or next is _LEFT_OUT
+    exec_, cell = {}, {}
+    if argv is not _LEFT_OUT:
+        if not isinstance(argv, (list, tuple)) or not argv or not all(_is_path(a) for a in argv):
+            return _bad("state %s: argv must be a non-empty list of strings or ag.home(...) paths, like [\"python3\", \"idle.py\"]" % name)
+        exec_["argv"] = list(argv)
+    if timeout_ms is not None:
+        if not isinstance(timeout_ms, int) or isinstance(timeout_ms, bool) or timeout_ms < 0:
+            return _bad("state %s: timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)" % name)
+        exec_["timeout_ms"] = timeout_ms
+    cell["exec"] = exec_
+    if next is not _LEFT_OUT:
+        nxt = _next(name, next)
+        if parts.kind(nxt) == "bad":
+            return nxt
+        cell["next"] = nxt
+    return {"kind": "state", "name": name, "cell": cell, "partial": partial}
+
+
+def _next(name, next):
     if isinstance(next, str):
-        nxt = next
-    elif isinstance(next, dict) and next:
+        return next
+    if isinstance(next, dict) and next:
         nxt = {}
         for code, target in next.items():
             if code == "*" or (isinstance(code, int) and not isinstance(code, bool) and 0 <= code <= 255):
@@ -131,18 +161,22 @@ def state(name, argv, next, timeout_ms=None):
                 return _bad("state %s: exit code %r in next must be a whole number 0-255 or \"*\"" % (name, code))
         if "0" not in nxt and "*" not in nxt:
             return _bad("state %s: next must have exit code 0 or \"*\" (exit code 0 must always lead somewhere)" % name)
-    else:
-        return _bad("state %s: next must be a state name, or a dict {exit code: state name} like {0: \"think\"}" % name)
-    exec_ = {"argv": list(argv)}
-    if timeout_ms is not None:
-        if not isinstance(timeout_ms, int) or isinstance(timeout_ms, bool) or timeout_ms < 0:
-            return _bad("state %s: timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)" % name)
-        exec_["timeout_ms"] = timeout_ms
-    return {"kind": "state", "name": name, "cell": {"exec": exec_, "next": nxt}}
+        return nxt
+    return _bad("state %s: next must be a state name, or a dict {exit code: state name} like {0: \"think\"}" % name)
 
 
-def fsm(start, states):
-    """狀態機：起點＋各格（ag.state(...) 的串列）。下一格、起點都要在表上（aos-fsm 開跑時查的同一套）。"""
+def fsm(start, states, drop=()):
+    """狀態機：起點＋各格（ag.state(...) 的串列）。下一格、起點都要在表上（aos-fsm 開跑時查的同一套）。
+    第一個參數給底的狀態機（ag.load(...).FSM、std.fsm()）＝換格（繼承第一刀）：drop 的格拿掉，同名格只換有給的欄位，新名的格加上（要給齊），整張重驗。"""
+    if parts.kind(start) == "bad":
+        return start
+    if parts.kind(start) == "fsm":
+        return _refit(start, states, drop)
+    if start is None:
+        return _bad("ag.fsm: the start is None: give the name of the start state, or the FSM of a loaded agent.py "
+                    "(an agent.py without FSM, like an eca body, has FSM None: there is no state machine to build on)")
+    if drop:
+        return _bad("ag.fsm: drop= only works on a state machine to build on, like ag.fsm(base.FSM, [...], drop=[\"act\"])")
     if not isinstance(states, (list, tuple)) or not states:
         return _bad("fsm needs a non-empty list of ag.state(...)")
     table = {}
@@ -153,7 +187,47 @@ def fsm(start, states):
             return _bad("each item of fsm states must come from ag.state(...), got %r" % (s,))
         if s["name"] in table:
             return _bad("state %s is declared twice" % s["name"])
+        if s.get("partial"):
+            return _bad("state %s needs both argv and next (only ag.fsm(base.FSM, [...]) takes a state with some left out)" % s["name"])
         table[s["name"]] = s["cell"]
+    return _checked(start, table)
+
+
+def _refit(base, states, drop):
+    """ag.fsm(底, [...], drop=)：底那張表的一份拷貝上換格。"""
+    table = json.loads(json.dumps(base["states"]))
+    if not isinstance(states, (list, tuple)):
+        return _bad("ag.fsm(base, states): states must be a list of ag.state(...) (it can be empty)")
+    if isinstance(drop, str) or not isinstance(drop, (list, tuple)) or not all(isinstance(d, str) for d in drop):
+        return _bad("ag.fsm(base, ..., drop=...): drop must be a list of state names, like [\"act\"]")
+    for d in drop:
+        if d not in table:
+            return _bad("ag.fsm(base, ..., drop=[%r]): the base has no state %s (states: %s)" % (d, d, ", ".join(table)))
+        del table[d]
+    seen = set()
+    for s in states:
+        if parts.kind(s) == "bad":
+            return s
+        if parts.kind(s) != "state":
+            return _bad("each item of fsm states must come from ag.state(...), got %r" % (s,))
+        if s["name"] in seen:
+            return _bad("state %s is declared twice" % s["name"])
+        seen.add(s["name"])
+        if s["name"] in table:
+            cell = table[s["name"]]
+            cell.setdefault("exec", {}).update(s["cell"]["exec"])
+            if "next" in s["cell"]:
+                cell["next"] = s["cell"]["next"]
+        elif s.get("partial"):
+            return _bad("state %s is not in the base (states: %s), so it needs both argv and next" % (s["name"], ", ".join(table)))
+        else:
+            table[s["name"]] = s["cell"]
+    if base["start"] not in table:
+        return _bad("ag.fsm(base, ...): the start state %s is dropped; a state machine needs its start" % base["start"])
+    return _checked(base["start"], table)
+
+
+def _checked(start, table):
     if not isinstance(start, str) or start not in table:
         return _bad("fsm start %r is not one of the states (%s)" % (start, ", ".join(table)))
     for name, cell in table.items():
@@ -200,6 +274,7 @@ def defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
     if not isinstance(description, str) or not description.strip():
         raise SpecBad("DESCRIPTION must be a non-empty string: one sentence saying what the agent does")
     description = description.strip()
+    hooks = parts.no_hooks(hooks)
     decl = {"system": system, "tools": tools, "llm": llm, "fsm": fsm, "hooks": hooks}
     for value in decl.values():
         parts.raise_bad(value)
@@ -218,7 +293,8 @@ def defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
         if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
             raise SpecBad("INTERFACES aos-agent llm_keys must be a list of strings")
     tools_out = None if parts.pick(tools, "TOOLS must be a list of std.pack(...), std.tool(...), ag.tool(...), ag.no(...) "
-                                          "(or a library's .pack / .tool), or ag.by_hand(\"tools.json\")",
+                                          "(or a library's .pack / .tool, or the TOOLS of ag.load(...): [base.TOOLS, ...]), "
+                                          "or ag.by_hand(\"tools.json\")",
                                    lambda v: isinstance(v, (list, tuple))) else parts.tools_json(tools)
     llm_out = None if parts.pick(llm, "LLM must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or ag.by_hand(\"llm.json\")",
                                  lambda v: isinstance(v, dict)) else parts.llm_json(llm, keys)
@@ -309,10 +385,19 @@ def write_defs(folder, files):
 
 
 def main(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None):
-    """agent.py 的最後一行：ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)；不宣告狀態機＝ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM)。"""
-    script = os.path.realpath(sys._getframe(1).f_code.co_filename)
+    """agent.py 的最後一行：ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)；不宣告狀態機＝ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM)。
+    被 ag.load 載入時：不讀 argv、不寫檔、不退出，只把九個欄位交給 ag.load。被普通 import（叫它的模組不是 __main__）：印一行 warning、什麼都不做
+    （繼承第一刀：以前會照 argv 寫進底那夾、退 0，衍生那支根本沒跑；aos-inherit-1119/02 結論 5）。"""
+    caller = sys._getframe(1)
+    script = os.path.realpath(caller.f_code.co_filename)
     base = os.path.basename(script)
     prog = os.path.basename(os.path.dirname(script)) if base == "agent.py" else os.path.splitext(base)[0]
+    if loader.hand_over(script, (description, system, tools, llm, fsm, meta, interfaces, hooks, files)):
+        return
+    if caller.f_globals.get("__name__") != "__main__":
+        flags.warn(prog, "%s was imported, not run, so its ag.main(...) does nothing; to build on another agent.py, "
+                         "use base = ag.load(\"its folder\")" % script)
+        return
     argv = sys.argv[1:]
     usage = "usage: python3 %s --write-defs [FOLDER] | --defs | --help" % base
     if argv[:1] in (["--help"], ["-h"]):

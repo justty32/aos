@@ -8,6 +8,9 @@
  "agent_spec_lib.py": {
   "description": "agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 ag.lib(\"名\", 根) 宣告的別的庫（工具自動帶「名_」）；包在生成時讀出來、展開成一支支工具抄進 tools.json。"
  },
+ "agent_spec_load.py": {
+  "description": "ag.load(路徑)：一支 agent.py 衍生自另一支（繼承第一刀，線 aos-inherit-cut1-1119）：跑底那支，它最後的 ag.main 只交出九個欄位，正規化成一份「底」交回。"
+ },
  "agent_spec_parts.py": {
   "description": "agent_spec 的零件：各份定義檔怎麼從宣告算出來、怎麼先驗（tools.json、llm.json、interfaces.json、hooks.json、FILES），以及不宣告 FSM 時照夾裡現有的 interfaces.json 找檔名。"
  },

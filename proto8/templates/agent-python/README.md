@@ -14,7 +14,7 @@ python3 agent.py --write-defs    # write the definition files into this folder
 aos-agent ctl add .              # mount it (add -d DAEMON, -w WORKSPACE as usual)
 ```
 
-Keep the lines above `# ---- your agent` as they are: they find the `aos` package (an `aos/` folder next to `agent.py`, then `$AOS_HOME/lib`). Keep the last line `ag.main(...)`.
+Keep the lines above `# ---- your agent` as they are: they find the `aos` package (`$AOS_HOME/lib` first, then an `aos/` folder next to `agent.py`, so a file named `aos.py` next to it does not get in the way when `AOS_HOME` is set). Keep the last line `ag.main(...)`.
 
 ## Read this before you run --write-defs
 
@@ -76,7 +76,7 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
   - `HOOKS`: writes `hooks.json`, adds `"hooks": "hooks.json"` to `interfaces.json` and the `on_start` / `on_stop` lines (they fire `after_start` / `after_stop`) to `loop.json`. Write it as
     - a dict `{hook name: entry}`, the entries as in any `hooks.json` (`event`, `handler`, `condition`, `every_ms`, `config`, ...);
     - `std.hooks()`: the hooks of the `agent-fsm` template (`std.hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/<template>/hooks.json` and copied in, so the next `--write-defs` follows a changed template;
-    - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `HOOKS = [std.hooks(), {"timer": None, "mine": {...}}]`;
+    - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `HOOKS = [std.hooks(), {"timer": None, "mine": {...}}]`; but two hook groups (`std.hooks(...)` of two templates, the `HOOKS` of `ag.load`) that give one name with different entries are `SpecBad` unless a dict of yours after them names it;
     - or `ag.by_hand("hooks.json")`.
   - `FILES`: other files written as they are, like `{"ladder.json": {...}}` (a dict or list is written as JSON, a string as it is). The name is one file in this folder; it cannot be a file that agent.py, the skeleton or the running agent writes.
 
@@ -93,6 +93,38 @@ Then `--write-defs` writes only the content files (`SYSTEM`, `TOOLS`, `LLM`, `HO
 Paths: write paths outside this folder as `ag.home("/...")` (under `$AOS_HOME`) or `ag.env("AOS_WS", "/...")`; they are written as `{"$env": ..., "$path": ...}` and work on any machine and after any copy. Do not write `../` paths: they break when the folder is copied somewhere else.
 
 `agent.py` is ordinary Python: use loops and small functions to build the lists. It should not use the network or read files outside this folder, apart from what the libraries read (packs, tool folders, `std.hooks`).
+
+## Build on another agent.py
+
+An agent that is another one plus a few changes: load the other `agent.py` and write only the changes.
+
+```python
+base = ag.load("../reviewer")        # runs ../reviewer/agent.py; its ag.main(...) only hands over its fields
+
+DESCRIPTION = "Review a change and refuse anything without a test."
+SYSTEM = base.SYSTEM + "Refuse a change that has no test.\n"
+TOOLS  = [base.TOOLS,                                     # all tools of the base, as one pack
+          ag.no("grep"),                                  # one of them out
+          std.tool("base/peek_now_time", name="now")]     # one more
+LLM    = {**base.LLM, "model": "luna"}
+HOOKS  = [base.HOOKS, {"timer": {**base.HOOKS["timer"], "every_ms": 60000}}]   # one field of one hook; on_error and the rest stay
+FSM    = ag.fsm(base.FSM, [ag.state("think", ["python3", ag.home("/templates/agent-fsm/brain.py")])])   # next stays the base's
+ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM, hooks=HOOKS)
+```
+
+- **It happens only when you run `--write-defs`.** The files written are whole, like any other definition: no `extends`, no `$override`, nothing that names the base. The running agent does not know there was a base, and the base folder does not have to be there later.
+- **A changed base is followed only when you run `--write-defs` again** here. `ag.load` runs the base's `agent.py`, not its JSON files, so this folder gets what the base's `agent.py` says now, even if the base's own files were not written again.
+- `ag.load(path)`: the folder of another `agent.py` (or the `.py` file itself). A relative path starts at the folder of this `agent.py` (in a Python prompt: the current folder); `ag.env("AOS_WS", "/agents/reviewer")` works too. It does not search anywhere. Loading the base writes nothing anywhere.
+- The base gives nine fields: `DESCRIPTION`, `SYSTEM`, `TOOLS`, `LLM`, `FSM`, `META`, `INTERFACES`, `HOOKS`, `FILES`. A base without `HOOKS` gives an empty group (no `hooks.json` here either, unless you add hooks); a base without `FSM` (an eca body) gives `FSM = None`. A field the base writes by hand (`ag.by_hand(...)`) cannot be built on: using it is one `SpecBad` line; not using it is fine.
+- **Tools.** `base.TOOLS` is one pack. `base.tools(prefix="r_", rename={...}, exclude=[...])` is the same pack with other names, as for `std.pack`. A tool you write yourself (`ag.tool`, `std.tool`) replaces the base's tool of that name; `ag.no` takes one out. A tool is always replaced as a whole: there is no "change one field of a tool".
+- **Two bases (a diamond).** `TOOLS = [d1.TOOLS, d2.TOOLS]`: a tool the same in both is one tool; a tool that differs, or that one of them took out (`ag.no`) and the other kept, is `SpecBad`. Say which you mean with `ag.tool(name, ...)` or `ag.no(name)`. A tool taken out does not come back unseen.
+- **Hooks.** `base.HOOKS` and `std.hooks()` are hook groups; `base.HOOKS["timer"]` is a copy of that hook, so `{**base.HOOKS["timer"], "every_ms": 60000}` changes one field and keeps the rest. When two groups (two bases, or `std.hooks()` of two templates) both have a hook of one name and the entries differ, it is `SpecBad`; pick one by writing that hook yourself in a dict after them (`None` drops it). A dict you write still replaces a hook as a whole, as before.
+- **State machine.** `ag.fsm(base.FSM, [ag.state(...)], drop=["act"])`: a state of the base's name changes only the fields you give (`argv`, `next`, `timeout_ms`; the rest stay), a new name adds a state (give `argv` and `next`), `drop` takes states out; the whole table is checked again.
+- Relative paths inside the base (a tool `path` or `env_file`, a hook `handler`, a file of the base folder named in a state's `argv`) are rewritten from the base folder, so they still point at the base's files here. Write paths in the base as `ag.home(...)` / `ag.env(...)` and nothing needs rewriting.
+- While the base runs, its folder comes first on `sys.path`; afterwards `sys.path` and the modules it imported (other than `aos`) are put back, so `import helper` here gets this folder's `helper.py`. Two `agent.py` files that load each other is `SpecBad`.
+- A wrong base (a missing folder, an error in its `agent.py`, a wrong declaration there) is one line, for example `strict: error: SpecBad ag.load('../reviewer'): ...`, and nothing is written.
+- Do not `import` another `agent.py` instead: its `ag.main(...)` then only prints a warning and does nothing (it used to write the other folder with your arguments).
+- In a Python prompt: `r = ag.load("/ws/agents/reviewer")`, then `ag.defs(...)` / `ag.write_defs(...)` with `r.SYSTEM`, `[r.TOOLS, ...]` and so on. A folder written that way has no `agent.py` and cannot be written again; keep the lines in an `agent.py` if you want to.
 
 ## Libraries
 

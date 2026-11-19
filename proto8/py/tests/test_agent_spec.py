@@ -659,8 +659,241 @@ class Reviewer(unittest.TestCase):
         self.assertEqual(json.loads(made["ladder.json"]), json.loads(want["ladder.json"]))
 
 
+BASE = '''\
+DESCRIPTION = "Review a change and answer by mail."
+SYSTEM = "You review changes in the workspace.\\n"
+std = ag.std
+TOOLS = [std.pack("look"), std.pack("mailbox")]
+LLM = {"model": "luna"}
+FSM = std.fsm()
+HOOKS = std.hooks()
+ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM, hooks=HOOKS)
+'''
+STRICT = '''\
+base = ag.load("../reviewer")
+DESCRIPTION = "Review a change and refuse anything without a test."
+SYSTEM = base.SYSTEM + "Refuse a change that has no test.\\n"
+TOOLS = [base.TOOLS, ag.no("grep"), ag.std.tool("base/peek_now_time", name="now")]
+HOOKS = [base.HOOKS, {"timer": {**base.HOOKS["timer"], "every_ms": 60000}}]
+ag.main(DESCRIPTION, SYSTEM, TOOLS, base.LLM, base.FSM, hooks=HOOKS)
+'''
+
+
+class Inherit(WithHome):
+    """inheritance first cut (aos-inherit-cut1-1119): base = ag.load(folder) runs another agent.py, whose ag.main only hands over its
+    fields; worked out when agent.py runs, so the files written are whole and name no base (N-70); the running side is not touched."""
+
+    def agent(self, name, body):
+        folder = Path(self.temp.name) / name
+        folder.mkdir(exist_ok=True)
+        (folder / "agent.py").write_text(HEAD + body)
+        return folder
+
+    def run1(self, folder, *argv):
+        return run_agent(folder / "agent.py", *(argv or ("--write-defs",)), home=self.home)
+
+    def assert_one_line(self, r, prog, *parts):
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+        self.assertTrue(r.stderr.startswith(prog + ": error: SpecBad "), r.stderr)
+        for p in parts:
+            self.assertIn(p, r.stderr)
+
+    def test_strict_reviewer(self):
+        base, strict = self.agent("reviewer", BASE), self.agent("strict-reviewer", STRICT)
+        self.assertEqual(self.run1(base).returncode, 0)
+        before = snapshot(base)
+        r = self.run1(strict)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stderr, "")
+        self.assertEqual(snapshot(base), before)                            # loading the base writes nothing there
+        made, want = snapshot(strict), snapshot(base)
+        self.assertEqual(sorted(made), sorted(want))
+        load = lambda files, name: json.loads(files[name])  # noqa: E731
+        for name in ("fsm.json", "loop.json", "llm.json", "_entry", "body.json"):
+            self.assertEqual(made[name], want[name], name)                  # whole files, the same as the base's
+        self.assertEqual(plain(load(made, "interfaces.json")), plain(load(want, "interfaces.json")))
+        tools, base_tools = load(made, "tools.json")["tools"], load(want, "tools.json")["tools"]
+        self.assertEqual(sorted(set(base_tools) - set(tools)), ["grep"])
+        self.assertEqual(sorted(set(tools) - set(base_tools)), ["now"])
+        self.assertEqual(made["system.txt"].decode(), "You review changes in the workspace.\nRefuse a change that has no test.\n")
+        hooks, base_hooks = load(made, "hooks.json")["hooks"], load(want, "hooks.json")["hooks"]
+        self.assertEqual(hooks["timer"], dict(base_hooks["timer"], every_ms=60000))
+        self.assertEqual(hooks["timer"]["on_error"], "continue")             # one field changed, on_error kept
+        self.assertEqual({k: v for k, v in hooks.items() if k != "timer"}, {k: v for k, v in base_hooks.items() if k != "timer"})
+        for name, data in made.items():                                     # no trace of the base in what was written
+            if name != "agent.py":
+                for trace in ("reviewer/", "ag.load", self.temp.name, "$override", "extends"):
+                    self.assertNotIn(trace, data.decode(), name)
+
+    def test_upstream_change_follows_at_regeneration_only(self):
+        base, strict = self.agent("reviewer", BASE), self.agent("strict-reviewer", STRICT)
+        self.assertEqual(self.run1(strict).returncode, 0)
+        first = snapshot(strict)
+        self.agent("reviewer", BASE.replace('std.pack("mailbox")]', 'std.pack("mailbox"), std.pack("json")]'))
+        self.assertEqual(snapshot(strict), first)                           # nothing follows by itself
+        self.assertEqual(self.run1(strict).returncode, 0)                   # regenerate the derived one: it follows,
+        tools = json.loads((strict / "tools.json").read_text())["tools"]    # though the base's json was never written
+        self.assertIn("json_get", tools)
+        self.assertFalse((base / "tools.json").exists())
+
+    def test_diamond(self):
+        self.agent("base", BASE)
+        self.agent("d1", BASE.replace("ag.main(", "base = ag.load('../base')\nTOOLS = [base.TOOLS, ag.no('grep')]\n"
+                                      "HOOKS = [base.HOOKS, {'timer': None}]\nag.main("))
+        self.agent("d2", BASE.replace("ag.main(", "base = ag.load('../base')\nTOOLS = [base.TOOLS]\nHOOKS = base.HOOKS\nag.main("))
+        d1, d2 = ag.load(str(Path(self.temp.name) / "d1")), ag.load(str(Path(self.temp.name) / "d2"))
+        tools = lambda items: ag.defs("D.", "", items, {}, ag.std.fsm())["tools.json"]["tools"]  # noqa: E731
+        with self.assertRaisesRegex(ag.SpecBad, r"tool grep is taken out in ag.load\('.*d1'\) but kept in ag.load\('.*d2'\)"):
+            tools([d1.TOOLS, d2.TOOLS])                                     # a tool taken out does not come back unseen
+        self.assertNotIn("grep", tools([d1.TOOLS, d2.TOOLS, ag.no("grep")]))
+        self.assertIn("grep", tools([d1.TOOLS, d2.TOOLS, ag.tool("grep", ag.home("/lib/tools/base/grep"))]))
+        self.assertEqual(sorted(tools([d1.TOOLS, d2.TOOLS, ag.no("grep")])), sorted(set(tools([d2.TOOLS])) - {"grep"}))
+        hooks = lambda h: ag.defs("D.", "", [], {}, ag.std.fsm(), hooks=h)["hooks.json"]["hooks"]  # noqa: E731
+        with self.assertRaisesRegex(ag.SpecBad, "hook timer comes from both"):
+            hooks([d1.HOOKS, d2.HOOKS])
+        self.assertNotIn("timer", hooks([d1.HOOKS, d2.HOOKS, {"timer": None}]))
+        dest = self.agent("top", "d1 = ag.load('../d1')\nd2 = ag.load('../d2')\n"
+                                 "ag.main('D.', '', [d1.TOOLS, d2.TOOLS], {}, ag.std.fsm())\n")
+        r = self.run1(dest)
+        self.assert_one_line(r, "top", "tool grep is taken out in")
+        self.assertEqual(os.listdir(dest), ["agent.py"])
+
+    def test_plain_import_does_not_write_the_base(self):
+        """the old pit (aos-inherit-1119/02, finding 5): importing another agent.py ran its ag.main with our argv, wrote into the
+        base's folder and exited 0 before our own ag.main. Now ag.main of an imported file says so and does nothing."""
+        base = self.agent("reviewer", BASE)
+        dest = self.agent("strict", "import importlib.util\n"
+                                    "s = importlib.util.spec_from_file_location('reviewer_agent', %r)\n"
+                                    "m = importlib.util.module_from_spec(s); s.loader.exec_module(m)\n"
+                                    "ag.main('D.', m.SYSTEM, [m.TOOLS[0]], {}, ag.std.fsm())\n" % str(base / "agent.py"))
+        r = self.run1(dest)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([p for p in os.listdir(base) if p != "__pycache__"], ["agent.py"])
+        self.assertIn("fsm.json", os.listdir(dest))
+        self.assertIn("reviewer: warning: ", r.stderr)
+        self.assertIn("use base = ag.load", r.stderr)
+
+    def test_load_errors_are_one_line(self):
+        self.agent("hand", BASE.replace('SYSTEM = "You review changes in the workspace.\\n"', 'SYSTEM = ag.by_hand("system.txt")'))
+        self.agent("broken", BASE.replace("LLM = ", "x = undefined_name\nLLM = "))
+        self.agent("nomain", BASE.replace("ag.main(", "_ = (").replace("hooks=HOOKS", "HOOKS"))
+        self.agent("badbase", BASE.replace('std.pack("mailbox")', 'std.pack("nope")'))
+        self.agent("a", "b = ag.load('../b')\nag.main('D.', '', [], {}, ag.std.fsm())\n")
+        self.agent("b", "a = ag.load('../a')\nag.main('D.', '', [], {}, ag.std.fsm())\n")
+        cases = {"no such folder": ("ag.load('../nowhere')", "is not a folder"),
+                 "no agent.py there": ("ag.load('../empty')", "there is no"),
+                 "a by_hand field used": ("ag.load('../hand').SYSTEM", "SYSTEM of", "is ag.by_hand('system.txt')"),
+                 "the base fails": ("ag.load('../broken')", "agent.py line 8: NameError"),
+                 "the base never calls ag.main": ("ag.load('../nomain')", "never calls ag.main"),
+                 "a wrong declaration in the base": ("ag.load('../badbase')", "std.pack('nope')", "fix the declaration in"),
+                 "a circle": ("ag.load('../a')", "load each other in a circle"),
+                 "no such hook": ("ag.load('../hand').HOOKS['nope']", "has no hook 'nope'"),
+                 "not a path": ("ag.load(3)", "give the folder of another agent.py")}
+        (Path(self.temp.name) / "empty").mkdir()
+        for why, (expr, *line) in cases.items():
+            with self.subTest(why=why):
+                dest = self.agent("derived", "base = %s\nag.main('D.', '', [], {}, ag.std.fsm())\n" % expr)
+                for flag in ("--write-defs", "--defs"):
+                    r = self.run1(dest, flag)
+                    self.assert_one_line(r, "derived", *line)
+                    self.assertEqual(r.stdout, "")
+                self.assertEqual(os.listdir(dest), ["agent.py"])
+        self.assertTrue(ag.load(str(Path(self.temp.name) / "hand")).TOOLS)    # a by_hand field stops only when it is used
+
+    def test_base_paths_are_moved_and_modules_put_back(self):
+        base = self.agent("base", "import helper\n" + BASE.replace(
+            "FSM = std.fsm()", "FSM = ag.fsm(std.fsm(), [ag.state('act', ['python3', 'act.py'])])").replace(
+            'std.pack("mailbox")]', 'std.pack("mailbox"), ag.tool("mine", "tools/mine", env_file="my.env")]').replace(
+            "HOOKS = std.hooks()", "HOOKS = [std.hooks(), {'h': {'event': 'after_tool', 'handler': 'hooks/h'}}]"))
+        (base / "helper.py").write_text("WHO = 'base'\n")
+        (base / "act.py").write_text("")
+        derived = self.agent("derived", "base = ag.load('../base')\nimport helper\nassert helper.WHO == 'derived', helper.WHO\n"
+                                        "ag.main('D.', '', [base.TOOLS], {}, base.FSM, hooks=base.HOOKS)\n")
+        (derived / "helper.py").write_text("WHO = 'derived'\n")
+        path = list(sys.path)
+        r = self.run1(derived)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        tools = json.loads((derived / "tools.json").read_text())["tools"]
+        self.assertEqual(tools["mine"], {"path": str(base / "tools" / "mine"), "env_file": str(base / "my.env")})
+        argv = json.loads((derived / "fsm.json").read_text())["states"]["act"]["exec"]["argv"]
+        self.assertEqual(argv, ["python3", str(base / "act.py")])           # "python3" is a command, not a file of the base
+        self.assertEqual(json.loads((derived / "hooks.json").read_text())["hooks"]["h"]["handler"], str(base / "hooks" / "h"))
+        sys.modules.pop("helper", None)
+        got = ag.load(str(base))                                            # in this process: sys.path and sys.modules put back
+        self.assertEqual(sys.path, path)
+        self.assertNotIn("helper", sys.modules)
+        self.assertEqual(got.FSM["states"]["act"]["exec"]["timeout_ms"], 0)  # the field not given is the base's
+        with unittest.mock.patch.dict(os.environ, {"AOS_INHERIT_TEST": self.temp.name}):
+            moved = ag.load(ag.env("AOS_INHERIT_TEST", "/base")).TOOLS["tools"]["mine"]["path"]
+        self.assertEqual(moved, {"$env": "AOS_INHERIT_TEST", "$path": "/base/tools/mine"})
+
+    def test_fsm_refit(self):
+        stock = ag.std.fsm()
+        f = ag.fsm(stock, [ag.state("think", ["python3", "think_cached.py"]), ag.state("look", ["true"], "idle")])
+        self.assertEqual(f["states"]["think"], {"exec": {"argv": ["python3", "think_cached.py"]}, "next": stock["states"]["think"]["next"]})
+        self.assertIn("look", f["states"])
+        self.assertEqual(ag.fsm(stock, [ag.state("act", timeout_ms=5)])["states"]["act"]["exec"]["argv"],
+                         stock["states"]["act"]["exec"]["argv"])
+        self.assertEqual(ag.fsm(stock, [ag.state("wait", next={0: "idle"})], drop=["act"])["states"]["wait"]["next"], {"0": "idle"})
+        self.assertEqual(stock, ag.std.fsm())                                # the base is not changed
+        for why, value, line in (("next to a dropped state", ag.fsm(stock, [], drop=["act"]), "next state 'act'"),
+                                 ("drop the start", ag.fsm(stock, [ag.state("wait", next="wait")], drop=["idle"]), "start state idle"),
+                                 ("drop nothing there", ag.fsm(stock, [], drop=["nope"]), "the base has no state nope"),
+                                 ("a new state, partly", ag.fsm(stock, [ag.state("new", ["true"])]), "needs both argv and next"),
+                                 ("partly, no base", ag.fsm("a", [ag.state("a", ["true"])]), "needs both argv and next"),
+                                 ("drop with no base", ag.fsm("a", [ag.state("a", ["true"], "a")], drop=["a"]), "drop= only"),
+                                 ("no base (eca)", ag.fsm(None, []), "has FSM None")):
+            with self.subTest(why=why):
+                self.assertIn(line, value["bad"])
+
+    def test_hook_groups_and_tools_of_a_base(self):
+        """two marked hook groups with one name and different entries = SpecBad (tightens the third cut's "a later one wins" for that
+        case only; aos-inherit-1119/06 (c) 4); a plain dict you write still wins."""
+        eca, stock = ag.std.hooks("eca-claude"), ag.std.hooks()
+        both = sorted(n for n in set(eca) & set(stock) if eca[n] != stock[n])       # today: brain_notify, context_wrap
+        self.assertTrue(both)
+        hooks = lambda h: ag.defs("D.", "", [], {}, ag.std.fsm(), hooks=h)["hooks.json"]  # noqa: E731
+        self.assertRaisesRegex(ag.SpecBad, "hook %s comes from both std.hooks\\('agent-fsm'\\) and std.hooks\\('eca-claude'\\)"
+                               % both[0], hooks, [stock, eca])
+        mine = {n: stock[n] for n in both}
+        self.assertEqual(hooks([stock, eca, mine])["hooks"][both[0]], stock[both[0]])        # written after them: picked
+        self.assertRaises(ag.SpecBad, hooks, [stock, mine, eca])                              # written between: not picked
+        self.assertEqual(hooks([ag.std.hooks(), ag.std.hooks()])["description"].count("templates/agent-fsm/hooks.json"), 1)
+        h = ag.std.hooks()["timer"]
+        h["every_ms"] = 1
+        self.assertNotEqual(ag.std.hooks()["timer"]["every_ms"], 1)
+        base = ag.load(str(self.agent("base", BASE.replace(", hooks=HOOKS", ""))))
+        self.assertNotIn("hooks.json", ag.defs("D.", "", [], {}, ag.std.fsm(), hooks=base.HOOKS))   # base had no HOOKS: none
+        self.assertEqual(sorted(ag.defs("D.", "", [base.tools(prefix="r_", exclude=["grep"])], {}, ag.std.fsm())["tools.json"]["tools"]),
+                         sorted("r_" + n for n in base.TOOLS["tools"] if n != "grep"))
+        self.assertIn("the base has no tool cat", base.tools(rename={"cat": "x"})["bad"])
+        self.assertRaisesRegex(ag.SpecBad, "listed twice", ag.defs, "D.", "", [base.TOOLS, base.TOOLS], {}, ag.std.fsm())
+
+
 class Skeleton(unittest.TestCase):
     """templates/agent-python: the committed files are exactly what its agent.py writes today."""
+
+    def test_aos_py_next_to_agent_py_does_not_win(self):
+        """an aos.py next to agent.py: with AOS_HOME set, the skeleton still finds the aos package ($AOS_HOME/lib comes first)."""
+        with tempfile.TemporaryDirectory(prefix="agent-python-") as tmp:
+            home = fake_home(tmp)
+            dest = Path(tmp) / "mine"
+            dest.mkdir()
+            shutil.copy(SKEL / "agent.py", dest)
+            (dest / "aos.py").write_text("raise SystemExit('the wrong aos')\n")
+            r = run_agent(dest / "agent.py", "--defs", home=home)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            (dest / "aos.py").unlink()
+            (home / "lib").unlink()
+            (home / "lib").mkdir()
+            (home / "lib" / "aos").mkdir()                     # an older lib: agent_spec there, agent_spec_lib not yet
+            (home / "lib" / "aos" / "__init__.py").write_text("")
+            (home / "lib" / "aos" / "agent_spec.py").write_text("from aos.agent_spec_lib import std\n")
+            r = run_agent(dest / "agent.py", "--defs", home=home)
+            self.assertEqual(r.returncode, 1)
+            self.assertEqual(r.stderr, "mine: error: ModuleMissing aos.agent_spec_lib not found "
+                                       "(under $AOS_HOME/lib, or next to agent.py)\n")             # one line, not a traceback
 
     def test_files(self):
         self.assertEqual(sorted(p.name for p in SKEL.iterdir()), sorted(GENERATED + ["README.md", "agent.py"]))

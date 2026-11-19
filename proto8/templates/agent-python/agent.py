@@ -6,17 +6,17 @@ sys.dont_write_bytecode = True
 _d = os.path.dirname(os.path.realpath(__file__))
 _found = [_d]
 if os.environ.get("AOS_HOME"):
-    _found.append(os.path.join(os.environ["AOS_HOME"], "lib"))
+    _found.insert(0, os.path.join(os.environ["AOS_HOME"], "lib"))   # $AOS_HOME/lib first: an aos.py next to agent.py must not win
 sys.path[:0] = _found
 try:
     from aos import agent_spec as ag
 except ModuleNotFoundError as _e:
-    if _e.name != "aos":
+    if _e.name != "aos" and not (_e.name or "").startswith("aos."):
         raise
     if os.environ.get("AOS_HOME"):
-        _line = "%s: error: ModuleMissing %s not found (under $AOS_HOME/lib, or next to agent.py)\n" % (os.path.basename(_found[0]), _e.name)
+        _line = "%s: error: ModuleMissing %s not found (under $AOS_HOME/lib, or next to agent.py)\n" % (os.path.basename(_d), _e.name)
     else:
-        _line = "%s: error: HomeMissing AOS_HOME is not set (set it, or copy the %s package folder next to agent.py)\n" % (os.path.basename(_found[0]), _e.name)
+        _line = "%s: error: HomeMissing AOS_HOME is not set (set it, or copy the %s package folder next to agent.py)\n" % (os.path.basename(_d), _e.name)
     sys.stderr.write(_line)
     sys.exit(1)
 # ---- your agent: change the lines below ----

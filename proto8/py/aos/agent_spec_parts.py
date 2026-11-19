@@ -26,8 +26,8 @@ WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl ad
         "tools.json": "Tools this agent can call.",
         "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",
         "hooks.json": "Hooks of this agent: aos functions run when an event happens; the stack copy of this file overrides it by name, null turns one off."}
-HOOKS_SHAPE = ("HOOKS must be a dict {hook name: entry}, std.hooks(...), a list of those (later ones win, None drops a hook), "
-               "or ag.by_hand(\"hooks.json\")")
+HOOKS_SHAPE = ("HOOKS must be a dict {hook name: entry}, std.hooks(...), the HOOKS of ag.load(...), a list of those "
+               "(later ones win, None drops a hook), or ag.by_hand(\"hooks.json\")")
 
 
 class SpecBad(Exception):
@@ -36,6 +36,25 @@ class SpecBad(Exception):
 
 class DefBad(ValueError):
     """定義夾本身（不是宣告）不對：_metainfo.json 壞了；不宣告 FSM 時 interfaces.json 不在、或沒宣告要寫的那份檔。"""
+
+
+class Hooks(dict):
+    """一組帶來源標記的 hook（std.hooks(...)、ag.load(...) 的 HOOKS；繼承第一刀 aos-inherit-cut1-1119）：兩組之間同名又不同＝SpecBad，
+    自己寫的普通 dict 才是故意蓋。值 None＝墓碑（這組把它拿掉了），寫檔前才濾。h["timer"] 回那格的一份拷貝；沒有或是墓碑＝SpecBad。
+    label＝錯誤訊息裡叫它的名字；origins＝寫進 hooks.json 說明的範本檔（不記 ag.load 的底，json 不留上一層）；declared=False＝底沒宣告 HOOKS。"""
+
+    def __init__(self, table, label, origins=(), declared=True):
+        dict.__init__(self, table)
+        self.label, self.origins, self.declared = label, list(origins), declared
+
+    def __getitem__(self, name):
+        if not dict.__contains__(self, name):
+            have = sorted(k for k, v in dict.items(self) if v is not None)
+            raise SpecBad("%s has no hook %r (hooks: %s)" % (self.label, name, ", ".join(have) or "none"))
+        entry = dict.__getitem__(self, name)
+        if entry is None:
+            raise SpecBad("%s takes hook %s out (None), so there is no entry to change" % (self.label, name))
+        return json.loads(json.dumps(entry))
 
 
 def kind(value):
@@ -58,21 +77,24 @@ def pick(value, what, ok):
     return None
 
 
-def tools_json(tools):
-    """TOOLS → tools.json 的內容。包在宣告時已讀出、展開好（aos/agent_spec_lib.py），這裡疊起來：明寫的 ag.tool／庫的 .tool 整格換掉包裡同名那支（故意），
-    ag.no 拿掉；兩個包展開出同一個名字＝解完的整格完全相同才算同一支（菱形），否則 SpecBad，不再悄悄蓋（命名空間第一刀；設計稿 aos-ns-1119/05 第 7 條）。
-    出的 tools.json 只有 tools 表、沒有 $override：哪幾支、各叫什麼在生成時定死（07 第 7 題暫照推薦）。"""
-    order, packed, own, nos, packs = [], {}, {}, [], []
+def stack_tools(tools):
+    """TOOLS 疊起來 → ({名字: 工具格，拿掉的＝None（墓碑）}, 說明裡列的包)。包在宣告時已讀出、展開好（aos/agent_spec_lib.py）：明寫的 ag.tool／庫的 .tool
+    整格換掉包裡同名那支（故意），ag.no 拿掉；兩個包展開出同一個名字＝解完的整格完全相同才算同一支（菱形），否則 SpecBad，不再悄悄蓋（命名空間第一刀；
+    設計稿 aos-ns-1119/05 第 7 條）。ag.load 的 TOOLS 也是一個包，它拿掉的帶著墓碑來：一邊墓碑、一邊還在＝同樣 SpecBad（繼承第一刀，aos-inherit-1119/07 A1）。"""
+    order, packed, own, nos, packs, origins = [], {}, {}, [], [], []
     for t in tools:
         raise_bad(t)
         if kind(t) not in ("pack", "tool", "no"):
             raise SpecBad("each item of TOOLS must come from std.pack(...), std.tool(...), ag.tool(...) or ag.no(...) "
-                          "(or .pack / .tool of a library from ag.lib), got %r" % (t,))
+                          "(or .pack / .tool of a library from ag.lib, or the TOOLS of ag.load(...)), got %r" % (t,))
         if t["kind"] == "pack":
-            label = "%s.pack(%r)" % (t["lib"], t["name"])
+            label = t.get("label") or "%s.pack(%r)" % (t["lib"], t["name"])
             if label in packs:
                 raise SpecBad("%s is listed twice" % label)
             packs.append(label)
+            for o in t.get("origins", [label]):
+                if o not in origins:
+                    origins.append(o)
             for name, entry in t["tools"].items():
                 packed.setdefault(name, []).append((label, entry))
                 if name not in order:
@@ -93,20 +115,32 @@ def tools_json(tools):
     out = {}
     for name in order:
         if name in nos:
+            out[name] = None
             continue
         if name in own:
             out[name] = own[name]
             continue
         (first, entry), rest = packed[name][0], packed[name][1:]
         for label, other in rest:
+            if other != entry and None in (entry, other):
+                gone, kept = (first, label) if entry is None else (label, first)
+                raise SpecBad("tool %s is taken out in %s but kept in %s: say which you mean with ag.no(%r) or ag.tool(%r, ...)"
+                              % (name, gone, kept, name, name))
             if other != entry:
                 raise SpecBad("tool %s comes from both %s and %s, and they differ: rename one (prefix= or rename=), "
                               "leave one out (exclude=), or pick one with ag.tool(%r, ...)" % (name, first, label, name))
         out[name] = entry
+    return out, origins
+
+
+def tools_json(tools):
+    """TOOLS → tools.json 的內容：stack_tools 疊完、濾掉墓碑。只有 tools 表、沒有 $override：哪幾支、各叫什麼在生成時定死（07 第 7 題暫照推薦）；
+    說明只列抄進來的包（std.pack、庫的 .pack），不提 ag.load 的底（json 不留上一層）。"""
+    table, origins = stack_tools(tools)
     desc = WHAT["tools.json"]
-    if packs:
-        desc += " agent.py copied in the tools of %s." % ", ".join(packs)
-    return {"description": desc, "tools": out}
+    if origins:
+        desc += " agent.py copied in the tools of %s." % ", ".join(origins)
+    return {"description": desc, "tools": {n: e for n, e in table.items() if e is not None}}
 
 
 def llm_json(llm, keys):
@@ -152,37 +186,65 @@ def interfaces_json(over, files, description):
     return out
 
 
-def hooks_json(hooks):
-    """HOOKS（一張表、std.hooks(...)、或它們的串列：後面的同名蓋前面、None 拿掉）→ hooks.json 的內容；每格照 agent 的 hooks.py 驗。"""
+def no_hooks(hooks):
+    """底沒宣告 HOOKS（ag.load 交回的空組）單獨用、或串列裡只有這種＝沒宣告 HOOKS（None）：不生 hooks.json，跟底一樣。"""
     layers = list(hooks) if isinstance(hooks, (list, tuple)) else [hooks]
-    table, stock = {}, []
+    if layers and all(isinstance(h, Hooks) and not h.declared for h in layers):
+        return None
+    return hooks
+
+
+def stack_hooks(hooks):
+    """HOOKS 疊起來 → ({名字: 格，拿掉的＝None（墓碑）}, 說明裡列的範本檔)。一張表、std.hooks(...)、ag.load 的 HOOKS、或它們的串列：後面的同名蓋前面、
+    None 拿掉；每格照 agent 的 hooks.py 驗。兩組帶標記的（Hooks）之間同名又不同＝SpecBad（繼承第一刀，收緊第三刀「兩組互蓋」那一種），
+    除非自己寫的普通 dict 在兩組之後明寫了那一格（＝選好了）；自己寫的照舊蓋（aos-inherit-1119/06 設計者直接定第 4 條）。"""
+    layers = list(hooks) if isinstance(hooks, (list, tuple)) else [hooks]
+    table, origins, marked, clash = {}, [], {}, {}
     for layer in layers:
         raise_bad(layer)
-        if kind(layer) == "stock_hooks":
-            stock.append(layer["template"])
-            layer = layer["hooks"]
+        if isinstance(layer, Hooks):
+            source = layer.label
+            for o in layer.origins:
+                if o not in origins:
+                    origins.append(o)
         elif kind(layer) is not None or not isinstance(layer, dict):
             raise SpecBad(HOOKS_SHAPE)
-        for name, entry in layer.items():
+        else:
+            source = None
+        for name, entry in dict.items(layer):
             if not isinstance(name, str):
                 raise SpecBad("HOOKS hook name %r must be a string" % (name,))
-            if entry is None:
+            if entry is not None:
+                try:
+                    hook_run.validate_name(name)
+                except hook_run.HooksBad as e:
+                    raise SpecBad("HOOKS hook name %r %s" % (name, e))
+                try:
+                    agent_hooks.validate_entry(entry)
+                except hook_run.HooksBad as e:
+                    raise SpecBad("HOOKS hook %s: %s" % (name, e))
+            if source is None:
+                clash.pop(name, None)                               # 自己寫在它們後面的＝選好了
+            else:
+                if name in marked and marked[name][1] != entry:
+                    clash[name] = (marked[name][0], source)
+                marked[name] = (source, entry)
+            if entry is None or table.get(name, False) is None:     # 拿掉的排到最後（照舊的 pop 順序）
                 table.pop(name, None)
-                continue
-            try:
-                hook_run.validate_name(name)
-            except hook_run.HooksBad as e:
-                raise SpecBad("HOOKS hook name %r %s" % (name, e))
-            try:
-                agent_hooks.validate_entry(entry)
-            except hook_run.HooksBad as e:
-                raise SpecBad("HOOKS hook %s: %s" % (name, e))
             table[name] = entry
+    for name, (first, second) in clash.items():
+        raise SpecBad("hook %s comes from both %s and %s, and they differ: pick one by writing it yourself after them, "
+                      "like {%r: ...} (None drops it)" % (name, first, second, name))
+    return table, origins
+
+
+def hooks_json(hooks):
+    """HOOKS → hooks.json 的內容：stack_hooks 疊完、濾掉墓碑；說明列抄自哪些範本（去重），不提 ag.load 的底。"""
+    table, origins = stack_hooks(hooks)
     desc = WHAT["hooks.json"]
-    if stock:
-        desc += " Taken from %s; see the description there for what each hook does." % ", ".join(
-            "templates/%s/hooks.json" % t for t in stock)
-    return {"description": desc, "hooks": table}
+    if origins:
+        desc += " Taken from %s; see the description there for what each hook does." % ", ".join(origins)
+    return {"description": desc, "hooks": {n: e for n, e in table.items() if e is not None}}
 
 
 def extra_files(files, taken):
