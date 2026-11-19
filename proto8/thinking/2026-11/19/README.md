@@ -7,3 +7,4 @@
 | 份 | 一句話 |
 |---|---|
 | [公司WSL-環境-1119](公司WSL-環境-1119.md) | 公司 WSL 的 aos 程式裝到 repo 這層（install.py 退 0、28 支、暫存樹假腦過）；LiteLLM 查清兩台版本（家機 1.87.5、公司昨天裝的 1.109.1 還在但登入沒走完），沒起，版本待使用者拍板 |
+| [aos-compile-庚](aos-compile-庚/README.md) | 庚的設計稿：一支 `agent.py` 宣告 SYSTEM／TOOLS／LLM／FSM 重生定義夾的 json；打架規則定成「`agent.py` 永遠贏、記指紋分過時與被手改、`agent_def check` 重生而 `defs check` 只報」；五刀範圍（第一刀只加 lib 與骨架）；六題待使用者拍板，沒改程式 |

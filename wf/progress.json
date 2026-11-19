@@ -261,11 +261,13 @@
       "title": "aos-compile：用 Python 寫、編譯成 aos 夾",
       "status": "open",
       "flow": "",
-      "what": "使用者 11-18 晚裁定：庚（agent 版 tool_spec，一支 agent.py 宣告 SYSTEM／TOOLS／LLM／FSM 重生 json）先做、己（從樹濃縮一頁總覽，只看不必精細）後做；除錯以 loop 那層為主（缺一頁攤開資源的畫面、這一步對到原始碼哪一行）；11-19 正式開始",
-      "next": "11-19 開工：先定庚的 agent_def check 打架規則",
+      "what": "使用者 11-18 晚裁定：庚（agent 版 tool_spec，一支 agent.py 宣告 SYSTEM／TOOLS／LLM／FSM 重生 json）先做、己（從樹濃縮一頁總覽，只看不必精細）後做；除錯以 loop 那層為主。11-19 庚的設計稿寫完（線 compile-geng-1119，沒改程式）：agent.py 長相與例子、打架規則（agent.py 永遠贏；記指紋分過時與被手改；agent_def check 重生、defs check 只報）、邊緣狀況、五刀範圍；六題待使用者拍板（第 1 題：手改過的生成檔是直接蓋還是停下來講；第 2 題：agent_def tools／llm／system 碰到生成檔擋不擋）",
+      "next": "第一刀（只加 py/aos/agent_spec.py 與 templates/agent-python/，不改現有程式）不必等六題，可交 opus 細化成施工計劃；第二刀（接進 agent_def 與 defs check）要等第 1、2 題的答案",
       "see": [
+        "[庚設計稿 README](../proto8/thinking/2026-11/19/aos-compile-庚/README.md)",
+        "[要使用者拍板的題](../proto8/thinking/2026-11/19/aos-compile-庚/09-要使用者拍板的題.md)",
         "[07-使用者裁定](../proto8/thinking/2026-11/18/aos-compile-1118/07-使用者裁定.md)",
-        "[README](../proto8/thinking/2026-11/18/aos-compile-1118/README.md)"
+        "[11-18 調查 README](../proto8/thinking/2026-11/18/aos-compile-1118/README.md)"
       ],
       "since": "2026-11-18"
     }
