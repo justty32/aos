@@ -10,7 +10,10 @@
 #   include/    public C++ headers, copied from cpp/aos-*/include
 #   cpp/build/  objects and build.log (kept, so a rerun only rebuilds what changed)
 #   cpp/compile_commands.json   for clangd
-# bin/, lib/ and include/ are emptied first, so a rerun gives the same result as a fresh install.
+# bin/, lib/ and include/ are not emptied first (a running tree keeps importing from lib/ meanwhile): every file is copied over
+# (changed ones through a temporary file and a rename), then whatever is left over is removed: files py/ no longer has,
+# entries py/entries.json no longer lists, headers cpp/ no longer has, and C++ outputs the Makefile no longer makes
+# (what make makes is read from its dry run). So a rerun gives the same result as a fresh install.
 # Programs run only from bin/ and lib/: a change in py/ shows up after the next install.py.
 # At the end it prints the next steps: set AOS_HOME once (it is never set for you; a warning when it points at another home),
 # then copy a starter template (templates/start-api or start-eca) to a tree and source that tree's env.sh.
@@ -118,11 +121,16 @@ def build(jobs):
         die("BuildFailed", "make exited %d, see %s" % (r.returncode, log.relative_to(HOME)))
 
 
-def compile_commands():
-    """Write cpp/compile_commands.json from a dry run of make (every compile line)."""
+def dry_run():
+    """The lines of make's dry run (-B -n: every command it would run for a full build)."""
     r = subprocess.run(make_args(1) + ["-B", "-n"], capture_output=True, text=True)
+    return r.stdout.splitlines()
+
+
+def compile_commands(lines):
+    """Write cpp/compile_commands.json from the dry run (every compile line)."""
     entries = []
-    for line in r.stdout.splitlines():
+    for line in lines:
         words = line.split()
         if "-c" in words and "-o" in words:
             src = words[words.index("-c") + 1]
@@ -131,22 +139,107 @@ def compile_commands():
     return len(entries)
 
 
-def copy_headers():
+def cpp_outputs(lines):
+    """What make puts into bin/ and lib/ (read from the dry run: the file after -o, or after `ar rcs`): {"bin": names, "lib": names}."""
+    out = {"bin": set(), "lib": set()}
+    for line in lines:
+        for part in line.split(";"):
+            words = part.split()
+            target = None
+            if len(words) > 2 and words[0] == "ar" and words[1].startswith("r"):
+                target = words[2]
+            elif "-o" in words and words.index("-o") + 1 < len(words):
+                target = words[words.index("-o") + 1]
+            if target:
+                p = Path(os.path.normpath(os.path.join(str(CPP), target)))
+                for key, folder in (("bin", BIN), ("lib", LIB)):
+                    if p.parent == folder:
+                        out[key].add(p.name)
+    return out
+
+
+def same_file(src, dst):
+    """dst already holds what src holds (a symlink with the same text, or a regular file with the same bytes and mode)."""
+    if src.is_symlink():
+        return dst.is_symlink() and os.readlink(dst) == os.readlink(src)
+    if dst.is_symlink() or not dst.is_file():
+        return False
+    a, b = src.stat(), dst.stat()
+    if a.st_size != b.st_size or (a.st_mode & 0o777) != (b.st_mode & 0o777):
+        return False
+    return src.read_bytes() == dst.read_bytes()
+
+
+def put(dst, write):
+    """Replace dst in one rename: write(tmp) fills a temporary file next to it (a reader sees the old file or the new one, never half)."""
+    if dst.is_dir() and not dst.is_symlink():
+        shutil.rmtree(dst)                       # a folder where a file now goes
+    tmp = dst.parent / (".%s.install-tmp" % dst.name)
+    if tmp.is_symlink() or tmp.exists():
+        tmp.unlink()
+    write(tmp)
+    os.replace(tmp, dst)
+
+
+def sync_tree(src, dst, skip=None):
+    """Copy the tree src into dst without emptying dst first; unchanged files are left as they are. Symlinks stay symlinks.
+    skip(folder, names) -> names not to copy. Returns (files, folders) copied, as paths relative to dst (for prune)."""
+    files, folders = set(), set()
+    for folder, dirs, names in os.walk(src):
+        rel = Path(folder).relative_to(src)
+        gone = set(skip(folder, dirs + names)) if skip else set()
+        dirs[:] = [d for d in dirs if d not in gone]
+        here = dst / rel
+        if here.is_symlink() or (here.exists() and not here.is_dir()):
+            here.unlink()
+        here.mkdir(parents=True, exist_ok=True)
+        folders.add(rel)
+        for name in sorted(names + [d for d in dirs if (Path(folder) / d).is_symlink()]):
+            if name in gone:
+                continue
+            s, d = Path(folder) / name, here / name
+            files.add(rel / name)
+            if same_file(s, d):
+                continue
+            if s.is_symlink():
+                put(d, lambda tmp, s=s: os.symlink(os.readlink(s), tmp))
+            else:
+                put(d, lambda tmp, s=s: shutil.copy2(s, tmp))
+        dirs[:] = [d for d in dirs if not (Path(folder) / d).is_symlink()]   # a symlinked folder is one entry, copied as a link
+    return files, folders
+
+
+def prune(root, files, folders):
+    """Remove what is under root but not in files / folders (paths relative to root): the leftovers of an earlier install."""
     n = 0
-    for d in sorted(CPP.glob("aos-*/include")):
-        shutil.copytree(d, INC, dirs_exist_ok=True)
-        n += sum(1 for p in d.rglob("*") if p.is_file())
+    for folder, dirs, names in os.walk(root, topdown=False):
+        rel = Path(folder).relative_to(root)
+        for name in names + [d for d in dirs if (Path(folder) / d).is_symlink()]:
+            if rel / name not in files:
+                (Path(folder) / name).unlink()
+                n += 1
+        if rel not in folders and folder != str(root) and not os.listdir(folder):
+            os.rmdir(folder)
     return n
 
 
+def copy_headers():
+    """cpp/aos-*/include -> include/ (all projects merged)."""
+    files, folders = set(), set()
+    for d in sorted(CPP.glob("aos-*/include")):
+        f, fo = sync_tree(d, INC)
+        files |= f
+        folders |= fo
+    return files, folders
+
+
 def copy_py():
-    """py/ -> lib/ (merged with the C++ libraries already there); skips tests/ at any depth, py/docs and __pycache__.
+    """py/ -> lib/ (next to the C++ libraries); skips tests/ at any depth, py/docs and __pycache__.
     Symlinks stay symlinks (the aos-sandbox examples point at lib/tools/... with relative links)."""
     def skip(folder, names):
         top = Path(folder) == PY
         return [n for n in names if n in ("tests", "__pycache__") or (top and n == "docs")]
-    shutil.copytree(PY, LIB, ignore=skip, dirs_exist_ok=True, symlinks=True)
-    return sum(1 for p in LIB.rglob("*") if p.is_file() and not p.name.startswith("libaos-"))
+    return sync_tree(PY, LIB, skip)
 
 
 ENTRY = """#!/usr/bin/env python3
@@ -160,8 +253,9 @@ ENTRY_NAME = re.compile(r"aos-[a-z0-9]+(-[a-z0-9]+)*\Z")
 ENTRY_MODULE = re.compile(r"aos\.apps(\.[a-z_][a-z0-9_]*)+\Z")
 
 
-def write_entries():
-    """bin/<command> for every line of py/entries.json ({"commands": {name: module}}); the module must be in lib/ already."""
+def write_entries(cpp_bin):
+    """bin/<command> for every line of py/entries.json ({"commands": {name: module}}); the module must be in lib/ already.
+    cpp_bin = the names make puts into bin/ (an entry may not have one of them). Returns the entry names."""
     path = PY / "entries.json"
     rel = path.relative_to(HOME)
     try:
@@ -177,12 +271,19 @@ def write_entries():
         file = module.replace(".", "/") + ".py"
         if not (LIB / file).is_file():
             die("EntriesBad", "%s: %s -> %s, but py/%s does not exist" % (rel, name, module, file))
-        target = BIN / name
-        if target.exists():
+        if name in cpp_bin:
             die("EntriesBad", "%s: %s is also a C++ executable in bin/" % (rel, name))
-        target.write_text(ENTRY % {"name": name, "file": file, "module": module}, encoding="utf-8")
-        target.chmod(0o755)
-    return len(cmds)
+        text = ENTRY % {"name": name, "file": file, "module": module}
+        target = BIN / name
+        if target.is_file() and not target.is_symlink() and target.read_text(encoding="utf-8", errors="replace") == text \
+                and os.access(target, os.X_OK):
+            continue
+
+        def write(tmp, text=text):
+            tmp.write_text(text, encoding="utf-8")
+            tmp.chmod(0o755)
+        put(target, write)
+    return set(cmds)
 
 
 def main(argv):
@@ -209,19 +310,30 @@ def main(argv):
         if not src.is_file():
             die("SourceMissing", "%s not found" % src)
     for d in (BIN, LIB, INC):
-        if d.is_dir():
-            shutil.rmtree(d)
-        d.mkdir()
+        if d.is_symlink() or (d.exists() and not d.is_dir()):
+            d.unlink()
+        d.mkdir(exist_ok=True)
+    lines = dry_run()
+    made = cpp_outputs(lines)
+    if not made["bin"]:
+        die("BuildBad", "make -n -B names nothing it puts into bin/ (nothing was changed; is cpp/Makefile all right?)")
     print("building cpp/ (make -j%d, log: cpp/build/build.log) ..." % jobs, flush=True)
     build(jobs)
-    ncpp = sum(1 for _ in BIN.iterdir())
-    nh = copy_headers()
-    npy = copy_py()
-    nent = write_entries()
-    nc = compile_commands()
-    nlib = sum(1 for p in LIB.iterdir() if p.name.startswith("libaos-"))
+    missing = sorted(n for key, folder in (("bin", BIN), ("lib", LIB)) for n in made[key] if not (folder / n).exists())
+    if missing:
+        die("BuildBad", "make finished but did not make %s (nothing was removed)" % ", ".join(missing))
+    hfiles, hfolders = copy_headers()
+    pfiles, pfolders = copy_py()
+    entries = write_entries(made["bin"])
+    gone = prune(INC, hfiles, hfolders)
+    gone += prune(LIB, pfiles | {Path(n) for n in made["lib"]}, pfolders)
+    gone += prune(BIN, {Path(n) for n in made["bin"] | entries}, {Path(".")})
+    nc = compile_commands(lines)
+    ncpp, nent, nlib = len(made["bin"]), len(entries), len(made["lib"])
+    npy = sum(1 for p in pfiles if not (PY / p).is_dir())
     print("installed %d commands into %s (%d C++, %d Python entries), %d files from py/ and %d C++ libraries into %s, %d headers into %s, "
-          "%d entries in cpp/compile_commands.json" % (ncpp + nent, BIN, ncpp, nent, npy, nlib, LIB, nh, INC, nc))
+          "%d entries in cpp/compile_commands.json; removed %d left over from an earlier install"
+          % (ncpp + nent, BIN, ncpp, nent, npy, nlib, LIB, len(hfiles), INC, nc, gone))
     print_next()
     return 0
 

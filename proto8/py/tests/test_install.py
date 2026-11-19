@@ -1,4 +1,4 @@
-"""test_install - proto8/install.py in a throwaway home with a fake make: fills bin/ (C++ + the Python entries of py/entries.json), lib/ (py/ copy + C++ libraries) and include/, a rerun gives the same result and drops old entries, a bad entries.json is one error line, the aos package imports only from lib/, the last lines follow AOS_HOME."""
+"""test_install - proto8/install.py in a throwaway home with a fake make: fills bin/ (C++ + the Python entries of py/entries.json), lib/ (py/ copy + C++ libraries) and include/, a rerun gives the same result and drops old entries, a rerun copies over without emptying first and then removes leftovers (never what make made), a failed build leaves the old install, a bad entries.json is one error line, the aos package imports only from lib/, the last lines follow AOS_HOME."""
 import os
 import shutil
 import subprocess
@@ -12,8 +12,15 @@ INSTALL = Path(__file__).resolve().parents[2] / "install.py"
 # fake make: writes one executable into BINDIR=, one library into LIBDIR= and one compile line for the dry run
 FAKE_MAKE = """#!/bin/sh
 for a in "$@"; do case "$a" in BINDIR=*) bindir="${a#BINDIR=}";; LIBDIR=*) libdir="${a#LIBDIR=}";; -n) dry=1;; esac; done
-if [ -n "$dry" ]; then echo "g++ -O3 -c aos-x/src/a.cpp -o build/obj/aos-x/src/a.o"; exit 0; fi
+if [ -n "$dry" ]; then
+  echo "g++ -O3 -c aos-x/src/a.cpp -o build/obj/aos-x/src/a.o"
+  [ -n "$FAKE_MAKE_EMPTY" ] && exit 0
+  echo "mkdir -p $libdir; rm -f $libdir/libaos-x.a"; echo "ar rcs $libdir/libaos-x.a build/obj/aos-x/src/a.o"
+  echo "g++ -O3 -static-pie -pthread -o $bindir/aos-x build/obj/aos-x/src/main.o $libdir/libaos-x.a"
+  exit 0
+fi
 [ -n "$FAKE_MAKE_FAIL" ] && { echo boom; exit 2; }
+[ -n "$FAKE_MAKE_UPTODATE" ] && [ -f "$bindir/aos-x" ] && exit 0
 mkdir -p "$bindir" "$libdir" && printf '#!/bin/sh\\n' > "$bindir/aos-x" && chmod +x "$bindir/aos-x" && : > "$libdir/libaos-x.a"
 """
 # a small py/: the aos package, one tool with its own tests, the package tests and docs (those two are not installed)
@@ -193,6 +200,60 @@ class InstallTest(unittest.TestCase):
         r = self.run_install(env={"FAKE_MAKE_FAIL": "1"})
         self.assertEqual(r.returncode, 1)
         self.assertIn("install.py: error: BuildFailed make exited 2, see cpp/build/build.log", r.stderr)
+
+    # ---- 第零刀（線 aos-pylib-cut-1119）：照抄之後刪孤兒，不先整夾刪 ----
+    def test_rerun_keeps_unchanged_files_and_removes_leftovers(self):
+        """A rerun does not empty lib/ first: unchanged files keep their inode, a changed one is replaced by a rename,
+        a module (and its folder) deleted from py/ is gone from lib/, and what make made stays even when make rewrote nothing."""
+        self.assertEqual(self.run_install().returncode, 0)
+        lib = self.home / "lib"
+        (self.home / "py" / "aos" / "tool_io.py").write_text("x = 2\n")
+        shutil.rmtree(self.home / "py" / "aos" / "agentlib")                         # a whole module folder deleted from py/
+        (self.home / "lib" / "aos" / "__pycache__").mkdir()
+        (self.home / "lib" / "aos" / "__pycache__" / "x.pyc").write_text("old\n")
+        init_ino = (lib / "aos" / "__init__.py").stat().st_ino
+        r = self.run_install(env={"FAKE_MAKE_UPTODATE": "1"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("removed 3 left over", r.stdout)
+        self.assertEqual((lib / "aos" / "__init__.py").stat().st_ino, init_ino)        # untouched
+        self.assertEqual((lib / "aos" / "tool_io.py").read_text(), "x = 2\n")
+        self.assertFalse((lib / "aos" / "agentlib").exists())                         # file and folder gone
+        self.assertFalse((lib / "aos" / "__pycache__").exists())
+        self.assertEqual(sorted(p.name for p in (self.home / "bin").iterdir()), ["aos-x", "aos-y"])   # make made nothing new
+        self.assertTrue((lib / "libaos-x.a").exists())
+        self.assertEqual([p for p in lib.rglob(".*install-tmp")], [])
+
+    def test_failed_rebuild_keeps_the_old_install(self):
+        self.assertEqual(self.run_install().returncode, 0)
+        before = self.lib_files()
+        (self.home / "py" / "aos" / "tool_io.py").unlink()
+        r = self.run_install(env={"FAKE_MAKE_FAIL": "1"})
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(self.lib_files(), before)                                    # nothing removed, nothing half-copied
+        self.assertEqual(sorted(p.name for p in (self.home / "bin").iterdir()), ["aos-x", "aos-y"])
+
+    def test_dry_run_naming_nothing_removes_nothing(self):
+        """If make's dry run names nothing it puts into bin/, install stops before touching anything (it would not know what is C++)."""
+        self.assertEqual(self.run_install().returncode, 0)
+        r = self.run_install(env={"FAKE_MAKE_EMPTY": "1"})
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("install.py: error: BuildBad make -n -B names nothing it puts into bin/", r.stderr)
+        self.assertEqual(sorted(p.name for p in (self.home / "bin").iterdir()), ["aos-x", "aos-y"])
+        self.assertIn("libaos-x.a", self.lib_files())
+
+    def test_dir_becomes_file_and_symlink_dirs(self):
+        """py/ turns a folder into a file: lib/ follows; a symlinked folder in py/ stays one link in lib/ and is not walked into on rerun."""
+        (self.home / "py" / "aos" / "z").mkdir()
+        (self.home / "py" / "aos" / "z" / "a.py").write_text("x\n")
+        (self.home / "py" / "aos" / "link").symlink_to("agentlib")
+        self.assertEqual(self.run_install().returncode, 0)
+        shutil.rmtree(self.home / "py" / "aos" / "z")
+        (self.home / "py" / "aos" / "z").write_text("now a file\n")
+        r = self.run_install()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual((self.home / "lib" / "aos" / "z").read_text(), "now a file\n")
+        self.assertTrue((self.home / "lib" / "aos" / "link").is_symlink())
+        self.assertTrue((self.home / "lib" / "aos" / "agentlib" / "hooks.py").is_file())
 
 
 if __name__ == "__main__":
