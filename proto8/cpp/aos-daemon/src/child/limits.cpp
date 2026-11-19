@@ -7,7 +7,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <sstream>
 
 #include <grp.h>
 #include <sys/resource.h>
@@ -36,33 +35,8 @@ const Key KEYS[] = {
 
 const long long MB_MAX = 0x7fffffffffffffffLL >> 20;   // 換成位元組不溢位
 
-// /etc/passwd、/etc/group 一行一行（name:x:id:…）。不用 getpwnam／getgrouplist：aos-daemon 是靜態連結的，glibc 的 NSS 在靜態程式裡
+// /etc/passwd、/etc/group 用 etc_rows（subuid.cpp）讀。不用 getpwnam／getgrouplist：aos-daemon 是靜態連結的，glibc 的 NSS 在靜態程式裡
 // 要執行時載同版本的共享庫，實測查不到的名字會把整台 daemon 弄成 SIGSEGV。所以只認本機兩份檔裡的帳號（LDAP 之類的不認）。
-std::vector<std::vector<std::string>> rows_of(const char* path) {
-    std::vector<std::vector<std::string>> out;
-    int err = 0;
-    std::optional<std::string> text = aos::read_file(path, err);
-    if (!text) {
-        return out;
-    }
-    std::istringstream in(*text);
-    std::string line;
-    while (std::getline(in, line)) {
-        std::vector<std::string> f;
-        size_t i = 0;
-        while (true) {
-            size_t j = line.find(':', i);
-            f.push_back(line.substr(i, j == std::string::npos ? std::string::npos : j - i));
-            if (j == std::string::npos) {
-                break;
-            }
-            i = j + 1;
-        }
-        out.push_back(std::move(f));
-    }
-    return out;
-}
-
 bool is_id(const std::string& s) {
     return !s.empty() && s.find_first_not_of("0123456789") == std::string::npos;
 }
@@ -79,7 +53,10 @@ void check_limits(const Json& v, const std::string& where) {
     for (auto& [k, x] : v.items()) {
         if (k == "user") {
             if (!x.is_string() || x.get<std::string>().empty()) {
-                throw Error{code::CfgBad, where + ".user must be a user name (non-empty string)"};
+                throw Error{code::CfgBad, where + ".user must be a user name or sub:N (non-empty string)"};
+            }
+            if (is_sub(x.get<std::string>()) && sub_number(x.get<std::string>()) == 0) {
+                throw Error{code::CfgBad, where + ".user " + aos::dumps(x) + ": sub:N needs N from 1 to 60000 (no leading zero)"};
             }
             continue;
         }
@@ -158,7 +135,12 @@ Limits prep_limits(const Json& limits, bool& procs_warned) {
     if (limits.contains("user")) {   // 子行程裡不查（要讀檔、配置）：fork 之前查好（同 s6-setuidgid：uid、主群組、附加群組）
         out.has_user = true;
         out.user = limits["user"].get<std::string>();
-        for (const auto& f : rows_of("/etc/passwd")) {
+        if (is_sub(out.user)) {   // 免 root 換成 subuid（線 subuid-1119）：查號碼段與 helper，做不到丟 LimitBad（父行程預檢，單列 stopped）
+            prep_sub(out.sub, out.user);
+            out.user_found = true;
+            return out;
+        }
+        for (const auto& f : etc_rows("/etc/passwd")) {
             if (f.size() >= 4 && f[0] == out.user && is_id(f[2]) && is_id(f[3])) {
                 out.user_found = true;
                 out.uid = (uid_t)std::strtoul(f[2].c_str(), nullptr, 10);
@@ -168,7 +150,7 @@ Limits prep_limits(const Json& limits, bool& procs_warned) {
         }
         if (out.user_found) {
             out.groups.push_back(out.gid);
-            for (const auto& f : rows_of("/etc/group")) {
+            for (const auto& f : etc_rows("/etc/group")) {
                 if (f.size() < 4 || !is_id(f[2])) {
                     continue;
                 }
@@ -202,7 +184,7 @@ void apply_limits(const Limits& lim) {
             _exit(1);
         }
     }
-    if (!lim.has_user) {
+    if (!lim.has_user || lim.sub.n != 0) {   // sub:N 由 run_child 接著呼叫 enter_sub（要跟父行程對號碼）
         return;
     }
     if (!lim.user_found) {

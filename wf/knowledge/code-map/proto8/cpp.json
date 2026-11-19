@@ -21,7 +21,9 @@
      "child.hpp": "保存 proc 的共同生命週期、可重放入口、公開窗與 stuck 判定資料。",
      "limits.cpp": "proc 的份額 limits（說明見 limits.hpp；11-05 feat-proto 件 5，等同 s6-softlimit／s6-setuidgid）。",
      "limits.hpp": "proc 的份額 limits（11-05 feat-proto 件 5，使用者「會想要限制特定aos proc所占用的資源。",
-     "refs.cpp": "把表與內嵌單子的路徑改寫成相對 daemon 或小格的參照。"
+     "refs.cpp": "把表與內嵌單子的路徑改寫成相對 daemon 或小格的參照。",
+     "subuid.cpp": "免 root 把 proc 換成 subuid（說明見 subuid.hpp；線 subuid-1119，kernel-limits-plan 段 3 的最小一刀）。",
+     "subuid.hpp": "免 root 把 proc 換成 subuid（limits.user 寫 \"sub:N\"；kernel-limits-plan 段 3 的最小一刀，線 subuid-1119）。"
     },
     "common": {
      "common.hpp": "aos-daemon 好幾個元素都用到的：型別別名、錯誤代號。"
@@ -56,6 +58,7 @@
     "test_stale_stop.py": "Check stop → sleep → start keeps the restarted loop running instead of replaying the old stop.",
     "test_state_path.py": "Check the procs_state_path query letter (11-13, K-F27): the reply carries the absolute path of procs_state.json, null without that window, BodyBad wh…",
     "test_stop_cause.py": "Verify the after_stop cause (B7) end to end: a real daemon writes stop_cause.json, its child aos-loop reads it, hook_fire reports it.",
+    "test_subuid.py": "驗證 daemon 認 limits.user 的 sub:N（免 root 換成 subuid，線 subuid-1119）：設定驗證、helper 找不到與失敗、小格 ACL、與 fake helper 的握手；有真的 newuidmap 才跑真換身分。",
     "test_two_machines.py": "Check two-machines daemon fixes: copies never adopt the original tree, and mailbox rows re-resolve directives on start."
    }
   },

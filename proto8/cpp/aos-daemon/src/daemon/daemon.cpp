@@ -161,6 +161,12 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         throw Error{code::CfgBad, "cgroup must be \"off\", \"auto\" or \"on\""};
     }
     cgroup_mode_ = cg.get<std::string>();
+    // 線 subuid-1119（kernel-limits-plan K6、K18：一台 daemon 一個群組）：limits.user 寫 sub:N 的 proc，主群組＝ns 裡的這個號碼；沒寫＝60001
+    Json grp = cfg_.value("group", Json(SUB_GROUP_MIN));
+    if (!grp.is_number_integer() || grp.get<long long>() < SUB_GROUP_MIN || grp.get<long long>() > SUB_GROUP_MAX) {
+        throw Error{code::CfgBad, "group must be an integer from " + std::to_string(SUB_GROUP_MIN) + " to " + std::to_string(SUB_GROUP_MAX)};
+    }
+    set_sub_group((int)grp.get<long long>());
     Json a = cfg_.value("adopt", Json(true));
     if (!a.is_boolean()) {
         throw Error{code::CfgBad, "adopt must be true or false"};

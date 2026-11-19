@@ -88,7 +88,7 @@
 **users 要兜底**：proc 名字是寄件人自己取的；沒對到任何樣式的 proc 不換身分、照 daemon 的帳號跑。要每支都換身分，`users` 最後一條寫 `"*"`，並用站的 `allowed` 限制寄件人能用哪些名字。
 **只寫 users 不寫 limits.default**：轉出的 proc 會帶 `limits: {"user": …}`，daemon 把有寫的 limits 整份當成這支的份額，它自己的預設就不套了；開 `users` 的站請同時寫 `limits.default`。
 
-**跟 daemon 的配合**：今天的 aos-daemon 還不認 `limits.groups`（`BodyBad`）與 `user: "sub:N"`（`LimitBad`）；daemon 認之前，`users` 不要填 `sub:N`、不要用 `groups`。見 [kernel-limits-plan 04](../../../../thinking/2026-11/13/kernel-limits-plan/04-施工與驗收.md)。
+**跟 daemon 的配合**：aos-daemon 11-19 起認 `user: "sub:N"`（免 root 換成 subuid，要 `newuidmap`，見 [daemon docs/09「換成 subuid」](../../../../cpp/aos-daemon/docs/09-份額.md)）；還不認 `limits.groups`（`BodyBad`），daemon 認之前不要用 `groups`。見 [kernel-limits-plan 04](../../../../thinking/2026-11/13/kernel-limits-plan/04-施工與驗收.md)。
 
 ## hooks
 

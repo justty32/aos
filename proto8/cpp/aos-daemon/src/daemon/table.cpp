@@ -1,6 +1,7 @@
 // table.cpp：【daemon】維護 proc 表、記錄子項與處理狀態窗寫入結果（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
 #include "child/cgroup.hpp"
+#include "child/subuid.hpp"
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
 
@@ -99,6 +100,7 @@ Json Daemon::info() {
     Json o = Json::object();
     o["cgroup"] = cgroup_mode_ == "off" ? "off" : cgroup_base_.empty() ? "none (" + cgroup_reason_ + ")" : cgroup_base_;
     o["daemon"] = parent_;
+    o["group"] = sub_group();   // 線 subuid-1119：sub:N 的 proc 用的主群組（ns 裡的號碼）
     o["poke"] = Json::object({{"ctl", poke_signal(1)}, {"mail", poke_signal(2)}, {"all", poke_signal(3)}});
     if (has_body_) {
         o["body_code"] = body_code_;   // 11-05：身體最後一次的結束碼（null＝還沒跑過）

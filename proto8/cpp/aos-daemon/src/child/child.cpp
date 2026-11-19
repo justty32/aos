@@ -33,6 +33,7 @@
 #include <vector>
 
 #include <fcntl.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -44,9 +45,10 @@ namespace aos::daemon {
 // ws：空＝AOS_WS 不碰（繼承 daemon 的）；不空＝設成它（eca 10-30）。
 // dstack：daemon 的 stack（絕對、結尾 /），一律設成 AOS_DAEMON（11-02，resident-bob 衝突 2：兄弟要共用位置；只設這一個）。
 // lim：份額（fork 之前 prep_limits 備好）；接好 stderr 之後、run_cli 之前照做（11-05 feat-proto 件 5，失敗＝stderr.txt 一行 LimitBad、退 1）。
+// sub_fd、envp：user 是 sub:N 時跟父行程對號碼的 socket 與換身分後的環境（線 subuid-1119，subuid.hpp）；其他是 -1、nullptr。
 [[noreturn]] static void run_child(const std::string& cell, const std::string& cwd, int err_fd,
                                    const std::vector<std::string>& argv, const std::string& ws, const std::string& dstack,
-                                   const Limits& lim, const std::string& cg_procs, const std::string& cg) {
+                                   const Limits& lim, const std::string& cg_procs, const std::string& cg, int sub_fd, char** envp) {
     setsid();
     int null_fd = open("/dev/null", O_RDWR);
     if (null_fd >= 0) {
@@ -76,6 +78,9 @@ namespace aos::daemon {
         }
     }
     apply_limits(lim);   // 等同 s6-softlimit／s6-setuidgid（daemon 自己做、不 exec s6）；proc 自己不知道（「偷偷」，C-52）
+    if (lim.sub.n != 0) {
+        enter_sub(lim.sub, sub_fd, envp);   // 進 cgroup、setrlimit 之後才換 uid（kernel-limits-plan 段 4 的順序）
+    }
     aos::restore_signals();
     int rc = 1;
     setenv("AOS_STACK", (cell + "/").c_str(), 1);
@@ -119,6 +124,15 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     if (procs_warned != nullptr) {
         *procs_warned = warned;
     }
+    std::vector<char*> envp;   // sub:N：換身分後的環境、小格的 ACL，都在 fork 之前備好（線 subuid-1119）
+    if (lim.sub.n != 0) {
+        finish_sub(lim.sub, cell, cwd, ws_s);
+        grant_cell(lim.sub, cell);
+        for (std::string& e : lim.sub.env) {
+            envp.push_back(e.data());
+        }
+        envp.push_back(nullptr);
+    }
     std::string err_path = aos::join(cell, err_name);
     int err_fd = open(err_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
     if (err_fd < 0) {
@@ -128,14 +142,31 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     long long err_off = fstat(err_fd, &est) == 0 ? (long long)est.st_size : 0;
     std::fflush(nullptr);
     std::string cg_procs = cg.empty() ? "" : cg + "/cgroup.procs";
+    int sv[2] = {-1, -1};
+    if (lim.sub.n != 0 && socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sv) != 0) {
+        int e = errno;
+        close(err_fd);
+        throw Error{code::LaunchFailed, "cannot start child " + name + ": socketpair failed (" + std::strerror(e) + ")"};
+    }
     pid_t pid = fork();
     if (pid < 0) {
         int e = errno;
         close(err_fd);
+        if (sv[0] >= 0) {
+            close(sv[0]);
+            close(sv[1]);
+        }
         throw Error{code::LaunchFailed, "cannot start child " + name + ": fork failed (" + std::strerror(e) + ")"};
     }
     if (pid == 0) {
-        run_child(cell, cwd, err_fd, argv, ws_s, dstack, lim, cg_procs, cg);
+        if (sv[0] >= 0) {
+            close(sv[0]);
+        }
+        run_child(cell, cwd, err_fd, argv, ws_s, dstack, lim, cg_procs, cg, sv[1], envp.empty() ? nullptr : envp.data());
+    }
+    if (sv[0] >= 0) {
+        close(sv[1]);
+        map_sub(lim.sub, pid, sv[0], err_fd);   // 等子行程開好 ns、替它跑 newuidmap／newgidmap（失敗＝stderr.txt 一行 LimitBad）
     }
     close(err_fd);
     Child c;

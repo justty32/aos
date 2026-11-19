@@ -2,7 +2,7 @@
 // 並且會分配份額給proc」、「讓daemon偷偷給底下的proc包s6」）。內部標頭。
 //
 //   check_limits  驗一份 limits（daemon.json 頂層、procs 每列、procs_ctl、信共用）：物件；key 只有 mem_mb、cpu_s、procs、file_mb、files、mem_total_mb、procs_total（正整數）
-//                 與 user（非空字串）；壞丟 CfgBad（呼叫者照 stack 那三條錯誤路徑處理：daemon.json 退 1、procs_ctl 不採用、壞信）
+//                 與 user（帳號名，或 sub:N＝免 root 換成 subuid，見 subuid.hpp）；壞丟 CfgBad（呼叫者照 stack 那三條錯誤路徑處理：daemon.json 退 1、procs_ctl 不採用、壞信）
 //   prep_limits   fork 之前把 limits 備成系統呼叫要的值（rlimit 的數字、user 的 uid／gid／groups 先查好）
 //   apply_limits  子行程裡（setsid、接好 stderr 之後、run_cli 之前）照備好的做：setrlimit（soft＝寫的值；hard 同值，cpu_s 多 1 秒（先收到 SIGXCPU））、setgroups＋setgid＋setuid；
 //                 失敗＝stderr（小格的 stderr.txt）一行 `aos-daemon: error: LimitBad …`、_exit(1)
@@ -12,6 +12,7 @@
 #pragma once
 
 #include "common/common.hpp"
+#include "child/subuid.hpp"
 
 #include <string>
 #include <vector>
@@ -42,13 +43,14 @@ struct Limits {
     uid_t uid = 0;
     gid_t gid = 0;
     std::vector<gid_t> groups;
+    Sub sub;                            // user 是 sub:N 才有（sub.n > 0）；換身分在 subuid.cpp 做
     bool empty() const { return rl.empty() && !has_user; }
 };
 
 // limits（null 或驗過的物件）→ 備好的值。user 查不到＝user_found false（子行程報 LimitBad）。
 Limits prep_limits(const Json& limits, bool& procs_warned);
 
-// 子行程裡呼叫：照做；失敗＝stderr 一行、_exit(1)（不回來）。lim.empty()＝什麼都不做。
+// 子行程裡呼叫：照做；失敗＝stderr 一行、_exit(1)（不回來）。lim.empty()＝什麼都不做；sub:N 只做 rlimit（換身分是 enter_sub）。
 void apply_limits(const Limits& lim);
 
 }  // namespace aos::daemon
