@@ -1,5 +1,7 @@
 繼承第一刀施工紀錄（線 aos-inherit-cut1-1119）：照 aos-inherit-1119 的乙做了 ag.load（跑底那支 agent.py、它的 ag.main 只交出九個欄位）＋TOOLS／HOOKS／ag.fsm 收「底」（墓碑、帶標記的 hook 組、換格），只動 agent_spec*，生出的 json 整份不記上一層、執行期一行沒動；順手修骨架找套件的兩處小洞；驗收逐條、自己定的細節、收緊的已交行為。
 
+> 11-19 之後 `ag` 改叫 `defs`（`from aos.py.agent import defs`），見 [aos-pylib-1119/07](aos-pylib-1119/07-使用者裁定.md#補寫定義的名字-ag-改叫-defs11-19線-aos-defs-rename-1119)。
+
 ← [aos-inherit-1119 README](aos-inherit-1119/README.md)｜設計：[04 乙修正版](aos-inherit-1119/04-設計選項.md)、[06](aos-inherit-1119/06-邊緣狀況與要拍板的題.md)、[07 採納表](aos-inherit-1119/07-Argon審與採納.md)、[08 使用者裁定](aos-inherit-1119/08-使用者裁定.md)｜規範 N-70（另一條文件線在寫，這條沒動條文）
 
 ## 授權與範圍

@@ -1,5 +1,7 @@
 # 庚第三刀施工紀錄（線 geng3-1119）：agent.py 多了 HOOKS、FILES、不宣告 FSM 的 eca 模式；reviewer 寫成一支 agent.py 跟手寫的等價；沒動 agent_def、知識庫、現有範本
 
+> 11-19 之後 `ag` 改叫 `defs`（`from aos.py.agent import defs`），見 [aos-pylib-1119/07](aos-pylib-1119/07-使用者裁定.md#補寫定義的名字-ag-改叫-defs11-19線-aos-defs-rename-1119)。
+
 ← [11-19](README.md)｜設計稿：[aos-compile-庚](aos-compile-庚/README.md)（範圍照 [08](aos-compile-庚/08-範圍切法.md) 第三刀，裁定 [10](aos-compile-庚/10-使用者裁定.md)）｜上一刀：[第一刀](aos-compile-庚-第一刀.md)
 
 ## 先講結論

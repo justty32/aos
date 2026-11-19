@@ -1,4 +1,4 @@
-"""agent_spec_lib - agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 ag.lib("名", 根) 宣告的別的庫（工具自動帶「名_」）；包在生成時讀出來、展開成一支支工具抄進 tools.json。
+"""agent_spec_lib - agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 defs.lib("名", 根) 宣告的別的庫（工具自動帶「名_」）；包在生成時讀出來、展開成一支支工具抄進 tools.json。
 
 設計稿 thinking/2026-11/19/aos-ns-1119/（03 的 B、05、07 使用者裁定）；施工紀錄 thinking/2026-11/19/aos-ns-第一刀.md。
 庫＝一個長相固定的資料夾：<根>/packs/<名>.json（工具包）、<根>/tools/<路徑>/（工具夾）。std 先不搬（07 第 4 題 b）：根＝$AOS_HOME，
@@ -64,7 +64,7 @@ class Lib:
     def _full(self, value, call):
         """包裡寫的路徑 → 全路徑：指示詞、絕對路徑原樣；相對路徑照 aos-tools 的算法從包檔那夾算起，改寫成庫根底下的全路徑（不能出庫根）。"""
         if not isinstance(value, str) or not value or os.path.isabs(value):
-            return value, None                          # 空字串、非字串：交給 ag.tool 照它的規矩報
+            return value, None                          # 空字串、非字串：交給 defs.tool 照它的規矩報
         rel = posixpath.normpath(self.packs_sub + "/" + value)
         if rel == ".." or rel.startswith("../"):
             return None, "%s: path %r leaves the library root; write it inside the library or as a directive" % (call, value)
@@ -131,7 +131,7 @@ class Lib:
         return {"kind": "pack", "lib": self.name, "name": name, "tools": out}
 
     def tool(self, path, name=None, **more):
-        """這個庫的一支工具（tools/<path>，例 std.tool("base/read")）；名字預設＝prefix＋夾名。也可當 ag.tool 的路徑：ag.tool("read", my.tool("read"))。"""
+        """這個庫的一支工具（tools/<path>，例 std.tool("base/read")）；名字預設＝prefix＋夾名。也可當 defs.tool 的路徑：defs.tool("read", my.tool("read"))。"""
         call = "%s.tool(%r)" % (self.name, path)
         if self.bad:
             return _bad(self.bad)
@@ -157,7 +157,7 @@ class Std(Lib):
     def hooks(self, template="agent-fsm"):
         """某個範本 hooks.json 的那組 hook（agent-fsm、eca-claude、eca-pi）。interfaces.json 的 hooks 只能指夾內的檔，所以借不了，
         生成時從 $AOS_HOME/templates/<template>/hooks.json 讀出來抄進這夾的 hooks.json（範本改了，下次重生跟著變）。
-        回一個帶來源標記的 dict（agent_spec_parts.Hooks）：跟另一組（另一個範本、ag.load 的 HOOKS）同名又不同＝SpecBad。"""
+        回一個帶來源標記的 dict（agent_spec_parts.Hooks）：跟另一組（另一個範本、defs.load 的 HOOKS）同名又不同＝SpecBad。"""
         call = "std.hooks(%r)" % (template,)
         if not isinstance(template, str) or not parts.PACK_RE.match(template):
             return _bad("%s: give a template name, like \"agent-fsm\"" % call)
@@ -191,17 +191,17 @@ std = Std()
 
 
 def lib(name, root):
-    """宣告別的庫：my = ag.lib("my", ag.env("AOS_WS", "/lib/my"))。根＝絕對路徑或指示詞（ag.env／ag.home），生成時一定要讀得到；
+    """宣告別的庫：my = defs.lib("my", defs.env("AOS_WS", "/lib/my"))。根＝絕對路徑或指示詞（defs.env／defs.home），生成時一定要讀得到；
     庫名只在這支 agent.py 裡有效，它的工具在腦那邊叫「庫名_工具名」。"""
     if not isinstance(name, str) or not parts.PACK_RE.match(name):
-        return Lib(str(name), "/", bad="ag.lib(%r): the library name must be lowercase letters, digits, _ or -, like \"my\"" % (name,))
+        return Lib(str(name), "/", bad="defs.lib(%r): the library name must be lowercase letters, digits, _ or -, like \"my\"" % (name,))
     if name == "std":
-        return Lib(name, "/", bad="ag.lib(\"std\"): std comes with aos; use ag.std, or give this library another name")
+        return Lib(name, "/", bad="defs.lib(\"std\"): std comes with aos; use defs.std, or give this library another name")
     spec = _spec()
     if not (isinstance(root, str) and os.path.isabs(root)) and not spec._is_directive(root):
-        return Lib(name, "/", bad="ag.lib(%r): the root must be an absolute path or ag.env(VAR, PATH) / ag.home(PATH), got %r" % (name, root))
+        return Lib(name, "/", bad="defs.lib(%r): the root must be an absolute path or defs.env(VAR, PATH) / defs.home(PATH), got %r" % (name, root))
     out = Lib(name, root)
-    _, err = out._where("", "ag.lib(%r)" % name)
+    _, err = out._where("", "defs.lib(%r)" % name)
     if err:
         out.bad = err
     return out

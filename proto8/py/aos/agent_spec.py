@@ -3,6 +3,7 @@
 使用者 11-18：「讓我不必在那邊mkdir半天」；11-19 定調：「agent.py產出東西後，產出後的東西就跟他沒關係了。好比C語言和.o之間的關係。」
 所以重生＝直接蓋：不記指紋、不寫記號、沒有 --force／--status；產出後的 json 誰都能照常改，下次重生被蓋回去（設計稿 thinking/2026-11/19/aos-compile-庚/ 03～06、10）。
 寫法與分層照同夾的 tool_spec（宣告寫錯先記著、生成前報一行 SpecBad；每份檔暫存檔＋改名）。找法同 tool_spec：骨架 templates/agent-python/agent.py 的開頭幾行。
+寫 agent.py 的人拿到這個模組的名字叫 defs：from aos.py.agent import defs（使用者 11-19「就 aos.py.agent.defs 吧」，線 aos-defs-rename-1119；檔不搬、模組名不改），下面的 defs.xxx 都是它。
 各份檔怎麼算、怎麼驗在 aos/agent_spec_parts.py（第三刀拆出去）；這裡是宣告用的小函式、defs、write_defs、main。
 
 宣告用的小函式（寫錯不在當下丟，記成 bad，defs()／main 再報 SpecBad）：
@@ -10,16 +11,16 @@
     std.pack(名, prefix=, rename=, exclude=)  讀 $AOS_HOME/lib/packs/名.json，展開成一支支工具抄進 tools.json（不寫 $override）
     std.tool("base/read", name=None, **其他)  一支工具 $AOS_HOME/lib/tools/base/read，名字預設＝夾名
     std.fsm()＝借 agent-fsm 範本的四格；std.hooks(範本="agent-fsm")＝那個範本 hooks.json 的那組 hook（生成時讀、抄進來）
-  lib(庫名, 根)        別的庫：my = ag.lib("my", ag.env("AOS_WS", "/lib/my"))；my.pack／my.tool 同上，工具名自動帶「庫名_」
+  lib(庫名, 根)        別的庫：my = defs.lib("my", defs.env("AOS_WS", "/lib/my"))；my.pack／my.tool 同上，工具名自動帶「庫名_」
   tool(名, 路徑, **其他) 單一個工具＝tools.json 的 tools[名]＝{"path": 路徑, **其他}；路徑也可給 my.tool(...)（只拿它的路徑）；同名蓋掉包裡那支
   no(名)              從展開的包裡拿掉那支（tools.json 裡就沒有那格）
   （包展開後兩支同名、內容又不同＝SpecBad，不再悄悄蓋；tools_json 在 agent_spec_parts）
   home(路徑)／env(變數, 路徑)  指示詞 {"$env": …, "$path": …}，原樣吐、不展開
   state(名, argv, next, timeout_ms=None)、fsm(起點, [state…])
   by_hand(檔名)        這份檔自己手寫：interfaces.json 指到它、不生、不蓋（SYSTEM／TOOLS／LLM／FSM／HOOKS 都可用）
-  load(路徑)           衍生（繼承第一刀 aos-inherit-cut1-1119，本體 aos/agent_spec_load.py）：base = ag.load("../reviewer") 跑那支 agent.py，
-                       它的 ag.main 只交出九個欄位；TOOLS 寫 [base.TOOLS, ag.no(...), ...]、HOOKS 寫 [base.HOOKS, {名: {**base.HOOKS[名], 鍵: 值}}]、
-                       FSM 寫 ag.fsm(base.FSM, [ag.state(名, 只給要換的)], drop=[...])；只在重生時算，生出的 json 整份、不記上一層（N-70）
+  load(路徑)           衍生（繼承第一刀 aos-inherit-cut1-1119，本體 aos/agent_spec_load.py）：base = defs.load("../reviewer") 跑那支 agent.py，
+                       它的 defs.main 只交出九個欄位；TOOLS 寫 [base.TOOLS, defs.no(...), ...]、HOOKS 寫 [base.HOOKS, {名: {**base.HOOKS[名], 鍵: 值}}]、
+                       FSM 寫 defs.fsm(base.FSM, [defs.state(名, 只給要換的)], drop=[...])；只在重生時算，生出的 json 整份、不記上一層（N-70）
 兩個可單獨叫的函式：
   defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None, folder=None)
       → {檔名: 內容}（驗完才回；宣告錯丟 SpecBad、夾不對丟 DefBad）。fsm=None＝不宣告狀態機：照 folder 裡現有的
@@ -32,9 +33,9 @@ import json, os, sys
 from aos import flags
 from aos import agent_spec_parts as parts
 from aos.agent_spec_parts import SpecBad, DefBad, WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FILES  # noqa: F401（對外的名字）
-from aos.agent_spec_lib import std, lib  # noqa: F401（對外的名字：ag.std、ag.lib）
+from aos.agent_spec_lib import std, lib  # noqa: F401（對外的名字：defs.std、defs.lib）
 from aos import agent_spec_load as loader
-from aos.agent_spec_load import load  # noqa: F401（對外的名字：ag.load）
+from aos.agent_spec_load import load  # noqa: F401（對外的名字：defs.load）
 
 HOOK_FIRE = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}   # loop.json 的 on_start／on_stop（照 agent-fsm 範本）
 RENAME_LAST = {"loop.json": 1, "body.json": 2, "interfaces.json": 3, "_entry": 4, "_metainfo.json": 5}   # 改名時被指的檔先換、索引檔最後（其他＝0）
@@ -48,12 +49,12 @@ Make an aos agent definition from the declarations in agent.py.
   --defs                 print everything --write-defs would write, as one JSON object
                          {"file name": content}, and write nothing.
 With FSM declared, agent.py writes the whole definition (skeleton included). Without FSM
-(ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM)), it fills only the content files (system, tools, llm,
+(defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM)), it fills only the content files (system, tools, llm,
 hooks) of a definition that already has its skeleton, under the names its interfaces.json gives.
-Packs (std.pack, or .pack of a library from ag.lib) are read when agent.py runs and their tools are
+Packs (std.pack, or .pack of a library from defs.lib) are read when agent.py runs and their tools are
 copied into tools.json, so AOS_HOME, and any variable a library root uses, must be set.
-To build on another agent.py: base = ag.load("../other") runs it (its ag.main only hands over its
-fields) and you write [base.TOOLS, ag.no("x")], [base.HOOKS, {...}], ag.fsm(base.FSM, [...]); it is
+To build on another agent.py: base = defs.load("../other") runs it (its defs.main only hands over its
+fields) and you write [base.TOOLS, defs.no("x")], [base.HOOKS, {...}], defs.fsm(base.FSM, [...]); it is
 worked out now, so the files written are whole and do not name the other one (README: "Build on").
 Then mount it: aos-agent ctl add FOLDER.
 On a wrong declaration: one line "NAME: error: SpecBad ..." on stderr, exit 1, nothing written.
@@ -84,7 +85,7 @@ def env(var, path):
 
 def tool(name, path, **more):
     """單一個工具；more（env、env_file…）原樣寫進那一格；aos-tools 合併時會擋的（env、env_file、cache）這裡先擋。
-    path 也可以是某個庫的 .tool(...)：只拿它的路徑（ag.tool("read", my.tool("read"))＝用 my 那支、叫 read）。"""
+    path 也可以是某個庫的 .tool(...)：只拿它的路徑（defs.tool("read", my.tool("read"))＝用 my 那支、叫 read）。"""
     if not isinstance(name, str) or not parts.TOOL_RE.match(name):
         return _bad("tool name %r must be 1-64 letters, digits, _ or -" % (name,))
     if parts.kind(path) == "bad":
@@ -92,12 +93,12 @@ def tool(name, path, **more):
     if parts.kind(path) == "tool":
         path = path["entry"]["path"]
     if not _is_path(path):
-        return _bad("tool %s must have a path: a string, or ag.home(\"/lib/tools/...\") / ag.env(VAR, PATH) / std.tool(\"base/read\")" % name)
+        return _bad("tool %s must have a path: a string, or defs.home(\"/lib/tools/...\") / defs.env(VAR, PATH) / std.tool(\"base/read\")" % name)
     e = more.get("env", {})
     if not isinstance(e, dict) or not all(isinstance(k, str) and parts.ENV_KEY_RE.match(k) and isinstance(v, str) for k, v in e.items()):
         return _bad("tool %s: env must be a dict of NAME -> string, like {\"LANG\": \"C\"}" % name)
     if "env_file" in more and not _is_path(more["env_file"]):
-        return _bad("tool %s: env_file must be a non-empty path string or ag.home(...) / ag.env(...)" % name)
+        return _bad("tool %s: env_file must be a non-empty path string or defs.home(...) / defs.env(...)" % name)
     if "cache" in more and more["cache"] is not False:
         return _bad("tool %s: cache can only be False" % name)
     return {"kind": "tool", "name": name, "entry": dict({"path": path}, **more)}
@@ -106,7 +107,7 @@ def tool(name, path, **more):
 def no(name):
     """把展開的包裡的某個工具拿掉（腦看到的名字；tools.json 裡就沒有那格）。"""
     if not isinstance(name, str) or not parts.TOOL_RE.match(name):
-        return _bad("ag.no(%r): the tool name must be 1-64 letters, digits, _ or -" % (name,))
+        return _bad("defs.no(%r): the tool name must be 1-64 letters, digits, _ or -" % (name,))
     return {"kind": "no", "name": name}
 
 
@@ -126,15 +127,15 @@ _LEFT_OUT = object()
 
 
 def state(name, argv=_LEFT_OUT, next=_LEFT_OUT, timeout_ms=None):
-    """狀態機的一格：跑 argv（字串或 ag.home(...) 的串列），退出碼 → 下一格（{0: "think", 10: "idle"}；"*"＝其他碼；字串＝只有 0）。
-    argv、next 單獨用時要給齊；在 ag.fsm(base.FSM, [...]) 裡換底的同名格時可以只給要換的（沒給的沿用底那格；繼承第一刀）。"""
+    """狀態機的一格：跑 argv（字串或 defs.home(...) 的串列），退出碼 → 下一格（{0: "think", 10: "idle"}；"*"＝其他碼；字串＝只有 0）。
+    argv、next 單獨用時要給齊；在 defs.fsm(base.FSM, [...]) 裡換底的同名格時可以只給要換的（沒給的沿用底那格；繼承第一刀）。"""
     if _state_name_bad(name):
         return _bad("state name %r must be a non-empty string without leading or trailing spaces or newlines" % (name,))
     partial = argv is _LEFT_OUT or next is _LEFT_OUT
     exec_, cell = {}, {}
     if argv is not _LEFT_OUT:
         if not isinstance(argv, (list, tuple)) or not argv or not all(_is_path(a) for a in argv):
-            return _bad("state %s: argv must be a non-empty list of strings or ag.home(...) paths, like [\"python3\", \"idle.py\"]" % name)
+            return _bad("state %s: argv must be a non-empty list of strings or defs.home(...) paths, like [\"python3\", \"idle.py\"]" % name)
         exec_["argv"] = list(argv)
     if timeout_ms is not None:
         if not isinstance(timeout_ms, int) or isinstance(timeout_ms, bool) or timeout_ms < 0:
@@ -166,50 +167,50 @@ def _next(name, next):
 
 
 def fsm(start, states, drop=()):
-    """狀態機：起點＋各格（ag.state(...) 的串列）。下一格、起點都要在表上（aos-fsm 開跑時查的同一套）。
-    第一個參數給底的狀態機（ag.load(...).FSM、std.fsm()）＝換格（繼承第一刀）：drop 的格拿掉，同名格只換有給的欄位，新名的格加上（要給齊），整張重驗。"""
+    """狀態機：起點＋各格（defs.state(...) 的串列）。下一格、起點都要在表上（aos-fsm 開跑時查的同一套）。
+    第一個參數給底的狀態機（defs.load(...).FSM、std.fsm()）＝換格（繼承第一刀）：drop 的格拿掉，同名格只換有給的欄位，新名的格加上（要給齊），整張重驗。"""
     if parts.kind(start) == "bad":
         return start
     if parts.kind(start) == "fsm":
         return _refit(start, states, drop)
     if start is None:
-        return _bad("ag.fsm: the start is None: give the name of the start state, or the FSM of a loaded agent.py "
+        return _bad("defs.fsm: the start is None: give the name of the start state, or the FSM of a loaded agent.py "
                     "(an agent.py without FSM, like an eca body, has FSM None: there is no state machine to build on)")
     if drop:
-        return _bad("ag.fsm: drop= only works on a state machine to build on, like ag.fsm(base.FSM, [...], drop=[\"act\"])")
+        return _bad("defs.fsm: drop= only works on a state machine to build on, like defs.fsm(base.FSM, [...], drop=[\"act\"])")
     if not isinstance(states, (list, tuple)) or not states:
-        return _bad("fsm needs a non-empty list of ag.state(...)")
+        return _bad("fsm needs a non-empty list of defs.state(...)")
     table = {}
     for s in states:
         if parts.kind(s) == "bad":
             return s
         if parts.kind(s) != "state":
-            return _bad("each item of fsm states must come from ag.state(...), got %r" % (s,))
+            return _bad("each item of fsm states must come from defs.state(...), got %r" % (s,))
         if s["name"] in table:
             return _bad("state %s is declared twice" % s["name"])
         if s.get("partial"):
-            return _bad("state %s needs both argv and next (only ag.fsm(base.FSM, [...]) takes a state with some left out)" % s["name"])
+            return _bad("state %s needs both argv and next (only defs.fsm(base.FSM, [...]) takes a state with some left out)" % s["name"])
         table[s["name"]] = s["cell"]
     return _checked(start, table)
 
 
 def _refit(base, states, drop):
-    """ag.fsm(底, [...], drop=)：底那張表的一份拷貝上換格。"""
+    """defs.fsm(底, [...], drop=)：底那張表的一份拷貝上換格。"""
     table = json.loads(json.dumps(base["states"]))
     if not isinstance(states, (list, tuple)):
-        return _bad("ag.fsm(base, states): states must be a list of ag.state(...) (it can be empty)")
+        return _bad("defs.fsm(base, states): states must be a list of defs.state(...) (it can be empty)")
     if isinstance(drop, str) or not isinstance(drop, (list, tuple)) or not all(isinstance(d, str) for d in drop):
-        return _bad("ag.fsm(base, ..., drop=...): drop must be a list of state names, like [\"act\"]")
+        return _bad("defs.fsm(base, ..., drop=...): drop must be a list of state names, like [\"act\"]")
     for d in drop:
         if d not in table:
-            return _bad("ag.fsm(base, ..., drop=[%r]): the base has no state %s (states: %s)" % (d, d, ", ".join(table)))
+            return _bad("defs.fsm(base, ..., drop=[%r]): the base has no state %s (states: %s)" % (d, d, ", ".join(table)))
         del table[d]
     seen = set()
     for s in states:
         if parts.kind(s) == "bad":
             return s
         if parts.kind(s) != "state":
-            return _bad("each item of fsm states must come from ag.state(...), got %r" % (s,))
+            return _bad("each item of fsm states must come from defs.state(...), got %r" % (s,))
         if s["name"] in seen:
             return _bad("state %s is declared twice" % s["name"])
         seen.add(s["name"])
@@ -223,7 +224,7 @@ def _refit(base, states, drop):
         else:
             table[s["name"]] = s["cell"]
     if base["start"] not in table:
-        return _bad("ag.fsm(base, ...): the start state %s is dropped; a state machine needs its start" % base["start"])
+        return _bad("defs.fsm(base, ...): the start state %s is dropped; a state machine needs its start" % base["start"])
     return _checked(base["start"], table)
 
 
@@ -278,13 +279,13 @@ def defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
     decl = {"system": system, "tools": tools, "llm": llm, "fsm": fsm, "hooks": hooks}
     for value in decl.values():
         parts.raise_bad(value)
-    if fsm is not None and parts.pick(fsm, "FSM must come from ag.fsm(...), std.fsm() or ag.by_hand(\"fsm.json\") (or leave it out: no FSM)",
+    if fsm is not None and parts.pick(fsm, "FSM must come from defs.fsm(...), std.fsm() or defs.by_hand(\"fsm.json\") (or leave it out: no FSM)",
                                       lambda v: parts.kind(v) == "fsm"):
         fsm_out = None
     else:
         fsm_out = fsm
     names, hand, taken, keys = _names(decl, fsm, hooks, interfaces, folder)
-    if parts.pick(system, "SYSTEM must be a string (the system text) or ag.by_hand(\"system.txt\")", lambda v: isinstance(v, str)):
+    if parts.pick(system, "SYSTEM must be a string (the system text) or defs.by_hand(\"system.txt\")", lambda v: isinstance(v, str)):
         system = None
     face = None
     if fsm is not None:
@@ -292,11 +293,11 @@ def defs(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
         keys = face.get("aos-agent", {}).get("llm_keys", LLM_KEYS)
         if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
             raise SpecBad("INTERFACES aos-agent llm_keys must be a list of strings")
-    tools_out = None if parts.pick(tools, "TOOLS must be a list of std.pack(...), std.tool(...), ag.tool(...), ag.no(...) "
-                                          "(or a library's .pack / .tool, or the TOOLS of ag.load(...): [base.TOOLS, ...]), "
-                                          "or ag.by_hand(\"tools.json\")",
+    tools_out = None if parts.pick(tools, "TOOLS must be a list of std.pack(...), std.tool(...), defs.tool(...), defs.no(...) "
+                                          "(or a library's .pack / .tool, or the TOOLS of defs.load(...): [base.TOOLS, ...]), "
+                                          "or defs.by_hand(\"tools.json\")",
                                    lambda v: isinstance(v, (list, tuple))) else parts.tools_json(tools)
-    llm_out = None if parts.pick(llm, "LLM must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or ag.by_hand(\"llm.json\")",
+    llm_out = None if parts.pick(llm, "LLM must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or defs.by_hand(\"llm.json\")",
                                  lambda v: isinstance(v, dict)) else parts.llm_json(llm, keys)
     hooks_out = None if hooks is None or "hooks" in hand else parts.hooks_json(hooks)
     extra = parts.extra_files(files, taken | set(hand.values())) if files is not None else {}
@@ -385,8 +386,8 @@ def write_defs(folder, files):
 
 
 def main(description, system, tools, llm, fsm=None, meta=None, interfaces=None, hooks=None, files=None):
-    """agent.py 的最後一行：ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)；不宣告狀態機＝ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM)。
-    被 ag.load 載入時：不讀 argv、不寫檔、不退出，只把九個欄位交給 ag.load。被普通 import（叫它的模組不是 __main__）：印一行 warning、什麼都不做
+    """agent.py 的最後一行：defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)；不宣告狀態機＝defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM)。
+    被 defs.load 載入時：不讀 argv、不寫檔、不退出，只把九個欄位交給 defs.load。被普通 import（叫它的模組不是 __main__）：印一行 warning、什麼都不做
     （繼承第一刀：以前會照 argv 寫進底那夾、退 0，衍生那支根本沒跑；aos-inherit-1119/02 結論 5）。"""
     caller = sys._getframe(1)
     script = os.path.realpath(caller.f_code.co_filename)
@@ -395,8 +396,8 @@ def main(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
     if loader.hand_over(script, (description, system, tools, llm, fsm, meta, interfaces, hooks, files)):
         return
     if caller.f_globals.get("__name__") != "__main__":
-        flags.warn(prog, "%s was imported, not run, so its ag.main(...) does nothing; to build on another agent.py, "
-                         "use base = ag.load(\"its folder\")" % script)
+        flags.warn(prog, "%s was imported, not run, so its defs.main(...) does nothing; to build on another agent.py, "
+                         "use base = defs.load(\"its folder\")" % script)
         return
     argv = sys.argv[1:]
     usage = "usage: python3 %s --write-defs [FOLDER] | --defs | --help" % base

@@ -9,7 +9,7 @@ if os.environ.get("AOS_HOME"):
     _found.insert(0, os.path.join(os.environ["AOS_HOME"], "lib"))   # $AOS_HOME/lib first: an aos.py next to agent.py must not win
 sys.path[:0] = _found
 try:
-    from aos import agent_spec as ag
+    from aos.py.agent import defs
 except ModuleNotFoundError as _e:
     if _e.name != "aos" and not (_e.name or "").startswith("aos."):
         raise
@@ -27,7 +27,7 @@ SYSTEM = """You are an assistant that looks things up in the workspace.
 Answer each letter with mailbox_send to its reply_to.
 """
 
-std = ag.std                # the library that comes with aos; another one: my = ag.lib("my", ag.env("AOS_WS", "/lib/my"))
+std = defs.std              # the library that comes with aos; another one: my = defs.lib("my", defs.env("AOS_WS", "/lib/my"))
 
 TOOLS = [std.pack("look"), std.pack("mailbox"), std.pack("json")]   # copied into tools.json tool by tool
 
@@ -35,4 +35,4 @@ LLM = {}                    # {} = the llm kernel's default brain; {"model": "lu
 
 FSM = std.fsm()             # the four cells of the agent-fsm template: idle, think, wait, act
 
-ag.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)
+defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM)

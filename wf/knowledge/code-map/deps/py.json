@@ -21,7 +21,7 @@
    "kind": "lib",
    "module": "aos.agent_spec",
    "unit": "proto8/py/aos/agent_spec.py",
-   "used_by": "proto8/py/aos/agent_spec_lib.py proto8/templates/agent-python",
+   "used_by": "proto8/py/aos/agent_spec_lib.py",
    "uses": "aos.agent_spec_lib aos.agent_spec_load aos.agent_spec_parts aos.flags"
   },
   {
@@ -343,7 +343,7 @@
    "kind": "lib",
    "module": "aos.py",
    "unit": "proto8/py/aos/py",
-   "used_by": "proto8/py/aos/apps/gdb proto8/py/aos/gdb",
+   "used_by": "proto8/py/aos/apps/gdb proto8/py/aos/gdb proto8/templates/agent-python",
    "uses": "aos.apps.agent aos.apps.daemon_ctl.main aos.gdb"
   },
   {
@@ -1044,7 +1044,7 @@
    "module": "",
    "unit": "proto8/templates/agent-python",
    "used_by": "",
-   "uses": "aos.agent_spec"
+   "uses": "aos.py.agent"
   },
   {
    "kind": "template",
