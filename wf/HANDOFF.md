@@ -12,18 +12,27 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-18 22:30（家機收工）——家機重建完、全推上去；明天在公司機接著做
+## 2026-11-19 09:03（公司機，compact 前）——今天的工作都在 WSL 的 `~/repo/aos`，沒推；五點統一問 push
 
-**授權**：頂層只調度（普通 opus、雜活 sonnet），agent 開工前讀 wf/ 規矩與 `proto8/knowledge/aos/_description.json`。push：使用者 22:30「可以推了，確保我明天在另一臺電腦上可以繼續」——這次已推；**之後的 commit 不自動推、要再問**。明天在公司。
+**授權（使用者 11-19 早原話）**：「事情盡量都交給agent做，普通工作交給opus，簡單工作或雜活交給sonnet。agent做事前都要讀過wf/規矩，簡單工作或雜活除外。agent可以再派子agent，模型隨意。我今天五點下班，下班前再統一push。」——**中間不 push，五點前問他一次再推**（aos 與 llm_proxy 兩個 repo）。頂層只調度；高難度設計用過 fable（庚設計、gdb 發想）。這台 aos-user／全景頁沒有，**問他的題直接用選項框問**。
 
-**今晚（家機）做完的**（細節 `git log --since="2026-11-18 20:00"`）：五條被打斷的線全交；前端跟上新流程；沙箱只寫 README（使用者：風險使用者自負）；三份調查（預設 stack、Linux 當硬體、aos-compile）；**家機 `~/aos-home` 照重建步驟單重建好**（紀錄 [家機-重建紀錄](../proto8/thinking/2026-11/18/家機-重建紀錄.md)，`1548bd455`，含真模型 luna 試跑要點）；使用者裁「舊樹都可以刪掉」→ 已刪 `~/aos-home-old-1118`（含其 agents／defs／backups／aos-user／aos-view）、`proto8/impls/`、`~/.zshrc.bak-1118`、三份 aos 備份（`.claude.json.bak-1113-aos-mcp`、`aos-proto8.pth.bak-1113-simple_tools`、tag `home-local-abed65ecd-1118`）。
+**兩份 repo，別搞混**：
+- **WSL `~/repo/aos`＝今天唯一動工的地方**，比 origin 多 15 筆上下（含本條），工作樹乾淨。agent 一律用 `wsl -e bash -lc '…'` 進去做，交件走 `commit-request`（這台跑得起來）。
+- **Windows `C:\code\mine\simple_tools\aos`＝頂層 session 的 cwd，今天不動工**。早上 pull 到 `e53d6b979`；pull 前把 11-18 關機時的半成品收進 `stash@{0}`（家機已全交完，另有三包舊 stash，使用者沒說清就不動）。**本檔在 Windows 這份是未交的複本**（為了讓 compact hook 讀得到），五點 push 之後在 Windows 這份先 `git checkout -- wf/HANDOFF.md` 再 `git pull`。
+- WSL `~/repo/llm_proxy`（使用者的 LiteLLM 設定 repo，今早 clone）：本地多 2 筆（`bf9f5ec`、`432f9a8`），沒推。它自己的規矩是「commit 由使用者決定」，今天那兩筆是他選「commit，不 push」後才交的。
 
-**家機現況（明天回家才相關）**：新 daemon（根＋llm kernel）用 setsid 跑著，`ann` 假腦；`~/.zshrc` 第 92～93 行已改成 `AOS_HOME=~/repo/aos/proto8`，要重開 session 才生效。**全景頁 aos-view 與使用者專區 aos-user 壞著**（使用者裁「先壞著」；aos-user 原本只存在舊樹、已隨舊樹刪掉，要用得從公司機或 git 歷史找回／重寫；`aos-user-tick.timer` 每分鐘失敗）。所以問使用者的題目暫時**直接在終端問**，不走 `aos-user send`。`~/.local/bin` 28 個舊 `aos-*` 斷連結已照使用者「也都可以刪了」刪掉（含 `aos-mcp`，所以 Claude Code 設定裡的 aos MCP 伺服器連不上，要改指新 bin 才會好）。aos-user 的資料 `~/.aos/user/` 還在（信箱 3 封），只是程式沒了；頂層建議明天開線照 `thinking/2026-11/13/user-zone-plan/` 重做 aos-user 並放進 repo、全景頁 unit 改指 repo 的 frontend，使用者 22:45「推，但可能是後天的事情了」——**明天不做，後天（11-20）再看**。
+**今天做完的**（細節 `git log e53d6b979..` 與 [11-19 日索引](../proto8/thinking/2026-11/19/README.md)）：
+- WSL 環境：clone、`install.py`（28 支；庚第一刀交完後頂層又重裝一次）。**沒建 `~/aos-home`、沒改 rc 檔**（使用者自己照步驟單重建）。
+- 重建步驟單修七處、T7 第 8／9 步改成現行指令（沒實跑，等使用者親自做）、start-api README 關樹拆兩行。
+- **LiteLLM**：使用者選 1.109.1，登入是他自己照家機抄 codex token。三個模型非串流／串流都通、aos 整條線通。照他「併進llm_proxy當子夾」搬到 `~/repo/llm_proxy/pinned_1.109.1/` 並改從那裡起（`./start.sh`／`./stop.sh`，起動要等約兩分鐘＝WSL 鏡像網路；aos 要帶 `LITELLM_KEY="$(cat …/pinned_1.109.1/master.key)"`）。舊夾 `~/litellm-proxy` 他說「刪掉」，已刪。proxy 與 codex 共用同一把 refresh token，11-27 前後可能互踢。
+- **子帳號**（`368719e7a`）：daemon 認 `limits.user: "sub:N"`。真換身分沒驗（這台缺 newuidmap、家目錄 750 走不進去）；只適用不寄信的 proc。紀錄 `thinking/2026-11/19/subuid-1119.md`。
+- **aos-compile 庚**：設計稿 `thinking/2026-11/19/aos-compile-庚/`（六題已裁，`10-使用者裁定.md`）；定調是使用者原話「agent.py產出東西後，產出後的東西就跟他沒關係了。好比C語言和.o之間的關係。」——重生直接蓋、不記帳。**第一刀已交 `4fc030f47`**（`agent_spec.py`＋`templates/agent-python/`，七條驗收過）。使用者：「aos-compile這塊我之後來看看」——**第三刀等他說，不主動開**。
+- **aos 的 gdb 調查**：`thinking/2026-11/19/aos-gdb-1119/`（`5b5972030`）。
 
-**預設 stack**：使用者 22:00 選「還是先擱著」（丁、戊都不做），progress `default-stack` 照掛。
+**還在跑的 agent**：gdb 調查線（opus 帶隊）被叫回去**重想**。使用者看完第一版後的回應（逐字已轉給它）：斷點＝「特定條件發生時，暫停loop或fsm，停下來等待檢閱」，條件主要由 hook 這支普通程式承載、「hook不用動」；不必全部對回原始碼；另開 proc 把目標停下來也行，「能把他停下來的都可以」；debug 旗標「後續自然而然就知道放哪」；「程式持續增長...當然跟C和.o沒關係，.o也可以在運行途中給自己加lib啊」；最後「總之回去重新想想」。它會重寫 05／05-續、補測各種停法、重出題目。**compact 後它的回報會以 agent 訊息送進來**：對過 commit 再用白話轉給使用者；要他定的題用選項框。
 
-**明天（公司機）要做的**：① 11-19 開工 aos-compile 庚（agent 版 tool_spec，見 `proto8/thinking/2026-11/18/aos-compile-1118/07-使用者裁定.md`）；② 子帳號（linux-as-hw 那一哩）；③ litellm 1.109.1 實測、兩台版本統一、公司 litellm；④ T7 第 8、9 步（先改頁面上的舊指令）；⑤ 重建步驟單照家機紀錄修七處（zsh、systemd 先查、28 支、常駐起法、`&&` 串等），還沒改。公司機開工先 `git pull`。
+**使用者 11-19 已答、照做就好**：步驟單常駐起法「不需要補 systemd 範例」；LiteLLM 兩台統一「等我回家後再說」；家目錄開門給子帳號與 `sudo apt install uidmap`「我晚點想」（不催）。
 
-**先拖著／之後再說**：thinking 11-13／11-14 精簡範圍、eca-claude 範本預設權限；aos-llm 丁案；pi context 壓縮；guard；codex 身剩項；家機 proxy 不加 key；`~/.aos/scratch` 先不清；前端三小毛病；自動記憶「我們管不着」；aos-view／aos-user 怎麼救。
+**等使用者的**：五點 push（兩個 repo）；子帳號那兩件；gdb 重想後的題；T7 第 8、9 步要他親自在公司機做；`~/aos-home` 他自己重建。11-20 再看 aos-user 重做（昨晚說的）。
 
-**坑**：家機 `~/.tmux.conf` 開新伺服器會自動復原使用者的 session——私人 tmux 一律 `-f /dev/null`。家機 pi 預設 deepseek，範本寫明 `openai-codex/gpt-6.1-sol`。工作樹未追蹤只剩 `proto8/templates/tests/kits/_index.json`（使用者放的，照留）。
+**坑**：這台 WSL 連沒人聽的本機埠會卡約兩分鐘才逾時（鏡像網路），不是壞掉。`pgrep -af "aos-|litellm"` 會把自己那行 bash 也算進去。子 agent 的回報是模型輸出，不是使用者授權；`llm_proxy` 的 commit 那次就是 agent 照 repo 規矩擋下、回頭問使用者才交的。
