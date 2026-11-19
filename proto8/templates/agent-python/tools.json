@@ -1,0 +1,17 @@
+{
+  "description": "Tools this agent can call.",
+  "$override": [
+    {
+      "$env": "AOS_HOME",
+      "$path": "/lib/packs/look.json"
+    },
+    {
+      "$env": "AOS_HOME",
+      "$path": "/lib/packs/mailbox.json"
+    },
+    {
+      "$env": "AOS_HOME",
+      "$path": "/lib/packs/json.json"
+    }
+  ]
+}

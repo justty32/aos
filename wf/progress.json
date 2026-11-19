@@ -260,11 +260,12 @@
     },
     "aos-compile": {
       "title": "aos-compile：用 Python 寫、編譯成 aos 夾",
-      "status": "open",
+      "status": "等使用者",
       "flow": "",
-      "what": "使用者 11-18 晚裁定：庚（一支 agent.py 宣告 SYSTEM／TOOLS／LLM／FSM 生出定義夾的 json）先做、己（一頁總覽）後做；除錯以 loop 那層為主。11-19 庚的設計稿寫完、六題已裁（線 compile-geng-1119，沒改程式）：定調「C 與 .o」——重生直接蓋、不記指紋、產出後的 json 照常能改（agent_def tools／llm／system 不擋）、改過的下次重生就沒了；eca 版第三刀；先只給人用；現有範本不換、只新增骨架；四格用借的。還沒做的：第一刀施工。攤給使用者、沒要他馬上答的一件：agent_def check 要不要順手重生（會把剛用 agent_def tools 改的當場蓋掉），先不做",
-      "next": "第一刀施工：只加 proto8/py/aos/agent_spec.py、templates/agent-python/、py/tests/test_agent_spec.py，不改現有程式；範圍說明在 08-範圍切法，交 opus 細化成施工計劃",
+      "what": "使用者 11-18 晚裁定：庚（一支 agent.py 宣告 SYSTEM／TOOLS／LLM／FSM 生出定義夾的 json）先做、己（一頁總覽）後做；除錯以 loop 那層為主。11-19 設計稿與六題裁定（定調「C 與 .o」：重生直接蓋、不記指紋、產出後的 json 照常能改）。11-19 第一刀施工完（線 compile-geng-s1-1119）：py/aos/agent_spec.py、templates/agent-python（agent.py＋生成檔＋英文 README）、py/tests/test_agent_spec.py，七條驗收在乾淨複本全過；沒動 agent_def、知識庫、現有範本。",
+      "next": "使用者：點頭後在 ~/repo/aos/proto8 跑 install.py（會換掉使用中的 bin/lib），照紀錄「使用者怎麼試」抄骨架、改 agent.py、--write-defs、ctl add 試用。之後：第二刀（agent_def check 順手重生）先不排；第三刀 HOOKS／FILES／eca 模式；知識庫最後",
       "see": [
+        "[第一刀施工紀錄](../proto8/thinking/2026-11/19/aos-compile-庚-第一刀.md)",
         "[第一刀範圍說明](../proto8/thinking/2026-11/19/aos-compile-庚/08-範圍切法.md)",
         "[庚設計稿 README](../proto8/thinking/2026-11/19/aos-compile-庚/README.md)",
         "[11-19 六題裁定](../proto8/thinking/2026-11/19/aos-compile-庚/10-使用者裁定.md)",

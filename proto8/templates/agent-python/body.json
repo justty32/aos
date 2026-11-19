@@ -1,0 +1,7 @@
+{
+  "description": "Run this agent's loop: aos-loop with loop.json.",
+  "argv": [
+    "aos-loop",
+    "loop.json"
+  ]
+}

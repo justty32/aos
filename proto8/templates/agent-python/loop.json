@@ -1,0 +1,8 @@
+{
+  "description": "Run the state machine in fsm.json every tick and expose public control, state and state flux files.",
+  "exec": "fsm.json",
+  "interval_ms": 300,
+  "ctl": "ctl.json",
+  "state": "state.json",
+  "state_flux": "state_flux.json"
+}

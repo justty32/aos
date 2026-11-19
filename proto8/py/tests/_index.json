@@ -11,6 +11,9 @@
  "ref_path_cases.json": {
   "description": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per rule, run by py/tests/test_ref_path.py."
  },
+ "test_agent_spec.py": {
+  "description": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files, SpecBad before any write, overwrite rules (C and…"
+ },
  "test_aos_lib_missing.py": {
   "description": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。"
  },

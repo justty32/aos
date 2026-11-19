@@ -4,6 +4,7 @@
  "tree": {
   "aos": {
    "__init__.py": "aos - aos 唯一的 Python 套件：指令、工具、範本格共用的模組（from aos import flags, tool_io …）；agent 層的在 aos.agentlib（11-18 S4 收成套件）。",
+   "agent_spec.py": "給人寫 agent 定義的輔助：在一支 agent.py 裡宣告說明、system、工具、腦設定、狀態機，就生出一份掛得上去的定義夾（_entry、body.json、loop.json、fsm.json、interfaces.json、tools.json、llm.json、system.txt…",
    "agentlib": {
     "__init__.py": "aos.agentlib - agent 層的共用模組（hooks、cooldown、claude／codex 對話的 cli_*、cmd_call …；S3 前在 lib/agent）。",
     "agent_tool.py": "claude、codex 共用的工具形入口 ask_cli。",
@@ -385,6 +386,7 @@
    },
    "fake_mcp_stdio.py": "Provide a standard-library MCP stdio server with tools and failure modes for client tests.",
    "ref_path_cases.json": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per …",
+   "test_agent_spec.py": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files, SpecBad before any write, overwrite rules (C and…",
    "test_aos_lib_missing.py": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。",
    "test_aos_ws_reply_match.py": "Check aos_ws reply matching (reply-match-1114): answer_for's order queue -> history -> history_removed -> letters.json, the letters.json helpers, mar…",
    "test_cli_a2a.py": "驗畫面開著的 claude 身往 CLI 的收件 socket 投署名訊息（11-13 cli_a2a）：信封與署名、hook 記 socket 與回執、投遞、等回答；",

@@ -1,0 +1,14 @@
+{
+  "description": "Register this agent with the current daemon (aos-agent ctl add).",
+  "argv": [
+    "aos-agent",
+    "ctl",
+    "add",
+    {
+      "$env": "AOS_CD"
+    }
+  ],
+  "cwd": {
+    "$env": "AOS_WS"
+  }
+}

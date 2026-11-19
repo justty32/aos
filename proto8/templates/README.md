@@ -19,6 +19,8 @@
 
 [`tool-python`](tool-python/README.md) 不是 agent 範本，是**一支工具的骨架**（[tools-def](../thinking/2026-11/10/tools-def/README.md)）：`_entry.json`（`python3 tool.py`）＋`tool.py`（用 [`py/aos/tool_spec.py`](../py/aos/tool_spec.py) 寫的加法）＋產出來的 `_tooldef.json`、`_metainfo.json`＋給 AI 看的英文 README。腦用 `tools_def new` 複製它、只改 `tool.py` 的下半段；人可以直接 `cp -r`，改完跑 `python3 tool.py --write-defs`。測試在 `tests/tool-python/`。
 
+[`agent-python`](agent-python/README.md) 是**用一支 `agent.py` 寫的 agent 定義**（線 compile-geng-s1-1119，設計稿 [aos-compile-庚](../thinking/2026-11/19/aos-compile-庚/README.md)；使用者 11-18「讓我不必在那邊mkdir半天」）：`agent.py`（用 [`py/aos/agent_spec.py`](../py/aos/agent_spec.py) 宣告說明、system、工具包、腦設定，狀態機借 agent-fsm 的四格）＋它生出來的 `_entry`、`body.json`、`loop.json`、`fsm.json`、`interfaces.json`、`tools.json`、`llm.json`、`system.txt`、`_metainfo.json`＋英文 README。`agent_def new` 用 `"template": "agent-python"` 抄、或 `cp -r`，改 `agent.py` 後跑 `python3 agent.py --write-defs`，再 `aos-agent ctl add`。重生＝宣告到的檔整份蓋掉（使用者 11-19「好比C語言和.o之間的關係」），`_metainfo.json` 只設自己的鍵、`README.md` 不在才寫。先只給人用（知識庫沒寫）。測試在 [`py/tests/test_agent_spec.py`](../py/tests/test_agent_spec.py)（含「骨架裡的生成檔跟 `agent.py` 當場重生一字不差」）。
+
 [`judge-llm`](judge-llm/README.md) 是同步呼叫 llm kernel 的裁判比對器，供 measure 的 `compare` 使用；複製後改 `judge.json` 與 `prompt.txt` 就能換模型與規則。
 
 [`reviewer`](reviewer/README.md) 重用 agent-fsm 的格，讓 review_round 試降級並留下專精、差異化與退休建議，agent 讀結果、開處方。
