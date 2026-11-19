@@ -287,7 +287,7 @@ void map_sub(const Sub& s, pid_t pid, int sock, int err_fd) {
     close(sock);
 }
 
-void enter_sub(const Sub& s, int sock, char** envp) {
+void open_sub_ns(const Sub& s, int sock) {
     if (unshare(CLONE_NEWUSER) != 0) {
         die(s.n, "unshare", errno);
     }
@@ -306,6 +306,9 @@ void enter_sub(const Sub& s, int sock, char** envp) {
         std::fflush(stderr);
         _exit(1);   // 父行程已寫了原因
     }
+}
+
+void become_sub(const Sub& s, char** envp) {
     if (setgroups(0, nullptr) != 0) {
         die(s.n, "setgroups", errno);
     }

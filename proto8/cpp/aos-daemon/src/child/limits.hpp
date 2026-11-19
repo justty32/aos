@@ -50,7 +50,10 @@ struct Limits {
 // limits（null 或驗過的物件）→ 備好的值。user 查不到＝user_found false（子行程報 LimitBad）。
 Limits prep_limits(const Json& limits, bool& procs_warned);
 
-// 子行程裡呼叫：照做；失敗＝stderr 一行、_exit(1)（不回來）。lim.empty()＝什麼都不做；sub:N 只做 rlimit（換身分是 enter_sub）。
+// 子行程裡呼叫：照做；失敗＝stderr 一行、_exit(1)（不回來）。lim.empty()＝什麼都不做；sub:N 只做 procs 以外的 rlimit（procs 是 apply_sub_nproc，換身分是 open_sub_ns＋become_sub）。
 void apply_limits(const Limits& lim);
+
+// sub:N 才用：apply_limits 跳過的 RLIMIT_NPROC（procs），在 open_sub_ns 之後、become_sub 之前呼叫（開 ns 前設會被核心拿去數 daemon 的 uid，見 limits.cpp）。
+void apply_sub_nproc(const Limits& lim);
 
 }  // namespace aos::daemon

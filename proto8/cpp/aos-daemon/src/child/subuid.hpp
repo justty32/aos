@@ -3,8 +3,8 @@
 // 做法照 kernel-limits-plan 03 第一節第 4 點（K4 已裁）：每支 proc 自己一個 user namespace，不是整棵樹進 ns。
 //   父行程 fork 之前：prep_sub 查 /etc/subuid、/etc/subgid 與 PATH 上的 newuidmap／newgidmap；finish_sub 備好子行程的環境（白名單）；
 //                     grant_cell 把小格（proc 的 stack）改成 0700＋ACL u:<subuid>:rwx，預設 ACL u:<subuid>:rwx、u:<daemon 的 uid>:rwx（K16、08 G6）
-//   子行程：enter_sub＝unshare(CLONE_NEWUSER) → 經 socketpair 通知父行程 → 等父行程對好號碼 → setgroups({})＋setresgid(G)＋setresuid(N)
-//           → 換成備好的環境、關掉 3 以上的 fd（L5）→ 檢查小格、daemon 的 cwd、工作區走不走得到；失敗＝stderr 一行 LimitBad、_exit(1)
+//   子行程：open_sub_ns＝unshare(CLONE_NEWUSER) → 經 socketpair 通知父行程 → 等父行程對好號碼；接著 apply_sub_nproc（limits.cpp）設 procs；
+//           become_sub＝setgroups({})＋setresgid(G)＋setresuid(N) → 換成備好的環境、關掉 3 以上的 fd（L5）→ 檢查小格、daemon 的 cwd、工作區走不走得到；失敗＝stderr 一行 LimitBad、_exit(1)
 //   父行程 fork 之後：map_sub＝等子行程開好 ns，跑 `newuidmap PID 0 <我的 uid> 1 N <起點+N-1> 1` 與 `newgidmap PID 0 <我的 gid> 1 G <起點+G-1> 1`，
 //                     回報子行程；失敗＝小格 stderr.txt 一行 LimitBad（子行程默默退 1）
 // 群組：一台 daemon 一個（K6、K18）：daemon.json `group`（ns 裡 60001～65536，沒寫＝60001），同台換了身分的 proc 主群組都是它、附屬群組清空。
@@ -51,7 +51,10 @@ void finish_sub(Sub& s, const std::string& cell, const std::string& cwd, const s
 void grant_cell(const Sub& s, const std::string& cell);
 // 父行程 fork 之後：sock＝socketpair 父這端（用完關掉）、err_fd＝小格 stderr.txt。
 void map_sub(const Sub& s, pid_t pid, int sock, int err_fd);
-// 子行程裡：sock＝socketpair 子這端；envp＝s.env 的指標陣列（fork 之前備好、結尾 nullptr）。失敗不回來。
-void enter_sub(const Sub& s, int sock, char** envp);
+// 子行程裡，兩步（中間設 procs，見 limits.cpp apply_sub_nproc）；失敗都不回來。
+// open_sub_ns：開 ns、跟父行程對號碼；sock＝socketpair 子這端（用完關掉）。
+void open_sub_ns(const Sub& s, int sock);
+// become_sub：換身分、環境、關 fd、走得到檢查；envp＝s.env 的指標陣列（fork 之前備好、結尾 nullptr）。
+void become_sub(const Sub& s, char** envp);
 
 }  // namespace aos::daemon

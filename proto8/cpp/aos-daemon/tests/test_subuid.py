@@ -99,8 +99,9 @@ class SubUid(unittest.TestCase):
         got = until(lambda: 'ready' if ready() else (r if (r := f.row()) and r['phase'] == 'stopped' else None), timeout=15)
         if got == 'ready':
             return
+        if 'cannot reach ' not in (got.get('reason') or ''):   # 別的起不來是真的錯，照實報、不 skip
+            self.fail('the proc stopped instead of getting ready: %s' % got.get('reason'))
         blocked = blocked_ancestor(f.root) or blocked_ancestor(PROTO / 'bin')
-        self.assertIn('cannot reach ', got['reason'])
         if blocked:   # 有 ACL 時權限位不準，只在看得出來時對路徑
             self.assertIn('cannot reach ' + blocked, got['reason'])
         self.skipTest('the subuid cannot reach the fixture: %s' % got['reason'])
@@ -205,6 +206,75 @@ class SubUid(unittest.TestCase):
         f.ctl('rm', 'job')
         until(lambda: 'job' not in f.rows(), timeout=15)
         self.assertFalse(Path('/proc/%s' % row['pid']).exists())
+
+    @unittest.skipUnless(REAL, 'needs newuidmap/newgidmap (apt install uidmap)')
+    def test_real_procs_counts_the_subuid(self):
+        # procs 低於使用者自己的行程數也起得來（開 ns 之後才設 RLIMIT_NPROC），而且數的是這個 subuid：身體自己＋2 個子行程，第 3 個 fork 失敗
+        ustart = sub_start('uid')
+        if ustart is None or sub_start('gid') is None:
+            self.skipTest('no /etc/subuid or /etc/subgid line for this user')
+        mine = sum(1 for d in Path('/proc').iterdir() if d.name.isdigit() and self.owner(d) == os.getuid())
+        self.assertGreater(mine, 3)
+        f = self.fixture('real-procs')
+        self.start(f, ENV['PATH'])
+        # dash 的 fork 失敗會讓整支 sh 退出，所以改用 python 數（單執行緒：只算一個）
+        body = self.script(f, 'forks', "exec python3 -c '%s'" % '\n'.join([
+            'import os, signal, time',
+            'signal.signal(signal.SIGTERM, lambda *a: os.killpg(0, signal.SIGKILL))',   # rm 只 SIGTERM 主行程（沒 cgroup 不收孤兒），自己帶走子行程
+            'kids, err = [], ""',
+            'for i in range(4):',
+            '    try:',
+            '        p = os.fork()',
+            '    except OSError as e:',
+            '        err = e.strerror',
+            '        break',
+            '    if p == 0:',
+            '        time.sleep(30)',
+            '        os._exit(0)',
+            '    kids.append(p)',
+            'open(os.environ["AOS_STACK"] + "/forks", "w").write("%d %s" % (len(kids), err))',
+            'open(os.environ["AOS_STACK"] + "/ready", "w").close()',
+            'time.sleep(30)']))
+        self.add(f, {'job': {'exec': body, 'limits': {'user': 'sub:7', 'procs': 3}}})
+        self.reachable(f, lambda: (f.cell / 'ready').exists())
+        self.assertEqual((f.cell / 'forks').read_text(), '2 Resource temporarily unavailable')
+        sid = str(f.row()['pid'])   # 只數這支 proc 的 session（daemon 替它 setsid）
+        subs = [d for d in Path('/proc').iterdir() if d.name.isdigit() and self.owner(d) == ustart + 6 and self.session(d) == sid]
+        self.assertEqual(len(subs), 3, [d.name for d in subs])
+        f.ctl('rm', 'job')
+        until(lambda: 'job' not in f.rows(), timeout=15)
+        self.assertFalse([d for d in subs if d.exists()])
+
+    @unittest.skipUnless(REAL, 'needs newuidmap/newgidmap (apt install uidmap)')
+    def test_real_cannot_reach(self):
+        # 04 第 1 條：工作區的祖先 subuid 走不進去＝點名那一層（不靠家目錄的權限：自己在 fixture 裡做一層 700）
+        f = self.fixture('real-reach')
+        self.start(f, ENV['PATH'])
+        locked = f.root / 'locked'
+        (locked / 'inner').mkdir(parents=True, exist_ok=True)
+        locked.chmod(0o700)
+        body = self.script(f, 'never', 'touch "$AOS_STACK/ran"')
+        self.add(f, {'job': {'exec': body, 'ws': str(locked / 'inner'), 'limits': {'user': 'sub:8'}}})
+        row = self.stopped(f)
+        if 'cannot reach ' + str(locked) + ':' not in (row.get('reason') or ''):
+            if 'cannot reach' in (row.get('reason') or ''):   # fixture 本身就走不到（家目錄沒開門）
+                self.skipTest('the subuid cannot reach the fixture: %s' % row['reason'])
+        self.assertIn('LimitBad user sub:8: cannot reach %s: Permission denied' % locked, row['reason'])
+        self.assertFalse((f.cell / 'ran').exists())
+
+    @staticmethod
+    def session(d):
+        try:
+            return (d / 'stat').read_text().rsplit(')', 1)[1].split()[3]
+        except (OSError, IndexError):
+            return None
+
+    @staticmethod
+    def owner(d):
+        try:
+            return os.stat(d).st_uid
+        except OSError:
+            return None
 
     @unittest.skipUnless(REAL, 'needs newuidmap/newgidmap (apt install uidmap)')
     def test_real_cpu_hit(self):

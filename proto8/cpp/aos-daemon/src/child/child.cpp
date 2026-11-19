@@ -79,7 +79,9 @@ namespace aos::daemon {
     }
     apply_limits(lim);   // 等同 s6-softlimit／s6-setuidgid（daemon 自己做、不 exec s6）；proc 自己不知道（「偷偷」，C-52）
     if (lim.sub.n != 0) {
-        enter_sub(lim.sub, sub_fd, envp);   // 進 cgroup、setrlimit 之後才換 uid（kernel-limits-plan 段 4 的順序）
+        open_sub_ns(lim.sub, sub_fd);   // 進 cgroup、setrlimit 之後才換 uid（kernel-limits-plan 段 4 的順序）
+        apply_sub_nproc(lim);           // procs 例外：開了 ns 才設，不然數到 daemon 的 uid（線 subuid-fix-1119）
+        become_sub(lim.sub, envp);
     }
     aos::restore_signals();
     int rc = 1;

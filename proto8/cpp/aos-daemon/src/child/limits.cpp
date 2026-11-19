@@ -165,26 +165,44 @@ Limits prep_limits(const Json& limits, bool& procs_warned) {
     return out;
 }
 
-void apply_limits(const Limits& lim) {
-    for (const Limits::Rl& r : lim.rl) {   // 先 setrlimit 再換身分（同 s6-softlimit … s6-setuidgid 的順序）
-        if (r.resource < 0) {
-            continue;
+// sub:N 的 RLIMIT_NPROC 要等開了 user ns 才設（線 subuid-fix-1119）：開 ns 那一刻，核心把當下的 RLIMIT_NPROC 記成這個 ns 的天花板，
+// 用來數「開 ns 的人」（daemon 的 uid）在外層的全部行程與執行緒；先設 procs: 5 再開 ns＝使用者自己幾十個行程就超過，execve 回 EAGAIN。
+// 開了 ns 之後才設＝只數 ns 裡這個 subuid 的行程（docs 09「換成 subuid」），外層照 daemon 自己的上限。
+static bool deferred(const Limits& lim, const Limits::Rl& r) {
+    return lim.sub.n != 0 && r.resource == RLIMIT_NPROC;
+}
+
+static void set_rl(const Limits::Rl& r) {
+    struct rlimit rl;
+    rl.rlim_cur = (rlim_t)r.value;
+    rl.rlim_max = (rlim_t)r.hard;
+    if (setrlimit(r.resource, &rl) != 0) {
+        int e = errno;
+        if (e == EPERM) {   // 比 daemon 自己的 hard 寬：hard 只能降不能升（不自動夾成 daemon 的，C-56）
+            std::fprintf(stderr, "aos-daemon: error: %s %s %lld exceeds the daemon's own hard limit\n", code::LimitBad, r.key, r.shown);
+        } else {
+            std::fprintf(stderr, "aos-daemon: error: %s %s %lld %s\n", code::LimitBad, r.key, r.shown, std::strerror(e));
         }
-        struct rlimit rl;
-        rl.rlim_cur = (rlim_t)r.value;
-        rl.rlim_max = (rlim_t)r.hard;
-        if (setrlimit(r.resource, &rl) != 0) {
-            int e = errno;
-            if (e == EPERM) {   // 比 daemon 自己的 hard 寬：hard 只能降不能升（不自動夾成 daemon 的，C-56）
-                std::fprintf(stderr, "aos-daemon: error: %s %s %lld exceeds the daemon's own hard limit\n", code::LimitBad, r.key, r.shown);
-            } else {
-                std::fprintf(stderr, "aos-daemon: error: %s %s %lld %s\n", code::LimitBad, r.key, r.shown, std::strerror(e));
-            }
-            std::fflush(stderr);
-            _exit(1);
+        std::fflush(stderr);
+        _exit(1);
+    }
+}
+
+void apply_sub_nproc(const Limits& lim) {
+    for (const Limits::Rl& r : lim.rl) {
+        if (deferred(lim, r)) {
+            set_rl(r);
         }
     }
-    if (!lim.has_user || lim.sub.n != 0) {   // sub:N 由 run_child 接著呼叫 enter_sub（要跟父行程對號碼）
+}
+
+void apply_limits(const Limits& lim) {
+    for (const Limits::Rl& r : lim.rl) {   // 先 setrlimit 再換身分（同 s6-softlimit … s6-setuidgid 的順序）；sub:N 的 procs 例外，見 deferred
+        if (r.resource >= 0 && !deferred(lim, r)) {
+            set_rl(r);
+        }
+    }
+    if (!lim.has_user || lim.sub.n != 0) {   // sub:N 由 run_child 接著呼叫 open_sub_ns、apply_sub_nproc、become_sub（要跟父行程對號碼）
         return;
     }
     if (!lim.user_found) {
