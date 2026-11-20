@@ -97,6 +97,9 @@
  "shell_observed.py": {
   "description": "Reserve a writable shell ledger before execution and record the completed command."
  },
+ "spec_base.py": {
+  "description": "agent_spec 與 tool_spec 共用的底：例外（SpecBad、DefBad）、從檔名推名字、--compile [位置]／--dry-run 的小旗標殼、寫檔後端（文字、json、程式檔、連結；暫存檔＋改名）。"
+ },
  "swap.py": {
   "description": "promote 與 rollback 兩支工具共用的換版：查過各 daemon 的公開清單、確認定義沒在用，再換上候選版或退回保留的前版。"
  },

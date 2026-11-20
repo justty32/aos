@@ -42,6 +42,7 @@ sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "aos", "__i
 try:
     from aos import tool_io  # noqa: E402
     from aos import tool_spec  # noqa: E402
+    from aos import spec_base  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
     if error.name != "aos":
         raise
@@ -570,7 +571,7 @@ def op_add_entry():
     argv = ["python3", script_name]
     if loc["kind"] == "dir":
         try:
-            tool_spec._write_file(os.path.join(loc["path"], "_entry.json"), {"argv": argv})
+            spec_base.write_files(loc["path"], {"_entry.json": {"argv": argv}})
         except OSError as e:
             die("WriteFailed", "cannot write _entry.json: %s" % e)
         where = "%s/_entry.json" % loc["path"]

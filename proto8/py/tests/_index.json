@@ -144,6 +144,9 @@
  "test_ref_path.py": {
   "description": "The shared \"path string -> (file, pointer)\" rule (aos_refpath.spot): left of # is the file system, right of # is inside the json."
  },
+ "test_spec_base.py": {
+  "description": "Test py/aos/spec_base.py: the shared base of agent_spec and tool_spec - one SpecBad / DefBad, prog_name, the --compile [LOCATION] / --dry-run shell, …"
+ },
  "test_state_path.py": {
   "description": "Check daemon_ctl.state_path: ask AOS_KERNEL for the table file with a query letter (a fake kernel answers), KernelFailed when nobody answers, and rea…"
  },

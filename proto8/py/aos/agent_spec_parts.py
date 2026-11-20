@@ -1,6 +1,6 @@
 """agent_spec_parts - agent_spec 的零件：各份定義檔怎麼從宣告算出來、怎麼先驗（tools.json、llm.json、interfaces.json、hooks.json、FILES），以及不宣告 FSM 時照夾裡現有的 interfaces.json 找檔名。
 
-只給 aos/agent_spec.py 用（第三刀 geng3-1119 從它拆出來，免得單檔過 300 行）；對外的名字（SpecBad、DefBad、WHAT…）由 agent_spec 轉出，agent.py 只認 agent_spec。
+只給 aos/agent_spec.py 用（第三刀 geng3-1119 從它拆出來，免得單檔過 300 行）；對外的名字（WHAT…；SpecBad、DefBad 在 aos/spec_base）由 agent_spec 轉出，agent.py 只認 agent_spec。
 驗的規矩不自己發明，照讀那份檔的一方：工具格照 aos-tools 的 registry.finish，hook 格照 aos/agentlib/hooks.py 的 validate_entry 與 hook_run.validate_name（直接叫，不抄一份）。
 """
 import json, os, re
@@ -8,6 +8,7 @@ import json, os, re
 from aos import hook_run
 from aos.agentlib import hooks as agent_hooks
 from aos.declared_files import declared_files
+from aos.spec_base import SpecBad, DefBad  # noqa: F401（兩個例外在 spec_base，跟 tool_spec 共用；parts.SpecBad 照舊叫得到）
 
 LLM_KEYS = ["model", "temperature", "top_p", "max_tokens", "seed", "presence_penalty", "frequency_penalty", "stop"]
 PACK_RE = re.compile(r"[a-z0-9][a-z0-9_-]*\Z")
@@ -28,14 +29,6 @@ WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl ad
         "hooks.json": "Hooks of this agent: aos functions run when an event happens; the stack copy of this file overrides it by name, null turns one off."}
 HOOKS_SHAPE = ("HOOKS must be a dict {hook name: entry}, std.hooks(...), the HOOKS of defs.load(...), a list of those "
                "(later ones win, None drops a hook), or defs.extern(\"hooks.json\")")
-
-
-class SpecBad(Exception):
-    """宣告本身寫錯；訊息寫成怎麼改。"""
-
-
-class DefBad(ValueError):
-    """定義夾本身（不是宣告）不對：_metainfo.json 壞了；不宣告 FSM 時 interfaces.json 不在、或沒宣告要寫的那份檔。"""
 
 
 class Hooks(dict):

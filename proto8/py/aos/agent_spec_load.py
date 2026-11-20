@@ -11,7 +11,7 @@ import json, os, posixpath, runpy, sys, traceback
 
 from aos import flags
 from aos import agent_spec_parts as parts
-from aos.agent_spec_parts import SpecBad, DefBad
+from aos.spec_base import SpecBad, DefBad
 
 FIELDS = ("DESCRIPTION", "SYSTEM", "TOOLS", "LLM", "FSM", "META", "INTERFACES", "HOOKS", "FILES")
 _chain = []          # 正在載入的檔（真路徑），最外面那支（叫第一個 defs.load 的）排第一

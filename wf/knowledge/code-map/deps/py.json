@@ -22,7 +22,7 @@
    "module": "aos.agent_spec",
    "unit": "proto8/py/aos/agent_spec.py",
    "used_by": "proto8/py/aos/agent_spec_lib.py",
-   "uses": "aos.agent_spec_lib aos.agent_spec_load aos.agent_spec_parts aos.flags"
+   "uses": "aos.agent_spec_lib aos.agent_spec_load aos.agent_spec_parts aos.flags aos.spec_base"
   },
   {
    "kind": "lib",
@@ -36,14 +36,14 @@
    "module": "aos.agent_spec_load",
    "unit": "proto8/py/aos/agent_spec_load.py",
    "used_by": "proto8/py/aos/agent_spec.py",
-   "uses": "aos.agent_spec_parts aos.flags"
+   "uses": "aos.agent_spec_parts aos.flags aos.spec_base"
   },
   {
    "kind": "lib",
    "module": "aos.agent_spec_parts",
    "unit": "proto8/py/aos/agent_spec_parts.py",
    "used_by": "proto8/py/aos/agent_spec.py proto8/py/aos/agent_spec_lib.py proto8/py/aos/agent_spec_load.py",
-   "uses": "aos.agentlib.hooks aos.declared_files aos.hook_run"
+   "uses": "aos.agentlib.hooks aos.declared_files aos.hook_run aos.spec_base"
   },
   {
    "kind": "lib",
@@ -362,6 +362,13 @@
   },
   {
    "kind": "lib",
+   "module": "aos.spec_base",
+   "unit": "proto8/py/aos/spec_base.py",
+   "used_by": "proto8/py/aos/agent_spec.py proto8/py/aos/agent_spec_load.py proto8/py/aos/agent_spec_parts.py proto8/py/aos/tool_spec.py proto8/py/tools/agent/tools_def",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
    "module": "aos.swap",
    "unit": "proto8/py/aos/swap.py",
    "used_by": "proto8/py/tools/aos/promote proto8/py/tools/aos/rollback",
@@ -400,7 +407,7 @@
    "module": "aos.tool_spec",
    "unit": "proto8/py/aos/tool_spec.py",
    "used_by": "proto8/py/tools/agent/tools_def proto8/templates/tool-python",
-   "uses": "aos.tool_io"
+   "uses": "aos.spec_base aos.tool_io"
   },
   {
    "kind": "lib",
@@ -645,7 +652,7 @@
    "module": "",
    "unit": "proto8/py/tools/agent/tools_def",
    "used_by": "",
-   "uses": "aos.tool_io aos.tool_spec"
+   "uses": "aos.spec_base aos.tool_io aos.tool_spec"
   },
   {
    "kind": "tool",

@@ -6,7 +6,8 @@
 agent.py→那一夾 json 叫「編譯」（compile）；defs.compile 算出、不寫，defs.write 寫進夾；指令 --compile 編譯＋寫、--dry-run 只印不寫。
 寫法與分層照同夾的 tool_spec（宣告寫錯先記著、編譯前報一行 SpecBad；每份檔暫存檔＋改名）。找法同 tool_spec：骨架 templates/agent-python/agent.py 的開頭幾行。
 寫 agent.py 的人拿到這個模組的名字叫 defs：from aos.py.agent import defs（使用者 11-19「就 aos.py.agent.defs 吧」，線 aos-defs-rename-1119；檔不搬、模組名不改），下面的 defs.xxx 都是它。
-各份檔怎麼算、怎麼驗在 aos/agent_spec_parts.py（第三刀拆出去）；這裡是宣告用的小函式、compile、write、main。
+各份檔怎麼算、怎麼驗在 aos/agent_spec_parts.py（第三刀拆出去）；例外、推名字、旗標殼、寫檔後端（暫存檔＋改名）在 aos/spec_base.py（跟 tool_spec 共用，
+線 aos-pylib-k0-1120）；這裡是宣告用的小函式、compile、write（只管 _metainfo.json 合併、README.md 不在才寫這兩條，寫檔交給後端）、main。
 
 宣告用的小函式（寫錯不在當下丟，記成 bad，compile()／main 再報 SpecBad）：
   std                 隨 aos 發的庫（aos/agent_spec_lib.py；命名空間第一刀 aos-ns-cut1-1119）：
@@ -35,8 +36,10 @@ compile 蓋掉了模組裡內建的 compile()：這個模組自己不用內建�
 import json, os, sys
 
 from aos import flags
+from aos import spec_base
+from aos.spec_base import SpecBad, DefBad  # noqa: F401（對外的名字：defs.SpecBad、defs.DefBad）
 from aos import agent_spec_parts as parts
-from aos.agent_spec_parts import SpecBad, DefBad, WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FILES  # noqa: F401（對外的名字）
+from aos.agent_spec_parts import WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FILES  # noqa: F401（對外的名字）
 from aos.agent_spec_lib import std, lib  # noqa: F401（對外的名字：defs.std、defs.lib）
 from aos import agent_spec_load as loader
 from aos.agent_spec_load import load  # noqa: F401（對外的名字：defs.load）
@@ -356,16 +359,11 @@ def compile(description, system, tools, llm, fsm=None, meta=None, interfaces=Non
         raise SpecBad("a declared value cannot be written as JSON (%s); use strings, numbers, lists and dicts" % e)
 
 
-def _text(value):
-    return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, indent=2) + "\n"
-
-
 def write(folder, files):
-    """files（compile() 的回傳）寫進 folder；回給人看的字串串列。先讀好 _metainfo.json、全部寫成暫存檔，最後連著改名；
-    寫暫存檔時失敗＝刪掉暫存檔、夾裡不變；改名時才失敗（極少）＝前面幾份已換上、每份各自完整，重跑一次就好（設計稿 07）。OSError 照丟（main 報 WriteFailed）；_metainfo.json 不是 JSON 物件＝DefBad。"""
-    if not os.path.isdir(folder):
-        raise OSError("%s is not a folder" % folder)
-    plan = []
+    """files（compile() 的回傳）寫進 folder；回給人看的字串串列。這裡只管兩條：先讀好 _metainfo.json、只蓋自己的鍵；README.md 在就不寫。
+    其餘交給 spec_base.write_files：全部寫成暫存檔，最後照 RENAME_LAST 連著改名；寫暫存檔時失敗＝刪掉暫存檔、夾裡不變；改名時才失敗（極少）＝
+    前面幾份已換上、每份各自完整，重跑一次就好（設計稿 07）。OSError 照丟（main 報 WriteFailed）；_metainfo.json 不是 JSON 物件＝DefBad。"""
+    plan = {}
     for name, value in files.items():
         path = os.path.join(folder, name)
         if name == "README.md":
@@ -381,25 +379,9 @@ def write(folder, files):
                 raise DefBad("%s is not a JSON object, so its other keys cannot be kept" % path)
             old.update(value)
             value = old
-        plan.append((name, path, _text(value)))
-    tmps = []
-    try:
-        for name, path, text in plan:
-            tmp = os.path.join(folder, ".%s.tmp-%d" % (name, os.getpid()))
-            tmps.append(tmp)
-            with open(tmp, "w", encoding="utf-8") as f:
-                f.write(text)
-            if os.path.exists(path):
-                os.chmod(tmp, os.stat(path).st_mode & 0o7777)
-        for (name, path, _), tmp in sorted(zip(plan, tmps), key=lambda p: RENAME_LAST.get(p[0][0], 0)):
-            os.replace(tmp, path)
-    finally:
-        for tmp in tmps:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
-    done = ["wrote %s" % os.path.join(folder, name) for name, _, _ in plan]
+        plan[name] = value
+    spec_base.write_files(folder, plan, last=RENAME_LAST)
+    done = ["wrote %s" % os.path.join(folder, name) for name in plan]
     if "README.md" in files and len(plan) < len(files):
         done.append("kept %s (it is already there)" % os.path.join(folder, "README.md"))
     return done
@@ -412,7 +394,7 @@ def main(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
     caller = sys._getframe(1)
     script = os.path.realpath(caller.f_code.co_filename)
     base = os.path.basename(script)
-    prog = os.path.basename(os.path.dirname(script)) if base == "agent.py" else os.path.splitext(base)[0]
+    prog = spec_base.prog_name(script, "agent.py")
     if loader.hand_over(script, (description, system, tools, llm, fsm, meta, interfaces, hooks, files)):
         return
     if caller.f_globals.get("__name__") != "__main__":
@@ -435,9 +417,7 @@ def main(description, system, tools, llm, fsm=None, meta=None, interfaces=None, 
     unknown = [a for a in rest if a.startswith("-")]
     if unknown:
         flags.die(prog, "FlagUnknown", "%s (%s)" % (unknown[0], usage))
-    if len(rest) > (1 if argv[0] == "--compile" else 0):
-        flags.die(prog, "ArgumentsBad", "too many arguments: %s (%s)" % (" ".join(argv), usage))
-    folder = rest[0] if rest else os.path.dirname(script)
+    folder = spec_base.location(argv[0], rest, argv, script, usage, lambda code, msg: flags.die(prog, code, msg))
     link = links[0][2:] if links else "static"            # 預設靜態（使用者 11-19 選項框「預設靜態 (Recommended)」）
     try:
         out = compile(description, system, tools, llm, fsm, meta, interfaces, hooks, files, folder,

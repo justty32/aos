@@ -7,7 +7,7 @@
 三條路（各自可單獨用，編譯產物都落在「位置」裡）：
   tooldef(description, params, errors)  → dict（OpenAI function 去掉 name，外加 tool_io 讀的 errors）
   metainfo(description, meta)            → dict（N-68 的通用 key，沒給的補保守預設）
-  write(location, td, mi)                位置＝資料夾（寫 _tooldef.json／_metainfo.json，暫存檔＋改名）
+  write(location, td, mi)                位置＝資料夾（寫 _tooldef.json／_metainfo.json，暫存檔＋改名；寫檔後端在 aos/spec_base）
                                          或 檔.json／檔.json#/指標（經 aos-json set 寫 _tooldef／_metainfo 鍵）
   main(run, description, params, meta)   工具的入口：--compile [位置] 編譯＋寫、--dry-run 只印不寫（兩份放一個物件）、
                                          --tooldef／--metainfo 只印那一份（aos-tools 問可執行檔 --tooldef 的協定，留著），
@@ -19,6 +19,8 @@ run 裡其他例外＝RunFailed（帶例外與行號，給腦改程式用）。"
 import json, os, re, subprocess, sys, traceback
 
 from aos import tool_io
+from aos import spec_base
+from aos.spec_base import SpecBad  # noqa: F401（對外的名字 ts.SpecBad；跟 agent_spec 同一個類別，線 aos-pylib-k0-1120）
 
 TYPES = ("string", "integer", "number", "boolean", "array", "object")
 CODE_RE = re.compile(r"[A-Z][A-Za-z0-9]*\Z")
@@ -36,10 +38,6 @@ class Fail(Exception):
     def __init__(self, code, reason):
         super().__init__(reason)
         self.code = code
-
-
-class SpecBad(Exception):
-    """宣告本身寫錯（參數型別、預設值、metainfo 的值…）；訊息寫成怎麼改。"""
 
 
 def fail(code, reason):
@@ -193,21 +191,9 @@ def split_location(location):
     return path, (ptr if sep else None)
 
 
-def _write_file(path, value):
-    tmp = os.path.join(os.path.dirname(path) or ".", ".%s.tmp-%d" % (os.path.basename(path), os.getpid()))
-    try:
-        with open(tmp, "w", encoding="utf-8") as f:
-            f.write(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
-        if os.path.exists(path):
-            os.chmod(tmp, os.stat(path).st_mode & 0o7777)
-        os.replace(tmp, path)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-
-
 def write(location, td=None, mi=None):
-    """把 td／mi 寫進位置；回寫了哪些（給人看的字串串列）。資料夾＝兩個檔；JSON 檔或 檔#/指標＝兩個鍵（aos-json set）。"""
+    """把 td／mi 寫進位置；回寫了哪些（給人看的字串串列）。資料夾＝兩個檔（各自經 spec_base.write_files 暫存檔＋改名）；
+    JSON 檔或 檔#/指標＝兩個鍵（aos-json set）。"""
     path, ptr = split_location(location)
     done = []
     for key, value in (("_tooldef", td), ("_metainfo", mi)):
@@ -215,7 +201,7 @@ def write(location, td=None, mi=None):
             continue
         if ptr is None and os.path.isdir(path):
             target = os.path.join(path, key + ".json")
-            _write_file(target, value)
+            spec_base.write_files(path, {key + ".json": value})
         else:
             target = "%s#%s/%s" % (path, (ptr or "").rstrip("/"), key)
             r = subprocess.run(["aos-json", "set", "--parents", target, json.dumps(value, ensure_ascii=False)],
@@ -254,8 +240,7 @@ def main(run, description, params=(), meta=None, errors=(), name=None):
     """工具的入口：最後一行寫 tool_spec.main(run, DESCRIPTION, PARAMS, META)。"""
     script = os.path.realpath(run.__code__.co_filename)
     if not name:                                    # tool.py＝資料夾名；別的腳本（JSON 物件裡的工具，mul.py）＝檔名去 .py
-        base = os.path.basename(script)
-        name = os.path.basename(os.path.dirname(script)) if base == "tool.py" else os.path.splitext(base)[0]
+        name = spec_base.prog_name(script, "tool.py")
     tool_io.NAME = name
     try:
         td = tooldef(description, params, list(errors) + _errors_in(script))
@@ -266,14 +251,13 @@ def main(run, description, params=(), meta=None, errors=(), name=None):
     if argv[:1] in (["--tooldef"], ["--metainfo"]):
         print(json.dumps(td if argv[0] == "--tooldef" else mi, ensure_ascii=False, indent=2))
         sys.exit(0)
-    if argv[:1] in (["--compile"], ["--dry-run"]) and len(argv) > (2 if argv[0] == "--compile" else 1):
-        tool_io.die("ArgumentsBad", "too many arguments: %s (usage: python3 %s --compile [LOCATION] | --dry-run)"
-                    % (" ".join(argv), os.path.basename(script)))
+    if argv[:1] in (["--compile"], ["--dry-run"]):
+        location = spec_base.location(argv[0], argv[1:], argv, script, "usage: python3 %s --compile [LOCATION] | --dry-run"
+                                      % os.path.basename(script), tool_io.die)
     if argv[:1] == ["--dry-run"]:
         print(json.dumps({"_tooldef.json": td, "_metainfo.json": mi}, ensure_ascii=False, indent=2))
         sys.exit(0)
     if argv[:1] == ["--compile"]:
-        location = argv[1] if len(argv) > 1 else os.path.dirname(script)
         try:
             for target in write(location, td, mi):
                 print("wrote %s" % target)
