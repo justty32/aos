@@ -78,3 +78,16 @@
 - 空的原因有兩個：程式不在夾裡（借 `AOS_HOME` 的 `lib/tools/aos/kernel`，即掛 proc 的 kernel 的共用骨架）；設定是 `{}`（什麼都不管、全部原樣轉給根）。
 - 出廠沒掛、沒人用（使用者 11-20「加一份選裝、預設不開」）；開法與可加的鍵（`allowed`、`max_running`、`queue`、`hooks`…）在 [start-api README「選裝：權限件」](../../../templates/start-api/README.md)。
 - 對照第 1、2 則：這一夾已經是他要的「沒要覆蓋就從 AOS_HOME 取」的樣子，`llm/` 也是；`agents/ann/` 才是整份帶著程式。
+
+## 第 7 則：perm 沒事了；回來看 root，問 `daemon.json#/procs` 底下那些的特性
+
+### 原話
+
+「那沒事了。然後回來看root，之前磨過一遍，所以還算熟，只是我忘記了，被寫在daemon.json#/procs底下的這些，他們的特性是？」
+
+### 現況（頂層照 `cpp/aos-daemon/docs` 01～05、10 答的）
+
+- `root/daemon.json` 的 `procs` 現在兩列：`_clock`（每 1000 ms 跑一次 `aos-clock`）、`_sweeper`（每 600000 ms 跑一次 `aos-sweeper --retention-days 7`），都帶 `auto_restart: true` 與 `stuck_after_ms`。
+- 寫在這裡的是名單的「底」：daemon 一起來就自己起它們，不用 `add`；每次 daemon 起來都照 daemon.json 再讀一次（自己結束過的也再起）。
+- 對照 `ctl add` 加的（`llm`、`ann`）：那是信改出來的，daemon 重起時靠 stack 接回，「只留名、設定記 null」，再起時照 proc 自己 stack 裡的 `loop.json`。
+- 寫法決定怎麼跑：物件裡有 `interval_ms` 這類 loop 的 key＝一直跑的 loop；只有 `exec`＝跑一次。
