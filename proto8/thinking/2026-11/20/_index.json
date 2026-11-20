@@ -5,6 +5,9 @@
  "aos-compile-base-1120": {
   "description": "編譯的通用底座與「Python 函數直接當工具／hook」調查（11-20）：現況盤點、可能的形狀、一個小原型、待裁題"
  },
+ "aos-gdb-small-1120.md": {
+  "description": "依據"
+ },
  "aos-gdb-wait-1120.md": {
   "description": "使用者 11-20 的裁定（選項框，答案逐字）"
  },

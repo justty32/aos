@@ -373,11 +373,12 @@
       "title": "aos-gdb：pause 加 wait=、斷點 id 與 add 的回傳（11-20 問答）",
       "status": "等使用者",
       "flow": "",
-      "what": "使用者 11-20 問 a.stop() 是不是阻塞、斷點 id 為什麼是 xxxx_1；只讀快查後選項框答四題：加 wait= 的是「暫停 a.bp.pause()」；不等時「回一個可以查的物件。用is_done()」；id 格式他在 Other 反問「不能純數字，然後搭配id、屬性(hook點種類)嗎？」（頂層的解讀：要純數字 id、種類放屬性，刪了重不重用待確認）；a.bp.add「回物件、帶屬性」。之後又答：resume／step「三個都加」、號碼「不重用」、屬性「每次讀都重新查」、扣在斷點上下 ctl stop「這次不動」。線 aos-gdb-wait-1120 已施工：三個動作 wait=False 回 Pending（is_done()、wait()）；id 純數字不重用；add 回斷點物件；替使用者選了：id=\"mine\" 照留、號碼不能自己挑、觀察者與觸發器同一條數列、Pending 只多 wait()。乾淨複本假腦測試全過",
-      "next": "使用者點頭後在要用的 proto8 跑 install.py，照紀錄試；待裁小題：號碼要不要補零（hook 照名字字典順序跑，gdb_10 排在 gdb_2 前）、Pending 要不要 cancel、a.bp.set 要不要也回斷點物件",
+      "what": "使用者 11-20 問 a.stop() 是不是阻塞、斷點 id 為什麼是 xxxx_1；只讀快查後選項框答四題：加 wait= 的是「暫停 a.bp.pause()」；不等時「回一個可以查的物件。用is_done()」；id 格式他在 Other 反問「不能純數字，然後搭配id、屬性(hook點種類)嗎？」（頂層的解讀：要純數字 id、種類放屬性，刪了重不重用待確認）；a.bp.add「回物件、帶屬性」。之後又答：resume／step「三個都加」、號碼「不重用」、屬性「每次讀都重新查」、扣在斷點上下 ctl stop「這次不動」。線 aos-gdb-wait-1120 已施工：三個動作 wait=False 回 Pending（is_done()、wait()）；id 純數字不重用；add 回斷點物件；替使用者選了：id=\"mine\" 照留、號碼不能自己挑、觀察者與觸發器同一條數列、Pending 只多 wait()。乾淨複本假腦測試全過。三小題使用者選「Pending 加 cancel(),a.bp.set 也回物件,斷點號碼檔名補零」，線 aos-gdb-small-1120 已施工：cancel() 只是不等、不收回；set 回斷點物件；名字號碼補零到 4 位（gdb_0012）；gdb 測試 66 支全過",
+      "next": "使用者點頭後在要用的 proto8 跑 install.py，照兩份紀錄試；已經掛著舊名 gdb_1 的 agent 先 aos-agent hook rm 再重下",
       "see": [
         "[aos-gdb-問答-1120](../proto8/thinking/2026-11/20/aos-gdb-問答-1120.md)",
-        "[aos-gdb-wait-1120](../proto8/thinking/2026-11/20/aos-gdb-wait-1120.md)"
+        "[aos-gdb-wait-1120](../proto8/thinking/2026-11/20/aos-gdb-wait-1120.md)",
+        "[aos-gdb-small-1120](../proto8/thinking/2026-11/20/aos-gdb-small-1120.md)"
       ],
       "since": "2026-11-20"
     },
