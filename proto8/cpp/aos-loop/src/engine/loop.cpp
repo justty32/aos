@@ -5,7 +5,8 @@
 //
 // 訊號：block_signals 擋著的三個訊號排在 kernel 裡；signal_got 兩次之間取出第一個並記住（之後一直回它）；
 // nap 用 sigtimedwait 睡，收到就醒。跑的期間收到的由 run_once 轉給那次、放在 Run::received。
-// 11-11：on_start 在第一次之前跑一次；on_stop 在 end（finish 之後、最後一份 state 之前）或 serve 的錯誤路徑跑一次（run_side、stop_side）。
+// 11-11：on_start 在第一次之前跑一次；on_stop 在 end（finish 之後、最後一份 state 之前）或 serve 的錯誤路徑跑一次（run_side、stop_side，在 points.cpp）。
+// 11-20 hook 第 5 刀：身體每跑一次的前後各一個點（before_point、after_point，在 points.cpp）；四個點失敗都收工（aos-daemon 的起停照舊只 warning）。
 // nap 也等子類別 wake_ 的訊號，交 woke 決定是否提前算一圈；aos-loop 不設，daemon 用來接 poke。
 // 11-14 B7：on_stop 多 AOS_LOOP_CAUSE（stop_cause；原因檔讀法在 window.cpp 的 cause_file）。
 #include "engine/engine.hpp"
@@ -80,43 +81,7 @@ void Loop::nap(double secs) {
     }
 }
 
-// 11-11 on_start／on_stop：跑一次，問題只一行 warning（不改結束碼）。跑的期間收到的訊號記成這支收到的（之後照常收工）。
-// code≥0＝on_stop：環境多 AOS_LOOP_CODE、AOS_LOOP_SIGNAL、AOS_LOOP_CAUSE（cause；跑完還原）。
-void Loop::run_side(const std::optional<Target>& t, const char* key, int code, const std::string& cause) {
-    if (!t) {
-        return;
-    }
-    std::vector<std::pair<const char*, std::optional<std::string>>> old;
-    if (code >= 0) {
-        for (const char* k : {"AOS_LOOP_CODE", "AOS_LOOP_SIGNAL", cause_env}) {
-            const char* o = std::getenv(k);
-            old.emplace_back(k, o ? std::optional<std::string>(o) : std::nullopt);
-        }
-        setenv("AOS_LOOP_CODE", std::to_string(code).c_str(), 1);
-        setenv("AOS_LOOP_SIGNAL", got_ != 0 ? std::to_string(got_).c_str() : "", 1);
-        setenv(cause_env, cause.c_str(), 1);
-    }
-    try {
-        Run b = run_once(*t, on_timeout_ms_);
-        if (b.received != 0 && got_ == 0) {
-            got_ = b.received;
-        }
-        if (b.timed_out) {
-            warn(std::string(key) + " " + t->label() + " did not finish in " + std::to_string(on_timeout_ms_) + " ms and was killed");
-        } else if (b.code != 0) {
-            warn(std::string(key) + " " + t->label() + " exited " + std::to_string(b.code));
-        }
-    } catch (const Error& e) {
-        warn(std::string(key) + " " + t->label() + " cannot run: " + e.code + " " + e.msg);
-    }
-    for (auto& [k, v] : old) {
-        if (v) {
-            setenv(k, v->c_str(), 1);
-        } else {
-            unsetenv(k);
-        }
-    }
-}
+// 四個點（on_start、on_stop、on_before_run、on_after_run）怎麼跑在 points.cpp。
 
 // 11-14 B7（圖紙 6.3）：照這個順序，第一條成立就停——
 // 1 收到 SIGTERM 而且原因檔可用＝檔裡的值（不管 stopping_、身體之後怎麼退）；2 收到任何訊號＝stopping_ 時 stop、否則 signal（SIGINT、SIGHUP 不讀檔）；
@@ -136,23 +101,9 @@ std::string Loop::stop_cause(const char* own) {
     return own;
 }
 
-void Loop::stop_side(int code, const char* own) {
-    if (!served_ || stop_ran_) {
-        return;
-    }
-    stop_ran_ = true;
-    if (!on_stop_) {
-        return;   // 沒有 on_stop：原因也不用算（不讀原因檔、不印它的 warning）
-    }
-    // 收尾途中（例：daemon 的 finish 等子項退）才到、還排著的訊號也算收到：先取出來，原因照 6.3 判；
-    // 不取的話它會被 run_once 當成 on_stop 跑的期間收到的、轉給 on_stop 把它收掉
-    signal_got();
-    run_side(on_stop_, "on_stop", code, stop_cause(own));
-}
-
 int Loop::end(int code, const std::string& phase, const char* own) {
     finish();
-    stop_side(code, own);
+    code = stop_side(code, own);   // 11-20：on_stop 失敗而本來要退 0＝改它的碼
     write_state(phase, Json(code));
     return code;
 }
@@ -163,7 +114,14 @@ int Loop::main_loop() {
     interval_base_ = interval_ms_;
     read_old_state();              // 先接回 paused 與 ctl_seq；第一輪讀 ctl 前不得覆寫舊 state／state_flux
     served_ = true;
-    run_side(on_start_, "on_start", -1);   // 11-11：起來跑一次（期間收到訊號＝下面頂端照常收工，on_stop 照跑）
+    // 11-11：起來跑一次（期間收到訊號＝下面頂端照常收工，on_stop 照跑）。11-20「四個點都跟著停」：失敗＝身體不跑、以它的碼收工
+    PointRun started = run_side(on_start_, "on_start", -1);
+    if (started.code != 0 && !d_.run_points) {
+        warn(started.why);
+    } else if (started.code != 0 && started.received == 0) {
+        fail_line(code::PointFailed, started.why);
+        return end(started.code, StateWindow::done, StopCauseWindow::error);
+    }
     while (true) {
         if (signal_got() != 0) {
             return end(128 + signal_got(), "stopped", StopCauseWindow::signal);
@@ -197,6 +155,20 @@ int Loop::main_loop() {
             write_state(paused ? "paused" : "waiting", Json());
             nap(paused ? 1.0 : wait);
             continue;
+        }
+        if (has_exec_) {   // 11-20：身體之前的點（沒寫、旗標檔不在＝go）
+            int r = before_point();
+            if (r == skip) {
+                next_at = Clock::now() + std::chrono::milliseconds(interval_ms_);   // 跳過也推時間，不然不睡覺一直重跑（Argon A4）
+                continue;
+            }
+            if (r == top) {
+                continue;
+            }
+            if (r != go) {
+                return r;
+            }
+            iv = interval_ms_;   // 再讀過一次 ctl
         }
         runs_ += 1;
         write_counter();
@@ -234,11 +206,17 @@ int Loop::main_loop() {
                 }
                 return end(128 + b.received, "stopped", StopCauseWindow::signal);
             }
+            if (b.code != 0 && b.code != 10) {   // 11-20：這行在 on_after_run 之前印
+                fail_line(code::RunFailed, "run " + std::to_string(runs_) + ": " + exec_.label() + " failed with exit code " + std::to_string(b.code));
+            }
+            int r = after_point(b);   // 11-20：身體之後的點
+            if (r != go) {
+                return r;
+            }
             if (b.code == 10) {
                 return end(0, StateWindow::done, StopCauseWindow::body_exit);
             }
             if (b.code != 0) {
-                fail_line(code::RunFailed, "run " + std::to_string(runs_) + ": " + exec_.label() + " failed with exit code " + std::to_string(b.code));
                 return end(b.code, StateWindow::done, StopCauseWindow::error);
             }
         }

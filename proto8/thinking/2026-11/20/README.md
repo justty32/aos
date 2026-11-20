@@ -32,3 +32,4 @@
 | [寄信問 kernel 放 body 的原型（aos-kask-proto-1120）](aos-kask-proto-1120/README.md) | 原型：骨架 round.py 每輪開頭先回特殊信箱 <stack>/kask/ 的問句信（不排隊、不過 hook、不記帳），llm kernel 與權限站都一問一答、中位數約 0.4 秒；灌 30 封不拖慢後面的請求（上一條線掛 hook 慢約 5 倍）；特殊信箱不用動 daemon 就能有，寄件人怎麼找到它沒地方寫，六種做法；寄錯到 requests/ 站仍回假成功；十題等使用者 |
 | [稱呼不用比喻（aos-plain-terms-1120）](aos-plain-terms-1120.md) | 偏好寫進 wf/（手、門→kernel／daemon；把手→遙控器，經過「物件」「操控器」兩次改口）；比喻詞盤點＋逐檔 csv；改了明確的三種：把手→遙控器、指 kernel 的門→kernel、總機→llm kernel（CONCEPTS、NORMS 逐條列）；站、板子、鐘、清道夫、手把等 18 題等使用者定；測試前後全綠 |
 | [編譯程式庫第 5 刀：教學照新寫法實跑（aos-pylib-k5-1120）](aos-pylib-k5-1120.md) | 教學 01～08 在乾淨複本、真 daemon、假腦從頭打兩遍；程式沒錯，改教學五處字（舊詞兩處、aos-llm ls 的順序、衍生例子兩個前提）；逐章實跑表；C-87 加註只擬字等使用者點頭；hook 兩條線交後要再對的節 |
+| [aos-hook-k5-1120](aos-hook-k5-1120.md) | hook 介面施工第 5 刀的 aos-loop 那一半：before_run／after_run 兩個點、旗標檔、四個點失敗都收工；範本接線等第 3 刀 |

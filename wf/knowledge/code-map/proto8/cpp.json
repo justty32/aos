@@ -57,6 +57,7 @@
     "test_poke.py": "Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures.",
     "test_ref_hash.py": "Check {\"$ref\": \"#/...\"} in daemon.json means daemon.json itself, also inside an inline inst moved into its cell (11-12).",
     "test_restart_backoff.py": "Check auto_restart backs off (wait grows on each restart in a row), shows it on the row (reason, counter_restarts), and resets after a long run (11-1…",
+    "test_run_points_refused.py": "aos-daemon takes none of aos-loop's run points (on_before_run, on_after_run, their _if flags), and its own on_start failing stays a warning (11-20 ho…",
     "test_stack_make.py": "Check aos-daemon creates a missing $AOS_STACK at start (11-11, make_stack) after the config checks pass.",
     "test_stale_stop.py": "Check stop → sleep → start keeps the restarted loop running instead of replaying the old stop.",
     "test_state_path.py": "Check the procs_state_path query letter (11-13, K-F27): the reply carries the absolute path of procs_state.json, null without that window, BodyBad wh…",
@@ -272,6 +273,7 @@
      "config.cpp": "Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；",
      "engine.hpp": "反覆跑的程式的骨架 Loop（公開介面在 aos/loop.hpp）。",
      "loop.cpp": "Loop 每次怎麼走（說明見 aos/loop.hpp）。",
+     "points.cpp": "loop 的四個點怎麼跑——on_start／on_stop（run_side、stop_side）與每跑一次身體前後的 on_before_run／on_after_run（說明見 aos/loop.hpp）。",
      "stack.cpp": "make_stack——aos-loop、aos-fsm 起來時 $AOS_STACK 有設但資料夾不在就 mkdir -p（11-11，說明見 aos/loop.hpp）。",
      "window.cpp": "ctl／state／state_flux 三扇窗與選開的 counter_runs.txt（NORMS N-06～N-09、N-17、N-32、N-33）。"
     },
@@ -287,6 +289,7 @@
    "tests": {
     "test_on_start_stop.py": "Check loop.json on_start / on_stop: run once before the first run and once on every way out (11-11 clock-hook).",
     "test_ref_hash.py": "Check {\"$ref\": \"#/...\"} in loop.json (a config key, the inline exec inst, ctl) takes the file that holds it (11-12).",
+    "test_run_points.py": "Check loop.json on_before_run / on_after_run and their _if flag files (11-20 hook cut 5): order, exit codes, skip, ctl, signals, environment.",
     "test_stack_make.py": "Check aos-loop creates a missing $AOS_STACK at start (11-11, make_stack) and writes there as usual."
    }
   },

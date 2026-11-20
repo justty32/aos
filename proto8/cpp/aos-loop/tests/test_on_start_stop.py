@@ -90,22 +90,42 @@ class OnStartStop(Fixture):
         self.assertEqual(self.lines()[0], 'start unset unset')
         self.assertEqual(self.lines()[-1], 'stop 0 ')
 
-    def test_failing_on_start_only_warns(self):
+    def test_failing_on_start_stops(self):   # 11-20 使用者「四個點都跟著停」：身體不跑、以它的碼收工、on_stop 照跑
         self.script('start', '#!/bin/sh\n# fails\nexit 3\n')
         self.body('exit 10\n')
         code, err = self.run_loop(self.cfg())
-        self.assertEqual(code, 0)
-        self.assertIn('aos-loop: warning: on_start', err)
-        self.assertIn('exited 3', err)
-        self.assertEqual(self.lines(), ['body', 'stop 0 '])
+        self.assertEqual(code, 3)
+        self.assertEqual(err.splitlines(), ['aos-loop: error: PointFailed on_start %s exited 3' % (self.d / 'start')])
+        self.assertEqual(self.lines(), ['stop 3 '])
+
+    def test_on_start_that_cannot_run_stops(self):
+        self.body('exit 10\n')
+        code, err = self.run_loop(self.cfg(on_start=str(self.d / 'nope')))
+        self.assertEqual(code, 1)
+        self.assertIn('aos-loop: error: PointFailed on_start', err)
+        self.assertEqual(self.lines(), ['stop 1 '])
+
+    def test_failing_on_stop_changes_a_zero_exit(self):
+        self.script('stop', '#!/bin/sh\n# fails\nexit 4\n')
+        self.body('exit 10\n')
+        code, err = self.run_loop(self.cfg())
+        self.assertEqual(code, 4)
+        self.assertIn('aos-loop: error: PointFailed on_stop', err)
+        self.body('exit 7\n')   # 本來就要退非 0：碼不變，只一行 warning
+        code, err = self.run_loop(self.cfg())
+        self.assertEqual(code, 7)
+        self.assertIn('aos-loop: error: RunFailed', err)
+        self.assertIn('aos-loop: warning: on_stop', err)
+        self.assertNotIn('PointFailed', err)
 
     def test_on_stop_timeout(self):
         self.script('stop', '#!/bin/sh\n# hangs\nsleep 30\n')
         self.body('exit 10\n')
         t0 = time.monotonic()
         code, err = self.run_loop(self.cfg(on_timeout_ms=300))
-        self.assertEqual(code, 0)
+        self.assertNotEqual(code, 0)   # 逾時＝失敗，本來要退 0＝改它的碼
         self.assertLess(time.monotonic() - t0, 5)
+        self.assertIn('PointFailed on_stop', err)
         self.assertIn('did not finish in 300 ms', err)
 
     def test_inline_inst(self):

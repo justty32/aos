@@ -1,12 +1,12 @@
 {
- "description": "Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop, today through py/tools/agent/hook_fire), and before_run / after_run, which are declared but not fired yet.",
+ "description": "Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop, today through py/tools/agent/hook_fire), and before_run / after_run (on_before_run / on_after_run, each with an _if flag file), which aos-loop runs but no template wires yet.",
  "provider": "aos-loop",
  "points": {
   "after_start": {
    "when": "the loop started, before the first run of its body (loop.json on_start; also after a wake or an auto_restart, not after a hard kill)",
    "phase": "after",
    "fields": {},
-   "if_failed": "the loop stops (all four loop points do); until aos-loop and the wiring change, a failing after_start hook only gives a warning and the agent starts anyway"
+   "if_failed": "the loop stops (all four loop points do): the body never runs, after_stop still fires"
   },
   "after_stop": {
    "when": "the loop is about to exit (loop.json on_stop: stop, sleep, remove, shutdown, a failing run; not after a hard kill)",
@@ -16,7 +16,7 @@
     "signal": {"about": "the signal it got, or null", "env": "AOS_LOOP_SIGNAL", "type": "int"},
     "cause": {"about": "stop, sleep, remove, shutdown, stuck, signal, max, body_exit or error (copied as given); null when empty or unset", "env": "AOS_LOOP_CAUSE", "type": "string"}
    },
-   "if_failed": "the loop exits with a failure code (all four loop points stop); until aos-loop and the wiring change, a failing after_stop hook only gives a warning"
+   "if_failed": "the loop exits with the hook's failure code when it would have exited 0 (all four loop points stop); when it already exits with another code, that code stays and the failure is one warning"
   },
   "before_run": {
    "when": "before each run of the loop body, after the pause check and the wait for interval_ms",
@@ -30,7 +30,7 @@
    "block": true,
    "if_blocked": "the loop skips this run: the body does not run, the run is not counted, after_run does not fire; the loop asks again after interval_ms",
    "if_failed": "the loop stops, as after a failing run; the body does not run",
-   "not_fired_yet": "aos-loop has no on_before_run key yet; nothing fires this point"
+   "not_fired_yet": "aos-loop runs loop.json on_before_run (while on_before_run_if exists), but no template wires it to aos-hook yet: that waits for the agents to read their hook_points declarations"
   },
   "after_run": {
    "when": "after each run of the loop body, whatever its exit code (not when the body could not start, not when the loop got a signal)",
@@ -43,7 +43,7 @@
     "next_stage": "fsm bodies only: the state the table is at now (the next one after a taken step, the same one otherwise); null for bodies without states"
    },
    "if_failed": "the loop stops with the hook's code when the body exited 0; when the body itself ends the loop, the body's result counts and the hook failure is one warning",
-   "not_fired_yet": "aos-loop has no on_after_run key yet; nothing fires this point"
+   "not_fired_yet": "aos-loop runs loop.json on_after_run (while on_after_run_if exists), but no template wires it to aos-hook yet: that waits for the agents to read their hook_points declarations"
   }
  }
 }

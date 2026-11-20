@@ -2,6 +2,7 @@
 // 還有 parse_target（exec 的寫法）、resolve_exec、place_inline（內嵌單子在哪，10-24）、loop_cli（命令列；--enable-logs、--enable-counters 開關、
 // 設定檔後面的 `-- 參數...`）、add_args（附加參數接到 exec 後面）
 // （10-21 傍晚 ideas § 9）；錯誤分代號。11-11：on_start／on_stop（寫法同 exec）與 on_timeout_ms。
+// 11-20 hook 第 5 刀：on_before_run／on_after_run（寫法同 exec）與 on_before_run_if／on_after_run_if（旗標檔路徑）；Defaults::run_points 是 false（aos-daemon）＝寫了就 CfgBad。
 #include "engine/engine.hpp"
 
 #include "aos/util/files.hpp"
@@ -161,12 +162,21 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     counters_ = opts.count("enable_counters") > 0;
     cfg_ = aos::load_cfg(spec);
     aos::RefBase exec_base;   // exec 那格裡相對 $ref 的起點（內嵌單子用）
-    std::map<std::string, aos::RefBase> side_base;   // 11-11 on_start／on_stop 同 exec
+    std::map<std::string, aos::RefBase> side_base;   // 11-11 on_start／on_stop 同 exec；11-20 on_before_run／on_after_run 也是
+    const char* run_keys[4] = {"on_before_run", "on_after_run", "on_before_run_if", "on_after_run_if"};   // 11-20 hook 第 5 刀
+    if (!d_.run_points && cfg_.is_object()) {
+        for (const char* k : run_keys) {
+            if (cfg_.contains(k)) {
+                throw Error{code::CfgBad, std::string(k) + " is not taken by " + d_.prog + " (only aos-loop runs points around each run of its body)"};
+            }
+        }
+    }
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45；捷徑解開，10-24 審後，config_file）
         std::string cf = config_file(spec);   // `{"$ref": "#/…"}`＝這份設定檔自己（11-12）
         aos::Resolved r = aos::loop::resolve_keys(cfg_, aos::RefBase{aos::dirname(cf), cf},
-                                       {"max", "interval_ms", "on_timeout_ms", CtlWindow::config_key, StateWindow::config_key, StateFluxWindow::config_key});
-        for (const char* k : {"exec", "on_start", "on_stop"}) {   // 是單子時裡面不解（10-24，resolve_exec；11-11 起停兩格同 exec）
+                                       {"max", "interval_ms", "on_timeout_ms", CtlWindow::config_key, StateWindow::config_key, StateFluxWindow::config_key,
+                                        run_keys[2], run_keys[3]});
+        for (const char* k : {"exec", "on_start", "on_stop", run_keys[0], run_keys[1]}) {   // 是單子時裡面不解（10-24，resolve_exec；11-11 起停兩格同 exec）
             if (r.value.is_object() && r.value.contains(k) && !r.value[k].is_null()) {
                 aos::Resolved ex = resolve_exec(r.value[k], r.dir_of(k));
                 r.value[k] = std::move(ex.value);
@@ -218,9 +228,10 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         throw Error{code::ArgumentsBad, "no exec (body), so the extra args after -- have nowhere to go"};   // daemon 純監工（11-02 晚代定）
     }
     // 11-11（使用者選「aos-loop 自己加」）：起來、要退時各跑一次；寫法同 exec，null＝沒有
-    std::optional<Target>* sides[2] = {&on_start_, &on_stop_};
-    const char* side_keys[2] = {"on_start", "on_stop"};
-    for (int i = 0; i < 2; ++i) {
+    // 11-20：身體前後兩格同 exec 的寫法
+    std::optional<Target>* sides[4] = {&on_start_, &on_stop_, &on_before_run_, &on_after_run_};
+    const char* side_keys[4] = {"on_start", "on_stop", run_keys[0], run_keys[1]};
+    for (int i = 0; i < 4; ++i) {
         Json v = cfg_.value(side_keys[i], Json());
         if (v.is_null()) {
             continue;
@@ -228,6 +239,21 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         Target t = parse_target(v, side_keys[i]);
         place_inline(t, spec, std::string("/") + side_keys[i], side_base[side_keys[i]]);
         *sides[i] = std::move(t);
+    }
+    // 11-20 旗標檔（使用者「用旗標檔」）：有寫＝那個檔在才跑；寫了卻沒有對應的點＝設定錯（寫什麼就做什麼）
+    std::string* flags[2] = {&before_run_if_, &after_run_if_};
+    for (int i = 0; i < 2; ++i) {
+        Json v = cfg_.value(run_keys[2 + i], Json());
+        if (v.is_null()) {
+            continue;
+        }
+        if (!v.is_string() || v.get<std::string>().empty()) {
+            throw Error{code::CfgBad, std::string(run_keys[2 + i]) + " must be a file path (the point runs only while that file exists)"};
+        }
+        if (!*sides[2 + i]) {
+            throw Error{code::CfgBad, std::string(run_keys[2 + i]) + " without " + run_keys[i]};
+        }
+        *flags[i] = v.get<std::string>();
     }
     if (cfg_.contains("on_timeout_ms")) {
         if (!aos::is_count(cfg_["on_timeout_ms"])) {

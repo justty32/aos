@@ -43,6 +43,7 @@ namespace aos::loop {
 namespace code {
 using namespace aos::exec::code;   // ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、WriteFailed、EntryBad、DirectiveBad、LaunchFailed…
 inline constexpr const char* RunFailed = "RunFailed";         // 身體那次退非 0（不是 10）：aos-loop 印這行、以那次的碼結束（11-05 stdio-unify D4）
+inline constexpr const char* PointFailed = "PointFailed";     // 四個點（on_start、on_stop、on_before_run、on_after_run）之一退非 0、逾時、起不來：aos-loop 印這行、收工（11-20 hook 第 5 刀）
 }  // namespace code
 
 // ctl／state／state_flux 的公開協議（C-52）：預設檔名與跨程式讀寫用的欄位／值只在這裡定義。
@@ -106,6 +107,13 @@ struct StopCauseWindow {
 };
 // on_stop 期間才設的環境變數：這次為什麼收工（StopCauseWindow 的值）。
 inline constexpr const char* cause_env = "AOS_LOOP_CAUSE";
+// 11-20 hook 第 5 刀：on_before_run／on_after_run 期間才設的環境變數（跑完還原，身體與 on_stop 看不到）。
+// runs_env 兩格都有：before＝這一次會是第幾次（已跑次數加一），after＝同一個數；後三個只有 on_after_run：
+// 身體的結束碼、停掉它的訊號號碼（沒有＝空字串）、花了幾毫秒（同 log 那一行的 code、signal、elapsed_ms）。
+inline constexpr const char* runs_env = "AOS_LOOP_RUNS";
+inline constexpr const char* run_code_env = "AOS_LOOP_RUN_CODE";
+inline constexpr const char* run_signal_env = "AOS_LOOP_RUN_SIGNAL";
+inline constexpr const char* run_ms_env = "AOS_LOOP_RUN_MS";
 
 // 一次的結果（欄位名同 11-03 前 fsm 的 trace.jsonl 那一行，再多一個 received；aos-loop 的 log 那一行也用 code、signal、elapsed_ms，11-02）。沒有 timed_out（10-21：loop 看不到格裡有沒有逾時，C-52；
 // 單子被逾時收掉＝跑它的 aos-exec 以 128＋N 正常結束：code 143、signal 0）。
@@ -214,6 +222,9 @@ struct Defaults {
     std::optional<long long> max;           // nullopt＝不限（10-21 plan L8，原 10）
     long long interval_ms = 0;
     bool need_exec = true;                  // exec 必填
+    // 11-20 hook 第 5 刀：true（aos-loop）＝收 on_before_run／on_after_run 與兩個 _if，四個點失敗都收工（使用者「四個點都跟著停」）；
+    // false（aos-daemon）＝那四個鍵寫了就是 CfgBad（不讓任何東西跳過或拖住管理員的一圈），on_start／on_stop 失敗照舊只一行 warning
+    bool run_points = true;
 };
 
 // 反覆跑的程式的骨架。設定檔（loop.json；daemon.json 是它的超集）的 key（旗標名＝key 名底線換連字號；起跑時 旗標 ＞ 設定檔 ＞ 預設）：
@@ -226,8 +237,18 @@ struct Defaults {
 //                 on_start＝第一次之前（讀完舊 state、ctl 之前）；on_stop＝要退時（stop、跑滿、身體 10、身體失敗、訊號、自己的錯，
 //                 finish() 之後、最後一份 state 之前；SIGKILL 跑不到）。on_stop 的環境多 AOS_LOOP_CODE（要退的碼）、AOS_LOOP_SIGNAL（收到的訊號號碼，
 //                 沒有＝空字串）、AOS_LOOP_CAUSE（11-14 B7，為什麼收工，見 StopCauseWindow；判斷順序：收到 SIGTERM 且原因檔可用＝檔裡的值 →
-//                 收到任何訊號＝stopping_ 時 stop、否則 signal → stopping_＝stop → 跑滿＝max → 身體 10＝body_exit → 其他＝error）。退非 0、逾時、起不來＝一行 warning，不改 loop 的結束碼、不擋起跑。loop 不知道它們是什麼（C-52）
-//   on_timeout_ms 上面兩格的期限（非負整數，0＝不限，沒寫＝5000；aos-daemon 收工只給子項 10 秒）
+//                 收到任何訊號＝stopping_ 時 stop、否則 signal → stopping_＝stop → 跑滿＝max → 身體 10＝body_exit → 其他＝error）。loop 不知道它們是什麼（C-52）。
+//                 退非 0、逾時、起不來（11-20 使用者「四個點都跟著停」；Defaults::run_points）：on_start＝錯誤行 PointFailed、身體不跑、以它的碼收工（on_stop 照跑）；
+//                 on_stop＝本來要退 0 就改以它的碼退（錯誤行 PointFailed），本來就非 0＝一行 warning、碼不變。跑的期間收到訊號＝照收到訊號收工，不算失敗。
+//                 run_points 是 false（aos-daemon）＝照 11-11 只一行 warning，不改結束碼、不擋起跑
+//   on_before_run, on_after_run  每跑一次身體之前、之後各跑一次的東西（11-20 hook 第 5 刀；寫法同 exec；沒寫＝不跑；不吃 on_timeout_ms，要限時寫單子的 timeout_ms）：
+//                 before 在「沒暫停、到時間了」之後跑（期間 state 仍是 waiting）：0＝再讀一次 ctl（這時下了 stop／pause 就照它，身體不跑），沒事才跑身體；
+//                 10＝跳過這一圈（不跑身體、不算一次、不發 after，下一次＝現在加 interval_ms）；其他＝錯誤行 PointFailed、以它的碼收工。
+//                 after 在身體跑完、印完 log（與 RunFailed 那行）之後跑；身體起不來、這一圈 loop 收到訊號就不跑。非 0：身體是 0＝錯誤行 PointFailed、以它的碼收工；
+//                 身體本來就要收工（10 或失敗）＝一行 warning，照身體的結果。環境見 runs_env 那幾個。run_points 是 false＝寫了就 CfgBad
+//   on_before_run_if, on_after_run_if  一個檔的路徑（相對＝照 cwd）：有寫＝那個檔在才跑對應的點（每圈看一次在不在，沒人掛時的成本）；沒寫＝每圈都跑；
+//                 寫了卻沒寫對應的點＝CfgBad
+//   on_timeout_ms on_start／on_stop 的期限（非負整數，0＝不限，沒寫＝5000；aos-daemon 收工只給子項 10 秒）
 //   ctl, state, state_flux 三扇窗的檔名，在 $AOS_STACK 底下（11-04 起沒寫＝ctl.json／state.json／state_flux.json、寫 null＝不開；要開卻沒設 AOS_STACK＝StackMissing）
 // log 不是 key（11-02 使用者「把log輸出到stdout」；11-02 晚「應該要改成默認不印」）：預設不印，命令列 --enable-logs 才印到 stdout；不寫任何 log 檔。
 // --enable-counters 也是命令列開關：開了 state 窗才每輪寫同資料夾的 counter_runs.txt（本行程起來後跑過幾次）；預設不碰檔。
@@ -325,6 +346,10 @@ protected:
     std::optional<Target> on_start_;   // 11-11：起來時跑一次（沒寫＝nullopt）
     std::optional<Target> on_stop_;    // 11-11：要退時跑一次
     long long on_timeout_ms_ = 5000;   // 11-11：on_start／on_stop 的期限；0＝不限
+    std::optional<Target> on_before_run_;   // 11-20：每跑一次身體之前（沒寫＝nullopt）
+    std::optional<Target> on_after_run_;    // 11-20：每跑一次身體之後
+    std::string before_run_if_;             // 11-20：on_before_run_if（空＝沒寫＝每圈都跑）
+    std::string after_run_if_;              // 11-20：on_after_run_if
     Json responded_at_;           // 最近一次有反應的時間（null＝起來後還沒有）
 
 private:
@@ -335,9 +360,26 @@ private:
     void write_counter();         // 開旗標與 state 窗才寫 counter_runs.txt；失敗丟 StateError
     int signal_got();             // 第一個收到的訊號（記住；0＝沒有）
     void nap(double secs);        // 睡 secs 秒（最多 1 秒），收到訊號就提早醒
-    void run_side(const std::optional<Target>& t, const char* key, int code, const std::string& cause = "");   // 跑 on_start（code<0）／on_stop；問題只 warning
-    // on_stop 只跑一次（end、serve 的錯誤路徑都叫）。own＝loop 自己的原因（max、body_exit、error；訊號、stop 由 stop_cause 另判）
-    void stop_side(int code, const char* own);
+    // 跑一個點一次（points.cpp）：code 0＝退 0；其他＝失敗的碼（退非 0＝那個碼，逾時＝那次的碼、0 時當 1，起不來＝1）；
+    // received＝跑的期間收到的訊號（也記進 got_）；why＝「鍵 誰 怎麼了」（錯誤行、warning 用）
+    struct PointRun {
+        int code = 0;
+        int received = 0;
+        std::string why;
+    };
+    PointRun run_point(const Target& t, const char* key, long long timeout_ms);
+    bool point_on(const std::string& flag) const;   // _if 的檔在嗎（沒寫＝在）
+    // 跑 on_start（code<0）／on_stop；回失敗那次（code 0＝沒事或沒寫）。要不要收工由呼叫的人看 d_.run_points 決定
+    PointRun run_side(const std::optional<Target>& t, const char* key, int code, const std::string& cause = "");
+    // on_stop 只跑一次（end、serve 的錯誤路徑都叫）。own＝loop 自己的原因（max、body_exit、error；訊號、stop 由 stop_cause 另判）。
+    // 回最後要退的碼（on_stop 失敗而本來要退 0＝它的碼）
+    int stop_side(int code, const char* own);
+    // 11-20：跑身體之前的 on_before_run。回 go＝跑身體；skip＝跳過這一圈（呼叫的人把下一次設成現在加 interval_ms）；
+    // top＝回頂端（收到訊號、再讀 ctl 後要停、暫停或已跑滿）；其他（>0）＝loop 以這個碼收工（已收尾）
+    static constexpr int go = -1, skip = -2, top = -3;
+    int before_point();
+    // 11-20：跑完身體之後的 on_after_run（b＝那次）；回 go＝照身體的結果往下，其他＝loop 以這個碼收工（已收尾）
+    int after_point(const Run& b);
     int end(int code, const std::string& phase, const char* own);
     std::string stop_cause(const char* own);       // 11-14 B7：照判斷順序算 AOS_LOOP_CAUSE（見上面 on_stop）
     std::optional<std::string> cause_file();       // 原因檔可用＝檔裡的 cause；不在、舊的＝nullopt（不在不印，壞的印一行 warning）
