@@ -465,9 +465,10 @@
       "title": "agent-fsm 每輪問模型的輸入成本：工具說明佔九成六、快取沒命中",
       "status": "open",
       "flow": "",
-      "what": "11-20 晚家機 ~/aos-home 的 ann（sol）：think/request.json 53 KB 裡 tools 50.8 KB，問一句話 prompt_tokens 約 12.6k、cached_tokens 0；起手範本 llm/kernel.json 的 sol 那包沒寫 session_key（docs 記 11-14 實測寫了命中 88%／82%、沒寫 18%／31%）。家機還沒實測。使用者：「明天吧，這塊確實值得來處理。」",
-      "next": "11-21 先在暫存樹實測 sol 加 \"session_key\": \"litellm_session_id\" 前後的 cached_tokens，結果給他看；要不要改起手範本、要不要減工具說明的量由他定",
+      "what": "11-20 晚家機 ~/aos-home 的 ann（sol）：think/request.json 53 KB 裡 tools 50.8 KB，問一句話 prompt_tokens 約 12.6k、cached_tokens 0。11-21 暫存樹實測（線 top-1121-skey）：sol 不加 session_key 4 輪快取都是 0；加 \"session_key\": \"litellm_session_id\" 第 2 輪起每輪命中 12,416（約 99%），4 輪沒中快取的 50,314 → 13,066。工具順序、system、對話前綴都穩定，原因就是沒寫這個鍵。範本與活樹都沒改。",
+      "next": "等使用者定：要不要在 templates/kernel/llm-kernel 與 start-api 的 sol 那包加 session_key（luna、terra 同後端，沒量）、活樹要不要跟著改、要不要另外減工具說明的量",
       "see": [
+        "[session-key-實測-1121](../proto8/thinking/2026-11/21/session-key-實測-1121.md)",
         "[aos-home-瀏覽筆記-1120 第 10 則](../proto8/thinking/2026-11/20/aos-home-瀏覽筆記-1120.md)"
       ],
       "since": "2026-11-20"
