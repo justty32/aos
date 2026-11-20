@@ -39,3 +39,4 @@
 | [aos-hook-k3-1120](aos-hook-k3-1120.md) | hook 介面施工第 3 刀：切到宣告，agent 與 kernel 的 hook 點讀 hook_points；六份定義與編譯輸出寫 hook_points |
 | [compact 改進想法（compact-改進想法-1120）](compact-改進想法-1120.md) | 使用者晚上試過 /compact、對照 Claude Code 後說：清工具輸出要納入 agent-fsm 的 compact，壓完補回用 hook、之後可各自實現 compact 方式；之後再規劃，沒派線 |
 | [agent 定義夾的 .py 收進子夾（agent-fsm-py-收進子夾-1120）](agent-fsm-py-收進子夾-1120.md) | 使用者晚上看 ~/aos-home/agents/ann：那些 .py 每支好幾百行、一堆註解，想收成 ann/py/ 並重新規劃架構；先記下來。現況：agent-fsm 範本的逐字抄本，8 支 1825 行、跟設定檔平放 |
+| [瀏覽 ~/aos-home 的筆記（aos-home-瀏覽筆記-1120）](aos-home-瀏覽筆記-1120.md) | 使用者晚上邊看剛重建的樹邊說的話，逐字陸續追加：範本 .py 沒要覆蓋就從 AOS_HOME 取、AOS_HOME 之後也要重構；問 hook_points.json 的 provider、description 與 _description、interfaces.json 的規範；附當場查的現況，都沒派線 |

@@ -29,6 +29,9 @@
  "aos-gdb-問答-1120.md": {
   "description": "使用者原話（11-20 上午，逐字）"
  },
+ "aos-home-瀏覽筆記-1120.md": {
+  "description": "使用者 11-20 晚瀏覽剛重建的 `~/aos-home` 時說的話（逐字，陸續追加）：問題與之後該改進的點，只記錄"
+ },
  "aos-hook-drift-1120.md": {
   "description": "hook 文件漂移 17 項補齊；eca 的 slash 信過兩次 before_queue 實跑屬實，使用者裁「修：只過一次」後已修"
  },

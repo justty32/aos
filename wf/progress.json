@@ -447,6 +447,18 @@
         "[agent-fsm-py-收進子夾-1120](../proto8/thinking/2026-11/20/agent-fsm-py-收進子夾-1120.md)"
       ],
       "since": "2026-11-20"
+    },
+    "aos-home-browse-1120": {
+      "title": "使用者 11-20 晚瀏覽 ~/aos-home 提的問題與改進點（陸續記）",
+      "status": "暫停",
+      "flow": "",
+      "what": "他說「總之我接下來說的，都麻煩先記下來」；逐字與當場查的現況在筆記裡，一則一段。目前：範本 .py 沒要覆蓋就從 AOS_HOME 取、AOS_HOME 之後也要重構；hook_points.json 一份一個 provider、description 不是 _description、interfaces.json 規範很薄（三題他在問原因，還沒說要改）",
+      "next": "等使用者看完說哪些要做",
+      "see": [
+        "[aos-home-瀏覽筆記-1120](../proto8/thinking/2026-11/20/aos-home-瀏覽筆記-1120.md)",
+        "[agent-fsm-py-收進子夾-1120](../proto8/thinking/2026-11/20/agent-fsm-py-收進子夾-1120.md)"
+      ],
+      "since": "2026-11-20"
     }
   }
 }
