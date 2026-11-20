@@ -91,3 +91,14 @@
 - 寫在這裡的是名單的「底」：daemon 一起來就自己起它們，不用 `add`；每次 daemon 起來都照 daemon.json 再讀一次（自己結束過的也再起）。
 - 對照 `ctl add` 加的（`llm`、`ann`）：那是信改出來的，daemon 重起時靠 stack 接回，「只留名、設定記 null」，再起時照 proc 自己 stack 裡的 `loop.json`。
 - 寫法決定怎麼跑：物件裡有 `interval_ms` 這類 loop 的 key＝一直跑的 loop；只有 `exec`＝跑一次。
+
+## 第 8 則：叫頂層把兩件沒把握的查清楚
+
+### 原話
+
+「去查一下。」（指第 7 則回答裡頂層說沒把握的兩點：對寫在 `daemon.json#/procs` 的列下 `rm` 會怎樣、`_` 開頭的名字有沒有特別意義。）
+
+### 結論（頂層查的）
+
+- **`rm` 寫在 daemon.json 的列：當下拿掉，daemon 重起又回來。** 家機暫存樹 `~/.aos/scratch/root-rm-1120/` 實跑（`templates/daemon-root` 的抄本、清掉 `AOS_*`、裝的是 HEAD `6d37ccdc8` 那版）：起根，表上 `_clock`、`_sweeper`；`aos-daemon-ctl rm _sweeper` 退 0、表上只剩 `_clock`；`shutdown` 說「1 procs asleep」；再起，`_clock`、`_sweeper` 都在跑（新 pid）。收尾 `shutdown`，沒有留下行程；暫存樹沒刪。
+- **`_` 開頭的名字程式不另眼相看。** `cpp/` 與 `py/aos`、`py/tools`（不含測試）裡找不到對 proc 名字第一個字是 `_` 的判斷，也沒有寫死 `_clock`、`_sweeper` 這兩個名字的地方；唯一的 `startswith("_")` 在 `py/aos/agent_spec_agent.py`，管的是 `defs.Agent` 的欄位名，跟 proc 名無關。所以只是命名慣例。
