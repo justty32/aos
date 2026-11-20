@@ -425,6 +425,17 @@
         "[排序搬上骨架](../proto8/thinking/2026-11/20/aos-kllm-round-1120.md)"
       ],
       "since": "2026-11-20"
+    },
+    "compact-improve": {
+      "title": "compact 改進：先清工具輸出、壓完補回走 hook",
+      "status": "暫停",
+      "flow": "",
+      "what": "使用者 11-20 晚：「清工具輸出這個看起來確實該納入我們的這個朴實compact。至於壓完後補回這塊，我們可以用hook實現，之後可以實現大家各自的compact方式……反正之後再來規劃。」沒派線、沒改程式；今天 /compact 沒有壓前壓後的 hook 點",
+      "next": "等使用者說要規劃",
+      "see": [
+        "[compact-改進想法-1120](../proto8/thinking/2026-11/20/compact-改進想法-1120.md)"
+      ],
+      "since": "2026-11-20"
     }
   }
 }

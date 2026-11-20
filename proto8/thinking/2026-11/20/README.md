@@ -37,3 +37,4 @@
 | [「問特定的東西、直接回」通用模式的調查（aos-direct-reply-1120）](aos-direct-reply-1120/README.md) | 調查：今天已有九處左右（daemon 的 ping／procs_state_path、kask 原型、agent-fsm 的 /compact 太短、eca slash；procs_state.json、endpoints.json 等讀檔型）；實跑空信箱每輪 0.024 ms、每答一封 8～22 ms、100 封拖同一輪約 1～2 秒，agent 的 idle 只在閒著時跑；預先寫檔讀一次 0.02 ms；七種形狀、九種邊緣狀況、八題等使用者 |
 | [aos-kllm-round-1120](aos-kllm-round-1120.md) | llm kernel 的排序搬上共用骨架：round.py 多 ordered（row／rank 兩個口），llm kernel 拿掉自己的 order；行為不變 |
 | [aos-hook-k3-1120](aos-hook-k3-1120.md) | hook 介面施工第 3 刀：切到宣告，agent 與 kernel 的 hook 點讀 hook_points；六份定義與編譯輸出寫 hook_points |
+| [compact 改進想法（compact-改進想法-1120）](compact-改進想法-1120.md) | 使用者晚上試過 /compact、對照 Claude Code 後說：清工具輸出要納入 agent-fsm 的 compact，壓完補回用 hook、之後可各自實現 compact 方式；之後再規劃，沒派線 |

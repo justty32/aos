@@ -106,6 +106,9 @@
   "description": "「編譯這塊變成整套一個 Python 程式庫」的設計稿與施工計劃（11-20，線 aos-pylib-plan-1120）：只出稿，沒改任何程式、範本、條文、知識庫",
   "index": "aos-pylib-plan-1120/_index.json"
  },
+ "compact-改進想法-1120.md": {
+  "description": "compact 改進想法（使用者 11-20 晚，逐字）：清工具輸出納入 agent-fsm 的 compact，壓完補回用 hook、各自的 compact 方式之後再規劃"
+ },
  "shared-docs-1120.md": {
   "description": "線 shared-docs-1120：把 k1、k2 因檔被佔而沒補的字補進共用文件"
  }
