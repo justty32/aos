@@ -49,3 +49,19 @@
 ### 現況（頂層照文件答的）
 
 格式的出處是 [kernel_llm docs/01-用法](../../../py/tools/aos/kernel_llm/docs/01-用法.md)：頂層是整台 llm kernel 的設定（`slots`、`reserved`、`backends`、`timeout_ms`、`exec`、`endpoint`、選填 `budget`、`aging_cycles`），`endpoints` 是「代號 → 一個能力包」的表；包裡的鍵分兩種，kernel 自己看的（`exec`、`slots`、`budget`、`speed`、`backend`、`session_key`）與原樣交給端點函數的（`url`、`model`、`fixed`、`cost`、`context`、`summary`、`script`…）。只回答，他還沒說想法。
+
+## 第 5 則：聽完 kernel.json 格式之後
+
+### 原話
+
+「這塊我之前好像也沒審過...不過這是kernel_llm自己規劃的，所以奇形怪狀也沒關係。就是說，之後等kernel種類多了，看能不能提取出一些通用的東西，我記得今天還是昨天有討論過的，反正就是這樣。不過llm kernel這塊挺重要的，之後找時間我來審審看。不過其實也還好，現在這樣也夠用了」
+
+### 決定
+
+- `kernel.json` 的格式是 kernel_llm 自己規劃的，長什麼樣都沒關係；現在這樣夠用，不改。
+- 等 kernel 種類多了，再看能不能提取通用的東西（不現在規劃）。
+- llm kernel 重要，他之後找時間審；沒排時間。
+
+### 註（記錄者加，不是使用者的話）
+
+- 他說「今天還是昨天有討論過的」，對得上的是 11-20 的 [aos-kres-1120](aos-kres-1120/README.md)（kernel 的資源基底與排程介面）與 [aos-kllm-round-1120](aos-kllm-round-1120.md)（llm kernel 的排序搬上共用骨架）、11-19 的 [aos-htop-1119](../19/aos-htop-1119/README.md)（自訂 kernel「先不定，讓它自然長」）。是不是指這幾份沒跟他確認。
