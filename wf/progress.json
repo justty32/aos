@@ -224,14 +224,15 @@
       "since": "2026-11-18"
     },
     "default-stack": {
-      "title": "預設 stack：暫定丁（路標）＋乙、可能改戊（往上層找），先留著",
+      "title": "預設 stack：11-18 暫定丁（路標）＋乙；11-20 晚使用者改說 agent 不記 daemon、-t 沒給就從 cwd 找",
       "status": "暫停",
       "flow": "",
-      "what": "使用者 11-18 晚裁：暫定走丁（agent 的 stack 裡加路標，表示在哪個 daemon 底下）、路標由 daemon 寫、丁順便帶乙（改錯誤訊息）；之後再做、尚未派線。他又補：「不過老實說，stack這塊說不定我之後會改主意，改成往上層資料夾找，先留着。」→ 可能改成戊，先留著。丁要改 N-63 一列、為 AOS_AGENT 開退路，daemon 寫路標要改 C++ daemon",
-      "next": "等使用者定丁還是戊，再派線",
+      "what": "使用者 11-18 晚裁：暫定走丁（agent 的 stack 裡加路標，表示在哪個 daemon 底下）、路標由 daemon 寫、丁順便帶乙（改錯誤訊息）；之後再做、尚未派線。他又補：「不過老實說，stack這塊說不定我之後會改主意，改成往上層資料夾找，先留着。」→ 可能改成戊，先留著。丁要改 N-63 一列、為 AOS_AGENT 開退路，daemon 寫路標要改 C++ daemon。11-20 晚他又說（逐字在 05）：沒給 -t、也沒設環境變數時，先試 ./.stack 再試 ./ 當 agent 的 stack；agent 不要記錄自己在哪個 daemon 底下，daemon 照舊 export AOS_DAEMON 自己指定——跟丁的路標方向相反，丁還算不算數沒問",
+      "next": "等使用者說要做再派線；派之前先問：丁（路標）是不是作廢、變數名是 AOS_TARGET 還是照舊 AOS_AGENT",
       "see": [
         "[04-使用者裁定](../proto8/thinking/2026-11/18/default-stack-1118/04-使用者裁定.md)",
-        "[調查入口](../proto8/thinking/2026-11/18/default-stack-1118/README.md)"
+        "[調查入口](../proto8/thinking/2026-11/18/default-stack-1118/README.md)",
+        "[05-使用者補充-1120](../proto8/thinking/2026-11/18/default-stack-1118/05-使用者補充-1120.md)"
       ],
       "since": "2026-11-18"
     },
