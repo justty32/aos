@@ -102,3 +102,22 @@
 
 - **`rm` 寫在 daemon.json 的列：當下拿掉，daemon 重起又回來。** 家機暫存樹 `~/.aos/scratch/root-rm-1120/` 實跑（`templates/daemon-root` 的抄本、清掉 `AOS_*`、裝的是 HEAD `6d37ccdc8` 那版）：起根，表上 `_clock`、`_sweeper`；`aos-daemon-ctl rm _sweeper` 退 0、表上只剩 `_clock`；`shutdown` 說「1 procs asleep」；再起，`_clock`、`_sweeper` 都在跑（新 pid）。收尾 `shutdown`，沒有留下行程；暫存樹沒刪。
 - **`_` 開頭的名字程式不另眼相看。** `cpp/` 與 `py/aos`、`py/tools`（不含測試）裡找不到對 proc 名字第一個字是 `_` 的判斷，也沒有寫死 `_clock`、`_sweeper` 這兩個名字的地方；唯一的 `startswith("_")` 在 `py/aos/agent_spec_agent.py`，管的是 `defs.Agent` 的欄位名，跟 proc 名無關。所以只是命名慣例。
+
+## 第 9 則：看 `.stack/procs_state.json`，問 `launch` 為什麼不直接用 aos inst 格式
+
+### 原話
+
+「def, launch這塊當初是爲何設計的？stuck_after_ms的意義？」
+
+「launch當初爲何不設計成直接套用aos inst格式？」
+
+### 現況（頂層當場查的）
+
+- `def`：使用者 11-04 選的（「那就b。」，[aos-agent 05/03 第 2 條](../../2026-11/04/aos-agent/05-實作步驟/03-實作時改的設計.md)）——表上直接記定義夾，aos-agent 讀它找定義，不從 `exec` 推。
+- `launch`：**不是使用者裁的，是 11-07 施工線代定的**（[arknights-kb 07](../07/arknights-kb/07-停不下與消失.md)「代定：…表上多 `launch`（可重放的入口與參數，好讓 adopt 不必猜型別）」、[08](../07/arknights-kb/08-daemon不分類實作結果.md)）。紀錄裡沒有「考慮過 inst 格式、為什麼不用」的字。
+- `launch` 現在存的是 daemon 自己的「proc 寫法」（跟 `daemon.json#/procs` 一列、`procs_added` 一項同一種）：已起過的是 `{"exec": [入口, 參數…]}`，沒起過的存原設定（可帶 `ws`、`limits` 等 daemon 的鍵）。不是 inst（`{"argv": […], "cwd", …}`）。
+- `stuck_after_ms`：照 [aos-daemon docs/04「判卡住」](../../../cpp/aos-daemon/docs/04-兩個手把-兩扇狀態窗.md) 答的，以前磨過，不另記。
+
+### 沒問的
+
+- 他是在問原因，還是想把 `launch` 改成 inst 格式，沒問。
