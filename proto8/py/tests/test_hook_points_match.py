@@ -90,6 +90,14 @@ class Tables(unittest.TestCase):
             with self.subTest(body=body):
                 self.assertEqual(hook_point.engine_table(fired(points)), hooks.EVENTS)
 
+    def test_definitions_declare_their_points(self):
+        """Cut 3: every shipped definition with hooks lists its hook_points; what they fire = the nine agent events."""
+        for tpl in ("agent-fsm", "agent-python", "start-api/agents/ann", "eca-claude", "eca-pi", "start-eca/agents/ann"):
+            with self.subTest(tpl=tpl):
+                points = hook_point.for_definition(str(ROOT / "templates" / tpl))
+                self.assertEqual(hook_point.engine_table(fired(points)), hooks.EVENTS)
+                self.assertEqual(hooks.table(str(ROOT / "templates" / tpl)), hook_point.engine_table(points))
+
     def test_kernel_events(self):
         spec = importlib.util.spec_from_file_location("kernel_hooks_for_match", KERNEL_DIR / "hooks.py")
         mod = importlib.util.module_from_spec(spec)

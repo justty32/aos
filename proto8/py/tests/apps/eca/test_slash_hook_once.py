@@ -24,7 +24,7 @@ class SlashHookOnce(unittest.TestCase):
             d.mkdir()
         (self.bin / "claude").symlink_to(HERE / "fake_claude_stream")
         (self.defn / "cli.json").write_text(json.dumps({"kind": "claude", "timeout_ms": 30000, "live_mail": True}))
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json"}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "eca"}, {"provider": "mcp"}]}}))
         self.calls, self.cli_log = self.t / "calls.jsonl", self.t / "cli.jsonl"
         hook = self.defn / "count"
         hook.write_text("#!/bin/sh\n# count - before_queue hook: one line per call, no change\ncat >> '%s'\necho >> '%s'\n" % (self.calls, self.calls))

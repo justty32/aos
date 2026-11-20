@@ -47,7 +47,7 @@ class StopCause(unittest.TestCase):
         self.defn = f.root / 'def'   # 最小的 agent 定義：只有 after_stop 一格 hook
         self.defn.mkdir(exist_ok=True)
         self.events = f.root / 'events.jsonl'
-        (self.defn / 'interfaces.json').write_text(json.dumps({'aos-agent': {'hooks': 'hooks.json'}}))
+        (self.defn / 'interfaces.json').write_text(json.dumps({'aos-agent': {'hooks': 'hooks.json', 'hook_points': [{'provider': 'aos-loop'}]}}))
         (self.defn / 'hooks.json').write_text(json.dumps({'hooks': {'log': {'event': 'after_stop', 'handler': 'log.py'}}}))
         handler = self.defn / 'log.py'
         handler.write_text(HANDLER % (sys.executable, str(self.events)))

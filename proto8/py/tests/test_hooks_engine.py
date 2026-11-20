@@ -63,7 +63,7 @@ class Engine(unittest.TestCase):
         defn, stack = root / "def", root / "stack"
         defn.mkdir()
         stack.mkdir()
-        (defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json"}}))
+        (defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
         (defn / "h").write_text("#!/bin/sh\ncat >/dev/null\necho '{\"content\": \"\"}'\n")
         (defn / "h").chmod(0o755)
         (defn / "hooks.json").write_text(json.dumps({"hooks": {"q": {"event": "before_queue", "handler": "h"},

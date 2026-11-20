@@ -22,7 +22,7 @@ class RetryBase(Base):
             "with open(%r, 'a') as f:\n    f.write(json.dumps(event) + '\\n')\n"
             % str(self.events_path))
         self.capture.chmod(0o755)
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json"}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "eca"}, {"provider": "mcp"}]}}))
         self.declare({"failed": {"event": "brain_failed", "handler": self.capture.name}})
 
     def declare(self, hooks):

@@ -11,11 +11,16 @@ on_clock 專用的鍵與檢查、content 的回話要求、tool_added 的名單�
 對外（另兩條線要用，改了要一起改）：
     EVENTS[事件] = {"condition": 事件 JSON 裡拿來比 condition 的欄位名或 None（不收 condition）,
                     "intercept": 能改的鍵（tuple）, "block": 能不能攔（結束碼 10）}
+                    11-20 第 3 刀起由宣告算出（aos 自己帶的 aos-loop、agent-fsm、eca、mcp 四份合起來、去掉 not_fired_yet）；
+                    只拿來驗清單的事件名與給 gdb 列種類（第 6 刀才改讀宣告）
+    points(def_folder) -> 這隻 interfaces.json 的 hook_points 讀出的點（hook_point.for_definition）；沒寫＝{}；壞＝HooksBad
+    table(def_folder) -> 這隻發事件用的引擎表（有 hook_points＝由它算；沒寫＝EVENTS，load 會擋有 hook 的）
     DEFAULTS = {"intercept": True, "async": False, "on_error": "stop", "timeout_ms": 60000}
                     （intercept 預設開：11-10 深夜使用者「3.幫我改成預設是開」；不能改的事件、async 的 hook＝自然不看回話、不報錯）
     格的鍵（11-10 深夜改名，使用者「hook這塊，主要走A, 但filter改condition。」）：event、handler、condition、intercept、async、on_error、timeout_ms
     declared(def_folder) -> 宣告的相對路徑字串 | None
-    load(def_folder, stack) -> {名字: 格}；格＝原格的鍵＋DEFAULTS 補齊＋"from"（來自哪份檔的絕對路徑）＋"base"（解 exec 相對路徑的資料夾）
+    load(def_folder, stack) -> {名字: 格}；格＝原格的鍵＋DEFAULTS 補齊＋"from"（來自哪份檔的絕對路徑）＋"base"（解 exec 相對路徑的資料夾）；
+                    有 hook 卻沒寫 hook_points＝HooksBad
     nulled(def_folder, stack) -> [stack 那份設成 null 的名字]（排好）
     validate_entry(entry) -> None；不對丟 HooksBad（原因不含名字，呼叫方自己加）
     check_clock(entry) -> None：只驗 on_clock 專用鍵的值（validate_entry 的後半）；不對丟 HooksBad
@@ -26,7 +31,8 @@ on_clock 專用的鍵與檢查、content 的回話要求、tool_added 的名單�
     tools_added(stack, tools, has_hook) -> [(name, path)]：這次比上次多出來的工具（tools＝[(name, path)]）
     hook 遙控器（11-20 hook 介面第 2 刀，thinking/2026-11/20/aos-hook-plan-1120/04）：agent_hooks.open(def_folder, stack, fail, warn)
                     ＝開一次、之後每個點一行（fire、has、names、clock_tick、take_letter、guard_tool、announce_tools），錯一律交 fail。
-                    發事件的程式都改叫它了（第 2 刀後半）；fire、has 這兩個模組函式留到第 3 刀（遙控器改讀宣告時）。
+                    發事件的程式都改叫它了（第 2 刀後半）；第 3 刀起遙控器的點讀這隻的 hook_points。fire、has 這兩個模組函式
+                    還留著（hook_clock 與幾支測試在用），表也照 table(def_folder)。
 
 11-11（thinking/2026-11/11/clock-hook）：事件多 after_start、after_stop（aos-loop 的 on_start／on_stop 叫 py/tools/agent/hook_fire 發，
 使用者「hook 要加的事件：起來與停下」）與 on_clock（看時鐘在 hook_clock.py）。on_clock 才收的鍵＝CLOCK_KEYS。
@@ -38,19 +44,22 @@ import os
 
 from aos.declared_files import declared_files
 
+from aos import hook_point
 from aos import hook_run   # 共用引擎（11-13 kernel-framework 批 1b）
 
-EVENTS = {
-    "before_queue": {"condition": None, "intercept": ("content",), "block": True},
-    "after_queue": {"condition": None, "intercept": (), "block": False},
-    "before_tool": {"condition": "name", "intercept": ("arguments",), "block": True},
-    "after_tool": {"condition": "name", "intercept": ("content",), "block": False},
-    "brain_failed": {"condition": "name", "intercept": (), "block": False},
-    "tool_added": {"condition": "name", "intercept": (), "block": False},
-    "after_start": {"condition": None, "intercept": (), "block": False},   # 11-11：loop 起來（on_start）
-    "after_stop": {"condition": None, "intercept": (), "block": False},    # 11-11：loop 要退（on_stop；多 code、signal）
-    "on_clock": {"condition": None, "intercept": (), "block": False},     # 11-11：時鐘走到了（clock_tick）
-}
+AGENT_PROVIDERS = ("agent-fsm", "eca", "mcp", "aos-loop")   # aos 自己帶、agent 一家用的提供者（hook_point.PROVIDERS 的名字；這個順序＝錯誤句列事件的順序，身體的在前）
+
+
+def _shipped():
+    """aos 自己帶的 agent 一家宣告合起來、去掉 not_fired_yet 的點（還沒有程式發）。"""
+    points = hook_point.read([hook_point.provider_path(p) for p in AGENT_PROVIDERS])
+    return {n: p for n, p in points.items() if "not_fired_yet" not in p}
+
+
+# 11-20 hook 第 3 刀：不再寫死，由宣告算出（aos-hook-plan-1120/12：留到第 6 刀 gdb 改讀宣告才拿掉）。
+# 驗清單的格用它（事件名要是 agent 一家有人發的）；這隻 agent 實際發哪些點看它自己 interfaces.json 的 hook_points（points()）。
+# 掛到這隻不會發的事件＝掛得上、不跑、不報錯（使用者 11-20 待裁第 5 題「照舊不管」）。
+EVENTS = hook_point.engine_table(_shipped())
 CLOCK_EVENT = "on_clock"                        # 事件名集中在這裡（11-11 先代定 clock_due，使用者改裁 on_clock）
 CLOCK_KEYS = ("clock", "every_cycles", "every_ms")   # 只有 on_clock 收
 DEFAULTS = hook_run.DEFAULTS                     # {"intercept": True, "async": False, "on_error": "stop", "timeout_ms": 60000}
@@ -141,8 +150,17 @@ def _layers(def_folder, stack):
     return tuple(paths), _read(paths[0]), _read(paths[1])
 
 
+def points(def_folder):
+    """這隻 agent 宣告的 hook 點（interfaces.json 的 hook_points，hook_point.for_definition）；沒寫＝{}。宣告壞＝HooksBad。"""
+    try:
+        return hook_point.for_definition(def_folder)
+    except hook_point.PointsBad as e:
+        raise HooksBad(str(e)) from None
+
+
 def load(def_folder, stack):
-    """定義那份疊 stack 那份（同名蓋過、null＝關掉）；回 {名字: 格}，格帶 from／base 與預設值。沒宣告或檔不在＝{}。"""
+    """定義那份疊 stack 那份（同名蓋過、null＝關掉）；回 {名字: 格}，格帶 from／base 與預設值。沒宣告或檔不在＝{}。
+    有 hook 生效卻沒寫 hook_points＝HooksBad（沒有點可掛；第 3 刀起不留「沒寫就當全部」）。"""
     paths, base, top = _layers(def_folder, stack)
     out = {}
     for path, table in ((paths and paths[0], base), (paths and paths[1], top)):
@@ -151,7 +169,17 @@ def load(def_folder, stack):
                 out.pop(name, None)
                 continue
             out[name] = hook_run.complete(entry, path)
+    if out and not points(def_folder):
+        raise HooksBad("%s declares no hook_points, so hooks %s have no point to listen to: add \"hook_points\" "
+                       "to its aos-agent (like [{\"provider\": \"aos-loop\"}, {\"provider\": \"agent-fsm\"}])"
+                       % (os.path.join(def_folder, "interfaces.json"), ", ".join(sorted(out))))
     return out
+
+
+def table(def_folder):
+    """這隻 agent 發事件用的引擎表：宣告了 hook_points＝那幾份算出的；沒寫＝EVENTS（反正沒人能掛，load 會擋）。"""
+    declared_points = points(def_folder)
+    return hook_point.engine_table(declared_points) if declared_points else EVENTS
 
 
 def nulled(def_folder, stack):
@@ -173,10 +201,11 @@ def fire(event, data, def_folder, stack, warn=None, only=None, entries=None):
     """跑 on==event、match 符合的 hook（照名字排序；前一個改過的後一個看得到；被攔下就停）。
     沒宣告、沒有符合的＝什麼都不做（不起子行程）。warn＝收一行英文的函式（on_error continue 時叫）；None＝不說。
     only＝只跑這些名字（clock_tick 一個一個發）；entries＝已讀好的清單（不重讀）。跑的那段在引擎 hook_run.fire。"""
-    if event not in EVENTS:
+    events = table(def_folder)
+    if event not in events:
         raise ValueError("unknown hook event %s" % event)
     entries = load(def_folder, stack) if entries is None else entries
-    return hook_run.fire(event, data, entries, stack, EVENTS, warn=warn, only=only, check=_check)
+    return hook_run.fire(event, data, entries, stack, events, warn=warn, only=only, check=_check)
 
 
 def tools_added(stack, tools, has_hook):

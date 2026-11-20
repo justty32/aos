@@ -160,8 +160,8 @@ class Agent(Unit):
         return "<agent.py loaded by %s from %s>" % (shown, self.path) if shown else "<%s>" % self._label()
 
     def events(self):
-        """這隻收的 hook 事件表。今天兩種身體（有沒有 fsm）實際都照 agent 的 hooks.py 那張驗；
-        改成照宣告（aos.hook_point.for_definition）是 hook 介面線之後的刀（設計稿 02、hook 設計稿 08）。"""
+        """這隻收的 hook 事件表：agent 的 hooks.EVENTS（11-20 hook 第 3 刀起由 aos 自己帶的宣告合起來算出）。
+        不照這隻自己的 hook_points 縮小：掛到這隻不會發的事件照舊掛得上（使用者 11-20 待裁第 5 題「照舊不管」）。"""
         return agent_hooks.EVENTS
 
     def pack(self, prefix="", rename=None, exclude=None):

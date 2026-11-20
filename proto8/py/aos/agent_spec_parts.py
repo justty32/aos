@@ -17,6 +17,7 @@ ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")                  # aos-tool
 RUNTIME_FILES = ("ctl.json", "state.json", "state_flux.json", "history.jsonl")   # loop／腦跑起來寫的檔名，FILES 不能用
 OWN_FILES = {"tools": "tools.json", "llm": "llm.json", "system": "system.txt", "fsm": "fsm.json", "hooks": "hooks.json"}
 SKELETON = ("_entry", "body.json", "loop.json", "interfaces.json")
+HOOK_POINTS = ({"provider": "aos-loop"}, {"provider": "agent-fsm"})   # 有 fsm 又有 hooks 時寫進 interfaces.json 的 hook_points
 CONTENT = ("system", "tools", "llm", "hooks")                          # 不宣告 FSM 時 agent.py 寫的內容檔（檔名照 interfaces.json）
 RESERVED = set(SKELETON) | set(RUNTIME_FILES) | set(OWN_FILES.values()) | {"_metainfo.json", "README.md", "agent.py"}
 WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl add).",
@@ -199,6 +200,7 @@ def interfaces_json(over, files, description):
              "history": "history.jsonl"}
     if "hooks" in files:
         agent["hooks"] = files["hooks"]
+        agent["hook_points"] = [dict(p) for p in HOOK_POINTS]   # 11-20 hook 第 3 刀：掛得上的點（格程式是 agent-fsm 那幾支）；要別的用 interfaces= 蓋
     agent["system"] = files["system"]
     out = {"description": description, "aos-agent": agent}
     if over is None:

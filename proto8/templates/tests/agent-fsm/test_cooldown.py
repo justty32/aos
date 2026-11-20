@@ -134,6 +134,7 @@ with open(os.environ['EVENT_LOG'], 'a') as f:
         path = self.definition / 'interfaces.json'
         files = json.loads(path.read_text())
         files['aos-agent']['hooks'] = 'hooks.json'
+        files['aos-agent']['hook_points'] = [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]
         path.write_text(json.dumps(files))
         (self.definition / 'hooks.json').write_text(json.dumps({'hooks': {
             'capture': {'event': 'brain_failed', 'handler': str(self.root / 'capture')}

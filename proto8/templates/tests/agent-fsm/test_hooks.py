@@ -32,7 +32,7 @@ class Hooks(unittest.TestCase):
         for d in (self.defn, self.stack, self.bin):
             d.mkdir()
         (self.defn / "interfaces.json").write_text(json.dumps(
-            {"aos-agent": {"tools": "tools.json", "llm": "llm.json", "hooks": "hooks.json"}}))
+            {"aos-agent": {"tools": "tools.json", "llm": "llm.json", "hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
         (self.defn / "tools.json").write_text("{}")
         (self.defn / "llm.json").write_text('{"model":"local"}')
         self.log = self.root / "log.jsonl"
@@ -350,7 +350,7 @@ sys.exit(code)
             r = hooks.fire("before_queue", {"content": "c"}, str(self.defn), str(self.stack))
             self.assertEqual((r["data"], r["blocked"]), ({"content": "c"}, False))
             self.declare({"a": {"event": "after_queue", "handler": "x"}})
-            (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json"}}))
+            (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
             hooks.fire("before_queue", {"content": "c"}, str(self.defn), str(self.stack))
 
 

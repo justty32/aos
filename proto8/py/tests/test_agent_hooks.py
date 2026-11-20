@@ -31,7 +31,7 @@ class AgentHandle(unittest.TestCase):
         self.defn, self.stack, fake = self.d / "def", self.d / "stack", self.d / "bin"
         for p in (self.defn, self.stack, fake):
             p.mkdir()
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json"}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
         self.hooks = {}
         self.posted = self.d / "posted.txt"
         post = fake / "aos-post"
@@ -71,7 +71,7 @@ class AgentHandle(unittest.TestCase):
     def test_content_check_and_errors_go_to_fail(self):
         self.handler("a", "echo '{\"content\": 5}'", "after_tool")
         self.assertIn("content in stdout must be a string", self.stopped("HookFailed", self.open().fire, "after_tool", {}))
-        self.stopped("EventUnknown", self.open().fire, "before_run", {})
+        self.stopped("EventUnknown", self.open().fire, "before_save", {})   # not in this agent's hook_points
         (self.defn / "hooks.json").write_text(json.dumps({"hooks": {"a": {"event": "on_clock", "handler": "x"}}}))
         self.assertIn("needs exactly one of every_cycles, every_ms", self.stopped("HooksBad", self.open().fire, "on_clock", {}))
         self.assertIn("needs exactly one", self.stopped("HooksBad", self.open().clock_tick))
@@ -127,6 +127,17 @@ class AgentHandle(unittest.TestCase):
                          {"data": {"arguments": {}}, "changed": [], "blocked": False, "hook": None, "text": ""})
         self.assertEqual(empty.clock_tick(), [])
         self.assertFalse(empty.has("before_tool"))
+
+    def test_points_come_from_hook_points(self):
+        """Cut 3: the handle's points are this definition's hook_points; hooks without hook_points = HooksBad."""
+        self.assertIn("before_run", hooks.points(str(self.defn)))
+        self.assertEqual(hooks.table(str(self.defn)), hook_point.engine_table(hooks.points(str(self.defn))))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json"}}))
+        self.assertEqual(self.open().fire("after_tool", {"name": "ls"})["changed"], [])      # nobody hooked: fine
+        self.handler("a", "exit 0", "after_tool")
+        self.assertIn("declares no hook_points", self.stopped("HooksBad", self.open().fire, "after_tool", {"name": "ls"}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "nope"}]}}))
+        self.assertIn("unknown hook point provider", self.stopped("PointsBad", self.open))
 
 
 if __name__ == "__main__":

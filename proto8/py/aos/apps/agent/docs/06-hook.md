@@ -81,6 +81,7 @@ queue 事件給 `--condition`＝`add` 直接 `ArgumentsBad`（由 `hooks.validat
 ## 兩份檔怎麼疊
 
 - **宣告**：定義的 `interfaces.json` 寫 `{"aos-agent": {"hooks": "hooks.json"}}`。沒宣告＝這隻沒有 hook（`aos-agent hook` 說 `HooksMissing`）。
+- **這隻會發哪些點**：同一個 `aos-agent` 裡的 `hook_points`（11-20 hook 第 3 刀），一個清單，每項是一份 `hook_points.json` 的路徑（從定義夾算）或 `{"provider": "aos-loop"}`（`aos-loop`、`agent-fsm`、`eca`、`mcp` 是 aos 自己帶的）。agent-fsm 範本寫 `[{"provider": "aos-loop"}, "hook_points.json"]`；eca-claude、eca-pi 寫 `aos-loop`、`eca`、`mcp` 三個；編譯（有 fsm 又有 hooks）寫 `aos-loop`、`agent-fsm`。有 hook 卻沒寫 `hook_points`＝`HooksBad`。看一隻有哪些點、帶哪些欄位：`aos-hook points --agent 定義夾`。清單的事件名照 aos 自己帶的四份合起來驗：掛到這隻不會發的點＝掛得上、不跑、不報錯。
 - **定義那份** `<定義>/hooks.json`、**這隻自己那份** `<stack>/hooks.json`，形狀一樣：`{"hooks": {"名字": {格} 或 null}}`。讀法＝定義那份疊上自己那份：同名的蓋過去、`null`＝關掉定義裡那一個。
 - `aos-agent hook` **只寫自己那份**（先寫暫存再改名），定義不動；每次事件都重讀，改了下一個事件就生效。改定義＝直接編 `<定義>/hooks.json`。
 

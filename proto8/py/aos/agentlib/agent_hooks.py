@@ -1,7 +1,7 @@
 """agent_hooks - agent 一家的 hook 遙控器：open 一次（定義那份疊 stack 那份），之後每個點一行；丟信三步、工具被攔的預設字、tool_added 那串只在這裡一份。
 
 圖紙：proto8/thinking/2026-11/20/aos-hook-plan-1120/04「agent 一家」（11-20 使用者「宣告式＋小函式都做」）；第 2 刀。
-事件表照舊用 hooks.EVENTS、清單照舊經 hooks.load 讀（第 3 刀才改讀宣告）；跑的那段是 aos.hook_point 的遙控器（再交引擎 hook_run）。
+點讀這隻定義夾 interfaces.json 的 hook_points（第 3 刀；沒寫＝沒有人能掛）、清單經 hooks.load 讀；跑的那段是 aos.hook_point 的遙控器（再交引擎 hook_run）。
 錯一律交給 open 時給的 fail(代號, 一句英文)：fail 自己丟的例外原樣往外走；fail 竟然回來＝丟 hook_point.FailReturned。
 發事件的都叫這裡：格程式（templates/agent-fsm 與抄本）、aos-eca-turn、aos-mcp、hook_fire（第 2 刀後半）；aos-hook --agent 用 source。
 從 hooks.py 拆出來只為檔案大小（F10）。
@@ -34,10 +34,19 @@ MAILBOX_WARNING = "mailbox_warning.txt"
 
 def open(def_folder, stack, fail, warn=None):
     """agent 的 hook 遙控器；def_folder None＝空遙控器（沒有 hook，fire 原樣回）。"""
-    entries = {} if def_folder is None else (lambda: hooks.load(def_folder, stack))
-    return AgentHooks(def_folder, stack, fail, warn,
-                      hook_point.open(table=hooks.EVENTS, entries=entries, stack=stack, fail=fail, warn=warn,
-                                      check=hooks._check))
+    if def_folder is None:
+        points, entries = {}, {}
+    else:
+        try:
+            points = hooks.points(def_folder)
+        except hooks.HooksBad as e:
+            hook_point.call_fail(fail, "PointsBad", str(e))
+        entries = lambda: hooks.load(def_folder, stack)
+    if points:   # 這隻宣告的點；宣告的 change 型別先驗、hooks._check（content 的規矩）接著驗
+        handle = hook_point.open(points, entries=entries, stack=stack, fail=fail, warn=warn, check=hooks._check)
+    else:        # 沒寫 hook_points：沒有人能掛（hooks.load 擋有 hook 的），點照 EVENTS 認、發了也沒人聽
+        handle = hook_point.open(table=hooks.EVENTS, entries=entries, stack=stack, fail=fail, warn=warn, check=hooks._check)
+    return AgentHooks(def_folder, stack, fail, warn, handle)
 
 
 def source(def_dir, stack, fail):

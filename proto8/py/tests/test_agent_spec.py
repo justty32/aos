@@ -155,8 +155,10 @@ class Declaration(WithHome):
         self.assertEqual(files["hooks.json"]["hooks"], table)
         self.assertIn("templates/agent-fsm/hooks.json", files["hooks.json"]["description"])
         self.assertEqual(list(files["interfaces.json"]["aos-agent"]),
-                         ["entry", "tools", "llm", "llm_keys", "history", "hooks", "system"])
+                         ["entry", "tools", "llm", "llm_keys", "history", "hooks", "hook_points", "system"])
         self.assertEqual(files["interfaces.json"]["aos-agent"]["hooks"], "hooks.json")
+        self.assertEqual(files["interfaces.json"]["aos-agent"]["hook_points"],
+                         [{"provider": "aos-loop"}, {"provider": "agent-fsm"}])   # hook cut 3: written with hooks
         fire = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}
         self.assertEqual(files["loop.json"]["on_start"], {"argv": [fire, "after_start", {"$env": "AOS_CD"}]})
         self.assertEqual(files["loop.json"]["on_stop"], {"argv": [fire, "after_stop", {"$env": "AOS_CD"}]})

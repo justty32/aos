@@ -183,7 +183,7 @@ class Hook(Base):
         stack.mkdir()
         (defn / "no_secrets.py").write_text(HOOK)
         (defn / "no_secrets.py").chmod(0o755)
-        (defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json"}}))
+        (defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
         (defn / "hooks.json").write_text(json.dumps({"hooks": {"no_secrets": {"event": "before_tool", "condition": "write",
                                                                              "handler": "no_secrets.py"}}}))
         got = hooks.fire("before_tool", {"name": "write", "arguments": {"text": "a secret"}}, str(defn), str(stack))

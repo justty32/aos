@@ -259,7 +259,7 @@ class Compact(unittest.TestCase):
         hook = self.defn / "fail.py"
         hook.write_text("#!" + sys.executable + "\nimport sys\nsys.exit(1)\n")
         hook.chmod(0o755)
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json"}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
         (self.defn / "hooks.json").write_text(json.dumps({"hooks": {name: {"event": name, "handler": "fail.py"} for name in ("before_queue", "after_queue")}}))
         self.start_idle()
         self.assertTrue(compact.asking(str(self.stack), self.history()))

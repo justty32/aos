@@ -28,7 +28,7 @@ class EcaHooks(unittest.TestCase):
             d.mkdir()
         (self.bin / "claude").symlink_to(HERE / "fake_claude")
         (self.defn / "cli.json").write_text(json.dumps({"kind": "claude", "timeout_ms": 30000}))
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json", "hooks": "hooks.json"}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json", "hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "eca"}, {"provider": "mcp"}]}}))
         self.log, self.cli_log, self.tools_log = self.t / "hooks.jsonl", self.t / "cli.jsonl", self.t / "tools.jsonl"
         subprocess.run(["aos-post", "init", str(self.stack / "queue")], env=self.env(), check=True, capture_output=True)
 

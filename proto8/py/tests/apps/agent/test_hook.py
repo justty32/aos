@@ -25,7 +25,7 @@ class Hook(unittest.TestCase):
         self.d = self.tmp / "d"
         self.defn = self.tmp / "defs" / "bob"
         self.defn.mkdir(parents=True)
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json"}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
         self.mine = self.defn / "hooks.json"
         self.mine.write_text(json.dumps({"hooks": {"audit": {"event": "after_tool", "handler": "audit.sh", "condition": ["a", "b"]}}}))
         (self.tmp / "h").mkdir()

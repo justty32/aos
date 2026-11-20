@@ -5,11 +5,10 @@ import os
 from aos import hook_point, hook_run
 
 
-EVENTS = {
-    "before_verdict": {"condition": None, "intercept": ("body",), "block": True},
-    "after_verdict": {"condition": "verdict", "intercept": ("verdict", "error", "next"), "block": True},
-    "before_reply": {"condition": None, "intercept": ("body",), "block": True},
-}
+# 11-20 hook 第 3 刀：三個點只寫在同夾的 hook_points.json（使用者待裁第 14 題「一起搬」）；EVENTS 由它算出，驗清單用。
+POINTS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "hook_points.json")
+POINTS = hook_point.read([POINTS_FILE])
+EVENTS = hook_point.engine_table(POINTS)
 
 
 def load(table, path):
@@ -41,9 +40,9 @@ def check(ctx, event, key, value):
 
 
 def open(ctx):
-    """這一輪的 hook 遙控器：表照舊（第 3 刀才讀 hook_points.json）、清單＝已讀好的 ctx.cfg["hooks"]；
+    """這一輪的 hook 遙控器：點＝同夾 hook_points.json 的宣告（第 3 刀；宣告的 change 型別先驗、check 接著驗）、清單＝已讀好的 ctx.cfg["hooks"]；
     hook 停下（HookFailed／HooksBad）＝ctx.die（11-20 hook 介面第 2 刀，原本 round.py 自己接）。"""
-    return hook_point.open(table=EVENTS, entries=lambda: ctx.cfg["hooks"], stack=ctx.stack, fail=ctx.die, warn=ctx.warn,
+    return hook_point.open(POINTS, entries=lambda: ctx.cfg["hooks"], stack=ctx.stack, fail=ctx.die, warn=ctx.warn,
                            check=lambda event, key, value: check(ctx, event, key, value))
 
 

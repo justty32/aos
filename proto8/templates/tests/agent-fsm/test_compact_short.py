@@ -105,7 +105,7 @@ class CompactShort(unittest.TestCase):
         hook = self.defn / "count.py"
         hook.write_text("#!" + sys.executable + "\nimport sys\nopen(%r, 'a').write(sys.stdin.read() + '\\n')\n" % str(log))
         hook.chmod(0o755)
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json", "llm": "llm.json", "hooks": "hooks.json"}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json", "llm": "llm.json", "hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
         (self.defn / "hooks.json").write_text(json.dumps({"hooks": {"count": {"event": "before_queue", "handler": "count.py", "intercept": False}}}))
         self.history(OLD[:2])
         self.letter("/compact")

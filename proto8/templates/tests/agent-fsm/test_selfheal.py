@@ -271,7 +271,7 @@ class SendFailed(Base):
                            'from pathlib import Path\nPath(' + repr(str(marker)) + ').write_text(json.dumps(json.load(sys.stdin)))\n')
         handler.chmod(0o755)
         (self.definition / 'interfaces.json').write_text(json.dumps({'aos-agent': {
-            'llm': 'llm.json', 'hooks': 'hooks.json'}}))
+            'llm': 'llm.json', 'hooks': 'hooks.json', 'hook_points': [{'provider': 'aos-loop'}, {'provider': 'agent-fsm'}]}}))
         (self.definition / 'hooks.json').write_text(json.dumps({'hooks': {'missing': {
             'event': 'brain_failed', 'condition': 'LlmKernelMissing',
             'handler': str(handler)}}}))

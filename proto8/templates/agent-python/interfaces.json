@@ -16,6 +16,14 @@
     ],
     "history": "history.jsonl",
     "hooks": "hooks.json",
+    "hook_points": [
+      {
+        "provider": "aos-loop"
+      },
+      {
+        "provider": "agent-fsm"
+      }
+    ],
     "system": "system.txt"
   }
 }

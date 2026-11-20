@@ -23,7 +23,7 @@ class ClockKernel(unittest.TestCase):
         clock = fixture.mom / "clock"
         clock.write_text("10\n")
         definition, stack = fixture.definition, fixture.mom
-        KernelFixture.save(definition / "interfaces.json", {"aos-agent": {"hooks": "hooks.json"}})
+        KernelFixture.save(definition / "interfaces.json", {"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}})
         KernelFixture.save(definition / "hooks.json", {"hooks": {"tick": {
             "event": "on_clock", "handler": "unused", "clock": "mom", "every_cycles": 5}}})
         warnings = []
@@ -75,7 +75,7 @@ class ClockKernel(unittest.TestCase):
             definition, stack = root / "def", root / "stack"
             definition.mkdir()
             stack.mkdir()
-            KernelFixture.save(definition / "interfaces.json", {"aos-agent": {"hooks": "hooks.json"}})
+            KernelFixture.save(definition / "interfaces.json", {"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}})
             KernelFixture.save(definition / "hooks.json", {"hooks": {"tick": {
                 "event": "on_clock", "handler": "unused", "clock": "mom", "every_cycles": 1}}})
             warnings = []

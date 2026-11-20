@@ -64,7 +64,7 @@ class CompactAlone(Base):
 class WrapThenCompact(Base):
     def setUp(self):
         super().setUp()
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "history": "history.jsonl"}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "eca"}, {"provider": "mcp"}], "history": "history.jsonl"}}))
         (self.defn / "hooks.json").write_text(json.dumps({"hooks": {"context_wrap": {
             "event": "on_clock", "every_cycles": 1, "config": {"percent": 35}, "handler": str(HANDLER),
             "on_error": "stop", "timeout_ms": 20000}}}))

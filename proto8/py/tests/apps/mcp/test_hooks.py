@@ -24,7 +24,7 @@ class McpHooks(unittest.TestCase):
         self.defn, self.st, self.bin = self.root / 'def', self.root / 'st', self.root / 'bin'
         for d in (self.defn, self.st, self.bin):
             d.mkdir()
-        (self.defn / 'interfaces.json').write_text(json.dumps({'aos-agent': {'tools': 'tools.json', 'hooks': 'hooks.json'}}))
+        (self.defn / 'interfaces.json').write_text(json.dumps({'aos-agent': {'tools': 'tools.json', 'hooks': 'hooks.json', 'hook_points': [{'provider': 'aos-loop'}, {'provider': 'eca'}, {'provider': 'mcp'}]}}))
         self.reg = self.defn / 'tools.json'
         self.reg.write_text('{}')
         self.log, self.calls = self.root / 'hooks.jsonl', self.root / 'calls.jsonl'
