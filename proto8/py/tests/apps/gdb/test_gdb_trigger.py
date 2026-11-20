@@ -288,7 +288,7 @@ class Handler(unittest.TestCase):
 
 
 class Shape(unittest.TestCase):
-    """介面的長相（線 aosgdb-api-1119，線 aos-pylib-cut-1119 改）：把手在 aos.py.agent（a.xxx＝aos-agent xxx、讀檔在 a.look）、斷點全在 a.bp；
+    """介面的長相（線 aosgdb-api-1119，線 aos-pylib-cut-1119 改）：遙控器在 aos.py.agent（a.xxx＝aos-agent xxx、讀檔在 a.look）、斷點全在 a.bp；
     建斷點＝a.bp.add.<種類>(...)（使用者 11-19 裁定），字串式 a.bp.add("before_tool") 不留；resume 不收參數；aos-gdb 的說明字串跟著改。"""
 
     def bp(self):

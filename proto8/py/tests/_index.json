@@ -43,10 +43,10 @@
   "description": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。"
  },
  "test_aos_py.py": {
-  "description": "入口 aos.py 的通用代理（不起 daemon）：細則表逐列翻成哪條 argv（用一支假的 aos-agent／aos-daemon-ctl 把 argv 印回來）、把手頂層照 aos-agent 子指令表擋錯、json=True 的整份／JSONL／空、Text 與 None、Failed …"
+  "description": "入口 aos.py 的通用代理（不起 daemon）：細則表逐列翻成哪條 argv（用一支假的 aos-agent／aos-daemon-ctl 把 argv 印回來）、遙控器頂層照 aos-agent 子指令表擋錯、json=True 的整份／JSONL／空、Text 與 None、Failed…"
  },
  "test_aos_py_live.py": {
-  "description": "入口 aos.py 對真的 aos 樹（start-api 抄一份、假腦）實跑：把手 a.ctl.state(json=True)、a.tools.ls()、a.say／a.listen、a.stack；模組層 agent.ctl.ls、daemon_ctl；指令自己擋下的（a.ctl.ls 不吃…"
+  "description": "入口 aos.py 對真的 aos 樹（start-api 抄一份、假腦）實跑：遙控器 a.ctl.state(json=True)、a.tools.ls()、a.say／a.listen、a.stack；模組層 agent.ctl.ls、daemon_ctl；指令自己擋下的（a.ctl.ls 不…"
  },
  "test_aos_ws_reply_match.py": {
   "description": "Check aos_ws reply matching (reply-match-1114): answer_for's order queue -> history -> history_removed -> letters.json, the letters.json helpers, mar…"

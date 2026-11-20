@@ -1,4 +1,4 @@
-"""aos.py.daemon_ctl - aos-daemon-ctl 的薄殼：daemon_ctl.X(ARG, flag=v)＝aos-daemon-ctl X --flag v ARG；daemon_ctl.attach(D) 回綁好 --daemon D 的把手。
+"""aos.py.daemon_ctl - aos-daemon-ctl 的薄殼：daemon_ctl.X(ARG, flag=v)＝aos-daemon-ctl X --flag v ARG；daemon_ctl.attach(D) 回綁好 --daemon D 的遙控器。
 
     from aos.py import daemon_ctl
     daemon_ctl.ls(json=True)                       # $ aos-daemon-ctl ls --json        （daemon 不給＝指令自己的預設）
@@ -20,7 +20,7 @@ def subcommands():
 
 
 def attach(daemon):
-    """綁好一台 daemon（轉成絕對路徑）的把手；不跑指令。"""
+    """綁好一台 daemon（轉成絕對路徑）的遙控器；不跑指令。"""
     if not daemon:
         raise _shell.Failed("daemon_ctl.attach", "give the daemon's stack folder", code="ArgumentsBad")
     return _shell.Proxy(PROG, ["--daemon", os.path.abspath(str(daemon))], top=subcommands)

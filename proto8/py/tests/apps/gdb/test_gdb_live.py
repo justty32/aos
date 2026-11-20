@@ -1,4 +1,4 @@
-"""入口 aos.py 的把手與 aos.gdb 斷點（a.bp、a.look）對真的 aos 樹（start-api 抄一份、假腦）實跑：a.bp 的增刪改查（id 純數字、刪了不重用、add 回的物件屬性每次重查）；控制 resume／step／pause 預設等到停下才回、回停在哪（wait=False 回 Pending，is_done() 由 False 變 True、結果跟等的版本同一句；cancel() 只是不等、step 的 pause 照停；set 也回斷點物件；hook 名號碼補零 gdb_0001）（沒停著時 resume 只等、step 走一格、閒著或行程不在就回「沒停」、Ctrl-C 只是不等了且不留殘局、timeout_s）；工具要跑之前扣住→看→續＝工具真的跑了；扣著時別人 pause、sleep 再 wake、shell ctl resume；跑完才停、連錯兩次才停、條件壞了不停不掛、舊字條；觀察者（丙）停住目標、字條 by watch、壞了不影響目標、一個看兩隻、拿掉後行程沒了。"""
+"""入口 aos.py 的遙控器與 aos.gdb 斷點（a.bp、a.look）對真的 aos 樹（start-api 抄一份、假腦）實跑：a.bp 的增刪改查（id 純數字、刪了不重用、add 回的物件屬性每次重查）；控制 resume／step／pause 預設等到停下才回、回停在哪（wait=False 回 Pending，is_done() 由 False 變 True、結果跟等的版本同一句；cancel() 只是不等、step 的 pause 照停；set 也回斷點物件；hook 名號碼補零 gdb_0001）（沒停著時 resume 只等、step 走一格、閒著或行程不在就回「沒停」、Ctrl-C 只是不等了且不留殘局、timeout_s）；工具要跑之前扣住→看→續＝工具真的跑了；扣著時別人 pause、sleep 再 wake、shell ctl resume；跑完才停、連錯兩次才停、條件壞了不停不掛、舊字條；觀察者（丙）停住目標、字條 by watch、壞了不影響目標、一個看兩隻、拿掉後行程沒了。"""
 import json
 import os
 from pathlib import Path
@@ -494,7 +494,7 @@ class Live(unittest.TestCase):
         a.bp.rm(b1)
         b2 = a.bp.add.after_tool("peek_now_time", once=True)
         self.assertEqual(b2.id, b1.id + 1)                         # 刪了不重用
-        b3 = agent.attach("ann", daemon=self.daemon).bp.add.before_queue()   # 新的把手、新的 a.bp（像重開 REPL）
+        b3 = agent.attach("ann", daemon=self.daemon).bp.add.before_queue()   # 新的遙控器、新的 a.bp（像重開 REPL）
         self.assertEqual(b3.id, b2.id + 1)
         a.bp.rm(b3)
         w = a.bp.add.watch(sh="exit 10", every_ms=200)

@@ -5,12 +5,12 @@
 | 檔 | 是什麼 |
 |---|---|
 | `main.py` | `aos-hook` 本體：`fire`、`points`、`check` 三個子指令、英文 `--help` |
-| `lists.py` | 點與清單從哪來：`--points`／`--list`，或 `--agent DEF_DIR`（第 2 刀 2a 起；讀清單、驗格、驗型別搬進小庫 `aos/hook_lists.py`，經 `aos.hook_point.open` 的把手用） |
+| `lists.py` | 點與清單從哪來：`--points`／`--list`，或 `--agent DEF_DIR`（第 2 刀 2a 起；讀清單、驗格、驗型別搬進小庫 `aos/hook_lists.py`，經 `aos.hook_point.open` 的遙控器用） |
 | [`loop_points.json`](loop_points.json) | 用 aos-loop 跑、loop.json 有接線的子程式提供的四個點：`after_start`、`after_stop`；`before_run`、`after_run` 先宣告、標 `not_fired_yet`（aos-loop 還沒接） |
 
-使用者 11-20「任何子程式，含非 Python」；施工是第 4 刀（線 aos-hook-k4-1120，使用者「先開第 4 刀」）。**只加**：現在沒有任何程式叫它，agent 的起停照舊走 `py/tools/agent/hook_fire`；換過去是第 5 刀。第 2 刀 2a（線 aos-hook-k2-1120）把它改成經小庫的把手跑、接上 `--agent`，行為沒變。
+使用者 11-20「任何子程式，含非 Python」；施工是第 4 刀（線 aos-hook-k4-1120，使用者「先開第 4 刀」）。**只加**：現在沒有任何程式叫它，agent 的起停照舊走 `py/tools/agent/hook_fire`；換過去是第 5 刀。第 2 刀 2a（線 aos-hook-k2-1120）把它改成經小庫的遙控器跑、接上 `--agent`，行為沒變。
 
-Python 寫的提供者不用起這支：直接 `aos.hook_point.open(…)` 開一個把手、每個點 `fire` 一行（介面寫在 [`hook_point.py`](../../hook_point.py) 檔頭；agent 一家另有 [`agentlib/agent_hooks.py`](../../agentlib/agent_hooks.py)）。
+Python 寫的提供者不用起這支：直接 `aos.hook_point.open(…)` 開一個遙控器、每個點 `fire` 一行（介面寫在 [`hook_point.py`](../../hook_point.py) 檔頭；agent 一家另有 [`agentlib/agent_hooks.py`](../../agentlib/agent_hooks.py)）。
 
 ## 提供一個點＝一份宣告＋在那個時機起一次 `aos-hook fire`
 
@@ -70,4 +70,4 @@ else if (r.code != 0) { /* aos-hook printed its error line */ }
 
 ## 測試
 
-`py/tests/apps/hook/test_hook_cli.py`、`test_hook_cli_agent.py`（`--agent`）（跑裝好的 `bin/aos-hook`，handler 是真的 sh 與 python3、經 aos-exec；沒有 daemon）。把手本身：`py/tests/test_hook_point_open.py`、`py/tests/test_agent_hooks.py`。
+`py/tests/apps/hook/test_hook_cli.py`、`test_hook_cli_agent.py`（`--agent`）（跑裝好的 `bin/aos-hook`，handler 是真的 sh 與 python3、經 aos-exec；沒有 daemon）。遙控器本身：`py/tests/test_hook_point_open.py`、`py/tests/test_agent_hooks.py`。

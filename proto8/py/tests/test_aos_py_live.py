@@ -1,4 +1,4 @@
-"""test_aos_py_live - 入口 aos.py 對真的 aos 樹（start-api 抄一份、假腦）實跑：把手 a.ctl.state(json=True)、a.tools.ls()、a.say／a.listen、a.stack；模組層 agent.ctl.ls、daemon_ctl；指令自己擋下的（a.ctl.ls 不吃 --target）原樣成 Failed；echo 印出的那條拿去 shell 跑結果一樣；以 - 開頭的話照送。"""
+"""test_aos_py_live - 入口 aos.py 對真的 aos 樹（start-api 抄一份、假腦）實跑：遙控器 a.ctl.state(json=True)、a.tools.ls()、a.say／a.listen、a.stack；模組層 agent.ctl.ls、daemon_ctl；指令自己擋下的（a.ctl.ls 不吃 --target）原樣成 Failed；echo 印出的那條拿去 shell 跑結果一樣；以 - 開頭的話照送。"""
 import io
 import json
 import os

@@ -1,10 +1,10 @@
-# aos-gdb — 在 Python REPL 裡對一隻已在跑的 agent 下斷點：條件成立就把它停下來，看完再續（入口 `aos.py`、把手 `a = agent.attach(名)`；斷點全在 `a.bp` 底下，以斷點為核心增刪改查）
+# aos-gdb — 在 Python REPL 裡對一隻已在跑的 agent 下斷點：條件成立就把它停下來，看完再續（入口 `aos.py`、遙控器 `a = agent.attach(名)`；斷點全在 `a.bp` 底下，以斷點為核心增刪改查）
 
 ← [cmd](../../../docs/05-commands.md)｜入口：[py/aos/py](../../py/__init__.py)｜斷點與讀檔：[py/aos/gdb](../../gdb/__init__.py)｜handler：[gdb_trigger](../../../tools/agent/gdb_trigger/_entry)｜觀察者本體：[gdb_watch](../../../tools/agent/gdb_watch/_entry)｜圖紙：[aos-gdb-1119](../../../../thinking/2026-11/19/aos-gdb-1119/README.md)、[第一版紀錄](../../../../thinking/2026-11/19/aos-gdb-lib-第一版.md)、[第二版紀錄](../../../../thinking/2026-11/19/aos-gdb-lib-第二版.md)、[整套 Python 庫](../../../../thinking/2026-11/19/aos-pylib-1119/README.md)、[施工紀錄](../../../../thinking/2026-11/19/aos-pylib-施工.md)、[控制動作紀錄](../../../../thinking/2026-11/19/aos-gdb-動詞-1119.md)
 
 使用者 11-19 的定義：斷點＝「特定條件發生時，暫停loop或fsm，停下來等待檢閱」，「能把他停下來的都可以」，「hook不用動」；第二版：「stop_before_tool不就是在工具開始前停下嗎？丙可以繼續」。hook 機制、daemon、aos-agent 都沒改。
 
-介面（使用者 11-19「斷點這塊，我覺得他的架構就是以斷點為核心， 增刪改查。然後a.xxx這塊，感覺就是aos-agent xxxx」；整套 Python 庫的選項框裁定：入口 `aos.py`、把手式、建斷點 `a.bp.add.before_tool("x")`、讀檔收進 `a.look`，見 [aos-pylib-1119/07](../../../../thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)）：
+介面（使用者 11-19「斷點這塊，我覺得他的架構就是以斷點為核心， 增刪改查。然後a.xxx這塊，感覺就是aos-agent xxxx」；整套 Python 庫的選項框裁定：入口 `aos.py`、遙控器式、建斷點 `a.bp.add.before_tool("x")`、讀檔收進 `a.look`，見 [aos-pylib-1119/07](../../../../thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)）：
 
 - **`a.xxx`＝`aos-agent xxx`**，一個呼叫＝一條指令，由入口的通用代理翻（`a.X.Y(ARG, flag=v)`＝`aos-agent --daemon D --target 名 X Y --flag v ARG`；`a.say`、`a.listen`、`a.ctl.state(json=True)`、`a.tools.add(…)`、`a.hook.ls()`…，`aos-agent` 以後加的子指令自動有）。
 - **兩個延伸**（不是 `aos-agent` 子指令，只在庫裡）：`a.bp` 斷點、`a.look` 讀 stack 的檔（`where`、`history(n)`、`observed(n)`、`request`、`queue`、`stderr(n)`、`file(rel)`）。`a` 上其他不是子指令的名字當場 `AttributeError`。
@@ -92,7 +92,7 @@ b.fired       # Failed: breakpoint 3: it is gone from ann (removed); a.bp.ls() l
 - **磁碟上的名字號碼補零到 4 位**（使用者 11-20 選「斷點號碼檔名補零」）：號碼 3 的觸發器 hook 名與小格夾是 `gdb_0003`、觀察者的 proc 名是 `gdbw_0003`，所以 `ls hooks/`、`aos-agent hook ls`、`aos-daemon-ctl ls` 列出來照號碼排（10 個以上也對），同一事件上的 hook 也照號碼先後跑。`b.id` 照舊是 `3`（int），指令的輸出與 `a.bp.why()` 裡看到的是 `gdb_0003`。過了 9999 就是 5 位，順序從那裡起不保證。
 - `a.bp.set(b, ...)` 回斷點物件（使用者 11-20 選「a.bp.set 也回物件」），跟 `add` 回的同一種（屬性每次讀都重新查）；要一份當下的 dict 用 `a.bp.get(b)`。
 - 自己取的名字照留（`id="mine"`，str）：hook 名 `gdb_mine`（不補零），不吃號碼；`ls` 號碼在前、名字在後。
-- 不用把手也行：`from aos.py import breakpoint as bp; bp.attach("ann", daemon=".stack").add.before_tool("write")`（跟 `a.bp` 同一種；別用原名 `breakpoint`，會蓋掉內建的）。
+- 不用遙控器也行：`from aos.py import breakpoint as bp; bp.attach("ann", daemon=".stack").add.before_tool("write")`（跟 `a.bp` 同一種；別用原名 `breakpoint`，會蓋掉內建的）。
 
 ## 兩種停法（由事件決定，不是選項）
 
@@ -164,7 +164,7 @@ aos-agent: error: HooksMissing bob does not declare hooks (...); to fix it in an
 | `a.say(text)` | `aos-agent say` | 回信名（str），交給 `listen(letter=...)` 等那一封的回答 |
 | `a.listen(timeout_s=20, letter=None)` | `aos-agent listen --timeout-s 20 [--letter L]` | |
 | `a.ctl.where()`、`a.ctl.state(json=True)`、`a.tools.ls()`、`a.hook.ls()`… | `aos-agent ... ctl where` 等 | 沒給 `json=True`＝stdout 原樣（REPL 印得跟 shell 一樣），空＝None；給了＝解好的 dict／list |
-| `agent.ctl.ls()`、`agent.ctl.add(...)`、`agent.ctl.rm(name)` | `aos-agent ctl ls` 等 | 這幾支不吃 `--target`，在模組層叫；在把手上叫會被指令擋下，錯誤原樣成 `Failed` |
+| `agent.ctl.ls()`、`agent.ctl.add(...)`、`agent.ctl.rm(name)` | `aos-agent ctl ls` 等 | 這幾支不吃 `--target`，在模組層叫；在遙控器上叫會被指令擋下，錯誤原樣成 `Failed` |
 | `a.stack` | `aos-agent ctl state --json who` | 每次問都跑一次（不快取） |
 | `a.look.where()`、`a.look.history(n)`、`a.look.observed(n)`、`a.look.request()`、`a.look.queue()`、`a.look.stderr(n)`、`a.look.file(rel)` | 讀 stack 的檔 | 停住時檢閱；檔不在＝None／[]；echo 開著印 `# read 路徑` |
 | `sh(cmd)` | `sh -c` | REPL 裡順手打 shell |

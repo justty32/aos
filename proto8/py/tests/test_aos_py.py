@@ -1,4 +1,4 @@
-"""test_aos_py - 入口 aos.py 的通用代理（不起 daemon）：細則表逐列翻成哪條 argv（用一支假的 aos-agent／aos-daemon-ctl 把 argv 印回來）、把手頂層照 aos-agent 子指令表擋錯、json=True 的整份／JSONL／空、Text 與 None、Failed 的欄位、echo 印在 stderr、repr 不跑指令、轉匯出 defs／std、import 入口不先載入別的。"""
+"""test_aos_py - 入口 aos.py 的通用代理（不起 daemon）：細則表逐列翻成哪條 argv（用一支假的 aos-agent／aos-daemon-ctl 把 argv 印回來）、遙控器頂層照 aos-agent 子指令表擋錯、json=True 的整份／JSONL／空、Text 與 None、Failed 的欄位、echo 印在 stderr、repr 不跑指令、轉匯出 defs／std、import 入口不先載入別的。"""
 import io
 import json
 import os

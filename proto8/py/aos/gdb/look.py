@@ -1,4 +1,4 @@
-"""aos.gdb.look - 讀 stack 裡的檔（stage、history、observed、最後一次問腦、信箱、stderr；把手上的 a.look 就是它）、why() 的結果長相、跑一條指令的小殼。
+"""aos.gdb.look - 讀 stack 裡的檔（stage、history、observed、最後一次問腦、信箱、stderr；遙控器上的 a.look 就是它）、why() 的結果長相、跑一條指令的小殼。
 
 停住時人看的全在 stack 的普通檔（thinking/2026-11/19/aos-gdb-1119/07 第三節）；這裡每個方法只讀一個檔，不解讀、不改。
 讀檔收進 a.look（使用者 11-19 選項框「收進 a.look」，thinking/2026-11/19/aos-pylib-1119/07 第 5 題），a.history 等名字還給 aos-agent。

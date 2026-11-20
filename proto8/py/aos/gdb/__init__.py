@@ -6,7 +6,7 @@
 或者說他應該是a.bp.stop(),a.bp.resume()。對斷點增刪改查，包括以id查詢斷點...」。
 圖紙：thinking/2026-11/19/aos-gdb-1119（乙案）、08-Argon審與採納、aos-gdb-lib-第一版.md、aos-gdb-lib-第二版.md（末節＝這次的介面）。
 
-兩層（把手在入口 aos.py.agent；這裡是它的延伸 a.bp 與 a.look 的本體）：
+兩層（遙控器在入口 aos.py.agent；這裡是它的延伸 a.bp 與 a.look 的本體）：
     a.xxx＝aos-agent xxx（aos.py 的通用代理）；a.look＝讀 stack 的檔（Look：where、history、observed、request、queue、stderr、file）。
     a.bp＝斷點（class Breakpoints）：增 a.bp.add.<種類>(...)（回斷點物件 Breakpoint）、rm／set／ls／get；控制 resume／step／pause（預設等到停下才回；
     wait=False＝送出就回 Pending，is_done() 問好了沒、cancel() 不等了）；查 why／held／stopped、notes；clear。
@@ -102,7 +102,7 @@ class _Defer:
 
 
 class Target:
-    """a.bp 背後的那一隻：名字、daemon（絕對路徑；把手沒給＝$AOS_DAEMON）、stack（第一次用到時問一次，這個 a.bp 用到底）。"""
+    """a.bp 背後的那一隻：名字、daemon（絕對路徑；遙控器沒給＝$AOS_DAEMON）、stack（第一次用到時問一次，這個 a.bp 用到底）。"""
 
     def __init__(self, name, daemon=None):
         d = daemon or os.environ.get("AOS_DAEMON")

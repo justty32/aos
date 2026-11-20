@@ -3,7 +3,7 @@
   "description": "aos.agentlib - agent 層的共用模組（hooks、cooldown、claude／codex 對話的 cli_*、cmd_call …；S3 前在 lib/agent）。"
  },
  "agent_hooks.py": {
-  "description": "agent 一家發 hook 的把手：open 一次（定義那份疊 stack 那份），之後每個點一行；丟信三步、工具被攔的預設字、tool_added 那串只在這裡一份。"
+  "description": "agent 一家的 hook 遙控器：open 一次（定義那份疊 stack 那份），之後每個點一行；丟信三步、工具被攔的預設字、tool_added 那串只在這裡一份。"
  },
  "agent_tool.py": {
   "description": "claude、codex 共用的工具形入口 ask_cli。"

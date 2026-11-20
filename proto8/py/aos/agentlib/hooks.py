@@ -25,7 +25,7 @@ on_clock 專用的鍵與檢查、content 的回話要求、tool_added 的名單�
     tools_added(stack, tools, has_hook) -> [(name, path)]：這次比上次多出來的工具（tools＝[(name, path)]）
     clock_tick(def_folder, stack, warn=None) -> [跑了的 hook 名]：on_clock 的檢查（11-11 clock-hook）；沒有這種 hook＝只讀清單、不起行程
     clock_restart(stack) -> None：loop 起來時清掉 on_clock 的狀態檔（下一次檢查＝第一次、立刻跑）
-    把手（11-20 hook 介面第 2 刀 2a，thinking/2026-11/20/aos-hook-plan-1120/04）：agent_hooks.open(def_folder, stack, fail, warn)
+    hook 遙控器（11-20 hook 介面第 2 刀 2a，thinking/2026-11/20/aos-hook-plan-1120/04）：agent_hooks.open(def_folder, stack, fail, warn)
                     ＝開一次、之後每個點一行（fire、has、names、clock_tick、take_letter、guard_tool、announce_tools），錯一律交 fail。
                     格程式、eca、aos-mcp 要等 install 之後（2b）才改叫它；上面這些模組函式留到第 3 刀。
 
