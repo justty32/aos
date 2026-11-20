@@ -49,6 +49,12 @@ CONCEPTS、NORMS 逐條只換稱呼、不動意思：
 | NORMS/主題 | LLM kernel 列 | 刪「問腦總機」四字（後面就是路徑） |
 | NORMS/命名-續/02 | 1 處 | 問腦總機→llm kernel |
 
+驗收：
+- 改完再 grep「總機、把手、當門、門房、唯一的門、kernel 的門、操控器」：剩下的都在使用者原話引號內、檔名與錨點、兩句打比方、`CONCEPTS/附錄3-條號表/02-各批出處/02-11月.md` 的出處紀錄「C-47 ② 補問腦總機收進框架」（記那天加了什麼，照舊）、「把手上的事」、別線 claim 的 `agent_spec_agent.py`，與下面不改的三個 wf 檔。「操控器」只剩 `wf/workflows/common/user/01`、`user.md` 記原話的引號裡。
+- 測試：`git archive HEAD` 抄兩份（一份原樣、一份蓋上本線改的檔），各跑 `install.py` 後跑 `test_hook_points_match`、`test_index_view`、`test_tool_io_keys`、`test_aos_py`、kernel `test_kernel_cut`、kernel_gate `test_triage`、guard `test_guard`、gdb `test_gdb_trigger`、kits `test_kits`、`py/tests` 整夾 discover：兩份全部 OK（discover 都是 OK、skipped=1），前後一樣。複本在 `~/.aos/scratch/aos-plain-terms-1120/copy-base-140051`、`copy-mine-140053`。
+
+交件：第 1 步 15784a0c7、a2f7ca377（撤回「物件」）；第 1 步定案＋第 2 步 52a697d96；第 3 步第一批（把手）1781997d3、第二批（門、總機、02）53ffda6bc；本紀錄收尾另一筆。
+
 沒改、各有理由：
 - `wf/progress.json`（把手 5 處）：活狀態，只能用 `--op progress_upsert` 整條換，那幾條是別線的。
 - `wf/HANDOFF.md`（把手 1 處）：頂層的交接。

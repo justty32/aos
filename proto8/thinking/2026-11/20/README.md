@@ -30,3 +30,4 @@
 | [aos-compact-twice-1120](aos-compact-twice-1120.md) | 連續兩封 /compact 現況實跑：fsm 第二封已被 4 則門檻擋（但報 LetterDropped）、eca 照做兩次；只查不改 |
 | [編譯程式庫第 4 刀：defs.extern 編成連結（aos-pylib-k4-1120）](aos-pylib-k4-1120.md) | defs.extern(目標) 那一欄編成 symlink、照字面存；fsm 只能同一夾（先實測）；defs.load 底的夾外連結照樣交出；agent_def check 報斷鏈；別濫用寫進 docstring／README／教學；沒用 extern 的產物逐 byte 不變；假腦實掛改共用檔不重編就生效；第二筆 loop= 宣告 |
 | [寄信問 kernel 放 body 的原型（aos-kask-proto-1120）](aos-kask-proto-1120/README.md) | 原型：骨架 round.py 每輪開頭先回特殊信箱 <stack>/kask/ 的問句信（不排隊、不過 hook、不記帳），llm kernel 與權限站都一問一答、中位數約 0.4 秒；灌 30 封不拖慢後面的請求（上一條線掛 hook 慢約 5 倍）；特殊信箱不用動 daemon 就能有，寄件人怎麼找到它沒地方寫，六種做法；寄錯到 requests/ 站仍回假成功；十題等使用者 |
+| [稱呼不用比喻（aos-plain-terms-1120）](aos-plain-terms-1120.md) | 偏好寫進 wf/（手、門→kernel／daemon；把手→遙控器，經過「物件」「操控器」兩次改口）；比喻詞盤點＋逐檔 csv；改了明確的三種：把手→遙控器、指 kernel 的門→kernel、總機→llm kernel（CONCEPTS、NORMS 逐條列）；站、板子、鐘、清道夫、手把等 18 題等使用者定；測試前後全綠 |
