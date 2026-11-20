@@ -49,7 +49,7 @@
   "description": "Timers: clock letters to your queue (clock_register), or an on_clock hook that adds nothing to your history; which one to choose."
  },
  "tools_def.json": {
-  "description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and the Python helper tool_spec."
+  "description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and writing a tool as one Python function with fn (@fn.tool, fn.main)."
  },
  "tools": {
   "description": "One node per stock tool (read, ls, write, edit, trash, shell ...): when to use it and which tool instead, examples with real output, errors. Tools explained on other pages (mailbox_send, self_tools, subagent ...) are pointer rows in its index.",
