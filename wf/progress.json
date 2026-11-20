@@ -485,6 +485,17 @@
         "[llm-effort-1121](../proto8/thinking/2026-11/21/llm-effort-1121.md)"
       ],
       "since": "2026-11-21"
+    },
+    "shell-metaphor": {
+      "title": "「在 shell 裡下 aos 指令」的比喻：等使用者定",
+      "status": "等使用者",
+      "flow": "",
+      "what": "11-21 線 top-1121-shellmeta 發想完：指令分七型、七個候選比喻、十四個邊緣狀況，沒選定、沒改程式與條文。比喻是使用者自己在定義的。",
+      "next": "等他答三題：1.「另一個 cpu」指 Linux 層的一次執行、他本人這顆外部 PU、還是跟 aos-daemon 平起平坐的另一顆；2. 比喻照「從哪裡來」切還是照「怎麼碰」切（人打 aos-agent hook add 與 agent 叫 self_hook 是同一支程式）；3. 直接改別人 stack 的那幾型算正門還是拆機殼。他定了之後才談要不要寫進板子比喻附錄。",
+      "see": [
+        "[shell-指令的比喻-1121](../proto8/thinking/2026-11/21/shell-指令的比喻-1121/README.md)"
+      ],
+      "since": "2026-11-21"
     }
   }
 }
