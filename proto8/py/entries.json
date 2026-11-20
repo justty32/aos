@@ -12,6 +12,7 @@
   "aos-feedback": "aos.apps.feedback.main",
   "aos-gdb": "aos.apps.gdb.main",
   "aos-grow": "aos.apps.grow.main",
+  "aos-hook": "aos.apps.hook.main",
   "aos-json-view": "aos.apps.json_view.main",
   "aos-mailbox": "aos.apps.mailbox.main",
   "aos-mcp": "aos.apps.mcp.main",

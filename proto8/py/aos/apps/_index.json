@@ -35,7 +35,7 @@
   "description": "aos-grow：把一個函數往上長一級或縮回一級、呼叫方跟著改的原型指令（嘗試性質，純標準庫 Python）"
  },
  "hook": {
-  "description": "proto8/py/aos/apps/hook — aos-loop 那一層的 hook 點宣告（之後的 aos-hook 指令也放這裡）"
+  "description": "proto8/py/aos/apps/hook — aos-hook 指令（讓任何子程式提供 hook 點），與 aos-loop 那一層的 hook 點宣告"
  },
  "json_view": {
   "description": "aos-json-view — 只讀：把 json 印成人好讀的樣子"

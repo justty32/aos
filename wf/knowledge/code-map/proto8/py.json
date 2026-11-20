@@ -125,7 +125,10 @@
      "main.py": "aos-grow - 把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。"
     },
     "hook": {
-     "loop_points.json": "Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop, today through py/tools/agent/hook…"
+     "__init__.py": "aos.apps.hook - the aos-hook command (main.py; lists.py reads the hooks lists for it) and loop_points.json, the hook points of the aos-loop layer.",
+     "lists.py": "aos-hook's part between the declarations and the engine: read the --list files (hooks tables), check their entries against the points, check the valu…",
+     "loop_points.json": "Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop, today through py/tools/agent/hook…",
+     "main.py": "aos-hook - fire a hook event from any program (C++, shell, ...), list the points of hook_points.json declarations, check declarations and hooks lists."
     },
     "json_view": {
      "main.py": "aos-json-view [旗標] FILE[#/指標] — 只讀：把一份 json（或其中一段）印成人好讀的樣子，不改任何檔。"
@@ -380,6 +383,9 @@
     "gdb": {
      "test_gdb_live.py": "入口 aos.py 的把手與 aos.gdb 斷點（a.bp、a.look）對真的 aos 樹（start-api 抄一份、假腦）實跑：a.bp 的增刪改查（id 純數字、刪了不重用、add 回的物件屬性每次重查）；控制 resume／step／pause 預設等到停下才回、回停在哪（wait=F…",
      "test_gdb_trigger.py": "aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent…"
+    },
+    "hook": {
+     "test_hook_cli.py": "Test aos-hook (fire, points, check) through bin/aos-hook: exit codes 0/10/1, the stdout line, where event data comes from, changes and their types, b…"
     },
     "json_view": {
      "test_json_view.py": "Test aos-json-view: indent guides (| per level, colour by depth), colours by type, text blocks (newlines and string arrays), compact inline objects/a…"

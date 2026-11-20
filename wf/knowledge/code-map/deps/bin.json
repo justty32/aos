@@ -116,6 +116,13 @@
    "source": "proto8/py/aos/apps/grow/main.py"
   },
   {
+   "command": "aos-hook",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.hook.main",
+   "source": "proto8/py/aos/apps/hook/main.py"
+  },
+  {
    "command": "aos-json",
    "from": "proto8/cpp/Makefile",
    "lang": "C++",
