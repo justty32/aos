@@ -11,6 +11,12 @@
  "aos-defnew-cp-1120.md": {
   "description": "依據"
  },
+ "aos-direct-reply-1120": {
+  "description": "「問特定的東西、直接回特定的東西」通用模式的調查（線 aos-direct-reply-1120）：今天已有九處左右；吃 body 的時間空的時候量不出、每答一封 8～22 毫秒、100 封拖 1～2 秒；不吃 body 的做法四種；八題等你"
+ },
+ "aos-direct-reply-1120.md": {
+  "description": "線 aos-direct-reply-1120 紀錄：「問特定的東西、直接回」通用模式的調查——只交 thinking，量測在暫存夾的乾淨複本"
+ },
  "aos-gdb-small-1120.md": {
   "description": "依據"
  },

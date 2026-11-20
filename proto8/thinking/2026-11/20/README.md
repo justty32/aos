@@ -34,3 +34,4 @@
 | [編譯程式庫第 5 刀：教學照新寫法實跑（aos-pylib-k5-1120）](aos-pylib-k5-1120.md) | 教學 01～08 在乾淨複本、真 daemon、假腦從頭打兩遍；程式沒錯，改教學五處字（舊詞兩處、aos-llm ls 的順序、衍生例子兩個前提）；逐章實跑表；C-87 加註只擬字等使用者點頭；hook 兩條線交後要再對的節 |
 | [aos-hook-k5-1120](aos-hook-k5-1120.md) | hook 介面施工第 5 刀的 aos-loop 那一半：before_run／after_run 兩個點、旗標檔、四個點失敗都收工；範本接線等第 3 刀 |
 | [aos-hook-k2b-1120](aos-hook-k2b-1120.md) | hook 介面施工第 2 刀的後半：fsm 格程式與抄本、eca、mcp、kernel、hook_fire 全改用 hook 遙控器；lists.py 刪掉；hooks.py 拆出 hook_clock.py |
+| [「問特定的東西、直接回」通用模式的調查（aos-direct-reply-1120）](aos-direct-reply-1120/README.md) | 調查：今天已有九處左右（daemon 的 ping／procs_state_path、kask 原型、agent-fsm 的 /compact 太短、eca slash；procs_state.json、endpoints.json 等讀檔型）；實跑空信箱每輪 0.024 ms、每答一封 8～22 ms、100 封拖同一輪約 1～2 秒，agent 的 idle 只在閒著時跑；預先寫檔讀一次 0.02 ms；七種形狀、九種邊緣狀況、八題等使用者 |
