@@ -102,5 +102,3 @@
 
 - **`rm` 寫在 daemon.json 的列：當下拿掉，daemon 重起又回來。** 家機暫存樹 `~/.aos/scratch/root-rm-1120/` 實跑（`templates/daemon-root` 的抄本、清掉 `AOS_*`、裝的是 HEAD `6d37ccdc8` 那版）：起根，表上 `_clock`、`_sweeper`；`aos-daemon-ctl rm _sweeper` 退 0、表上只剩 `_clock`；`shutdown` 說「1 procs asleep」；再起，`_clock`、`_sweeper` 都在跑（新 pid）。收尾 `shutdown`，沒有留下行程；暫存樹沒刪。
 - **`_` 開頭的名字程式不另眼相看。** `cpp/` 與 `py/aos`、`py/tools`（不含測試）裡找不到對 proc 名字第一個字是 `_` 的判斷，也沒有寫死 `_clock`、`_sweeper` 這兩個名字的地方；唯一的 `startswith("_")` 在 `py/aos/agent_spec_agent.py`，管的是 `defs.Agent` 的欄位名，跟 proc 名無關。所以只是命名慣例。
-
-使用者看完這兩個結論：「好，正如我所想。」
