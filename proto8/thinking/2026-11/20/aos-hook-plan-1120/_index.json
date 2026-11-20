@@ -1,0 +1,50 @@
+{
+ "00-使用者原話.md": {
+  "description": "原話"
+ },
+ "01-宣告格式.md": {
+  "description": "結論"
+ },
+ "02-現有的點改寫成宣告.md": {
+  "description": "先看分法"
+ },
+ "03-誰讀宣告.md": {
+  "description": "結論"
+ },
+ "04-小函式.md": {
+  "description": "結論"
+ },
+ "05-發事件指令.md": {
+  "description": "結論"
+ },
+ "06-loop層的點.md": {
+  "description": "結論"
+ },
+ "07-對照與衝突.md": {
+  "description": "合的"
+ },
+ "08-給編譯線的接口.md": {
+  "description": "結論"
+ },
+ "09-施工計劃.md": {
+  "description": "總表"
+ },
+ "09b-施工計劃-逐刀.md": {
+  "description": "刀 1 宣告檔＋小庫＋兩支測試（只加）"
+ },
+ "10-待裁題.md": {
+  "description": "會擋住施工的"
+ },
+ "11-Argon審查原文.md": {
+  "description": "(A) 審查"
+ },
+ "12-採納表.md": {
+  "description": "結論"
+ },
+ "13-使用者已答.md": {
+  "description": "第一批：設計線開工前問的三題（定了方向）"
+ },
+ "README.md": {
+  "description": "「提供 hook 點」的介面：設計稿與施工計劃（11-20）——宣告檔、呼叫端小程式庫、發事件的指令、loop 層的兩個新點；只出稿，沒改程式"
+ }
+}
