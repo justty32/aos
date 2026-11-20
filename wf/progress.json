@@ -436,6 +436,17 @@
         "[compact-改進想法-1120](../proto8/thinking/2026-11/20/compact-改進想法-1120.md)"
       ],
       "since": "2026-11-20"
+    },
+    "agent-fsm-py-folder": {
+      "title": "agent 定義夾的 .py 收進 py/ 子夾、重新規劃架構",
+      "status": "暫停",
+      "flow": "",
+      "what": "使用者 11-20 晚：「~/aos-home/agents/ann裏面，那些.py，每個都好幾百行，一大堆注解……是否可以收縮成ann/py/...，然後重新規劃架構，讓以後比較好維護？這個先記下來。」現況：agent-fsm 範本逐字抄本，8 支 1825 行（wait 644、idle 330、compact 260、brain 258、act 233＋三支小的），跟設定檔平放；沒派線",
+      "next": "等使用者說要做；派之前問規劃到哪一層（只搬位置／拆檔瘦身／格程式收回 lib）",
+      "see": [
+        "[agent-fsm-py-收進子夾-1120](../proto8/thinking/2026-11/20/agent-fsm-py-收進子夾-1120.md)"
+      ],
+      "since": "2026-11-20"
     }
   }
 }

@@ -2,6 +2,9 @@
  "README.md": {
   "description": "proto8 討論紀錄：2026-11-20"
  },
+ "agent-fsm-py-收進子夾-1120.md": {
+  "description": "agent 定義夾裡的 .py 收進 py/ 子夾、重新規劃架構（使用者 11-20 晚，逐字）：只記錄，之後再做"
+ },
  "aos-compact-twice-1120.md": {
   "description": "線 aos-compact-twice-1120：連續兩封 /compact 今天在 agent-fsm 與 eca 各會怎樣；之後修 agent-fsm「太短的 /compact」當成正常做完"
  },
