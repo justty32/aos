@@ -1,0 +1,55 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-11-20"
+ },
+ "aos-compile-base-1120": {
+  "description": "編譯的通用底座與「Python 函數直接當工具／hook」調查（11-20）：現況盤點、可能的形狀、一個小原型、待裁題"
+ },
+ "aos-gdb-wait-1120.md": {
+  "description": "使用者 11-20 的裁定（選項框，答案逐字）"
+ },
+ "aos-gdb-問答-1120.md": {
+  "description": "使用者原話（11-20 上午，逐字）"
+ },
+ "aos-hook-iface-1120": {
+  "description": "hook 點的介面與耦合調查（11-20）：誰提供點、誰觸發、誰掛；加一個點要動幾處、耦合多深、可能的形狀、待裁題"
+ },
+ "aos-hook-k1-1120.md": {
+  "description": "「提供 hook 點」的介面：施工第 1 刀（宣告檔＋小庫＋兩支測試，只加不改）"
+ },
+ "aos-hook-k4-1120.md": {
+  "description": "「提供 hook 點」的介面：施工第 4 刀（新指令 aos-hook：fire、points、check，只加不改）"
+ },
+ "aos-hook-plan-1120": {
+  "description": "「提供 hook 點」的介面：設計稿與施工計劃（11-20）——宣告檔、呼叫端小程式庫、發事件的指令、loop 層的兩個新點；只出稿，沒改程式",
+  "index": "aos-hook-plan-1120/_index.json"
+ },
+ "aos-init-kernel-1120": {
+  "description": "線 aos-init-kernel-1120：「買了板子要灌的初始 kernel＝llm＋權限沙箱、都可選」的調查與發想——現況盤點、可能的切法、待裁題"
+ },
+ "aos-kask-1120": {
+  "description": "「寄信問 kernel」的基礎協議（線 aos-kask-1120，調查＋發想）：今天唯一的問句信是「表在哪」、由 daemon 本體回；問腦總機把問句當壞信拒、掛 proc 的站轉給 daemon 回「收到」；用一支 hook 不改程式就能回一份 json，但 hook 不能回信，所以一問兩答；八題等你"
+ },
+ "aos-kask-1120.md": {
+  "description": "線 aos-kask-1120 紀錄：「寄信問 kernel」基礎協議的調查與發想——只寫 thinking，原型在暫存夾"
+ },
+ "aos-kres-1120": {
+  "description": "kernel 的資源基底與排程介面（線 aos-kres-1120，發想）：資源基底＝請求帶的 json＋kernel 放話的 schema＋粗化／細化＋記帳，今天用 hook 就能做單人版；排程介面「骨架本來就有」對一半，骨架有叫「誰先」的口但規則每包自寫、hook 碰不到；九題等你"
+ },
+ "aos-pylib-k0-1120.md": {
+  "description": "一句話"
+ },
+ "aos-pylib-k1-1120.md": {
+  "description": "一句話"
+ },
+ "aos-pylib-k2-1120.md": {
+  "description": "一句話"
+ },
+ "aos-pylib-plan-1120": {
+  "description": "「編譯這塊變成整套一個 Python 程式庫」的設計稿與施工計劃（11-20，線 aos-pylib-plan-1120）：只出稿，沒改任何程式、範本、條文、知識庫",
+  "index": "aos-pylib-plan-1120/_index.json"
+ },
+ "shared-docs-1120.md": {
+  "description": "線 shared-docs-1120：把 k1、k2 因檔被佔而沒補的字補進共用文件"
+ }
+}
