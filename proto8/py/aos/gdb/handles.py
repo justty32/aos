@@ -1,4 +1,4 @@
-"""aos.gdb.handles - a.bp 交回去給人拿著的兩種物件：Breakpoint（a.bp.add.<種類>(...) 回的斷點，屬性每次讀都重新查）與 Pending（resume／step／pause 給 wait=False 時回的，is_done() 問好了沒）。
+"""aos.gdb.handles - a.bp 交回去給人拿著的兩種物件：Breakpoint（a.bp.add.<種類>(...) 與 a.bp.set 回的斷點，屬性每次讀都重新查）與 Pending（resume／step／pause 給 wait=False 時回的，is_done() 問好了沒、cancel() 不等了）。
 
 使用者 11-20 選項框（紀錄 thinking/2026-11/20/aos-gdb-問答-1120.md、aos-gdb-wait-1120.md）：
     a.bp.add「回物件、帶屬性」；屬性「每次讀都重新查」（斷點被刪掉後讀屬性會報錯）；id 純數字、種類放在屬性（.kind）。
@@ -65,11 +65,14 @@ class Pending:
     """resume／step／pause 給 wait=False 時回的：動作已經送出，等它停下的那段在背景（這個 Python 行程裡的一條執行緒）跑。
     is_done()＝好了沒（停了、確定不會停、或等出錯了都算好了）；wait()＝等到好了，回跟 wait=True 時一樣的東西（.outcome、.head），
     背景裡丟的錯（例如 a.bp.timeout_s 到了的 Timeout）在 wait() 丟。wait() 裡按 Ctrl-C 只是這次不等了，背景照等。
-    背景裡不印「still waiting」那一行（a.bp.report_s 不用在這裡）。"""
+    背景裡不印「still waiting」那一行（a.bp.report_s 不用在這裡）。
+    cancel()＝不等了（使用者 11-20 選「Pending 加 cancel()」）：只是背景不再等，已經送出的放行／resume／pause 一樣都不收回；
+    之後 is_done() 是 True，wait() 回 outcome "cancelled" 的結果（剛好已經停了或已經好了＝照原本的結果）。"""
 
     def __init__(self, what, name, run=None, value=None):
+        """run＝背景跑的那段，收一個 threading.Event（設了＝cancel() 叫它不等了），回結果；value＝不用等、一開始就好了的結果。"""
         self._what, self._name = what, name
-        self._done = threading.Event()
+        self._done, self._cancel = threading.Event(), threading.Event()
         self._out, self._err = value, None
         if run is None:
             self._done.set()
@@ -78,7 +81,7 @@ class Pending:
 
     def _go(self, run):
         try:
-            self._out = run()
+            self._out = run(self._cancel)
         except BaseException as e:               # 什麼錯都留給 wait()
             self._err = e
         finally:
@@ -96,9 +99,19 @@ class Pending:
             raise self._err
         return self._out
 
+    def cancel(self):
+        """不等了：叫背景停下來（不收回已經送出的東西），等它真的停了才回（通常不到 0.1 秒）。
+        回 True＝是這次 cancel 讓它好的（之後 wait() 的 outcome 是 "cancelled"）；False＝早就好了，什麼都沒變。"""
+        if self._done.is_set():
+            return False
+        self._cancel.set()
+        while not self._done.wait(0.1):
+            pass
+        return self._err is None and getattr(self._out, "outcome", None) == "cancelled"
+
     def __repr__(self):
         if not self._done.is_set():
-            return "<%s on %s: still waiting; .is_done() asks, .wait() waits>" % (self._what, self._name)
+            return "<%s on %s: still waiting; .is_done() asks, .wait() waits, .cancel() stops waiting>" % (self._what, self._name)
         if self._err is not None:
             return "<%s on %s: done, failed: %s>" % (self._what, self._name, self._err)
         return "<%s on %s: done: %s>" % (self._what, self._name, self._out.head)

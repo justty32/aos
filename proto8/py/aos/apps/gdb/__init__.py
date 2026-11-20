@@ -31,7 +31,7 @@ every breakpoint thing is under a.bp:
   a.bp.add.watch(py=lambda t: len(t.history(0)) > 20)   another proc looks every 0.5 s and pauses it
   a.bp.add                                     lists every kind (tab completes them)
 the three controls wait until it stops again and show where (wait=False: return at once with p;
-p.is_done() says if it is done, p.wait() gives the same result):
+p.is_done() says if it is done, p.wait() gives the same result, p.cancel() stops waiting and takes nothing back):
   a.say("hi"); a.bp.resume()
                            # stopped at breakpoint 1 (before_tool: write)
   a.bp.resume()            go on (a held tool call runs as it was) and wait for the next stop;
@@ -42,6 +42,7 @@ p.is_done() says if it is done, p.wait() gives the same result):
   a line on stderr every a.bp.report_s seconds; Ctrl-C = stop waiting, the agent goes on.
   a.bp.why(); a.bp.held(); a.bp.stopped(); a.bp.notes()   where and why it stopped
   a.bp.ls(); a.bp.get(b); a.bp.set(b, enabled=False, times=3, once=True); a.bp.rm(b); a.bp.clear()
+                           set returns the breakpoint too; on disk number 3 is gdb_0003 (gdbw_0003 for a watcher)
 Every call prints the aos command behind it on stderr ($ ...); aos.py.echo = False stops that.
 The same names work in any python3 with $AOS_HOME/lib on sys.path (there echo is off).
 More: proto8/py/aos/apps/gdb/README.md

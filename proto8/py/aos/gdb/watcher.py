@@ -22,7 +22,7 @@ import shutil
 import signal
 
 from aos.gdb import trigger
-from aos.gdb.look import Look, Failed, bp_id, run
+from aos.gdb.look import Look, Failed, bp_id, bp_name, run
 
 PREFIX = "gdbw_"                                # 觀察者在 daemon 表上的名字一律以此開頭
 SPEC = "watch.json"
@@ -209,8 +209,8 @@ def about(spec):
 
 
 def proc_of(id):
-    """斷點 id（號碼或名字）→ 表上的 proc 名 gdbw_<id>。"""
-    return PREFIX + str(id)
+    """斷點 id（號碼或名字）→ 表上的 proc 名 gdbw_<id>（號碼補零到 4 位，例 gdbw_0002；look.bp_name）。"""
+    return PREFIX + bp_name(id)
 
 
 def _used_numbers(daemon, table):

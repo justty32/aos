@@ -1,4 +1,4 @@
-"""入口 aos.py 的把手與 aos.gdb 斷點（a.bp、a.look）對真的 aos 樹（start-api 抄一份、假腦）實跑：a.bp 的增刪改查（id 純數字、刪了不重用、add 回的物件屬性每次重查）；控制 resume／step／pause 預設等到停下才回、回停在哪（wait=False 回 Pending，is_done() 由 False 變 True、結果跟等的版本同一句）（沒停著時 resume 只等、step 走一格、閒著或行程不在就回「沒停」、Ctrl-C 只是不等了且不留殘局、timeout_s）；工具要跑之前扣住→看→續＝工具真的跑了；扣著時別人 pause、sleep 再 wake、shell ctl resume；跑完才停、連錯兩次才停、條件壞了不停不掛、舊字條；觀察者（丙）停住目標、字條 by watch、壞了不影響目標、一個看兩隻、拿掉後行程沒了。"""
+"""入口 aos.py 的把手與 aos.gdb 斷點（a.bp、a.look）對真的 aos 樹（start-api 抄一份、假腦）實跑：a.bp 的增刪改查（id 純數字、刪了不重用、add 回的物件屬性每次重查）；控制 resume／step／pause 預設等到停下才回、回停在哪（wait=False 回 Pending，is_done() 由 False 變 True、結果跟等的版本同一句；cancel() 只是不等、step 的 pause 照停；set 也回斷點物件；hook 名號碼補零 gdb_0001）（沒停著時 resume 只等、step 走一格、閒著或行程不在就回「沒停」、Ctrl-C 只是不等了且不留殘局、timeout_s）；工具要跑之前扣住→看→續＝工具真的跑了；扣著時別人 pause、sleep 再 wake、shell ctl resume；跑完才停、連錯兩次才停、條件壞了不停不掛、舊字條；觀察者（丙）停住目標、字條 by watch、壞了不影響目標、一個看兩隻、拿掉後行程沒了。"""
 import json
 import os
 from pathlib import Path
@@ -307,20 +307,23 @@ class Live(unittest.TestCase):
         with self.assertRaises(Failed):
             a.bp.get("no_such")
         # 改：停用＝hook 拿下、設定留著；停用時不停
-        self.assertFalse(a.bp.set(b1, enabled=False)["enabled"])
+        off = a.bp.set(b1, enabled=False)                              # set 也回斷點物件（使用者 11-20「a.bp.set 也回物件」）
+        self.assertTrue(isinstance(off, Breakpoint) and off == b1 and off.kind == "before_tool")
+        self.assertFalse(off.enabled)
         self.assertFalse(b1.enabled)
-        self.assertNotIn("gdb_%d" % b1.id, a.hook.ls() or "")
+        self.assertNotIn("gdb_%04d" % b1.id, a.hook.ls() or "")
         x = a.say("ten")
         self.assertIn("FAKE ANSWER to: ten", a.listen(timeout_s=30, letter=x))
         self.assertFalse(a.bp.stopped())
         on = a.bp.set(b1, enabled=True, once=True)
-        self.assertEqual((on["enabled"], on["once"]), (True, True))
-        self.assertIn("once", on["about"])
-        self.assertEqual(a.bp.set(b2, times=3)["times"], 3)
-        self.assertEqual(a.bp.set(w, times=4)["times"], 4)
-        self.assertFalse(a.bp.set(w, enabled=False)["enabled"])
-        until(lambda: self.row("gdbw_%d" % w.id)["phase"] == "stopped")
-        self.assertTrue(a.bp.set(w.id, enabled=True)["enabled"])
+        self.assertEqual((on.enabled, on.once), (True, True))
+        self.assertIn("once", on.about)
+        self.assertEqual(a.bp.set(b2, times=3).times, 3)
+        self.assertEqual(a.bp.set(w, times=4).times, 4)
+        self.assertFalse(a.bp.set(w, enabled=False).enabled)
+        until(lambda: self.row("gdbw_%04d" % w.id)["phase"] == "stopped")
+        won = a.bp.set(w.id, enabled=True)                             # 觀察者也回物件；給號碼回的 .id 也是號碼
+        self.assertEqual((won.id, won.kind, won.enabled), (w.id, "watch", True))
         y = a.say("ten b")                                             # 啟用回來：照停
         head = "stopped at breakpoint %d (before_tool: peek_now_time)" % b1.id
         self.assertEqual(a.bp.resume().head, head)
@@ -336,7 +339,7 @@ class Live(unittest.TestCase):
         self.assertEqual([r["id"] for r in a.bp.ls()], [b1.id])
         with self.assertRaises(Failed):
             a.bp.get(b2)
-        self.assertIsNone(self.row("gdbw_%d" % w.id))
+        self.assertIsNone(self.row("gdbw_%04d" % w.id))
         a.bp.clear()
         self.assertEqual(a.bp.ls(), [])
         from aos.py import breakpoint as bp                            # bp.attach 回的跟 a.bp 同一種
@@ -498,7 +501,7 @@ class Live(unittest.TestCase):
         a.bp.rm(b3)
         w = a.bp.add.watch(sh="exit 10", every_ms=200)
         self.assertEqual((w.id, w.kind), (b3.id + 1, "watch"))      # 觀察者跟觸發器同一條數列
-        self.assertIsNotNone(self.row("gdbw_%d" % w.id))
+        self.assertIsNotNone(self.row("gdbw_%04d" % w.id))
         a.bp.rm(w)
         w2 = a.bp.add.watch(sh="exit 10", every_ms=200)
         self.assertEqual(w2.id, w.id + 1)
@@ -519,6 +522,33 @@ class Live(unittest.TestCase):
             b2.fired                                               # 刪掉後讀屬性＝報錯
         self.assertEqual(e.exception.code, "BreakpointGone")
         self.assertIn("FAKE ANSWER to: nineteen", a.listen(timeout_s=30, letter=x))
+
+    # ---- cancel() 與補零（使用者 11-20 三小題都選，線 aos-gdb-small-1120）----
+    def test_23_cancel_stops_waiting_and_takes_nothing_back(self):
+        a = self.a
+        a.bp.add.after_tool(sh="sleep 3; exit 10")                 # act 這一格拖 3 秒（條件永遠不算）
+        b = a.bp.add.before_tool("peek_now_time", once=True)
+        names = [r["name"] for r in a.hook.ls(json=True)]
+        self.assertIn("gdb_%04d" % b.id, names)                    # 磁碟上的名字補零；.id 照舊是 int
+        self.assertTrue(os.path.isdir(os.path.join(a.stack, "hooks", "gdb_%04d" % b.id)))
+        x = a.say("twenty three")
+        self.assertEqual(a.bp.resume().head, "stopped at breakpoint %d (before_tool: peek_now_time)" % b.id)
+        p = a.bp.step(wait=False)                                  # 放行就回；act 還要約 3 秒
+        self.assertFalse(p.is_done())
+        self.assertTrue(p.cancel())                                # 不等了
+        self.assertTrue(p.is_done())
+        r = p.wait()
+        self.assertEqual((r.outcome, r.head),
+                         ("cancelled", "stopped waiting (cancel()); nothing is taken back: what a.bp.step() sent stays sent"))
+        self.assertFalse(a.bp.stopped())                           # 還在 act 裡
+        self.assertIsNotNone(trigger.ctl_unapplied(a.stack))       # step 送的 pause 沒收回
+        until(a.bp.stopped, timeout=30)                            # 這一格做完照停
+        self.assertEqual(a.look.where(), "think")
+        q = a.bp.pause(wait=False)                                 # 已經停著：一拿到就好了，cancel 什麼都不變
+        self.assertFalse(q.cancel())
+        self.assertEqual(q.wait().outcome, "stopped")
+        self.assertEqual(a.bp.resume().outcome, "idle")
+        self.assertIn("FAKE ANSWER to: twenty three", a.listen(timeout_s=30, letter=x))
 
     # ---- 骨架起的 agent（使用者 11-19 下午選「骨架帶一行空的 HOOKS」，線 aos-bpfix-1119）----
     def skeleton_agent(self, name, drop_hooks=False):
@@ -584,7 +614,7 @@ class Live(unittest.TestCase):
         why = a.bp.why()
         self.assertTrue(why.current)
         note = why.notes[-1]
-        self.assertEqual((note["by"], note["trigger"], note["detail"]["target"]), ("watch", "gdbw_%d" % w.id, "ann"))
+        self.assertEqual((note["by"], note["trigger"], note["detail"]["target"]), ("watch", "gdbw_%04d" % w.id, "ann"))
         self.assertIn("paused by breakpoint %d (a watcher)" % w.id, repr(why))
         self.assertEqual((w.fired, w.here), (1, True))
         self.assertEqual(why.breakpoint, w)
@@ -614,7 +644,7 @@ class Live(unittest.TestCase):
         a.bp.rm(w2)
         a.bp.rm(w)
         self.assertFalse(alive(pid2))
-        self.assertIsNone(self.row("gdbw_%d" % w2.id))
+        self.assertIsNone(self.row("gdbw_%04d" % w2.id))
         self.assertEqual(self.watchers(), [])
         self.assertEqual(a.bp.ls(), [])
 

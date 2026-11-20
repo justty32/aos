@@ -9,7 +9,7 @@
 兩層（把手在入口 aos.py.agent；這裡是它的延伸 a.bp 與 a.look 的本體）：
     a.xxx＝aos-agent xxx（aos.py 的通用代理）；a.look＝讀 stack 的檔（Look：where、history、observed、request、queue、stderr、file）。
     a.bp＝斷點（class Breakpoints）：增 a.bp.add.<種類>(...)（回斷點物件 Breakpoint）、rm／set／ls／get；控制 resume／step／pause（預設等到停下才回；
-    wait=False＝送出就回 Pending，is_done() 問好了沒）；查 why／held／stopped、notes；clear。
+    wait=False＝送出就回 Pending，is_done() 問好了沒、cancel() 不等了）；查 why／held／stopped、notes；clear。
 控制動作（使用者 11-19「我記得有step into還是啥的，參考那些ide」，選項框選「resume/step 自己等到停」；「不該有這個方法」＝skip 拿掉；
     線 aosgdb-verbs-1119，紀錄 thinking/2026-11/19/aos-gdb-動詞-1119.md）：resume＝繼續跑、等下一次停；step＝走 fsm 一格就停；pause＝現在停（使用者 11-19 選「改 a.bp.pause()」：VS Code 的「停一下」叫 Pause）。
     wait=（使用者 11-20 選項框：加 wait= 的是「暫停 a.bp.pause()」、不等時「回一個可以查的物件。用is_done()」、resume／step「三個都加」；
@@ -19,7 +19,8 @@
     after_start、after_stop；on_clock 不收）、tool_error、watch；tab 補得出、打錯當場 AttributeError；主詞＝能篩名字的事件才有（工具名，brain_failed 是錯誤代號）。
 id（使用者 11-20：「不能純數字，然後搭配id、屬性(hook點種類)嗎？」＝純數字、種類放在屬性；號碼「不重用」；add「回物件、帶屬性」、屬性「每次讀都重新查」）：
     號碼是 int，從 1 起、刪了不再用：計數器在 agent 的 stack（gdb/next_id.json，trigger.take_id）；觀察者從它看的每一隻一起拿，所以每隻的 a.bp 裡都不撞。
-    id="mine" 自己取名照留（str，不能全是數字）；rm／set／get／replace 收 Breakpoint、號碼、數字字串或名字。
+    id="mine" 自己取名照留（str，不能全是數字）；rm／set／get／replace 收 Breakpoint、號碼、數字字串或名字；set 也回 Breakpoint（使用者 11-20 選「a.bp.set 也回物件」）。
+    磁碟上的名字（hook 名、小格夾、觀察者的 proc 名）號碼補零到 4 位：gdb_0002、gdbw_0012（使用者 11-20 選「斷點號碼檔名補零」）；.id 照舊是 int 2。
 斷點兩種，同一套 id：
     觸發器（a.bp.add.before_tool(...) 等事件）：agent 身上一個 hook（gdb_<id>），事件來了判條件。
         事件還沒發生（before_tool、before_queue）＝扣住（hold）：hook handler 自己不回，工具還沒跑；a.bp.resume() 放行、照原樣跑。
@@ -58,7 +59,7 @@ import time
 from aos.agentlib import hooks as _hooks
 from aos.gdb import trigger, watcher as _watch
 from aos.gdb.handles import Breakpoint, Pending
-from aos.gdb.look import Look, Text, Why, bp_id, run, Failed  # noqa: F401
+from aos.gdb.look import Look, Text, Why, bp_id, bp_name, run, Failed  # noqa: F401
 from aos.py._shell import Timeout, call, show
 
 HANDLER = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/gdb_trigger"}
@@ -210,7 +211,7 @@ replace＝同 id 已有就換掉（id＝已有的號碼或斷點物件也行）�
 
 class Breakpoints:
     """a.bp：以斷點為核心——增 add.<種類>(...)（回 Breakpoint）、刪 rm、改 set、查 ls／get（收 Breakpoint 或 id：號碼 int、數字字串、自己取的名字）；
-    控制 resume（繼續跑）、step（走一格）、pause（現在停），只收 wait=：預設等到停下才回、回停在哪；wait=False＝送出就回 Pending（is_done()、wait()）；
+    控制 resume（繼續跑）、step（走一格）、pause（現在停），只收 wait=：預設等到停下才回、回停在哪；wait=False＝送出就回 Pending（is_done()、wait()、cancel()）；
     查 why（停在哪、為什麼）／held（扣住的那一次）／stopped（停著沒）；字條 notes；全拿掉 clear。
     等的設定（屬性，不是參數）：idle_s＝閒著多久算「不會停了」、report_s＝每幾秒印一行現況（0＝不印）、timeout_s＝最多等幾秒（None＝不限）。
     a.bp 每次取都是新的物件，所以設定與「自己送出的 pause」記在模組裡、以 (daemon, 名字) 為鍵：同一隻的每個 a.bp 共用。"""
@@ -338,7 +339,8 @@ class Breakpoints:
     # ---- 改 ----
     def set(self, id, enabled=None, times=None, once=None):
         """改一個斷點（收 Breakpoint 或 id）：enabled（停用＝觸發器把 hook 拿下、設定留著；觀察者 aos-daemon-ctl stop。啟用＝裝回去／start）、times、once。
-        改了 times／once 計數照留（停過幾次不歸零）。條件、事件、tool、every_ms、看誰改不了：同一個 id 重下 a.bp.add.<種類>(..., id=ID, replace=True)。回改完的 get(id)。"""
+        改了 times／once 計數照留（停過幾次不歸零）。條件、事件、tool、every_ms、看誰改不了：同一個 id 重下 a.bp.add.<種類>(..., id=ID, replace=True)。
+        回斷點物件（Breakpoint，跟 a.bp.add 回的同一種：屬性每次讀都重新查；要一份當下的 dict 用 a.bp.get(id)）。"""
         kind, id = self._kind(id)
         if times is not None and (not isinstance(times, int) or isinstance(times, bool) or times < 1):
             raise Failed("bp.set", "times must be a whole number >= 1")
@@ -356,7 +358,7 @@ class Breakpoints:
             trigger.write_json(path, spec)       # gdb_watch 每圈重讀 watch.json
             if enabled is not None:
                 run(["aos-daemon-ctl", "--daemon", a.daemon, "start" if enabled else "stop", _watch.proc_of(id)], echo=True)
-            return self.get(id)
+            return Breakpoint(self, id)
         spec = self._spec(id)
         if times is not None:
             spec["times"] = times
@@ -379,7 +381,7 @@ class Breakpoints:
         except Failed:
             undo()                                 # 裝不上／拿不下＝設定放回原本的，不留改一半的（線 aos-bpfix-1119）
             raise
-        return self.get(id)
+        return Breakpoint(self, id)
 
     # ---- 查 ----
     def ls(self, quiet=False):
@@ -413,7 +415,8 @@ class Breakpoints:
         它不會停時不卡死：閒著（stage idle、信箱與 cur 都空、沒有在途的 pause）連續 a.bp.idle_s 秒＝回 "did not stop: idle"；
         行程不在＝回 "did not stop: not running"；等的時候每 a.bp.report_s 秒在 stderr 印一行現況；a.bp.timeout_s 有給才會逾時（丟 Timeout）。
         Ctrl-C＝只是不等了：agent 照跑、什麼都不留（先前 a.bp.step() 送出還沒套用的 pause 一併收回），回一句說明。
-        wait=False：放行／ctl resume 送出就回 Pending，等的那段在背景跑；p.is_done() 問好了沒，p.wait() 回跟 wait=True 一樣的東西。"""
+        wait=False：放行／ctl resume 送出就回 Pending，等的那段在背景跑；p.is_done() 問好了沒，p.wait() 回跟 wait=True 一樣的東西，
+        p.cancel() 不等了（只是不等：送出的放行／resume／pause 不收回，跟 Ctrl-C 不同）。"""
         _check_wait(wait, "resume")
         h, sig0 = self.held(), self._sig()
         with _Defer() as d:
@@ -463,7 +466,8 @@ class Breakpoints:
         """送完指令之後：wait＝在這裡等到停（_wait）；不等＝同一段等在背景執行緒跑（不印定期那一行），回 Pending。"""
         if wait:
             return self._wait(sig0, what, hit, own=own)
-        return Pending("a.bp.%s(wait=False)" % what, self._a.name, run=lambda: self._wait(sig0, what, False, own=own, report=False))
+        return Pending("a.bp.%s(wait=False)" % what, self._a.name,
+                       run=lambda cancel: self._wait(sig0, what, False, own=own, report=False, cancel=cancel))
 
     # ---- 停在哪、為什麼 ----
     def held(self):
@@ -695,8 +699,9 @@ class Breakpoints:
                 pass
         return "idle"
 
-    def _wait(self, sig0, what, hit, own=None, report=True):
-        """resume／step／pause 共用的等：停著而且跟開始時不是同一次＝停了；閒著或行程不在連續 idle_s 秒＝沒停；Ctrl-C＝不等了。report＝印定期那一行。"""
+    def _wait(self, sig0, what, hit, own=None, report=True, cancel=None):
+        """resume／step／pause 共用的等：停著而且跟開始時不是同一次＝停了；閒著或行程不在連續 idle_s 秒＝沒停；Ctrl-C＝不等了。report＝印定期那一行。
+        cancel（Pending 的 threading.Event）設了＝不等了（outcome cancelled）：只是不再等，送出的東西一樣都不收回（step 送的 pause 照留）。"""
         a = self._a
         start = last = time.monotonic()
         quiet = None
@@ -715,6 +720,8 @@ class Breakpoints:
                             sig0 = self._sig()
                             continue
                         return self._stopped(what, own)
+                if cancel is not None and cancel.is_set():
+                    return self._result("cancelled", "stopped waiting (cancel()); nothing is taken back: what a.bp.%s() sent stays sent" % what)
                 now = time.monotonic()
                 body = self._body()
                 if body in ("idle", "gone"):
@@ -901,8 +908,8 @@ def _order(id):
 
 
 def _hook(id):
-    """斷點 id → 觸發器的 hook 名（也是小格夾名）gdb_<id>。"""
-    return trigger.PREFIX + str(id)
+    """斷點 id → 觸發器的 hook 名（也是小格夾名）gdb_<id>：號碼補零到 4 位（gdb_0002，使用者 11-20 選「斷點號碼檔名補零」），名字原樣。"""
+    return trigger.PREFIX + bp_name(id)
 
 
 def _kind_of(spec):

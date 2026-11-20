@@ -399,7 +399,7 @@ class Shape(unittest.TestCase):
         go = threading.Event()
         w = Why("ann", True, True, [])
         w.outcome, w.head = "stopped", "stopped after one step, before think"
-        p = Pending("a.bp.step(wait=False)", "ann", run=lambda: (go.wait(5), w)[1])
+        p = Pending("a.bp.step(wait=False)", "ann", run=lambda cancel: (go.wait(5), w)[1])
         self.assertFalse(p.is_done())
         self.assertIn("still waiting", repr(p))
         go.set()
@@ -407,7 +407,7 @@ class Shape(unittest.TestCase):
         self.assertTrue(p.is_done())
         self.assertIn("done: stopped after one step", repr(p))
 
-        def boom():
+        def boom(cancel):
             raise Failed("a.bp.resume", "it broke")
         q = Pending("a.bp.resume(wait=False)", "ann", run=boom)
         with self.assertRaises(Failed):
@@ -510,7 +510,7 @@ class AddFails(unittest.TestCase):
     def test_failing_add_next_to_others_and_replace_puts_back(self):
         self.mode("ok")
         self.assertEqual(self.bp.add.after_tool("write", times=2).id, 1)
-        cell = self.tmp / "stack" / "hooks" / "gdb_1"
+        cell = self.tmp / "stack" / "hooks" / "gdb_0001"
         trigger.write_json(str(cell / trigger.COUNT), {"seen": 5, "streak": 1, "fired": 2})
         before = {n: (cell / n).read_bytes() for n in (trigger.SPEC, trigger.COUNT)}
         self.mode("fail")
@@ -519,7 +519,7 @@ class AddFails(unittest.TestCase):
         with self.assertRaises(self.g.Failed):
             self.bp.add.after_tool("read", id=1, replace=True)                   # 重下失敗：原本的設定與計數放回去
         self.assertEqual({n: (cell / n).read_bytes() for n in before}, before)
-        self.assertEqual(sorted(p.name for p in (self.tmp / "stack" / "hooks").iterdir()), ["gdb_1"])
+        self.assertEqual(sorted(p.name for p in (self.tmp / "stack" / "hooks").iterdir()), ["gdb_0001"])
         with self.assertRaises(self.g.Failed):
             self.bp.set(1, times=5)                                              # 改也一樣：裝不上＝設定不變
         self.assertEqual((cell / trigger.SPEC).read_bytes(), before[trigger.SPEC])
@@ -535,7 +535,7 @@ class AddFails(unittest.TestCase):
         self.assertEqual(list((self.tmp / "daemon" / "procs").iterdir()), [])
         nxt = self.tmp / "stack" / "gdb" / trigger.NEXT
         self.assertEqual(json.loads(nxt.read_text()), {"next": 1})               # 掛不上表＝號碼還回去了
-        kept = self.tmp / "daemon" / "procs" / "gdbw_5"                          # 先前 rm 過、留著給人看的夾：不動，號碼也不再用
+        kept = self.tmp / "daemon" / "procs" / "gdbw_0005"                         # 先前 rm 過、留著給人看的夾：不動，號碼也不再用
         kept.mkdir()
         (kept / "old.txt").write_text("kept")
         with self.assertRaises(self.g.Failed):
@@ -565,7 +565,7 @@ class Ids(unittest.TestCase):
         self.assertEqual(self.bp.ls(), [])
         self.assertEqual(self.bp.add.tool_error().id, 4)
         self.assertEqual(json.loads((self.tmp / "stack" / "gdb" / trigger.NEXT).read_text()), {"next": 5})
-        self.assertEqual(sorted(json.loads((self.tmp / "hooks.json").read_text())), ["gdb_4"])   # hook 名＝gdb_<號碼>
+        self.assertEqual(sorted(json.loads((self.tmp / "hooks.json").read_text())), ["gdb_0004"])   # hook 名＝gdb_<補零的號碼>
 
     def test_add_returns_a_live_object(self):
         self.mode("ok")
@@ -573,9 +573,9 @@ class Ids(unittest.TestCase):
         self.assertEqual((b.id, b.kind, b.how, b.times, b.enabled, b.fired), (1, "after_tool", "pause", 2, True, 0))
         self.assertEqual(self.bp.add.tool_error().kind, "tool_error")
         self.assertEqual(self.bp.add.before_queue().kind, "before_queue")
-        trigger.write_json(str(self.tmp / "stack" / "hooks" / "gdb_1" / trigger.COUNT), {"seen": 4, "fired": 2})
+        trigger.write_json(str(self.tmp / "stack" / "hooks" / "gdb_0001" / trigger.COUNT), {"seen": 4, "fired": 2})
         self.assertEqual((b.fired, b.seen), (2, 4))                              # 每次讀都重新查
-        self.assertEqual(self.bp.set(b, times=3)["times"], 3)                    # set 收物件
+        self.assertEqual(self.bp.set(b, times=3).times, 3)                       # set 收物件（也回物件）
         self.assertEqual(b.times, 3)
         self.assertEqual(self.bp.get(b)["id"], 1)                                # get 收物件也收號碼
         self.assertEqual(self.bp.get(1), self.bp.get("1"))

@@ -47,12 +47,21 @@ def bp_id(name):
     return int(s) if s.isascii() and s.isdigit() else s
 
 
+DIGITS = 4                                       # 號碼在名字裡補零到幾位（使用者 11-20 選「斷點號碼檔名補零」；紀錄寫的例子是 gdb_0002）
+
+
+def bp_name(id):
+    """斷點 id → hook 名／proc 名裡字首後面那段：號碼補零到 DIGITS 位（gdb_0002：hook 照名字的字典順序跑、ls 夾也照號碼排；
+    過了 9999 就是原樣的 5 位以上，順序從那裡起不保證），自己取的名字原樣。bp_id 反過來（"0002" → 2）。"""
+    return "%0*d" % (DIGITS, id) if isinstance(id, int) and not isinstance(id, bool) else str(id)
+
+
 class Why:
     """why() 的結果：paused（停著沒：ctl pause 已套用，或扣在斷點上）、held（扣住的那份 hold.json 或 None）、
     current（最後一張字條是不是這次停的原因）、notes（上次 resume 之後的字條）、pending（扣住之後又來的 ctl 指令 (seq, cmd) 或 None）、
     breakpoint（現在停在哪個斷點的 id：號碼 int，或自己取的名字 str；不是停在斷點上＝None）。
     a.bp.resume()／step()／pause() 回的也是它（wait=False 時是背景等完之後 .wait() 回的），另有 outcome（stopped＝停了、idle＝閒著不會停、
-    gone＝行程不在、interrupted＝Ctrl-C 不等了）與 head（印出來的第一行，例 "stopped at breakpoint 1 (before_tool: write)"）；a.bp.why() 回的這兩個是 None。"""
+    gone＝行程不在、interrupted＝Ctrl-C 不等了、cancelled＝Pending.cancel() 不等了）與 head（印出來的第一行，例 "stopped at breakpoint 1 (before_tool: write)"）；a.bp.why() 回的這兩個是 None。"""
 
     def __init__(self, name, paused, current, notes, held=None, pending=None):
         self.name, self.paused, self.current, self.notes, self.held, self.pending = name, paused, current, notes, held, pending
