@@ -348,6 +348,18 @@
         "[README](../proto8/thinking/2026-11/20/aos-init-kernel-1120/README.md)"
       ],
       "since": "2026-11-20"
+    },
+    "aos-compile-base": {
+      "title": "編譯的通用底座與 Python 函數直接當工具／hook",
+      "status": "等使用者",
+      "flow": "",
+      "what": "調查與發想已寫好（只查只寫，沒改程式）：底座五個形狀、函數當工具／hook 四個形狀與一個 repo 外原型；八題待裁",
+      "next": "等使用者看待裁題",
+      "see": [
+        "[README](../proto8/thinking/2026-11/20/aos-compile-base-1120/README.md)",
+        "[待裁題](../proto8/thinking/2026-11/20/aos-compile-base-1120/09-C-待裁題.md)"
+      ],
+      "since": "2026-11-20"
     }
   }
 }
