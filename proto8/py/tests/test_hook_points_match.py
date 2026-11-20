@@ -1,4 +1,4 @@
-"""Consistency test: the hook_points.json declarations say the same as the event tables the programs use today and as the hand copies (docs, knowledge, self_hook, help texts, gdb); gaps found today are listed as known, not fixed."""
+"""Consistency test: the hook_points.json declarations say the same as the event tables the programs use today and as the hand copies (docs, knowledge, self_hook, help texts, gdb); a hand copy that misses a point or a field fails."""
 import ast
 import importlib.util
 import json
@@ -29,19 +29,9 @@ def fired(points):
 AGENT = dict(fired(ECA), **fired(FSM))   # same nine names on both bodies; fields of both for the doc checks
 FIELDS = {n: set(fired(FSM).get(n, {}).get("fields", {})) | set(fired(ECA).get(n, {}).get("fields", {})) for n in AGENT}
 
-# Gaps between the declarations (= what the code does) and hand copies, found on 11-20 (line aos-hook-k1-1120).
-# Cut 1 changes no doc: whether to fill them is question 8 of proto8/thinking/2026-11/20/aos-hook-plan-1120/10.
-KNOWN_GAPS = {
-    "06-hook.md: after_stop.cause",            # added 11-14 (B7), the doc table never got it
-    "06-hook.md: brain_failed.attempt", "06-hook.md: brain_failed.cause", "06-hook.md: brain_failed.code",
-    "06-hook.md: brain_failed.dropped", "06-hook.md: brain_failed.error", "06-hook.md: brain_failed.retry",
-    "06-hook.md: brain_failed.status", "06-hook.md: brain_failed.wait_s",   # the table says only name, reason
-    "06-hook.md: on_clock.config",              # only in the options table, not in the event row
-    "self_hook/_tooldef.json: brain_failed.attempt", "self_hook/_tooldef.json: brain_failed.cause",
-    "self_hook/_tooldef.json: brain_failed.dropped", "self_hook/_tooldef.json: brain_failed.retry",
-    "self_hook/_tooldef.json: brain_failed.status", "self_hook/_tooldef.json: brain_failed.wait_s",
-    "knowledge me/self_hook.json: after_stop.cause",
-}
+# Gaps between the declarations (= what the code does) and hand copies that are allowed for now: "where: point.field".
+# The 17 found on 11-20 (line aos-hook-k1-1120) were filled by line aos-hook-drift-1120; keep this empty.
+KNOWN_GAPS = frozenset()
 
 
 def assigned(path, name):
@@ -147,7 +137,6 @@ class HandCopies(unittest.TestCase):
     def test_known_gaps_are_still_there(self):
         self.assertEqual(sorted(KNOWN_GAPS - set(gaps())), [], "fixed: take these out of KNOWN_GAPS")
 
-    @unittest.expectedFailure
     def test_hand_copies_match_fully(self):
         self.assertEqual(gaps(), [])
 

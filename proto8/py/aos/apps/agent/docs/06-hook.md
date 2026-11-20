@@ -8,17 +8,19 @@
 
 ## 事件
 
+每個事件什麼時候發、帶哪些欄位，以各身體的宣告檔為準（使用者 11-20 待裁第 4 題「事件欄位以宣告為唯一來源」選「要」）：agent-fsm 四格 [templates/agent-fsm/hook_points.json](../../../../../templates/agent-fsm/hook_points.json)、起來與停下 [py/aos/apps/hook/loop_points.json](../../hook/loop_points.json)，eca 見下面「eca（縮水版）」。下表是手抄的 agent-fsm 版，[py/tests/test_hook_points_match.py](../../../../tests/test_hook_points_match.py) 比對點名與欄位名有沒有漏。
+
 | 事件 | 什麼時候（agent-fsm） | 事件 JSON 多的欄位 | `condition` 比什麼 | 能改 |
 |---|---|---|---|---|
-| `before_queue` | idle：信從 queue 拿出來、進 history 之前 | `letter`、`content` | 不收 condition | 改 `content`、丟掉這封 |
+| `before_queue` | idle：信從 queue 拿出來、進 history 之前（`/compact` 信先被挑走，不過這裡） | `letter`、`content` | 不收 condition | 改 `content`、丟掉這封 |
 | `after_queue` | idle：信進 history 之後 | `letter`、`content` | 不收 condition | 不能 |
 | `before_tool` | act：工具要跑之前 | `name`、`id`、`arguments`（解開的 JSON） | 工具名 | 改 `arguments`、攔下不跑 |
 | `after_tool` | act：工具跑完、結果進 history 之前（被攔下的不觸發） | 上面三個＋`content`、`code`（逾時＝null）、`timed_out` | 工具名 | 改 `content` |
-| `brain_failed` | wait：`BrainFailed`／`SendFailed`／`ReplyBad`／`BudgetMissing`（額度拒絕，11-14 AK17）那一刻 | `name`（代號）、`reason` | 代號 | 不能 |
+| `brain_failed` | wait：`LlmKernelMissing`／`SendFailed`／`BudgetMissing`（額度拒絕，11-14 AK17）／`BrainFailed`／`ReplyBad` 那一刻 | `name`（代號）、`reason`（一句話）；解到 kernel 的 error 物件時多 `error`（`BudgetMissing`、`BrainFailed`）；只有 `BrainFailed` 帶 `retry`（true＝等一下重送同一份、false＝agent 停）、`attempt`（連續第幾次失敗），kernel 的 error 有才帶 `code`（kernel 的代號）、`status`（HTTP 狀態），`retry` 為 true 才帶 `wait_s`（幾秒後再試） | 代號 | 不能 |
 | `tool_added` | think：工具清單多了名字（一個名字一次；第一次只記不觸發） | `name`、`path` | 工具名 | 不能 |
 | `after_start` | loop 起來、第一次之前（loop.json 的 `on_start` → `py/tools/agent/hook_fire`） | — | 不收 condition | 不能 |
-| `after_stop` | loop 要退時（`on_stop`：stop、sleep、rm、daemon 收工、出錯停；kill -9 不跑） | `code`（要退的碼）、`signal`（收到的訊號，沒有＝null） | 不收 condition | 不能 |
-| `on_clock` | 每格開頭（idle、think、wait、act）看一次時鐘，條件到了才跑（見下面「時鐘」） | `clock`、`cycle`、`interval_ms`、`first`、`last_cycle`、`missed` | 不收 condition（條件寫 `every_cycles`／`every_ms`） | 不能 |
+| `after_stop` | loop 要退時（`on_stop`：stop、sleep、rm、daemon 收工、出錯停；kill -9 不跑） | `code`（要退的碼）、`signal`（收到的訊號，沒有＝null）、`cause`（為什麼停：`stop`／`sleep`／`remove`／`shutdown`／`stuck`／`signal`／`max`／`body_exit`／`error`，aos-loop 給什麼照抄，空的或沒給＝null；給程式比的代號，不是表上給人看的 `reason`） | 不收 condition | 不能 |
+| `on_clock` | 每格開頭（idle、think、wait、act）看一次時鐘，條件到了才跑（見下面「時鐘」） | `clock`、`cycle`、`interval_ms`、`first`、`last_cycle`、`missed`；格裡寫了 `config` 才多 `config`（原樣） | 不收 condition（條件寫 `every_cycles`／`every_ms`） | 不能 |
 
 每份事件 JSON 都有 `event`、`hook`（這個 hook 的名字）、`stack`（agent 的 stack 絕對路徑）。同一事件多個 hook＝照名字排序一個一個跑，前一個改過的後一個看得到，被攔下就不往下。連鎖（hook 寄信給自己又觸發）不檢測，自行承擔。
 
@@ -132,14 +134,15 @@ start／wake 撤單，新活 loop 或新畫面不關；鎖忙 30 秒後再試、
 
 ## eca（縮水版）
 
-eca 的腦是外面的 CLI，aos 只看得到經過自己手的東西（圖紙 § 6）：
+eca 的腦是外面的 CLI，aos 只看得到經過自己手的東西（圖紙 § 6）。事件名跟 agent-fsm 一樣，但有幾個意思不同（使用者 11-20 待裁第 3 題選「各自寫清楚就好」：不改行為、不改名，各身體寫清楚）；以 eca 的宣告檔為準：[py/aos/apps/eca/hook_points.json](../../eca/hook_points.json)（aos-eca-turn）、[py/aos/apps/mcp/hook_points.json](../../mcp/hook_points.json)（aos-mcp），起停同上面的 loop_points.json。
 
-| 事件 | eca | 在哪 |
-|---|---|---|
-| `before_queue`／`after_queue` | 有 | aos-eca-turn 讀信、交給 CLI 之前／信接進 history 之後 |
-| `before_tool`／`after_tool` | 只有經 aos-mcp 叫的 aos 工具 | aos-mcp 的 tools/call |
-| `brain_failed` | 有（`name`＝`CliFailed`／`ReplyMissing`） | aos-eca-turn |
-| `tool_added` | 有（看 aos 登記檔的名單） | aos-eca-turn 每輪開頭 |
-| `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop`（hook_fire） |
-| `on_clock` | 有（冷卻中、退讓的那輪也判） | aos-eca-turn 每輪最開頭 |
-| CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos |
+| 事件 | eca | 在哪 | 跟 agent-fsm 不同的地方 |
+|---|---|---|---|
+| `before_queue` | 有：每封好信交給 CLI 之前，**slash 信也過**；等回答時又來的信也過 | aos-eca-turn | agent-fsm 的 `/compact` 信不過 |
+| `after_queue` | 有：信交給 CLI、接進 history、收掉之後；slash 那一輪也跑 | aos-eca-turn | hook 失敗等回答接進 history 才報（agent-fsm 當場退 1） |
+| `before_tool`／`after_tool` | 只有經 aos-mcp 叫的 aos 工具；欄位同上，但 `id`＝JSON-RPC 的 id 轉成字串（沒有＝空字串），`after_tool` 的 `content`＝各段文字併成一段 | aos-mcp 的 tools/call | CLI 自帶工具看不到；hook 失敗（`on_error` stop）＝那次工具呼叫回 isError、CLI 照樣往下，agent 不停 |
+| `brain_failed` | 有：交給 CLI 之後 CLI 失敗；`name`＝`CliFailed`／`ReplyMissing`、`reason`；claude 另帶 `code`（同代號）、`retry`（true＝冷卻後重送）、`attempt`（連續第幾次）、`dropped`（丟掉幾封信）、`retry` 為 true 才帶 `wait_s`（冷卻幾秒），知道時帶 `status`（HTTP 狀態）、`cause`（CLI 自己說的失敗原因）；codex 只有 `name`、`reason` | aos-eca-turn | 代號與欄位不同，沒有 `error` 物件 |
+| `tool_added` | 有（看 aos 登記檔的名單） | aos-eca-turn 每次交給 CLI 之前 | |
+| `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop`（hook_fire） | 同 |
+| `on_clock` | 有（冷卻中、退讓的那輪也判） | aos-eca-turn 每輪最開頭 | 每輪看一次（agent-fsm 每格看一次） |
+| CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos | |

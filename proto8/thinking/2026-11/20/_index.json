@@ -17,6 +17,9 @@
  "aos-gdb-問答-1120.md": {
   "description": "使用者原話（11-20 上午，逐字）"
  },
+ "aos-hook-drift-1120.md": {
+  "description": "hook 文件漂移 17 項補齊，並實跑查證 eca 的 slash 信過兩次 before_queue（屬實，沒修）"
+ },
  "aos-hook-iface-1120": {
   "description": "hook 點的介面與耦合調查（11-20）：誰提供點、誰觸發、誰掛；加一個點要動幾處、耦合多深、可能的形狀、待裁題"
  },
