@@ -140,3 +140,22 @@
 ### 決定
 
 - 頂層問要不要在暫存樹實測加 `session_key` 的差別，他答：「明天吧，這塊確實值得來處理。」（指每輪 1.2 萬 token、快取沒命中這一塊）
+
+## 第 11 則：hook 點都是 ann 自己提供的；擔心 ann 的 .py 太複雜、可能要重構；問 hook 有沒有 py lib
+
+### 原話
+
+「所以這套，interfaces.json中所宣告的hook point，完全就是由ann自己提供的。」（頂層答：對，aos-loop 那份與格程式那份都在 ann 自己的行程裡發，daemon、時鐘、kernel 不替它發。）「很好，就是這樣。啊，那個hook_fire的程式，是一個命令行程式碼？」
+
+「喔太好了，那明天再說這塊。然後hook點都是ann自己提供的，我其實會擔心ann這些.py的原始碼，太過複雜，這可能會需要重構。與hook相關的，有提供py lib嗎？」
+
+### 決定
+
+- `hook_fire` 換成 `aos-hook fire`、刪掉舊的那支：「明天再說這塊」（就是排著的 hook 第 5 刀剩的一半）。
+- 擔心 ann 的格程式太複雜、可能要重構：跟第 1 則（收進子夾、重新規劃架構）、第 2、3 則（起手範本改成借的）是同一件事的又一個理由；沒說要現在做。
+
+### 現況（頂層當場查的）
+
+- hook 有 py lib，分三層：`aos.hook_point`（通用小庫，任何提供者拿來開遙控器、發事件）、`aos.agentlib.agent_hooks`（agent 一家的遙控器，多包了丟信三步、工具被攔的預設字、`tool_added`、`clock_tick`）、`aos.hook_run`（共用引擎：比 condition、寫 `event.json`、跑 handler、解回話）。寫 hook 的程式那一邊另有 `@fn.hook`。
+- 格程式裡跟 hook 有關的程式已經很少：四支各一行 `H = agent_hooks.open(…)`，之後每個點一行（`H.clock_tick()`、`H.take_letter(…)`、`H.guard_tool(…)`、`H.announce_tools(…)`、`H.fire(…)`）。這是 11-20 hook 第 2 刀後半做的。
+- 所以格程式的複雜不在 hook：`wait.py` 644 行、`idle.py` 330 行，裡面是收信、回答配對、冷卻與重試、compact、成本觀測這些。
