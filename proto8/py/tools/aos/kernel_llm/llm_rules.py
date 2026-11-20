@@ -422,14 +422,16 @@ def check(ctx):
 
 
 @guarded
-def order(ctx, incoming):
-    """驗不過的排最前（輪到就回信）；其餘照級數、期限、黏著、速度、等多久、先寄。"""
-    bad, good = [], []
-    for name in sorted(incoming):
-        result = examined(ctx, name, incoming[name])
-        (bad if isinstance(result, Error) else good).append(name if isinstance(result, Error) else result)
-    ranked = ordering.sort(good, ctx.cfg["aging_cycles"], ctx.old_queue["backends"])
-    return bad + [waiting["id"] for waiting in ranked]
+def row(ctx, name, letter):
+    """骨架排先後用的一列（排隊資料）；驗不過回 None，骨架排最前、輪到由 admit 回信。"""
+    result = examined(ctx, name, letter)
+    return None if isinstance(result, Error) else result
+
+
+@guarded
+def rank(ctx, rows):
+    """級數、期限、黏著、速度、等多久、先寄（黏著讀上一輪的 backends）。"""
+    return ordering.sort(rows, ctx.cfg["aging_cycles"], ctx.old_queue["backends"])
 
 
 def budget_extra(ctx, scope, limit, number, **more):

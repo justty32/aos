@@ -745,6 +745,7 @@
       "test_kernel_cut.py": "驗證轉寄中途行程被砍（寄出前、寄出後還沒記對照）重起後不重寄、不漏寄、回信仍代得回去。",
       "test_kernel_hold.py": "用真的 aos-post 與 aos-exec 驗證 after_verdict hook 的「先留著」（hold）與表態檔 decisions/<信名>.json。",
       "test_kernel_hooks.py": "用真的 aos-post 與 aos-exec 驗證 kernel 三個 hook 時機和排隊時的保存。",
+      "test_kernel_rank.py": "驗證骨架的「誰先」一步（round.ordered）：包的 order 整個接手、row／rank 兩個口、驗不過的排最前、都沒有時照信名。",
       "test_kernel_route.py": "用真的 aos-post 與 aos-exec 驗證 after_verdict hook 替單封信指定下一站（照規則分流）與各種邊緣。",
       "test_limits_rule.py": "驗證 kernel 站的份額與身分規則、設定錯誤及真信箱轉寄與拒信。",
       "test_refuse_extra.py": "驗證 kernel 框架：refuse 可帶額外錯誤鍵；after_verdict 保留包的額外鍵與 hook 自己加的鍵。",

@@ -17,7 +17,7 @@
 | 檔案 | 工作 |
 |---|---|
 | `_entry` | 英文 help、參數、共用模組入口，呼叫骨架 |
-| `round.py` | 讀設定、鎖 `requests/.flock`、派發三個 hook 時機、逐封套用判決 |
+| `round.py` | 讀設定、鎖 `requests/.flock`、排先後（`ordered`）、派發三個 hook 時機、逐封套用判決 |
 | `letters.py` | 包 aos-post 的信件本身：認領、看信、收信、拒信與排隊 body |
 | `forwarding.py` | 轉寄對照 `forwarded.json`（防重、寄到一半的待定列）與靠它做的轉寄、代回 |
 | `hooks.py` | 三個事件的設定與回話規則，執行交給共用 hook_run |
@@ -26,7 +26,14 @@
 | `queue_fifo.py` | 先來先掛的排隊窗、寄件人期限與時間換算 |
 | `runner.py` | 「自己跑」零件：把一件工作掛成 daemon 的 proc、看表收成品、逾時、重掛一次、拔列；去處由呼叫的包給 |
 
-包提供 `collect(ctx, before_reply=None)`、`check(ctx)`、`order(ctx, letters)`、`admit(ctx, name, letter)`、`dispatch(ctx, name, letter, detail)`，以及 `load(cfg, cfg_dir)`、`refuse(ctx, name, letter, code, msg)`、`finish(ctx, queued)`。設定不對丟 `round.CfgBad`。包另外提供 `read(path)` 時，骨架改叫它讀設定、不走下面「整份先過 aos-directive」的讀法，hooks 也由包自己交給 `hooks.load` 驗（問腦那一包用：每組端點的指示詞用到才解）。骨架給的 `ctx` 有 `cfg`、`stack`、`requests`、`name`、`die`、`warn`、`previous`（上一輪的排隊列）與 `queued`（這輪已確定留隊的列）；包需要的輪內狀態自己加。
+包提供 `collect(ctx, before_reply=None)`、`check(ctx)`、`admit(ctx, name, letter)`、`dispatch(ctx, name, letter, detail)`，以及 `load(cfg, cfg_dir)`、`refuse(ctx, name, letter, code, msg)`、`finish(ctx, queued)`。設定不對丟 `round.CfgBad`。包另外提供 `read(path)` 時，骨架改叫它讀設定、不走下面「整份先過 aos-directive」的讀法，hooks 也由包自己交給 `hooks.load` 驗（問腦那一包用：每組端點的指示詞用到才解）。骨架給的 `ctx` 有 `cfg`、`stack`、`requests`、`name`、`die`、`warn`、`previous`（上一輪的排隊列）與 `queued`（這輪已確定留隊的列）；包需要的輪內狀態自己加。
+
+**誰先**（`round.ordered`，使用者 11-20 對「llm kernel 那套排序要不要搬上骨架」選「現在一起搬」）：`check` 之後、逐封 hook 之前，骨架排這輪的信。包可以給三個選填的口：
+- `row(ctx, name, letter)`：回這封排序用的一列（dict，要有 `"id": 信名`，其餘隨包放）；回 `None`＝這封驗不過，骨架把它排最前（照信名），輪到時由包的 `admit` 回錯。沒有這個口，每列是 `{"id": 信名, "letter": 信}`。
+- `rank(ctx, rows)`：吃驗得過的那幾列（照信名先後交進來），回排好的列。`ctx` 是同一份，規則可以讀包自己的狀態（問腦那一包讀上一輪各後端掛的包做黏著）。沒有這個口，照信名先後（有序信先，同 aos-post）。
+- `order(ctx, letters)`：要整個自己排時才給，回一串信名；有它，骨架不叫 `row`／`rank`。掛 proc 那一包用它（滿格留隊的信照上一輪的隊序在前）。
+
+「等了多久」骨架不記，要用的包自己記（問腦那一包記在 `queue.json`，放在 `row` 回的列裡）。
 
 `admit` 回 `(verdict, detail)`：`pass` 的 detail 是新名字清單、`refuse` 是 `(code, msg)`、`queue` 是窗的一列。hook 從拒或排改成 pass 時，交給 `dispatch` 的 detail 是 None；包從 body 數實際轉出的名字，不回頭驗規則。`dispatch` 成功回 `None`，失敗回 `(code, msg)` 交骨架拒信。包的 `collect(ctx, before_reply=None)` 可傳代回前的回呼；每封對得上表的回信會以 `(原信記錄, 回信信封)` 呼叫，回傳要代回的 body。骨架在這個回呼派發 `before_reply`，三個時機都交給共用的 `py/aos/hook_run.py` 執行。
 

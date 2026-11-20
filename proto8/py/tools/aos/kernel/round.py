@@ -45,6 +45,26 @@ def load(pack, path):
     return cfg
 
 
+def ordered(pack, ctx, incoming):
+    """誰先：包有 order 就整個交給它；否則骨架排——包的 row 回 None（驗不過）的排最前、輪到由 admit 回錯，
+    其餘的列交包的 rank 排；沒有 row 每列是 {"id": 信名, "letter": 信}，沒有 rank 照信名先後。"""
+    if hasattr(pack, "order"):
+        return pack.order(ctx, incoming)
+    bad, rows = [], []
+    for letter_name in sorted(incoming):
+        row = pack.row(ctx, letter_name, incoming[letter_name]) if hasattr(pack, "row") else {
+            "id": letter_name, "letter": incoming[letter_name]}
+        if row is None:
+            bad.append(letter_name)
+        else:
+            rows.append(row)
+    if hasattr(pack, "rank"):
+        rows = pack.rank(ctx, rows)
+    else:
+        rows = sorted(rows, key=lambda row: letters.letter_key(row["id"]))
+    return bad + [row["id"] for row in rows]
+
+
 def run(pack, cfg_path, name="kernel"):
     """每次執行做一輪；包負責信的規則，骨架只管順序與判決。"""
     cfg = load(pack, cfg_path)
@@ -73,7 +93,7 @@ def run(pack, cfg_path, name="kernel"):
         ctx.previous = {}
         pack.collect(ctx, before_reply=lambda original, reply: hooks.before_reply(ctx, original, reply))
         incoming = pack.check(ctx)
-        names = pack.order(ctx, incoming)
+        names = ordered(pack, ctx, incoming)
         ctx.queued = []
         ctx.held = []
         held_before = hold.view(ctx) if ctx.can_hold else {}

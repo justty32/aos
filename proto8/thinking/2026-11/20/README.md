@@ -35,3 +35,4 @@
 | [aos-hook-k5-1120](aos-hook-k5-1120.md) | hook 介面施工第 5 刀的 aos-loop 那一半：before_run／after_run 兩個點、旗標檔、四個點失敗都收工；範本接線等第 3 刀 |
 | [aos-hook-k2b-1120](aos-hook-k2b-1120.md) | hook 介面施工第 2 刀的後半：fsm 格程式與抄本、eca、mcp、kernel、hook_fire 全改用 hook 遙控器；lists.py 刪掉；hooks.py 拆出 hook_clock.py |
 | [「問特定的東西、直接回」通用模式的調查（aos-direct-reply-1120）](aos-direct-reply-1120/README.md) | 調查：今天已有九處左右（daemon 的 ping／procs_state_path、kask 原型、agent-fsm 的 /compact 太短、eca slash；procs_state.json、endpoints.json 等讀檔型）；實跑空信箱每輪 0.024 ms、每答一封 8～22 ms、100 封拖同一輪約 1～2 秒，agent 的 idle 只在閒著時跑；預先寫檔讀一次 0.02 ms；七種形狀、九種邊緣狀況、八題等使用者 |
+| [aos-kllm-round-1120](aos-kllm-round-1120.md) | llm kernel 的排序搬上共用骨架：round.py 多 ordered（row／rank 兩個口），llm kernel 拿掉自己的 order；行為不變 |
