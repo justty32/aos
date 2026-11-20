@@ -42,3 +42,67 @@
 ```
 
 同一個 chatgpt 後端的 `luna`、`terra` 照理也一樣，這次沒量。`~/aos-home/llm/kernel.json` 是活樹，要改也是使用者或頂層的事。
+
+## 續量：luna、terra、astra（線 top-1121-skey2，11-21 家機）
+
+使用者：「luna/terra/astra也都順便去量，astra好像還沒被納入，那就也派線去做。」
+
+### 做法
+
+照 `templates/start-api`（`git archive HEAD`，d3882e9c5）抄兩棵暫存樹 `~/.aos/scratch/top-1121-skey2/a-nokey`、`b-key`。兩棵的 `llm/kernel.json` 都在 `sol` 後面加一包 `astra`（模型 `chatgpt-gpt-6-astra`，LiteLLM 那邊本來就有，`GET /v1/models` 列得到、`~/repo/llm_proxy/models/chatgpt.yaml` 第 21 行；沒改代理）；只有 `b-key` 在 `luna`、`terra`、`sol`、`astra` 四包加 `"session_key": "litellm_session_id"`。每棵掛三隻 agent-fsm（`ann` 的抄本，`llm.json` 各指 `luna`／`terra`／`astra`），每隻連問「Reply with one word: ok」：luna、terra 各 4 輪，astra 貴、各 3 輪。先跑完不加的整棵、關掉，再跑加了的。數字讀各隻的 `observed.jsonl`。
+
+### 數字（每格是 prompt_tokens／cached_tokens）
+
+| 輪 | luna 不加 | luna 加了 | terra 不加 | terra 加了 | astra 不加 | astra 加了 |
+|---|---|---|---|---|---|---|
+| 1 | 12,553／0 | 12,553／12,416 | 12,553／0 | 12,553／12,416 | 12,553／0 | 12,553／12,416 |
+| 2 | 12,570／12,416 | 12,570／12,416 | 12,570／0 | 12,570／12,416 | 12,570／0 | 12,570／12,416 |
+| 3 | 12,587／0 | 12,587／12,416 | 12,587／0 | 12,587／12,416 | 12,587／0 | 12,587／12,416 |
+| 4 | 12,604／0 | 12,604／12,416 | 12,604／12,416 | 12,604／12,416 | — | — |
+| 沒中快取的合計 | 37,898 | 650 | 37,898 | 650 | 37,710 | 462 |
+
+- luna 實際模型 `chatgpt-gpt-6-luna-low`、terra `chatgpt-gpt-6.1-terra`（都照範本），astra `chatgpt-gpt-6-astra`。三個都能問能答，回 `ok`。
+- 加了的那組連第 1 輪也中，是因為一兩分鐘前不加的那組剛送過一模一樣的開頭（兩棵樹、各隻的 system 與 `tools` 逐字相同），上游還留著。換成隔很久第一次問，第 1 輪會像早上 sol 一樣是 0；要比的是第 2 輪起。
+- 不加的那組偶爾中一次（luna 第 2 輪、terra 第 4 輪），astra 3 輪都沒中，跟 11-14 公司機「不加還有兩三成」一樣是碰運氣。
+
+### 結論
+
+- luna、terra、astra 跟 sol 一樣：加 `"session_key": "litellm_session_id"` 之後每輪都中約 99%，不加大多是 0。四個都走 LiteLLM 的 chatgpt 後端，行為一致。
+- 這次沒有「加了仍是 0」的模型，不用另外查原因。
+
+### 命中量為什麼停在 12,416
+
+不是快取只停在工具說明＋system 後面。另外用 sol 加了 `session_key` 的一隻 agent 問 4 輪，第 1、3 輪各塞一長串數字：
+
+| 輪 | 問了什麼 | prompt_tokens | cached_tokens |
+|---|---|---|---|
+| 1 | 一長串數字＋ok | 14,669 | 0 |
+| 2 | 短句 | 14,686 | 14,592 |
+| 3 | 又一長串數字＋ok | 15,918 | 14,592 |
+| 4 | 短句 | 15,935 | 15,744 |
+
+第 2 輪的命中把第 1 輪那串數字也算進去了，第 4 輪又長到 15,744，所以快取會跟著對話往後長。看起來的規律（從這幾個數字推的，沒找到上游文件對照）：
+
+- 命中量一律是 128 的倍數（12,416＝97×128、14,592＝114×128、15,744＝123×128）。
+- 上一輪請求最後大約 47～77 個 token 這一輪用不到（由上面幾組數字夾出來的範圍；是哪幾個 token 沒查）。
+
+所以短句每輪只多 17 個 token，4 輪加起來才 51 個，跨不過下一個 128 的格子，看起來就像卡在 12,416。對話長到多出一百多個 token 就會往上長。這對成本的影響很小（每輪沒中的只有一兩百個 token）。
+
+### 建議寫進範本的幾行（這條線沒改，要不要改由使用者定）
+
+`proto8/templates/kernel/llm-kernel/kernel.json` 與 `proto8/templates/start-api/llm/kernel.json`（兩份逐字一樣，要一起改）的 `luna`、`terra`、`sol` 三包都加 `session_key`，`sol` 後面新增 `astra` 一包：
+
+```json
+   "luna":        {"exec": "endpoints/litellm", "url": "http://localhost:4000/v1", "model": "chatgpt-gpt-6-luna-low", "session_key": "litellm_session_id", "cost": "high", "context": 272000,
+                   "summary": "LiteLLM gpt-6 luna, low effort"},
+   "terra":       {"exec": "endpoints/litellm", "url": "http://localhost:4000/v1", "model": "chatgpt-gpt-6.1-terra", "session_key": "litellm_session_id", "cost": "high", "context": 272000,
+                   "summary": "LiteLLM gpt-6.1 terra"},
+   "sol":         {"exec": "endpoints/litellm", "url": "http://localhost:4000/v1", "model": "chatgpt-gpt-6.1-sol", "fixed": {"temperature": 0.2}, "session_key": "litellm_session_id", "cost": "high", "context": 272000,
+                   "summary": "LiteLLM gpt-6.1 sol"},
+   "astra":       {"exec": "endpoints/litellm", "url": "http://localhost:4000/v1", "model": "chatgpt-gpt-6-astra", "session_key": "litellm_session_id", "cost": "high", "context": 272000,
+                   "summary": "LiteLLM gpt-6 astra: images and creative work, about 3x sol's price"},
+```
+
+`astra` 的 `context` 272000 是代理 `models/chatgpt.yaml` 裡 chatgpt 那組共用的 `max_input_tokens`；沒加 `fixed`（`luna`、`terra` 也沒有）；`summary` 那句價格照 [team-model/grades](../../../../wf/workflows/team-model/grades.md)「astra 實際價格約 sol 的 3 倍」。`~/aos-home/llm/kernel.json` 是活樹，沒碰。
+
+真模型這次共叫 26 次（luna 8、terra 8、astra 6、sol 長句 4）。

@@ -465,8 +465,8 @@
       "title": "agent-fsm 每輪問模型的輸入成本：工具說明佔九成六、快取沒命中",
       "status": "open",
       "flow": "",
-      "what": "11-20 晚家機 ~/aos-home 的 ann（sol）：think/request.json 53 KB 裡 tools 50.8 KB，問一句話 prompt_tokens 約 12.6k、cached_tokens 0。11-21 暫存樹實測（線 top-1121-skey）：sol 不加 session_key 4 輪快取都是 0；加 \"session_key\": \"litellm_session_id\" 第 2 輪起每輪命中 12,416（約 99%），4 輪沒中快取的 50,314 → 13,066。工具順序、system、對話前綴都穩定，原因就是沒寫這個鍵。範本與活樹都沒改。",
-      "next": "等使用者定：要不要在 templates/kernel/llm-kernel 與 start-api 的 sol 那包加 session_key（luna、terra 同後端，沒量）、活樹要不要跟著改、要不要另外減工具說明的量",
+      "what": "11-20 晚家機 ~/aos-home 的 ann（sol）：think/request.json 53 KB 裡 tools 50.8 KB，問一句話 prompt_tokens 約 12.6k、cached_tokens 0。11-21 暫存樹實測（線 top-1121-skey）：sol 不加 session_key 4 輪快取都是 0；加 \"session_key\": \"litellm_session_id\" 第 2 輪起每輪命中 12,416（約 99%），4 輪沒中快取的 50,314 → 13,066。工具順序、system、對話前綴都穩定，原因就是沒寫這個鍵。續量（線 top-1121-skey2）：luna、terra、astra（chatgpt-gpt-6-astra，暫存樹新加一包）結果跟 sol 一樣；命中停在 12,416 是上游 128 一格、短句長不過下一格，長句會往上長。範本與活樹都沒改。",
+      "next": "等使用者定：要不要在 templates/kernel/llm-kernel 與 start-api 的 luna、terra、sol 三包加 session_key、新增 astra 一包（建議的幾行在紀錄裡）；活樹要不要跟著改；要不要另外減工具說明的量",
       "see": [
         "[session-key-實測-1121](../proto8/thinking/2026-11/21/session-key-實測-1121.md)",
         "[aos-home-瀏覽筆記-1120 第 10 則](../proto8/thinking/2026-11/20/aos-home-瀏覽筆記-1120.md)"

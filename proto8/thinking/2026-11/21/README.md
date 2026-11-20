@@ -6,4 +6,4 @@
 
 | 份 | 一句話 |
 |---|---|
-| [session_key 實測（session-key-實測-1121）](session-key-實測-1121.md) | 暫存樹實測 sol 加 "session_key": "litellm_session_id" 前後：不加 4 輪快取都是 0，加了第 2 輪起每輪 12,416 token 命中（約 99%），4 輪沒中快取的從 50,314 降到 13,066；工具順序、system、對話前綴都穩定，原因就是沒寫這個鍵；範本沒改，要不要改等使用者 |
+| [session_key 實測（session-key-實測-1121）](session-key-實測-1121.md) | 暫存樹實測 sol 加 "session_key": "litellm_session_id" 前後：不加 4 輪快取都是 0，加了第 2 輪起每輪 12,416 token 命中（約 99%）；續量 luna、terra、astra（astra 在暫存樹新加一包）結果一樣；命中停在 12,416 是 128 一格、短句長不過下一格；範本沒改，建議四包都加、新增 astra，等使用者定 |
