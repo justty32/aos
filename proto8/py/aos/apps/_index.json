@@ -22,7 +22,8 @@
   "description": "aos-daemon-ctl — 掛上 proc、起停、暫停、自檢與清理舊列"
  },
  "eca": {
-  "description": "aos-eca-turn 的 Python 套件：一輪的認領批信、hook、slash 指令、交給 CLI 前後、等回答時又來的信、history 讀寫與換台開場白"
+  "description": "aos-eca-turn 的 Python 套件：一輪的認領批信、hook、slash 指令、交給 CLI 前後、等回答時又來的信、history 讀寫與換台開場白",
+  "index": "eca/_index.json"
  },
  "feedback": {
   "description": "aos-feedback 的 Python 套件：旗標解析與顯示、意見的附加寫入與評分者分類規則、從評分與工具帳算 AI 舒適度"
@@ -32,6 +33,9 @@
  },
  "grow": {
   "description": "aos-grow：把一個函數往上長一級或縮回一級、呼叫方跟著改的原型指令（嘗試性質，純標準庫 Python）"
+ },
+ "hook": {
+  "description": "proto8/py/aos/apps/hook — aos-loop 那一層的 hook 點宣告（之後的 aos-hook 指令也放這裡）"
  },
  "json_view": {
   "description": "aos-json-view — 只讀：把 json 印成人好讀的樣子"

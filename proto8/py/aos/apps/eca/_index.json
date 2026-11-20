@@ -1,0 +1,50 @@
+{
+ "README.md": {
+  "description": "aos-eca — 外部 coding agent（claude／codex／pi）的兩支指令"
+ },
+ "__init__.py": {
+  "description": "aos/apps/eca/__init__.py - aos-eca-turn 的英文說明、旗標檢查與主入口（main）。"
+ },
+ "batch.py": {
+  "description": "aos/apps/eca/batch.py - 一批信的認領與讀信（開場白、冷卻時只拿一封、take-all）與 goal 提醒的題目與進展。"
+ },
+ "common.py": {
+  "description": "aos/apps/eca/common.py - 共用的名字、錯誤（Fail）、lib 模組的載入、aos-post 介面、mailbox_warning 與 letters.json（回答配對）。"
+ },
+ "handoff.py": {
+  "description": "aos/apps/eca/handoff.py - 一批信交給 CLI 的前後（一般一輪與 slash 交給 claude 的那幾條共用）：交出去那刻收信、交出去後失敗記冷卻、成功收尾。"
+ },
+ "history.py": {
+  "description": "aos/apps/eca/history.py - $AOS_STACK/history.jsonl 的讀、附加，與 .history_sum（⑩ history 被改過＝開新對話）。"
+ },
+ "hook.py": {
+  "description": "aos/apps/eca/hook.py - 這支跑的 hook（before_queue、tool_added；fire 把 hook 停下換成 Fail）。"
+ },
+ "hook_points.json": {
+  "description": "Hook points fired by aos-eca-turn (the eca body); tool hooks are in ../mcp/hook_points.json, the loop points in ../hook/loop_points.json."
+ },
+ "main_screen.py": {
+  "description": "aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。"
+ },
+ "main_turn.py": {
+  "description": "aos-eca-turn - 外部 coding agent（claude／codex，eca）的一輪：把 stack 的 queue 裡的信照順序全部一起交給 CLI——交出去就收信——等它答完、回答接進 history。"
+ },
+ "midturn.py": {
+  "description": "aos/apps/eca/midturn.py - 等 CLI 回答的這段時間又來的信：馬上認領、過 hook、交給 cli_ask 投進 CLI（More）；信的寄件人欄（unnamed）。"
+ },
+ "reseed.py": {
+  "description": "aos/apps/eca/reseed.py - ⑧ 換台開新對話時接在題目前面的開場白（從 history 組「整理過的紀錄」）。"
+ },
+ "retry.py": {
+  "description": "aos/apps/eca/retry.py - 暫時錯後欠著的信存於 retry.json，提供原子讀寫、清除與續做提示。"
+ },
+ "screen_slash.py": {
+  "description": "screen_slash sends allowlisted commands to an open CLI screen and returns masked output without opening a screen."
+ },
+ "slash.py": {
+  "description": "aos/apps/eca/slash.py - ⑭ slash 指令（/clear、/compact、/status、/usage、/exit、/goal）在 aos 這層怎麼做。"
+ },
+ "turn.py": {
+  "description": "aos/apps/eca/turn.py - 平級形的一輪（one_turn）：認領一批、hook、slash 分流、交給 cli_session、回答接進 history、冷卻。"
+ }
+}

@@ -93,6 +93,12 @@
  "test_flags_anywhere.py": {
   "description": "Check aos_flags.parse(anywhere=True) and the one-layer commands moved to it (P-44 continued, 11-11 \"全部改\")."
  },
+ "test_hook_point.py": {
+  "description": "Test aos.hook_point: the shipped hook_points.json files read and check fine, every check rule rejects a bad example, merging, engine_table and for_de…"
+ },
+ "test_hook_points_match.py": {
+  "description": "Consistency test: the hook_points.json declarations say the same as the event tables the programs use today and as the hand copies (docs, knowledge, …"
+ },
  "test_hook_run.py": {
   "description": "Verify the shared hook engine: entry validation, running handlers through aos-exec, replies, blocking, on_error, timeouts, ordering and conditions."
  },

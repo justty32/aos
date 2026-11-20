@@ -264,6 +264,13 @@
   },
   {
    "kind": "lib",
+   "module": "aos.hook_point",
+   "unit": "proto8/py/aos/hook_point.py",
+   "used_by": "",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
    "module": "aos.hook_run",
    "unit": "proto8/py/aos/hook_run.py",
    "used_by": "proto8/py/aos/agent_spec_parts.py proto8/py/aos/agentlib proto8/py/tools/aos/kernel",
