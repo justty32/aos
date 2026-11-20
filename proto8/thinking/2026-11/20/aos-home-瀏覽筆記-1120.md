@@ -64,4 +64,4 @@
 
 ### 註（記錄者加，不是使用者的話）
 
-- 他說「今天還是昨天有討論過的」，對得上的是 11-20 的 [aos-kres-1120](aos-kres-1120/README.md)（kernel 的資源基底與排程介面）與 [aos-kllm-round-1120](aos-kllm-round-1120.md)（llm kernel 的排序搬上共用骨架）、11-19 的 [aos-htop-1119](../19/aos-htop-1119/README.md)（自訂 kernel「先不定，讓它自然長」）。是不是指這幾份沒跟他確認。
+- 他說「今天還是昨天有討論過的」，對得上的是 11-20 的 [aos-kres-1120](aos-kres-1120/README.md)（kernel 的資源基底與排程介面）與 [aos-kllm-round-1120](aos-kllm-round-1120.md)（llm kernel 的排序搬上共用骨架）、11-19 的 [aos-htop-1119](../19/aos-htop-1119/README.md)（自訂 kernel「先不定，讓它自然長」）。頂層列出這三份問他，他答：「對的，就是這些。」
