@@ -159,3 +159,5 @@
 - hook 有 py lib，分三層：`aos.hook_point`（通用小庫，任何提供者拿來開遙控器、發事件）、`aos.agentlib.agent_hooks`（agent 一家的遙控器，多包了丟信三步、工具被攔的預設字、`tool_added`、`clock_tick`）、`aos.hook_run`（共用引擎：比 condition、寫 `event.json`、跑 handler、解回話）。寫 hook 的程式那一邊另有 `@fn.hook`。
 - 格程式裡跟 hook 有關的程式已經很少：四支各一行 `H = agent_hooks.open(…)`，之後每個點一行（`H.clock_tick()`、`H.take_letter(…)`、`H.guard_tool(…)`、`H.announce_tools(…)`、`H.fire(…)`）。這是 11-20 hook 第 2 刀後半做的。
 - 所以格程式的複雜不在 hook：`wait.py` 644 行、`idle.py` 330 行，裡面是收信、回答配對、冷卻與重試、compact、成本觀測這些。
+
+頂層把第 1、2、3、11 則串成「格程式變薄、共用的收進 `AOS_HOME`、定義夾不帶程式」問他要不要這樣走（這句是頂層的整理，不是他的話），他答：「明天再說，甚至可能延後。反正程式能跑就別動他」。→ 格程式的重構不排，能跑就不動。
