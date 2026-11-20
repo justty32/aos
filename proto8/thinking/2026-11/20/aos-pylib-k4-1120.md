@@ -146,7 +146,11 @@ agent = defs.Agent("...", system=..., tools=[...], llm={}, fsm=std.fsm(),
 2. **編出的 `loop.json` 間隔對**：`every_ms=1000`→`interval_ms: 1000`、`0`→`0`；給了 loop 的跟沒給的整份只差 `interval_ms`（鍵、順序、其他檔都一樣）；`--compile` 寫進檔是 1500（測試）；`defs.load` 的 `base.loop` 寫 `loop=base.loop` 才帶過來。
 3. **實掛量到間隔真的變了**（`test_agent_spec_loop_live.py`）：抄 start-api、只起根 daemon（不用腦），兩隻 agent 各一格狀態機 `sh -c "date +%s%N >> 檔"`（每格記一次時間），一隻 `loop=defs.loop(every_ms=1000)`、一隻不給，掛上去跑 6 秒：**間隔中位數 1005 毫秒對 304 毫秒**。
 4. **報錯**：沒給 `every_ms`、負數、小數、布林、字串、手寫 dict、一個數字、不給 fsm（eca 版）各一條 SpecBad；`defs.loop(1000)`（照位置給）、`defs.loop(every_ms=…, max=3)`（沒開的鍵）是 Python 的 TypeError；壞的 `every_ms` 經 `--compile` 是一行 SpecBad、退 1、`loop.json` 不動。
-5. 全套測試逐夾：見下（第一筆的 `new` 對 `new2`）。
+5. 全套測試逐夾（第一筆的 `new` 對 `new2`＝`60c0a6d28`＋本線兩筆的檔，各自 install）：`py/tests` 699 → 705 OK（多 6＝loop 4＋live 2；skip 1、expected failure 1 同）；其餘每夾條數與結果都相同（defs 28、agent_def 32、tools_def 12、tool-python 5、apps 十七夾全 OK、feedback 18 error 已知、agent-fsm 209、reviewer 1、judge-llm 4、kits 8）。沒有紅的。
+
+## 交件
+
+第一筆 `a612756e3`（extern 連結版）、第二筆 `1d95d3c7a`（loop=）、這一筆補紀錄的測試結果。沒 push；沒在 repo 跑 install.py。暫存在 `~/.aos/scratch/aos-pylib-k4-1120/`（base、new、new2 三份複本與留底）、實測樹 `/tmp/k4-links-wqedxsjm`，都沒刪。
 
 **對不上或設計稿沒寫的（選最小）**：
 
