@@ -1,4 +1,4 @@
-# hook 文件漂移 17 項補齊，並實跑查證 eca 的 slash 信過兩次 before_queue（屬實，沒修）
+# hook 文件漂移 17 項補齊；eca 的 slash 信過兩次 before_queue 實跑屬實，使用者裁「修：只過一次」後已修
 
 ← [當天索引](README.md)｜待裁第 8 題 [10](aos-hook-plan-1120/10-待裁題.md)｜使用者已答 [13](aos-hook-plan-1120/13-使用者已答.md)｜17 項的來源 [第 1 刀紀錄](aos-hook-k1-1120.md)｜疑點來源 [調查線 05](aos-hook-iface-1120/05-B3-fsm與eca差在哪.md)
 
@@ -8,7 +8,8 @@
 
 - 17 項全部是文件漏寫，沒有一項是程式錯；照程式與 `hook_points.json` 改了三份手抄（`06-hook.md`、self_hook 的 `_tooldef.json` 說明、知識庫 `me/self_hook.json`），**沒改程式**。
 - `test_hook_points_match.py` 的已知清單清空、拿掉 `expectedFailure`：之後任何一份手抄漏了點名或欄位名就紅。
-- 第二件**屬實**：eca 等回答時來的 `/compact` 信，`before_queue` 跑兩次（同一封信、同一個信名）；普通信只跑一次。只查證、沒修，修不修要問使用者。
+- 第二件**屬實**：eca 等回答時來的 `/compact` 信，`before_queue` 跑兩次（同一封信、同一個信名）；普通信只跑一次。第一輪只查證、沒修（commit `1bcde0265`）。
+- 第二輪（下面「第三件」）：使用者裁「修：只過一次」，`midturn.py` 先認 slash 再過 hook；新測試守住四種情境各一次；改前 2 次、改後 1 次；開畫面走 socket 那條也實跑過（假的 CLI 那頭）。順手把 gdb 例子的 `BrainTimeout` 改成 `BrainFailed`。
 
 ## 第一件：17 項逐項
 
@@ -30,7 +31,7 @@
 - self_hook 說明：after_stop 的 `cause` 原寫「or null from an old aos-loop」改成「or null when not given」（照 hook_fire：空的或沒設＝null；proto8 不留舊版說法）；on_clock 那行補 `config`（原本只在另一行的例子裡出現，測試是假過關）。
 - 知識庫 `me/self_hook.json`：before_queue 補兩種身體的差別（fsm 的 `/compact` 不過、eca 的 slash 也過）；before_tool 補 eca 只看得到經 aos-mcp 的工具、hook 失敗只讓那次呼叫變錯誤；brain_failed 的 `code` 補「kernel 有給才帶」、補一句 `LlmKernelMissing`、`SendFailed`、`ReplyBad` 只有 `name`、`reason`。
 
-沒碰的手抄：`docs/tutorial` 裡講 hook 的只有 06 第 69 行 gdb 的例子（`brain_failed("BrainTimeout")`），跟 17 項無關；`BrainTimeout` 不是兩種身體會發的代號（fsm 是 LlmKernelMissing、SendFailed、BudgetMissing、BrainFailed、ReplyBad，eca 是 CliFailed、ReplyMissing），`py/aos/apps/gdb/README.md` 第 62 行同樣寫法——例子而已、不擋什麼，屬 gdb 文件，沒改，列給頂層。`py/docs/` 沒有 hook 專章（hook 的文件在 `py/aos/apps/agent/docs/06-hook.md`）。
+沒碰的手抄：`docs/tutorial` 裡講 hook 的只有 06 第 69 行 gdb 的例子（`brain_failed("BrainTimeout")`），跟 17 項無關；`BrainTimeout` 不是兩種身體會發的代號（fsm 是 LlmKernelMissing、SendFailed、BudgetMissing、BrainFailed、ReplyBad，eca 是 CliFailed、ReplyMissing），`py/aos/apps/gdb/README.md` 同樣寫法——例子而已、不擋什麼，屬 gdb 文件，第一輪沒改、列給頂層（第二輪已改，見第三件）。`py/docs/` 沒有 hook 專章（hook 的文件在 `py/aos/apps/agent/docs/06-hook.md`）。
 
 ## 第二件：eca 的 slash 信過兩次 before_queue
 
@@ -80,7 +81,65 @@
 
 修法（沒做，給使用者選時參考）：`midturn.py` 先用 `slash_of` 看原信、是 slash 就不過 hook 直接停手（hook 留給下一輪那次）；兩行內的改動，會改「slash 信過 hook 的時機」，但結果跟單獨來的 slash 信一樣。
 
-## 測試
+## 第三件：修成只過一次（第二輪）
+
+### 使用者的題目與答案
+
+頂層轉來的原話：使用者 11-20 用選項框選了「修：只過一次」，選項說明「等回答途中認出是 slash 信就不過 hook、直接留給下一輪，下一輪才過那一次」。題目本身的字頂層沒有轉來，這裡只能記到選項與說明。
+
+### 改了什麼
+
+- `py/aos/apps/eca/midturn.py` 的 `More.take`：讀到信先用 `slash_of` 看**原信**，是 slash 就停手、不過 hook、信留在 `cur/`；下一輪 `turn.py:64` 過那唯一一次。原本 hook 之後的 `slash_of` 檢查留著：hook 把普通信改成 slash 時照舊停手（這種極少見的情況下一輪會再過一次 hook，見「替使用者做的選擇」）。檔頭說明補一句。
+- 新測試 `py/tests/apps/eca/test_slash_hook_once.py`（4 支）：普通信單獨、slash 單獨、普通信中途、slash 中途，各只過一次。放到沒修的複本上，slash 中途那支紅（`{'/compact': 2}`）；修過的全綠。
+- `06-hook.md` eca 表的 before_queue 那格補「每封只過一次（等回答時來的 slash 信當下不過、留到下一輪才過）」。第一輪加的字沒有寫「過兩次」，不用改。
+- 教學 `docs/tutorial/06-接著開發-3-除錯與腳本.md:69`、`py/aos/apps/gdb/README.md:66` 的 `brain_failed("BrainTimeout")` 改成 `brain_failed("BrainFailed")`（兩種身體都不會發 BrainTimeout）。gdb README 原本被 aos-kinit-tpl-1120 claim 著，等它放了才 claim、才改。
+
+### 改前改後實跑
+
+複本：`git archive 7327f47bc`（第二輪開工時的 HEAD）抄兩份，`base2` 只有 HEAD，`mine2` 再蓋上本線第二輪四個檔，各自跑 `install.py`。repro 同第二件（`repro.py`），每種跑兩次：
+
+| 情境 | 改前（base2） | 改後（mine2） |
+|---|---|---|
+| 普通信，單獨一輪 | 1、1 | 1、1 |
+| `/compact`，單獨一輪 | 1、1 | 1、1 |
+| 普通信，等回答時來 | 1、1 | 1、1 |
+| `/compact`，等回答時來，再跑一輪 | **2、2** | **1、1** |
+
+```
+base2: == slash letter mid-turn, then one more turn, run 1
+         before_queue calls per letter: {"SLOW:3 first": 1, "/compact": 2}
+mine2: == slash letter mid-turn, then one more turn, run 1
+         before_queue calls per letter: {"SLOW:3 first": 1, "/compact": 1}
+```
+
+### 開畫面走 socket（live_a2a）那條
+
+- 實跑了，方法跟上面不同：`repro/sockrun.py` 在同一個行程裡直接叫真的 `cli_ask.live_a2a` 和真的 `midturn.More`，給它一條真的 Unix socket。
+- CLI 那頭是假的：一個 socket 伺服器，收到信封就照 `cli_a2a` 的格式寫回執、寫 `turns.jsonl`，並在第一批之後往 queue 寄一封中途信。
+- 沒起 tmux 畫面：小格的 `alive()` 換成永遠 true。
+- `Handoff` 換成只會收信（`aos-post done`）的小替身，所以 history 沒接。
+- 只數「等回答這段」的次數。下一輪走的是 `turn.py:64`，跟上表同一段，沒在 socket 這邊另跑。
+
+```
+base2: == sock-slash (late letter '/compact')   before_queue calls while waiting: 1 ["/compact"]   left in queue cur/: 1
+mine2: == sock-slash (late letter '/compact')   before_queue calls while waiting: 0 []             left in queue cur/: 1
+both:  == sock-plain (late letter 'second')     before_queue calls while waiting: 1 ["second"]     handed over mid-turn: ["second"]
+```
+
+改前：等回答時多過一次，下一輪再過一次，合計 2 次。改後：等回答時 0 次、信留給下一輪，合計 1 次。普通中途信兩邊都是 1 次，而且都投出去了。
+
+### 測試（改前改後，同一份 HEAD）
+
+| 夾 | base2 | mine2 |
+|---|---|---|
+| `py/tests` | 690 支 OK（skipped 1） | 690 支 OK（skipped 1） |
+| `py/tests/apps/eca` | 223 支 OK | 227 支 OK（多的 4 支是新測試） |
+| `py/tests/apps/agent` | 213 支 OK（skipped 3） | 213 支 OK（skipped 3） |
+| 新測試放在 base2 上 | 4 支、slash 中途那支紅 | 4 支 OK |
+
+base2 上那份新測試檔跑完後移到 `~/.aos/scratch/aos-hook-drift-1120/base2-newtest.py.moved`（沒刪），所以三夾比對時 base2 不含它。
+
+## 測試（第一輪）
 
 照規則 6：`git archive HEAD` 抄出兩份乾淨複本、各自 `install.py`、清 `AOS_*`、逐夾跑 unittest（`py/tests`、`py/tests/apps/*`、`py/tools/**/tests`、`templates/tests/*`、`templates/tests`、`templates/kernel`、`cpp/**/tests`）。
 
@@ -102,7 +161,9 @@
 - 17 項以外，同一段裡測試抓不到、但跟程式不符的字也一起改了（上面「順手改的」）；都是照程式與宣告，沒有新說法。
 - `test_hook_points_match.py` 保留 `KNOWN_GAPS`（改成空的 `frozenset()`）與兩支比對已知清單的測試，之後真有要暫時放過的漂移還能用；`test_hand_copies_match_fully` 拿掉 `expectedFailure`，現在跟 `test_no_new_gaps` 等價。
 - 第二件沒起 daemon／aos-loop 的整隻 agent，只跑身體 `aos-eca-turn`（loop 每拍叫的那支）：要數的是 hook 被叫幾次，跟外面有沒有 loop 無關；假腦路走 `live_mail`（沒開畫面也會收中途信）而不是開 tmux 畫面的 socket 路。
-- gdb 例子的 `BrainTimeout` 沒改（不是 hook 漂移，是 gdb 文件的例子）。
+- gdb 例子的 `BrainTimeout` 第一輪沒改，第二輪照頂層轉來的指示改成 `BrainFailed`（選它是因為 agent-fsm 的 kernel 錯誤都走這個代號）。
+- 第二輪：hook 之後的 `slash_of` 檢查留著。hook 把普通信改成 slash 時照舊停手，所以這種情況下一輪會再過一次 hook。要做到嚴格只過一次，就得把 hook 改過的信存起來帶到下一輪，是更大的改動；這情況要 hook 刻意把字改成 slash 指令，所以沒做。
+- 第二輪：socket 路的實跑用的是真的 `live_a2a`、`More`、socket，假的 CLI 那頭；沒起 tmux 畫面、沒真 claude。
 
 ## 跟別線
 

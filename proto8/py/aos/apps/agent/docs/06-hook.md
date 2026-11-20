@@ -138,7 +138,7 @@ eca 的腦是外面的 CLI，aos 只看得到經過自己手的東西（圖紙 �
 
 | 事件 | eca | 在哪 | 跟 agent-fsm 不同的地方 |
 |---|---|---|---|
-| `before_queue` | 有：每封好信交給 CLI 之前，**slash 信也過**；等回答時又來的信也過 | aos-eca-turn | agent-fsm 的 `/compact` 信不過 |
+| `before_queue` | 有：每封好信交給 CLI 之前，**slash 信也過**；等回答時又來的信也過；每封只過一次（等回答時來的 slash 信當下不過、留到下一輪才過，使用者 11-20「修：只過一次」） | aos-eca-turn | agent-fsm 的 `/compact` 信不過 |
 | `after_queue` | 有：信交給 CLI、接進 history、收掉之後；slash 那一輪也跑 | aos-eca-turn | hook 失敗等回答接進 history 才報（agent-fsm 當場退 1） |
 | `before_tool`／`after_tool` | 只有經 aos-mcp 叫的 aos 工具；欄位同上，但 `id`＝JSON-RPC 的 id 轉成字串（沒有＝空字串），`after_tool` 的 `content`＝各段文字併成一段 | aos-mcp 的 tools/call | CLI 自帶工具看不到；hook 失敗（`on_error` stop）＝那次工具呼叫回 isError、CLI 照樣往下，agent 不停 |
 | `brain_failed` | 有：交給 CLI 之後 CLI 失敗；`name`＝`CliFailed`／`ReplyMissing`、`reason`；claude 另帶 `code`（同代號）、`retry`（true＝冷卻後重送）、`attempt`（連續第幾次）、`dropped`（丟掉幾封信）、`retry` 為 true 才帶 `wait_s`（冷卻幾秒），知道時帶 `status`（HTTP 狀態）、`cause`（CLI 自己說的失敗原因）；codex 只有 `name`、`reason` | aos-eca-turn | 代號與欄位不同，沒有 `error` 物件 |

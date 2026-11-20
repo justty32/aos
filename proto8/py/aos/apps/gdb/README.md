@@ -63,7 +63,7 @@ q.wait()                      # stopped waiting (cancel()); nothing is taken bac
 | `a.bp.add.tool_error("write", times=2)` | 工具跑完而且回錯（退出碼不是 0 或逾時） | 暫停 |
 | `a.bp.add.before_queue()` | 一封信要收進來之前 | 扣住 |
 | `a.bp.add.after_queue()` | 收了一封信之後 | 暫停 |
-| `a.bp.add.brain_failed("BrainTimeout")` | 問腦失敗（主詞是錯誤代號，參數名 `code`） | 暫停 |
+| `a.bp.add.brain_failed("BrainFailed")` | 問腦失敗（主詞是錯誤代號，參數名 `code`） | 暫停 |
 | `a.bp.add.tool_added("grep")` | 加了工具 | 暫停 |
 | `a.bp.add.after_start()`、`a.bp.add.after_stop()` | loop 起來、要退 | 暫停 |
 | `a.bp.add.watch(py=…, every_ms=500, also=["bob"])` | 觀察者：另一支 proc 輪詢，條件成立（一定要給 sh 或 py） | 暫停（晚一格） |

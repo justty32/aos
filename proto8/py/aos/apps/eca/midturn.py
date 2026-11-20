@@ -2,7 +2,7 @@
 """11-13 使用者裁「馬上送，eca他會自己處理」：畫面開著的 claude 身走收件 socket 時（py/cli_ask.live_a2a），這一輪還在等回答，
 queue 又來信就不等這輪講完——一次認領一封、照樣過 before_queue、投進 CLI（它手上那步工具做完就讀到），投出去才接進 history、收信、
 跑 after_queue（Handoff.extra）。停手不再拿的情況（那封留在 cur/，下一輪照一般流程處理）：來的是 slash 指令（那是操作 CLI，要等這輪
-講完由 aos 這層做）、hook 或 aos-post 出錯（下一輪在一般流程報）、投不出去。貼字與非互動那兩條路不叫這裡。"""
+講完由 aos 這層做；先認再過 hook，所以 slash 信只在下一輪過一次 before_queue，11-20）、hook 或 aos-post 出錯（下一輪在一般流程報）、投不出去。貼字與非互動那兩條路不叫這裡。"""
 from .common import NOT_FOUND, Fail, letters_drop, mailbox_warning, must_post, names, post
 from .batch import letter_body
 from .hook import before_queue
@@ -38,10 +38,13 @@ class More:
                     post(["done", self.box, sig])
                     mailbox_warning(self.stack, sig, why)
                     continue
+                if slash_of([body], None):                             # slash 指令：先認、不過 hook，留在 cur/ 給下一輪（那輪 turn.py 過唯一
+                    self.stopped = True                                # 一次 before_queue；使用者 11-20「修：只過一次」）
+                    return []
                 body = before_queue(self.stack, self.box, sig, body, self.template)
                 if body is None:
                     continue
-                if slash_of([body], None):
+                if slash_of([body], None):                             # hook 把信改成 slash：一樣停手（這種下一輪會再過一次 hook）
                     self.stopped = True
                     return []
                 self.pending = (sig, body)

@@ -379,6 +379,7 @@
      "test_screen_hook.py": "test_screen_hook checks that slash_of routes screen-only commands to slash_turn and leaves look-alikes as plain text.",
      "test_screen_slash.py": "test_screen_slash checks screen-only commands with a fake cell, clock and tmux output, never a real screen.",
      "test_slash.py": "Test aos-eca-turn's slash commands (11-12 eca-slash): one letter that is exactly /clear, /compact, /status, /usage or /exit is done by aos (or handed…",
+     "test_slash_hook_once.py": "Test that before_queue runs exactly once per letter on aos-eca-turn: plain and slash letters, alone or arriving while a turn waits for the answer (11…",
      "test_switch.py": "Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs."
     },
     "feedback": {
