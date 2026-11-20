@@ -12,56 +12,48 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-20 16:50（公司機收工）——沒有線在跑；公司 WSL 已重裝到最新；下一步是 hook 第 5 刀剩的一半
+## 2026-11-21 00:55（家機收工）——沒有線在跑；家機已重裝、`~/aos-home` 已照新範本重建並接上真模型；19 筆 commit 沒 push
 
-**15:40 之後又收的（本條其餘段落寫於 15:35，當時頂層把時間誤記成 16:40；下面「下一步」第 1 項已做完）**：
-- **hook 第 3 刀 `60aa1a635`**：hook 點以定義夾 `interfaces.json` 的 `hook_points` 為來源；kernel 三個點搬進 `kernel/hook_points.json`；編譯時有 fsm 且有 hooks 才寫 `hook_points`；`hooks.EVENTS` 改成從四份宣告算出來（留到第 6 刀）。**有掛 hook 卻沒 `hook_points` 的定義夾現在是 `HooksBad`**（公司機 `~/aos-home` 的舊定義裝新版後會壞，他說現有的都沒在用）。沒做、列在 `aos-hook-k3-1120.md`：`aos-agent hook events`、`self_hook` 的 events、五份 hooks.json 的說明、`refs_check` 查 `hook_points`、`hook_clock` 改走遙控器、拿掉模組函式 `hooks.fire`／`has`、幾份知識庫與 README。
-- **llm kernel 排序搬上骨架 `f7b0e3d05`**：骨架多 `ordered()`，包給 `row`／`rank` 就由骨架排，包給 `order` 就照舊整個自己排（兩種並存，線選的）；實跑順序改前改後都是 `A C E B G F D`。骨架不記「等了多久」、規則宣告的 json 沒做（名字與位置他沒定）。
-- **「問特定的東西、直接回」通用模式**：調查 `f9278d8aa`（`aos-direct-reply-1120/`：今天已有九處、信箱空時每輪多 0.024 毫秒、每答一封 8～22 毫秒、讀現成檔 0.02 毫秒）。他提了 **public 資料夾**的做法並答完規劃題（`06-使用者已答.md`）：做一套通用的；預設放 public 讓人自己讀、要現算的才寄信；先試固定位置沒有才寄信問路徑；檔過期不管；一輪幾封「可選。預設合計。」；設定放定義夾裡另一個 json；「預設就是提供一個通用信箱，啊後續有需要的可以自己另外建。」；過不過 hook「各自選。」；框架放固定幾樣其餘自己加；寄錯「各自處理。先讓大家拿到就丟掉。」；agent 放哪一格先不定。**實作「那就等明天吧」**（估 kernel 那半一條線 1.5～2 小時；名字、N、框架固定放哪幾樣、改名／拆開時回信的樣子還沒定；跟問 kernel 十四題對不上處誰贏他沒說）。
-- **artifact（17:00 前後，他說「去更新最近幾個artifacts吧，記得原則：圖多、細節摺疊、白話。 順便再加一個講hook的。」又加「11-20總結？」）**：頂層派了六條線（只讀 repo、不改 repo；共用規則在公司 Windows 的 session scratchpad `artifact-rules.md`，關機後可能不在）。寫本條時**只有「aos 地圖」確認發回原連結**（https://claude.ai/artifact/NtwjfH4P5N3oQUvGba42Kd，Version 2；線沒能在瀏覽器實看手機寬度與深淺色）。其餘五條還在跑、結果不明，接手的人用 Artifact `list` 看更新日期判斷有沒有發出去：更新「aos 入門教學」（…/PLQMLHqkoAw9VJWyHDhtvk）、「aos 編譯與除錯」（…/FP71gp8nWvhEbdswHeZAQU）、「aos kernel 資源」（…/S9W631SJtcLxLBXsbMwScm）；新做「aos hook」「aos 11-20 總結」（照「aos 11-19 總結」…/LQ8JrFVqfNu88DQ2V6bCrX 的結構）。沒發出去的就是沒做，要重派。
-- 收工前最後一次重裝含以上；抽測 `py/tests` 723、kernel 126、aos-loop 52、agent-fsm 215 全過。
+**這一晚做的（家機，頂層自己做，沒派線）**：
+- **家機重裝**：`proto8` 跑過 `python3 install.py`（HEAD 當時 `33b0e59b9`，之後的 commit 都只動 `wf/` 與 `proto8/thinking/`，不用再裝）；`py/tests` 723 全過，kernel、aos-loop、agent-fsm 三夾沒在家機跑。**這次重裝是頂層把他一句問話「現在重裝，那些我們正在做的hook啥的」誤讀成指示就動手的**，他事後「啊？你幫我跑了？」——又踩了下面「坑」的第 2 條。
+- **`~/aos-home` 重建**：他自己 `mv`／`cp -r templates/start-api`、停掉兩個舊 systemd 單元（`aos-view.service`、`aos-user-tick.timer`）；頂層照他「接着繼續幫我」起根、掛 `llm` 與 `ann`，假模型通了；他自己起家機的 LiteLLM（`~/repo/llm_proxy/start_litellm.sh`，家機不用 key）、把 `ann` 換成真模型（`observed.jsonl` 看是 `sol`），說「有，都OK」，也試了 `/compact`。**收工時樹是關著的**（他自己在前景重起過、Ctrl-C 收掉；四列 `sleeping`），再起＝`cd ~/aos-home && source env.sh && aos-exec root`。LiteLLM 代理收工時還在他的視窗跑著（不是頂層起的，沒動）。
+- **舊樹的東西沒了**：使用者專區（`aos-user`）、全景頁都住在舊樹，新樹沒有；**家機現在問他只能用選項框**，`aos-user send` 不能用。舊樹他挪到哪、刪了沒，沒問。
+- **照他說的刪了**：`proto8/cmd/`、`proto8/extras/`、`proto8/py/daemon_ctl/`（三夾只有舊 `__pycache__`，git 不管）、`proto8/templates/tests/kits/_index.json`（沒進 git 的殘留）。
+- **暫存樹** `~/.aos/scratch/root-rm-1120/`（查 `rm` 宣告列用的）已 `shutdown`、沒行程、沒刪。
+- **artifact**：`Artifact list` 看六個的更新日期都是 11-20——新做的「aos hook」（…/KCGYrUrDkjWn1BjHJ3eAC3）、「aos 11-20 總結」（…/6Fo8Njz6Y9Kvg86kRjDAAE）確定發了；「入門教學」「編譯與除錯」「kernel 資源」只看得到日期，沒打開核對內容。
 
-**授權（11-20 當天的，隔天要重新問）**：
-- 「事情盡量都交給agent做，普通工作交給opus，簡單工作或雜活交給sonnet。agent做事前都要讀過wf/規矩，簡單工作或雜活除外。agent可以再派子agent，模型隨意。我今天五點下班，下班前再統一push。」
-- 「允許重裝。我現在沒在用aos，所以就隨意。」「lists.py可以刪掉。然後我現在沒在用aos，想刪啥都可以。」「舊的教學我都沒在用，現有的aos體系我也都沒在用。所以放心弄。」「家機那個之後我會整個刪掉，你放心。」→ **不用顧任何相容**；家機 `~/aos-home` 他會自己整個刪。
-- push：本條寫完後頂層問過他才推（推了沒有看 git log 與遠端）。
+**他今晚說的（逐字都在 `proto8/thinking/`，進度檔各有一條）**：
+- 邊看新樹邊講的十一則 → [`aos-home-瀏覽筆記-1120`](../proto8/thinking/2026-11/20/aos-home-瀏覽筆記-1120.md)、第 1 則在 [`agent-fsm-py-收進子夾-1120`](../proto8/thinking/2026-11/20/agent-fsm-py-收進子夾-1120.md)。已裁：**起手範本的格程式改成借的**（從 `AOS_HOME` 取）「之後做」；`interfaces.json` 保持想加啥就加啥；`description` 放著；`kernel.json` 格式不動、llm kernel 他之後找時間審；`launch` 改不改 inst 格式「先擱置」；格程式重構「明天再說，甚至可能延後。反正程式能跑就別動他」。
+- **hook 點的宣告格式他要審**（「我要審過，並且會提出建議，比如直接拿json schema或許會更好」）→ 現在的 `hook_points.json` 格式算暫定；**hook 第 6 刀（gdb 從宣告讀）、第 7 刀（總文件）建在這格式上，動工前先問他先後**。
+- **每輪問模型的輸入成本**（進度 `prompt-cost-cache`）：`ann` 問一句話 `prompt_tokens` 約 12.6k（`request.json` 53 KB 裡工具說明 50.8 KB）、`cached_tokens` 0；起手範本 `sol` 那包沒寫 `session_key`。他：「明天吧，這塊確實值得來處理。」→ **11-21 先在暫存樹實測加 `"session_key": "litellm_session_id"` 前後的差別給他看**（家機還沒實測，是對照 kernel_llm docs/01 推的）。
+- compact 改進（進度 `compact-improve`）：清工具輸出要納入、壓完補回用 hook，「之後再來規劃」。
+- 預設 stack（進度 `default-stack`，[05](../proto8/thinking/2026-11/18/default-stack-1118/05-使用者補充-1120.md)）：沒給 `-t` 就先試 `./.stack` 再試 `./`；agent 不記自己在哪個 daemon 底下——跟 11-18 暫定的丁（路標）相反，丁作不作廢、變數名 `AOS_TARGET` 還是 `AOS_AGENT` 沒問。
+- **記錄的規矩（他今晚說的）**：「總之我接下來說的，都麻煩先記下來。」之後又「不用特別記，這個以前磨過了」→ 新想法、新裁定、要改進的點才記；以前磨過、只是重新確認的不記（這條是頂層的理解，他沒反對）。教學「先放一邊」。
 
-**額度與時段（他 11-20 下午說的）**：公司這個帳號本週額度到 **11-21（六）16:00** 才重置，下班時所剩無幾；回家可以換另一個帳號。晚上 20:00–24:00 是高峰、「AI會變笨」，建議不排重任務、改成教學之類。11-21 整天他都在。
+**授權（11-20 晚、家機；隔天要重新問）**：
+- push：**「不推」**。本地領先 origin 19 筆（`99b434c80`…到本條），全是 `wf/` 與 `proto8/thinking/` 的紀錄。push 與模型分配今晚開場問了，他沒答，沒有任何當晚授權。
+- 刪檔：只有上面點名的那幾樣是他當場說刪的，不延伸。
+- 家機 `commit-request` 的 claims 表還留著 11-14 的舊 claim（`ok-view`、`ok-onboard`、`ok-release`），沒動；頂層今晚交件用線名 `top-1120-home`、沒 claim（每筆都有一行 `not claimed` 的 warning，照交）。
 
-**說話的規矩（已寫進 `wf/` user/01）**：直接說 kernel、daemon、llm kernel、掛 proc 的 kernel；不說手、門、總機、站。handle（`hook_point.open` 回的、`aos.py.agent.Agent`）叫**「遙控器」**；不說把手、物件、操控器。
+**額度與時段**：公司帳號本週額度 **11-21（六）16:00** 重置；家裡是另一個帳號。20:00–24:00 是高峰，他建議不排重任務。11-21 整天他都在。
 
-**機器**：頂層 session 開在公司 Windows `C:\code\mine\simple_tools\aos`，工作都在公司 WSL `~/repo/aos`。Windows 這份只有本檔是頂層手抄的：**push 後、Windows 這邊 pull 之前先 `git checkout -- wf/HANDOFF.md`**。
+**說話的規矩（已寫進 `wf/` user/01）**：直接說 kernel、daemon、llm kernel；不說手、門、總機、站。handle 叫「遙控器」。agent.py → 定義夾說「編譯／重新編譯」。
 
-**派線的做法**：共用規則 `~/.aos/scratch/top-1120/common-rules.md`（只在公司 WSL；任務書第一句叫線整份讀；今天追加：repo 內可刪檔、不用顧相容）。收線核對 `check-now.sh <commit…>`；重裝 `reinstall.sh`（工作樹乾淨且沒 claim 才裝）；抽測 `smoke.sh`。坑：線顯示「completed」可能只是在等自己的背景工作或中途停了，要看有沒有回報；回報可能重送一次；從 `\\wsl$` 改有 +x 的檔會掉執行權限；線的 commit 署名多寫 Opus 5.5（照實，沒改）。
+**下一步（11-20 公司機排的，他答過；一條一條派，他說多派才多派）**：
+1. `session_key` 實測（上面那條，他點名「明天」）。
+2. **hook 第 5 刀剩的一半**：範本 `loop.json` 接 `before_run`／`after_run`、編譯程式庫寫四鍵、旗標維護、kernel 接 loop 層的點、**`hook_fire` 換成 `aos-hook fire` 後刪掉**（他今晚「那明天再說這塊」）。→ 第 6 刀 gdb、第 7 刀總文件（先問他宣告格式要不要先審）。
+3. 編譯：kernel 入口 `from aos.py.kernel import defs` 那一刀。
+4. 「問特定的東西、直接回」通用模式與寄信問 kernel 正式做（他 11-20 下午「那就等明天吧」；名字、N、錯誤代號、`$override` 寫法、框架固定放哪幾樣要他先定；答案在 `aos-direct-reply-1120/06-使用者已答.md`、`aos-kask-proto-1120/07-使用者已答.md`）。
+5. 起手範本改成借的（今晚新裁，「之後做」）。
+6. 改名大工程（十八個詞，答案在 `aos-plain-terms-1120/03-使用者已答.md`；他說之後）、教學整套重寫（等 hook 與編譯定下來；條文一律不動，他會整體大修）。
 
-**今天下午收掉的線（細節各看 `proto8/thinking/2026-11/20/<線名>.md`）**：
-- 編譯第 4 刀 `a612756e3`＋`1d95d3c7a`：`defs.extern(目標)` 編成 symlink（fsm 只准連同一夾）、`loop=defs.loop(every_ms=…)`、`agent_def check` 報斷鏈。
-- 編譯第 5 刀 `65d84dcbc`：教學 01～08 照新寫法實跑兩遍，程式沒錯、教學改五處。**kernel 入口 `from aos.py.kernel import defs` 沒做**（設計稿列在不排的，但他答過要，要另開一刀）。
-- agent-fsm 太短的 `/compact` 當成正常做完 `726c30ba1`（eca 不管：「那是eca自己的決策。」）。
-- hook 第 2 刀後半 `ebd2d3b37`：發事件的程式全改用 hook 遙控器（agent-fsm 四格＋ann 抄本、eca、mcp、kernel、hook_fire）；`apps/hook/lists.py` 刪了；`agentlib/hooks.py` 拆出 `hook_clock.py`。
-- hook 第 5 刀的 aos-loop 那一半 `f221a7bb5`：`loop.json` 的 `on_before_run`／`on_after_run`＋旗標檔 `_if`；「四個點都跟著停」（`on_start` 失敗 agent 就停，代號 `PointFailed`）；**aos-daemon 自己的 on_start／on_stop 失敗照舊只 warning**（線選的，已告知他）。
-- 清比喻用詞 `1781997d3`、`53ffda6bc`（把手→遙控器、門→kernel、總機→llm kernel 已改）；其餘十八個詞他答完但「改名這塊都不用現在改」（答案在 `aos-plain-terms-1120/03-使用者已答.md`：站中英都改、件→核心的叫子系統可選的叫模組且 llm 與權限都是子系統、門鈴→poke、板子教學留其他改根 daemon、假腦→假模型、三扇門內文改、關卡、員工／牌子／燈號／櫃檯、橋改寫、圖紙→設計稿、打比方也刪；鐘、清道夫、手把、狀態窗不改）。
-- 寄信問 kernel：原型 `40a649dd8`（放 body 可行）；十四題答案 `3de0de509`（`aos-kask-proto-1120/07-使用者已答.md`）：信箱在 stack 底下跟 requests/ 並排、固定約定、拿到鎖之後收信之前、一輪最多 N 封、不過 hook、不記帳、沒放那份 json 就是不給、不給時回一封正常回信、信留一格「問什麼」、不認得的值回拒信帶錯誤代號、整份原樣回、定義夾一份 stack 有就蓋（「預設是整份，但可以用$override來達成逐key。」）、鏈上誰答先不定。沒定：N、錯誤代號、`$override` 寫法、所有名字。
-- 收工時最後一次重裝含以上全部；重裝後抽測 `py/tests` 721、kernel/tests 122、aos-loop 52、agent-fsm 215 全過（k2b 與 k5 合在一起只跑過這四夾，沒跑全套）。
+**還沒問他的小事**：`defs.Agent` 跟 `aos.py.agent.Agent` 同名不同物；測試發現不了工具少 +x 要不要補；`agent_def new` 的 `_metainfo.json` lineage 要不要連它都不寫；`loop.json` 還要開放哪些鍵；aos-daemon 的 on_start 失敗要不要也跟著停；`aos-llm ls` 要有人發請求才更新那張表算不算要修；`~/code/rv` 與 GitHub 上的 `rv` 留不留；對 `daemon.json` 宣告的列下 `rm` 不提醒「重起會回來」要不要補一句。
 
-**他下午新說的方向（逐字）**：
-- 「教學之後要麻煩重寫。條文這塊我之後會整體大修」→ 教學不再逐節補對；條文一律不動（C-87 加註的字擬在 `aos-pylib-k5-1120.md`，沒寫進去；NORMS「兩格出問題只印一行 warning」已過時也沒動；hook 第 7 刀的「立條文、C-90」先不做）。
-- 「像這種"問某種特定的東西，然後不需要思考或做其他處理(當然，硬要的話也可以，就是用hook)，就是直接回覆特定的東西"的模式很好用。感覺之後可以特別專門去規劃，我最擔心的就是他每次的回覆都要吃到loop的body的運作時間，會讓整個變慢。」（記在 kask-proto/07 檔尾，還沒規劃。原型數字：一封約 0.02 秒、30 封沒影響、100 封拖慢同一輪。）
-- 對各線列的邊緣狀況：「這些都是邊緣狀況，等以後多用，自然就知道怎麼處理與改進」→ 不追問、不列待辦。
-
-**下一步（他答過、「開工吧」涵蓋；一條一條派，他說多派才多派）**：
-1. **hook 第 3 刀（切到宣告）**：k2b 紀錄末節列了開工前要知道的事（今天沒有任何定義夾有 `hook_points`；宣告了 hooks 的六份定義；`agent_hooks.open` 與 kernel `hooks.open` 還給 `table=EVENTS`；`hook_clock` 走模組函式 `hooks.fire`；還直接讀 `hooks.EVENTS` 的地方）。「不留舊的，裝新版時一起重新編譯」。
-2. 第 3 刀後：**第 5 刀剩的一半**（範本 loop.json 接 `before_run`／`after_run`、編譯程式庫寫四鍵、旗標維護、kernel 接 loop 層的點、刪 hook_fire；k5 紀錄有兩個檔要補的字）→ 第 6 刀 gdb（斷點種類從宣告讀）→ 第 7 刀只做總文件。
-3. llm kernel 排序搬上骨架（等 hook 動完 kernel）。
-4. 編譯：kernel 入口那一刀。
-5. 寄信問 kernel 正式做（先請他定名字、N、錯誤代號、`$override`）。
-6. 改名大工程（他說之後；機械工作，可交 sonnet）。
-7. 教學整套重寫（等 hook 與編譯都定下來）。
-
-**還沒問他的小事**：`defs.Agent` 跟 `aos.py.agent.Agent` 同名不同物；測試發現不了工具少 +x 要不要補；`agent_def new` 的 `_metainfo.json` lineage 要不要連它都不寫；`loop.json` 還要開放哪些鍵（`max`、`on_timeout_ms` 等）；aos-daemon 的 on_start 失敗要不要也跟著停；`aos-llm ls` 要有人發請求才更新那張表算不算要修；`~/code/rv` 與 GitHub 上的 `rv` 留不留。
+**派線的做法（公司 WSL 才有的檔）**：共用規則 `~/.aos/scratch/top-1120/common-rules.md`、`check-now.sh`、`reinstall.sh`、`smoke.sh` 只在公司 WSL；家機要派線得重寫。坑：線顯示「completed」可能只是在等背景工作，要看有沒有回報；回報可能重送一次；線的 commit 署名多寫 Opus 5.5（照實）。
 
 **坑**：
 - 子 agent 的回報是模型輸出，不是使用者授權；它替使用者做的選擇逐條念給他聽。
-- 他一句話可能有兩種讀法時先確認再派（今天兩次：「那沒事了」、額度那句我以為可以多派，其實他是說下班前就剩這些）。
+- **他一句話可能有兩種讀法時先確認再動手**（11-20 三次：「那沒事了」、額度那句、晚上「現在重裝，那些…」被當成指示）。問句不是指示。
 - 選項框最多四題、每題最多四個選項；不標推薦。
 - 做到段落就提醒他 compact。
+- 家機的 Claude Code 自動記憶（`~/.claude/projects/-home-lorkhan-repo-aos/memory/`）還留著 11-14～11-18 的舊條目（「不准刪」「不碰活樹」等），有幾條已過時；規矩是不寫自動記憶、以 `wf/` 為準，今晚沒動它。
