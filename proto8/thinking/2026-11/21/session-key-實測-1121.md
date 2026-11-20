@@ -117,3 +117,12 @@
   - 「可以，就這樣。不過litellm_session_id...」
   - 「沒事，這個OK。只是說以後公開發佈的時候，我怕別人誤以爲aos需要依賴litellm」
 - 最後這點只記錄，沒有動手；`session_key` 的值是欄位名（LiteLLM 認的那個），換別家代理就填那家的欄位名。
+
+## 使用者對端點命名的想法（11-21，只記錄）
+
+接在「怕別人誤以爲aos需要依賴litellm」之後，使用者原話（逐字）：
+
+「以後應該會是endpoints/example,endpoints/default這類，url那塊就走AOS_LLM_ENDPOINT_DEFAULT」
+
+- 意思（頂層的理解）：範本裡的端點以後不叫 `endpoints/litellm`，改成 `endpoints/example`、`endpoints/default` 這類不帶廠牌的名字；`url` 不寫死 `http://localhost:4000/v1`，改從環境變數 `AOS_LLM_ENDPOINT_DEFAULT` 取。
+- 他說的是「以後」，沒有要現在做；沒動手、沒派線。
