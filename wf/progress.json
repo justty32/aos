@@ -337,6 +337,17 @@
         "[aos-check-refs-1119](../proto8/thinking/2026-11/19/aos-check-refs-1119.md)"
       ],
       "since": "2026-11-19"
+    },
+    "aos-init-kernel": {
+      "title": "初始 kernel：llm 件＋權限沙箱件、都可選（調查＋發想）",
+      "status": "等使用者",
+      "flow": "",
+      "what": "11-20 線 aos-init-kernel-1120 盤點完：今天灌 kernel 只灌 llm kernel，會想的 agent 都要它；權限件今天不存在於灌 kernel 這一步，相關東西散在 daemon 本體、站範本、agent 與工具；攤了四種切法與八題待裁",
+      "next": "等使用者看待裁題",
+      "see": [
+        "[README](../proto8/thinking/2026-11/20/aos-init-kernel-1120/README.md)"
+      ],
+      "since": "2026-11-20"
     }
   }
 }
