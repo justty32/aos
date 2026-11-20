@@ -5,10 +5,12 @@
 | 檔 | 是什麼 |
 |---|---|
 | `main.py` | `aos-hook` 本體：`fire`、`points`、`check` 三個子指令、英文 `--help` |
-| `lists.py` | 讀 `--list` 的清單、對著宣告驗格、驗 hook 改回來的值的型別（交給引擎的 `check` 口） |
+| `lists.py` | 點與清單從哪來：`--points`／`--list`，或 `--agent DEF_DIR`（第 2 刀 2a 起；讀清單、驗格、驗型別搬進小庫 `aos/hook_lists.py`，經 `aos.hook_point.open` 的把手用） |
 | [`loop_points.json`](loop_points.json) | 用 aos-loop 跑、loop.json 有接線的子程式提供的四個點：`after_start`、`after_stop`；`before_run`、`after_run` 先宣告、標 `not_fired_yet`（aos-loop 還沒接） |
 
-使用者 11-20「任何子程式，含非 Python」；施工是第 4 刀（線 aos-hook-k4-1120，使用者「先開第 4 刀」）。**只加**：現在沒有任何程式叫它，agent 的起停照舊走 `py/tools/agent/hook_fire`；換過去是第 5 刀。
+使用者 11-20「任何子程式，含非 Python」；施工是第 4 刀（線 aos-hook-k4-1120，使用者「先開第 4 刀」）。**只加**：現在沒有任何程式叫它，agent 的起停照舊走 `py/tools/agent/hook_fire`；換過去是第 5 刀。第 2 刀 2a（線 aos-hook-k2-1120）把它改成經小庫的把手跑、接上 `--agent`，行為沒變。
+
+Python 寫的提供者不用起這支：直接 `aos.hook_point.open(…)` 開一個把手、每個點 `fire` 一行（介面寫在 [`hook_point.py`](../../hook_point.py) 檔頭；agent 一家另有 [`agentlib/agent_hooks.py`](../../agentlib/agent_hooks.py)）。
 
 ## 提供一個點＝一份宣告＋在那個時機起一次 `aos-hook fire`
 
@@ -50,7 +52,8 @@ else if (r.code != 0) { /* aos-hook printed its error line */ }
 
 ## 規矩
 
-- **旗標**（三個子指令共用，子指令前後都收）：`--points FILE`（可重複；同名的點在兩份裡說法要一致，不一致＝`PointsBad`）、`--list FILE`（可重複；後面的同名蓋前面的、`null`＝關掉；**檔不在＝沒有 hook**，跟 agent 的 stack 那份一樣）、`--stack DIR`（hook 的小格放 `DIR/hooks/<名>/`；沒給＝`$AOS_STACK`；都沒有＝`StackMissing`，只有 `fire` 要）。`--agent DEF_DIR` 先留位置，現在給了＝`ArgumentsBad`（要等第 2 刀）。
+- **旗標**（三個子指令共用，子指令前後都收）：`--points FILE`（可重複；同名的點在兩份裡說法要一致，不一致＝`PointsBad`）、`--list FILE`（可重複；後面的同名蓋前面的、`null`＝關掉；**檔不在＝沒有 hook**，跟 agent 的 stack 那份一樣）、`--stack DIR`（hook 的小格放 `DIR/hooks/<名>/`；沒給＝`$AOS_STACK`；都沒有＝`StackMissing`，只有 `fire` 要）。
+- **`--agent DEF_DIR`**（第 2 刀 2a）：一次給齊一隻 agent 的那一套，跟 `--points`／`--list` 二選一（一起給＝`ArgumentsBad`）。點＝定義夾 `interfaces.json` 的 `aos-agent.hook_points`（`hook_point.for_definition`；**今天的定義夾都還沒有這個鍵，第 3 刀才加**，沒有＝沒有點，發什麼都是 `EventUnknown … (points: none)`）；清單＝定義宣告的 `hooks` 檔，疊上 stack 裡同名那份（沒有 stack＝只有定義那份，`check`、`points` 可以這樣用）；on_clock 的格另驗 agent 自己的規矩（`every_cycles`／`every_ms` 恰好一個、正整數；`clock` 非空字串）；`fire … after_start` 先清 stack 裡各 hook 的 on_clock 狀態（同今天 `hook_fire`；清不掉＝一行 warning）。不是資料夾＝`ArgumentsBad`。
 - **事件資料**，後者蓋前者：stdin 的 JSON 物件（空的、是終端＝`{}`；鍵原樣傳下去）→ 宣告裡寫了 `env` 的欄位：環境變數去頭尾空白後不是空的才用（`type: int` 要是整數，不然 `ArgumentsBad`），沒設就留 stdin 給的、都沒有＝`null` → `--field NAME=VALUE`、`--field-file NAME=PATH`（讀檔去頭尾空白；檔不在＝`null`）→ `--field-default NAME=VALUE`（前面都沒給出值、或是 `null` 才用）。同一個 NAME 同時給 `--field` 與 `--field-file`＝`ArgumentsBad`；同一個旗標給兩次＝後面那個算。`--field` 給的名字不在宣告裡也照收（跟 stdin 的鍵一樣不驗）。
 - **stdin 一定會被讀到底**（除非是終端）：從別的程式起 `aos-hook` 時，stdin 要嘛給 JSON、要嘛接 `/dev/null`；接著一條永遠不關的管子它會一直等。aos-daemon 底下的 aos-loop 本來就是 `/dev/null`。
 - **stdout**：一行 JSON `{"data", "changed", "blocked", "hook", "text"}`（引擎 `hook_run.fire` 的回值原樣）；`-q`＝不印。
@@ -67,4 +70,4 @@ else if (r.code != 0) { /* aos-hook printed its error line */ }
 
 ## 測試
 
-`py/tests/apps/hook/test_hook_cli.py`（跑裝好的 `bin/aos-hook`，handler 是真的 sh 與 python3、經 aos-exec；沒有 daemon）。
+`py/tests/apps/hook/test_hook_cli.py`、`test_hook_cli_agent.py`（`--agent`）（跑裝好的 `bin/aos-hook`，handler 是真的 sh 與 python3、經 aos-exec；沒有 daemon）。把手本身：`py/tests/test_hook_point_open.py`、`py/tests/test_agent_hooks.py`。

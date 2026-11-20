@@ -17,12 +17,17 @@ on_clock 專用的鍵與檢查、content 的回話要求、tool_added 的名單�
     load(def_folder, stack) -> {名字: 格}；格＝原格的鍵＋DEFAULTS 補齊＋"from"（來自哪份檔的絕對路徑）＋"base"（解 exec 相對路徑的資料夾）
     nulled(def_folder, stack) -> [stack 那份設成 null 的名字]（排好）
     validate_entry(entry) -> None；不對丟 HooksBad（原因不含名字，呼叫方自己加）
+    check_clock(entry) -> None：只驗 on_clock 專用鍵的值（validate_entry 的後半）；不對丟 HooksBad
+    layers(def_folder, stack) -> [定義那份, stack 那份] 的清單絕對路徑；沒宣告 hooks＝[]
     has(event, def_folder, stack) -> 有沒有 on==event 的 hook（不看 match）
     fire(event, data, def_folder, stack, warn=None) -> {"data": 改過的 data（新 dict）, "changed": [改過的鍵],
                     "blocked": bool, "hook": 攔下的 hook 名或 None, "text": 攔下那個 hook 的 stdout（字串）或 ""}
     tools_added(stack, tools, has_hook) -> [(name, path)]：這次比上次多出來的工具（tools＝[(name, path)]）
     clock_tick(def_folder, stack, warn=None) -> [跑了的 hook 名]：on_clock 的檢查（11-11 clock-hook）；沒有這種 hook＝只讀清單、不起行程
     clock_restart(stack) -> None：loop 起來時清掉 on_clock 的狀態檔（下一次檢查＝第一次、立刻跑）
+    把手（11-20 hook 介面第 2 刀 2a，thinking/2026-11/20/aos-hook-plan-1120/04）：agent_hooks.open(def_folder, stack, fail, warn)
+                    ＝開一次、之後每個點一行（fire、has、names、clock_tick、take_letter、guard_tool、announce_tools），錯一律交 fail。
+                    格程式、eca、aos-mcp 要等 install 之後（2b）才改叫它；上面這些模組函式留到第 3 刀。
 
 11-11（thinking/2026-11/11/clock-hook）：事件多 after_start、after_stop（aos-loop 的 on_start／on_stop 叫 py/tools/agent/hook_fire 發，
 使用者「hook 要加的事件：起來與停下」）與 on_clock（使用者「hook就可以添加一個類型……去看指定的clock proc……每隔十個cycle就幹嘛，
@@ -75,20 +80,28 @@ def validate_entry(entry):
     """單格驗證；不認得的鍵不管（C-48）。不對＝HooksBad。共通的鍵由引擎驗，on_clock 專用的鍵排在它後面驗
     （一格同時有兩種錯時先報共通鍵的那句；使用者 11-13「4可以。」）。"""
     hook_run.validate_entry(entry, EVENTS)
-    on = entry["event"]
-    if on == CLOCK_EVENT:
-        given = [k for k in ("every_cycles", "every_ms") if k in entry]
-        if len(given) != 1:
-            raise HooksBad("event %s needs exactly one of every_cycles, every_ms" % on)
-        n = entry[given[0]]
-        if not isinstance(n, int) or isinstance(n, bool) or n <= 0:
-            raise HooksBad("%s must be a positive integer" % given[0])
-        if "clock" in entry and not (isinstance(entry["clock"], str) and entry["clock"]):
-            raise HooksBad("clock must be a non-empty string (a proc name, or the path of a clock file or of a folder with one)")
+    if entry["event"] == CLOCK_EVENT:
+        check_clock(entry)
     else:
         for key in CLOCK_KEYS:
             if key in entry:
                 raise HooksBad("%s is only for event %s" % (key, CLOCK_EVENT))
+
+
+def check_clock(entry):
+    """on_clock 專用鍵的值（every_cycles／every_ms 恰好一個、正整數；clock 非空字串）；別的事件的格＝不管。不對＝HooksBad。
+    validate_entry 與照宣告讀清單的（aos-hook --agent，宣告的 entry_keys 已擋「只能寫在 on_clock」）共用。"""
+    on = entry["event"]
+    if on != CLOCK_EVENT:
+        return
+    given = [k for k in ("every_cycles", "every_ms") if k in entry]
+    if len(given) != 1:
+        raise HooksBad("event %s needs exactly one of every_cycles, every_ms" % on)
+    n = entry[given[0]]
+    if not isinstance(n, int) or isinstance(n, bool) or n <= 0:
+        raise HooksBad("%s must be a positive integer" % given[0])
+    if "clock" in entry and not (isinstance(entry["clock"], str) and entry["clock"]):
+        raise HooksBad("clock must be a non-empty string (a proc name, or the path of a clock file or of a folder with one)")
 
 
 def _read(path):
@@ -118,13 +131,19 @@ def _read(path):
     return table
 
 
-def _layers(def_folder, stack):
+def layers(def_folder, stack):
+    """[定義那份, stack 那份] 的絕對路徑（interfaces.json 宣告的 hooks 相對路徑，各從兩處算）；沒宣告＝[]。"""
     rel = declared(def_folder)
     if not rel:
+        return []
+    return [os.path.abspath(os.path.join(def_folder, rel)), os.path.abspath(os.path.join(stack, rel))]
+
+
+def _layers(def_folder, stack):
+    paths = layers(def_folder, stack)
+    if not paths:
         return None, {}, {}
-    mine = os.path.abspath(os.path.join(def_folder, rel))
-    own = os.path.abspath(os.path.join(stack, rel))
-    return (mine, own), _read(mine), _read(own)
+    return tuple(paths), _read(paths[0]), _read(paths[1])
 
 
 def load(def_folder, stack):

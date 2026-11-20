@@ -1,88 +1,56 @@
-"""lists - aos-hook's part between the declarations and the engine: read the --list files (hooks tables), check their entries against the points, check the values hooks change.
+"""lists - where aos-hook takes the points and the hooks lists from: --points FILE and --list FILE, or --agent DEF_DIR (an agent's own declarations and its two hooks layers).
 
-Design: proto8/thinking/2026-11/20/aos-hook-plan-1120 (05 the command, 01 entry_keys, 04 the change types; 12 is what holds).
-Cut 4 of that plan: only aos-hook uses this. Running the hooks is aos.hook_run (the same engine the agents and the
-kernel use); this file only decides which entries there are and which changed values are allowed.
-Cut 2 (aos.hook_point.open) needs the same three things and may move them there.
+Design: proto8/thinking/2026-11/20/aos-hook-plan-1120/05 (--agent: the declarations = the hook_points of the definition's
+interfaces.json, the lists = the definition's hooks file with the stack copy on top, the agent's own on_clock rules);
+12 is what holds. Cut 4 kept the list reading here; cut 2a moved it to aos.hook_lists (used through
+aos.hook_point.open) and left this file the choice of source. Raises nothing of its own: errors go to fail(code, sentence).
 
 API:
-    load(paths, points) -> {name: entry} for aos.hook_run.fire: the hooks tables of the files, a later file overrides
-                           an earlier one by name, null = turned off; a missing file = no hooks. Bad = hook_run.HooksBad
-    check(points)       -> check(event, key, value) for hook_run.fire: the value must have the declared change type
-                           (string, nonempty_string, object, any); bad = ValueError with one English sentence
+    source(opts, stack, fail) -> {"points": {name: point}, "lists": [paths], "files": how many declarations,
+                                  "entry_check": None or function,
+                                  "label": what the points are, for messages, "agent": DEF_DIR or None}
+        opts = the shared flags (points, list, agent). --agent with --points or --list = ArgumentsBad.
+        --agent: no stack = only the definition's layer (check and points may go without one). A definition
+        without hook_points has no points (cut 3 adds them to the definitions).
 """
-import json
 import os
 
-from aos import hook_point, hook_run
+from aos import hook_point
 
 
-def _entry_keys(points):
-    """{key: [points that take it]} from the points' entry_keys."""
-    out = {}
-    for name, point in points.items():
-        for key in point.get("entry_keys", []):
-            out.setdefault(key, []).append(name)
-    return out
-
-
-def _check_entry(entry, table, owners):
-    """The engine's checks of the common keys, then: a key of some point's entry_keys only on that point (01, B5)."""
-    hook_run.validate_entry(entry, table)
-    for key, events in sorted(owners.items()):
-        if key in entry and entry["event"] not in events:
-            raise hook_run.HooksBad("%s is only for event %s" % (key, " or ".join(sorted(events))))
-
-
-def _read(path, table, owners):
-    """One list file -> {name: entry or None}; missing = {}."""
-    try:
-        with open(path, encoding="utf-8") as f:
-            doc = json.load(f)
-    except FileNotFoundError:
-        return {}
-    except (OSError, ValueError) as e:
-        raise hook_run.HooksBad("cannot read %s: %s" % (path, e)) from None
-    if not isinstance(doc, dict):
-        raise hook_run.HooksBad("%s must be a JSON object" % path)
-    hooks = doc.get("hooks", {})
-    if not isinstance(hooks, dict):
-        raise hook_run.HooksBad("hooks in %s must be a JSON object" % path)
-    for name, entry in hooks.items():
-        try:
-            hook_run.validate_name(name)
-        except hook_run.HooksBad as e:
-            raise hook_run.HooksBad("hook name %r in %s %s" % (name, path, e)) from None
-        if entry is not None:
-            try:
-                _check_entry(entry, table, owners)
-            except hook_run.HooksBad as e:
-                raise hook_run.HooksBad("hook %s in %s: %s" % (name, path, e)) from None
+def agent_hooks():
+    """aos.agentlib.hooks, imported only for --agent (a plain fire does not pay for it)."""
+    from aos.agentlib import hooks
     return hooks
 
 
-def load(paths, points):
-    """The --list files in order -> {name: entry} completed with the engine's defaults, "from" and "base"."""
-    table, owners = hook_point.engine_table(points), _entry_keys(points)
-    out = {}
-    for path in paths:
-        path = os.path.abspath(path)
-        for name, entry in _read(path, table, owners).items():
-            if entry is None:
-                out.pop(name, None)
-            else:
-                out[name] = hook_run.complete(entry, path)
-    return out
+def _points(fail, read, *args):
+    try:
+        return read(*args)
+    except hook_point.PointsBad as e:
+        hook_point.call_fail(fail, "PointsBad", str(e))
 
 
-def check(points):
-    """The engine's check hook: a changed value must have the type the point declares for that key."""
-    def one(event, key, value):
-        want = points[event].get("change", {}).get(key, "any")
-        if want == "string" and not isinstance(value, str):
-            raise ValueError("%s in stdout must be a string" % key)
-        if want == "nonempty_string" and not (isinstance(value, str) and value.strip()):
-            raise ValueError("%s in stdout must be a non-empty string" % key)
-        if want == "object" and not isinstance(value, dict):
-            raise ValueError("%s in stdout must be a JSON object" % key)
-    return one
+def source(opts, stack, fail):
+    agent = opts.get("agent")
+    if agent is None:
+        paths = opts.get("points", [])
+        if not paths:
+            hook_point.call_fail(fail, "ArgumentsBad", "give at least one --points FILE, or --agent DEF_DIR")
+        return {"points": _points(fail, hook_point.read, paths), "lists": opts.get("list", []), "files": len(paths),
+                "entry_check": None, "label": ", ".join(paths), "agent": None}
+    if opts.get("points") or opts.get("list"):
+        hook_point.call_fail(fail, "ArgumentsBad", "give either --agent DEF_DIR or --points / --list, not both")
+    if not (agent and os.path.isdir(agent)):
+        hook_point.call_fail(fail, "ArgumentsBad", "--agent needs an agent definition folder, got %r" % agent)
+    agent = os.path.abspath(agent)
+    points = _points(fail, hook_point.for_definition, agent)
+    hooks = agent_hooks()
+    try:
+        layers = hooks.layers(agent, stack or agent)
+    except hooks.HooksBad as e:
+        hook_point.call_fail(fail, "HooksBad", str(e))
+    files = len({said["path"] for point in points.values() for said in point["said"]})
+    return {"points": points, "lists": layers if stack else layers[:1], "files": files,
+            "entry_check": hooks.check_clock,
+            "label": "the hook_points of %s" % os.path.join(agent, "interfaces.json"), "agent": agent}

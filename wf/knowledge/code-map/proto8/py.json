@@ -12,6 +12,7 @@
    "agent_spec_parts.py": "agent_spec 的零件：各份定義檔怎麼從宣告算出來、怎麼先驗（tools.json、llm.json、interfaces.json、FILES），以及不宣告 FSM 時照夾裡現有的 interfaces.json 找檔名。",
    "agentlib": {
     "__init__.py": "aos.agentlib - agent 層的共用模組（hooks、cooldown、claude／codex 對話的 cli_*、cmd_call …；S3 前在 lib/agent）。",
+    "agent_hooks.py": "agent 一家發 hook 的把手：open 一次（定義那份疊 stack 那份），之後每個點一行；丟信三步、工具被攔的預設字、tool_added 那串只在這裡一份。",
     "agent_tool.py": "claude、codex 共用的工具形入口 ask_cli。",
     "agents_cmd.py": "subagent 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。",
     "cli_a2a.py": "cli_session 往開著的 claude 畫面投署名訊息（Claude Code 的 cross-session messaging socket）：記 socket、包信封、投遞、等 hook 回執",
@@ -127,7 +128,7 @@
     },
     "hook": {
      "__init__.py": "aos.apps.hook - the aos-hook command (main.py; lists.py reads the hooks lists for it) and loop_points.json, the hook points of the aos-loop layer.",
-     "lists.py": "aos-hook's part between the declarations and the engine: read the --list files (hooks tables), check their entries against the points, check the valu…",
+     "lists.py": "where aos-hook takes the points and the hooks lists from: --points FILE and --list FILE, or --agent DEF_DIR (an agent's own declarations and its two …",
      "loop_points.json": "Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop, today through py/tools/agent/hook…",
      "main.py": "aos-hook - fire a hook event from any program (C++, shell, ...), list the points of hook_points.json declarations, check declarations and hooks lists."
     },
@@ -218,7 +219,9 @@
     "trigger.py": "aos.gdb.trigger - 條件觸發器的共用零件：觸發器檔（trigger.json）長什麼樣、條件怎麼判、連續幾次才算、停的時候留的字條（gdb/log.jsonl）與停在事件前的「扣住」檔（gdb/hold.json）、斷點號碼的計數器（gdb/next_id.json）；REPL 那…",
     "watcher.py": "aos.gdb.watcher - 觀察者（丙）：另一支掛在 daemon 表上的普通 proc（名字 gdbw_ 開頭），每隔 every_ms 看一次目標 agent 的檔，條件成立（連續 times 次）就 ctl pause 目標並在它的 gdb/log.jsonl 留字條（by \"wat…"
    },
-   "hook_point.py": "read the hook_points.json declarations (the hook points a program offers), check them, and turn them into the table the hook engine wants.",
+   "hook_handle.py": "the handle aos.hook_point.open returns: fire a program's hook points through the engine, with errors going to the program's own fail().",
+   "hook_lists.py": "read hooks lists (JSON files with a \"hooks\" table) against a hook point table, and check the values hooks change against the declared types; the part…",
+   "hook_point.py": "read the hook_points.json declarations (the hook points a program offers), check them, turn them into the table the hook engine wants, and open a han…",
    "hook_run.py": "hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。",
    "index.py": "aos_index - index_view：透過 index（視角）看節點，一行一項「鍵 TAB description」；index 放哪只寫在 spot() 一處。",
    "json.py": "aos_json - 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／len／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set、jsonx_mu…",
@@ -388,7 +391,8 @@
      "test_gdb_trigger.py": "aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent…"
     },
     "hook": {
-     "test_hook_cli.py": "Test aos-hook (fire, points, check) through bin/aos-hook: exit codes 0/10/1, the stdout line, where event data comes from, changes and their types, b…"
+     "test_hook_cli.py": "Test aos-hook (fire, points, check) through bin/aos-hook: exit codes 0/10/1, the stdout line, where event data comes from, changes and their types, b…",
+     "test_hook_cli_agent.py": "Test aos-hook --agent DEF_DIR through bin/aos-hook: the definition's hook_points, its hooks file with the stack copy on top, the agent's on_clock che…"
     },
     "json_view": {
      "test_json_view.py": "Test aos-json-view: indent guides (| per level, colour by depth), colours by type, text blocks (newlines and string arrays), compact inline objects/a…"
@@ -436,6 +440,7 @@
    },
    "fake_mcp_stdio.py": "Provide a standard-library MCP stdio server with tools and failure modes for client tests.",
    "ref_path_cases.json": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per …",
+   "test_agent_hooks.py": "Test aos.agentlib.agent_hooks, the agent's hook handle (cut 2a): fire like hooks.fire, the two layers, take_letter's three steps, guard_tool's defaul…",
    "test_agent_spec.py": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad before any w…",
    "test_agent_spec_lib.py": "Test the libraries of py/aos/agent_spec.py (std, defs.lib: packs copied in, other libraries prefixed, clashes SpecBad) and how tool packs are linked,…",
    "test_agent_spec_load.py": "Test defs.load of py/aos/agent_spec.py (one agent.py built on another: the loaded agent's fields, worked out when agent.py runs, nothing of the base …",
@@ -473,6 +478,7 @@
    "test_fn_spec_live.py": "cut 3 for real: an agent.py with @fn.tool add and @fn.hook no_secrets compiled with the installed aos, checked by agent_def check, mounted in a copy …",
    "test_fn_spec_more.py": "Test cut 3 of the compile library beyond what a function may use: @fn.hook into hooks.json (events, condition, fn.block, same names), renames and cla…",
    "test_hook_point.py": "Test aos.hook_point: the shipped hook_points.json files read and check fine, every check rule rejects a bad example, merging, engine_table and for_de…",
+   "test_hook_point_open.py": "Test aos.hook_point.open and its handle: where points and hooks come from, lists read again on every fire, the declared change types checked per hook…",
    "test_hook_points_match.py": "Consistency test: the hook_points.json declarations say the same as the event tables the programs use today and as the hand copies (docs, knowledge, …",
    "test_hook_run.py": "Verify the shared hook engine: entry validation, running handlers through aos-exec, replies, blocking, on_error, timeouts, ordering and conditions.",
    "test_hooks_engine.py": "驗 py/aos/agentlib/hooks.py 用的是共用引擎 py/aos/hook_run.py（11-13 kernel-framework 批 1b）：類別同一個、跑與解回話沒有第二份、只把 py/ 放上路徑也找得到引擎、agent 自己的檢查（on_clock 的鍵、content…",

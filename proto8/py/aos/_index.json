@@ -70,8 +70,14 @@
  "gdb": {
   "description": "aos-gdb 的 Python 庫（aos.gdb）：對已在跑的 agent 下條件觸發器（一個 hook：工具要跑之前扣住，或事件後暫停）或起觀察者（另一支 proc 輪詢、成立就暫停目標）、列出／拿掉、看為什麼停、檢閱 stack、續"
  },
+ "hook_handle.py": {
+  "description": "the handle aos.hook_point.open returns: fire a program's hook points through the engine, with errors going to the program's own fail()."
+ },
+ "hook_lists.py": {
+  "description": "read hooks lists (JSON files with a \"hooks\" table) against a hook point table, and check the values hooks change against the declared types; the part…"
+ },
  "hook_point.py": {
-  "description": "read the hook_points.json declarations (the hook points a program offers), check them, and turn them into the table the hook engine wants."
+  "description": "read the hook_points.json declarations (the hook points a program offers), check them, turn them into the table the hook engine wants, and open a han…"
  },
  "hook_run.py": {
   "description": "hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。"

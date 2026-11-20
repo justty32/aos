@@ -2,9 +2,10 @@
 
 Design: proto8/thinking/2026-11/20/aos-hook-plan-1120/05 (the command) with 12 (what holds after the review); the user
 11-20: "任何子程式，含非 Python", then "先開第 4 刀". Cut 4 only adds this command: nothing calls it yet, hook_fire stays.
-The hooks run in aos.hook_run (the engine the agents and the kernel use): order, exit 10, on_error, timeout_ms and which
-keys a hook may change are its rules. lists.py reads the --list files and checks the changed values' declared types.
---agent DEF_DIR is a reserved flag: it needs cut 2 (the agent's own lists and on_clock rules) and is ArgumentsBad until then.
+The hooks run in aos.hook_run (the engine the agents and the kernel use) through an aos.hook_point handle: order, exit
+10, on_error, timeout_ms and which keys a hook may change are the engine's rules; the handle reads the lists and checks
+the changed values' declared types. lists.py picks the source: --points / --list, or --agent DEF_DIR (cut 2a: the
+agent's hook_points, its two hooks layers and on_clock rules; after_start first clears the on_clock state).
 Exit codes: 0 ok (also when no hook listens), 10 blocked (fire only), 1 error (one line "aos-hook: error: CODE reason").
 """
 import json
@@ -33,7 +34,10 @@ where the points and the hooks are (these flags go before or after the subcomman
                   several: a later file overrides an earlier one by name, null turns a hook off; a file
                   that does not exist has no hooks
   --stack DIR     where the hooks' own folders go (DIR/hooks/NAME/); default $AOS_STACK
-  --agent DEF_DIR not available yet (it comes with the agent's own declarations); give --points and --list
+  --agent DEF_DIR an agent's own set instead of --points / --list: the points = the hook_points of
+                  DEF_DIR/interfaces.json, the hooks = the definition's hooks file with the stack's copy
+                  on top (no stack: the definition's only; fire needs one); on_clock entries get the
+                  agent's checks; fire after_start first clears the on_clock state of the stack
   -h, --help      show this help
 
 exit codes: 0 ok; 10 blocked by a hook (fire only); 1 error ("aos-hook: error: CODE reason" on stderr).
@@ -102,25 +106,24 @@ def parse(argv, sub, switches=None, multi=None, short=None):
         raise Fail(e.code, "%s (see %s %s --help)" % (e, PROG, sub))
 
 
-def declared():
-    """The --points files merged (hook_point.read); --agent is not there yet."""
-    if ROOT.get("agent"):
-        raise Fail("ArgumentsBad", "--agent is not available yet (it needs the agent's own declarations); "
-                   "give --points FILE and --list FILE")
-    paths = ROOT.get("points", [])
-    if not paths:
-        raise Fail("ArgumentsBad", "give at least one --points FILE")
-    try:
-        return hook_point.read(paths)
-    except hook_point.PointsBad as e:
-        raise Fail("PointsBad", str(e))
+def failed(code, sentence):
+    """The fail() of the hook_point handle: this command's own error line."""
+    raise Fail(code, sentence)
 
 
-def hooks_of(points):
-    try:
-        return lists.load(ROOT.get("list", []), points)
-    except hook_run.HooksBad as e:
-        raise Fail("HooksBad", str(e))
+def stack_dir():
+    return ROOT.get("stack") or os.environ.get("AOS_STACK", "")
+
+
+def declared(stack=""):
+    """Where the points and the lists come from (lists.source): --points / --list, or --agent."""
+    return lists.source(ROOT, stack, failed)
+
+
+def handle(src, stack):
+    """The hook_point handle over the source's points and lists."""
+    return hook_point.open(src["points"], lists=src["lists"], stack=stack or ".", fail=failed, warn=warn,
+                           entry_check=src["entry_check"])
 
 
 def value(point, event, name, text, source):
@@ -198,20 +201,23 @@ def fire(argv):
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "give one EVENT" if not rest else "give one EVENT (got %s)" % " ".join(rest))
     event = rest[0]
-    points = declared()
+    stack = stack_dir()
+    src = declared(stack)
+    points = src["points"]
     if event not in points:
         raise Fail("EventUnknown", "no point %s in %s (points: %s)"
-                   % (event, ", ".join(ROOT["points"]), ", ".join(points) or "none"))
-    stack = ROOT.get("stack") or os.environ.get("AOS_STACK", "")
+                   % (event, src["label"], ", ".join(points) or "none"))
     if not stack:
         raise Fail("StackMissing", "give --stack DIR or set AOS_STACK (the hooks' folders go to DIR/hooks/NAME/)")
-    entries = hooks_of(points)
+    hooks = handle(src, stack)
+    entries = hooks.load()
     data = event_data(points, event, opts)
-    try:
-        result = hook_run.fire(event, data, entries, stack, hook_point.engine_table(points), warn=warn,
-                               check=lists.check(points))
-    except hook_run.HookFailed as e:
-        raise Fail("HookFailed", str(e))
+    if src["agent"] and event == "after_start":   # as hook_fire did: the first clock check after a start runs at once
+        try:
+            lists.agent_hooks().clock_restart(stack)
+        except OSError as e:
+            warn("cannot reset the on_clock state in %s: %s" % (stack, e))
+    result = hooks.fire(event, data, entries=entries)
     if not opts.get("quiet"):
         print(json.dumps(result, ensure_ascii=False), flush=True)
     sys.exit(hook_run.BLOCK if result["blocked"] else 0)
@@ -250,7 +256,7 @@ def points_cmd(argv):
     opts, rest = parse(argv, "points", {"--json": "json"}, short={"-j": "--json"})
     if rest:
         raise Fail("ArgumentsBad", "points takes no arguments (got %s)" % " ".join(rest))
-    points = declared()
+    points = declared()["points"]
     if opts.get("json"):
         print(json.dumps(points, ensure_ascii=False))
     else:
@@ -262,15 +268,17 @@ def check(argv):
     _, rest = parse(argv, "check")
     if rest:
         raise Fail("ArgumentsBad", "check takes no arguments (got %s)" % " ".join(rest))
-    points = declared()
-    entries = hooks_of(points)
+    stack = stack_dir()
+    src = declared(stack)
+    points = src["points"]
+    entries = handle(src, stack).load()
     for name, entry in sorted(entries.items()):
         later = [s for s in points[entry["event"]]["said"] if "not_fired_yet" in s]
         if later:
             warn("hook %s (in %s) is on point %s, which nothing fires yet: %s"
                  % (name, entry["from"], entry["event"], later[0]["not_fired_yet"]))
     print("ok: %d points from %d declarations, %d hooks from %d lists"
-          % (len(points), len(ROOT["points"]), len(entries), len(ROOT.get("list", []))))
+          % (len(points), src["files"], len(entries), len(src["lists"])))
 
 
 SUBS = {"fire": fire, "points": points_cmd, "check": check}

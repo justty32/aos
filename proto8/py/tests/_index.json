@@ -15,6 +15,9 @@
  "ref_path_cases.json": {
   "description": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per rule, run by py/tests/test_ref_path.py."
  },
+ "test_agent_hooks.py": {
+  "description": "Test aos.agentlib.agent_hooks, the agent's hook handle (cut 2a): fire like hooks.fire, the two layers, take_letter's three steps, guard_tool's defaul…"
+ },
  "test_agent_spec.py": {
   "description": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad before any w…"
  },
@@ -125,6 +128,9 @@
  },
  "test_hook_point.py": {
   "description": "Test aos.hook_point: the shipped hook_points.json files read and check fine, every check rule rejects a bad example, merging, engine_table and for_de…"
+ },
+ "test_hook_point_open.py": {
+  "description": "Test aos.hook_point.open and its handle: where points and hooks come from, lists read again on every fire, the declared change types checked per hook…"
  },
  "test_hook_points_match.py": {
   "description": "Consistency test: the hook_points.json declarations say the same as the event tables the programs use today and as the hand copies (docs, knowledge, …"

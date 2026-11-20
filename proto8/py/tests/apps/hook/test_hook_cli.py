@@ -77,7 +77,8 @@ class HookCli(unittest.TestCase):
         self.assertError(self.run_hook("shoot"), "CommandUnknown")
         self.assertError(self.run_hook("fire", "--nope"), "FlagUnknown")
         self.assertError(self.run_hook("fire", "before_save"), "ArgumentsBad", "--points")
-        self.assertError(self.run_hook("fire", "--agent", self.d, "before_save"), "ArgumentsBad", "not available yet")
+        self.assertError(self.run_hook("fire", "--agent", self.d, "--points", self.points, "before_save"),
+                         "ArgumentsBad", "not both")
 
     # ---- fire: exit 0, data, -q
     def test_nobody_listens(self):

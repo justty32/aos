@@ -26,3 +26,4 @@
 | [編譯程式庫第 3 刀：函數工具與 hook 抽成 fn/<名>.py（aos-pylib-k3-1120）](aos-pylib-k3-1120.md) | agent.py 的 @fn.tool／@fn.hook 函數放進 tools／hooks，編譯時抽成定義夾的 fn/<名>.py；新 fn_spec.py、agent_spec_hooks.py；函數用到 agent.py 自己的東西、defs／std、旁邊模組都 SpecBad；沒用函數的產物逐 byte 不變；假腦實掛工具被叫、hook 攔得下；對不上處十一條 |
 | [aos-hook-drift-1120](aos-hook-drift-1120.md) | hook 待裁第 8 題：17 項文件漂移補齊、一致性測試守住；eca 中途來的 /compact 信過兩次 before_queue 實跑屬實，沒修 |
 | [aos-kinit-tpl-1120](aos-kinit-tpl-1120.md) | 照初始 kernel 八題的答案改文件與 start-api：最小核心＋llm 件＋權限件，另有一串可選件待定；llm kernel 改掛同板（llm/）、加選裝不開的權限站 perm/；重建步驟單跟著改；假腦實跑 |
+| [aos-hook-k2-1120](aos-hook-k2-1120.md) | hook 介面施工第 2 刀的庫那一半（2a）：把手 hook_point.open 與 agent_hooks.open、aos-hook --agent；呼叫端沒換，install 後再換（2b） |

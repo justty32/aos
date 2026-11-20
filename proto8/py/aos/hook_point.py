@@ -1,9 +1,11 @@
-"""hook_point - read the hook_points.json declarations (the hook points a program offers), check them, and turn them into the table the hook engine wants.
+"""hook_point - read the hook_points.json declarations (the hook points a program offers), check them, turn them into the table the hook engine wants, and open a handle a program fires its points with.
 
 Design: proto8/thinking/2026-11/20/aos-hook-plan-1120 (01 format, 04 this library, 12 what changed after review).
-Cut 1 of that plan: only added, nobody calls this at run time yet. The tables the programs really use are still
-aos.agentlib.hooks.EVENTS and the kernel's hooks.EVENTS; py/tests/test_hook_points_match.py checks that the
-declarations say the same. Standard library only; prints nothing, never exits: errors are PointsBad.
+Cut 1 added the reading; cut 2a (library half) added open() and the handle. aos-hook uses the handle; the agent
+bodies and the kernel still fire through their own tables (aos.agentlib.hooks.EVENTS, the kernel's hooks.EVENTS)
+until cut 2b / 3 switch them; py/tests/test_hook_points_match.py checks that the declarations say the same.
+Standard library plus the engine (aos.hook_run, aos.hook_lists); prints nothing, never exits: errors are PointsBad,
+or go to the handle's fail().
 
 One declaration file = one provider (the program that fires the events) and all its points:
     {"description": "...", "provider": "agent-fsm", "points": {"before_tool": {point}, ...}}
@@ -37,6 +39,36 @@ API:
     for_definition(def_dir)   -> read() of the "hook_points" list in def_dir/interfaces.json ("aos-agent" key);
                                  no file, no "aos-agent" or no "hook_points" = {}. Items: a string = a path
                                  (relative = from def_dir), or {"provider": name}
+    open(points=None, *, table=None, lists=None, entries=None, stack, fail, warn=None, check=None, entry_check=None)
+                              -> Handle. Where the points come from, exactly one of:
+                                 points  a list of declaration paths (read() is called) or read()'s {name: point}
+                                 table   a ready engine table (the shape engine_table() gives); no declared types
+                              Who listens, at most one of (neither = nobody):
+                                 lists   paths of hooks lists, read again on every fire (aos.hook_lists.load:
+                                         later overrides earlier, null = off, missing = none, entry_keys only on
+                                         their points, then entry_check(entry) for the provider's own rules)
+                                 entries {name: entry} already read and completed (hook_run.complete), or a
+                                         function returning that, called on every fire (the kernel resolves its
+                                         list itself; the agent reads its two layers itself)
+                              stack = where the hooks' folders go (stack/hooks/NAME/).
+                              fail(code, sentence) = report an error the program's own way; it should not return.
+                              It gets PointsBad (at open), EventUnknown, HooksBad and HookFailed. When fail raises,
+                              that exception goes out as it is; when fail returns, FailReturned is raised.
+                              warn(line) = one English line when an on_error continue hook fails; None = silent.
+                              check(event, key, value) = the caller's own check of a changed value (raise
+                              ValueError); it runs after the declared type check, inside the engine, right after
+                              each hook, so a bad value follows that hook's on_error and never reaches the next hook.
+    Handle.points             the declared points ({name: point}; {} when opened with table)
+    Handle.table              the engine table
+    Handle.load()             -> {name: entry} of who listens now (HooksBad goes to fail)
+    Handle.has(event)         -> whether some hook is on event (no condition compared)
+    Handle.names(event, data) -> the names that would run for data, sorted (condition compared)
+    Handle.fire(event, data, only=None, entries=None) -> the engine's result {"data", "changed", "blocked", "hook",
+                                 "text"}. only = run exactly these names that are on event, with no condition compared
+                                 again (take them from names(); the kernel's after_verdict fires one by one);
+                                 entries = what load() gave (not read again)
+    FailReturned              raised when fail() returned; .code and the sentence
+    call_fail(fail, code, sentence) -> never returns: calls fail, raises FailReturned if it returned
 
 Checks (PointsBad, one English sentence naming the file and the point):
     1 the file is a JSON object; provider a non-empty string; points an object; point names only a-z, 0-9, _;
@@ -46,9 +78,12 @@ Checks (PointsBad, one English sentence naming the file and the point):
     4 change types are one of four
     5 the same point name in several files: phase, condition, subject, change, block, key and entry_keys must match
 """
+import io                                         # io.open: this module's own open() is the handle
 import json
 import os
 import re
+
+from aos import hook_handle
 
 HERE = os.path.dirname(os.path.realpath(__file__))           # py/aos, or lib/aos once installed
 ROOT = os.path.dirname(os.path.dirname(HERE))                 # the aos tree (proto8 / AOS_HOME)
@@ -68,6 +103,11 @@ NAME = re.compile(r"[a-z0-9_]+\Z")
 
 class PointsBad(ValueError):
     """A hook point declaration, or the hook_points list of an interfaces.json, is bad."""
+
+
+FailReturned = hook_handle.FailReturned
+call_fail = hook_handle.call_fail
+Handle = hook_handle.Handle
 
 
 def provider_path(name):
@@ -140,7 +180,7 @@ def _check_point(where, point):
 def read_file(path):
     """One declaration file -> (provider, {name: point}); bad = PointsBad."""
     try:
-        with open(path, encoding="utf-8") as f:
+        with io.open(path, encoding="utf-8") as f:
             doc = json.load(f)
     except (OSError, ValueError) as e:
         raise PointsBad("cannot read hook points %s: %s" % (path, e)) from None
@@ -199,7 +239,7 @@ def for_definition(def_dir):
     """read() of the hook_points list in def_dir/interfaces.json; nothing declared = {}; bad = PointsBad."""
     path = os.path.join(def_dir, "interfaces.json")
     try:
-        with open(path, encoding="utf-8") as f:
+        with io.open(path, encoding="utf-8") as f:
             doc = json.load(f)
     except FileNotFoundError:
         return {}
@@ -224,3 +264,22 @@ def for_definition(def_dir):
         else:
             raise PointsBad("%s: each item of hook_points must be a path or {\"provider\": NAME}" % path)
     return read(paths)
+
+
+def open(points=None, *, table=None, lists=None, entries=None, stack=None, fail=None, warn=None, check=None,
+         entry_check=None):
+    """A Handle to fire a program's points (see the module doc). Wrong arguments = TypeError (a caller's bug)."""
+    if (points is None) == (table is None):
+        raise TypeError("hook_point.open wants exactly one of points, table")
+    if lists is not None and entries is not None:
+        raise TypeError("hook_point.open wants at most one of lists, entries")
+    if not (isinstance(stack, str) and stack) or not callable(fail):
+        raise TypeError("hook_point.open wants stack (a non-empty path) and fail (a function)")
+    if table is not None:
+        return Handle({}, table, lists, entries, stack, fail, warn, check, entry_check)
+    if isinstance(points, (list, tuple)):
+        try:
+            points = read(points)
+        except PointsBad as e:
+            call_fail(fail, "PointsBad", str(e))
+    return Handle(points, engine_table(points), lists, entries, stack, fail, warn, check, entry_check)
