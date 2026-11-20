@@ -121,3 +121,22 @@
 ### 決定
 
 - 頂層問他是想知道原因還是要改成 inst 格式，他答：「這個先擱置，等以後遇到問題再說。」`launch` 的格式不動、不列待辦。
+
+## 第 10 則：看 `.stack/procs`——stop_cause.json、aos-observed、letters.json、observed.jsonl、think/request.json
+
+### 原話
+
+「然後我開始來看.stack/procs，_clock/stop_cause.json來由是？ann/interfaces.json中宣告了aos-observed，這是啥？letters.json，這是agent的信箱對嗎？observed.jsonl又是啥？think中的request.json會被定期清理掉吧，一些重複的東西是否會用$override或$ref？」
+
+### 現況（頂層當場查的，家機 `~/aos-home/.stack/procs/ann`，樹關著時讀檔）
+
+- `think/request.json` 只有一份，每次問模型前整份覆寫（先寫暫存再改名），不是累積的，所以沒有「定期清理」這件事；答完那份留著，下一輪被蓋掉。
+- 它是送給模型的請求原樣，**完全展開、沒有 `$ref`／`$override`**。這次那份 53 KB：`tools` 50.8 KB、`messages` 1.8 KB——九成六是工具說明，每一輪都整份重寫、整份送出去。
+- `observed.jsonl` 最後兩筆：`prompt_tokens` 12626、12646（只問了幾句話），`cached_tokens` 都是 0。起手範本 `llm/kernel.json` 的 `sol` 那包沒寫 `session_key`；[kernel_llm docs/01](../../../py/tools/aos/kernel_llm/docs/01-用法.md) 記著 11-14 實測寫了 `"session_key": "litellm_session_id"` 快取命中 88%／82%、沒寫 18%／31%。這次家機沒有另外實測。
+- `letters.json` 不是信箱：是「回答配對」的帳（`pending`＝收進對話、還沒答的信；`dropped`＝被丟的），信箱是同一夾的 `queue/`（`new/`、`cur/`、`tmp/`）。
+- `observed.jsonl`＝每問一次模型記一行（哪封信、哪個端點與模型、token 用量、花幾毫秒）；自動 compact 的 35% 就是讀它。stack 的 `interfaces.json` 寫 `{"aos-observed": {"file": "observed.jsonl"}}` 是在宣告「我有這份觀測檔、檔名是這個」，由 `py/aos/observed.py` 寫。
+- `stop_cause.json`：daemon 送 SIGTERM 之前先寫在那隻的 stack，內容是為什麼要它停（這次是 `shutdown`）；子 loop 收工時讀它，交給 `on_stop`（agent 的 `after_stop` 事件的 `cause`）。出處 [aos-daemon docs/03](../../../cpp/aos-daemon/docs/03-起-停-暫停.md)。
+
+### 沒問的
+
+- `request.json` 的重複要不要改成 `$ref`、`sol` 那包要不要加 `session_key`：他是在問現況，還沒說要改。
