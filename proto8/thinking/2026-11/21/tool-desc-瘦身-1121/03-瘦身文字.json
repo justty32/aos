@@ -1,0 +1,435 @@
+{
+ "_description": "Prototype B text for the 40 agent-fsm default tools: the new description and the new description of each parameter; schema shape, enum, default and required stay as they are.",
+ "contract": "wf-table/1",
+ "source": "03-施工檔單.md",
+ "extracted": "2026-11-21",
+ "columns": [
+  "tool",
+  "file_path",
+  "description",
+  "params"
+ ],
+ "rows": [
+  {
+   "tool": "read",
+   "file_path": "../../../../py/tools/base/read/_tooldef.json",
+   "description": "Read a text file as plain lines; at most 2000 lines or 50KB per call, the last line says the offset to continue from. More: aos/tools/read.json.",
+   "params": {
+    "path": "relative to your workspace, or absolute",
+    "offset": "first line (1-based)",
+    "max_lines": "most lines to read"
+   }
+  },
+  {
+   "tool": "ls",
+   "file_path": "../../../../py/tools/base/ls/_tooldef.json",
+   "description": "List a folder: NAME TAB TYPE per line, folders first; long adds size, mtime and info, json gives JSON. A last line \"... next_offset N\" means more. More: aos/tools/ls.json.",
+   "params": {
+    "path": "relative to your workspace, or absolute",
+    "offset": "first one to show (paging)",
+    "max_items": "most to show",
+    "hidden": "true = include names starting with .",
+    "long": "true = more detail",
+    "json": "true = JSON output"
+   }
+  },
+  {
+   "tool": "view",
+   "file_path": "../../../../py/tools/base/view/_tooldef.json",
+   "description": "Look into a file step by step (JSON). JSON file: one level at pointer, big values shown as type and size. Text file: big ones as an outline first, then start/end for a range. More: aos/tools/view.json.",
+   "params": {
+    "path": "relative to your workspace, or absolute",
+    "pointer": "JSON pointer, e.g. /states/think (JSON files)",
+    "start": "first line (text files)",
+    "end": "last line, inclusive"
+   }
+  },
+  {
+   "tool": "stat",
+   "file_path": "../../../../py/tools/base/stat/_tooldef.json",
+   "description": "Facts about one file, folder or link as JSON: type, size, lines, format, mtime. More: aos/tools/stat.json.",
+   "params": {
+    "path": "relative to your workspace, or absolute"
+   }
+  },
+  {
+   "tool": "grep",
+   "file_path": "../../../../py/tools/base/grep/_tooldef.json",
+   "description": "Search file contents with a Python regular expression, like grep -rn: one line PATH:LINE:TEXT per match. To find files by name use glob. More: aos/tools/grep.json.",
+   "params": {
+    "pattern": "the regular expression",
+    "path": "folder or file to search (default .)",
+    "glob": "only files matching this, e.g. *.py",
+    "fixed": "true = plain text, not a regex",
+    "ignore_case": "true = ignore case",
+    "context": "lines around each match (0-5)",
+    "files": "true = only list matching files",
+    "hidden": "true = include names starting with .",
+    "gitignore": "false = include .gitignore'd files",
+    "offset": "first one to show (paging)",
+    "max_matches": "most to show"
+   }
+  },
+  {
+   "tool": "glob",
+   "file_path": "../../../../py/tools/base/glob/_tooldef.json",
+   "description": "Find files by name pattern under a folder (*, **, ?; \"*.py\" matches at any depth); one path per line. To search inside files use grep. More: aos/tools/glob.json.",
+   "params": {
+    "pattern": "e.g. *.py, src/**/*.json",
+    "path": "folder to search under (default .)",
+    "type": "file, dir or any",
+    "sort": "name or mtime (newest first)",
+    "hidden": "true = include names starting with .",
+    "gitignore": "false = include .gitignore'd files",
+    "offset": "first one to show (paging)",
+    "max_items": "most to show"
+   }
+  },
+  {
+   "tool": "write",
+   "file_path": "../../../../py/tools/base/write/_tooldef.json",
+   "description": "Write a whole file (new, or fully replaced); parent folders are created. To change a part use edit. More: aos/tools/write.json.",
+   "params": {
+    "path": "relative to your workspace, or absolute",
+    "content": "the whole file content"
+   }
+  },
+  {
+   "tool": "edit",
+   "file_path": "../../../../py/tools/base/edit/_tooldef.json",
+   "description": "Change a text file by exact text replacement. Each old_text must occur exactly once in the original file; if any item does not match, nothing changes. More: aos/tools/edit.json.",
+   "params": {
+    "path": "relative to your workspace, or absolute",
+    "edits": "one or more {old_text, new_text}, not overlapping"
+   }
+  },
+  {
+   "tool": "copy",
+   "file_path": "../../../../py/tools/base/copy/_tooldef.json",
+   "description": "Copy a file or folder; to is the full new path and must not exist. More: aos/tools/copy.json.",
+   "params": {
+    "from": "source path",
+    "to": "full destination path"
+   }
+  },
+  {
+   "tool": "move",
+   "file_path": "../../../../py/tools/base/move/_tooldef.json",
+   "description": "Move or rename a file or folder (also restores from .trash/); to is the full new path and must not exist. More: aos/tools/move.json.",
+   "params": {
+    "from": "current path",
+    "to": "full new path"
+   }
+  },
+  {
+   "tool": "mkdir",
+   "file_path": "../../../../py/tools/base/mkdir/_tooldef.json",
+   "description": "Create a folder with its parents; an existing folder is fine. More: aos/tools/mkdir.json.",
+   "params": {
+    "path": "relative to your workspace, or absolute"
+   }
+  },
+  {
+   "tool": "trash",
+   "file_path": "../../../../py/tools/base/trash/_tooldef.json",
+   "description": "Delete by moving into .trash/ in your workspace; move can bring it back. More: aos/tools/trash.json.",
+   "params": {
+    "path": "relative to your workspace, or absolute"
+   }
+  },
+  {
+   "tool": "remove",
+   "file_path": "../../../../py/tools/base/remove/_tooldef.json",
+   "description": "Delete for real, like rm; no undo (prefer trash). A folder needs recursive: true. More: aos/tools/remove.json.",
+   "params": {
+    "path": "relative to your workspace, or absolute",
+    "recursive": "true = a folder with everything in it"
+   }
+  },
+  {
+   "tool": "shell",
+   "file_path": "../../../../py/tools/base/shell/_tooldef.json",
+   "description": "Run one bash command line in your workspace; output ends with [exit code N]. Prefer grep, glob, ls for searching and listing. Not a sandbox. More: aos/tools/shell.json.",
+   "params": {
+    "command": "the bash command line",
+    "timeout_s": "seconds (at most 300)"
+   }
+  },
+  {
+   "tool": "run_python",
+   "file_path": "../../../../py/tools/base/run_python/_tooldef.json",
+   "description": "Run a short Python 3 program (standard library) in your workspace; output ends with [exit code N]. More: aos/tools/run_python.json.",
+   "params": {
+    "code": "the whole program",
+    "timeout_s": "seconds (at most 300)"
+   }
+  },
+  {
+   "tool": "peek_clock",
+   "file_path": "../../../../py/tools/base/peek_clock/_tooldef.json",
+   "description": "The daemon clock: {\"cycle\": N, \"interval_ms\": M}. More: aos/tools/peek_clock.json.",
+   "params": {}
+  },
+  {
+   "tool": "peek_now_time",
+   "file_path": "../../../../py/tools/base/peek_now_time/_tooldef.json",
+   "description": "Get the current time. UTC by default; {\"local\": true} = local time with offset and weekday. More: aos/tools/peek_now_time.json.",
+   "params": {
+    "local": "true = local time"
+   }
+  },
+  {
+   "tool": "math",
+   "file_path": "../../../../py/tools/base/math/_tooldef.json",
+   "description": "Compute one arithmetic expression (numbers, + - * / // % **, parentheses; no functions). More: aos/tools/math.json.",
+   "params": {
+    "expr": "e.g. (2+3)**2 // 4"
+   }
+  },
+  {
+   "tool": "do_task",
+   "file_path": "../../../../py/tools/agent/do_task/_tooldef.json",
+   "description": "Do one task inside your own conversation and keep only its summary. Op start marks the place, op end (with summary) replaces everything since the mark by one summary message; status lists open tasks. More: aos/me/do_task.json.",
+   "params": {
+    "op": "what to do",
+    "task": "start: one sentence, what the task is for",
+    "summary": "end (required): what you found or did and still need",
+    "keep_others": "end: true = keep letters that came in during the task unfolded"
+   }
+  },
+  {
+   "tool": "todo",
+   "file_path": "../../../../py/tools/agent/todo/_tooldef.json",
+   "description": "Your to-do list for a task of 3+ steps, kept outside your history (call ls after a summary). One op per call; every op prints the whole list. Keep at most one item in_progress. More: aos/tools/todo.json.",
+   "params": {
+    "op": "what to do",
+    "items": "set: the whole new list ([] clears)",
+    "text": "add: the new item",
+    "after": "add: put it after this item number (0 = top)",
+    "n": "mark: item number, from 1",
+    "status": "the new status",
+    "json": "true = JSON output"
+   }
+  },
+  {
+   "tool": "goal",
+   "file_path": "../../../../py/tools/agent/goal/_tooldef.json",
+   "description": "Your goal: one sentence you keep working on; when you stop by yourself you are reminded of it. Ops: get, set (text), done (when really finished or impossible), pause (when waiting for someone), resume. More: aos/tools/goal.json.",
+   "params": {
+    "op": "what to do",
+    "text": "set: the goal, one sentence",
+    "limit": "set: reminders without progress before it pauses (default 10)",
+    "status": "done: done or abandoned",
+    "reason": "done, pause: one sentence why"
+   }
+  },
+  {
+   "tool": "self_tools",
+   "file_path": "../../../../py/tools/agent/self_tools/_tooldef.json",
+   "description": "List or change your own tools (only yours): ls, get one in full, add a tool folder, rm, reset. Changes work at once. More: aos/me/self_tools.json.",
+   "params": {
+    "op": "what to do",
+    "name": "get, rm: the tool name; add: the name to use (default folder name)",
+    "path": "add: tool folder, JSON file or executable",
+    "path_json": "add: a directive instead of path, like {\"$env\": \"AOS_HOME\", \"$path\": \"/lib/tools/base/math\"}",
+    "replace": "add: true = replace a tool of the same name",
+    "envs": "add: fixed env values for this tool",
+    "env_file": "add: a KEY=VALUE file read on every call",
+    "no_cache": "add: re-ask an executable for its definition",
+    "long": "true = more detail"
+   }
+  },
+  {
+   "tool": "self_llm",
+   "file_path": "../../../../py/tools/agent/self_llm/_tooldef.json",
+   "description": "List or change your own brain settings (model, temperature ...; values are strings): ls, set, rm, reset. Works from your next brain call; a broken model stops you, so ls first. More: aos/me/self_llm.json.",
+   "params": {
+    "op": "what to do",
+    "long": "show where each value comes from",
+    "settings": "set: keys and new values, like {\"model\": \"smart-high\"}",
+    "keys": "rm: keys to give back to your definition"
+   }
+  },
+  {
+   "tool": "self_system",
+   "file_path": "../../../../py/tools/agent/self_system/_tooldef.json",
+   "description": "See or replace your own system text: get, set (the whole new text), reset. Works from your next brain call; each change costs one prompt-cache miss. More: aos/me/self_system.json.",
+   "params": {
+    "op": "what to do",
+    "long": "show where each value comes from",
+    "text": "set: the whole new text (\"\" = none)"
+   }
+  },
+  {
+   "tool": "self_state",
+   "file_path": "../../../../py/tools/agent/self_state/_tooldef.json",
+   "description": "Facts and numbers about yourself; only reads. {} = one line per part; parts = details (who, state, tools, llm, system, hooks, history, mailbox, subagents, resources, time, all). More: aos/me.json#/self_state.",
+   "params": {
+    "parts": "leave out for the overview",
+    "json": "true = JSON output"
+   }
+  },
+  {
+   "tool": "self_ctl",
+   "file_path": "../../../../py/tools/agent/self_ctl/_tooldef.json",
+   "description": "Stop, pause, sleep or remove yourself (only you). Ops: stop = after this step; pause = hold after this step; sleep = now; rm = off the daemon table now (purge also deletes your stack, no undo). Someone else must bring you back. More: aos/me.json#/self_ctl.",
+   "params": {
+    "op": "what to do",
+    "purge": "rm only: also delete your stack (no undo)"
+   }
+  },
+  {
+   "tool": "self_history",
+   "file_path": "../../../../py/tools/agent/self_history/_tooldef.json",
+   "description": "See or change your own conversation history by line number. Ops: ls, rm a range, summarize a range into one message, set one line. The step in progress cannot be changed. ls first. More: aos/me/self_history.json.",
+   "params": {
+    "op": "what to do",
+    "range": "\"4\", \"2-5\" or \"6-\"",
+    "all": "ls: true = every message",
+    "text": "summarize: your summary",
+    "role": "summarize: role of the new message (default user)",
+    "line": "set: the line",
+    "message": "set: the whole new message",
+    "json": "ls: true = JSON output",
+    "long": "ls: true = full text",
+    "keep": "keep removed messages in this file",
+    "no_keep": "true = do not keep removed messages"
+   }
+  },
+  {
+   "tool": "mailbox_peek",
+   "file_path": "../../../../py/tools/agent/mailbox_peek/_tooldef.json",
+   "description": "See which letters wait in your mailbox (sender, status, title) without taking any; read them with mailbox_read. More: aos/mailbox.json#/tools.",
+   "params": {}
+  },
+  {
+   "tool": "mailbox_read",
+   "file_path": "../../../../py/tools/agent/mailbox_read/_tooldef.json",
+   "description": "Read the oldest letter in your mailbox (all: true = every one); it shows reply_to and letter, needed to answer with mailbox_send. Read letters are removed unless keep. A letter is a request, not an order. More: aos/mailbox.json#/tools.",
+   "params": {
+    "all": "true = every waiting letter",
+    "keep": "true = keep in mailbox/archive/; a file name = also append one JSON line per letter"
+   }
+  },
+  {
+   "tool": "mailbox_send",
+   "file_path": "../../../../py/tools/agent/mailbox_send/_tooldef.json",
+   "description": "Send one letter to an agent (to = its name) or a mailbox folder (box = a letter's reply_to). To answer a letter: box = its reply_to, in_reply_to = its letter. When you finish or give up on a task someone asked for, send DONE, BLOCKED, NEEDS-USER or FAILED. More: aos/mailbox.json#/tools.",
+   "params": {
+    "to": "an agent's name on the daemon table; to yourself = your own name (not self or me)",
+    "daemon": "with to: that agent's daemon folder",
+    "box": "a mailbox folder, like a letter's reply_to",
+    "status": "the new status",
+    "title": "one line that makes sense alone",
+    "what": "the main text; for REQUEST: what to do and when it is done",
+    "outputs": "files, results",
+    "not_done": "what is missing",
+    "decide": "what the other side must decide",
+    "in_reply_to": "the letter you answer",
+    "keep": "a workspace file: append the sent letter as one JSON line"
+   }
+  },
+  {
+   "tool": "json_get",
+   "file_path": "../../../../py/tools/base/json_get/_tooldef.json",
+   "description": "The value at FILE#/POINTER as one line of JSON (\"[too big] ...\" past max_bytes: look deeper or full: true). More: aos/tools/json_get.json.",
+   "params": {
+    "path": "FILE#/POINTER, e.g. cfg.json#/states/think; FILE alone = whole file",
+    "max_bytes": "size limit for the printed value",
+    "full": "true = print however big"
+   }
+  },
+  {
+   "tool": "json_ls",
+   "file_path": "../../../../py/tools/base/json_ls/_tooldef.json",
+   "description": "List the keys or indexes at FILE#/POINTER, one per line; long adds type and size, depth lists deeper. More: aos/tools/json_ls.json.",
+   "params": {
+    "path": "FILE#/POINTER, e.g. cfg.json#/states",
+    "long": "true = more detail",
+    "depth": "levels to list",
+    "offset": "first one to show (paging)",
+    "limit": "most to show"
+   }
+  },
+  {
+   "tool": "json_search",
+   "file_path": "../../../../py/tools/base/json_search/_tooldef.json",
+   "description": "Find a key and/or exact value below FILE#/POINTER (up: true = in the levels above); contains = substring. One FILE#/POINTER per hit. More: aos/tools/json_search.json.",
+   "params": {
+    "path": "FILE#/POINTER or FILE",
+    "key": "key name to find",
+    "value": "exact JSON value to find",
+    "contains": "true = substring match",
+    "up": "true = search the levels above",
+    "limit": "most to show"
+   }
+  },
+  {
+   "tool": "json_len",
+   "file_path": "../../../../py/tools/base/json_len/_tooldef.json",
+   "description": "Length at FILE#/POINTER: keys of an object, items of an array, characters of a string. More: aos/tools/json_len.json.",
+   "params": {
+    "path": "FILE#/POINTER"
+   }
+  },
+  {
+   "tool": "json_set",
+   "file_path": "../../../../py/tools/base/json_set/_tooldef.json",
+   "description": "Set FILE#/POINTER to value, stored exactly as given (replace, or add the key); /- appends; parents creates missing levels. More: aos/tools/json_set.json.",
+   "params": {
+    "path": "FILE#/POINTER, e.g. cfg.json#/states/act/next",
+    "value": "required: any JSON",
+    "parents": "true = create missing levels"
+   }
+  },
+  {
+   "tool": "json_add",
+   "file_path": "../../../../py/tools/base/json_add/_tooldef.json",
+   "description": "Add a new key or array item at FILE#/POINTER (/2 inserts before item 2, /- appends); never overwrites (KeyExists: use json_set). More: aos/tools/json_add.json.",
+   "params": {
+    "path": "FILE#/POINTER",
+    "value": "required: any JSON",
+    "parents": "true = create missing levels"
+   }
+  },
+  {
+   "tool": "json_del",
+   "file_path": "../../../../py/tools/base/json_del/_tooldef.json",
+   "description": "Delete one key or array item at FILE#/POINTER. More: aos/tools/json_del.json.",
+   "params": {
+    "path": "FILE#/POINTER"
+   }
+  },
+  {
+   "tool": "json_multi_get",
+   "file_path": "../../../../py/tools/base/json_multi_get/_tooldef.json",
+   "description": "json_get for several places at once: one line PATH TAB VALUE per place; one failing does not stop the others. More: aos/tools/json_multi_get.json.",
+   "params": {
+    "paths": "FILE#/POINTER each",
+    "max_bytes": "size limit for the printed value",
+    "full": "true = print however big"
+   }
+  },
+  {
+   "tool": "json_multi_set",
+   "file_path": "../../../../py/tools/base/json_multi_set/_tooldef.json",
+   "description": "json_set for several places in order; one failing does not stop or undo the others. More: aos/tools/json_multi_set.json.",
+   "params": {
+    "items": "each {\"path\": FILE#/POINTER, \"value\": any JSON}",
+    "parents": "true = create missing levels"
+   }
+  },
+  {
+   "tool": "index_view",
+   "file_path": "../../../../py/tools/base/index_view/_tooldef.json",
+   "description": "Show a node through its index (KEY TAB description per entry). The node is a folder, FILE or FILE#/POINTER; what an index says about X is in the index of X's parent. A view, not the facts; to change an index use the json tools. More: aos/tools/index_view.json.",
+   "params": {
+    "path": "the node: folder, FILE or FILE#/POINTER",
+    "index": "read this index table instead (or laid over path's)",
+    "key": "show only this entry",
+    "offset": "first one to show (paging)",
+    "limit": "most to show"
+   }
+  }
+ ]
+}
