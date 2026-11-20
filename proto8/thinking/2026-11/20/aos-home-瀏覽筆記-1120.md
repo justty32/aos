@@ -39,3 +39,13 @@
 - **`interfaces.json`**：保持現在這樣，想加什麼就加什麼；以後有需求再定規矩。它的定位就是「想看這個 agent／kernel／…有提供什麼介面，就去看 interfaces.json，找自己想看的」。
 - **`hook_points.json` 的宣告格式**：之後要討論，他要審過、會提建議（例：直接拿 json schema 或許更好）。在他審之前，現在的格式算暫定。
 - **`description`**：放著，就這樣。
+
+## 第 4 則：問 `~/aos-home/llm/kernel.json` 的格式
+
+### 原話
+
+「他的kernel.json的格式能說一下嗎」
+
+### 現況（頂層照文件答的）
+
+格式的出處是 [kernel_llm docs/01-用法](../../../py/tools/aos/kernel_llm/docs/01-用法.md)：頂層是整台 llm kernel 的設定（`slots`、`reserved`、`backends`、`timeout_ms`、`exec`、`endpoint`、選填 `budget`、`aging_cycles`），`endpoints` 是「代號 → 一個能力包」的表；包裡的鍵分兩種，kernel 自己看的（`exec`、`slots`、`budget`、`speed`、`backend`、`session_key`）與原樣交給端點函數的（`url`、`model`、`fixed`、`cost`、`context`、`summary`、`script`…）。只回答，他還沒說想法。
