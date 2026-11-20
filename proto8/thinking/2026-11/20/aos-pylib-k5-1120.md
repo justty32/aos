@@ -87,8 +87,16 @@
 
 ## 全套測試逐夾
 
-教學沒有比對測試（`grep tutorial` 在 `*.py` 沒有命中）。改的只有 md，改前（`base`）／改後（`base` 疊本線三份 md 的 `after`）各跑一輪：結果見下表（交件前補）。
+教學沒有比對測試（`grep tutorial` 在 `*.py` 沒有命中）。改的只有 md，改前（`base`）／改後（`base` 疊本線三份 md 的 `after`）各跑一輪，逐夾條數與結果**全部相同**（去掉秒數後 `diff` 無差）：
+
+| 夾 | base／after |
+|---|---|
+| `py/tests` | 721 OK（skip 1） |
+| `templates/tests/tool-python`、`tools_def`、`defs`、`agent_def` | 5／12／28／32 OK |
+| `py/tests/apps/*`（feedback 以外十七夾，含 agent 213、eca 227、gdb 66） | 全 OK |
+| `py/tests/apps/feedback` | 18 error（讀不到 `wf/`，已知） |
+| `templates/tests` agent-fsm、judge-llm、kits、reviewer、image-move-check | 215／4／8／1 OK、0 條 |
 
 ## 交件
 
-本線只交：`docs/tutorial/06-接著開發-1-改與工具.md`、`06-接著開發-2-連結與衍生.md`、`README.md`、這份紀錄；日索引一列（`day_upsert`）、`wf/progress.json` 的 `aos-compile-base` 只加字（`progress_upsert`）。沒刪檔、沒 push、沒在 repo 跑 `install.py`。暫存在 `~/.aos/scratch/aos-pylib-k5-1120/`（複本 `base`、教學夾 `tut`、`tut2`、`probe-sd2`（試關機兩次的小板子）、留底 `tests-*`、各章腳本），都沒刪。
+本線只交：`docs/tutorial/06-接著開發-1-改與工具.md`、`06-接著開發-2-連結與衍生.md`、`README.md`、這份紀錄；日索引一列（`day_upsert`）、`wf/progress.json` 的 `aos-compile-base` 只加字（`progress_upsert`），第一筆 `65d84dcbc`；這一筆只補測試表。沒刪檔、沒 push、沒在 repo 跑 `install.py`。暫存在 `~/.aos/scratch/aos-pylib-k5-1120/`（複本 `base`、教學夾 `tut`、`tut2`、`probe-sd2`（試關機兩次的小板子）、留底 `tests-*`、各章腳本），都沒刪。
