@@ -378,11 +378,14 @@
       "title": "hook 點的介面與耦合",
       "status": "等使用者",
       "flow": "",
-      "what": "調查與發想已寫好（只查只寫，沒改程式）：加一個 hook 點要動的地方、呼叫端與手抄清單的耦合、fsm 與 eca 差異；甲～戊五個形狀；十題待裁",
-      "next": "等使用者看待裁題",
+      "what": "調查與發想已寫好（只查只寫，沒改程式）：加一個 hook 點要動的地方、呼叫端與手抄清單的耦合、fsm 與 eca 差異；甲～戊五個形狀；十題待裁；11-20 使用者用選項框答三題：整理到「宣告式＋小函式都做」、管到「任何子程式，含非 Python」、「在 loop 層加通用的點」（他另說「我原本以為你會把hook界面和compile分開來設計」，所以 hook 介面獨立一條線）。設計稿與施工計劃已交（線 aos-hook-plan-1120，只出稿沒改程式）：每個提供者一份 hook_points.json、小庫 aos.hook_point、指令 aos-hook fire、aos-loop 的 before_run／after_run；六條衝突、十四題待裁、施工七刀（第 1、2、4 刀不依賴待裁題）",
+      "next": "設計稿已交、等使用者看衝突與待裁題；施工要他另外點頭（全部程式刀都要 install.py）",
       "see": [
         "[README](../proto8/thinking/2026-11/20/aos-hook-iface-1120/README.md)",
-        "[待裁題](../proto8/thinking/2026-11/20/aos-hook-iface-1120/08-D-待裁題.md)"
+        "[待裁題](../proto8/thinking/2026-11/20/aos-hook-iface-1120/08-D-待裁題.md)",
+        "[設計與計劃 README](../proto8/thinking/2026-11/20/aos-hook-plan-1120/README.md)",
+        "[要帶給使用者的衝突](../proto8/thinking/2026-11/20/aos-hook-plan-1120/07-對照與衝突.md)",
+        "[待裁十四題](../proto8/thinking/2026-11/20/aos-hook-plan-1120/10-待裁題.md)"
       ],
       "since": "2026-11-20"
     },
