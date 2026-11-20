@@ -38,13 +38,13 @@ class Live(unittest.TestCase):
         cls.daemon = str(cls.tmp / "tree" / ".stack")
         cls.tree = cls.tmp / "tree"
         shutil.copytree(PROTO / "templates" / "start-api", cls.tree, symlinks=True)
-        cls.logs = [open(cls.tmp / n, "w") for n in ("root.log", "llm.log")]
+        cls.logs = [open(cls.tmp / "root.log", "w")]
         cls.procs = [subprocess.Popen(["aos-exec", "root"], cwd=cls.tree, env=ENV, stdin=subprocess.DEVNULL,
                                       stdout=cls.logs[0], stderr=subprocess.STDOUT, start_new_session=True)]
         until(lambda: (cls.tree / ".stack" / "state.json").exists())
-        cls.procs.append(subprocess.Popen(["aos-exec", "--stack", "stacks/llm", "def"], cwd=cls.tree / "llms", env=ENV,
-                                          stdin=subprocess.DEVNULL, stdout=cls.logs[1], stderr=subprocess.STDOUT, start_new_session=True))
-        until(lambda: (cls.tree / "llms" / "stacks" / "llm" / "state.json").exists())
+        subprocess.run(["aos-daemon-ctl", "-d", ".stack", "add", "--auto-restart", "llm"], cwd=cls.tree, env=ENV,
+                       check=True, capture_output=True, timeout=60)   # llm kernel 掛在根上一列（start-api README）
+        until(lambda: (cls.tree / ".stack" / "procs" / "llm" / "state.json").exists())
         os.environ.update(AOS_HOME=str(PROTO), PATH=ENV["PATH"])
         for k in [k for k in os.environ if k.startswith("AOS_") and k != "AOS_HOME"]:
             del os.environ[k]
@@ -59,11 +59,10 @@ class Live(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         try:
-            for d in (cls.daemon, str(cls.tree / "llms" / "stacks" / "llm")):
-                try:
-                    daemon_ctl.shutdown(daemon=d)
-                except Failed:
-                    pass
+            try:
+                daemon_ctl.shutdown(daemon=cls.daemon)              # llm kernel 是根上一列，跟著睡下
+            except Failed:
+                pass
             for p in cls.procs:
                 try:
                     p.wait(timeout=20)

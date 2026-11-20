@@ -144,6 +144,7 @@
   "start-api": {
    "agents": {
     "ann": {
+     ".env": "ann's own defaults (a value already set wins). The permission part is optional and off: to switch it on, mount perm on the root (aos-daemon-ctl -d .s…",
      "act.py": "act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。",
      "atomic_file.py": "agent-fsm 的格（idle、wait）共用的寫檔：先寫同資料夾的 .<名>.tmp 再改名（N-05），寫不成交給呼叫端的 die（WriteFailed）。",
      "body.json": "argv：`aos-loop loop.json`",
@@ -166,22 +167,26 @@
     "ann/": "Run an aos agent with loop and FSM cells."
    },
    "env.sh": "This tree's env.sh: \"cd <this tree> && source env.sh\" (bash or zsh) in every window; it hands over to $AOS_HOME/env.sh, the real one, so it hardly ev…",
-   "llms": {
-    "def": {
-     ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
-     "_entry": "入口：`aos-daemon --enable-logs daemon.json`",
-     "daemon.json": "設定（鍵：exec、interval_ms、procs）",
-     "endpoints": {
-      "litellm": {
-       "_entry": "Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable (unset or empty: no key is sent)."
-      }
-     },
-     "fake_slow": {
-      "_entry": "demo 用的慢假腦 endpoint 函數：先睡 endpoint.delay_s 秒，再把同一份 stdin 交給 py/tools/base/llm_fake、它的 stdout／結束碼原樣交回"
-     },
-     "interfaces.json": "Declare the stack ledger interface",
-     "kernel.json": "Main llm kernel with backend limits for local models"
-    }
+   "llm": {
+    ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+    "_entry": "入口：`aos-daemon --enable-logs daemon.json`",
+    "daemon.json": "設定（鍵：exec、interval_ms、procs）",
+    "endpoints": {
+     "litellm": {
+      "_entry": "Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable (unset or empty: no key is sent)."
+     }
+    },
+    "fake_slow": {
+     "_entry": "demo 用的慢假腦 endpoint 函數：先睡 endpoint.delay_s 秒，再把同一份 stdin 交給 py/tools/base/llm_fake、它的 stdout／結束碼原樣交回"
+    },
+    "interfaces.json": "Declare the stack ledger interface",
+    "kernel.json": "Main llm kernel with backend limits for local models"
+   },
+   "perm": {
+    ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+    "_entry": "入口：`aos-loop loop.json`",
+    "kernel.json": "",
+    "loop.json": "設定（鍵：exec、interval_ms）"
    },
    "root": {
     ".env": "defaults for this root (a value already exported in the shell wins); every agent and child daemon inherits them.",

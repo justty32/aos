@@ -342,10 +342,11 @@
       "title": "初始 kernel：llm 件＋權限沙箱件、都可選（調查＋發想）",
       "status": "等使用者",
       "flow": "",
-      "what": "11-20 線 aos-init-kernel-1120 盤點完：今天灌 kernel 只灌 llm kernel，會想的 agent 都要它；權限件今天不存在於灌 kernel 這一步，相關東西散在 daemon 本體、站範本、agent 與工具；攤了四種切法與八題待裁",
-      "next": "等使用者看待裁題",
+      "what": "11-20 線 aos-init-kernel-1120 盤點完：今天灌 kernel 只灌 llm kernel，會想的 agent 都要它；權限件今天不存在於灌 kernel 這一步，相關東西散在 daemon 本體、站範本、agent 與工具；攤了四種切法與八題待裁。使用者 11-20 用選項框答完八題（06-使用者已答）並說「開工吧」；線 aos-kinit-tpl-1120 已交：文件寫成「初始 kernel＝最小核心＋llm 件＋權限件，另有一串可選件（待定）」；起手範本 start-api 的 llm kernel 改成掛在根上一列 llm/、加一份選裝不開的權限站 perm/（ann 的 .env 留一行註解）；重建步驟單跟著改；假腦實跑兩種都通",
+      "next": "一串可選件有哪些、怎麼裝：待定；鐘與清道夫程式上刪不掉沒做；P4 只寫明沒修；家裡那台重建照新的 start-api 與重建步驟單（改動逐項在 aos-kinit-tpl-1120 紀錄）",
       "see": [
-        "[README](../proto8/thinking/2026-11/20/aos-init-kernel-1120/README.md)"
+        "[README](../proto8/thinking/2026-11/20/aos-init-kernel-1120/README.md)",
+        "[施工紀錄 aos-kinit-tpl-1120](../proto8/thinking/2026-11/20/aos-kinit-tpl-1120.md)"
       ],
       "since": "2026-11-20"
     },

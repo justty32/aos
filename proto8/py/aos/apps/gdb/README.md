@@ -114,7 +114,7 @@ b.fired       # Failed: breakpoint 3: it is gone from ann (removed); a.bp.ls() l
 ```sh
 cp -r $AOS_HOME/templates/start-api /tmp/t && cd /tmp/t && source env.sh
 aos-exec root &                                   # 根
-(cd llms && aos-exec --stack stacks/llm def &)    # llm kernel（假腦）
+aos-daemon-ctl -d .stack add --auto-restart llm  # llm kernel（假腦）掛在根上一列
 aos-agent -d .stack ctl add --auto-restart -w . agents/ann
 aos-gdb -d .stack ann                              # 進 REPL：agent、daemon_ctl、std、defs、a＝ann
 ```
@@ -144,7 +144,7 @@ gdb> a.say("once more"); p = a.bp.pause(wait=False); p.is_done()   # returns at 
 gdb> p.wait()                                      # same as a.bp.pause(): "stopped before ..."
 ```
 
-`aos-gdb` 不給 NAME 也行：只放好 `agent`、`daemon_ctl`、`std`、`defs`，自己 `a = agent.attach("ann")`。給了 `-d D`：REPL 裡 `AOS_DAEMON` 設成它，模組層的 `agent.ctl.ls()`、`daemon_ctl.ls()` 也對那台。收樹：`aos-daemon-ctl -d .stack shutdown`、`aos-daemon-ctl -d llms/stacks/llm shutdown`（分兩句打；REPL 裡是 `daemon_ctl.shutdown()`）。
+`aos-gdb` 不給 NAME 也行：只放好 `agent`、`daemon_ctl`、`std`、`defs`，自己 `a = agent.attach("ann")`。給了 `-d D`：REPL 裡 `AOS_DAEMON` 設成它，模組層的 `agent.ctl.ls()`、`daemon_ctl.ls()` 也對那台。收樹：`aos-daemon-ctl -d .stack shutdown`（一句全關，llm kernel 是根上一列；REPL 裡是 `daemon_ctl.shutdown()`）。
 
 **觸發器掛在 agent 的 hook 上，定義要宣告 hook**（`interfaces.json` 的 `aos-agent.hooks`）。上面 start-api 的 ann 有；`agent-python` 骨架抄出來的也有——骨架的 `defs.Agent(...)` 帶 `hooks={}`（空的，不帶任何現成的 hook；使用者 11-19 下午選「骨架帶一行空的 HOOKS」），什麼都不改就下得了斷點。沒宣告的定義（拿掉 `hooks=` 的 `agent.py`、自己手寫的夾）下斷點＝`HooksMissing`，錯誤行後面補一句怎麼修：
 

@@ -6,6 +6,14 @@
 
 llm kernel 像一台專門打電話的總機：agent 要想事情，就寄一封信進總機的收件匣，總機去問模型、把答案寄回來。它自己也是一台小 daemon（有自己的表），掛在板子上。
 
+「初始 kernel」由三塊組成（使用者 11-20：「兩件+最小核心。然後弄一串可選的…」）：
+
+- **最小核心**：板子買來就有——上一章的 daemon、時鐘 `_clock`、清道夫 `_sweeper`，加上信箱與「我是誰」。
+- **llm 件**：這一章灌的總機。名義上可選，但 agent 沒有它就不能想（第一次問腦就 `LlmKernelMissing` 停下）；不會想的 proc 才用不到。
+- **權限件**：一台站，管「准不准開 proc、同時幾個」。可選、預設不開，這份教學不裝；[start-api](../../templates/start-api/README.md#選裝權限件預設不開) 帶一份沒掛的，要的話照那裡三步打開。它是給守規矩的人用的規矩，不是牆：真要擋，靠換 Linux 帳號。
+
+另外還有「一串可選件」，有哪些還沒定。每塊的細節在 [kernel 入口「初始 kernel」](../../templates/kernel/README.md#初始-kernel買了板子之後灌什麼)。
+
 ## 掛上去（視窗 B，板子要開著）
 
 ```sh
@@ -61,5 +69,5 @@ fake-demo-slow	slow	free	-	1	-	fake brain that takes 3 s, one at a time, sorted 
 
 <details><summary>另一種擺法：kernel 自己一台、不掛在板子上</summary>
 
-`templates/start-api` 和 llm kernel 的說明用的是另一種：kernel 另開一個視窗 `aos-exec --stack stacks/llm def` 自己起停。這樣關板子時 kernel 不跟著關，好幾塊板子可以共用一台總機。教學選「掛上去」是照「灌 kernel」的比喻，也讓第 08 章一句就全關。
+主線是掛在板子上（使用者 11-20「掛同一塊板子」；`templates/start-api` 也這樣擺）。另一種是 kernel 自己一台：另開一個視窗 `aos-exec --stack <它的 stack> llm` 自己起停，`.env` 的 `AOS_LLM_KERNEL` 指那個 stack。這樣關板子時 kernel 不跟著關，好幾塊板子可以共用一台總機；代價是要多管一台的起停，第 08 章的一句全關也就不夠了。
 </details>

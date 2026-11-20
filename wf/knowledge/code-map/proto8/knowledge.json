@@ -62,7 +62,7 @@
     "common.json": "Common error codes"
    },
    "errors.json": "Reading an error",
-   "kernel.json": "What a kernel is in aos, where to send requests, the example kernels in $AOS_HOME/templates/kernel/, how to be a kernel yourself (kernel_gate), and h…",
+   "kernel.json": "What a kernel is in aos and what a new board's initial kernel is made of, where to send requests, the example kernels in $AOS_HOME/templates/kernel/,…",
    "kits.json": "Kits: ready-made system text and tools for one agent role",
    "mailbox.json": "Mailbox: letters between agents",
    "me": {

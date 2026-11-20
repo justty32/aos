@@ -25,7 +25,7 @@ aos-daemon-ctl -d .stack shutdown                          # 關樹；再起＝�
 | 夾／檔 | 是什麼 | 從哪抄的 | 跟原範本不一樣的地方 |
 |---|---|---|---|
 | `env.sh` | 薄的：`AOS_HOME` 沒設報一行錯；有就 `source "$AOS_HOME/env.sh"`（清掉別棵樹的 `AOS_*`、把 `$AOS_HOME/bin` 放上 `PATH`）；最後可以加這棵樹自己的 `export` | — | — |
-| `root/` | 根 daemon 的定義（時鐘＋清道夫） | [daemon-root](../daemon-root/README.md) | `.env` 的 `AOS_LLM_KERNEL` 指樹裡的 `llms/stacks/llm`（這包沒帶 llm kernel；要的話照 start-api 抄 `kernel/llm-kernel` 到 `llms/def`） |
+| `root/` | 根 daemon 的定義（時鐘＋清道夫） | [daemon-root](../daemon-root/README.md) | `.env` 的 `AOS_LLM_KERNEL` 指樹裡的 `llms/stacks/llm`（這包沒帶 llm kernel；要的話照 start-api 抄 `kernel/llm-kernel` 到 `llm/`、掛上根，並把這行改成 `${AOS_STACK}/procs/llm`） |
 | `agents/ann/` | 一隻外部 coding agent（Claude Code） | [eca-claude](../eca-claude/README.md) | 沒有（`llm.json` 照範本是 `sonnet`） |
 
 跑起來後樹裡多出 `.stack/`（根的 stack，agent 的 stack 在 `.stack/procs/ann/`）。

@@ -8,8 +8,27 @@
 |---|---|
 | `daemon-kernel/` | 一台 daemon，它自己的身體就是框架站：請求先過站的規則，放行的才轉寄進這台 daemon 的 ctl 信箱 |
 | `procs-kernel/` | 同一支框架站，改成掛在一台普通 daemon 底下的一個 loop proc |
-| `llm-kernel/` | 問腦的那台：agent 寄請求信、它挑能力包（`smart-high`、`stupid-fast`…）問模型、寄回信；自己一台 daemon |
+| `llm-kernel/` | 問腦的那台：agent 寄請求信、它挑能力包（`smart-high`、`stupid-fast`…）問模型、寄回信；自己一台 daemon，主線是掛成板子上的一列（見下面「初始 kernel」） |
 | [`llm-team/`](llm-team/) | 隊 kernel：能力包寫下一層 stack 與代號，經 llm_forward 轉交；自己一台 daemon |
+
+## 初始 kernel：買了板子之後灌什麼
+
+使用者 11-20：「兩件+最小核心。然後弄一串可選的，比如需要額外依賴的權限那塊，還有一堆比較麻煩的東西。」（八題與答案：[aos-init-kernel-1120](../../thinking/2026-11/20/aos-init-kernel-1120/06-使用者已答.md)）
+
+**初始 kernel＝最小核心＋llm 件＋權限件，另有一串可選件。** 起手範本 [start-api](../start-api/README.md) 就是照這個擺的。
+
+| 塊 | 是什麼 | 今天在哪 | 可不可選 |
+|---|---|---|---|
+| 最小核心 | 板子本身（daemon：表、ctl 信箱、limits、自動重起）、身分（信封的 `sender`＝寄件人自己的 stack，自報不驗）、信箱（`aos-post`）、時鐘 `_clock`、清道夫 `_sweeper` | 起根就有：[daemon-root](../daemon-root/README.md) | 一定有。鐘與清道夫也算核心（使用者 11-20「算核心」），不是可以拿掉的件 |
+| llm 件 | 問腦的總機：排隊、格數、能力包、帳本、**問腦的額度**（`budget`，使用者 11-20「留在 llm 件」） | `llm-kernel/`，掛成板子上的一列 `llm`（使用者 11-20「掛同一塊板子」）；agent 從 `AOS_LLM_KERNEL` 找它 | 可選，但**只對不會想的 proc 成立**：agent-fsm、agent-python 只會寄信問總機，沒裝就在第一次問腦時 `LlmKernelMissing` 停下（使用者 11-20「不能，維持現狀」） |
+| 權限件 | 門：准不准開 proc、同時幾個、上限夾、`users`→`sub:N` | 一台框架站（`procs-kernel/` 掛成一列；或 `daemon-kernel/`、`kernel_gate`），寄件人把 `AOS_KERNEL` 設成它的 `requests/` | 可選、預設不開；start-api 帶一份沒掛的 `perm/`。guard、sandbox 不算權限件（使用者 11-20「不算」），留在 agent 與工具那邊 |
+| 一串可選件 | 使用者舉了「需要額外依賴的權限那塊，還有一堆比較麻煩的東西」 | 待定 | 有哪些件、怎麼裝：待定 |
+
+- **沒裝權限件時**，擋得住的只剩 Linux 的檔案權限，與 daemon 本體的 limits、`sub:N`（表上那列寫了才套）；daemon 自己來者不拒。
+- **權限件是給守規矩的人用的規矩，不是牆；牆是換 Linux 帳號**（使用者 11-20「明寫」）。`AOS_KERNEL` 是寄件人自己的環境變數，拿掉它、直接寫 daemon 的 ctl 信箱就繞過站；`aos-daemon-ctl` 也一律直寄 daemon。同一個 Linux 帳號底下擋不住（[02「誰能繞過 kernel」](docs/02-kernel-modes.md#誰能繞過-kernel靠-linux-權限)）。
+- **開了權限件就要知道**（基底體檢 P4，使用者 11-19 選「維持現狀，只寫明」）：寄件人的「我是誰」、讀自己信箱、設鬧鐘都先問那一站，站 3 秒不回＝全部 `KernelFailed`。
+- **`AOS_KERNEL` 不要寫在根的 `.env`**：整塊板子都會繼承，llm kernel 也會把問腦的 proc 經那一站掛到根上、它自己的表上看不到（11-20 實跑：問腦失敗）。寫在要經過站的那隻 agent 的 `.env`（start-api 的 `agents/ann/.env` 有一行註解好的）。
+- 鐘、清道夫「算核心」只是說法：今天的程式照樣讓人從 `daemon.json` 刪掉那兩列，沒有擋。
 
 ## 框架站是什麼
 

@@ -25,3 +25,4 @@
 | [agent_def new 改成純粹 cp（aos-defnew-cp-1120）](aos-defnew-cp-1120.md) | 拿掉 tools 檔相對路徑的換算（rebase_tools），整夾照抄、路徑一律不改寫不警告，只寫 lineage；新測試逐 byte 比、repo 每份範本也比；暫存樹假腦實跑：抄出的定義用自己那份工具；repo 裡沒有登記檔寫相對路徑，沒東西壞；使用者第 10 題「純粹的cp過去」 |
 | [編譯程式庫第 3 刀：函數工具與 hook 抽成 fn/<名>.py（aos-pylib-k3-1120）](aos-pylib-k3-1120.md) | agent.py 的 @fn.tool／@fn.hook 函數放進 tools／hooks，編譯時抽成定義夾的 fn/<名>.py；新 fn_spec.py、agent_spec_hooks.py；函數用到 agent.py 自己的東西、defs／std、旁邊模組都 SpecBad；沒用函數的產物逐 byte 不變；假腦實掛工具被叫、hook 攔得下；對不上處十一條 |
 | [aos-hook-drift-1120](aos-hook-drift-1120.md) | hook 待裁第 8 題：17 項文件漂移補齊、一致性測試守住；eca 中途來的 /compact 信過兩次 before_queue 實跑屬實，沒修 |
+| [aos-kinit-tpl-1120](aos-kinit-tpl-1120.md) | 照初始 kernel 八題的答案改文件與 start-api：最小核心＋llm 件＋權限件，另有一串可選件待定；llm kernel 改掛同板（llm/）、加選裝不開的權限站 perm/；重建步驟單跟著改；假腦實跑 |

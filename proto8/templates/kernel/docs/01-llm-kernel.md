@@ -10,7 +10,7 @@
 ```
 llm-kernel/
   _entry       ["aos-daemon", "--enable-logs", "daemon.json"]
-  daemon.json  {"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel_llm"}, {"$env": "AOS_CD", "$path": "kernel.json"}]}, "interval_ms": 300, "procs": {"_sweeper": {…}}}（身體＝kernel；procs 只帶清道夫一列（見 py/aos/apps/sweeper；不要就刪）、不帶鐘列，聽外層的 `AOS_CLOCK`）
+  daemon.json  {"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel_llm"}, {"$env": "AOS_CD", "$path": "kernel.json"}]}, "interval_ms": 300, "procs": {"_sweeper": {…}}}（身體＝kernel；procs 只帶清道夫一列（見 py/aos/apps/sweeper；清道夫算最小核心，見[入口「初始 kernel」](../README.md#初始-kernel買了板子之後灌什麼)）、不帶鐘列，聽外層的 `AOS_CLOCK`）
   kernel.json  slots 2、reserved＝{"high": 1}（使用者裁定 sol 審查 #7）、timeout_ms 0〔不限時，11-15 起；以前 120000〕、exec＝預設 endpoint 函數 `{"$env": "AOS_HOME", "$path": "/lib/tools/base/llm_http"}`、endpoint＝預設代號 fake、
                不設 budget（使用者選「從範本拿掉」；要限寄件人就自己加 budget.senders，例子在 03 件 5）、
                endpoints＝能力包表（下表）
@@ -30,7 +30,9 @@ llm-kernel/
 
 **包怎麼讀**（全文在 [kernel_llm docs/01](../../../py/tools/aos/kernel_llm/docs/01-用法.md)）：信與 agent 的 `llm.json` 只寫代號；kernel 自己看 `exec`／`slots`／`budget`／`speed` 與 `backend` 五個（拿掉後才交給 endpoint 函數），其餘（`url`、`model`、`fixed`、`script`、`delay_s`…）原樣交給函數。金鑰由端點小 proc 自己讀環境，kernel 不讀、不寫、不轉交。**`fixed` 是釘死的**：信的 `request` 寫了 `fixed` 裡的 key、或那包有 `model` 而信寫了 `model`＝那封回 `RequestBad`；換溫度、換模型＝換代號（多登記一包）。`cost`／`context`／`summary` 只給人與腦挑代號用，kernel 每拍寫進窗 `$AOS_STACK/endpoints.json`，`aos-llm ls` 印它。
 
-**起來**（PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的），或 `source "$AOS_HOME/env.sh"`）：
+**主線：掛成板子上的一列**（使用者 11-20「掛同一塊板子」；教學 [03](../../../docs/tutorial/03-灌kernel.md)、起手範本 [start-api](../../start-api/README.md) 都這樣擺）：`cp -r $AOS_HOME/templates/kernel/llm-kernel llm`，再 `aos-daemon-ctl -d <根的 stack> add --auto-restart llm`，根的 `.env` 寫 `AOS_LLM_KERNEL=${AOS_STACK}/procs/llm`。板子管它的生死：掉了自己再起，關板子一句全關、再開一起醒；金鑰在起根的那個視窗 export（它從板子繼承環境）。
+
+**另一種擺法：自己一台、自己起停**（關板子時不跟著關、好幾塊板子共用一台總機；PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的），或 `source "$AOS_HOME/env.sh"`）：
 
 ```sh
 mkdir ~/llm_kernel && cd ~/llm_kernel
@@ -58,7 +60,7 @@ aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 
 - **留格給 high**：範本已在 `kernel.json` 頂層設 `"reserved": {"high": 1}`（使用者裁定 sol 審查 #7）；程式裡是選填，只認 `high`，值須為非負整數且小於頂層 `slots`（`slots: 1` 只能填 0），不合＝`CfgBad`。沒寫、`{}` 或 `high: 0`＝不保留；`reserved` 同 `slots` 整格先解指示詞。低於 high 的信只補到總在飛數 `slots-N`，看 `priority_of` 的宣告 level、不算 aging；跳過不能補的信，後面的 high 可繼續補。保留格不搶占已在飛的請求，high 要用保留範圍外的格仍可能等在飛的跑完。
 - **額度**：kernel 總的 `budget`、每包的 `budget`、每個寄件人的 `budget.senders`（寄件人＝信封 `sender`＝寄信那隻 proc 的 stack `$AOS_STACK`，跟信箱信封一致；11-13 線修 T31 起，之前是工作區；不驗身分）；用量帳在 `$AOS_STACK/used.json`（`packs`、`senders` 各一格；`senders` 的 key 是相對 kernel stack 的路徑，整包搬家相對位置相同就沿用同一格帳）。範本不設預算；要限某隻 agent 就在自己那份 `kernel.json` 寫 `"budget": {"senders": {"<它的 stack，建議寫絕對路徑>": {"max_calls": N}}}`（相對 key 從 kernel.json 所在夾算，`used.json` 的 key 卻是相對 kernel stack，別照抄；對不上起過的 proc 的 key，kernel 會印一行 warning）（[03 件 5](03-feat-proto.md)）。
 - **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台；非空路徑的 `new/` 不是資料夾時，每輪 warning 一行，仍用原路徑、不改退路、不因此報錯，後續掛 proc 失敗照舊（[已知限制](../../../py/tools/aos/kernel_llm/docs/04-已知限制.md)）。
-- agent-fsm 問腦一定經這裡（沒設 `AOS_LLM_KERNEL`＝`LlmKernelMissing`），要先起這個。
+- agent-fsm 問腦一定經這裡（沒設 `AOS_LLM_KERNEL`＝`LlmKernelMissing`），要先起這個。初始 kernel 裡「llm 件可選」只對不會想的 proc 成立；沒裝 llm 件的板子上，agent 不能想（使用者 11-20「不能，維持現狀」）。
 
 範本出廠帶 stdout log、**不帶鐘列**（鐘只放在根 daemon，總機掛在樹裡就聽根的鐘；單獨起又沒設 `AOS_CLOCK`＝退牆鐘）；正式使用可在自己的副本拿掉 `_entry` 的 `--enable-logs`。真要總機自己的鐘，照 [aos-daemon docs/02](../../../cpp/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列) 加鐘列＋`.env`（掛在樹裡時還要掛它的那列加 `--dotenv-override`）。
 

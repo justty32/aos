@@ -42,6 +42,9 @@
  "aos-kask-1120.md": {
   "description": "線 aos-kask-1120 紀錄：「寄信問 kernel」基礎協議的調查與發想——只寫 thinking，原型在暫存夾"
  },
+ "aos-kinit-tpl-1120.md": {
+  "description": "線 aos-kinit-tpl-1120：把使用者對「初始 kernel」八題的答案落到文件與起手範本（start-api 改成 llm kernel 掛同板、加選裝不開的權限站）"
+ },
  "aos-kres-1120": {
   "description": "kernel 的資源基底與排程介面（線 aos-kres-1120，發想）：資源基底＝請求帶的 json＋kernel 放話的 schema＋粗化／細化＋記帳，今天用 hook 就能做單人版；排程介面「骨架本來就有」對一半，骨架有叫「誰先」的口但規則每包自寫、hook 碰不到；九題等你"
  },

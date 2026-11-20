@@ -45,17 +45,16 @@ class Live(unittest.TestCase):
         cls.tmp = Path(os.path.realpath(tempfile.mkdtemp(prefix="gdb-live-")))
         cls.tree = cls.tmp / "tree"
         shutil.copytree(PROTO / "templates" / "start-api", cls.tree, symlinks=True)
-        kj = cls.tree / "llms" / "def" / "kernel.json"
+        kj = cls.tree / "llm" / "kernel.json"
         k = json.loads(kj.read_text())
         k["endpoints"]["fake-math"] = dict(k["endpoints"]["fake"], tool="math", summary="fake brain that calls math with {} (an error)")
         kj.write_text(json.dumps(k))
-        cls.logs = [open(cls.tmp / n, "w") for n in ("root.log", "llm.log")]
+        cls.logs = [open(cls.tmp / "root.log", "w")]
         cls.procs = [subprocess.Popen(["aos-exec", "root"], cwd=cls.tree, env=ENV, stdin=subprocess.DEVNULL,
                                       stdout=cls.logs[0], stderr=subprocess.STDOUT, start_new_session=True)]
         until(lambda: (cls.tree / ".stack" / "state.json").exists())
-        cls.procs.append(subprocess.Popen(["aos-exec", "--stack", "stacks/llm", "def"], cwd=cls.tree / "llms", env=ENV,
-                                          stdin=subprocess.DEVNULL, stdout=cls.logs[1], stderr=subprocess.STDOUT, start_new_session=True))
-        until(lambda: (cls.tree / "llms" / "stacks" / "llm" / "state.json").exists())
+        cls.sh("aos-daemon-ctl -d .stack add --auto-restart llm")    # llm kernel 掛在根上一列（start-api README）
+        until(lambda: (cls.tree / ".stack" / "procs" / "llm" / "state.json").exists())
         cls.sh("aos-agent -d .stack ctl add --auto-restart -w . agents/ann")
         os.environ.update(AOS_HOME=str(PROTO), PATH=ENV["PATH"])   # 庫在這個行程裡叫 aos-agent
         cls.daemon = str(cls.tree / ".stack")
@@ -65,8 +64,7 @@ class Live(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         try:
-            cls.sh("aos-daemon-ctl -d .stack shutdown", check=False)
-            cls.sh("aos-daemon-ctl -d llms/stacks/llm shutdown", check=False)
+            cls.sh("aos-daemon-ctl -d .stack shutdown", check=False)       # llm kernel 是根上一列，跟著睡下
             for p in cls.procs:
                 try:
                     p.wait(timeout=20)

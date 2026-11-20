@@ -49,7 +49,7 @@ kernel 總 `slots` 2、兩包各 `slots` 1、每封 3 秒：同級的信 fast �
 
 ### 件 4：agent 生 agent（`subagent`、`agent_def`；框架站 `max_running` 5＝清道夫＋4）
 
-直接用出廠的 `kernel/daemon-kernel`：`kernel.json` 的 `max_running` 5＝清道夫 `_sweeper`＋fsm1＋三隻孩子（範本不帶鐘列，不用替時鐘多留一格；清道夫那列範本預設帶、也算 running，不掛的調回 4）。實際容量看框架站的回信與表，不以假腦文字判斷。
+直接用出廠的 `kernel/daemon-kernel`：`kernel.json` 的 `max_running` 5＝清道夫 `_sweeper`＋fsm1＋三隻孩子（範本不帶鐘列，不用替時鐘多留一格；清道夫那列範本預設帶、也算 running）。實際容量看框架站的回信與表，不以假腦文字判斷。
 
 ```sh
 T=/tmp/feat-s9-spawn && rm -rf $T && mkdir -p $T/ws && cd $T

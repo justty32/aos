@@ -20,7 +20,7 @@
 | 鏈的中間站 | 上面兩種任一種，但放行的信不給自己那台 daemon，而是轉給另一個站 | `<這一站的 stack>/requests` | 沒有現成範本，見下面「鏈的例子」 |
 
 - **身體還是 loop proc**：當身體時，站跑在 daemon 那一圈裡，這一輪卡多久 daemon 那一圈就卡多久，所以要快。要慢慢判（例：hook 裡要問腦）就用 loop proc。loop proc 自己也是表上一列 `running`，`max_running` 要把它算進去（範本 `procs-kernel` 寫 2＝站自己＋1 格）。
-- **`daemon-kernel` 範本的格數**：出廠帶 `--enable-logs`、不帶鐘列。`max_running` 數的是這台表上所有在跑的列，範本帶的清道夫 `_sweeper` 也佔一格，所以預設 5＝4 隻工作 proc＋清道夫。不掛清道夫的（從 `daemon.json` 刪掉那列）自己把 `kernel.json` 的 `max_running` 調回 4；自己加了鐘列的再加一。`max_running` 是可選的：寫非負整數＝上限，寫 `null` 或不寫＝不限（使用者 11-10「上限應該是可選的，默認的值就隨意，改5吧。」）。
+- **`daemon-kernel` 範本的格數**：出廠帶 `--enable-logs`、不帶鐘列。`max_running` 數的是這台表上所有在跑的列，範本帶的清道夫 `_sweeper` 也佔一格，所以預設 5＝4 隻工作 proc＋清道夫（清道夫算最小核心，使用者 11-20「算核心」，見[入口「初始 kernel」](../README.md#初始-kernel買了板子之後灌什麼)）；自己加了鐘列的再加一。`max_running` 是可選的：寫非負整數＝上限，寫 `null` 或不寫＝不限（使用者 11-10「上限應該是可選的，默認的值就隨意，改5吧。」）。
 
 ### 框架站怎麼判
 
