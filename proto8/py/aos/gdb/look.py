@@ -36,20 +36,23 @@ def _tail_jsonl(path, n):
 
 
 def bp_id(name):
-    """hook 名 gdb_<id>／觀察者 proc 名 gdbw_<id> → 斷點 id。"""
+    """hook 名 gdb_<id>／觀察者 proc 名 gdbw_<id>（或已經拿掉字首的 id）→ 斷點 id：號碼＝int（使用者 11-20 選純數字），自己取的名字＝str；空＝None。"""
     s = name or ""
     for p in ("gdbw_", "gdb_"):                  # gdbw_ 先比（它也以 gdb 開頭）
         if s.startswith(p):
-            return s[len(p):]
-    return s or None
+            s = s[len(p):]
+            break
+    if not s:
+        return None
+    return int(s) if s.isascii() and s.isdigit() else s
 
 
 class Why:
     """why() 的結果：paused（停著沒：ctl pause 已套用，或扣在斷點上）、held（扣住的那份 hold.json 或 None）、
     current（最後一張字條是不是這次停的原因）、notes（上次 resume 之後的字條）、pending（扣住之後又來的 ctl 指令 (seq, cmd) 或 None）、
-    breakpoint（現在停在哪個斷點的 id，str；不是停在斷點上＝None）。
-    a.bp.resume()／step()／stop() 回的也是它，另有 outcome（stopped＝停了、idle＝閒著不會停、gone＝行程不在、interrupted＝Ctrl-C 不等了）
-    與 head（印出來的第一行，例 "stopped at before_tool_1 (write)"）；a.bp.why() 回的這兩個是 None。"""
+    breakpoint（現在停在哪個斷點的 id：號碼 int，或自己取的名字 str；不是停在斷點上＝None）。
+    a.bp.resume()／step()／pause() 回的也是它（wait=False 時是背景等完之後 .wait() 回的），另有 outcome（stopped＝停了、idle＝閒著不會停、
+    gone＝行程不在、interrupted＝Ctrl-C 不等了）與 head（印出來的第一行，例 "stopped at breakpoint 1 (before_tool: write)"）；a.bp.why() 回的這兩個是 None。"""
 
     def __init__(self, name, paused, current, notes, held=None, pending=None):
         self.name, self.paused, self.current, self.notes, self.held, self.pending = name, paused, current, notes, held, pending

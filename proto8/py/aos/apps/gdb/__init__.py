@@ -23,15 +23,17 @@ from aos.py.agent import defs), and with NAME also a = agent.attach(NAME, daemon
   agent.ctl.ls(); daemon_ctl.ls()             commands that take no --target
   a.look.where(); a.look.history(3)           read the stack's files (also observed, request, queue, stderr, file)
 every breakpoint thing is under a.bp:
-  b = a.bp.add.before_tool("write")           hold it before write runs; returns the id "before_tool_1"
+  b = a.bp.add.before_tool("write")           hold it before write runs; returns the breakpoint:
+                                               b.id == 1 (a number, never used again), b.kind == "before_tool", b.fired ...
   a.bp.add.after_tool("write")                pause after the tool ran, before the brain sees the result
   a.bp.add.tool_error(times=2)                the same, when tools exit non-zero or time out twice in a row
   a.bp.add.after_tool(sh="grep -q secret || exit 10")
   a.bp.add.watch(py=lambda t: len(t.history(0)) > 20)   another proc looks every 0.5 s and pauses it
   a.bp.add                                     lists every kind (tab completes them)
-the three controls take no arguments; each waits until it stops again and shows where:
+the three controls wait until it stops again and show where (wait=False: return at once with p;
+p.is_done() says if it is done, p.wait() gives the same result):
   a.say("hi"); a.bp.resume()
-                           # stopped at before_tool_1 (write)
+                           # stopped at breakpoint 1 (before_tool: write)
   a.bp.resume()            go on (a held tool call runs as it was) and wait for the next stop;
                            not stopped (just after a.say) = sends nothing, only waits
   a.bp.step()              go one step of its fsm (idle, think, wait or act) and stop again
@@ -47,7 +49,7 @@ exit codes: 0 left the REPL; 1 error (ArgumentsBad, AttachFailed...); 130 Ctrl-C
 """
 BANNER = """aos-gdb: %s
   ready: agent, daemon_ctl, std, defs%s.  Try: %s
-  Ctrl-D leaves; breakpoints stay (triggers on the agent, watchers on the daemon) until a.bp.rm(id) / a.bp.clear()."""
+  Ctrl-D leaves; breakpoints stay (triggers on the agent, watchers on the daemon) until a.bp.rm(b) / a.bp.clear()."""
 
 
 def main():

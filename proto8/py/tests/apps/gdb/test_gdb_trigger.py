@@ -1,4 +1,5 @@
-"""aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent 跑：pause 型發 pause、留字條；hold 型扣住等放行（放行退 0、什麼都不印；shell 的 ctl resume 也放行；被 TERM 留 hold_ended 且同一次再來時直接再扣住；放行過的同一次再來不再扣）；條件壞了只 warning 退 0；介面長相（a.bp、resume／step／stop 不收參數、沒有 skip 與 wait_stopped、說明字串）。"""
+"""aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent 跑：pause 型發 pause、留字條；hold 型扣住等放行（放行退 0、什麼都不印；shell 的 ctl resume 也放行；被 TERM 留 hold_ended 且同一次再來時直接再扣住；放行過的同一次再來不再扣）；條件壞了只 warning 退 0；介面長相（a.bp、resume／step／pause 只收 wait=、沒有 skip 與 wait_stopped、說明字串、wait=False 回的 Pending）；
+斷點 id 純數字、刪了不重用、add 回的物件屬性每次重查、rm／set／get 收物件與 id、自己取名、下斷點失敗號碼還回去（假的 aos-agent）。"""
 import json
 import os
 from pathlib import Path
@@ -314,8 +315,12 @@ class Shape(unittest.TestCase):
         import aos.gdb as g
         for name in ("rm", "set", "ls", "get", "resume", "step", "pause", "why", "held", "stopped", "notes", "clear"):
             self.assertTrue(callable(getattr(g.Breakpoints, name)), name)
-        for name in ("resume", "step", "pause"):                         # 使用者 11-19「a.resume()就是a.resume()，他的args不應該有東西」
-            self.assertEqual(list(inspect.signature(getattr(g.Breakpoints, name)).parameters), ["self"], name)
+        for name in ("resume", "step", "pause"):                         # 使用者 11-20「三個都加」wait=，只開這一個參數
+            ps = inspect.signature(getattr(g.Breakpoints, name)).parameters
+            self.assertEqual(list(ps), ["self", "wait"], name)
+            self.assertIs(ps["wait"].default, True)
+            with self.assertRaises(g.Failed):
+                getattr(self.bp(), name)(wait=1)                         # 只收 True／False，先擋、什麼都不送
         for gone in ("skip", "wait_stopped", "stop"):                   # 11-19「不該有這個方法」；等停下併進 resume／step；stop 改名 pause
             self.assertFalse(hasattr(g.Breakpoints, gone), gone)
         self.assertFalse(hasattr(trigger, "SKIPPABLE"))
@@ -338,8 +343,9 @@ class Shape(unittest.TestCase):
         self.assertTrue(repr(w).startswith("stopped after one step, before think\nann is paused by a.bp.step()"))
         w.outcome, w.head = "idle", "ann did not stop: it is idle"
         self.assertEqual(repr(w), "ann did not stop: it is idle")
-        h = Why("ann", True, True, [], held={"trigger": "gdb_before_tool_1", "event": "before_tool", "detail": {"name": "write"}})
-        self.assertEqual(h.breakpoint, "before_tool_1")
+        h = Why("ann", True, True, [], held={"trigger": "gdb_1", "event": "before_tool", "detail": {"name": "write"}})
+        self.assertEqual(h.breakpoint, 1)
+        self.assertIn("held at breakpoint 1:", repr(h))
         self.assertIn("a.bp.step() runs it", repr(h))
         self.assertNotIn("skip", repr(h))
 
@@ -383,7 +389,31 @@ class Shape(unittest.TestCase):
 
     def test_bp_id(self):
         from aos.gdb.look import bp_id
-        self.assertEqual((bp_id("gdb_before_tool_1"), bp_id("gdbw_watch_1"), bp_id(None)), ("before_tool_1", "watch_1", None))
+        self.assertEqual((bp_id("gdb_3"), bp_id("gdbw_12"), bp_id("gdb_mine"), bp_id("gdbw_mine"), bp_id(None)), (3, 12, "mine", "mine", None))
+
+    def test_pending(self):
+        """wait=False 回的物件：is_done() 由 False 變 True；wait() 回背景的結果、背景的錯在 wait() 丟（使用者 11-20「用is_done()」）。"""
+        import threading
+        from aos.gdb.handles import Pending
+        from aos.gdb.look import Why, Failed
+        go = threading.Event()
+        w = Why("ann", True, True, [])
+        w.outcome, w.head = "stopped", "stopped after one step, before think"
+        p = Pending("a.bp.step(wait=False)", "ann", run=lambda: (go.wait(5), w)[1])
+        self.assertFalse(p.is_done())
+        self.assertIn("still waiting", repr(p))
+        go.set()
+        self.assertIs(p.wait(), w)
+        self.assertTrue(p.is_done())
+        self.assertIn("done: stopped after one step", repr(p))
+
+        def boom():
+            raise Failed("a.bp.resume", "it broke")
+        q = Pending("a.bp.resume(wait=False)", "ann", run=boom)
+        with self.assertRaises(Failed):
+            q.wait()
+        self.assertTrue(q.is_done())
+        self.assertTrue(Pending("a.bp.pause(wait=False)", "ann", value=w).is_done())   # 已經停著：一拿到就是好的
 
 
 FAKE_AGENT = r'''#!/usr/bin/env python3
@@ -474,28 +504,28 @@ class AddFails(unittest.TestCase):
             self.bp.ls()                                                          # 列也是同一句
         self.assertIn("add HOOKS = {} to agent.py", str(e.exception))
         self.mode("ok")
-        self.assertEqual(self.bp.add.before_tool("write"), "before_tool_1")      # id 不跳號
-        self.assertEqual([(r["id"], r["enabled"]) for r in self.bp.ls()], [("before_tool_1", True)])
+        self.assertEqual(self.bp.add.before_tool("write").id, 1)                 # id 不跳號
+        self.assertEqual([(r["id"], r["enabled"]) for r in self.bp.ls()], [(1, True)])
 
     def test_failing_add_next_to_others_and_replace_puts_back(self):
         self.mode("ok")
-        self.assertEqual(self.bp.add.after_tool("write", times=2), "after_tool_1")
-        cell = self.tmp / "stack" / "hooks" / "gdb_after_tool_1"
+        self.assertEqual(self.bp.add.after_tool("write", times=2).id, 1)
+        cell = self.tmp / "stack" / "hooks" / "gdb_1"
         trigger.write_json(str(cell / trigger.COUNT), {"seen": 5, "streak": 1, "fired": 2})
         before = {n: (cell / n).read_bytes() for n in (trigger.SPEC, trigger.COUNT)}
         self.mode("fail")
         with self.assertRaises(self.g.Failed):
             self.bp.add.after_tool("read")                                       # 旁邊已有一個：新的不留、舊的不動
         with self.assertRaises(self.g.Failed):
-            self.bp.add.after_tool("read", id="after_tool_1", replace=True)      # 重下失敗：原本的設定與計數放回去
+            self.bp.add.after_tool("read", id=1, replace=True)                   # 重下失敗：原本的設定與計數放回去
         self.assertEqual({n: (cell / n).read_bytes() for n in before}, before)
-        self.assertEqual(sorted(p.name for p in (self.tmp / "stack" / "hooks").iterdir()), ["gdb_after_tool_1"])
+        self.assertEqual(sorted(p.name for p in (self.tmp / "stack" / "hooks").iterdir()), ["gdb_1"])
         with self.assertRaises(self.g.Failed):
-            self.bp.set("after_tool_1", times=5)                                 # 改也一樣：裝不上＝設定不變
+            self.bp.set(1, times=5)                                              # 改也一樣：裝不上＝設定不變
         self.assertEqual((cell / trigger.SPEC).read_bytes(), before[trigger.SPEC])
         self.mode("ok")
-        self.assertEqual(self.bp.add.after_tool("read"), "after_tool_2")
-        self.assertEqual([r["id"] for r in self.bp.ls()], ["after_tool_1", "after_tool_2"])
+        self.assertEqual(self.bp.add.after_tool("read").id, 2)
+        self.assertEqual([r["id"] for r in self.bp.ls()], [1, 2])
 
     def test_watcher_that_cannot_go_on_the_table_leaves_no_stack(self):
         self.mode("ok")
@@ -503,12 +533,89 @@ class AddFails(unittest.TestCase):
             self.bp.add.watch(py="False")
         self.assertEqual(e.exception.code, "AddRejected")
         self.assertEqual(list((self.tmp / "daemon" / "procs").iterdir()), [])
-        kept = self.tmp / "daemon" / "procs" / "gdbw_watch_1"                   # 先前 rm 過、留著給人看的夾：不動
+        nxt = self.tmp / "stack" / "gdb" / trigger.NEXT
+        self.assertEqual(json.loads(nxt.read_text()), {"next": 1})               # 掛不上表＝號碼還回去了
+        kept = self.tmp / "daemon" / "procs" / "gdbw_5"                          # 先前 rm 過、留著給人看的夾：不動，號碼也不再用
         kept.mkdir()
         (kept / "old.txt").write_text("kept")
         with self.assertRaises(self.g.Failed):
             self.bp.add.watch(py="False")
         self.assertEqual((kept / "old.txt").read_text(), "kept")
+        self.assertEqual(json.loads(nxt.read_text()), {"next": 6})               # 這次拿的是 6（躲開 5），沒掛上也還回去
+        self.assertEqual(self.bp.add.before_tool().id, 6)
+
+
+class Ids(unittest.TestCase):
+    """斷點 id 與 add 回的物件（使用者 11-20：id 純數字、種類放屬性；號碼「不重用」；add「回物件、帶屬性」；屬性「每次讀都重新查」）。
+    用 AddFails 那支假的 aos-agent（hook ls／add／rm、ctl state），不起 daemon。"""
+
+    setUp, tearDown, mode = AddFails.setUp, AddFails.tearDown, AddFails.mode
+
+    def test_numbers_are_never_used_again(self):
+        self.mode("ok")
+        b1 = self.bp.add.before_tool("write")
+        self.assertEqual((b1.id, type(b1.id)), (1, int))
+        self.bp.rm(b1)
+        b2 = self.bp.add.before_tool("write")
+        self.assertEqual(b2.id, 2)                                               # 刪 1 再加得到 2
+        again = self.g.Breakpoints(self.g.Target("ann", str(self.tmp / "daemon")))   # 重新取 a.bp（像重開 REPL）：計數器在 stack 裡
+        self.assertEqual(again.add.after_tool().id, 3)
+        self.bp.rm(2)
+        self.bp.rm("3")                                                          # 數字字串也收
+        self.assertEqual(self.bp.ls(), [])
+        self.assertEqual(self.bp.add.tool_error().id, 4)
+        self.assertEqual(json.loads((self.tmp / "stack" / "gdb" / trigger.NEXT).read_text()), {"next": 5})
+        self.assertEqual(sorted(json.loads((self.tmp / "hooks.json").read_text())), ["gdb_4"])   # hook 名＝gdb_<號碼>
+
+    def test_add_returns_a_live_object(self):
+        self.mode("ok")
+        b = self.bp.add.after_tool("write", times=2)
+        self.assertEqual((b.id, b.kind, b.how, b.times, b.enabled, b.fired), (1, "after_tool", "pause", 2, True, 0))
+        self.assertEqual(self.bp.add.tool_error().kind, "tool_error")
+        self.assertEqual(self.bp.add.before_queue().kind, "before_queue")
+        trigger.write_json(str(self.tmp / "stack" / "hooks" / "gdb_1" / trigger.COUNT), {"seen": 4, "fired": 2})
+        self.assertEqual((b.fired, b.seen), (2, 4))                              # 每次讀都重新查
+        self.assertEqual(self.bp.set(b, times=3)["times"], 3)                    # set 收物件
+        self.assertEqual(b.times, 3)
+        self.assertEqual(self.bp.get(b)["id"], 1)                                # get 收物件也收號碼
+        self.assertEqual(self.bp.get(1), self.bp.get("1"))
+        self.assertTrue(b == 1 and b == self.bp.get(1)["id"])
+        self.assertIn("breakpoint 1 of ann: after_tool", repr(b))
+        with self.assertRaises(AttributeError):
+            b.kind = "x"                                                         # 唯讀：改用 a.bp.set
+        with self.assertRaises(AttributeError):
+            b.no_such_field
+        self.bp.rm(b)                                                            # rm 收物件
+        with self.assertRaises(self.g.Failed) as e:
+            b.fired                                                              # 刪掉之後讀屬性＝報錯
+        self.assertEqual(e.exception.code, "BreakpointGone")
+        self.assertIn("gone", str(e.exception))
+        self.assertEqual(b.id, 1)                                                # id 本身照拿得到
+        self.assertIn("gone", repr(b))
+        with self.assertRaises(self.g.Failed):
+            self.bp.get(b)
+
+    def test_names_and_ids_you_give(self):
+        """自己取名照留（替使用者做的選擇：最不破壞）；號碼不能自己挑，只能 replace 已有的。"""
+        self.mode("ok")
+        m = self.bp.add.after_tool(id="mine")
+        self.assertEqual((m.id, m.kind), ("mine", "after_tool"))
+        self.assertEqual(sorted(json.loads((self.tmp / "hooks.json").read_text())), ["gdb_mine"])
+        n = self.bp.add.before_tool()
+        self.assertEqual(n.id, 1)                                                # 取名不吃號碼
+        self.assertEqual([r["id"] for r in self.bp.ls()], [1, "mine"])           # 號碼在前、名字在後
+        r = self.bp.add.before_queue(id=n, replace=True)                         # replace 收物件：同一個號碼換掉
+        self.assertEqual((r.id, r.kind, n.kind), (1, "before_queue", "before_queue"))
+        for bad in (7, "7"):
+            with self.assertRaises(self.g.Failed) as e:
+                self.bp.add.before_tool(id=bad, replace=True)                    # 沒有的號碼不能自己挑
+            self.assertIn("never used again", str(e.exception))
+        with self.assertRaises(self.g.Failed):
+            self.bp.add.after_tool(id="mine")                                    # 同名不換（沒給 replace）
+        for bad in (0, -1, True, "", "a/b", None, 1.5):
+            with self.assertRaises(self.g.Failed):
+                self.bp.get(bad)
+        self.assertEqual(self.bp.add.after_tool().id, 2)
 
 
 if __name__ == "__main__":

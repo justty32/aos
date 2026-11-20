@@ -5,7 +5,7 @@
 為什麼掛在 daemon 表上、不是 REPL 外的背景程式：REPL 關了照樣在；表上看得到（aos-daemon-ctl ls）、停得掉（rm）、daemon 收工就一起睡、重起一起醒；
 自己壞了（設定壞、行程掛）＝表上那一列 stopped 帶原因，目標照跑。它就是一個 aos-loop：loop.json 的 exec 是 lib/tools/agent/gdb_watch，每一圈看一次。
 
-檔（觀察者自己的 stack：<daemon>/procs/gdbw_<名>/）：
+檔（觀察者自己的 stack：<daemon>/procs/gdbw_<id>/；id＝號碼，或自己取的名字）：
     watch_loop.json   交給 aos-daemon-ctl add 的 aos-loop 設定（daemon 再照它寫自己的 loop.json）（exec＝gdb_watch、interval_ms＝every_ms、ctl／state／state_flux）
     watch.json        設定：{"proc": 表上的名字, "targets": [名字...], "daemon": 絕對路徑, "kind": "sh" | "py", "sh": 字串, "py": {...},
                             "times": N, "once": bool, "about": 一句英文}
@@ -22,7 +22,7 @@ import shutil
 import signal
 
 from aos.gdb import trigger
-from aos.gdb.look import Look, Failed, run
+from aos.gdb.look import Look, Failed, bp_id, run
 
 PREFIX = "gdbw_"                                # 觀察者在 daemon 表上的名字一律以此開頭
 SPEC = "watch.json"
@@ -208,8 +208,25 @@ def about(spec):
                              ", once" if spec.get("once") else "")
 
 
+def proc_of(id):
+    """斷點 id（號碼或名字）→ 表上的 proc 名 gdbw_<id>。"""
+    return PREFIX + str(id)
+
+
+def _used_numbers(daemon, table):
+    """這個 daemon 上觀察者用過的號碼：表上的、procs/ 底下留著的 gdbw_<號碼> 夾（rm 過、留著給人看的也算）。"""
+    names = set(table)
+    try:
+        names |= set(os.listdir(os.path.join(daemon, "procs")))
+    except FileNotFoundError:
+        pass
+    return {i for i in (bp_id(n) for n in names if n.startswith(PREFIX)) if isinstance(i, int)}
+
+
 def add(daemon, targets, sh=None, py=None, times=1, once=False, every_ms=500, name=None, replace=False, echo=True):
-    """起一個觀察者（aos-daemon-ctl add）；回它的 id（str，不含 gdbw_；aos.gdb 的 a.bp.add.watch(...) 叫這個）。"""
+    """起一個觀察者（aos-daemon-ctl add）；回它的 id（不含 gdbw_；aos.gdb 的 a.bp.add.watch(...) 叫這個）。
+    name 不給＝拿一個新號碼（int）：從它看的每一隻的計數器一起拿（trigger.take_id），也躲開這個 daemon 上觀察者用過的號碼，
+    所以在每個目標的 a.bp 裡都不會跟觸發器撞、刪了也不再用（使用者 11-20「不重用」）；掛不上表＝號碼還回去。name 給了＝照用（自己取的名字，或 replace 的那個號碼）。"""
     if isinstance(targets, str):
         targets = [targets]
     targets = list(targets or [])
@@ -221,13 +238,7 @@ def add(daemon, targets, sh=None, py=None, times=1, once=False, every_ms=500, na
     missing = [t for t in targets if t not in table]
     if missing:
         raise Failed("watch", "not on the daemon table: %s" % ", ".join(missing))
-    if name is None:
-        i = 1
-        while "%sw%d" % (PREFIX, i) in table:
-            i += 1
-        name = "w%d" % i
-    proc = PREFIX + name
-    spec = {"proc": proc, "targets": targets, "daemon": daemon, "kind": "sh" if sh is not None else "py",
+    spec = {"proc": None, "targets": targets, "daemon": daemon, "kind": "sh" if sh is not None else "py",
             "times": times, "once": bool(once), "every_ms": every_ms}
     try:
         if sh is not None:
@@ -235,24 +246,34 @@ def add(daemon, targets, sh=None, py=None, times=1, once=False, every_ms=500, na
         else:
             spec["py"] = trigger.pack_py(py, var="t", what="the target t")
         spec["about"] = about(spec)
-        validate(spec)
+        validate(dict(spec, proc=PREFIX))
     except trigger.Bad as e:
         raise Failed("watch", str(e)) from None
-    if proc in table:
-        if not replace:
-            raise Failed("watch", "there is already a watcher named %s (replace=True to replace it)" % name)
-        run(["aos-daemon-ctl", "--daemon", daemon, "rm", proc], echo=echo)
-    stack = stack_dir(daemon, proc)
-    fresh = not os.path.exists(stack)
-    os.makedirs(stack, exist_ok=True)
+    stacks = None
+    if name is None:
+        stacks = [stack_of(t, daemon) for t in targets]
+        name = trigger.take_id(stacks, 1 + max(_used_numbers(daemon, table), default=0))
+    proc = spec["proc"] = proc_of(name)
     try:
-        trigger.write_json(os.path.join(stack, SPEC), spec)
-        trigger.write_json(os.path.join(stack, STATE), {})
-        trigger.write_json(os.path.join(stack, LOOP), loop_config(every_ms))
-        run(["aos-daemon-ctl", "--daemon", daemon, "add", "--name", proc, "--stack", stack, os.path.join(stack, LOOP)], echo=echo)
+        if proc in table:
+            if not replace:
+                raise Failed("watch", "there is already a watcher %s (replace=True to replace it)" % name)
+            run(["aos-daemon-ctl", "--daemon", daemon, "rm", proc], echo=echo)
+        stack = stack_dir(daemon, proc)
+        fresh = not os.path.exists(stack)
+        os.makedirs(stack, exist_ok=True)
+        try:
+            trigger.write_json(os.path.join(stack, SPEC), spec)
+            trigger.write_json(os.path.join(stack, STATE), {})
+            trigger.write_json(os.path.join(stack, LOOP), loop_config(every_ms))
+            run(["aos-daemon-ctl", "--daemon", daemon, "add", "--name", proc, "--stack", stack, os.path.join(stack, LOOP)], echo=echo)
+        except Failed:
+            if fresh:                             # 掛不上表＝不留這次新建的 stack 夾（線 aos-bpfix-1119）；先前就有的（rm 過留著給人看的）不動
+                shutil.rmtree(stack, ignore_errors=True)
+            raise
     except Failed:
-        if fresh:                                 # 掛不上表＝不留這次新建的 stack 夾（線 aos-bpfix-1119）；先前就有的（rm 過留著給人看的）不動
-            shutil.rmtree(stack, ignore_errors=True)
+        if stacks is not None:
+            trigger.give_back(stacks, name)       # 號碼不被吃掉
         raise
     return name
 
@@ -266,7 +287,7 @@ def ls(daemon):
         stack = stack_dir(daemon, proc)
         spec = trigger.read_json(os.path.join(stack, SPEC), {}) or {}
         state = trigger.read_json(os.path.join(stack, STATE), {}) or {}
-        out.append({"name": proc[len(PREFIX):], "phase": row.get("phase"), "pid": row.get("pid"), "reason": row.get("reason"),
+        out.append({"name": bp_id(proc), "phase": row.get("phase"), "pid": row.get("pid"), "reason": row.get("reason"),
                     "targets": spec.get("targets"), "about": spec.get("about"), "every_ms": spec.get("every_ms"),
                     "per_target": {t: {k: v for k, v in (state.get(t) or {}).items() if k not in ("mem", "stack")}
                                    for t in spec.get("targets") or []}})
@@ -275,4 +296,4 @@ def ls(daemon):
 
 def rm(daemon, name, echo=True):
     """拿掉一個觀察者（aos-daemon-ctl rm：先停、等它退出，再從表上拿掉；它的 stack 留著給人看）。"""
-    return run(["aos-daemon-ctl", "--daemon", daemon, "rm", PREFIX + name], echo=echo)
+    return run(["aos-daemon-ctl", "--daemon", daemon, "rm", proc_of(name)], echo=echo)

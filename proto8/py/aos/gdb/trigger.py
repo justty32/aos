@@ -1,4 +1,4 @@
-"""aos.gdb.trigger - 條件觸發器的共用零件：觸發器檔（trigger.json）長什麼樣、條件怎麼判、連續幾次才算、停的時候留的字條（gdb/log.jsonl）與停在事件前的「扣住」檔（gdb/hold.json）；REPL 那邊（aos.gdb）、hook handler（gdb_trigger）與觀察者（gdb_watch）都用這份。
+"""aos.gdb.trigger - 條件觸發器的共用零件：觸發器檔（trigger.json）長什麼樣、條件怎麼判、連續幾次才算、停的時候留的字條（gdb/log.jsonl）與停在事件前的「扣住」檔（gdb/hold.json）、斷點號碼的計數器（gdb/next_id.json）；REPL 那邊（aos.gdb）、hook handler（gdb_trigger）與觀察者（gdb_watch）都用這份。
 
 圖紙：proto8/thinking/2026-11/19/aos-gdb-1119（乙案）、08-Argon審與採納、aos-gdb-lib-第一版.md、aos-gdb-lib-第二版.md。使用者 11-19：斷點＝「特定條件發生時，
 暫停loop或fsm，停下來等待檢閱」，條件主要由 hook 承載、「hook不用動」；第二版：「stop_before_tool不就是在工具開始前停下嗎？」。
@@ -21,6 +21,8 @@ trigger.json 判條件，成立時照事件分兩種停法（how）：
     <agent stack>/gdb/hold.json                  正在扣住時才有：{"token", "pid", "trigger", "event", "key", "detail", "ctl_seq", ...}；
                                                  pid 不在了＝過時（is_held 會查）。
     <agent stack>/gdb/release.json               放行單：{"token": 同 hold.json}（那一次照原樣跑）。
+    <agent stack>/gdb/next_id.json               斷點號碼的計數器：{"next": N}＝下一個號碼（使用者 11-20「不重用」：刪了也不再拿來用；
+                                                 觸發器從自己這隻拿，觀察者從它看的每一隻一起拿，見 take_id）；鎖檔 gdb/next_id.lock。
 條件：always＝事件來了就算；tool_error＝after_tool 的 code 不是 0 或逾時（看 agent-fsm 交給 hook 的 code／timed_out，不猜內容）；
     sh＝`sh -c 字串`、事件 JSON 在 stdin、stdout 丟掉，退 0＝算、退 10＝不算、其他＝條件壞了；
     py＝函式 f(event)（REPL 的 def／lambda，marshal 帶過去）或運算式字串（變數 ev），回真值＝算；看得到 json、re、os 與內建。
@@ -45,6 +47,8 @@ LOG_DIR = "gdb"
 LOG = "log.jsonl"
 HOLD = "hold.json"
 RELEASE = "release.json"
+NEXT = "next_id.json"                            # 斷點號碼計數器（gdb/ 底下）
+NEXT_LOCK = "next_id.lock"
 PREFIX = "gdb_"                                  # 觸發器的 hook 名一律以此開頭（ls 時認得出是誰裝的）
 NO = 10                                          # sh 條件：10＝查了不算（N-43）
 SH_TIMEOUT_S = 20                                # sh 條件自己的上限；pause 型 hook 的 timeout_ms 給得比它大
@@ -348,6 +352,50 @@ def read_hold(agent_stack):
 def write_release(agent_stack, token):
     """放行單：handler 看到 token 對得上就放行（那一次照原樣跑）。"""
     write_json(os.path.join(agent_stack, LOG_DIR, RELEASE), {"token": token})
+
+
+class _Locked:
+    """依序鎖住這幾個 stack 的 gdb/next_id.lock（排過序，兩個 REPL 同時下斷點不會互卡）。"""
+
+    def __init__(self, stacks):
+        self.stacks = sorted(set(os.path.abspath(s) for s in stacks))
+
+    def __enter__(self):
+        import fcntl
+        self.fds = []
+        for s in self.stacks:
+            os.makedirs(os.path.join(s, LOG_DIR), exist_ok=True)
+            fd = os.open(os.path.join(s, LOG_DIR, NEXT_LOCK), os.O_RDWR | os.O_CREAT, 0o644)
+            self.fds.append(fd)
+            fcntl.flock(fd, fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *exc):
+        for fd in self.fds:
+            os.close(fd)                         # 關檔＝放鎖
+        return False
+
+
+def _next(stack):
+    v = (read_json(os.path.join(stack, LOG_DIR, NEXT), {}) or {}).get("next")
+    return v if isinstance(v, int) and not isinstance(v, bool) and v >= 1 else 1
+
+
+def take_id(stacks, at_least=1):
+    """拿一個新的斷點號碼：n＝at_least 與這幾個 stack 計數器的最大值，每個計數器都推到 n+1（之後誰都不會再拿到 n）。回 n（int）。"""
+    with _Locked(stacks) as lk:
+        n = max([at_least] + [_next(s) for s in lk.stacks])
+        for s in lk.stacks:
+            write_json(os.path.join(s, LOG_DIR, NEXT), {"next": n + 1})
+    return n
+
+
+def give_back(stacks, n):
+    """下斷點失敗時把號碼 n 還回去：計數器還停在 n+1（之後沒人再拿過）的才改回 n；有人拿過就不動（那就跳過 n，照樣不重用）。"""
+    with _Locked(stacks) as lk:
+        for s in lk.stacks:
+            if _next(s) == n + 1:
+                write_json(os.path.join(s, LOG_DIR, NEXT), {"next": n})
 
 
 def read_json(path, default=None):

@@ -200,8 +200,9 @@
    "flags.py": "aos_flags：命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 …",
    "gdb": {
     "__init__.py": "aos.gdb - aos-gdb 的 Python 庫（在 python REPL 裡用）：接上一隻已在跑的 agent（a.xxx＝aos-agent xxx 的薄殼），斷點全在 a.bp 底下（增刪改查、停、續、為什麼停）。",
+    "handles.py": "aos.gdb.handles - a.bp 交回去給人拿著的兩種物件：Breakpoint（a.bp.add.<種類>(...) 回的斷點，屬性每次讀都重新查）與 Pending（resume／step／pause 給 wait=False 時回的，is_done() 問好了沒）。",
     "look.py": "aos.gdb.look - 讀 stack 裡的檔（stage、history、observed、最後一次問腦、信箱、stderr；把手上的 a.look 就是它）、why() 的結果長相、跑一條指令的小殼。",
-    "trigger.py": "aos.gdb.trigger - 條件觸發器的共用零件：觸發器檔（trigger.json）長什麼樣、條件怎麼判、連續幾次才算、停的時候留的字條（gdb/log.jsonl）與停在事件前的「扣住」檔（gdb/hold.json）；REPL 那邊（aos.gdb）、hook handler（gdb…",
+    "trigger.py": "aos.gdb.trigger - 條件觸發器的共用零件：觸發器檔（trigger.json）長什麼樣、條件怎麼判、連續幾次才算、停的時候留的字條（gdb/log.jsonl）與停在事件前的「扣住」檔（gdb/hold.json）、斷點號碼的計數器（gdb/next_id.json）；REPL 那…",
     "watcher.py": "aos.gdb.watcher - 觀察者（丙）：另一支掛在 daemon 表上的普通 proc（名字 gdbw_ 開頭），每隔 every_ms 看一次目標 agent 的檔，條件成立（連續 times 次）就 ctl pause 目標並在它的 gdb/log.jsonl 留字條（by \"wat…"
    },
    "hook_run.py": "hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。",
@@ -364,7 +365,7 @@
      "test_feedback.py": "Verify feedback CLI storage, comfort calculations and the real aos-exec tool boundary."
     },
     "gdb": {
-     "test_gdb_live.py": "入口 aos.py 的把手與 aos.gdb 斷點（a.bp、a.look）對真的 aos 樹（start-api 抄一份、假腦）實跑：a.bp 的增刪改查；控制 resume／step／stop 都等到停下才回、回停在哪（沒停著時 resume 只等、step 走一格、閒著或行程不在就回「沒停」…",
+     "test_gdb_live.py": "入口 aos.py 的把手與 aos.gdb 斷點（a.bp、a.look）對真的 aos 樹（start-api 抄一份、假腦）實跑：a.bp 的增刪改查（id 純數字、刪了不重用、add 回的物件屬性每次重查）；控制 resume／step／pause 預設等到停下才回、回停在哪（wait=F…",
      "test_gdb_trigger.py": "aos.gdb.trigger 與 gdb_trigger handler（不起 daemon）：連續 N 次與歸零、once、tools 篩法、sh 的 0／10／其他、py 函式與運算式的打包與拒收、tool_error、字條從 resume 之後算；handler 用假的 aos-agent…"
     },
     "json_view": {
