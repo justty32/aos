@@ -8,20 +8,34 @@
 
 - **`a.xxx`＝`aos-agent xxx`**，一個呼叫＝一條指令，由入口的通用代理翻（`a.X.Y(ARG, flag=v)`＝`aos-agent --daemon D --target 名 X Y --flag v ARG`；`a.say`、`a.listen`、`a.ctl.state(json=True)`、`a.tools.add(…)`、`a.hook.ls()`…，`aos-agent` 以後加的子指令自動有）。
 - **兩個延伸**（不是 `aos-agent` 子指令，只在庫裡）：`a.bp` 斷點、`a.look` 讀 stack 的檔（`where`、`history(n)`、`observed(n)`、`request`、`queue`、`stderr(n)`、`file(rel)`）。`a` 上其他不是子指令的名字當場 `AttributeError`。
-- 斷點：增 `a.bp.add.<種類>(...)`、刪 `rm`、改 `set`、查 `ls`／`get`，每個斷點一個 **id（str）**；控制 `resume`（繼續跑）、`step`（走一格）、`pause`（現在停）——三個都**不收參數、都等到停下才回**、回停在哪；停在哪、為什麼 `why`／`held`／`stopped`。觸發器與觀察者是兩種斷點，同一套 id。
+- 斷點：增 `a.bp.add.<種類>(...)`（**回斷點物件**）、刪 `rm`、改 `set`、查 `ls`／`get`，每個斷點一個 **id：純數字、刪了不再用**，種類放在屬性 `.kind`；控制 `resume`（繼續跑）、`step`（走一格）、`pause`（現在停）——三個**預設都等到停下才回**、回停在哪，給 `wait=False` 就送出馬上回一個可以查的物件（`is_done()`）；停在哪、為什麼 `why`／`held`／`stopped`。觸發器與觀察者是兩種斷點，同一條號碼。
 
 ## 控制：`resume`、`step`、`pause`（照 IDE／gdb）
 
-使用者 11-19：「我記得有step into還是啥的，參考那些ide」；選項框選「resume/step 自己等到停」（像 gdb 的 continue：放行後卡著，等到下次停下才回來、印出停在哪；不再有 wait 這個方法；Ctrl-C 只是不等了，agent 照跑）；「放行但那次工具不跑」那個方法「不該有這個方法」（拿掉了）；「現在停」選「改 a.bp.pause() (Recommended)」（VS Code 的「停一下」叫 Pause；aos 的 `ctl stop` 是把整隻停掉）。紀錄：[aos-gdb-動詞-1119](../../../../thinking/2026-11/19/aos-gdb-動詞-1119.md)。
+使用者 11-19：「我記得有step into還是啥的，參考那些ide」；選項框選「resume/step 自己等到停」（像 gdb 的 continue：放行後卡著，等到下次停下才回來、印出停在哪；不再有 wait 這個方法（11-20 起要不等，是三個動作的 `wait=False`，見下面）；Ctrl-C 只是不等了，agent 照跑）；「放行但那次工具不跑」那個方法「不該有這個方法」（拿掉了）；「現在停」選「改 a.bp.pause() (Recommended)」（VS Code 的「停一下」叫 Pause；aos 的 `ctl stop` 是把整隻停掉）。紀錄：[aos-gdb-動詞-1119](../../../../thinking/2026-11/19/aos-gdb-動詞-1119.md)。
 
 ```
 b = a.bp.add.before_tool("write")
 a.say("write a note")
 a.bp.resume()      # 等到停在斷點才回來
-# stopped at before_tool_1 (write)
+# stopped at breakpoint 1 (before_tool: write)
 a.bp.step()        # 走一格，又停
 a.bp.resume()      # 繼續，等下一次停
 ```
+
+**不等：`wait=False`**（使用者 11-20 選項框：加 wait= 的是「暫停 a.bp.pause()」、不等時「回一個可以查的物件。用is_done()」、resume／step「三個都加」；紀錄 [aos-gdb-wait-1120](../../../../thinking/2026-11/20/aos-gdb-wait-1120.md)）。三個動作都只收這一個參數，預設 `wait=True`＝上面那樣等；`wait=False`＝動作送出去就回一個 `Pending`，等它停下的那段在背景（同一個 Python 行程裡的一條執行緒）跑：
+
+```
+p = a.bp.resume(wait=False)   # 放行就回
+p.is_done()                   # False：還在等它停
+p                             # <a.bp.resume(wait=False) on ann: still waiting; .is_done() asks, .wait() waits>
+p.is_done()                   # True：停了（或確定不會停、或等出錯了）
+p.wait()                      # 回的跟 a.bp.resume() 一樣：.outcome、.head、印出來同一段
+```
+
+- `p.wait()` 好了就馬上回，還沒好就等到好；背景裡丟的錯（`a.bp.timeout_s` 到了的 `Timeout` 等）在 `wait()` 丟。`wait()` 裡按 Ctrl-C 只是這次不等了，背景照等。
+- 背景不印「still waiting」那一行（`report_s` 只管 `wait=True`）；`idle_s`、`timeout_s` 照用。已經停著時 `a.bp.pause(wait=False)` 回一個已經好了的。
+- 同一隻同時有兩個沒好的 `Pending`（例如 `resume(wait=False)` 還沒好又下 `step()`）不擋，誰先看到停誰先好；別這樣用。
 
 | 動作 | 停著時（扣住／暫停） | 沒停著時 | 回什麼 |
 |---|---|---|---|
@@ -30,11 +44,11 @@ a.bp.resume()      # 繼續，等下一次停
 | `a.bp.pause()` | 什麼都不送 | `ctl pause --no-wait` | 同上（`stopped before idle (a.bp.pause())`）；停著時 `already stopped ...` |
 
 - **一格**＝fsm 的一格（`idle`、`think`、`wait`、`act` 之一跑一次）；停住時 `a.look.where()`／第一行的 `before X`＝下一格。等腦回話時 `wait` 是一格接一格（同一個 wait 走好幾步才到 act）。這一格裡碰到別的斷點（例如同一格 act 裡第二個工具也有 before_tool 斷點）＝停在那裡。
-- **它不會停時**（閒著了、斷點都拿掉了）不卡死：閒著（`stage.txt` 是 idle、`queue/new` 與 `queue/cur` 都空、沒有還沒套用的 pause）連續 `a.bp.idle_s` 秒＝回 `did not stop: it is idle`；loop 行程不在（sleep、stop、rm）＝回 `did not stop: it is not running`。等的時候每 `a.bp.report_s` 秒（預設 10）在 stderr 印一行現況（在哪一格、信箱幾封）。`a.bp.timeout_s`（預設 None＝不限）給了才會逾時，丟 `Timeout`。這三個是 `a.bp` 的屬性，不是參數。回的東西有 `.outcome`：`stopped`、`idle`、`gone`、`interrupted`。
+- **它不會停時**（閒著了、斷點都拿掉了）不卡死：閒著（`stage.txt` 是 idle、`queue/new` 與 `queue/cur` 都空、沒有還沒套用的 pause）連續 `a.bp.idle_s` 秒＝回 `did not stop: it is idle`；loop 行程不在（sleep、stop、rm）＝回 `did not stop: it is not running`。等的時候每 `a.bp.report_s` 秒（預設 10）在 stderr 印一行現況（在哪一格、信箱幾封）。`a.bp.timeout_s`（預設 None＝不限）給了才會逾時，丟 `Timeout`。這三個是 `a.bp` 的屬性，不是參數（參數只有 `wait=`）。回的東西有 `.outcome`：`stopped`、`idle`、`gone`、`interrupted`。
 - **Ctrl-C**：只是不等了，agent 照跑，回 `stopped waiting (Ctrl-C); ann goes on as it was`。送指令的那一小段先不理 Ctrl-C（指令不會送一半）；step 送出還沒套用的 pause 會收回（背景跑一條 `aos-agent ctl resume`）。`pause()` 的 Ctrl-C 例外：pause 已經送出，這一格做完它就停（要停是你要的）。
 - **限制**：step 從暫停起是接力（ctl 窗只放得下一道指令）：`ctl resume` 一被套用才寫 `ctl pause`，空檔約 0.04 秒；比這更短的一格（例如閒著時的 idle 一格）可能多走一格。eca 身（沒有 `stage.txt`）認不出閒著，只靠定期那一行與 `timeout_s`。觀察者看著時閒著照樣回「沒停」（觀察者之後才停它的話，再 `resume()` 一次）。
 
-## 建斷點：`a.bp.add.<種類>([主詞], *, 條件, 選項)` → id
+## 建斷點：`a.bp.add.<種類>([主詞], *, 條件, 選項)` → 斷點物件
 
 所有種類同一個形狀；`a.bp.add` 直接打出來會列出每一種與它的參數，tab 補得出，打錯種類當場 `AttributeError`；字串式 `a.bp.add("before_tool")` 不收（`Failed`，說要寫種類）。
 
@@ -52,7 +66,25 @@ a.bp.resume()      # 繼續，等下一次停
 
 - **主詞**（第一個位置參數）只有能篩名字的種類有：工具名（`tool=`），`brain_failed` 是錯誤代號（`code=`）；其他種類不收位置參數。種類表從 hook 的事件表（`aos.agentlib.hooks.EVENTS`，`on_clock` 不收）長出來，以後 hook 加事件這裡自動多一種。
 - **條件**（都是關鍵字）：不給＝事件來了就算；`sh="..."`＝一段 shell（觸發器：事件 JSON 在 stdin；觀察者：cwd＝目標 stack；退 0＝算、**退 10＝不算**、其他＝條件壞了，所以 `grep -q x || exit 10`）；`py=`＝觸發器 `f(ev)`／運算式字串（變數 `ev`），觀察者 `f(t)`／運算式字串（變數 `t`），看得到 `json`、`re`、`os` 與內建，外層變數要當預設值傳。
-- **選項**：`times=`＝連續幾次才算；`once=True`＝只停一次；`id="mine"`＝自己取名（不給＝`種類_N`）；`replace=True`＝同 id 已有就換掉；觀察者另有 `every_ms`、`also`。
+- **選項**：`times=`＝連續幾次才算；`once=True`＝只停一次；`id="mine"`＝自己取名（不能全是數字；不給＝下一個號碼）；`replace=True`＝同 id 已有就換掉（`id=` 給已有的號碼或斷點物件也行；沒有的號碼不能自己挑）；觀察者另有 `every_ms`、`also`。
+
+### id 與斷點物件
+
+使用者 11-20 選項框：id「不能純數字，然後搭配id、屬性(hook點種類)嗎？」（＝純數字、種類放屬性）；號碼「不重用」；`add`「回物件、帶屬性」；屬性「每次讀都重新查」。
+
+```
+b = a.bp.add.before_tool("write")
+b.id          # 3：號碼（int），從 1 起，刪了不再拿來用
+b.kind        # 'before_tool'（tool_error、watch…＝a.bp.add 後面那個名字）
+b.fired       # 0；停過一次之後再讀就是 1（每次讀都重新查 a.bp.get(b)）
+b             # <breakpoint 3 of ann: before_tool, tool write is about to run (enabled, fired 0)>
+a.bp.rm(b)    # rm／set／get 收物件，也收號碼（3、"3"）或自己取的名字
+b.fired       # Failed: breakpoint 3: it is gone from ann (removed); a.bp.ls() lists the ones there are
+```
+
+- 屬性＝`a.bp.get(id)` 那一列的每一欄（`.kind`、`.how`、`.about`、`.enabled`、`.times`、`.once`、`.seen`、`.fired`、`.spent`、`.last_error`、`.here`、`.condition`…；觀察者另有 `.targets`、`.phase`…），每讀一次就查一次（會跑 `hook ls`、讀小格）；唯讀，改用 `a.bp.set(b, ...)`。`b.id` 固定，刪了也讀得到；`b == 3` 比的是 id。
+- **號碼不重用**：計數器存在 agent 的 stack（`gdb/next_id.json`），重開 REPL、重新取 `a.bp` 照樣接著數。觀察者的號碼從它看的每一隻的計數器一起拿（也躲開這個 daemon 上觀察者用過的號碼），所以每隻的 `a.bp` 裡觸發器與觀察者不撞；觸發器也躲開表上觀察者的號碼。下斷點失敗＝號碼還回去（不跳號）。計數器跟著 stack 走：換成一個新的 stack 夾就從 1 數起。
+- 自己取的名字照留（`id="mine"`，str）：hook 名 `gdb_mine`，不吃號碼；`ls` 號碼在前、名字在後。
 - 不用把手也行：`from aos.py import breakpoint as bp; bp.attach("ann", daemon=".stack").add.before_tool("write")`（跟 `a.bp` 同一種；別用原名 `breakpoint`，會蓋掉內建的）。
 
 ## 兩種停法（由事件決定，不是選項）
@@ -83,12 +115,12 @@ aos-gdb -d .stack ann                              # 進 REPL：agent、daemon_c
 ```
 gdb> b = a.bp.add.before_tool("peek_now_time")    # fake brain calls peek_now_time on every message
 $ aos-agent --daemon /tmp/t/.stack --target ann ctl state --json who
-$ aos-agent --daemon /tmp/t/.stack --target ann hook add --event before_tool --name gdb_before_tool_1 ...
-gdb> b
-'before_tool_1'
+$ aos-agent --daemon /tmp/t/.stack --target ann hook add --event before_tool --name gdb_1 ...
+gdb> b.id, b.kind
+(1, 'before_tool')
 gdb> a.say("hello"); a.bp.resume()               # waits until it stops
-stopped at before_tool_1 (peek_now_time)
-ann is held at breakpoint before_tool_1: tool peek_now_time has not run yet; a.bp.resume() lets it go on as it was, a.bp.step() runs it and stops after this step
+stopped at breakpoint 1 (before_tool: peek_now_time)
+ann is held at breakpoint 1: tool peek_now_time has not run yet; a.bp.resume() lets it go on as it was, a.bp.step() runs it and stops after this step
 gdb> a.look.history(1)                            # the call the brain asked for; no tool result yet
 gdb> a.bp                                         # every breakpoint, one line each; "<- stopped here"
 gdb> a.bp.step()                                  # the tool runs; stops when this step ends
@@ -97,10 +129,12 @@ gdb> a.bp.set(b, enabled=False); a.bp.resume()
 ann did not stop: it is idle (nothing queued, no step running); ...
 gdb> a.listen()
 FAKE ANSWER to: hello (tool said: 2026-...)       # the tool really ran
-gdb> w = a.bp.add.watch(py=lambda t: len(t.history(0)) > 6)   # another proc looks every 0.5 s; w == 'watch_1'
-gdb> a.say("again"); a.bp.resume()                # "stopped at watch_1 (ann), before ..."
+gdb> w = a.bp.add.watch(py=lambda t: len(t.history(0)) > 6)   # another proc looks every 0.5 s; w.id == 2, w.kind == 'watch'
+gdb> a.say("again"); a.bp.resume()                # "stopped at breakpoint 2 (watch: ann), before ..."
 gdb> a.bp.rm(w); a.bp.resume()
 gdb> a.bp.pause(); a.bp.resume()                   # stop it now without a breakpoint, then go on
+gdb> a.say("once more"); p = a.bp.pause(wait=False); p.is_done()   # returns at once; False until it has stopped
+gdb> p.wait()                                      # same as a.bp.pause(): "stopped before ..."
 ```
 
 `aos-gdb` 不給 NAME 也行：只放好 `agent`、`daemon_ctl`、`std`、`defs`，自己 `a = agent.attach("ann")`。給了 `-d D`：REPL 裡 `AOS_DAEMON` 設成它，模組層的 `agent.ctl.ls()`、`daemon_ctl.ls()` 也對那台。收樹：`aos-daemon-ctl -d .stack shutdown`、`aos-daemon-ctl -d llms/stacks/llm shutdown`（分兩句打；REPL 裡是 `daemon_ctl.shutdown()`）。
@@ -128,17 +162,17 @@ aos-agent: error: HooksMissing bob does not declare hooks (...); to fix it in an
 | `a.look.where()`、`a.look.history(n)`、`a.look.observed(n)`、`a.look.request()`、`a.look.queue()`、`a.look.stderr(n)`、`a.look.file(rel)` | 讀 stack 的檔 | 停住時檢閱；檔不在＝None／[]；echo 開著印 `# read 路徑` |
 | `sh(cmd)` | `sh -c` | REPL 裡順手打 shell |
 
-`a.bp.xxx`（斷點，以斷點為核心；id 都是 str）：
+`a.bp.xxx`（斷點，以斷點為核心；收斷點物件，也收 id：號碼或自己取的名字）：
 
 | 方法 | 背後是 | 說明 |
 |---|---|---|
-| `a.bp.add.<種類>(...)` | 觸發器：`aos-agent hook add --event ... --name gdb_ID`；觀察者：`aos-daemon-ctl add --name gdbw_ID ...` | **增**，回 id（`"before_tool_1"`、`"tool_error_1"`、`"watch_1"`；`id=` 自己取）。寫法見上一節。失敗（`HooksMissing`、表上掛不上…）＝什麼都不留：觸發器的小格不留、id 不被吃掉，重下失敗放回原本的設定與計數；觀察者新建的 stack 夾不留 |
+| `a.bp.add.<種類>(...)` | 觸發器：`aos-agent hook add --event ... --name gdb_ID`；觀察者：`aos-daemon-ctl add --name gdbw_ID ...` | **增**，回斷點物件（`b.id`＝號碼，例 `3`；`b.kind`＝種類；`id=` 自己取名）。寫法見上一節。失敗（`HooksMissing`、表上掛不上…）＝什麼都不留：觸發器的小格不留、號碼還回去，重下失敗放回原本的設定與計數；觀察者新建的 stack 夾不留 |
 | `a.bp.rm(id)`、`a.bp.clear()` | `hook rm gdb_ID`／`aos-daemon-ctl rm gdbw_ID` | **刪**。觸發器的小格留著給人看（標 removed）；觀察者也看別隻的話別隻也不看了。`clear`＝這隻身上全部 |
 | `a.bp.set(id, enabled=None, times=None, once=None)` | 改 `trigger.json`／`watch.json`，`hook add --replace`／`hook rm`；觀察者 `aos-daemon-ctl stop／start gdbw_ID` | **改**，回改完的 `get(id)`。停用＝觸發器的 hook 拿下、設定與計數留著（啟用＝裝回去）；觀察者 stop（啟用＝start）。計數不歸零。觸發器裝不上／拿不下＝`trigger.json` 放回原本的。**改不了**：種類、條件（sh／py）、主詞、every_ms、看誰——同一個 id 重下 `a.bp.add.<種類>(..., id=ID, replace=True)` |
-| `a.bp.ls()`、`a.bp.get(id)`、`a.bp`（REPL 裡直接打） | `hook ls --json`、讀小格與 `aos-daemon-ctl ls -j` | **查**。一列：`id`、`kind`（trigger／watch）、`on`（種類）、`how`（hold／pause）、`about`、`enabled`、`times`、`once`、`seen`、`streak`、`fired`、`spent`、`last_error`、`here`（現在是不是停在它這裡）；`get` 另有 `condition`（sh 原文／py）、`tools`，觀察者另有 `targets`、`every_ms`、`phase`、`pid`、`per_target` |
-| `a.bp.resume()` | 扣住：寫 `gdb/release.json`；暫停：`ctl resume`；沒停著：不送 | 繼續跑，**不收參數**，等到下一次停下才回（見「控制」一節） |
-| `a.bp.step()` | `ctl resume`＋`ctl pause --no-wait`／`ctl pause --no-wait`＋放行 | 走 fsm 一格就停，等到停下才回 |
-| `a.bp.pause()` | `aos-agent ctl pause --no-wait` | 現在停（不靠斷點），等到真的停下才回；已經停著＝不送 |
+| `a.bp.ls()`、`a.bp.get(id)`、`a.bp`（REPL 裡直接打） | `hook ls --json`、讀小格與 `aos-daemon-ctl ls -j` | **查**。一列（號碼小的在前、自己取名的在後）：`id`、`kind`（種類：`before_tool`、`tool_error`…，觀察者是 `watch`）、`how`（hold／pause）、`about`、`enabled`、`times`、`once`、`seen`、`streak`、`fired`、`spent`、`last_error`、`here`（現在是不是停在它這裡）；`get` 另有 `condition`（sh 原文／py）、`tools`，觀察者另有 `targets`、`every_ms`、`phase`、`pid`、`per_target` |
+| `a.bp.resume(wait=True)` | 扣住：寫 `gdb/release.json`；暫停：`ctl resume`；沒停著：不送 | 繼續跑，等到下一次停下才回（見「控制」一節）；`wait=False`＝送出就回 `Pending`（`is_done()`、`wait()`） |
+| `a.bp.step(wait=True)` | `ctl resume`＋`ctl pause --no-wait`／`ctl pause --no-wait`＋放行 | 走 fsm 一格就停，等到停下才回；`wait=False` 同上 |
+| `a.bp.pause(wait=True)` | `aos-agent ctl pause --no-wait` | 現在停（不靠斷點），等到真的停下才回；已經停著＝不送；`wait=False` 同上 |
 | `a.bp.idle_s`、`a.bp.report_s`、`a.bp.timeout_s` | （屬性） | 上面三個怎麼等：閒著多久算不會停（1）、每幾秒印一行現況（10，0＝不印）、最多等幾秒（None＝不限，過了丟 `Timeout`） |
 | `a.bp.why()`、`a.bp.held()` | 讀 `gdb/log.jsonl`、`gdb/hold.json`、`ctl.json` | 為什麼停：上次續之後的字條（觸發器 by `hook`、觀察者 by `watch`、`step`／`pause` 自己停的 by `step`／`pause`）、`.breakpoint`＝停在哪個 id、扣在哪、扣住後又來的 ctl pause／stop；字條的 ctl seq 跟現在對不上＝之後有人在 shell 下過 ctl，會說字條可能是舊的 |
 | `a.bp.stopped()` | 讀 `gdb/hold.json`（handler 活著才算）、`state.json` 的 `paused` | 停著＝暫停已套用或扣住（看的是真的停住，不是字條） |
@@ -148,7 +182,7 @@ aos-agent: error: HooksMissing bob does not declare hooks (...); to fix it in an
 
 ## 觀察者（丙）
 
-`a.bp.add.watch(...)` 起的斷點：一支掛在 daemon 表上的普通 proc（名字 `gdbw_<id>`；就是一個 aos-loop，每圈跑一次 `lib/tools/agent/gdb_watch`），每隔 `every_ms` 看一次每個目標，條件成立就 `ctl pause` 目標、在目標的 `gdb/log.jsonl` 留字條（`by: watch`）。完全不碰目標的定義與 hook。
+`a.bp.add.watch(...)` 起的斷點：一支掛在 daemon 表上的普通 proc（名字 `gdbw_<id>`，例 `gdbw_2`；就是一個 aos-loop，每圈跑一次 `lib/tools/agent/gdb_watch`），每隔 `every_ms` 看一次每個目標，條件成立就 `ctl pause` 目標、在目標的 `gdb/log.jsonl` 留字條（`by: watch`）。完全不碰目標的定義與 hook。
 
 - **為什麼掛在表上、不是 REPL 外的背景程式**：REPL 關了照樣在；`aos-daemon-ctl ls` 看得到、`rm` 停得掉；daemon 收工一起睡、重起一起醒；它自己壞了＝表上那一列 stopped 帶原因，目標照跑。
 - **條件**：`py`＝函式 `f(t)` 或運算式字串（變數 `t`）。`t` 是那個目標的檢閱物件（跟 `a.look` 同一種：`t.name`、`t.stack`、`t.history(n)`、`t.observed(n)`、`t.where()`、`t.file(rel)`、`t.queue()`…），`t.mem` 是跨圈留著的 dict（存成 JSON），拿來看跨好幾格的事，例：
@@ -167,8 +201,9 @@ aos-agent: error: HooksMissing bob does not declare hooks (...); to fix it in an
 
 ## 檔與防呆
 
-- 觸發器：`<stack>/hooks/gdb_<名>/trigger.json`（`how` 由事件定）、`count.json`（`pending`＝扣住被打斷的那一次、`decided`＝放行過的那一次）；字條：`<stack>/gdb/log.jsonl`（只往後加；`by` 是 `hook`、`repl`、`ctl`、`watch`）；扣住時 `<stack>/gdb/hold.json`、放行單 `gdb/release.json`。
-- 觀察者：`<daemon>/procs/gdbw_<名>/watch.json`、`watch_state.json`、`watch_loop.json`（交給 `aos-daemon-ctl add` 的那份；同夾的 `loop.json` 是 daemon 自己寫的）。
+- 觸發器：`<stack>/hooks/gdb_<id>/trigger.json`（`how` 由事件定）、`count.json`（`pending`＝扣住被打斷的那一次、`decided`＝放行過的那一次）；字條：`<stack>/gdb/log.jsonl`（只往後加；`by` 是 `hook`、`repl`、`ctl`、`watch`）；扣住時 `<stack>/gdb/hold.json`、放行單 `gdb/release.json`；號碼計數器 `<stack>/gdb/next_id.json`（`{"next": N}`，鎖檔 `next_id.lock`）。
+- hook 照名字的字典順序跑，所以同一事件上 `gdb_10` 排在 `gdb_2` 前面（誰先扣住）；要定先後就自己取名。
+- 觀察者：`<daemon>/procs/gdbw_<id>/watch.json`、`watch_state.json`、`watch_loop.json`（交給 `aos-daemon-ctl add` 的那份；同夾的 `loop.json` 是 daemon 自己寫的）。
 - 觸發器一律 `--on-error continue`、`--no-intercept`：條件或 handler 壞了，agent 只多一行 warning，不會掛掉、不會被 daemon 連環重起；handler 印什麼都擋不下工具。扣住型不限時（等人）；暫停型 15 秒（sh／py 條件 40 秒）。
 - shell 這邊沒有對應的 `a.bp.*` 指令（要 `aos-bp ...` 還是 `aos-gdb bp ...` 待使用者裁，見[第二版紀錄末節](../../../../thinking/2026-11/19/aos-gdb-lib-第二版.md)；照 C-86 兩者都不進 `aos-agent`）。
 - 沒做：一包現成觸發器（丁）、`on_clock`、eca 身（claude、codex 當腦）上的扣住沒測（before_tool 在 aos-mcp 裡跑，扣太久 CLI 那邊可能自己逾時）。
