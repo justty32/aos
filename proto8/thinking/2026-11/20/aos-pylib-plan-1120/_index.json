@@ -44,6 +44,9 @@
  "11-採納表.md": {
   "description": "先講結論"
  },
+ "12-使用者已答.md": {
+  "description": "對開工的話"
+ },
  "README.md": {
   "description": "「編譯這塊變成整套一個 Python 程式庫」的設計稿與施工計劃（11-20，線 aos-pylib-plan-1120）：只出稿，沒改任何程式、範本、條文、知識庫"
  }
