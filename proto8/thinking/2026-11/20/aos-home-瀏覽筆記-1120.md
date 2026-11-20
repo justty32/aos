@@ -26,3 +26,16 @@
 
 - 範本 .py 從 `AOS_HOME` 取：今天用 `std.fsm()` 編譯出來的定義與 reviewer 已經是「借 agent-fsm 的格程式」（設計稿 01 的表）；`cp -r` 抄出來的 ann 則整份帶著。他要的是不是把起手範本也改成借的，沒問。
 - `description` 要不要改成走 `_index`／`_metainfo`、`hook_points.json` 要不要改成一份多個 provider、`interfaces.json` 要不要補一張鍵的總表：他是在問原因，還沒說要改。
+
+## 第 3 則：聽完第 2 則的現況後的裁定
+
+### 原話
+
+「起手範本確實該改成要借的，之後做。interfaces.json就保持現在想加啥就加啥，我覺得很好，以後有需求再去定規矩，反正就一個"想看這個agent/kernel/...有提供啥界面，就去看interfaces.json，找自己想看的"。hook_points.json這塊，對於可hook點的宣告格式，之後要來討論一下，我要審過，並且會提出建議，比如直接拿json schema或許會更好。description這塊看起來就是放着，那OK，就這樣。然後是~/aos-home/llm，我也有些問題」
+
+### 決定
+
+- **起手範本改成借的**（格程式不整份帶進定義夾、從 `AOS_HOME` 取）：要做，「之後做」。
+- **`interfaces.json`**：保持現在這樣，想加什麼就加什麼；以後有需求再定規矩。它的定位就是「想看這個 agent／kernel／…有提供什麼介面，就去看 interfaces.json，找自己想看的」。
+- **`hook_points.json` 的宣告格式**：之後要討論，他要審過、會提建議（例：直接拿 json schema 或許更好）。在他審之前，現在的格式算暫定。
+- **`description`**：放著，就這樣。
