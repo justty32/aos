@@ -138,6 +138,9 @@
  "test_fn_spec_more.py": {
   "description": "Test cut 3 of the compile library beyond what a function may use: @fn.hook into hooks.json (events, condition, fn.block, same names), renames and cla…"
  },
+ "test_hook_flags.py": {
+  "description": "Test aos.hook_flags.sync: the before_run / after_run flag files follow the hooks in effect, only for declared loop points, and are written whole (no …"
+ },
  "test_hook_point.py": {
   "description": "Test aos.hook_point: the shipped hook_points.json files read and check fine, every check rule rejects a bad example, merging, engine_table and for_de…"
  },

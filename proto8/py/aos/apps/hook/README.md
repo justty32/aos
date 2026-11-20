@@ -5,9 +5,9 @@
 | 檔 | 是什麼 |
 |---|---|
 | `main.py` | `aos-hook` 本體：`fire`、`points`、`check` 三個子指令、英文 `--help`；點與清單從哪來（`--points`／`--list`；`--agent DEF_DIR` 交給 [`agentlib/agent_hooks.py`](../../agentlib/agent_hooks.py) 的 `source`）。讀清單、驗格、驗型別在小庫 `aos/hook_lists.py`，經 `aos.hook_point.open` 的遙控器用 |
-| [`loop_points.json`](loop_points.json) | 用 aos-loop 跑、loop.json 有接線的子程式提供的四個點：`after_start`、`after_stop`；`before_run`、`after_run` 先宣告、標 `not_fired_yet`（aos-loop 還沒接） |
+| [`loop_points.json`](loop_points.json) | 用 aos-loop 跑、loop.json 有接線的子程式提供的四個點：`after_start`、`after_stop`；`before_run`、`after_run`（每跑一次身體的前後；範本的 loop.json 經這支發，旗標檔在才跑） |
 
-使用者 11-20「任何子程式，含非 Python」；施工是第 4 刀（線 aos-hook-k4-1120，使用者「先開第 4 刀」）。**只加**：現在沒有任何程式叫它，agent 的起停照舊走 `py/tools/agent/hook_fire`；換過去是第 5 刀。第 2 刀 2a（線 aos-hook-k2-1120）把它改成經小庫的遙控器跑、接上 `--agent`，行為沒變；第 2 刀後半（線 aos-hook-k2b-1120）把原本的 `lists.py` 拆進 `main.py` 與 `agent_hooks.source` 後刪掉（使用者 11-20「lists.py可以刪掉」），agent 一家發事件的程式（fsm 格程式、aos-eca-turn、aos-mcp、`hook_fire`）與 kernel 也都改用遙控器。
+使用者 11-20「任何子程式，含非 Python」；施工是第 4 刀（線 aos-hook-k4-1120，使用者「先開第 4 刀」）。第 4 刀只加、沒人叫它；第 5 刀後半（線 top-1121-hook5）起，範本的 loop.json 用它發 `before_run`／`after_run`（agent 的範本經 `--agent`、procs-kernel 範本經 `--points`／`--list`，procs-kernel 連起停兩點也是），agent 的起停照舊走 `py/tools/agent/hook_fire`（換不換使用者 11-20「明天再說」）。第 2 刀 2a（線 aos-hook-k2-1120）把它改成經小庫的遙控器跑、接上 `--agent`，行為沒變；第 2 刀後半（線 aos-hook-k2b-1120）把原本的 `lists.py` 拆進 `main.py` 與 `agent_hooks.source` 後刪掉（使用者 11-20「lists.py可以刪掉」），agent 一家發事件的程式（fsm 格程式、aos-eca-turn、aos-mcp、`hook_fire`）與 kernel 也都改用遙控器。
 
 Python 寫的提供者不用起這支：直接 `aos.hook_point.open(…)` 開一個遙控器、每個點 `fire` 一行（介面寫在 [`hook_point.py`](../../hook_point.py) 檔頭；agent 一家另有 [`agentlib/agent_hooks.py`](../../agentlib/agent_hooks.py)）。
 
@@ -58,7 +58,8 @@ else if (r.code != 0) { /* aos-hook printed its error line */ }
 - **stdout**：一行 JSON `{"data", "changed", "blocked", "hook", "text"}`（引擎 `hook_run.fire` 的回值原樣）；`-q`＝不印。
 - **結束碼**：0＝照常（沒人掛也是 0）；10＝被攔下（只有宣告 `block: true` 的點會）；1＝錯，stderr 一行 `aos-hook: error: CODE reason`、stdout 不印。代號：`HookFailed`（`on_error: stop` 的 hook 失敗：退 0／10 以外的碼、逾時、起不來、回話不是 JSON 物件、改回來的值型別不對）、`HooksBad`、`PointsBad`、`EventUnknown`（宣告裡沒有這個點）、`ArgumentsBad`、`StackMissing`，以及 `FlagUnknown`、`CommandUnknown`。`on_error: continue` 的 hook 失敗＝一行 warning、照常退 0。handler 的 stderr 原樣透出。
 - **跑 hook 全在引擎**（`aos.hook_run.fire`，agent 與 kernel 用的同一份）：照名字排序、前一個改的後一個看得到、退 10 攔下就停、`condition` 比宣告裡 `condition` 指的欄位、`intercept`／`async`／`timeout_ms`／`on_error` 照舊。這裡只多兩件：**改回來的值照宣告的 `change` 型別驗**（`string`、`nonempty_string`、`object`、`any`；在每個 hook 跑完的當下驗，壞值不會傳給下一個，照那個 hook 的 `on_error`），與**清單驗格時，某個點的 `entry_keys` 寫在別的點的格上＝`HooksBad`**。
-- 宣告標 `not_fired_yet` 的點（`before_run`、`after_run`）照樣發得動——之後 aos-loop 就是用這支發它們。`check` 看到有 hook 掛在這種點上只印一行 warning。
+- 宣告標 `not_fired_yet` 的點照樣發得動；`check` 看到有 hook 掛在這種點上只印一行 warning（aos 自己帶的宣告第 5 刀後半起沒有這種點了）。
+- **旗標檔**（第 5 刀後半；設計 [06「沒人掛時怎麼做到零成本」](../../../../thinking/2026-11/20/aos-hook-plan-1120/06-loop層的點.md)、12 的 A1／B1）：點裡有 `before_run`／`after_run` 時，`fire … after_start` 與帶 stack 的 `check`（`--stack` 或 `$AOS_STACK`）照生效的清單對 stack 裡的 `hook_before_run.flag`／`hook_after_run.flag`——有 hook 掛那個點就建、沒有就刪（程式在 [`aos/hook_flags.py`](../../hook_flags.py)）；`check` 多印一行 `flags: 路徑 on|off, …`。寫不成＝`WriteFailed`。其餘子指令、別的事件都不動旗標（讀的一方去刪會跟剛掛上的一方互踩）。loop.json 的 `on_before_run_if`／`on_after_run_if` 指著這兩個檔，檔不在 aos-loop 就不起這支。agent 那邊改清單的 `aos-agent hook add／rm／reset` 也對同兩個檔。
 - `points` 一個點一段：第一行 `名字  phase  condition 欄位  change 鍵 (型別)  can block`，下面每個提供者的 when／if blocked／if failed／not fired yet、每個欄位；`-j` 印合併後的 JSON（`said` 每份宣告一項）。
 - `check` 只驗：宣告讀得過、每份清單的每一格對得上宣告；不跑 handler、不解 handler 的指示詞、不看 handler 的檔在不在。成功印一行 `ok: …`、退 0。
 - 誰都能發事件、替別人的 stack 跑 hook：不擋（[設計 05「邊緣」](../../../../thinking/2026-11/20/aos-hook-plan-1120/05-發事件指令.md#邊緣)）；handler 裡再叫 `aos-hook fire` 是連鎖觸發，不檢測。

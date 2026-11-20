@@ -24,6 +24,8 @@ from aos.agent_spec_parts import WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FI
 
 FIELDS = ("description", "system", "tools", "llm", "fsm", "hooks", "meta", "interfaces", "files", "loop")
 HOOK_FIRE = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}   # loop.json 的 on_start／on_stop（照 agent-fsm 範本）
+FLAG_IF = {"before_run": {"$env": "AOS_STACK", "$path": "/hook_before_run.flag"},   # loop.json 的 on_before_run_if／on_after_run_if（檔名同 aos.hook_flags.FLAGS）
+           "after_run": {"$env": "AOS_STACK", "$path": "/hook_after_run.flag"}}
 RENAME_LAST = {"loop.json": 1, "body.json": 2, "interfaces.json": 3, "_entry": 4, "_metainfo.json": 5}   # 改名時被指的檔先換、索引檔最後（其他＝0）
 SEE_CHANGE = ("agents that use this definition see the change from their next brain call "
               "(state machine and loop changes: from their next tick or restart)")
@@ -54,10 +56,23 @@ class Fsm(dict, Unit):
         return _plain({name: _fsm_json(self)})
 
 
+def run_points(fsm_file):
+    """有 hooks 的 fsm agent 的 loop.json 多的四鍵：身體（一格）前後經 aos-hook fire --agent 發 before_run／after_run，旗標檔在才跑
+    （hook 第 5 刀後半，線 top-1121-hook5；寫法照設計 aos-hook-plan-1120/06：stage 從 stack 的 stage.txt 讀，第一圈還沒有那個檔時用 fsm 的起始格）。"""
+    def fire(event, fields):
+        return {"argv": ["aos-hook", "fire", "-q", "--agent", {"$env": "AOS_CD"}] + fields + [event]}
+    return {"on_before_run": fire("before_run", ["--field-file", {"$env": "AOS_STACK", "$path": "/stage.txt", "$prefix": "stage="},
+                                                 "--field-default", {"$ref": fsm_file + "#/start", "$prefix": "stage="}]),
+            "on_before_run_if": dict(FLAG_IF["before_run"]),
+            "on_after_run": fire("after_run", ["--field-file", {"$env": "AOS_STACK", "$path": "/stage.txt", "$prefix": "next_stage="}]),
+            "on_after_run_if": dict(FLAG_IF["after_run"])}
+
+
 class _Loop:
-    """loop.json：每格跑 fsm 那份、公開 ctl／state／state_flux；有 hooks 才接 on_start／on_stop（after_start／after_stop）。
+    """loop.json：每格跑 fsm 那份、公開 ctl／state／state_flux；有 hooks 才接 on_start／on_stop（after_start／after_stop）與
+    on_before_run／on_after_run 和兩個 _if（before_run／after_run，run_points）。
     內部的一塊（設計稿 02「loop 與 fsm 在庫裡的地位」）；人能宣告的只有間隔：defs.Agent(..., loop=defs.loop(every_ms=…))（待裁第 8 題「加一個宣告」，
-    線 aos-pylib-k4-1120），不給＝300。其餘的鍵由 hook 介面線之後的刀帶（07「跟 hook 介面線共用的檔」；要加旗標就在 json() 裡多寫幾行）。"""
+    線 aos-pylib-k4-1120），不給＝300。hook 那幾個鍵由 hook 介面線帶（07「跟 hook 介面線共用的檔」；第 5 刀後半加了 run_points 那四個）。"""
 
     def __init__(self, fsm_file, hooks, every_ms=300):
         self.fsm_file, self.hooks, self.every_ms = fsm_file, hooks, every_ms
@@ -69,6 +84,7 @@ class _Loop:
             loop["description"] += WHAT["loop_hooks"]
             loop["on_start"] = {"argv": [HOOK_FIRE, "after_start", {"$env": "AOS_CD"}]}
             loop["on_stop"] = {"argv": [HOOK_FIRE, "after_stop", {"$env": "AOS_CD"}]}
+            loop.update(run_points(self.fsm_file))
         return loop
 
 

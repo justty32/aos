@@ -41,10 +41,11 @@ class Shipped(unittest.TestCase):
                         self.assertTrue(src.is_file(), src)
                         self.assertRegex(src.read_text(encoding="utf-8"), r"\b%s\b" % re.escape(name))
 
-    def test_not_fired_yet_only_on_the_new_loop_points(self):
+    def test_nothing_shipped_is_not_fired_yet(self):
+        """Cut 5, second half: the templates wire before_run / after_run, so every shipped point is fired."""
         found = {(prov, n) for prov, path in SHIPPED.items()
                  for n, p in hook_point.read_file(path)[1].items() if "not_fired_yet" in p}
-        self.assertEqual(found, {("aos-loop", "before_run"), ("aos-loop", "after_run")})
+        self.assertEqual(found, set())
 
     def test_start_api_copy_is_the_same_file(self):
         copy = PY.parent / "templates" / "start-api" / "agents" / "ann" / "hook_points.json"

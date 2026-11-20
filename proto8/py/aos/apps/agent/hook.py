@@ -1,8 +1,10 @@
 # aos/apps/agent/hook.py - 管 agent 自己那份 hooks 清單（疊在定義那份上，同名蓋過、null 關掉）：ls、get、add、rm、reset。
 # 圖紙：proto8/thinking/2026-11/10/self-family/hook/01-圖紙.md § 4、§ 5。讀清單、驗格一律用 py/aos/agentlib/hooks.py，這裡只管命令列與寫 stack 那份。
+# add／rm／reset 之後順手對 before_run／after_run 的旗標檔（aos.hook_flags；hook 第 5 刀後半，線 top-1121-hook5；設計 aos-hook-plan-1120/06、12 的 A1）。
 import json
 import os
 from aos import flags as aos_flags
+from aos import hook_flags
 from aos.agentlib import hooks
 from . import PROG
 from .common import Fail, actions, bad_args, note, parse, target
@@ -50,13 +52,16 @@ it is. Flags may go before or after XXX.
 
 events: before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added,
         after_start, after_stop (the agent's loop starts / is about to exit),
+        before_run, after_run (before / after each run of the loop body: each state of an
+        fsm agent, each turn of an eca; exit 10 of a before_run hook skips that run),
         on_clock (a clock moved on: needs --every-cycles or --every-ms)
 
 flags:
       --event EVENT       the event (required)
   -n, --name N            the hook's name (default: XXX's file or folder name)
-      --condition M       run only when the tool name / error code is M (repeatable;
-                          not for before_queue / after_queue)
+      --condition M       run only when the tool name / error code is M, for before_run
+                          the state about to run (repeatable; not for before_queue /
+                          after_queue / after_run)
       --every-cycles N    on_clock: run when the clock moved N cycles since the last run
       --every-ms N        on_clock: the same, N ms counted in cycles (N / $AOS_CLOCK_INTERVAL,
                           default 1000 ms a cycle; not the wall clock)
@@ -68,8 +73,8 @@ flags:
                           '{"percent": 50, "wrap": true, "window": 200000}')
       --no-intercept      do not read its reply (by default it is read: exit 0 + JSON on
                           stdout changes the event, exit 10 blocks it; only for
-                          before_queue, before_tool, after_tool; other events and
-                          --async hooks never have their reply read)
+                          before_queue, before_tool, after_tool, before_run; other
+                          events and --async hooks never have their reply read)
       --async             start it and do not wait
       --on-error W        stop (default: the agent stops) or continue (a warning)
       --timeout-ms N      give up waiting after N ms (default 60000; 0 = no limit)
@@ -117,7 +122,9 @@ flags:
   -h, --help          show this help
 
 No ACTION means ls. Changes go to this agent's own list, which sits on top of the definition's.
-Changes apply from the next event. More: proto8/py/aos/apps/agent/docs/06-hook.md
+Changes apply from the next event. Adding, removing and reset also keep the two flag files
+of before_run / after_run in the stack (hook_before_run.flag, hook_after_run.flag: the loop
+fires those points only while they exist). More: proto8/py/aos/apps/agent/docs/06-hook.md
 exit codes: 0 ok; 1 error (TargetMissing, HooksMissing, HooksBad...); 130 Ctrl-C.
 """ % actions(HELPS.values(), "aos-agent [--daemon D] hook [--target NAME] ")
 
@@ -138,6 +145,16 @@ def loaded(folder, stack):
         return hooks.load(folder, stack)
     except hooks.HooksBad as e:
         raise Fail("HooksBad", str(e)) from e
+
+
+def keep_flags(folder, stack):
+    """改完清單：照現在生效的那串對 stack 裡 before_run／after_run 的旗標檔（有人掛才在）。寫不成＝WriteFailed。"""
+    try:
+        hook_flags.sync(stack, hooks.points(folder), hooks.load(folder, stack))
+    except hooks.HooksBad as e:
+        raise Fail("HooksBad", str(e)) from e
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot keep the hook flag files in %s: %s" % (stack, aos_flags.os_reason(e))) from e
 
 
 def write_own(path, doc):
@@ -298,8 +315,10 @@ def cmd(argv):
                 aos_flags.warn(PROG, "nothing done")
                 return
             os.unlink(own)
+            keep_flags(folder, a.stack)
             print("deleted %s; back to the definition's %s only" % (own, mine))
         else:
+            keep_flags(folder, a.stack)
             print("there was no file of this agent's own (using the definition's %s)" % mine)
         return
     made, doc = not os.path.isfile(own), read_own(own)
@@ -309,6 +328,7 @@ def cmd(argv):
             raise Fail("HookExists", "%s already has a hook named %s (add --replace to replace it)" % (a.name, name))
         doc["hooks"][name] = entry
         write_own(own, doc)
+        keep_flags(folder, a.stack)
         print("added %s (%s#/hooks/%s: %s)" % (name, own, name, json.dumps(entry, ensure_ascii=False)))
     else:
         name = args[0]
@@ -320,6 +340,7 @@ def cmd(argv):
         else:
             del doc["hooks"][name]
         write_own(own, doc)
+        keep_flags(folder, a.stack)
         print("removed %s (%s#/hooks/%s: %s)" % (name, own, name, "set to null" if in_def else "deleted"))
     if made:
         note("created %s (it records only what this agent added or turned off; the definition's %s still shows through; hook reset deletes it)" % (own, mine))

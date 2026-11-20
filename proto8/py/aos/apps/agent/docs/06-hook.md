@@ -2,13 +2,13 @@
 
 # hook：事件發生時，跑你指定的 aos 函數
 
-**一句話**：在 agent 身上掛「某件事發生時跑這支」——信要進對話、工具要跑／跑完、腦叫失敗、多了工具、起來／停下、時鐘走到了；被跑的那支從 stdin 收到一份事件 JSON，想的話還能改掉或攔下那件事。
+**一句話**：在 agent 身上掛「某件事發生時跑這支」——信要進對話、工具要跑／跑完、腦叫失敗、多了工具、起來／停下、每一格前後、時鐘走到了；被跑的那支從 stdin 收到一份事件 JSON，想的話還能改掉或攔下那件事。
 
 使用者 11-10 晚：「還有self_hook，用於在有東西進到queue，或是一些事件發生，比如呼叫了某特定工具，比如brain呼叫失敗，或是新增了某些特定工具之類時，執行指定aos函數。」設計在 [圖紙](../../../../../thinking/2026-11/10/self-family/hook/01-圖紙.md)；讀清單、挑、跑、解回話全從 [py/aos/agentlib/hooks.py](../../../agentlib/hooks.py) 進去，四個格、aos-eca-turn、aos-mcp、`aos-agent hook` 共用它；挑、跑、解回話那段是共用引擎 [py/aos/hook_run.py](../../../hook_run.py)（框架站的 hook 也用同一份），`hooks.py` 自己管清單怎麼讀怎麼疊、`on_clock`、`tool_added`。
 
 ## 事件
 
-每個事件什麼時候發、帶哪些欄位，以各身體的宣告檔為準（使用者 11-20 待裁第 4 題「事件欄位以宣告為唯一來源」選「要」）：agent-fsm 四格 [templates/agent-fsm/hook_points.json](../../../../../templates/agent-fsm/hook_points.json)、起來與停下 [py/aos/apps/hook/loop_points.json](../../hook/loop_points.json)，eca 見下面「eca（縮水版）」。下表是手抄的 agent-fsm 版，[py/tests/test_hook_points_match.py](../../../../tests/test_hook_points_match.py) 比對點名與欄位名有沒有漏。
+每個事件什麼時候發、帶哪些欄位，以各身體的宣告檔為準（使用者 11-20 待裁第 4 題「事件欄位以宣告為唯一來源」選「要」）：agent-fsm 四格 [templates/agent-fsm/hook_points.json](../../../../../templates/agent-fsm/hook_points.json)、起來與停下、每一格前後 [py/aos/apps/hook/loop_points.json](../../hook/loop_points.json)，eca 見下面「eca（縮水版）」。下表是手抄的 agent-fsm 版，[py/tests/test_hook_points_match.py](../../../../tests/test_hook_points_match.py) 比對點名與欄位名有沒有漏。
 
 | 事件 | 什麼時候（agent-fsm） | 事件 JSON 多的欄位 | `condition` 比什麼 | 能改 |
 |---|---|---|---|---|
@@ -20,6 +20,8 @@
 | `tool_added` | think：工具清單多了名字（一個名字一次；第一次只記不觸發） | `name`、`path` | 工具名 | 不能 |
 | `after_start` | loop 起來、第一次之前（loop.json 的 `on_start` → `py/tools/agent/hook_fire`） | — | 不收 condition | 不能 |
 | `after_stop` | loop 要退時（`on_stop`：stop、sleep、rm、daemon 收工、出錯停；kill -9 不跑） | `code`（要退的碼）、`signal`（收到的訊號，沒有＝null）、`cause`（為什麼停：`stop`／`sleep`／`remove`／`shutdown`／`stuck`／`signal`／`max`／`body_exit`／`error`，aos-loop 給什麼照抄，空的或沒給＝null；給程式比的代號，不是表上給人看的 `reason`） | 不收 condition | 不能 |
+| `before_run` | 每跑一格之前（loop.json 的 `on_before_run` → `aos-hook fire`；讀過 ctl、等過 `interval_ms` 之後；暫停中不發；只在旗標檔 `hook_before_run.flag` 在時跑，見下面「每一格前後」） | `counter_runs`（這會是第幾次）、`stage`（要跑的那一格；第一圈還沒有 stage.txt 時用 fsm.json 的起始格） | 格名 | 攔下（退 10＝跳過這一圈：這格不跑、不算一次、不發 `after_run`，過 `interval_ms` 再問一次） |
+| `after_run` | 每跑完一格之後（`on_after_run`；身體起不來、loop 收到訊號的那圈不發；旗標檔 `hook_after_run.flag`） | `counter_runs`（跟 before_run 同一個數）、`code`（那格的結束碼）、`signal`（結束它的訊號，沒有＝null）、`elapsed_ms`（跑了多久）、`next_stage`（表現在停在哪一格） | 不收 condition | 不能 |
 | `on_clock` | 每格開頭（idle、think、wait、act）看一次時鐘，條件到了才跑（見下面「時鐘」） | `clock`、`cycle`、`interval_ms`、`first`、`last_cycle`、`missed`；格裡寫了 `config` 才多 `config`（原樣） | 不收 condition（條件寫 `every_cycles`／`every_ms`） | 不能 |
 
 每份事件 JSON 都有 `event`、`hook`（這個 hook 的名字）、`stack`（agent 的 stack 絕對路徑）。同一事件多個 hook＝照名字排序一個一個跑，前一個改過的後一個看得到，被攔下就不往下。連鎖（hook 寄信給自己又觸發）不檢測，自行承擔。
@@ -30,7 +32,18 @@
 
 - 跑得到：起來（`ctl add`／`start`、開門 wake、auto_restart 重起都是新起一支）；停下（`ctl stop`＝`code` 0、`sleep`／`rm`／daemon 收工＝SIGTERM `code` 143 `signal` 15、身體失敗＝那個碼）。
 - 跑不到：kill -9（之後 auto_restart 重起會有一次 `after_start`、中間沒有 `after_stop`）；daemon 被 kill -9 後 adopt 接回的 loop 沒重起，不會再跑 `after_start`。pause 不算停下（loop 還活著）。
-- 期限：loop 給這兩格 `on_timeout_ms`（預設 5000）——daemon 收工只等子項 10 秒；hook 自己的 `timeout_ms` 要更短，範本例子寫 5000 以內。hook 失敗只讓 hook_fire 印錯誤行、aos-loop 印一行 warning，agent 照起、照停。
+- 期限：loop 給這兩格 `on_timeout_ms`（預設 5000）——daemon 收工只等子項 10 秒；hook 自己的 `timeout_ms` 要更短，範本例子寫 5000 以內。
+- hook 失敗（`on_error` stop）＝agent 跟著停（使用者 11-20 待裁第 2 題「四個點都跟著停」，aos-loop 11-20 起）：`after_start` 的 hook 失敗＝agent 起不來（表上 `aos-loop: error: PointFailed on_start …`）；`after_stop` 的 hook 失敗而本來要退 0＝改退它的碼。
+
+## 每一格前後（before_run／after_run）
+
+使用者 11-20 選「在 loop 層加通用的點」、「能攔」、「before_run / after_run」、「用旗標檔」。aos-loop 每跑一次身體的前後各跑一次 loop.json 的 `on_before_run`／`on_after_run`，範本把它們接到 `aos-hook fire --agent 定義資料夾 before_run|after_run`（[py/aos/apps/hook](../../hook/README.md)）。agent-fsm 的一次＝一格，eca 的一次＝一輪。
+
+- **沒人掛時不多起行程**：`on_before_run_if`／`on_after_run_if` 指到 stack 裡的 `hook_before_run.flag`／`hook_after_run.flag`，檔在才跑。旗標檔由改清單的指令對：`aos-agent hook add／rm／reset`（`self_hook`、gdb 下斷點都經它）改完清單就照生效的那串建或刪；`aos-hook check --agent 定義資料夾 --stack STACK` 手動對一次。讀清單、發事件都不動旗標。
+- **手改 hooks.json 的**（定義那份或 stack 那份）：旗標不會自己跟上，跑一次 `aos-hook check --agent … --stack …`。範本的起來（`on_start`）今天還是 `hook_fire`，它不對旗標；定義那份 hooks.json 一開始就掛了 before_run／after_run 的，要等 `hook_fire` 換成 `aos-hook fire` 之後起來時才會自動對（使用者 11-20「明天再說」）。
+- `before_run` 退 0 之後 loop 會再讀一次 ctl：扣在 before_run 期間下的 stop／pause 會生效，那一格不跑。
+- 成本：有人掛的點每次起一支 `aos-hook`（約 36 毫秒起跳，加 handler 自己的）；閒著的 agent-fsm 每 300 毫秒就跑一格 idle，掛了 `before_run` 等於每秒多 3 個行程。要定時做事用 `on_clock`。
+- 失敗：同上「四個點都跟著停」，`before_run`／`after_run` 的 hook 失敗＝agent 停下（`PointFailed`）。
 
 ## 時鐘（on_clock）
 
@@ -56,7 +69,7 @@
 | 結束碼 | 意思 |
 |---|---|
 | 0 | 放行。`intercept` 開著而且 stdout 非空＝stdout 是一個 JSON 物件，認得的鍵（`content`／`arguments`）拿來改；stdout 空＝不改 |
-| 10 | 攔下（`before_queue`＝這封信收掉；`before_tool`＝工具不跑，腦看到的結果＝hook 的 stdout，空就給 `[aos] hook: tool NAME blocked by hook HOOK.`）；別的事件的 10＝當 0 |
+| 10 | 攔下（`before_queue`＝這封信收掉；`before_tool`＝工具不跑，腦看到的結果＝hook 的 stdout，空就給 `[aos] hook: tool NAME blocked by hook HOOK.`；`before_run`＝跳過這一圈）；別的事件的 10＝當 0 |
 | 其他、逾時、起不來、該是 JSON 卻不是 | hook 自己失敗：`on_error` 決定 |
 
 ## 選項
@@ -67,8 +80,8 @@
 |---|---|---|
 | `event`（`--event`） | 事件名，必填 | — |
 | `handler`（XXX 或 `--path-json`） | 目標：aos-exec 跑得動的東西（工具夾、JSON、執行檔）；相對路徑從寫它的那份檔的資料夾算 | — |
-| `condition`（`--condition`，可重複） | 只在工具名／代號完全相等時跑 | 全部 |
-| `intercept`（`--no-intercept`＝false） | 看不看它的回話（只有那三個事件有回話可看） | true |
+| `condition`（`--condition`，可重複） | 只在工具名／代號／格名（`before_run`）完全相等時跑 | 全部 |
+| `intercept`（`--no-intercept`＝false） | 看不看它的回話（只有那三個事件有回話可看；`before_run` 的退 10 也要它開著才算攔） | true |
 | `async`（`--async`＝true） | true＝不等它跑完、放出去不管、不看回話 | false |
 | `on_error`（`--on-error`） | `stop`＝那格印 `agent-fsm: error: HookFailed …`、agent 停下等人；`continue`＝一行 warning、當沒這個 hook | stop |
 | `timeout_ms`（`--timeout-ms`） | 等它的上限，0＝不限時；到了整群收掉、算失敗 | 60000 |
@@ -145,5 +158,6 @@ eca 的腦是外面的 CLI，aos 只看得到經過自己手的東西（圖紙 �
 | `brain_failed` | 有：交給 CLI 之後 CLI 失敗；`name`＝`CliFailed`／`ReplyMissing`、`reason`；claude 另帶 `code`（同代號）、`retry`（true＝冷卻後重送）、`attempt`（連續第幾次）、`dropped`（丟掉幾封信）、`retry` 為 true 才帶 `wait_s`（冷卻幾秒），知道時帶 `status`（HTTP 狀態）、`cause`（CLI 自己說的失敗原因）；codex 只有 `name`、`reason` | aos-eca-turn | 代號與欄位不同，沒有 `error` 物件 |
 | `tool_added` | 有（看 aos 登記檔的名單） | aos-eca-turn 每次交給 CLI 之前 | |
 | `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop`（hook_fire） | 同 |
+| `before_run`／`after_run` | 有：每一輪的前後 | loop.json 的 `on_before_run`／`on_after_run`（aos-hook） | 一圈＝一輪；沒有 `stage`／`next_stage`（不帶） |
 | `on_clock` | 有（冷卻中、退讓的那輪也判） | aos-eca-turn 每輪最開頭 | 每輪看一次（agent-fsm 每格看一次） |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos | |

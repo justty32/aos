@@ -11,7 +11,7 @@ sys.dont_write_bytecode = True
 PY = Path(__file__).resolve().parents[1]
 ROOT = PY.parent
 sys.path.insert(0, str(PY))
-from aos import hook_point
+from aos import hook_flags, hook_point
 from aos.agentlib import hooks
 
 P = hook_point.PROVIDERS
@@ -22,11 +22,12 @@ KERNEL = hook_point.read([str(KERNEL_DIR / "hook_points.json")])
 
 
 def fired(points):
-    """Points something fires today (before_run / after_run are declared ahead of aos-loop)."""
+    """Points something fires today (a point marked not_fired_yet is declared ahead of its code; none is since cut 5)."""
     return {n: p for n, p in points.items() if "not_fired_yet" not in p}
 
 
-AGENT = dict(fired(ECA), **fired(FSM))   # same nine names on both bodies; fields of both for the doc checks
+AGENT = dict(fired(ECA), **fired(FSM))   # same eleven names on both bodies; fields of both for the doc checks
+LOOP = hook_point.read([P["aos-loop"]])     # the four points aos-loop fires through loop.json
 FIELDS = {n: set(fired(FSM).get(n, {}).get("fields", {})) | set(fired(ECA).get(n, {}).get("fields", {})) for n in AGENT}
 
 # Gaps between the declarations (= what the code does) and hand copies that are allowed for now: "where: point.field".
@@ -112,9 +113,10 @@ class Tables(unittest.TestCase):
         self.assertEqual(others, {hooks.CLOCK_EVENT})
 
     def test_hook_fire(self):
+        """hook_fire fires the two points of on_start / on_stop (before_run / after_run go through aos-hook)."""
         entry = PY / "tools" / "agent" / "hook_fire" / "_entry"
         loop = hook_point.read_file(P["aos-loop"])[1]
-        self.assertEqual(set(assigned(entry, "EVENTS")), set(fired(loop)))
+        self.assertEqual(set(assigned(entry, "EVENTS")), set(fired(loop)) - {"before_run", "after_run"})
         self.assertIn(assigned(entry, "CAUSE_KEY"), loop["after_stop"]["fields"])
         self.assertEqual(loop["after_stop"]["fields"]["cause"]["env"], assigned(entry, "CAUSE_ENV"))
         src = entry.read_text(encoding="utf-8")
@@ -123,13 +125,31 @@ class Tables(unittest.TestCase):
 
     def test_gdb(self):
         trigger = PY / "aos" / "gdb" / "trigger.py"
-        before = {n for n, p in AGENT.items() if p["phase"] == "before"}
+        # gdb's hold list covers the body points; the loop's before_run is a pause breakpoint until cut 6 reads the declarations
+        before = {n for n, p in AGENT.items() if p["phase"] == "before" and n not in LOOP}
         self.assertEqual(set(assigned(trigger, "HOLD_EVENTS")), before)
         for n in before:   # key_of: before_tool looks at id, the rest at letter
             self.assertEqual(AGENT[n].get("key"), "id" if n == "before_tool" else "letter", n)
         for n, p in AGENT.items():   # SUBJECT: points with a name condition; brain_failed = code, the rest = tool
             if p.get("condition") == "name":
                 self.assertEqual(p.get("subject"), "code" if n == "brain_failed" else "tool", n)
+
+    def test_templates_wire_the_loop_points(self):
+        """A24: the templates whose definitions take hooks wire before_run / after_run in loop.json, each behind its flag file."""
+        flag = {p: {"$env": "AOS_STACK", "$path": "/" + n} for p, n in hook_flags.FLAGS.items()}
+        agents = ("agent-fsm", "agent-python", "start-api/agents/ann", "eca-claude", "eca-pi", "start-eca/agents/ann")
+        for tpl in agents + ("kernel/procs-kernel", "start-api/perm"):
+            loop = json.loads((ROOT / "templates" / tpl / "loop.json").read_text(encoding="utf-8"))
+            for point in ("before_run", "after_run"):
+                with self.subTest(tpl=tpl, point=point):
+                    argv = loop["on_" + point]["argv"]
+                    self.assertEqual((argv[:3], argv[-1]), (["aos-hook", "fire", "-q"], point))
+                    self.assertEqual(loop["on_%s_if" % point], flag[point])
+                    self.assertIn("--agent" if tpl in agents else "--list", argv)
+            fields = [a for a in loop["on_before_run"]["argv"] if isinstance(a, dict) and "$prefix" in a]
+            with self.subTest(tpl=tpl, stage=True):
+                fsm = (ROOT / "templates" / tpl / "fsm.json").exists()
+                self.assertEqual([a["$prefix"] for a in fields], ["stage=", "stage="] if fsm else [])
 
     def test_self_hook_event_enum(self):
         tooldef = json.loads((PY / "tools" / "agent" / "self_hook" / "_tooldef.json").read_text(encoding="utf-8"))

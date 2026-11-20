@@ -106,7 +106,7 @@
     ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
     "_entry": "入口：`aos-loop loop.json`",
     "kernel.json": "設定（鍵：allowed、max_running）",
-    "loop.json": "設定（鍵：exec、interval_ms）"
+    "loop.json": "Run the kernel once every 300 ms over kernel.json. The four aos-loop hook points (after_start, after_stop, before_run = before each round, after_run …"
    },
    "tests": {
     "kernel-chain-check": {
@@ -186,7 +186,7 @@
     ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
     "_entry": "入口：`aos-loop loop.json`",
     "kernel.json": "",
-    "loop.json": "設定（鍵：exec、interval_ms）"
+    "loop.json": "Run the kernel once every 300 ms over kernel.json. The four aos-loop hook points (after_start, after_stop, before_run = before each round, after_run …"
    },
    "root": {
     ".env": "defaults for this root (a value already exported in the shell wins); every agent and child daemon inherits them.",

@@ -96,6 +96,8 @@
 | daemon 底下一個 loop proc | `loop.json` 的 `exec` 寫框架站，掛到一台普通 daemon 上 | `<那個 proc 的 stack>/requests` | `procs-kernel/` |
 | 鏈的中間站 | 上面兩種任一種，`kernel.json` 多寫 `next` 指到別的站（或站的環境 `AOS_KERNEL` 指到別的站） | 同上 | 沒有現成範本，例子在 [02](docs/02-kernel-modes.md) |
 
+**`procs-kernel/` 每一輪的前後也能掛 hook**（hook 第 5 刀後半，使用者 11-20 待裁第 7 題選「接：改 procs-kernel 範本的 loop.json」，線 top-1121-hook5）：它的 `loop.json` 把 aos-loop 的四個點（`after_start`、`after_stop`、`before_run`＝每一輪之前、`after_run`＝每一輪之後；[宣告](../../py/aos/apps/hook/loop_points.json)）接到 `aos-hook fire`，清單是**同夾的 `loop_hooks.json`**（`{"hooks": {名字: 一格}}`，格的寫法同 `kernel.json` 的 `hooks`；檔不在＝沒有 hook，出廠沒有這個檔）。kernel 的程式沒改：`kernel.json` 的 `hooks` 照舊只收判前、判後、代回之前三個點，loop 的四個點寫在 `loop_hooks.json`。`before_run` 退 10＝這一輪不跑；四個點的 hook 失敗（`on_error` stop）＝站停下。`before_run`／`after_run` 只在站的 stack 裡有 `hook_before_run.flag`／`hook_after_run.flag` 時才起 `aos-hook`：站起來（`after_start`）時照 `loop_hooks.json` 對一次；改了 `loop_hooks.json` 要重起這一站，或跑 `aos-hook check --points $AOS_HOME/lib/aos/apps/hook/loop_points.json --list <這一夾>/loop_hooks.json --stack <站的 stack>`。代價：站每次起、停各多起一支 `aos-hook`（約 36 毫秒）。`daemon-kernel/` 是 daemon 的身體，aos-daemon 不收這幾個鍵，沒接。
+
 `daemon-kernel/`、`procs-kernel/` 兩份範本原樣只能當**最後一站**用：它們的 `kernel.json` 寫了 `max_running`、沒寫 `next` 與 `count_daemon`，所以站的環境裡 `AOS_KERNEL` 要嘛沒設、要嘛指到這一站自己的 `requests/`（跳過，轉給 `$AOS_DAEMON` 那台、也在那台的表上數）。繼承到指向**別站**的 `AOS_KERNEL` 時，每一輪都是 `CfgBad`（站不猜要去哪台數）。要改當鏈的中間站，自己在 `kernel.json` 補上 `count_daemon`（或寫 `next` 連同 `count_daemon`），或在起那一站的殼 `unset AOS_KERNEL`。範本沒有預先寫 `count_daemon`：寫死某一台就等於替你猜了要數哪台。
 
 手跑的指令、鏈的例子、hook 的例子、已知限制都在 [02-kernel-modes](docs/02-kernel-modes.md)。

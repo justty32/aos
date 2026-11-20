@@ -162,6 +162,12 @@ class Declaration(WithHome):
         fire = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}
         self.assertEqual(files["loop.json"]["on_start"], {"argv": [fire, "after_start", {"$env": "AOS_CD"}]})
         self.assertEqual(files["loop.json"]["on_stop"], {"argv": [fire, "after_stop", {"$env": "AOS_CD"}]})
+        before = files["loop.json"]["on_before_run"]["argv"]   # hook cut 5, second half: the loop points through aos-hook
+        self.assertEqual(before[:5] + before[-1:], ["aos-hook", "fire", "-q", "--agent", {"$env": "AOS_CD"}, "before_run"])
+        self.assertIn({"$ref": "fsm.json#/start", "$prefix": "stage="}, before)
+        self.assertEqual(files["loop.json"]["on_before_run_if"], {"$env": "AOS_STACK", "$path": "/hook_before_run.flag"})
+        self.assertEqual(files["loop.json"]["on_after_run"]["argv"][-1], "after_run")
+        self.assertEqual(files["loop.json"]["on_after_run_if"], {"$env": "AOS_STACK", "$path": "/hook_after_run.flag"})
         self.assertEqual(files["ladder.json"], {"repeat": 3})
         self.assertEqual(files["notes.txt"], "plain text\n")
 
@@ -176,6 +182,7 @@ class Declaration(WithHome):
         files = agent().dry_run()
         self.assertNotIn("hooks", files["interfaces.json"]["aos-agent"])
         self.assertNotIn("on_start", files["loop.json"])
+        self.assertNotIn("on_before_run", files["loop.json"])
         self.assertNotIn("hooks.json", files)
 
     def test_stock_hooks_needs_a_home_with_the_template(self):

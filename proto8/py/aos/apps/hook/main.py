@@ -7,6 +7,8 @@ The hooks run in aos.hook_run (the engine the agents and the kernel use) through
 the changed values' declared types. The source: --points / --list, or --agent DEF_DIR (aos.agentlib.agent_hooks.source:
 the agent's hook_points, its two hooks layers and on_clock rules; after_start first clears the on_clock state).
 Exit codes: 0 ok (also when no hook listens), 10 blocked (fire only), 1 error (one line "aos-hook: error: CODE reason").
+Flags of the loop points (aos.hook_flags; hook cut 5, second half, line top-1121-hook5): fire after_start and check with a
+stack make STACK/hook_before_run.flag and hook_after_run.flag match the lists, for any source whose points include them.
 """
 import json
 import os
@@ -14,7 +16,7 @@ import re
 import sys
 
 from aos import flags as aos_flags
-from aos import hook_point, hook_run
+from aos import hook_flags, hook_point, hook_run
 
 PROG = "aos-hook"
 HELP = """aos-hook - fire a hook event from any program, and list or check hook point declarations
@@ -39,6 +41,10 @@ where the points and the hooks are (these flags go before or after the subcomman
                   agent's checks; fire after_start first clears the on_clock state of the stack
   -h, --help      show this help
 
+flag files: when the points include before_run / after_run, fire after_start and check (with a
+stack) create STACK/hook_before_run.flag / hook_after_run.flag while a hook listens to that point
+and remove them otherwise; a loop.json wired to aos-hook fires those points only while they exist.
+
 exit codes: 0 ok; 10 blocked by a hook (fire only); 1 error ("aos-hook: error: CODE reason" on stderr).
 more: proto8/py/aos/apps/hook/README.md"""
 HELPS = {
@@ -58,6 +64,7 @@ Event data, later ones override earlier ones:
   --field-default NAME=VALUE   only when nothing above gave NAME a value (missing or null)
   The same NAME in --field and --field-file is ArgumentsBad; the same flag twice = the last one counts.
   -q, --quiet             print nothing on stdout (only the exit code tells)
+after_start also sets the flag files of before_run / after_run in the stack (see aos-hook --help).
 
 stdout: one JSON line {"data": {...}, "changed": [...], "blocked": false, "hook": null, "text": ""}:
 the data after the hooks, the keys they changed, and when blocked the hook's name and its stdout.
@@ -75,11 +82,13 @@ block; then what each provider says (when, if blocked, if failed, not fired yet)
   -j, --json   one JSON object {NAME: point} instead; "said" has one item per file that declares it""",
     "check": """aos-hook check - check declarations and hooks lists without running a handler
 
-usage: aos-hook check [--points FILE]... [--list FILE]...
+usage: aos-hook check [--points FILE]... [--list FILE]... [--stack DIR]
 
 Reads the declarations (PointsBad) and every hooks list against them (HooksBad: an event no
 declaration has, a bad key, an entry_keys key on another point). A hook on a point marked
-not_fired_yet is one warning line. Prints one "ok: ..." line, exit 0."""}
+not_fired_yet is one warning line. Prints one "ok: ..." line, exit 0.
+With a stack (--stack, or $AOS_STACK) and points that include before_run / after_run, it also
+sets their flag files in the stack (one more line "flags: ..."; WriteFailed when it cannot)."""}
 ROOT = {}                                      # the shared flags (--points, --list, --stack, --agent)
 FLAGS = {"--stack": "stack", "--agent": "agent"}
 MULTI = {"--points": "points", "--list": "list"}
@@ -233,10 +242,20 @@ def fire(argv):
             hook_clock.clock_restart(stack)
         except OSError as e:
             warn("cannot reset the on_clock state in %s: %s" % (stack, e))
+    if event == "after_start":   # 06/12 B1: a loop's start is one of the moments the flags are set from the lists
+        keep_flags(stack, points, entries)
     result = hooks.fire(event, data, entries=entries)
     if not opts.get("quiet"):
         print(json.dumps(result, ensure_ascii=False), flush=True)
     sys.exit(hook_run.BLOCK if result["blocked"] else 0)
+
+
+def keep_flags(stack, points, entries):
+    """The flag files of before_run / after_run in the stack, from the hooks in effect (aos.hook_flags); {point: on}."""
+    try:
+        return hook_flags.sync(stack, points, entries)
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot set the hook flag files in %s: %s" % (stack, aos_flags.os_reason(e)))
 
 
 def head(name, point):
@@ -295,6 +314,10 @@ def check(argv):
                  % (name, entry["from"], entry["event"], later[0]["not_fired_yet"]))
     print("ok: %d points from %d declarations, %d hooks from %d lists"
           % (len(points), src["files"], len(entries), len(src["lists"])))
+    flags = keep_flags(stack, points, entries) if stack else {}
+    if flags:
+        print("flags: " + ", ".join("%s %s" % (os.path.join(stack, hook_flags.FLAGS[p]), "on" if on else "off")
+                                    for p, on in flags.items()))
 
 
 SUBS = {"fire": fire, "points": points_cmd, "check": check}

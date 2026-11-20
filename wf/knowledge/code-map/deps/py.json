@@ -71,7 +71,7 @@
    "module": "aos.apps.agent",
    "unit": "proto8/py/aos/apps/agent",
    "used_by": "proto8/py/aos/py",
-   "uses": "aos.agentlib.cli_a2a aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_linger aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.daemon_ctl aos.declared_files aos.directive_value aos.flags aos.ws"
+   "uses": "aos.agentlib.cli_a2a aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_linger aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.daemon_ctl aos.declared_files aos.directive_value aos.flags aos.hook_flags aos.ws"
   },
   {
    "kind": "app",
@@ -141,7 +141,7 @@
    "module": "aos.apps.hook",
    "unit": "proto8/py/aos/apps/hook",
    "used_by": "",
-   "uses": "aos.agentlib.agent_hooks aos.agentlib.hook_clock aos.flags aos.hook_point aos.hook_run"
+   "uses": "aos.agentlib.agent_hooks aos.agentlib.hook_clock aos.flags aos.hook_flags aos.hook_point aos.hook_run"
   },
   {
    "kind": "app",
@@ -303,6 +303,13 @@
    "unit": "proto8/py/aos/gdb",
    "used_by": "proto8/py/aos/py proto8/py/tools/agent/gdb_trigger proto8/py/tools/agent/gdb_watch",
    "uses": "aos.agentlib.hooks aos.py._shell aos.py.agent"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.hook_flags",
+   "unit": "proto8/py/aos/hook_flags.py",
+   "used_by": "proto8/py/aos/apps/agent proto8/py/aos/apps/hook",
+   "uses": ""
   },
   {
    "kind": "lib",

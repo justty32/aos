@@ -199,10 +199,13 @@ class HookCli(unittest.TestCase):
         r = self.run_hook("check", "--points", self.points, "--list", self.list)
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertEqual(r.stdout, "ok: 2 points from 1 declarations, 1 hooks from 1 lists\n")
-        self.handler("later", "true", event="after_run")
-        r = self.run_hook("check", "--points", self.points, "--points", LOOP, "--list", self.list)
+        ahead = self.d / "ahead.json"   # since cut 5 no shipped point is not_fired_yet: declare one here
+        ahead.write_text(json.dumps({"description": "x", "provider": "ahead", "points": {"on_tick": {
+            "when": "some day", "phase": "on", "fields": {}, "not_fired_yet": "nothing fires it yet"}}}))
+        self.handler("later", "true", event="on_tick")
+        r = self.run_hook("check", "--points", self.points, "--points", ahead, "--list", self.list)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("aos-hook: warning: hook later (in %s) is on point after_run, which nothing fires yet" % self.list, r.stderr)
+        self.assertIn("aos-hook: warning: hook later (in %s) is on point on_tick, which nothing fires yet" % self.list, r.stderr)
 
 
 if __name__ == "__main__":

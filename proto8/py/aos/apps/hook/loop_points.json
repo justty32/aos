@@ -1,5 +1,5 @@
 {
- "description": "Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop, today through py/tools/agent/hook_fire), and before_run / after_run (on_before_run / on_after_run, each with an _if flag file), which aos-loop runs but no template wires yet.",
+ "description": "Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop; the agent templates through py/tools/agent/hook_fire), and before_run / after_run (on_before_run / on_after_run through aos-hook fire, each only while its _if flag file exists: STACK/hook_before_run.flag, hook_after_run.flag, kept by aos-agent hook and aos-hook).",
  "provider": "aos-loop",
  "points": {
   "after_start": {
@@ -29,8 +29,7 @@
    "subject": "stage",
    "block": true,
    "if_blocked": "the loop skips this run: the body does not run, the run is not counted, after_run does not fire; the loop asks again after interval_ms",
-   "if_failed": "the loop stops, as after a failing run; the body does not run",
-   "not_fired_yet": "aos-loop runs loop.json on_before_run (while on_before_run_if exists), but no template wires it to aos-hook yet: that waits for the agents to read their hook_points declarations"
+   "if_failed": "the loop stops, as after a failing run; the body does not run"
   },
   "after_run": {
    "when": "after each run of the loop body, whatever its exit code (not when the body could not start, not when the loop got a signal)",
@@ -42,8 +41,7 @@
     "elapsed_ms": {"about": "how long the body ran", "env": "AOS_LOOP_RUN_MS", "type": "int"},
     "next_stage": "fsm bodies only: the state the table is at now (the next one after a taken step, the same one otherwise); null for bodies without states"
    },
-   "if_failed": "the loop stops with the hook's code when the body exited 0; when the body itself ends the loop, the body's result counts and the hook failure is one warning",
-   "not_fired_yet": "aos-loop runs loop.json on_after_run (while on_after_run_if exists), but no template wires it to aos-hook yet: that waits for the agents to read their hook_points declarations"
+   "if_failed": "the loop stops with the hook's code when the body exited 0; when the body itself ends the loop, the body's result counts and the hook failure is one warning"
   }
  }
 }

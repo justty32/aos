@@ -23,7 +23,7 @@ RESERVED = set(SKELETON) | set(RUNTIME_FILES) | set(OWN_FILES.values()) | {"_met
 WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl add).",
         "body.json": "Run this agent's loop: aos-loop with loop.json.",
         "loop.json": "Run the state machine in %s every tick and expose public control, state and state flux files.",
-        "loop_hooks": " on_start / on_stop fire the after_start / after_stop hooks (lib/tools/agent/hook_fire).",
+        "loop_hooks": " on_start / on_stop fire the after_start / after_stop hooks (lib/tools/agent/hook_fire); on_before_run / on_after_run fire before_run / after_run around each state (aos-hook), only while the flag file is in the stack (hook_before_run.flag, hook_after_run.flag).",
         "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
         "tools.json": "Tools this agent can call.",
         "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",
