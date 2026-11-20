@@ -8,6 +8,9 @@
  "agent_spec_agent.py": {
   "description": "defs.Agent 與 defs.fsm 回的 Fsm：寫定義變成物件，.dry_run() 算出 {檔名: 內容}、不寫，.compile(夾) 算完寫進夾；loop.json 那段在內部的 _Loop。"
  },
+ "agent_spec_hooks.py": {
+  "description": "agent_spec 的 hook 那塊：hooks=… 怎麼疊（一張表、std.hooks(...)、defs.load 的 hooks、@fn.hook 的函數、它們的串列）、怎麼驗、怎麼算出 hooks.json。"
+ },
  "agent_spec_lib.py": {
   "description": "agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 defs.lib(\"名\", 根) 宣告的別的庫（工具自動帶「名_」）；包在編譯時讀出來、展開成一支支工具（靜態連結進 tools.json；動態連結見 pack 的 link）。"
  },
@@ -15,7 +18,7 @@
   "description": "defs.load(路徑)：一支 agent.py 衍生自另一支（繼承第一刀，線 aos-inherit-cut1-1119）：跑底那支，它最後的 defs.main 只交出那隻 Agent，正規化成一份新的 Agent 交回。"
  },
  "agent_spec_parts.py": {
-  "description": "agent_spec 的零件：各份定義檔怎麼從宣告算出來、怎麼先驗（tools.json、llm.json、interfaces.json、hooks.json、FILES），以及不宣告 FSM 時照夾裡現有的 interfaces.json 找檔名。"
+  "description": "agent_spec 的零件：各份定義檔怎麼從宣告算出來、怎麼先驗（tools.json、llm.json、interfaces.json、FILES），以及不宣告 FSM 時照夾裡現有的 interfaces.json 找檔名。"
  },
  "agentlib": {
   "description": "aos 套件裡 agent 層的共用模組（hooks、cooldown、quiet、goal_state、claude／codex 對話的 cli_*、cmd_call、agents_cmd…）；S3 前在 lib/agent",
@@ -60,6 +63,9 @@
  },
  "fn_run.py": {
   "description": "fn.main(function): the compile flags and running a marked function as a tool or as a hook handler; fn.fail and fn.block."
+ },
+ "fn_spec.py": {
+  "description": "compile @fn.tool / @fn.hook functions of an agent.py into programs fn/<name>.py of the definition folder (\"pulled out\")."
  },
  "gdb": {
   "description": "aos-gdb 的 Python 庫（aos.gdb）：對已在跑的 agent 下條件觸發器（一個 hook：工具要跑之前扣住，或事件後暫停）或起觀察者（另一支 proc 輪詢、成立就暫停目標）、列出／拿掉、看為什麼停、檢閱 stack、續"

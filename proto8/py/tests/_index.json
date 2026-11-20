@@ -114,6 +114,15 @@
  "test_fn_run.py": {
   "description": "Test fn.main: a tool's flags (--compile folder / pointer, --dry-run, --tooldef, --metainfo), its run (defaults, enum, fn.fail, RunFailed, names), and…"
  },
+ "test_fn_spec.py": {
+  "description": "Test py/aos/fn_spec.py (cut 3): an @fn.tool / @fn.hook function of agent.py compiled into fn/<name>.py - what it may use from outside (each row of de…"
+ },
+ "test_fn_spec_live.py": {
+  "description": "cut 3 for real: an agent.py with @fn.tool add and @fn.hook no_secrets compiled with the installed aos, checked by agent_def check, mounted in a copy …"
+ },
+ "test_fn_spec_more.py": {
+  "description": "Test cut 3 of the compile library beyond what a function may use: @fn.hook into hooks.json (events, condition, fn.block, same names), renames and cla…"
+ },
  "test_hook_point.py": {
   "description": "Test aos.hook_point: the shipped hook_points.json files read and check fine, every check rule rejects a bad example, merging, engine_table and for_de…"
  },

@@ -11,6 +11,7 @@
 import json, os, posixpath, re
 
 from aos import agent_spec_parts as parts
+from aos.agent_spec_hooks import Hooks               # hook 那塊 11-20 第 3 刀拆到 agent_spec_hooks（線 aos-pylib-k3-1120）
 
 PREFIX_RE = re.compile(r"[A-Za-z0-9_-]*\Z")       # 腦叫工具的名字只准英數、_、-，前綴也一樣
 STOCK_CELLS = (("idle", "idle", {0: "think", 10: "idle"}, None),       # templates/agent-fsm/fsm.json 那四格，格的程式借範本那份
@@ -170,7 +171,7 @@ class Std(Lib):
     def hooks(self, template="agent-fsm"):
         """某個範本 hooks.json 的那組 hook（agent-fsm、eca-claude、eca-pi）。interfaces.json 的 hooks 只能指夾內的檔，所以借不了，
         編譯時從 $AOS_HOME/templates/<template>/hooks.json 讀出來抄進這夾的 hooks.json（範本改了，下次重新編譯跟著變）。
-        回一個帶來源標記的 dict（agent_spec_parts.Hooks）：跟另一組（另一個範本、defs.load 的 HOOKS）同名又不同＝SpecBad。"""
+        回一個帶來源標記的 dict（agent_spec_hooks.Hooks）：跟另一組（另一個範本、defs.load 的 HOOKS）同名又不同＝SpecBad。"""
         call = "std.hooks(%r)" % (template,)
         if not isinstance(template, str) or not parts.PACK_RE.match(template):
             return _bad("%s: give a template name, like \"agent-fsm\"" % call)
@@ -189,7 +190,7 @@ class Std(Lib):
             return _bad("%s: cannot read $AOS_HOME/templates/%s/hooks.json: %s" % (call, template, e))
         if not isinstance(table, dict):
             return _bad("%s: $AOS_HOME/templates/%s/hooks.json has no hooks object" % (call, template))
-        return parts.Hooks(table, call, ["templates/%s/hooks.json" % template])   # 帶標記的一組：std.hooks()["timer"] 取一格（繼承第一刀）
+        return Hooks(table, call, ["templates/%s/hooks.json" % template])   # 帶標記的一組：std.hooks()["timer"] 取一格（繼承第一刀）
 
     def fsm(self, group="agent-fsm"):
         """agent-fsm 範本那四格（idle、think、wait、act），格的程式借 $AOS_HOME/templates/agent-fsm/ 那份（不抄、編譯時不讀）。"""

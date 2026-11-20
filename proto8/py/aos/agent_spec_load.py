@@ -5,15 +5,18 @@
 base.meta、base.interfaces、base.hooks、base.files，與 base.pack(prefix=, rename=, exclude=)；交回的是 aos/agent_spec_agent.Agent，本身也能 .compile(夾)。
 只在 agent.py 重新編譯時發生：編出的 json 照舊整份、沒有上一層；執行期一行不動。只收明寫的路徑（不搜尋），相對路徑從叫它的那支 agent.py 的夾算（REPL 從 cwd）。
 載入期間：底在自己的一份 __main__ 下跑（runpy），載完還原 sys.path 與新進 sys.modules 的非 aos 模組（07 A4）；a 載 b、b 載 a＝SpecBad。
-底的欄位：tools＝一個帶來源名的包（拿掉的留墓碑 None）、hooks＝agent_spec_parts.Hooks（帶標記；沒宣告＝空組、當作沒宣告）、fsm＝Fsm（eca 版＝None）、
+底的欄位：tools＝一個帶來源名的包（拿掉的留墓碑 None）、hooks＝agent_spec_hooks.Hooks（帶標記；沒宣告＝空組、當作沒宣告）、fsm＝Fsm（eca 版＝None）、
 meta＝dict、interfaces／files＝dict 或 None；底裡的相對路徑（工具 path／env_file、hook handler、狀態格 argv 裡底那夾真有的檔）照底那夾換算（07 A5）。
+底的 @fn.tool／@fn.hook 函數（編譯程式庫第 3 刀，線 aos-pylib-k3-1120）那格帶著 fn_spec.KEY、不換算：衍生那支編譯時在自己的夾重抽一份 fn/<名>.py，不指回底那夾（N-70）。
 extern 的欄位＝用到那一欄才報 SpecBad（不用就不擋）。錯一律丟 SpecBad；在 agent.py 最外層沒人接時，這裡裝的 sys.excepthook 印成一行「名: error: SpecBad …」、退 1（07 A3）。
 """
 import json, os, posixpath, runpy, sys, traceback
 
 from aos import flags
 from aos import agent_spec_parts as parts
+from aos import agent_spec_hooks as hook_parts
 from aos.agent_spec_agent import Agent, Fsm, FIELDS
+from aos.fn_spec import KEY as FN_KEY
 from aos.spec_base import SpecBad, DefBad
 
 _chain = []          # 正在載入的檔（真路徑），最外面那支（叫第一個 defs.load 的）排第一
@@ -171,7 +174,7 @@ def _based(shown, file, root, given):
         table, origins = parts.stack_tools([tools] if parts.kind(tools) == "pack" else tools)
         for entry in table.values():
             for key in ("path", "env_file"):
-                if entry is not None and key in entry:
+                if entry is not None and key in entry and FN_KEY not in entry:     # 函數工具：衍生那支自己重抽
                     entry[key] = _moved(entry[key], root)
         out.tools = {"kind": "pack", "lib": "defs.load", "name": shown, "label": shown, "origins": list(origins), "tools": _copy(table)}
     if "llm" not in hand:
@@ -197,14 +200,14 @@ def _based(shown, file, root, given):
             raise SpecBad("%s must be a dict" % field)
         setattr(out, field, None if value is None else _copy(value))
     if "hooks" not in hand:
-        hooks = parts.no_hooks(values["hooks"])
+        hooks = hook_parts.no_hooks(values["hooks"])
         if hooks is None:
-            out.hooks = parts.Hooks({}, "the hooks of %s" % shown, declared=False)
+            out.hooks = hook_parts.Hooks({}, "the hooks of %s" % shown, declared=False)
         else:
-            table, origins = parts.stack_hooks(hooks)
+            table, origins = hook_parts.stack_hooks(hooks)
             table = _copy(table)
             for entry in table.values():
-                if entry is not None and "handler" in entry:
+                if entry is not None and "handler" in entry and FN_KEY not in entry:
                     entry["handler"] = _moved(entry["handler"], root)
-            out.hooks = parts.Hooks(table, "the hooks of %s" % shown, origins)
+            out.hooks = hook_parts.Hooks(table, "the hooks of %s" % shown, origins)
     return out

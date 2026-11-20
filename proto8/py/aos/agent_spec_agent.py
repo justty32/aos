@@ -5,12 +5,16 @@
 建構時只收、不驗（寫錯在 .dry_run()／.compile() 才丟 SpecBad）；編譯不改物件裡的串列與表，同一張 fsm、同一串工具可以放進好幾個 Agent。
 defs.load 交回的也是 Agent（本體 aos/agent_spec_load.py）：欄位是普通屬性；tools 是一個包（底的工具疊完），extern 的欄位一碰就 SpecBad。
 跟把手 aos.py.agent.Agent（活的那隻）同名不同物（設計稿 07d 意見 9）。只給 aos/agent_spec 用，寫 agent.py 的人叫 defs.Agent。
+tools=[…]／hooks=[…] 裡的 @fn.tool／@fn.hook 函數（第 3 刀，線 aos-pylib-k3-1120；使用者 11-20「抽出來」「一起，同一套寫法」）：
+_files 最後交給 aos/fn_spec.programs，每個函數多一份 fn/<名>.py（程式檔），tools.json／hooks.json 那格指到它；hook 照 events() 那張表查 fn.block 能不能用。
 """
 import json, os
 
 from aos import spec_base
+from aos import fn_spec
 from aos.spec_unit import Unit
 from aos import agent_spec_parts as parts
+from aos import agent_spec_hooks as hook_parts
 from aos.agentlib import hooks as agent_hooks
 from aos.spec_base import SpecBad, DefBad
 from aos.agent_spec_parts import WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FILES
@@ -174,7 +178,7 @@ class Agent(Unit):
         if not isinstance(description, str) or not description.strip():
             raise SpecBad("description must be a non-empty string: one sentence saying what the agent does")
         description = description.strip()
-        hooks = parts.no_hooks(self.hooks)
+        hooks = hook_parts.no_hooks(self.hooks)
         decl = {"system": system, "tools": tools, "llm": llm, "fsm": fsm, "hooks": hooks}
         for value in decl.values():
             parts.raise_bad(value)
@@ -199,7 +203,8 @@ class Agent(Unit):
             else parts.tools_json(_tool_list(tools), link, warn)
         llm_out = None if parts.pick(llm, "llm must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or defs.extern(\"llm.json\")",
                                      lambda v: isinstance(v, dict)) else parts.llm_json(llm, keys)
-        hooks_out = None if hooks is None or "hooks" in hand else parts.hooks_json(hooks)
+        hooks_out = None if hooks is None or "hooks" in hand else hook_parts.hooks_json(hooks)
+        programs = fn_spec.programs(tools_out, names.get("tools"), hooks_out, names.get("hooks"), self.events())
         extra = parts.extra_files(files, taken | set(hand.values())) if files is not None else {}
         if meta is not None and not isinstance(meta, dict):
             raise SpecBad("meta must be a dict like {\"cost\": {\"time_ms\": 60000}, \"resource\": [\"llm\"]}")
@@ -223,7 +228,13 @@ class Agent(Unit):
         out.update(extra)
         out["_metainfo.json"] = dict({"summary": description}, **(meta or {}))
         out["README.md"] = description + "\n"
-        return _plain(out)
+        out = _plain(out)
+        for name in programs:                   # fn/<名>.py：程式檔（755），不經 _plain（那會變回普通字串）
+            if name in out or name in hand.values():
+                raise SpecBad("%s, the program of a function, clashes with a file agent.py writes or an extern; rename the function "
+                              "(name=)" % name)
+        out.update(programs)
+        return out
 
     def _write(self, folder, files):
         """files 寫進 folder；回給人看的字串串列。這裡只管兩條：先讀好 _metainfo.json、只蓋自己的鍵；README.md 在就不寫。

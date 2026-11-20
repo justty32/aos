@@ -20,6 +20,8 @@
   load(路徑)           衍生（本體 aos/agent_spec_load.py）：base = defs.load("../reviewer") 跑那支 agent.py，交回它交給 defs.main 的那隻（新的一份）；
                        tools=[base.tools, defs.drop(...)]、hooks=[base.hooks, {名: {**base.hooks[名], 鍵: 值}}]、fsm=defs.fsm(base.fsm, [...], drop=[...])、
                        base.pack(prefix=, rename=, exclude=)；只在編譯時算，編出的 json 整份、不記上一層（N-70）
+函數當工具與 hook（編譯程式庫第 3 刀，線 aos-pylib-k3-1120；使用者 11-20「抽出來」）：tools=[…, add]、hooks=[…, no_secrets] 裡放 @fn.tool／@fn.hook 的函數，
+                     編譯時各抽成定義夾的 fn/<名>.py（本體 aos/fn_spec.py；hook 那塊在 aos/agent_spec_hooks.py）
 main(物件)：agent.py 最後一行；--compile [資料夾]、--dry-run、--help，都沒有＝ArgumentsBad 帶用法（P-44）；Agent 的前兩個可加 --static（預設）／--dynamic。
 """
 import json, os, sys
@@ -62,6 +64,8 @@ linked dynamically, to check the tool names), so AOS_HOME, and any variable a li
 To build on another agent.py: base = defs.load("../other") runs it and gives back the agent it hands to
 defs.main; write tools=[base.tools, defs.drop("x")], hooks=[base.hooks, {...}], fsm=defs.fsm(base.fsm, [...]);
 it is worked out now, so the files written are whole and do not name the other one (README: "Build on").
+A function marked @fn.tool / @fn.hook("event") (from aos.py import fn) in tools=[...] / hooks=[...] is pulled
+out into a program fn/<name>.py of the folder (README: "Functions as tools and hooks").
 Without defs.main (a build script, the REPL): agent.dry_run() gives the files, agent.compile(FOLDER) writes them.
 Then mount it: aos-agent ctl add FOLDER.
 On a wrong declaration: one line "NAME: error: SpecBad ..." on stderr, exit 1, nothing written.

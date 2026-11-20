@@ -46,6 +46,7 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
 | `_metainfo.json` | `summary` and `meta` keys | the description, `meta=` |
 | `README.md` | this file | written only when missing |
 | `hooks.json` | the hooks (none in this skeleton: `hooks={}`) | `hooks=` |
+| `fn/<name>.py` (not in this skeleton) | one program for each function tool or hook | `@fn.tool` / `@fn.hook` functions in `tools=` / `hooks=` |
 | any other name (not in this skeleton) | as given | `files=` |
 
 ## What you write in agent.py
@@ -74,7 +75,8 @@ defs.main(agent)
   - `std.tool("base/read")`: one tool of `std` (`$AOS_HOME/lib/tools/base/read`), named after its folder (`name="..."` picks another name);
   - `defs.tool("read", defs.home("/lib/tools/base/read"))`: one tool by its path; it replaces a tool of the same name from the packs. The path can also be a library tool: `defs.tool("read", my.tool("read"))`;
   - `defs.drop("shell")`: drop one tool from the packs (also one that a base of `defs.load` gives);
-  - the `.pack(...)` / `.tool(...)` of another library (see "Libraries" below).
+  - the `.pack(...)` / `.tool(...)` of another library (see "Libraries" below);
+  - a Python function marked `@fn.tool`, written in this `agent.py` (see "Functions as tools and hooks" below).
   - `std.pack(...)` and the `.pack(...)` of a library also take `prefix="..."` (put before every tool name), `rename={"read": "cat"}` (the name of one tool, instead of prefix + its name) and `exclude=["grep"]` (leave tools out).
   - When two packs give the same name and the tools are not exactly the same, `--compile` stops with `SpecBad` instead of letting one hide the other. Use `prefix=`, `rename=`, `exclude=`, or pick one with `defs.tool(name, ...)`.
 - `llm`: a dict. `{}` = the llm kernel's default brain; `{"model": "luna"}` picks a brain pack of the kernel. Other keys must be in `llm_keys` (`temperature`, `max_tokens`, ...).
@@ -101,11 +103,52 @@ defs.main(agent)
   - `hooks`: writes `hooks.json`, adds `"hooks": "hooks.json"` to `interfaces.json` and the `on_start` / `on_stop` lines (they fire `after_start` / `after_stop`) to `loop.json`. Write it as
     - a dict `{hook name: entry}`, the entries as in any `hooks.json` (`event`, `handler`, `condition`, `every_ms`, `config`, ...);
     - `std.hooks()`: the hooks of the `agent-fsm` template (`std.hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/<template>/hooks.json` and copied in, so recompiling follows a changed template;
+    - a Python function marked `@fn.hook("event", ...)` (see "Functions as tools and hooks" below);
     - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `hooks=[std.hooks(), {"timer": None, "mine": {...}}]`; but two hook groups (`std.hooks(...)` of two templates, the `hooks` of `defs.load`) that give one name with different entries are `SpecBad` unless a dict of yours after them names it;
     - or `defs.extern("hooks.json")`.
 
     The skeleton has `hooks={}`: no hooks, but `hooks.json` is declared, so an agent made from it takes breakpoints (`aos-gdb`, `a.bp.add...`) and `aos-agent hook add` without any change. Keep that line when you rewrite the part below `# ---- your agent`; without it, setting a breakpoint is `HooksMissing`. Want the `agent-fsm` template's hooks (a timer that looks at the mailbox, ...)? Write `hooks=std.hooks()`.
   - `files`: other files written as they are, like `{"ladder.json": {...}}` (a dict or list is written as JSON, a string as it is). The name is one file in this folder; it cannot be a file that agent.py, the skeleton or the running agent writes.
+
+## Functions as tools and hooks
+
+A tool or a hook can be one Python function in this `agent.py`, written the way a tool is written in the `tool-python` skeleton (`from aos.py import fn`):
+
+```python
+from aos.py import fn
+import re
+
+
+@fn.tool
+def add(a: float, b: float) -> float:
+    """Add two numbers and return the sum. Example: {"a": 2, "b": 3} -> 5
+
+    Args:
+      a: the first number
+      b: the second number
+    """
+    return a + b
+
+
+@fn.hook("before_tool", condition="ws_write")
+def no_secrets(event):
+    """Stop a ws_write that mentions a secret."""
+    if re.search("secret", str(event.get("arguments"))):
+        return fn.block("the arguments mention a secret")
+
+
+agent = defs.Agent("...", system="...", tools=[std.pack("ws-write"), add], llm={}, fsm=std.fsm(), hooks=[no_secrets])
+```
+
+- **Compiling pulls each function out** into its own program, `fn/<name>.py` in this folder (mode 755): the setup lines that find `aos`, the imports it uses, the function as you wrote it (decorator included) and `fn.main(...)`. `tools.json` gets `"add": {"path": "fn/add.py"}`, `hooks.json` gets `"no_secrets": {"event": "before_tool", "handler": "fn/no_secrets.py", "condition": "ws_write"}`. From then on the program does not need `agent.py`; you may change it by hand, and the next compile writes it again as a whole. A function you take out of `agent.py` leaves its old `fn/` file behind (compiling deletes nothing).
+- **Nothing is registered by itself**: a function is used only where you list it (`tools=[..., add]`, `hooks=[..., no_secrets]`). The name is the function's name, or `name=`; `prefix=` / `rename=` of `.pack(...)` rename the file too (`fn/base_check.py`). Two things that end up with one file name are `SpecBad`.
+- **Description and parameters** (tools): as in `tool-python` - the docstring up to `Args:`, a type on every parameter (`str`, `int`, `float`, `bool`, `list`, `dict`), a line `name: ...` under `Args:`; or written out, `@fn.tool(description="...", params=[fn.param(...)], errors=[...], meta={...})`. Both are taken; the written one wins, one parameter at a time.
+- **Hooks**: `@fn.hook("event", condition=..., timeout_ms=..., on_error=..., async_=True, name="...")`; every key except `name` goes into the `hooks.json` entry as written (`async_` is the `async` key). The function gets the event as a dict and returns `None` (go on), a dict of keys to change, or `fn.block("why")` (stop it; only events that can be stopped, like `before_tool` and `before_queue`). A function hook and a dict entry of one name: the later one in the list wins, as with dicts.
+- **What a function may use**: Python builtins, its own parameters and variables, `fn`, and modules imported at the top of `agent.py` (`import re`; the program gets one import line for each name it uses, so `import os, re` with only `re` used gives `import re`). Anything else is `SpecBad` when you compile: a constant, function or class of `agent.py` (move it into the function), `defs` or `std` (at run time use `fn.fail` / `fn.block`), a module that sits next to `agent.py` (`import helpers`: the program cannot find it), a name `agent.py` does not define. That goes for the decorator line and the default values too (`@fn.tool(params=PARAMS)` uses `PARAMS`). It must be a plain `def` at the top of the file with only the `fn` decorator on it.
+- **Relative paths in the function start at `fn/`**, the folder of the program, like any tool aos runs (`open("data.txt")` reads `fn/data.txt`). For the workspace use `os.environ["AOS_WS"]`.
+- **`fn` is read from `$AOS_HOME/lib`** when the program runs (the program looks for `aos` only there, and takes `fn/` itself off the module path, so a tool called `json` does not hide the `json` module). Upgrading aos changes the programs of an agent you already compiled, the same as the tools of a statically linked pack.
+- `defs.load`: the base's functions come over with `base.tools` / `base.hooks`, and compiling here pulls them out again into this folder's `fn/`; nothing points back at the base. `defs.drop("add")` writes no `fn/add.py`. An eca body (no `fsm`) gets `fn/` and its entries the same way.
+- **Each hook run starts a Python** (about 20 ms); keep busy events like `before_tool` light.
 
 ## Without a state machine (eca bodies: Claude Code, pi)
 
@@ -189,6 +232,7 @@ tools=[std.pack("look", link="dynamic"), std.pack("mailbox")],   # one pack its 
 
 - **Static (the default).** The tools of the pack are copied into `tools.json` one by one, with full paths. A tool added to the pack later shows up only after you recompile. Only the list is fixed: each path still points into `$AOS_HOME` (or the library), and the tool program and its `_tooldef.json` there are read when the agent runs, so an upgrade of `$AOS_HOME` changes them for this agent too.
 - **Dynamic.** `tools.json` names the pack file (`"$override": [{"$env": "AOS_HOME", "$path": "/lib/packs/look.json"}]`) and aos reads it before every brain call. A tool added to the pack later shows up from the agent's next brain call, without recompiling or restarting.
+- A function tool (`@fn.tool`) is not in a pack: it is always one entry of the `tools` table, pointing at its own `fn/<name>.py` in this folder, with `--static` and `--dynamic` alike. Its program is fixed here until you recompile, but the `fn` it imports is read from `$AOS_HOME/lib` when it runs.
 - A `link=` on a pack wins over `--static` / `--dynamic`. Either way the pack is read when you compile, and the same checks run (a name two packs give with different tools is `SpecBad`).
 - What only static linking can do:
   - **renamed tools.** A pack with `prefix=` or `rename=`, which includes every pack of a library other than `std` (its tools get `<name>_` by default), cannot be linked dynamically: at run time aos reads the pack as it is. Under `--dynamic` such a pack is linked statically and you get one `warning` line; `link="dynamic"` on it is `SpecBad`. `my.pack("look", prefix="", link="dynamic")` works (its tools keep their names).
