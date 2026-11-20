@@ -118,6 +118,6 @@
 - `launch` 現在存的是 daemon 自己的「proc 寫法」（跟 `daemon.json#/procs` 一列、`procs_added` 一項同一種）：已起過的是 `{"exec": [入口, 參數…]}`，沒起過的存原設定（可帶 `ws`、`limits` 等 daemon 的鍵）。不是 inst（`{"argv": […], "cwd", …}`）。
 - `stuck_after_ms`：照 [aos-daemon docs/04「判卡住」](../../../cpp/aos-daemon/docs/04-兩個手把-兩扇狀態窗.md) 答的，以前磨過，不另記。
 
-### 沒問的
+### 決定
 
-- 他是在問原因，還是想把 `launch` 改成 inst 格式，沒問。
+- 頂層問他是想知道原因還是要改成 inst 格式，他答：「這個先擱置，等以後遇到問題再說。」`launch` 的格式不動、不列待辦。
