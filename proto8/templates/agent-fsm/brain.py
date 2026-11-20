@@ -1,10 +1,11 @@
 # brain.py [--system FILE] [--tools FILE] [--history full|task] [--max-tool-calls N] - think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。
 # 寄出去、收回信是下一格 wait（wait.py：aos-llm send／recv，經 $AOS_LLM_KERNEL〔llm kernel 的 stack〕的 llm kernel；thinking 2026-11-04 think-as-function 03 § 1）。
 # 結束碼（fsm.json 照碼分岔，N-36）：0＝請求寫好了（→ wait）；10＝history 最後一則不是 user／tool（上一題已答完、或人改了 history）＝沒事做（→ idle）。
-# 請求＝llm kernel 請求信的 body：{"endpoint"?: 代號, "request": {"messages", "tools"?, 調整鍵…}}（真正的模型名綁在 kernel 的 endpoint 包上）。
+# 請求＝llm kernel 請求信的 body：{"endpoint"?: 代號, "effort"?: 思考程度, "request": {"messages", "tools"?, 調整鍵…}}（真正的模型名綁在 kernel 的 endpoint 包上）。
 #   腦設定＝interfaces.json 宣告的 llm（AOS_CD）疊 $AOS_STACK/<宣告相對路徑>（只放改過的鍵，aos-agent llm set 寫的；有的鍵蓋過定義），每格重讀＝下一題生效；
 #   鍵 model＝kernel 的包代號，填進 body 的 endpoint 欄（11-10 晚使用者「把fsm認的endpoint這個key，也改名爲model吧」；kernel 不動）；都沒寫＝不放（kernel 用預設）。
 #   temperature、top_p、max_tokens、seed、presence_penalty、frequency_penalty、stop＝與快取無關的調整鍵，轉型後放進 request（llm_settings.py）。其他鍵不看（C-48）。
+#   鍵 effort＝思考程度名，填進 body 的 effort 欄（11-21），kernel 照那包的 efforts 換成上游要的樣子；那包沒宣告＝kernel 不理它。
 # 寫新請求時順手刪 $AOS_STACK/think/pending.txt（上一封的名字）：新請求取代舊的，wait 會重寄。
 # --system FILE：讀成一則 system 放最前面、不存進 history（P-41）。沒給＝interfaces.json 宣告的 system（11-11 self-system，使用者裁「fsm 取代、eca 附加」）：
 #   $AOS_STACK/<宣告相對路徑> 在＝整份用這隻自己那份（aos-agent system set／self_system 寫的，取代定義那份），否則定義那份；每格重讀＝下一格生效。
@@ -235,11 +236,14 @@ if tools and not compacting and (max_tool_calls is None or tool_call_count < max
 body = {"request": request}
 try:
     model, tuning = llm_settings.body_fields(cfg)
+    effort = llm_settings.effort_of(cfg)
 except ValueError as e:
     die("CfgBad", str(e))
 request.update(tuning)
 if model:
     body["endpoint"] = model                                  # agent 這邊叫 model，kernel 請求信照舊叫 endpoint
+if effort:
+    body["effort"] = effort                                   # 思考程度：kernel 照那包的 efforts 換（11-21）
 
 think = os.path.join(stack, "think")
 path = os.path.join(think, "request.json")

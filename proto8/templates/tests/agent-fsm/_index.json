@@ -29,6 +29,9 @@
  "test_do_task_fold.py": {
   "description": "do_task save／load（11-11 fork-and-do-task/02）：真 daemon＋真 llm kernel＋假腦劇本——start→叫工具→end 後 history 只剩紀錄點＋總結、原文留檔；巢狀；任務中等信（預設信一起摺、keep_others 信留著）；停掉再起來…"
  },
+ "test_effort_setting.py": {
+  "description": "agent-fsm 的腦設定 effort（思考程度，11-21）：llm_settings.effort_of 給 brain.py 填進請求信 body 的 effort；壞值 body_fields 也擋（defs check 走那支）。"
+ },
  "test_fork.py": {
   "description": "fork（11-11 fork-and-do-task/01）：真 daemon＋真 llm kernel＋假腦劇本——父先聽到暗號、叫 fork，分身帶著整段對話答出暗號、再叫 fork＝DepthExceeded；結論回到父那則 tool、父 history 沒有分身的過程；分身收掉（keep…"
  },

@@ -8,3 +8,4 @@
 |---|---|
 | [session_key 實測（session-key-實測-1121）](session-key-實測-1121.md) | 暫存樹實測 sol 加 "session_key": "litellm_session_id" 前後：不加 4 輪快取都是 0，加了第 2 輪起每輪 12,416 token 命中（約 99%）；續量 luna、terra、astra（astra 在暫存樹新加一包）結果一樣；命中停在 12,416 是 128 一格、短句長不過下一格；範本沒改，建議四包都加、新增 astra，等使用者定 |
 | [hook 第 5 刀後半（aos-hook-k5b-1121）](aos-hook-k5b-1121.md) | 範本 loop.json 接上 before_run／after_run、編譯寫四鍵、旗標檔由改清單的指令與 after_start 對、procs-kernel 接 loop 的四個點（清單 loop_hooks.json，kernel 程式沒改）；hook_fire 沒動；全套 79 夾跟基準相同另加 12 支；未決：起來時對旗標要等 hook_fire 換掉 |
+| [llm kernel 思考程度（llm-effort-1121）](llm-effort-1121.md) | 實測 LiteLLM 帶尾碼的模型名與 reasoning_effort 都送得到上游（sol 帶 none 被擋 400、nothink 推理歸 0），max／none 只能走尾碼；不帶尾碼＝上游預設；換程度那一輪多半不中快取、之後照中。使用者選乙：信的 body 多 effort，llm kernel 照包的 efforts 表接尾碼；範本 sol、luna、terra、astra 用 $ref 共用兩張尾碼表，agent-fsm 的 llm.json 認 effort。LLM_KEYS（hook5 的檔）、隊 kernel 轉 effort、~/aos-home 還沒動 |

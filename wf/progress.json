@@ -473,6 +473,17 @@
         "[aos-home-瀏覽筆記-1120 第 10 則](../proto8/thinking/2026-11/20/aos-home-瀏覽筆記-1120.md)"
       ],
       "since": "2026-11-20"
+    },
+    "llm-effort": {
+      "title": "llm kernel 思考程度（effort）的收尾",
+      "status": "open",
+      "flow": "",
+      "what": "11-21 線 top-1121-effort：信的 body 可帶 effort，llm kernel 照包的 efforts 換成 LiteLLM 分身名；範本四包已宣告、agent-fsm 認 llm.json 的 effort，已交。剩三件沒做。",
+      "next": "1. 線 top-1121-hook5 交了之後，py/aos/agent_spec_parts.py 的 LLM_KEYS 加 effort（agent.py 編譯的定義才認）；2. 要不要讓隊 kernel（llm_forward）轉 effort；3. ~/aos-home 跟著改要使用者點頭（repo 跑 install.py、llm/kernel.json 加 effort_suffixes 與四包 efforts、agent 定義夾換新的 brain.py／llm_settings.py／interfaces.json）",
+      "see": [
+        "[llm-effort-1121](../proto8/thinking/2026-11/21/llm-effort-1121.md)"
+      ],
+      "since": "2026-11-21"
     }
   }
 }
