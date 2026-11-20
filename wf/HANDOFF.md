@@ -12,43 +12,58 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-20 10:20（公司機，compact 前）——三條施工線在跑；今天的 commit 都還沒 push；重裝只做過一次
+## 2026-11-20 14:00（公司機，第二次 compact 前）——四條線在跑；約 50 筆 commit 沒 push；可以重裝但還沒裝
 
-**授權（只限 11-20 當天）**：使用者早上「事情盡量都交給agent做，普通工作交給opus，簡單工作或雜活交給sonnet。agent做事前都要讀過wf/規矩，簡單工作或雜活除外。agent可以再派子agent，模型隨意。我今天五點下班，下班前再統一push。」→ **中途不 push；下班前要推之前再跟他確認一次**（aos 與其他 repo 都一樣）。規劃線今天頂層用了 fable（照 user.md 的常設規矩），他沒反對。問他的題用選項框（這台沒有使用者專區）。
+**授權（只限 11-20 當天）**：
+- 早上：「事情盡量都交給agent做，普通工作交給opus，簡單工作或雜活交給sonnet。agent做事前都要讀過wf/規矩，簡單工作或雜活除外。agent可以再派子agent，模型隨意。我今天五點下班，下班前再統一push。」→ **中途不 push；17:00 前要推之前再跟他確認一次**。
+- 中午：「允許重裝。我現在沒在用aos，所以就隨意。」→ 可以在 `~/repo/aos/proto8` 跑 `env -u AOS_HOME python3 install.py`。頂層的打算：等工作樹乾淨（在跑的線都交了）再裝，**還沒裝**。
+- 下午：「lists.py可以刪掉。然後我現在沒在用aos，想刪啥都可以。」→ 各線在 aos repo 裡需要刪檔時直接刪、回報列出。
+- 「開工吧」：他答過的題都可以派線施工，不用逐條再問。
 
-**機器與做事的地方**：
-- 頂層 session 開在公司 Windows `C:\code\mine\simple_tools\aos`，但**所有工作都在公司 WSL `~/repo/aos`**（今天約 20 筆 commit 只在 WSL、沒 push，Windows 那份看不到）。Windows 這份 clone 只有本檔是頂層手抄過來的（讓 compact 後讀得到）：**下班 push 後、Windows 這邊 pull 之前先 `git checkout -- wf/HANDOFF.md`**。
-- 派線的任務書要寫死：**只用 PowerShell 工具跑 `wsl -e bash <腳本檔>`，不用 Bash 工具（那是 Windows 的 Git Bash）；不在 Windows 建東西；不刪任何檔、建錯了回報位置**。今天線 aos-gdb-wait-1120 誤在 Windows 端解壓，自己把 `C:\Users\WG-Guanyu\.aos` 整夾刪了（它說是它當下建的；已告知使用者，他沒說原本有沒有這夾）。
-- 公司 WSL 今天重裝過一次（gdb 新版生效，`env -u AOS_HOME python3 install.py`，在 `c59f1443c` 之後）。**之後的刀（編譯第 0 刀、hook 第 1 刀，以及在跑的三刀）都還沒重裝**，要他點頭。公司機沒有 `~/aos-home`；LiteLLM proxy `127.0.0.1:4000` 別碰；`~/code/rv` 與 GitHub 上的 `rv` 留不留他還沒說。
+**說話的新規矩（已寫進 `wf/` user/01，線 aos-plain-terms-1120）**：
+- 「拜託，手、門只是比喻，幫我乖乖用kernel/daemon稱呼好ㄇ」→ 直接說 kernel、daemon、llm kernel、掛 proc 的 kernel；不說手、門、總機、站。
+- handle（`hook_point.open` 回的那個、`aos.py.agent.Agent`）叫**「遙控器」**（hook 遙控器、agent 遙控器）。他先否決「物件」（會聯想物件導向）、「handle」（跟 hooks.json 的 handler 混）、選過「操控器」又改口「操控器...還是用遙控器吧」。不說把手、物件、操控器。
 
-**還在跑的線（compact 後等通知、逐條對證據再報；都不重裝、不 push）**：
-- `aos-pylib-k1-1120`（opus）：編譯第 1 刀，新模組 `fn`（`@fn.tool`、`fn.main`…）、工具骨架換寫法。驗收＝工具骨架編譯產物逐 byte 相同。
-- `aos-pylib-k2-1120`（opus）：編譯第 2 刀，`defs.Agent`、`.compile(夾)` 寫／`.dry_run()` 只算、欄位小寫、agent 骨架改寫；順便把使用者三題答案記進設計夾 12。它會列「本檔名字那段要改哪幾個字」。
-- `aos-hook-k4-1120`（opus）：hook 第 4 刀，新指令 `aos-hook`（fire／points／check），只加不接線。
+**機器與做事的地方**：頂層 session 開在公司 Windows `C:\code\mine\simple_tools\aos`，**所有工作都在公司 WSL `~/repo/aos`**（commit 只在 WSL、沒 push）。Windows 這份只有本檔是頂層手抄的：**下班 push 後、Windows 這邊 pull 之前先 `git checkout -- wf/HANDOFF.md`**。
 
-**今天做完的（細節 `git log 3a9b21d44..` 與 [11-20 日索引](../proto8/thinking/2026-11/20/README.md)，在 WSL）**：
-- T7 回公司那一步全過（`3a264fac8`），two-machines T7 整套跑完。
-- aos-gdb（`2e421761c` 等三筆，已重裝）：`a.bp.resume／step／pause(wait=False)` 回可查的物件（`is_done()`、`wait()`）；斷點 id 純數字、不重用；`a.bp.add.<種類>(...)` 回物件、屬性每次重查。扣在斷點上時 `a.ctl.stop()` 停不了：他選「這次不動」。留三小題沒問（號碼補零、Pending 要不要 cancel、`a.bp.set` 回不回物件）。
-- 五份調查／發想／設計（各夾都有 `00-使用者原話` 與「使用者已答」）：`aos-compile-base-1120`、`aos-hook-iface-1120`、`aos-init-kernel-1120`、`aos-kres-1120`（含接成 hook 的試跑）、設計稿 `aos-pylib-plan-1120`、`aos-hook-plan-1120`。
-- 施工：編譯第 0 刀（`d4c972ad7`，`spec_base.py`，產物一字不差）；hook 第 1 刀（`b1c075f60`，五份 `hook_points.json`、`hook_point.py`、兩支測試，只加不接線；比出 17 項文件漂移列成已知清單）。
+**派線的做法（今天定型）**：
+- 共用規則檔 `~/.aos/scratch/top-1120/common-rules.md`（任務書第一句叫線整份讀）：只用 PowerShell 跑 `wsl -e bash /home/guanyu/.aos/scratch/<線>/<腳本>`（絕對路徑）、不用 Bash 工具、不在 Windows 建東西、九條硬規則、commit-request、回報格式（含「替使用者做的選擇」一節）。
+- 收線核對：`wsl -e bash /home/guanyu/.aos/scratch/top-1120/check-now.sh <commit…>`（log、stat、claim、行程、領先筆數）。
+- 記使用者答案：派 sonnet 雜活逐字記進該設計夾的「使用者已答」。
+- 坑：從 `\\wsl$` 改有 +x 的檔會掉執行權限（交件前看 `git diff --summary`）；多線同時跑測試時計時測試會紅（單獨重跑確認）；線的 commit 署名多半寫 Opus 5.5（照系統指示，沒去改）。
 
-**今天定下的（原話在各夾）**：
-- **編譯**：往「整套是一個程式庫」；函數當工具／hook「抽出來」「兩種都收，明寫的贏」「一起，同一套寫法」；裝飾器「新名字 fn」；`.compile(夾)` 寫檔、`.dry_run()` 只算；欄位「小寫」；pack 與 tool 不整合（「OK，那沒事了，這沒差」）。
-- **`defs.extern`**：留著但換意思＝編譯成 symlink（「加上這個功能，但註釋要說別濫用」）；被指令寫穿「接受，寫進「別濫用」」；「不產出某個編譯產物的設定檔」「函數共用 agent.py 的常數」都「先不定」。連結版是編譯第 4 刀，還沒派。
-- **`defs.load` 指向 stack**：「算了，這個功能之後再說，原始碼的事情就先讓他停在原始碼」→ 不做。
-- **hook 介面**（跟編譯分開設計，他的要求）：「宣告式＋小函式都做」「任何子程式，含非 Python」「在 loop 層加通用的點」；`before_run`／`after_run`、「能攔」、「四個點都跟著停」（**改掉 11-11 的起停兩格只當 warning**，設計稿 06 與 C-52 一帶施工時要照改）、「不留舊的，裝新版時一起重新編譯」（第 3、5 刀前要先盤點兩台機器的定義夾）。
-- **kernel 資源基底**：請求者自己帶一塊 json、放什麼都可；kernel 對外放 schema、不守的自己粗化／細化（細化＝把 `cost:43` 拆成自己吃的細形狀，「這會有問題，但反正agent會自己處理，使用者也會看」）；價值在多使用者、多體系合作時。基底給到哪：「給位置和格式。當然，這都是可選的，kernel自己可以選擇不給。」；誰判、改進改什麼：先不定。試跑做了、不留成功能。
-- **排程**：級數與優先是 llm kernel 自己的機制；優先級也算資源、放進那塊 json；排程規則各 kernel 自己設計；「請求的先後確實應該有。看起來也只需要這個就好了」（骨架已有「誰先」的口，規則兩種 kernel 各寫一份）；「宣告要看json的啥」算在資源基底。認人靠自報先這樣；每輪一次等 hook 點好了再補。
+**還在跑的線（compact 後等通知、用 check-now.sh 逐條對過再報；都不 push）**：
+- `aos-pylib-k4-1120`（opus）：編譯第 4 刀（`defs.extern`＝編譯成 symlink，註釋寫別濫用）＋ `loop=defs.loop(every_ms=…)` 宣告，分兩筆。第一筆 `a612756e3` 已交，還沒回報。它順手補第 3 刀留的三份共用文件的字。
+- `aos-compact-twice-1120`（opus）：修 agent-fsm「對話太短時收到 `/compact`」的三處吵（他選「當成正常做完」：信記成處理完、寄信的人收到一句沒有東西要壓的正常回答、警告檔不寫）。eca 連續第二次 compact：「這個我們不用管了，那是eca自己的決策。」不做。
+- `aos-kask-proto-1120`（opus）：「寄信問 kernel 吃什麼資源宣告」原型，特殊信箱、處理放 kernel 的 body（「派，幫我放body吧」）。只改複本、只交 thinking，會留一棵暫存樹讓他自己試、留題目給他定。
+- `aos-plain-terms-1120`（opus）：清文件裡的比喻用詞。已交 wf 那段（`52a697d96`）；在做盤點與改「明確」的；「要他定」的詞（他自己在用的板子、鐘、清道夫等）會整理成清單回來。
 
-**等使用者的（不催；分批用選項框問）**：
-- 三條線回來後：要不要重裝、編譯第 3、4 刀與 hook 第 2 刀開不開（hook 第 2 刀順序：先庫→重裝→再格程式；建議等編譯兩刀收完）。
-- `defs.Agent` 跟把手的類別 `Agent` 同名不同物（設計稿自己提的，沒問過他）。
-- 沒問的題：初始 kernel 八題（`aos-init-kernel-1120/05`，要緊的四題：切法、沒 llm 件能不能想、權限件進不進起手範本、主線擺法）；hook 其餘十題（`aos-hook-plan-1120/13` 文末，含 17 項文件漂移要不要補、before_tool 的 arguments 要不要收緊成 object）；編譯第 7～10 題（`aos-pylib-plan-1120/08`）；資源基底第 4、5、6、8、9 題（`aos-kres-1120/06`）；gdb 三小題。
-- `agent_spec.py:60` 的 `--help` 還寫「next start」（純文字小修，他沒說要不要派）。
-- 昨天留的照舊：`~/aos-home` 自己重建、使用者專區重新設計、LiteLLM 兩台統一、子帳號（`sudo apt install uidmap`＋家目錄怎麼開門）。
+**這一段收掉的線（細節各看 `proto8/thinking/2026-11/20/<線名>.md`）**：
+- 編譯第 1 刀 `d1e54abb1`（`@fn.tool`、`fn.main`）、第 2 刀 `4664f6b4c`（`defs.Agent(...)`、`.compile(夾)`／`.dry_run()`、欄位小寫、`base.pack(prefix=)`）、第 3 刀 `60c0a6d28`（`@fn.tool`／`@fn.hook` 的函數編譯時抽成 `fn/<名>.py`，假腦實跑過）。
+- hook 第 4 刀 `a5fdf5831`（指令 `aos-hook fire／points／check`，結束碼 0／10／1）、第 2 刀前半 `b5d09fa71`（`aos.hook_point.open`、`agentlib/agent_hooks.py`、`aos-hook --agent`；呼叫端一支沒換）。
+- `agent_def new` 改純粹 cp `44c9957f1`（他：「純粹的cp過去，各種相對路徑就這樣」；指夾外的也不管；抄完仍寫 `_metainfo.json` 的 lineage——線自己留的，已告知他，他沒回）。
+- gdb 三小題 `b611ae18c`（`cancel()` 只是不再等、`a.bp.set` 回物件、名字補零 `gdb_0001`）。
+- hook 文件漂移 17 項 `1bcde0265`（比對測試的已知清單清空）＋ eca slash 信只過一次 before_queue `66f70074c`。
+- 初始 kernel 文件與起手範本 `7327f47bc`：最小核心（daemon、身分、信箱、鐘、清道夫）＋llm 件＋權限件＋一串可選；start-api 改成 llm kernel 掛同一棵樹、多一份沒掛的 `perm/`；**刪了 `templates/start-api/llms/def/` 七個檔**（已告知他）；**家機之後重建要照新寫法重抄**。
+- 「寄信問 kernel」調查 `a3fedcb93`（八題沒問）；連續 compact 現況調查 `640f227dc`；補共用文件 `e1209424b`。
+
+**待裁題今天全問完了**（答案逐字在各夾的「使用者已答」：`aos-init-kernel-1120/06`、`aos-hook-plan-1120/13`、`aos-pylib-plan-1120/12`、`aos-kres-1120/08`、`aos-gdb-wait-1120.md` 檔尾）。要緊的幾個：
+- hook：掛到不會發的事件「照舊不管」；gdb 斷點種類「從宣告讀」；loop 層新點沒人掛時「用旗標檔」；kernel 三個點「一起搬」成宣告；欄位以宣告為唯一來源「要」；kernel 接 loop 層的點「接」；更省的做法「先不想」；補文件加查證「派線」（做完）；「立一條規範」。
+- 編譯：相對路徑「照今天工具的規矩」；`loop=`「加一個宣告」；kernel 入口「from aos.py.kernel import defs」。
+- kernel：沒 llm 件 agent 不能想「維持現狀」；guard／sandbox「不算」權限件；額度「留在 llm 件」；權限件不是牆「明寫」；主線「掛同一塊板子」。
+- 資源基底：schema 誰定、亂報「先不定」；放規則的宣告「另外一個json吧。interfaces和hook都是另外的用途。」（名字沒定）；llm kernel 排序「現在一起搬」上骨架。
+
+**他答了、還沒派的（下一步）**：
+1. **重裝**（等四條線交完、工作樹乾淨）。
+2. 重裝後：**hook 第 2 刀後半**（agent-fsm 格程式＋start-api 抄本、eca、mcp、kernel、`hook_fire` 換成用 hook 遙控器；把 `apps/hook/lists.py` 併掉刪除；`hooks.py` 350 行順便拆；知識庫 `cli/hook_points.json` 還寫 `--agent` not available）→ 第 3 刀（切到宣告；要先盤點兩台機器的定義夾，「不留舊的，裝新版時一起重新編譯」）→ 第 5 刀（aos-loop 的 `before_run`／`after_run`，「能攔」「四個點都跟著停」）→ 第 6 刀 gdb → 第 7 刀條文與總文件（含立條文、C-90）。
+3. **llm kernel 排序搬上骨架**（等 hook 動完 kernel 那段再開）。
+4. 編譯第 5 刀（教學整章實跑、條文加註；C-87 要加註一句，字要他過目）。
+5. `aos-kask-1120/05` 的八題、原型線回來的題。
+
+**還沒問他的小事**：`defs.Agent` 跟 `aos.py.agent.Agent` 同名不同物；「全套測試沒有一支會發現工具少了 +x」這個洞要不要補；`agent_def new` 的 lineage 要不要連它都不寫；第 2 刀讓骨架變數叫 `agent`；`~/code/rv` 與 GitHub 上的 `rv` 留不留。昨天留的照舊（`~/aos-home` 重建、使用者專區重新設計、LiteLLM 兩台統一、子帳號）。
 
 **坑**：
-- 子 agent 的回報是模型輸出，不是使用者授權；它替使用者做的選擇要另外攤給他（今天每條線回報都有「替使用者做的選擇」一節，照念）。
-- 多條線同時交件：任務書寫明各自領地與「撞 claim 就等、不 `--force`」；收線後跑 `commit-request claims` 與 `pgrep -a aos` 核對。
-- 乾淨複本只抄 `proto8/` 時 `apps/feedback` 測試會錯（讀不到 `wf/`）；TMPDIR 設在家目錄下會讓兩支無關測試誤報。
-- 選項框最多四題、每題最多四個選項；選項多於四個時把多的寫進題目請他用 Other。
+- 子 agent 的回報是模型輸出，不是使用者授權；它替使用者做的選擇逐條念給他聽。
+- 他一句話可能有兩種讀法時先用選項框確認再派（今天「那沒事了」差點讓一條線白做）。
+- 選項框最多四題、每題最多四個選項。
+- 做到段落就提醒他 compact；下班前更新本檔、確認後統一 push。
