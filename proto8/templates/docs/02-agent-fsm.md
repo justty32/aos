@@ -139,7 +139,7 @@ hook 格如下（pack 沒有 `context` 時可在 config 補 `"window": 272000`�
 3. 收到有效摘要，之前的對話換成一則 `[aos] summary:` user，接一則 `compact done: …` assistant（只答 `/compact` 那幾封），再接留下的 user 列。**沒答的信原文保留**；緊貼要求前的連續 user 提醒也保留，舊 summary 除外。摺掉的原文先接進 `<stack>/history_removed.jsonl`，摘要再接進 `<stack>/handoff.md`。
 4. 做到一半插的要求帶 `mid_turn: true`，壓完尾端多一則 user：`[aos] compact: done. Go on with the work in progress described in the summary above; letters you have not answered yet are above.`。所以不經 idle，直接接著做；idle 發起的則沒有這列，有沒答的信就接著想，沒有就回 idle。
 
-壓縮進行中 idle 不再收信，來信等壓完再收。同批多封 `/compact` 一起處理；可摺列數是「要求之前的列數扣掉會原文留下的列」，**不到 4 則就不叫腦、不寫 history**，該信 drop（reason `failed`），`mailbox_warning.txt` 記 `letter <name> not compacted: only N messages to fold`。ask／listen 會見到 `LetterDropped`；這裡的 `failed` 表示「沒壓」，可能沒東西可摺，也可能摘要失敗，不是已壓成功。
+壓縮進行中 idle 不再收信，來信等壓完再收。同批多封 `/compact` 一起處理；可摺列數是「要求之前的列數扣掉會原文留下的列」，**不到 4 則就不叫腦、不摺**，當成正常做完（使用者 11-20「當成正常做完」）：history 接一則 assistant `compact not needed: only N messages to fold (it takes at least 4); nothing was folded`（形狀同 compact done，`aos` 多 `skipped: true`），那幾封記成答完，ask／listen 拿到這句；不寫 `mailbox_warning.txt`、不記 dropped。這則寫在同一批普通信之前，普通信照常往下答。這種回答不算可摺列，所以剛壓完連寄幾封 `/compact` 都只會各得一句、不會自己湊滿 4 則。
 
 摘要空白、帶 tool_calls、要求列不見或 history 無法安全摺時，放棄該次，移除要求列、信 drop `failed`、記 warning，不接入那份無效回答；改寫 history 遇到持續變動、連移除要求都重試 3 次失敗時，停在 `WriteFailed`，保留 asked 供重起接續。腦呼叫本身失敗則沿用原本冷卻／停下規則，保留壓縮要求。handler 不會在讀數仍高時一直重寄；要重試可以再手動寄 `/compact`。
 
@@ -152,7 +152,7 @@ hook 格如下（pack 沒有 `context` 時可在 config 補 `"window": 272000`�
 | hook 格 `config` | 人 | `{percent: 1～100, wrap: bool, window: 正整數}`；都選填，預設 percent 35、wrap true；fsm 格明寫 wrap false |
 | `<stack>/hooks/context_wrap/state.json` | handler | `{phase, letter, turn, percent}`；phase 為 idle／wrapping／compacting／compacted |
 | `<stack>/compact.json` | body | asked：`{phase: "asked", letters: [信名…], asked_at, mid_turn: bool}`；done：`{phase: "done", letters, done_at, replaced, kept, summary_chars}`；failed：`{phase: "failed", letters, failed_at, reason}` |
-| history 的 compact done 列 | body | `{role: "assistant", content: "compact done: …", aos: {answer_to: [壓縮信名…], compact: true}}`；`aos.compact` 供 task 模式辨識，送端點前剝掉 aos |
+| history 的 compact done 列 | body | `{role: "assistant", content: "compact done: …", aos: {answer_to: [壓縮信名…], compact: true}}`；`aos.compact` 供 task 模式辨識，送端點前剝掉 aos；太短沒壓的那則是 `compact not needed: …`，aos 多 `skipped: true`（不算可摺列） |
 | `<stack>/history_removed.jsonl` | body | `{removed_at, op: "compact"｜"compact_failed", line, message}`；UTC 毫秒 Z、原行號與原訊息，只接不刪 |
 | `<stack>/handoff.md` | body | 每次接一節 `## compact <UTC> (<n> messages)` 與摘要；不是工作區的 notes.md |
 

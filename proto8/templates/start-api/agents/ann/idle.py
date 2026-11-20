@@ -18,6 +18,9 @@
 #   自己暫停後來了訊息、答完又停下＝只讀 history 最後 262144 bytes，找到 goal 呼叫且未碰到提醒或 summary 才加一次 paused 提示；
 #   不改 goal.json、不自動 resume；外面或 aos 設的暫停不提示。goal.json 壞了＝安靜當沒有（每 300 ms 一拍，不洗 log；aos-agent goal get 報 GoalBad）。讀寫走 py/aos/agentlib/goal_state.py。
 # /compact bypasses queue hooks, batches one summary request after ordinary letters, and resumes an existing request without taking mail.
+# 可摺的不到 compact.MIN_ROWS 則（例：剛壓完又來一封）＝使用者 11-20「當成正常做完」：不問腦、不摺，先回一則 compact.SKIP 的回答
+#   （照 compact done 的形狀，answer_to＋aos.compact＋aos.skipped），信記成答完；不寫 mailbox_warning、不記 dropped。
+#   回答寫在這批普通信之前（批開頭先看 cur/ 有沒有 /compact），這批的普通信才不會被它擋在後面沒人答。
 import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
@@ -57,7 +60,8 @@ Hooks (hooks.json declared in interfaces.json): before_queue runs before a good 
 into history (it may change content, or drop the letter: done, not in history, one line in
 mailbox_warning.txt); after_queue runs after it went in. A failing hook = HookFailed, exit 1.
 /compact bypasses queue hooks and requests a summary after taking the entire batch. With
-fewer than four foldable messages it is dropped as failed without changing history.
+fewer than four foldable messages there is no brain call and nothing is folded: the /compact
+letters get one answer "compact not needed: ..." (before the ordinary letters of the batch).
 While a summary is already requested, take no mail and return to think.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
@@ -156,6 +160,11 @@ def take():
             return 1
     if names("new"):
         post(["take-all", box], ok=(0, NOT_FOUND))
+    short = [name for name, _ in compact.waiting_letters(box, "cur")]
+    if short:                                    # 太短就先答，寫在這批普通信之前（普通信是待答信，不算可摺，數字不受它們影響）
+        count = compact.foldable(stack, cell_common.read_history(history_path, die), aos_ws)
+        if count < compact.MIN_ROWS:
+            answer_short(compact, short, count)
     good = 0
     compact_letters = []
     compact_extra = ""
@@ -196,22 +205,29 @@ def take():
     if compact_letters:
         history = cell_common.read_history(history_path, die)
         count = compact.foldable(stack, history, aos_ws)
-        if count >= compact.MIN_ROWS:
-            try:
-                aos_ws.letters_take(stack, compact_letters)
-            except OSError as e:
-                die("WriteFailed", "cannot take compact letters: %s" % e)
-            compact.ask(stack, history_path, compact_letters, compact_extra, aos_ws, die)
-        else:
-            for sig in compact_letters:
-                drop(sig, "failed")
-                write_atomic(os.path.join(stack, "mailbox_warning.txt"),
-                             "letter %s not compacted: only %d messages to fold\n" % (sig, count), die)
+        if count < compact.MIN_ROWS:             # 批開頭沒認出來的（照理不會有）：一樣當成做完
+            answer_short(compact, compact_letters, count)
+            return good
+        try:
+            aos_ws.letters_take(stack, compact_letters)
+        except OSError as e:
+            die("WriteFailed", "cannot take compact letters: %s" % e)
+        compact.ask(stack, history_path, compact_letters, compact_extra, aos_ws, die)
         for sig in compact_letters:
             post(["done", box, sig])
-        if count >= compact.MIN_ROWS:
-            return good + 1
+        return good + 1
     return good
+
+
+def answer_short(compact, sigs, count):
+    """可摺的不到門檻：回一則「compact not needed」（compact.skip）、收信、記成答完（回答配對：pending → history → done → 清 pending）。"""
+    compact.skip(stack, history_path, sigs, count, aos_ws, die)
+    for sig in sigs:
+        post(["done", box, sig])
+    try:
+        aos_ws.letters_answered(stack, sigs)
+    except OSError as e:
+        aos_flags.warn("agent-fsm", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
 
 
 def drop(sig, reason):

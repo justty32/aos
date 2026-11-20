@@ -142,22 +142,24 @@ class Compact(unittest.TestCase):
         self.assertEqual(self.letters()["pending"], [a, b])
         self.assertEqual(list((self.stack / "queue/cur").iterdir()), [])
 
-    def test_short_history_drops_without_writing_history(self):
+    def test_short_history_answers_without_folding(self):
         self.history(OLD[:2])
         c = self.letter("/compact")
         self.run_cell("idle", 10)
-        self.assertEqual(self.history(), OLD[:2])
-        self.assertEqual(aos_ws.answer_for(str(self.stack), c), ("dropped", "failed"))
-        self.assertIn("only 2 messages to fold", (self.stack / "mailbox_warning.txt").read_text())
+        self.assertEqual(self.history()[:2], OLD[:2])
+        self.assertEqual(self.history()[2]["aos"], {"answer_to": [c], "compact": True, "skipped": True})
+        self.assertEqual(aos_ws.answer_for(str(self.stack), c),
+                         ("answered", compact.SKIP % (2, compact.MIN_ROWS)))
+        self.assertFalse((self.stack / "mailbox_warning.txt").exists())
         self.assertFalse((self.stack / "think/request.json").exists())
 
     def test_short_same_batch_does_not_strand_letter_a(self):
         a = self.letter("letter A")
         c = self.letter("/compact")
         self.run_cell("idle")
-        self.assertEqual(len(self.history()), 1)
-        self.assertEqual(self.history()[0]["aos"]["letter"], a)
-        self.assertEqual(aos_ws.answer_for(str(self.stack), c), ("dropped", "failed"))
+        self.assertEqual([m["role"] for m in self.history()], ["assistant", "user"])   # the short answer goes before letter A
+        self.assertEqual(self.history()[1]["aos"]["letter"], a)
+        self.assertEqual(aos_ws.answer_for(str(self.stack), c)[0], "answered")
         self.run_cell("brain")
         self.run_cell("wait", 10)
         self.run_cell("wait")

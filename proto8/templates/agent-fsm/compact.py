@@ -19,6 +19,7 @@ ASK = ("[aos] compact: your conversation history is about to be replaced by one 
        "is also saved to handoff.md in your stack.")
 CONTINUE = ("[aos] compact: done. Go on with the work in progress described in the summary above; "
             "letters you have not answered yet are above.")
+SKIP = "compact not needed: only %d messages to fold (it takes at least %d); nothing was folded"
 
 
 def utc():
@@ -62,8 +63,29 @@ def keep_indices(history, pending):
     return keep
 
 
+def is_skip(row):
+    aos = row.get("aos")
+    return row.get("role") == "assistant" and isinstance(aos, dict) and aos.get("skipped") is True
+
+
 def foldable(stack, history, aos_ws):
-    return len(history) - len(keep_indices(history, aos_ws.letters_pending(stack)))
+    # Answers to too-short /compact letters do not count, so repeated /compact letters never fill the threshold themselves.
+    keep = keep_indices(history, aos_ws.letters_pending(stack))
+    return sum(1 for i, row in enumerate(history) if i not in keep and not is_skip(row))
+
+
+def skip(stack, history_path, letters, count, aos_ws, die):
+    """Too little to fold (user 11-20: treat it as done normally): no brain call, no fold; one assistant answer
+    shaped like compact done (answer_to, aos.compact) plus aos.skipped. No mailbox warning, nothing dropped.
+    The caller closes the letters (aos-post done) and then calls aos_ws.letters_answered."""
+    row = aos_ws.mark_answer({"role": "assistant", "content": SKIP % (count, MIN_ROWS)}, letters)
+    row.setdefault("aos", {}).update(compact=True, skipped=True)
+    try:
+        aos_ws.letters_take(stack, letters)
+        with open(history_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except OSError as e:
+        die("WriteFailed", "cannot answer the compact letters: %s" % e)
 
 
 def save_state(stack, row, die):
@@ -81,15 +103,15 @@ def ask(stack, history_path, letters, extra, aos_ws, die, mid_turn=False):
     save_state(stack, {"phase": "asked", "letters": letters, "asked_at": utc(), "mid_turn": mid_turn}, die)
 
 
-def waiting_letters(box):
+def waiting_letters(box, stage="new"):
     try:
-        names = sorted(n for n in os.listdir(os.path.join(box, "new")) if not n.startswith("."))
+        names = sorted(n for n in os.listdir(os.path.join(box, stage)) if not n.startswith("."))
     except (FileNotFoundError, NotADirectoryError):
         return []
     found = []
     for name in names:
         try:
-            with open(os.path.join(box, "new", name, "letter.json"), encoding="utf-8") as f:
+            with open(os.path.join(box, stage, name, "letter.json"), encoding="utf-8") as f:
                 body = json.load(f).get("body")
             if isinstance(body, dict) and body.get("role") == "user":
                 yes, extra = is_compact(body.get("content"))

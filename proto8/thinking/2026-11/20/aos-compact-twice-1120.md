@@ -1,6 +1,6 @@
-# 線 aos-compact-twice-1120：連續兩封 /compact 今天在 agent-fsm 與 eca 各會怎樣（只查現況，沒改程式）
+# 線 aos-compact-twice-1120：連續兩封 /compact 今天在 agent-fsm 與 eca 各會怎樣；之後修 agent-fsm「太短的 /compact」當成正常做完
 
-頂層派、線隊長寫。程式、測試、文件一行沒動；只交這份紀錄。
+頂層派、線隊長寫。第一段（00～07）只查現況、沒改程式（commit `640f227dc`）；第二段（08～）照使用者看完報告後的裁定修 agent-fsm。
 
 ## 00 使用者原話（逐字）
 
@@ -171,3 +171,135 @@
 - repo：沒改任何程式、測試、文件；本線開工到收到縮小範圍時還沒動 repo 檔，沒有要還原的檔、沒有 patch、沒 claim 過程式檔。
 - 暫存：`~/.aos/scratch/aos-compact-twice-1120/`（`base/` 複本、`run1/` 實跑樹、`run1.txt` 輸出、`run_twice.py`、`run.sh`、`setup.sh`、`suite.sh`、`check.sh`、`look*.sh`；`suite-base.txt`＋`logs-base/` 是開工時跑的相關夾基準，範圍縮小後沒用到）。TMPDIR `/tmp/aos-compact-twice-1120-*`。
 - 行程：實跑的兩台 daemon 已 shutdown（退 0）。
+
+## 08 第二段：使用者看完現況後的裁定（逐字）
+
+- 「1.eca連續第二次不做<-這個我們不用管了，那是eca自己的決策。2.fsm那三次吵，這個感覺偏向bug，要修。」
+- 頂層用選項框問「agent-fsm 收到 /compact 但對話太短不用壓（例如剛壓完又來一封）時，修完之後寄信的人該看到什麼？（今天：信被記成失敗丟棄、警告檔多一句、寄信的人收到理由寫錯的錯誤）」，選項：「當成正常做完」（不算失敗：信記成處理完，寄信的人收到一句「沒有東西要壓」的正常回答，警告檔不寫）／「安靜丟掉」／「還是算錯誤，但寫對理由」。他選：**「當成正常做完」**。
+- 頂層轉述：活樹現在沒人在用（使用者說「我現在沒在用aos」）；使用者今天另說「想刪啥都可以」（這次沒刪檔）。
+
+## 09 改了什麼（只動 agent-fsm，eca 不動）
+
+- `templates/agent-fsm/compact.py`
+  - `:22` 新增 `SKIP`＝`compact not needed: only %d messages to fold (it takes at least %d); nothing was folded`（寄信的人拿到的那句）。
+  - `:77` 新增 `skip()`：照 compact 成功時回給寄信人的同一條路——一則 assistant、`mark_answer` 帶 `answer_to`、`aos.compact: true`——另加 `aos.skipped: true`；先 `letters_take` 再接 history。
+  - `:66`／`:71` `is_skip`、`foldable`：這種回答**不算可摺列**。
+  - `:106` `waiting_letters(box, stage="new")` 多一個 stage 參數，idle 用它看 `cur/`（brain 照舊看 `new/`）。
+- `templates/agent-fsm/idle.py`
+  - `:163-167` 認領完一批、處理普通信**之前**，先看 `cur/` 裡有沒有 `/compact`。可摺的不到 4 則，就先 `answer_short`（`:222`）：寫回答、`aos-post done`、`letters_answered`。
+  - `:209` 原本的 drop `failed`＋`mailbox_warning` 那段拿掉，換成同一個 `answer_short` 當保險（照理不會走到）。
+  - HELP 與檔頭註解跟著改。
+- `templates/start-api/agents/ann/` 的 `compact.py`、`idle.py`、`README.md`：整份照抄 agent-fsm 那三個檔（`test_start` 要求兩邊一樣）。
+- `templates/reviewer` 經 `fsm.json` 直接跑 `$AOS_HOME/templates/agent-fsm/*.py`，不用改；`templates/tests/reviewer` 一起跑過。
+- 文件
+  - `templates/agent-fsm/README.md` 那一句；
+  - `templates/docs/02-agent-fsm.md`「寄 /compact 會怎樣」那段與資料格式表的 compact done 列；
+  - 知識庫 `knowledge/aos/me/compact.json#/rules` 那一條。
+- 測試
+  - `templates/tests/agent-fsm/test_compact.py`：兩支舊的短對話測試改成新的期待（一支改名 `test_short_history_answers_without_folding`）。
+  - 新檔 `test_compact_short.py` 6 支：
+    - 剛壓完再一封＝正常回答、不問腦、不寫警告、不記 dropped；
+    - 連四封都各得一句、可摺數停在 2；
+    - 中間夾一封普通信＝照常壓；
+    - 同一批「/compact、信 B」＝回答在 B 之前、B 照常被答；
+    - `--history task` 在這則之後仍帶摘要；
+    - `/compact` 照舊不過 before_queue（計數 hook）。
+
+## 10 替使用者做的選擇（第二段）
+
+- 回答的字句：`compact not needed: only N messages to fold (it takes at least 4); nothing was folded`。
+- 「正常回答」的解讀：compact 成功時本來就有回信，是一則 assistant `compact done: …`（`answer_to`＋`aos.compact`）。這次照同一個形狀接進 history，`ask`／`listen` 照一般回答拿到它。`/compact` 這封 user 信本身不進 history（成功時也不留）。
+- 這種回答**不算可摺列**（多一個 `aos.skipped`）。不這樣的話，剛壓完連寄 `/compact` 會被自己的回答湊滿 4 則，第三封就真的壓（壓的是摘要加這幾句）。這條是我加的，跟「當成正常做完」的意思一致：多寄幾封也不會因此開始壓。
+- 回答寫在同一批普通信之前：idle 一次收一整批；若寫在普通信後面，對話尾巴會是 assistant，腦以為沒有要答的，普通信就沒人答（既有測試 `test_short_same_batch_does_not_strand_letter_a` 守的那件）。普通信是待答信、本來就不算可摺，所以先算數字不影響結果。
+- `compact.json` 不動（沒有 asked／done 那一步），`handoff.md`、`history_removed.jsonl` 也不動。
+
+## 11 那句寫錯的理由（"the agent failed after it was handed over"）
+
+- 出處：`py/aos/apps/agent/listen.py:73-74` 的 `DROP_WHY["failed"]`，dropped 的 reason 是 `failed` 時 ask／listen 都印這句。
+- 寫 `failed` 的地方有三處：
+  - agent-fsm `idle.py` 太短這條：理由錯，這次改成正常回答，不再 drop。
+  - agent-fsm `compact.py` 的 `give_up`：摘要空白、帶 tool_calls、要求列不見、history 一直在變。信已交給腦、是這次 compact 失敗，這句大致對得上。
+  - eca `handoff.py:82/117/120`：交給 CLI 之後失敗，對得上。
+- 所以只有這條路徑會錯，隨這次修掉；`listen.py` 不用改。
+
+## 12 實跑（改前 base2、改後 new2，假腦、真 daemon）
+
+- 樹：`git archive HEAD`（`52a697d96`）抄兩份。`base2` 不動；`new2` 只疊本線 10 個檔，別線工作樹的改動沒抄。各自 `install.py`。
+- 腳本 `run_twice.py`（`run2.sh <copy> <run>`），fsm 兩個情境：
+  - 連三封 `/compact`；
+  - 中間夾一封普通信。
+- 每個情境最後再用 `aos-agent ask --timeout-s 20 /compact` 寄一封。
+- 輸出原樣在 `run-before.txt`、`run-after.txt`，這裡貼重點列（完整輸出很長，letters.json 那幾行照抄就太長了）。
+
+改前（`run-before.txt`）：
+
+```
+=== fsm fsm_a: q1 | q2 | /compact | /compact | /compact
+  say '/compact'             -> letter 000000000003...: answered (compact done: 5 messages replaced by the summary above; the originals ) 
+  say '/compact'             -> letter 000000000004...: dropped (failed) 
+  say '/compact'             -> letter 000000000005...: dropped (failed) 
+  mailbox_warning.txt: letter 000000000005... not compacted: only 2 messages to fold
+  before_queue saw: ['q1', 'q2']
+  brain requests so far (all fsm agents): 3, compact asks: 1
+  listen --letter 000000000005... (last /compact): exit 1, stdout '', stderr 'aos-agent: error: LetterDropped 000000000005... will not be answered: fsm_a dropped it (failed: the agent failed after it was handed over); say it again for a new ans'
+  ask '/compact': exit 1, stdout '', stderr 'aos-agent: error: LetterDropped 000000000006... will not be answered: fsm_a dropped it (failed: the agent failed after it was handed over); say it again for a new answer'
+=== fsm fsm_b: q1 | q2 | /compact | plain letter | /compact
+  say '/compact'             -> letter 000000000005...: answered (compact done: 5 messages replaced by the summary above; the originals ) 
+  brain requests so far (all fsm agents): 8, compact asks: 3
+  ask '/compact': exit 1, stdout '', stderr 'aos-agent: error: LetterDropped 000000000006... will not be answered: fsm_b dropped it (failed: the agent failed after it was handed over); say it again for a new answer'
+```
+
+改後（`run-after.txt`）：
+
+```
+=== fsm fsm_a: q1 | q2 | /compact | /compact | /compact
+  say '/compact'             -> letter 000000000003...: answered (compact done: 5 messages replaced by the summary above; the originals ) 
+  say '/compact'             -> letter 000000000004...: answered (compact not needed: only 2 messages to fold (it takes at least 4); not) 
+  say '/compact'             -> letter 000000000005...: answered (compact not needed: only 2 messages to fold (it takes at least 4); not) 
+  history:
+    user      '[aos] summary: lines 1-5, 5 messages. SUMMARY-1 of 6 message' 
+    assistant 'compact done: 5 messages replaced by the summary above; the ' {"answer_to": ["000000000003..."], "compact": true}
+    assistant 'compact not needed: only 2 messages to fold (it takes at lea' {"answer_to": ["000000000004..."], "compact": true, "skipped": true}
+    assistant 'compact not needed: only 2 messages to fold (it takes at lea' {"answer_to": ["000000000005..."], "compact": true, "skipped": true}
+  mailbox_warning.txt: (none)
+  letters.json: {"pending": [], "dropped": []}
+  before_queue saw: ['q1', 'q2']
+  brain requests so far (all fsm agents): 3, compact asks: 1
+  listen --letter 000000000005... (last /compact): exit 0, stdout 'compact not needed: only 2 messages to fold (it takes at least 4); nothing was folded', stderr ''
+  ask '/compact': exit 0, stdout 'compact not needed: only 2 messages to fold (it takes at least 4); nothing was folded', stderr ''
+=== fsm fsm_b: q1 | q2 | /compact | plain letter | /compact
+  say '/compact'             -> letter 000000000005...: answered (compact done: 5 messages replaced by the summary above; the originals ) 
+  mailbox_warning.txt: (none)
+  brain requests so far (all fsm agents): 8, compact asks: 3
+  ask '/compact': exit 0, stdout 'compact not needed: only 2 messages to fold (it takes at least 4); nothing was folded', stderr ''
+```
+
+（`...` 是我把信名尾巴截掉，原樣在 txt 裡。）改前改後問腦次數一樣（連續的那幾封都沒問腦），差別只在寄信的人拿到什麼、警告檔與 dropped。
+
+## 13 測試（改前 base2／改後 new2，逐夾）
+
+`python3 -m unittest discover` 逐夾，兩份複本各自 `install.py`、清 `AOS_*`、TMPDIR 在 `/tmp/aos-compact-twice-1120-<copy>`；兩份同時跑（機器較忙），沒有紅的、不用重跑。
+
+| 夾 | 改前 base2 | 改後 new2 |
+|---|---|---|
+| `py/tests` | 715 OK（略 1） | 715 OK（略 1） |
+| `py/tests/apps/agent` | 213 OK（略 3） | 213 OK（略 3） |
+| `templates/tests`（含 `test_start` 的抄本一致檢查） | 29 OK（略 2、預期失敗 2） | 29 OK（略 2、預期失敗 2） |
+| `templates/tests/agent-fsm` | 209 OK | 215 OK（＋6＝新檔 `test_compact_short.py`；`test_compact.py` 兩支改期待） |
+| `templates/tests/reviewer` | 1 OK | 1 OK |
+
+## 14 對不上處與沒驗的
+
+- 對話是空的時候第一封就是 `/compact`：
+  - 回答會成為 history 第一則，而且是 assistant。
+  - 若這隻帶 `--prompt` 開場白，history 已不是空的，開場白就不會再投了（改前是 drop、history 留空、開場白照投）。
+  - 少見，沒另外處理。
+- 這則回答接在另一則 assistant 後面，例如 compact done 之後，或一般回答之後：對話裡會有連著兩則 assistant 送給端點。假腦沒問題；真端點沒驗（OpenAI 形狀接受；經 LiteLLM 轉 Anthropic 是否要求嚴格交替沒試）。
+- 答到一半來的 `/compact`：`brain.py:134-136` 照舊要可摺 ≥4 則才在輪中認領；太短的就留在 queue，回 idle 時才由這條答。
+
+## 15 收尾（第二段）
+
+- 交 11 個檔（10 個程式／測試／文件＋這份紀錄），走 commit-request；`git diff --summary` 沒有 mode 改動。開工時這些檔都沒人 claim。
+- 別線工作樹裡沒交的改動沒碰、沒抄進複本（複本是 `git archive`）。
+- 暫存：`~/.aos/scratch/aos-compact-twice-1120/` 的 `base2/`、`new2/`、`run-before*`、`run-after*`、`suite-*2.txt`、`logs-*2/`、`files.txt`。
+- 實跑的 daemon 都已 shutdown（退 0）。
