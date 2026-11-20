@@ -65,3 +65,16 @@
 ### 註（記錄者加，不是使用者的話）
 
 - 他說「今天還是昨天有討論過的」，對得上的是 11-20 的 [aos-kres-1120](aos-kres-1120/README.md)（kernel 的資源基底與排程介面）與 [aos-kllm-round-1120](aos-kllm-round-1120.md)（llm kernel 的排序搬上共用骨架）、11-19 的 [aos-htop-1119](../19/aos-htop-1119/README.md)（自訂 kernel「先不定，讓它自然長」）。頂層列出這三份問他，他答：「對的，就是這些。」
+
+## 第 6 則：`~/aos-home/perm` 怎麼這麼空
+
+### 原話
+
+「然後我在看aos-home/perm，他怎麽這麼空？」
+
+### 現況（頂層當場查的）
+
+- `perm/` 只有三個檔：`_entry`（`["aos-loop", "loop.json"]`）、`loop.json`（每 300 毫秒跑一次 `$AOS_HOME/lib/tools/aos/kernel`、把 `kernel.json` 交給它）、`kernel.json`（`{}`）。
+- 空的原因有兩個：程式不在夾裡（借 `AOS_HOME` 的 `lib/tools/aos/kernel`，即掛 proc 的 kernel 的共用骨架）；設定是 `{}`（什麼都不管、全部原樣轉給根）。
+- 出廠沒掛、沒人用（使用者 11-20「加一份選裝、預設不開」）；開法與可加的鍵（`allowed`、`max_running`、`queue`、`hooks`…）在 [start-api README「選裝：權限件」](../../../templates/start-api/README.md)。
+- 對照第 1、2 則：這一夾已經是他要的「沒要覆蓋就從 AOS_HOME 取」的樣子，`llm/` 也是；`agents/ann/` 才是整份帶著程式。
