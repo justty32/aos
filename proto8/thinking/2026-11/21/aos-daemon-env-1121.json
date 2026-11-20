@@ -1,0 +1,340 @@
+{
+ "contract": "wf-table/1",
+ "source": "aos-daemon-env-1121.md",
+ "extracted": "2026-11-21",
+ "columns": [
+  "id",
+  "class",
+  "where",
+  "how",
+  "purpose",
+  "without",
+  "if_1120"
+ ],
+ "rows": [
+  {
+   "id": "1",
+   "class": "甲 非 daemon 不可",
+   "where": "aos-agent ctl add/rm/start/stop/sleep/wake/pause/resume/set-def（py/aos/apps/agent/ctl/）",
+   "how": "間接：common.table_ref→daemon_ctl.find_daemon",
+   "purpose": "寄 ctl 信叫 daemon 起停掛拆",
+   "without": "DaemonMissing（cwd 有 ./.stack 就退回用它）；設了 AOS_KERNEL 則走 kernel、不看 AOS_DAEMON",
+   "if_1120": "不動（使用者說 daemon 照舊 export AOS_DAEMON）"
+  },
+  {
+   "id": "2",
+   "class": "甲 非 daemon 不可",
+   "where": "aos-agent ctl ls／state／where（ctl/ls.py、state.py、where.py）",
+   "how": "間接：common.table()",
+   "purpose": "讀 daemon 的表，列每隻的 phase、stack、ws",
+   "without": "DaemonMissing（同上退路）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "3",
+   "class": "甲 非 daemon 不可",
+   "where": "工具 agents_ctl（py/tools/agent/agents_ctl＋agentlib/agents_cmd.py）",
+   "how": "間接：在 $AOS_WS 叫 aos-agent ctl …",
+   "purpose": "agent 管表上任何一隻",
+   "without": "DaemonMissing（ws 底下剛好有 .stack 就用那台）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "4",
+   "class": "甲 非 daemon 不可",
+   "where": "工具 subagent（py/tools/agent/subagent）",
+   "how": "間接：ctl who 認自己＋ctl add／ask --target 子",
+   "purpose": "起子 agent、對子 agent 說話、數配額",
+   "without": "DaemonMissing（暫存樹實測 ws=work）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "5",
+   "class": "甲 非 daemon 不可",
+   "where": "工具 fork（py/tools/agent/fork）",
+   "how": "間接：ctl who＋ctl add 分身",
+   "purpose": "抄自己成分身掛上同一台",
+   "without": "DaemonMissing（有 AOS_KERNEL 時改問 kernel）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "6",
+   "class": "甲 非 daemon 不可",
+   "where": "工具 self_ctl（py/tools/agent/self_ctl）",
+   "how": "間接：ctl who＋ctl stop/pause/sleep/rm 自己",
+   "purpose": "請 daemon 停、暫停、睡、拿掉自己",
+   "without": "DaemonMissing",
+   "if_1120": "不動"
+  },
+  {
+   "id": "7",
+   "class": "甲 非 daemon 不可",
+   "where": "工具 self_state（py/tools/agent/self_state）",
+   "how": "間接：ctl who＋ctl state",
+   "purpose": "看自己在表上的 phase、原因等（資料在 daemon 的表）",
+   "without": "DaemonMissing（實測）",
+   "if_1120": "不動；stack 的 state.json 也有一部分"
+  },
+  {
+   "id": "8",
+   "class": "甲 非 daemon 不可",
+   "where": "工具 gdb_trigger、gdb_watch（py/tools/agent/gdb_*）",
+   "how": "間接：aos-agent [-d D] ctl pause；gdb_watch 另看表",
+   "purpose": "條件成立時叫 daemon 暫停目標",
+   "without": "pause 送不出、只留字條（不讓工具失敗）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "9",
+   "class": "甲 非 daemon 不可",
+   "where": "aos-mailbox send --to NAME（py/aos/apps/mailbox/__init__.py target_box）",
+   "how": "直接：dc.find_daemon＋row_of",
+   "purpose": "名字→收件人的 stack（信直接放進對方 stack/mailbox，不經 daemon 轉）",
+   "without": "DaemonMissing；改用 --box 路徑就不用",
+   "if_1120": "不動"
+  },
+  {
+   "id": "10",
+   "class": "甲 非 daemon 不可",
+   "where": "hook 的 on_clock 鐘寫成 proc 名字（agentlib/hook_clock.py）",
+   "how": "間接：aos-agent ctl ls --json",
+   "purpose": "名字→那一列 stack 裡的 clock 檔",
+   "without": "那個 hook 報 cannot find clock；寫路徑就不用",
+   "if_1120": "不動"
+  },
+  {
+   "id": "11",
+   "class": "甲 非 daemon 不可",
+   "where": "aos.py.agent 遙控器、aos.gdb 的 a.bp（py/aos/py/agent、py/aos/gdb）",
+   "how": "直接讀 AOS_DAEMON（a.bp）；其餘交給 aos-agent",
+   "purpose": "人用的 Python 庫：名字→那一隻",
+   "without": "a.bp：DaemonMissing；其餘同 aos-agent",
+   "if_1120": "不動"
+  },
+  {
+   "id": "12",
+   "class": "甲 非 daemon 不可",
+   "where": "aos-eca 畫面看守（py/aos/apps/eca/main_screen.py）",
+   "how": "直接：dc.find_daemon＋rows",
+   "purpose": "看畫面那隻還在不在表上",
+   "without": "安靜跳過（回 None），少一個檢查",
+   "if_1120": "不動"
+  },
+  {
+   "id": "13",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "aos-agent say／ask／listen／chat（say.py、ask.py、listen.py、chat.py）",
+   "how": "間接：common.target→find→table() 名字→列",
+   "purpose": "寫信進那隻的 stack/queue、讀 history；say 另看列的 def 判斷是不是 eca",
+   "without": "DaemonMissing（實測 E1）；在樹根退回 ./.stack 照樣通（E3）",
+   "if_1120": "要改：-t 沒給時拿 ./.stack 或 ./ 當 stack；eca 判斷與 ws 今天從表的列拿，stack 自己沒記"
+  },
+  {
+   "id": "14",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "aos-agent history／goal（history.py、goal.py）",
+   "how": "同上",
+   "purpose": "讀改那隻 stack 的 history.jsonl、goal.json",
+   "without": "同上",
+   "if_1120": "同上（小）"
+  },
+  {
+   "id": "15",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "aos-agent tools／llm／system／hook（tools.py、llm.py、system.py、hook.py＋decl.def_of）",
+   "how": "同上，另用列的 def 欄找定義",
+   "purpose": "改 stack 裡自己那份覆蓋檔；定義那份從表的 def 欄找",
+   "without": "同上",
+   "if_1120": "要改：stack 裡沒有記定義在哪（實測 ann 的 stack 只有 interfaces.json＝{aos-observed}），單靠 stack 找不到定義"
+  },
+  {
+   "id": "16",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "aos-agent open／close／watch／peek（screen.py＋decl.run_entry）",
+   "how": "同上；run_entry 還把 AOS_DAEMON＝那台塞給下層",
+   "purpose": "跑定義裡的畫面入口",
+   "without": "同上",
+   "if_1120": "同上（要定義）"
+  },
+  {
+   "id": "17",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "aos-agent ctl who（ctl/who.py）",
+   "how": "間接：table()",
+   "purpose": "從 $AOS_STACK 反查「我是哪隻」（下面 self_*、mailbox_* 都靠它）",
+   "without": "DaemonMissing",
+   "if_1120": "本身就是查表；方向沒提到它"
+  },
+  {
+   "id": "18",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "aos-agent 寄件人名（sender.py）",
+   "how": "間接：table()",
+   "purpose": "--from 沒給時用 $AOS_STACK 查表得名字",
+   "without": "查不到就退回登入名（不報錯）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "19",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "工具 self_tools、self_llm、self_system、self_hook、self_history（py/tools/agent/self_*）",
+   "how": "間接：先 ctl who 認自己，再 aos-agent --target 自己",
+   "purpose": "改自己 stack 裡的覆蓋檔／對話",
+   "without": "DaemonMissing（實測 ws=work）；ws＝樹根時靠 ./.stack 退路照通（實測）",
+   "if_1120": "不動：daemon 照舊給 AOS_DAEMON；工具 cwd＝$AOS_WS 不是 stack，-t 的 cwd 退路幫不到它們"
+  },
+  {
+   "id": "20",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "工具 goal（py/tools/agent/goal）",
+   "how": "同上",
+   "purpose": "改自己 stack 的 goal.json",
+   "without": "DaemonMissing（實測）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "21",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "工具 do_task（py/tools/agent/do_task）",
+   "how": "同上（ctl who＋history）",
+   "purpose": "摺自己的 history",
+   "without": "DaemonMissing（實測）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "22",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "工具 mailbox_peek／mailbox_read（agentlib/mailbox_call.me）",
+   "how": "間接：ctl who --json",
+   "purpose": "拿到自己的 stack，再 aos-mailbox --stack 它",
+   "without": "DaemonMissing（實測）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "23",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "工具 mailbox_send 寄件人那半（py/tools/agent/mailbox_send）",
+   "how": "間接：ctl who；daemon 欄不給＝自己的 $AOS_DAEMON",
+   "purpose": "寄件人＝我、回信箱＝我的 stack",
+   "without": "DaemonMissing",
+   "if_1120": "不動（收件人名字那半見 aos-mailbox --to）"
+  },
+  {
+   "id": "24",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "工具 user_send／user_verify（py/tools/agent/user_*）",
+   "how": "間接：mailbox_call.me",
+   "purpose": "寄使用者專區／驗回信要知道自己的 stack",
+   "without": "DaemonMissing",
+   "if_1120": "不動"
+  },
+  {
+   "id": "25",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "工具 clock_register add 不給 box（py/tools/agent/clock_register）",
+   "how": "間接：ctl who --json",
+   "purpose": "預設寄到自己的 queue",
+   "without": "DaemonMissing（ls、rm 不用；鐘本身看 AOS_CLOCK）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "26",
+   "class": "乙 只要自己的 stack／定義",
+   "where": "工具 kernel_gate（py/tools/agent/kernel_gate/_entry）",
+   "how": "間接：ctl who；直接讀 AOS_DAEMON 印說明",
+   "purpose": "找自己 stack 下的 hooks/kernel_gate",
+   "without": "DaemonMissing；說明句印 not set",
+   "if_1120": "不動"
+  },
+  {
+   "id": "27",
+   "class": "丙 路標・顯示・照傳",
+   "where": "agentlib 外的 tool_io.place（py/aos/tool_io.py）",
+   "how": "直接讀",
+   "purpose": "路徑在 daemon stack 底下就印成 $AOS_DAEMON/…",
+   "without": "照印絕對路徑",
+   "if_1120": "不動"
+  },
+  {
+   "id": "28",
+   "class": "丙 路標・顯示・照傳",
+   "where": "cli_mcp MCP_ENV、cli_session env.json（agentlib/cli_mcp.py、cli_session.py）",
+   "how": "直接：照傳／記下",
+   "purpose": "把 AOS_DAEMON 帶給 claude/codex 叫的工具",
+   "without": "下層工具少這個變數（後果同乙類）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "29",
+   "class": "丙 路標・顯示・照傳",
+   "where": "aos-sandbox 預設帶進沙箱的變數（py/aos/apps/sandbox/main.py ENV_BASE）",
+   "how": "照傳",
+   "purpose": "沙箱裡的工具照樣認得 daemon",
+   "without": "同上",
+   "if_1120": "不動"
+  },
+  {
+   "id": "30",
+   "class": "丙 路標・顯示・照傳",
+   "where": "agent-fsm 的 wait.py（templates/agent-fsm、start-api/agents/ann）",
+   "how": "直接讀",
+   "purpose": "AOS_LLM_KERNEL 是相對路徑時從 AOS_DAEMON 算",
+   "without": "改從 cwd 算；範本給的是絕對路徑，平常碰不到",
+   "if_1120": "不動"
+  },
+  {
+   "id": "31",
+   "class": "丙 路標・顯示・照傳",
+   "where": "aos-llm send／ls（cpp/aos-llm/src/send、ls）",
+   "how": "直接讀",
+   "purpose": "send：相對的 kernel 路徑從 AOS_DAEMON 算；ls：沒指名時查 daemon 表找 llm kernel",
+   "without": "send 改從 cwd 算；ls 報 LlmKernelMissing",
+   "if_1120": "不動"
+  },
+  {
+   "id": "32",
+   "class": "丙 路標・顯示・照傳",
+   "where": "guard／guard scope（py/tools/agent/guard）",
+   "how": "直接讀",
+   "purpose": "把 daemon 的 stack 整塊列為不准碰、讀表認各隻定義；mailbox_send／clock_register 的 daemon 只准自己那台",
+   "without": "那幾條擋的規則不生效（保護少一塊）",
+   "if_1120": "不動"
+  },
+  {
+   "id": "33",
+   "class": "丙 路標・顯示・照傳",
+   "where": "kernel_gate triage（py/tools/agent/kernel_gate/triage）",
+   "how": "直接讀／補設",
+   "purpose": "信裡 {$env: AOS_DAEMON} 的目標照 daemon 解",
+   "without": "rules 沒寫 daemon 就解不開那種目標",
+   "if_1120": "不動"
+  },
+  {
+   "id": "34",
+   "class": "丙 路標・顯示・照傳",
+   "where": "daemon 寫進小格的指示詞 {$env: AOS_DAEMON, $path}（cpp/aos-daemon child.cpp、refs.cpp；py/aos/daemon_ctl/entry.py --envs）",
+   "how": "aos-exec／aos-loop 解指示詞時讀",
+   "purpose": "loop 型 proc 的 cwd、目標，與 ctl add --envs 的目標都寫成相對 daemon stack（整棵樹搬家照起）",
+   "without": "DirectiveBad（aos-directive env.cpp：is not set）；daemon 起的子行程一定有設。普通 ctl add 的 agent（如 ann）不用，表上存相對路徑由 daemon 解",
+   "if_1120": "不動"
+  },
+  {
+   "id": "35",
+   "class": "丙 路標・顯示・照傳",
+   "where": "aos-loop 錯誤行（cpp/aos-loop/src/engine/config.cpp）",
+   "how": "只顯示",
+   "purpose": "錯誤行裡把路徑縮成 $AOS_DAEMON/../..",
+   "without": "照印原路徑",
+   "if_1120": "不動"
+  },
+  {
+   "id": "36",
+   "class": "丙 路標・顯示・照傳",
+   "where": "start-api ann/.env 註解那行（templates/start-api/agents/ann/.env）",
+   "how": "註解",
+   "purpose": "開權限件時 AOS_KERNEL=${AOS_DAEMON}/procs/perm/requests",
+   "without": "出廠是註解，不生效",
+   "if_1120": "不動"
+  }
+ ]
+}

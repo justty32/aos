@@ -1,0 +1,133 @@
+{
+ "contract": "wf-table/1",
+ "source": "aos-daemon-env-1121.md",
+ "extracted": "2026-11-21",
+ "columns": [
+  "id",
+  "folder",
+  "file",
+  "what",
+  "after_move",
+  "kind",
+  "stores_daemon"
+ ],
+ "rows": [
+  {
+   "id": "1",
+   "folder": "定義夾 agents/ann",
+   "file": "整夾",
+   "what": "程式、llm.json、tools.json、system；grep 不到絕對路徑",
+   "after_move": "照常（實測 A：新 daemon 掛上就答）",
+   "kind": "照常",
+   "stores_daemon": "否"
+  },
+  {
+   "id": "2",
+   "folder": "工作區",
+   "file": "看使用者放什麼",
+   "what": "agent 的外部記憶；aos 本身不在裡面寫 daemon 的事",
+   "after_move": "照常",
+   "kind": "照常",
+   "stores_daemon": "否"
+  },
+  {
+   "id": "3",
+   "folder": "stack",
+   "file": "history.jsonl、goal.json、letters.json、queue/",
+   "what": "對話、目標、信件順序；不含路徑",
+   "after_move": "照常接上（實測 B：listen 看得到搬前 #8 #9，goal 照提醒）",
+   "kind": "照常",
+   "stores_daemon": "否"
+  },
+  {
+   "id": "4",
+   "folder": "stack",
+   "file": "tools.json（也含 llm／hooks／system 的覆蓋檔）",
+   "what": "\"$override\": \"../../../agents/ann/tools.json\"＝從 stack 到定義的相對路徑",
+   "after_move": "stack 與定義的相對位置不變＝照常；換了名字或位置＝安靜地指到別的定義（實測 B2：annB 的覆蓋仍指 agents/ann，不報錯）",
+   "kind": "差一點（小）",
+   "stores_daemon": "否"
+  },
+  {
+   "id": "5",
+   "folder": "stack",
+   "file": "hooks/<名>/on_clock.json、event.json",
+   "what": "上次看到的時鐘絕對路徑、自己 stack 絕對路徑、cycle",
+   "after_move": "跑起來自己改寫成新時鐘（實測：變成 tree2/.stack/clock、cycle 12）",
+   "kind": "照常",
+   "stores_daemon": "執行時快取，會重寫"
+  },
+  {
+   "id": "6",
+   "folder": "stack",
+   "file": "think/brain_wait.json、sent.json、request.json",
+   "what": "正在等的腦回信、llm kernel 的絕對路徑",
+   "after_move": "停乾淨後搬＝下一輪重寫（實測指向 tree2 的 llm）；正在等回信時搬，那封回信留在舊 kernel",
+   "kind": "照常；等回信中搬會少一則",
+   "stores_daemon": "執行時快取"
+  },
+  {
+   "id": "7",
+   "folder": "stack",
+   "file": "state.json、stage.txt、stderr.txt、observed.jsonl",
+   "what": "pid、boot_id、phase；log 裡有絕對路徑",
+   "after_move": "新身體起來覆蓋 state.json；新 daemon 不會誤認舊 pid（看 /proc environ 的 AOS_STACK／AOS_DAEMON）",
+   "kind": "照常",
+   "stores_daemon": "否（log 只是紀錄）"
+  },
+  {
+   "id": "8",
+   "folder": "stack",
+   "file": "mailbox/ 裡的信",
+   "what": "reply_to 存成相對收件信箱的路徑",
+   "after_move": "兩隻一起搬、相對位置不變＝照常；只搬一隻＝回信寄到錯的地方",
+   "kind": "差一點（看擺法）",
+   "stores_daemon": "否"
+  },
+  {
+   "id": "9",
+   "folder": "stack",
+   "file": "subagent 的帳（tools/subagent 的設定）",
+   "what": "子 agent 的絕對 stack；子 agent 的 AOS_NOTIFY_BOX＝父的絕對信箱",
+   "after_move": "子 agent 是舊 daemon 表上的列，不會跟著搬；帳裡的絕對路徑指回舊地方",
+   "kind": "卡住（要手動重掛子 agent）",
+   "stores_daemon": "子 agent 的掛接在舊 daemon 表上"
+  },
+  {
+   "id": "10",
+   "folder": "stack",
+   "file": "procs/<名>/exec.json（只有 ctl add --envs 才有）",
+   "what": "目標寫成 {$env: AOS_DAEMON, $path: 相對舊 daemon stack}",
+   "after_move": "重新 ctl add 會重寫；不重掛直接用＝照新 AOS_DAEMON 拼，擺法不同就錯",
+   "kind": "照常（重掛時）",
+   "stores_daemon": "存了「相對 daemon 的位置」"
+  },
+  {
+   "id": "11",
+   "folder": "daemon 的 stack",
+   "file": "procs_state.json 那一列（名字、def、ws、auto_restart、parent）",
+   "what": "agent 掛在哪、叫什麼",
+   "after_move": "不跟著走；在新 daemon 要 ctl add 一次（名字可換）",
+   "kind": "要手動（一行指令）",
+   "stores_daemon": "是，這本來就是 daemon 的東西"
+  },
+  {
+   "id": "12",
+   "folder": "daemon 的 stack",
+   "file": "clock 登記表（clock_register 加的格）",
+   "what": "box 寫成相對 daemon stack（如 procs/ann/queue）",
+   "after_move": "不跟著走；新 daemon 要重新登記",
+   "kind": "要手動",
+   "stores_daemon": "是"
+  },
+  {
+   "id": "13",
+   "folder": "環境變數",
+   "file": "AOS_DAEMON、AOS_STACK、AOS_WS、AOS_LLM_KERNEL、AOS_CLOCK",
+   "what": "每次起身體時由新 daemon 給",
+   "after_move": "照常（全部換成新的）",
+   "kind": "照常",
+   "stores_daemon": "執行時由環境給，不存檔"
+  }
+ ]
+}
