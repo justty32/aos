@@ -22,7 +22,7 @@ from aos.agentlib import hooks as agent_hooks
 from aos.spec_base import SpecBad, DefBad
 from aos.agent_spec_parts import WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FILES
 
-FIELDS = ("description", "system", "tools", "llm", "fsm", "hooks", "meta", "interfaces", "files")
+FIELDS = ("description", "system", "tools", "llm", "fsm", "hooks", "meta", "interfaces", "files", "loop")
 HOOK_FIRE = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}   # loop.json 的 on_start／on_stop（照 agent-fsm 範本）
 RENAME_LAST = {"loop.json": 1, "body.json": 2, "interfaces.json": 3, "_entry": 4, "_metainfo.json": 5}   # 改名時被指的檔先換、索引檔最後（其他＝0）
 SEE_CHANGE = ("agents that use this definition see the change from their next brain call "
@@ -56,13 +56,14 @@ class Fsm(dict, Unit):
 
 class _Loop:
     """loop.json：每格跑 fsm 那份、公開 ctl／state／state_flux；有 hooks 才接 on_start／on_stop（after_start／after_stop）。
-    內部的一塊（設計稿 02「loop 與 fsm 在庫裡的地位」）：要不要讓人宣告等待裁第 8 題；內容由 hook 介面線之後的刀帶（07「跟 hook 介面線共用的檔」），這裡原樣搬來。"""
+    內部的一塊（設計稿 02「loop 與 fsm 在庫裡的地位」）；人能宣告的只有間隔：defs.Agent(..., loop=defs.loop(every_ms=…))（待裁第 8 題「加一個宣告」，
+    線 aos-pylib-k4-1120），不給＝300。其餘的鍵由 hook 介面線之後的刀帶（07「跟 hook 介面線共用的檔」；要加旗標就在 json() 裡多寫幾行）。"""
 
-    def __init__(self, fsm_file, hooks):
-        self.fsm_file, self.hooks = fsm_file, hooks
+    def __init__(self, fsm_file, hooks, every_ms=300):
+        self.fsm_file, self.hooks, self.every_ms = fsm_file, hooks, every_ms
 
     def json(self):
-        loop = {"description": WHAT["loop.json"] % self.fsm_file, "exec": self.fsm_file, "interval_ms": 300,
+        loop = {"description": WHAT["loop.json"] % self.fsm_file, "exec": self.fsm_file, "interval_ms": self.every_ms,
                 "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}
         if self.hooks:
             loop["description"] += WHAT["loop_hooks"]
@@ -127,14 +128,15 @@ def _links(hand, names, folder):
 
 
 class Agent(Unit):
-    """一隻 agent 的定義：defs.Agent(說明, system=, tools=, llm=, fsm=None, hooks=None, meta=None, interfaces=None, files=None)。
-    不給 fsm＝只填一份現成定義夾的內容檔（eca 版，要知道夾才算得出：.dry_run(夾)）。命令列 --static／--dynamic 只有它收（link=）。"""
+    """一隻 agent 的定義：defs.Agent(說明, system=, tools=, llm=, fsm=None, hooks=None, meta=None, interfaces=None, files=None, loop=None)。
+    不給 fsm＝只填一份現成定義夾的內容檔（eca 版，要知道夾才算得出：.dry_run(夾)）。命令列 --static／--dynamic 只有它收（link=）。
+    loop＝defs.loop(every_ms=…)（loop.json 的間隔；要有 fsm）。"""
     LINKS = True
     AFTER = (SEE_CHANGE,)
 
-    def __init__(self, description, *, system, tools, llm, fsm=None, hooks=None, meta=None, interfaces=None, files=None):
+    def __init__(self, description, *, system, tools, llm, fsm=None, hooks=None, meta=None, interfaces=None, files=None, loop=None):
         self.description, self.system, self.tools, self.llm, self.fsm = description, system, tools, llm, fsm
-        self.hooks, self.meta, self.interfaces, self.files = hooks, meta, interfaces, files
+        self.hooks, self.meta, self.interfaces, self.files, self.loop = hooks, meta, interfaces, files, loop
 
     def __getattr__(self, name):              # 只在沒有這個屬性時才來：defs.load 交回的 extern 欄位、寫錯的名字
         hand = self.__dict__.get("_hand", {})
@@ -243,12 +245,20 @@ class Agent(Unit):
         for k in ("summary", "lineage"):
             if meta and k in meta:
                 raise SpecBad("meta must not set %s (%s)" % (k, "it comes from the description" if k == "summary" else "agent_def new writes it"))
+        every_ms = 300                          # 不給 loop＝跟以前一樣（產物逐 byte 相同）
+        if self.loop is not None:
+            parts.raise_bad(self.loop)
+            if parts.kind(self.loop) != "loop":
+                raise SpecBad("loop must come from defs.loop(every_ms=...), got %r" % (self.loop,))
+            if fsm is None:
+                raise SpecBad("loop needs fsm: without fsm, loop.json belongs to the skeleton you copied; change it there by hand")
+            every_ms = self.loop["every_ms"]
         out = {}
         if fsm is not None:
             out["_entry"] = {"description": WHAT["_entry"], "argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}],
                              "cwd": {"$env": "AOS_WS"}}
             out["body.json"] = {"description": WHAT["body.json"], "argv": ["aos-loop", "loop.json"]}
-            out["loop.json"] = _Loop(names["fsm"], hooks is not None).json()
+            out["loop.json"] = _Loop(names["fsm"], hooks is not None, every_ms).json()
             if fsm_out is not None:
                 out["fsm.json"] = _fsm_json(fsm_out)
             out["interfaces.json"] = face

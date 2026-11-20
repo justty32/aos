@@ -9,7 +9,8 @@
 名字 defs：from aos.py.agent import defs（使用者 11-19「就 aos.py.agent.defs 吧」；檔不搬、模組名不改）。
 
 宣告用的小函式（寫錯不在當下丟，記成 bad，.dry_run()／.compile()／defs.main 再報 SpecBad）：
-  Agent(說明, system=, tools=, llm=, fsm=None, hooks=None, meta=None, interfaces=None, files=None)  一隻 agent；不給 fsm＝只填現成定義夾的內容檔（eca 版）
+  Agent(說明, system=, tools=, llm=, fsm=None, hooks=None, meta=None, interfaces=None, files=None, loop=None)  一隻 agent；不給 fsm＝只填現成定義夾的內容檔（eca 版）
+  loop(every_ms=)      loop.json 的間隔（兩格之間停多久；不給 loop＝300 毫秒）；要有 fsm（第 4 刀第二筆，線 aos-pylib-k4-1120；待裁第 8 題「加一個宣告」）
   std                 隨 aos 發的庫（aos/agent_spec_lib.py）：std.pack(名, prefix=, rename=, exclude=, link=)、std.tool("base/read", name=None, **其他)、
                       std.fsm()＝agent-fsm 範本的四格、std.hooks(範本="agent-fsm")＝那個範本 hooks.json 的那組 hook
   lib(庫名, 根)        別的庫：my = defs.lib("my", defs.env("AOS_WS", "/lib/my"))；my.pack／my.tool 同上，工具名自動帶「庫名_」
@@ -37,7 +38,7 @@ from aos.agent_spec_lib import std, lib  # noqa: F401（對外的名字：defs.s
 from aos import agent_spec_load as loader
 from aos.agent_spec_load import load  # noqa: F401（對外的名字：defs.load）
 
-PUBLIC = ("Agent", "main", "load", "std", "lib", "tool", "drop", "extern", "home", "env", "state", "fsm", "SpecBad", "DefBad")
+PUBLIC = ("Agent", "main", "load", "std", "lib", "tool", "drop", "extern", "home", "env", "state", "fsm", "loop", "SpecBad", "DefBad")
 HELP = """\
 usage: python3 agent.py --compile [--static | --dynamic] [FOLDER] | --dry-run [--static | --dynamic] | --help
 Compile agent.py into an aos agent definition (a folder of JSON files), like a C compiler
@@ -57,6 +58,7 @@ defs.main(it): agent = defs.Agent("what it does", system=..., tools=[...], llm={
                       get a prefix or rename= (a library other than std, by default), and the
                       tools of defs.load, are still linked statically, with a warning.
                       One pack: std.pack("look", link="dynamic") / link="static".
+loop=defs.loop(every_ms=1000) sets the pause between two ticks of the loop (loop.json; default 300 ms).
 With fsm given, agent.py writes the whole definition (skeleton included). Without fsm
 (defs.Agent(..., system=, tools=, llm=) only), it fills only the content files (system, tools, llm,
 hooks) of a definition that already has its skeleton, under the names its interfaces.json gives.
@@ -159,6 +161,17 @@ def extern(target):
     if not isinstance(target, str) or not target or "\0" in target:
         return _bad("extern(%r): give the path of the file to link to, like \"../shared/system.txt\"" % (target,))
     return {"kind": "extern", "target": target}
+
+
+def loop(*, every_ms=None):
+    """loop.json 的宣告：defs.Agent(..., loop=defs.loop(every_ms=1000))＝兩格之間停 every_ms 毫秒（loop.json 的 interval_ms；不給 loop＝300）。
+    待裁第 8 題（設計稿 aos-pylib-plan-1120/08），使用者 11-20 選「加一個宣告」；只開 every_ms 這一個（線 aos-pylib-k4-1120 第二筆），
+    loop.json 其餘的鍵照舊由編譯定。規矩照讀它的 aos-loop：非負整數（0＝不停）。回記號（不是能單獨編譯的東西：loop.json 要知道 fsm 與 hooks）。"""
+    if every_ms is None:
+        return _bad("defs.loop: give every_ms, the pause between two ticks in milliseconds, like defs.loop(every_ms=1000)")
+    if not isinstance(every_ms, int) or isinstance(every_ms, bool) or every_ms < 0:
+        return _bad("defs.loop: every_ms must be a whole number of milliseconds >= 0 (0 = no pause), got %r" % (every_ms,))
+    return {"kind": "loop", "every_ms": every_ms}
 
 
 def _state_name_bad(name):

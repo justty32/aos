@@ -2,7 +2,7 @@
 
 設計稿 thinking/2026-11/19/aos-inherit-1119/（04 乙修正版、06、07 採納表、08 使用者裁定）；紀錄 thinking/2026-11/19/aos-inherit-第一刀.md；規範 N-70（繼承只在編譯時）。
 交回物件、欄位小寫（編譯程式庫第 2 刀，線 aos-pylib-k2-1120；使用者 11-20 選項框「小寫」）：base.description、base.system、base.tools、base.llm、base.fsm、
-base.meta、base.interfaces、base.hooks、base.files，與 base.pack(prefix=, rename=, exclude=)；交回的是 aos/agent_spec_agent.Agent，本身也能 .compile(夾)。
+base.meta、base.interfaces、base.hooks、base.files、base.loop（第 4 刀第二筆），與 base.pack(prefix=, rename=, exclude=)；交回的是 aos/agent_spec_agent.Agent，本身也能 .compile(夾)。
 只在 agent.py 重新編譯時發生：編出的 json 照舊整份、沒有上一層；執行期一行不動。只收明寫的路徑（不搜尋），相對路徑從叫它的那支 agent.py 的夾算（REPL 從 cwd）。
 載入期間：底在自己的一份 __main__ 下跑（runpy），載完還原 sys.path 與新進 sys.modules 的非 aos 模組（07 A4）；a 載 b、b 載 a＝SpecBad。
 底的欄位：tools＝一個帶來源名的包（拿掉的留墓碑 None）、hooks＝agent_spec_hooks.Hooks（帶標記；沒宣告＝空組、當作沒宣告）、fsm＝Fsm（eca 版＝None）、
@@ -221,6 +221,10 @@ def _based(shown, file, root, given):
         if value is not None and not isinstance(value, dict):
             raise SpecBad("%s must be a dict" % field)
         setattr(out, field, None if value is None else _copy(value))
+    loop = values["loop"]                                       # defs.loop(...)（第 4 刀第二筆）：跟別的欄一樣，寫 loop=base.loop 才帶過來
+    if loop is not None and parts.kind(loop) != "loop":
+        raise SpecBad("loop must come from defs.loop(every_ms=...)")
+    out.loop = None if loop is None else _copy(loop)
     if "hooks" not in skip:
         hooks = hook_parts.no_hooks(values["hooks"])
         if hooks is None:

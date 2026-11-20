@@ -37,7 +37,7 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
 | `agent.py` | the source of this definition | you |
 | `_entry` | mounts the agent on a daemon (`aos-agent ctl add`) | always written |
 | `body.json` | runs the loop: `aos-loop loop.json` | always written |
-| `loop.json` | runs `fsm.json` every 300 ms; names the ctl, state and state flux files; with `hooks`, fires `after_start` / `after_stop` | always written |
+| `loop.json` | runs `fsm.json` every 300 ms (`loop=` changes it); names the ctl, state and state flux files; with `hooks`, fires `after_start` / `after_stop` | always written; `loop=` |
 | `fsm.json` | the state machine | `fsm=` |
 | `interfaces.json` | names the other files (`entry`, `tools`, `llm`, `llm_keys`, `history`, `system`, and `hooks` with `hooks`) | always written; `interfaces=` is laid over it |
 | `tools.json` | the tools | `tools=` |
@@ -66,7 +66,7 @@ agent = defs.Agent(
 defs.main(agent)
 ```
 
-`defs.Agent(description, *, system, tools, llm, fsm=None, hooks=None, meta=None, interfaces=None, files=None)` only takes the fields; a wrong field is found when you compile (one `SpecBad` line, for example `tools must be a list ...`).
+`defs.Agent(description, *, system, tools, llm, fsm=None, hooks=None, meta=None, interfaces=None, files=None, loop=None)` only takes the fields; a wrong field is found when you compile (one `SpecBad` line, for example `tools must be a list ...`).
 
 - the description (first, without a name): one English sentence: what the agent does. It becomes `summary` in `_metainfo.json`.
 - `system`: the system text as a string, or `defs.extern("../shared/system.txt")`: `system.txt` becomes a link to a file you write yourself (see "extern" below; use it sparingly).
@@ -109,6 +109,7 @@ defs.main(agent)
 
     The skeleton has `hooks={}`: no hooks, but `hooks.json` is declared, so an agent made from it takes breakpoints (`aos-gdb`, `a.bp.add...`) and `aos-agent hook add` without any change. Keep that line when you rewrite the part below `# ---- your agent`; without it, setting a breakpoint is `HooksMissing`. Want the `agent-fsm` template's hooks (a timer that looks at the mailbox, ...)? Write `hooks=std.hooks()`.
   - `files`: other files written as they are, like `{"ladder.json": {...}}` (a dict or list is written as JSON, a string as it is). The name is one file in this folder; it cannot be a file that agent.py, the skeleton or the running agent writes.
+  - `loop`: `defs.loop(every_ms=1000)`: the pause between two ticks of the loop, in milliseconds (`interval_ms` in `loop.json`; without `loop`, 300). A whole number >= 0 (0 = no pause, as aos-loop reads it). It needs `fsm` (without `fsm`, `loop.json` is the one of the skeleton you copied). Only the pause can be declared; the other keys of `loop.json` are worked out by the compile.
 
 ## extern: a link to a file you write (do not overuse it)
 
@@ -214,7 +215,7 @@ defs.main(agent)
 - **It happens only when you run `--compile`.** The files written are whole, like any other definition: no `extends`, no `$override`, nothing that names the base. The running agent does not know there was a base, and the base folder does not have to be there later.
 - **A changed base is followed only when you recompile** here. `defs.load` runs the base's `agent.py`, not its JSON files, so this folder gets what the base's `agent.py` says now, even if the base itself was not recompiled.
 - `defs.load(path)`: the folder of another `agent.py` (or the `.py` file itself). A relative path starts at the folder of this `agent.py` (in a Python prompt: the current folder); `defs.env("AOS_WS", "/agents/reviewer")` works too. It does not search anywhere. Loading the base writes nothing anywhere.
-- `defs.load` gives the `defs.Agent` that the base's `agent.py` hands to `defs.main` (a new copy each time), with nine fields: `base.description`, `base.system`, `base.tools`, `base.llm`, `base.fsm`, `base.meta`, `base.interfaces`, `base.hooks`, `base.files`. A base without `hooks` gives an empty group (no `hooks.json` here either, unless you add hooks); like every field, the base's `hooks` comes over only when you write it (`hooks=base.hooks`, even when it is the skeleton's empty `{}`): an `agent.py` here without `hooks` has no `hooks.json` and takes no breakpoints; a base without `fsm` (an eca body) gives `base.fsm` = `None`. A field the base links to a file inside its own folder (`defs.extern("system.hand.txt")`) cannot be built on: using it is one `SpecBad` line; not using it is fine. A field linked to a file outside the base's folder comes over as the same link (see "extern").
+- `defs.load` gives the `defs.Agent` that the base's `agent.py` hands to `defs.main` (a new copy each time), with ten fields: `base.description`, `base.system`, `base.tools`, `base.llm`, `base.fsm`, `base.meta`, `base.interfaces`, `base.hooks`, `base.files`, `base.loop`. A base without `hooks` gives an empty group (no `hooks.json` here either, unless you add hooks); like every field, the base's `hooks` comes over only when you write it (`hooks=base.hooks`, even when it is the skeleton's empty `{}`): an `agent.py` here without `hooks` has no `hooks.json` and takes no breakpoints; a base without `fsm` (an eca body) gives `base.fsm` = `None`. A field the base links to a file inside its own folder (`defs.extern("system.hand.txt")`) cannot be built on: using it is one `SpecBad` line; not using it is fine. A field linked to a file outside the base's folder comes over as the same link (see "extern").
 - **Tools.** `base.tools` is one pack. `base.pack(prefix="r_", rename={...}, exclude=[...])` is the same pack with other names, as for `std.pack`. A tool you write yourself (`defs.tool`, `std.tool`) replaces the base's tool of that name; `defs.drop` takes one out. A tool is always replaced as a whole: there is no "change one field of a tool".
 - **Two bases (a diamond).** `tools=[d1.tools, d2.tools]`: a tool the same in both is one tool; a tool that differs, or that one of them took out (`defs.drop`) and the other kept, is `SpecBad`. Say which you mean with `defs.tool(name, ...)` or `defs.drop(name)`. A tool taken out does not come back unseen.
 - **Hooks.** `base.hooks` and `std.hooks()` are hook groups; `base.hooks["timer"]` is a copy of that hook, so `{**base.hooks["timer"], "every_ms": 60000}` changes one field and keeps the rest. When two groups (two bases, or `std.hooks()` of two templates) both have a hook of one name and the entries differ, it is `SpecBad`; pick one by writing that hook yourself in a dict after them (`None` drops it). A dict you write still replaces a hook as a whole, as before.

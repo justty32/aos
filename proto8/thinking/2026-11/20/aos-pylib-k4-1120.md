@@ -123,3 +123,45 @@ bob = defs.Agent(
 - `wf/HANDOFF.md` 名字那段（:37 一帶）：「`defs.extern`：留著但換意思＝編譯成 symlink」可補「已交（第 4 刀，線 aos-pylib-k4-1120）：同夾手寫換名連過去 `defs.extern("system.hand.txt")`；fsm 只能連同一夾；`agent_def check` 報斷鏈」。
 - `py/aos/spec_base.py` 檔頭第 4 行（見上「對不上」第 9 條）。
 - 改的是 `py/`：**活樹要在 `~/repo/aos/proto8` 跑 `install.py` 才吃到**（要使用者點頭）；本線沒跑。已經用舊意思寫 `defs.extern("system.txt")` 的 `agent.py`（使用者教學夾 `~/code/aos-tut` 的 bob 若照 06-2 做過）要改成 `defs.extern("system.hand.txt")`、手寫檔改名才能再編譯；已編好的定義夾不受影響（執行期沒動）。
+- HANDOFF 另可加一句（第二筆）：「`defs.Agent(..., loop=defs.loop(every_ms=1000))` 定 `loop.json` 的間隔（第 8 題「加一個宣告」）」。
+
+## 第二筆：loop=（待裁第 8 題「加一個宣告」）
+
+```python
+agent = defs.Agent("...", system=..., tools=[...], llm={}, fsm=std.fsm(),
+                   loop=defs.loop(every_ms=1000))     # loop.json 的 interval_ms：1000（不給 loop＝300）
+```
+
+| 檔 | 做什麼 |
+|---|---|
+| `py/aos/agent_spec.py` | 新 `defs.loop(*, every_ms)`：只收關鍵字、只開 `every_ms`；非負整數（照 aos-loop 讀 `interval_ms` 的規矩：`is_count`，0＝不停），其餘＝bad；回記號 `{"kind": "loop", "every_ms": N}`；`PUBLIC`、檔頭、`HELP` 一行 |
+| `py/aos/agent_spec_agent.py` | `Agent(..., loop=None)`、`FIELDS` 多 `loop`（排最後）；`_files` 驗：不是 `defs.loop` 來的、不給 fsm＝SpecBad；`_Loop(fsm檔, hooks, every_ms=300)`，`json()` 的鍵與順序不變、只換值 |
+| `py/aos/agent_spec_load.py` | 底交出 `base.loop`（`None` 或記號的拷貝） |
+| 測試 | 新 `test_agent_spec_loop.py`（4 條）、`test_agent_spec_loop_live.py`（2 條實掛） |
+| 文件 | 骨架 README：檔案表 `loop.json` 那列、`defs.Agent(...)` 簽名、選填欄位 `loop`、`defs.load` 改「ten fields」加 `base.loop` |
+
+**驗收**：
+
+1. **不給 `loop=` 逐 byte 相同**：同一套 capture（骨架 12 種旗標＋八隻例子，新寫法），第一筆的 `new` 對第二筆的 `new2`：111 份 **110 份相同**，唯一不同是 `--help` 多一行；寫出的樹只差骨架 `README.md`（文件）；權限清單相同；骨架重新編譯跟提交的那份無差。測試另有一條：不給 loop 的 `loop.json` 跟 agent-fsm 範本那份（除說明）相同、300。
+2. **編出的 `loop.json` 間隔對**：`every_ms=1000`→`interval_ms: 1000`、`0`→`0`；給了 loop 的跟沒給的整份只差 `interval_ms`（鍵、順序、其他檔都一樣）；`--compile` 寫進檔是 1500（測試）；`defs.load` 的 `base.loop` 寫 `loop=base.loop` 才帶過來。
+3. **實掛量到間隔真的變了**（`test_agent_spec_loop_live.py`）：抄 start-api、只起根 daemon（不用腦），兩隻 agent 各一格狀態機 `sh -c "date +%s%N >> 檔"`（每格記一次時間），一隻 `loop=defs.loop(every_ms=1000)`、一隻不給，掛上去跑 6 秒：**間隔中位數 1005 毫秒對 304 毫秒**。
+4. **報錯**：沒給 `every_ms`、負數、小數、布林、字串、手寫 dict、一個數字、不給 fsm（eca 版）各一條 SpecBad；`defs.loop(1000)`（照位置給）、`defs.loop(every_ms=…, max=3)`（沒開的鍵）是 Python 的 TypeError；壞的 `every_ms` 經 `--compile` 是一行 SpecBad、退 1、`loop.json` 不動。
+5. 全套測試逐夾：見下（第一筆的 `new` 對 `new2`）。
+
+**對不上或設計稿沒寫的（選最小）**：
+
+1. `defs.loop` 回的是記號（跟 `defs.state`、`defs.tool` 一樣的 `{"kind": …}`），**不能單獨 `.compile(夾)`**：`loop.json` 要知道 fsm 的檔名與有沒有 hooks，單獨編不出完整的一份。照第 2 刀 `spec_unit` 的做法要做成 `Unit` 是可以的（多一個要定的「單獨編時 exec 指哪」），選最小、不做。
+2. 只收關鍵字：`defs.loop(1000)` 是 TypeError（Python 當場丟），不是記成 bad 晚點報。理由：參數名就是意思（毫秒），照位置寫看不出單位。
+3. `every_ms=0` 收（aos-loop 收 0＝不停，照讀它的一方）。
+4. 不給 fsm（eca 版）時給 `loop=`＝SpecBad（那份 `loop.json` 屬於抄來的骨架，agent.py 不寫它）。
+5. hook 線第 5 刀要加的 `before_run`／`after_run` 旗標：`_Loop.json()` 的結構沒動，照樣在裡面多寫幾行；`defs.loop` 也沒有擋多加參數的設計（之後要開就是多一個關鍵字）。
+
+**沒開放、列給使用者看的 `loop.json` 鍵**（`cpp/aos-loop/src/engine/config.cpp:168` 收的；沒加）：
+
+- `max`：跑幾格就停（不寫＝一直跑）。
+- `on_timeout_ms`：on_start／on_stop 程式的時限。
+- `ctl`、`state`、`state_flux`：三扇窗的檔名（今天編譯寫死 `ctl.json`／`state.json`／`state_flux.json`，別的程式照這三個名字找，開放風險大）。
+- `exec`、`on_start`、`on_stop`：由 fsm 與 hooks 決定，不宜讓人直接寫。
+- 旗標 `--enable-logs`／`--enable-counters`（`body.json` 的 argv，不是 `loop.json` 的鍵）。
+
+**替使用者做的選擇（第二筆）**：只開 `every_ms`（任務書定）；名字照設計稿 08 的寫法 `defs.loop(every_ms=…)`、`loop=` 欄；`base.loop` 跟別的欄一樣不自動繼承。
