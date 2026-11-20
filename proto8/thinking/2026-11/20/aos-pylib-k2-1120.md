@@ -81,7 +81,8 @@ defs.main(agent)
 - `apps/agent` 改動前那條 failure 是 `test_reply_match.NewBody.test_one_batch_one_answer_to_everyone`（跟編譯無關，改動後同一條過了，看起來是時間上的不穩）。
 - `apps/feedback` 兩邊都是 18 條 error：要讀 repo 的 `wf/advices/feedback/raters.json`，乾淨複本只抄 `proto8/`，跟本線無關。
 - `test_agent_spec*.py` 共 64 條：舊的 53 條換寫法照過（`Linking`、`Reviewer.test_same_as_the_template`、`Skeleton.test_committed_files_match_agent_py` 都在內），新 11 條。
-- 最後一輪之後只改了 `py/aos/py/agent/__init__.py` 的檔頭註解（兩行註解，不影響執行）。
+- 最後一輪之後只改了 `py/aos/py/agent/__init__.py` 的檔頭註解（兩行註解，不影響執行）與教學 06-1 兩行。
+- 第 1 刀那條線途中交件（`d1e54abb1`、`f6b30bf9a`），所以再拿本線交件前的 HEAD（`f23727981`，含第 1 刀）抄一份、疊本線的檔再跑一次：`py/tests` 665 OK（skip 1、expected failure 1）、`templates/tests/tool-python` 5 OK、`tools_def` 12、`defs` 27、`agent_def` 30、`apps/gdb` 58 全 OK。兩刀疊在一起沒有撞。
 
 **新加的測試**（`test_agent_spec_objects.py`）：fsm 單獨 `.compile(夾)` 只寫 `fsm.json`、等於放進 Agent 編出的那份、`name=` 可換、壞檔名 SpecBad，並真的拿 `aos-fsm` 跑兩步（`aos-fsm` 沒有只驗不跑的旗標）；一支建置腳本編兩夾；`.dry_run()` 等於 `.compile()` 寫出的；寫錯建構不丟、到 `.dry_run()`／`.compile()` 才丟（Agent、Fsm 各一）；eca 版不給夾＝SpecBad；同一張 fsm、同一串 tools（含 `defs.load` 的）、同一組 hooks 放進兩個 Agent，第二個不受第一個影響、物件編完沒被改；`defs.main(Fsm)` 給 `--static`＝FlagUnknown、`--compile` 只寫 fsm.json；`defs.main` 收到的不是一個物件＝一行 SpecBad、什麼都沒寫，被載入時載入方報 SpecBad；`defs.compile`／`defs.write`／`base.TOOLS` 是 AttributeError、`agent.TOOLS = …` 也擋；`defs.load` 回的物件自己 `.compile(夾)` 跟底一樣。
 
