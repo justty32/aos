@@ -1,24 +1,19 @@
-"""tool_spec - 給 AI 寫工具的輔助：在一支 Python 裡宣告說明、參數、特性，就編譯出 _tooldef／_metainfo（資料夾的兩個檔或 JSON 物件的兩個鍵），執行時照宣告驗參數再叫 run(args)。
+"""tool_spec - 工具說明書的內部零件：參數、_tooldef、_metainfo 怎麼組與怎麼驗，寫進「位置」（資料夾的兩個檔或 JSON 物件的兩個鍵），掃原始碼裡的 fn.fail 代號。
 
 使用者 11-10 深夜（thinking 2026-11/10/tools-def）：「給python一種，順便弄個好用的lib，方便AI弄json schema, metainfo啥的。」
+11-20 起寫工具的寫法是 aos.py.fn（@fn.tool＋fn.main，使用者選「新名字 fn」，線 aos-pylib-k1-1120）：入口 main() 與印結果搬去
+aos/fn_run.py，fn.fail 也在那裡；這支留給 fn_mark、fn_run 與 tools_def（分階段 add_tooldef／add_metainfo、check）用，寫工具的人不直接 import。
 純標準庫；接在 tool_io 上（錯誤行、--help、旗標、不認得的鍵＝ArgumentsBad 都走 tool_io，這裡不另拼）。
-找法同 tool_io（py/docs/01 規則 9）＋ $AOS_HOME/lib：骨架 templates/tool-python/tool.py 的開頭幾行照這個順序找。
 
-三條路（各自可單獨用，編譯產物都落在「位置」裡）：
+  param(name, type, description, ...)   → 一個參數（寫錯記成 bad，tooldef 再報 SpecBad）
   tooldef(description, params, errors)  → dict（OpenAI function 去掉 name，外加 tool_io 讀的 errors）
   metainfo(description, meta)            → dict（N-68 的通用 key，沒給的補保守預設）
   write(location, td, mi)                位置＝資料夾（寫 _tooldef.json／_metainfo.json，暫存檔＋改名；寫檔後端在 aos/spec_base）
                                          或 檔.json／檔.json#/指標（經 aos-json set 寫 _tooldef／_metainfo 鍵）
-  main(run, description, params, meta)   工具的入口：--compile [位置] 編譯＋寫、--dry-run 只印不寫（兩份放一個物件）、
-                                         --tooldef／--metainfo 只印那一份（aos-tools 問可執行檔 --tooldef 的協定，留著），
-                                         其餘照 tool_io 跑：驗參數（型別、必填、enum、不認得的鍵）、補預設、叫 run、印結果。
-旗標與名字照 agent_spec（使用者 11-19 選項框「開一刀對齊 (Recommended)」，線 aos-defs-rename3-1119，thinking/2026-11/19/aos-pylib-1119/07 末節）：
-指令 --compile／--dry-run、Python write()；算的兩支本來就叫 tooldef()／metainfo()，不另加 compile()。
-run 回字串＝原樣印；dict／list／數字／布林＝印一行 JSON；None＝不印。fail(代號, 原因)＝錯誤行退 1；
-run 裡其他例外＝RunFailed（帶例外與行號，給腦改程式用）。"""
-import json, os, re, subprocess, sys, traceback
+  errors_in(path)                        原始碼裡寫到的 fail("代號", …)（fn.fail 也認），照出現順序
+  tooldef_problems／metainfo_problems     手寫的說明書有什麼毛病（tools_def check 用）"""
+import json, os, re, subprocess
 
-from aos import tool_io
 from aos import spec_base
 from aos.spec_base import SpecBad  # noqa: F401（對外的名字 ts.SpecBad；跟 agent_spec 同一個類別，線 aos-pylib-k0-1120）
 
@@ -31,18 +26,6 @@ META_DEFAULTS = {"resource": "cpu", "side_effect": False, "idempotent": True, "d
                  "cost": {"time_ms": 100}, "timeout_ms": 10000}
 META_BOOLS = ("side_effect", "idempotent", "deterministic", "parallel", "arbitrary_exec")
 _NO = object()
-
-
-class Fail(Exception):
-    """run 裡丟出＝這支工具的錯誤行（代號＋原因）。"""
-    def __init__(self, code, reason):
-        super().__init__(reason)
-        self.code = code
-
-
-def fail(code, reason):
-    """在 run 裡用：fail("NotFound", "no such city") → 印「名: error: NotFound no such city」、退 1。"""
-    raise Fail(code, reason)
 
 
 def _matches(value, t):
@@ -213,72 +196,10 @@ def write(location, td=None, mi=None):
     return done
 
 
-def _errors_in(path):
-    """入口原始碼裡寫到的 fail("代號", …)，照出現順序。"""
+def errors_in(path):
+    """原始碼裡寫到的 fail("代號", …)（fn.fail 也是），照出現順序；讀不了＝[]。"""
     try:
         with open(path, encoding="utf-8") as f:
             return list(dict.fromkeys(FAIL_RE.findall(f.read())))
     except (OSError, UnicodeError):
         return []
-
-
-def _print_result(result):
-    if result is None:
-        return
-    if isinstance(result, str):
-        text = result
-    else:
-        try:
-            text = json.dumps(result, ensure_ascii=False)
-        except (TypeError, ValueError):
-            text = str(result)
-    sys.stdout.write(text if text.endswith("\n") else text + "\n")
-    sys.stdout.flush()
-
-
-def main(run, description, params=(), meta=None, errors=(), name=None):
-    """工具的入口：最後一行寫 tool_spec.main(run, DESCRIPTION, PARAMS, META)。"""
-    script = os.path.realpath(run.__code__.co_filename)
-    if not name:                                    # tool.py＝資料夾名；別的腳本（JSON 物件裡的工具，mul.py）＝檔名去 .py
-        name = spec_base.prog_name(script, "tool.py")
-    tool_io.NAME = name
-    try:
-        td = tooldef(description, params, list(errors) + _errors_in(script))
-        mi = metainfo(description, meta)
-    except SpecBad as e:
-        tool_io.die("SpecBad", "%s (fix the declaration in %s)" % (e, os.path.basename(script)))
-    argv = sys.argv[1:]
-    if argv[:1] in (["--tooldef"], ["--metainfo"]):
-        print(json.dumps(td if argv[0] == "--tooldef" else mi, ensure_ascii=False, indent=2))
-        sys.exit(0)
-    if argv[:1] in (["--compile"], ["--dry-run"]):
-        location = spec_base.location(argv[0], argv[1:], argv, script, "usage: python3 %s --compile [LOCATION] | --dry-run"
-                                      % os.path.basename(script), tool_io.die)
-    if argv[:1] == ["--dry-run"]:
-        print(json.dumps({"_tooldef.json": td, "_metainfo.json": mi}, ensure_ascii=False, indent=2))
-        sys.exit(0)
-    if argv[:1] == ["--compile"]:
-        try:
-            for target in write(location, td, mi):
-                print("wrote %s" % target)
-        except (OSError, SpecBad) as e:
-            tool_io.die("WriteFailed", str(e), echo=False)
-        sys.exit(0)
-    tool_io.start(name, None, tooldef=td)
-    args = tool_io.arguments()
-    for key, node in td["parameters"]["properties"].items():
-        if key not in args and "default" in node:
-            args[key] = node["default"]
-        elif key in args and "enum" in node and args[key] not in node["enum"]:
-            tool_io.die("ArgumentsBad", "%s must be one of: %s (got %s)" % (key, ", ".join(map(str, node["enum"])), json.dumps(args[key])))
-    try:
-        result = run(args)
-    except Fail as e:
-        tool_io.die(e.code, str(e))
-    except tool_io.Error as e:
-        tool_io.die(e.code, str(e))
-    except Exception as e:      # noqa: BLE001  給腦看的：哪一行、什麼例外
-        frames = [f for f in traceback.extract_tb(e.__traceback__) if os.path.realpath(f.filename) == script]
-        where = " (%s line %d)" % (os.path.basename(script), frames[-1].lineno) if frames else ""
-        tool_io.die("RunFailed", "run() raised %s: %s%s" % (type(e).__name__, e, where))
-    _print_result(result)

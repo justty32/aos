@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""tool-python 骨架 - 最小、合格、能跑的工具：把兩個數相加。抄出去改 DESCRIPTION、PARAMS、run 就是新工具（說明看 README.md）。"""
+"""tool-python 骨架 - 最小、合格、能跑的工具：把兩個數相加。抄出去改 @fn.tool 底下那個函數（名字、docstring、參數、內容）就是新工具（說明看 README.md）。"""
 # ---- setup: find the aos package (keep these lines as they are) ----
 import os, sys
 sys.dont_write_bytecode = True
@@ -9,7 +9,7 @@ if os.environ.get("AOS_HOME"):
     _found.append(os.path.join(os.environ["AOS_HOME"], "lib"))
 sys.path[:0] = _found
 try:
-    from aos import tool_spec as ts
+    from aos.py import fn
 except ModuleNotFoundError as _e:
     if _e.name != "aos":
         raise
@@ -22,18 +22,16 @@ except ModuleNotFoundError as _e:
     sys.exit(1)
 # ---- your tool: change the lines below ----
 
-DESCRIPTION = 'Add two numbers and return the sum. Example: {"a": 2, "b": 3} -> 5'
 
-PARAMS = [
-    ts.param("a", "number", "the first number"),
-    ts.param("b", "number", "the second number"),
-]
+@fn.tool(meta={"side_effect": False})
+def add(a: float, b: float) -> float:
+    """Add two numbers and return the sum. Example: {"a": 2, "b": 3} -> 5
 
-META = {"side_effect": False}
-
-
-def run(args):
-    return args["a"] + args["b"]
+    Args:
+      a: the first number
+      b: the second number
+    """
+    return a + b
 
 
-ts.main(run, DESCRIPTION, PARAMS, META)
+fn.main(add)

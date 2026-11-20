@@ -4,11 +4,12 @@
 #   粗版、照 agent_def：只複製與檢查；改內容用一般的檔案工具，掛上去用 self_tools add。
 # 介面（py/docs/01 的契約）：stdin 收 {"op": "new"|"check", …}；別的鍵＝ArgumentsBad：
 #   new {path, description?}  骨架整夾複製到 path（先寫同層暫存夾 .<名>.new-<pid> 再改名，略過 __pycache__）；path 哪裡都行、
-#       能不能寫交給 Linux 權限；已經在＝PathExists。description＝先填進 tool.py 的 DESCRIPTION。最後叫 tool.py --compile
+#       能不能寫交給 Linux 權限；已經在＝PathExists。description＝先塞進 tool.py 的 @fn.tool(description=...)（明寫的贏過 docstring；
+#       11-20 起骨架是 fn 寫法，線 aos-pylib-k1-1120，設計稿 07d 意見 3）。最後叫 tool.py --compile
 #       讓 _tooldef.json／_metainfo.json 跟 tool.py 一致。成功印一行 made tool folder … 與下一步。
 #   check {path, sample?}  path＝資料夾、JSON 檔或 檔.json#/指標（同 aos-exec 的入口位置，N-61、N-62）。一行一項：
 #       entry（資料夾的 _entry／_entry.json，或 JSON 物件的 _entry 鍵；argv 裡的 .py 要在、編得過）→
-#       用 tool_spec 的腳本先跑 `腳本 --compile 位置` 重新編譯兩份定義 → metainfo（tool_spec.metainfo_problems）→
+#       用 fn 寫的腳本（有 fn.main(…)）先跑 `腳本 --compile 位置` 重新編譯兩份定義 → metainfo（tool_spec.metainfo_problems）→
 #       tooldef（tool_spec.tooldef_problems；資料夾與 JSON 檔另經 aos-tools 暫存登記檔 add＋get 驗一次）→
 #       給了 sample 就 aos-exec 試叫一次 → 最後一行 stage（只是能跑的函數／有 metainfo／有 tooldef＝可當工具）。
 #       有 bad＝最後再一行錯誤行 ToolBad、退 1（報告留在 stdout）。
@@ -16,8 +17,8 @@
 #   請弄個_metainfo.json，再弄個_tooldef.json」）：new 也收 JSON 物件（檔.json#/指標 或 新的 檔.json：物件裡寫 _entry 鍵、
 #   旁邊放 <名>.py，名＝指標最後一段或檔名）；分階段三個 op，資料夾與 JSON 物件都通、已經有了＝PathExists：
 #   add_entry {path, script?}  寫入口（資料夾 _entry.json {"argv": ["python3", 腳本]}／物件的 _entry 鍵）；腳本不在＝抄骨架的 tool.py 過去。
-#   add_metainfo {path, description?, meta?}  寫 _metainfo：入口腳本用 tool_spec 又沒給 description＝照腳本產；否則照 description／meta 產。
-#   add_tooldef {path, description?, params?}  寫 _tooldef：同上；params＝[{name, type, description, default?, enum?, items?, required?}]（＝ts.param 的參數）。
+#   add_metainfo {path, description?, meta?}  寫 _metainfo：入口腳本用 fn 寫又沒給 description＝照腳本產；否則照 description／meta 產。
+#   add_tooldef {path, description?, params?}  寫 _tooldef：同上；params＝[{name, type, description, default?, enum?, items?, required?}]（＝內部 tool_spec.param 的參數）。
 #   相對路徑從 $AOS_WS 算、絕對照用，不設工作區限制。錯：stderr 與 stdout 各一行「tools_def: error: 代號 原因」、退 1；
 #   op 沒給＝ArgumentsBad、不認得＝OpUnknown。--help＝英文說明印 stdout、退 0；Ctrl-C 退 130。
 import json, os, re, shutil, signal, subprocess, sys, tempfile
@@ -28,7 +29,7 @@ usage: %s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the works
 Make tools: op new copies the Python tool skeleton (templates/tool-python) to a new folder
 (or into a JSON object: FILE.json#/POINTER, the script goes next to the JSON file);
 op check checks one tool location (folder, JSON file or FILE.json#/POINTER), recompiles
-_tooldef/_metainfo from a tool_spec script, can try one call, and says the stage.
+_tooldef/_metainfo from a script written with fn (fn.main), can try one call, and says the stage.
 Step by step instead: add_entry, then add_metainfo, then add_tooldef (same locations).
 Result on stdout, one line per item. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.
 """ % (NAME, NAME)
@@ -155,12 +156,23 @@ def ensure_json_file(loc):
         die("MkdirFailed", "cannot create %s: %s" % (tool_io.place(loc["path"]), tool_io.os_reason(e)))
 
 
+def with_description(src, desc):
+    """tool.py 的行 → 第一個 @fn.tool 那行塞進 description=（明寫的贏過 docstring）；desc None＝不動。"""
+    if desc is None:
+        return src
+    for i, x in enumerate(src):
+        if x.startswith("@fn.tool"):
+            rest = x[len("@fn.tool"):].strip()
+            inner = rest[1:-1].strip() if rest.startswith("(") and rest.endswith(")") else ""
+            src[i] = "@fn.tool(description=%r%s)\n" % (desc.strip(), ", " + inner if inner else "")
+            break
+    return src
+
+
 def copy_script(dest, desc=None):
-    """骨架的 tool.py 抄到 dest（description＝先填進 DESCRIPTION）。"""
+    """骨架的 tool.py 抄到 dest（description＝先塞進 @fn.tool(description=...)）。"""
     with open(os.path.join(SKELETON, "tool.py"), encoding="utf-8") as f:
-        src = f.read().splitlines(keepends=True)
-    if desc is not None:
-        src = ["DESCRIPTION = %r\n" % desc.strip() if x.startswith("DESCRIPTION = ") else x for x in src]
+        src = with_description(f.read().splitlines(keepends=True), desc)
     try:
         with open(dest, "w", encoding="utf-8") as f:
             f.write("".join(src))
@@ -193,7 +205,7 @@ def new_object(loc, desc):
     shown = os.path.relpath(script, tool_io.workspace()) if not os.path.isabs(args["path"]) else script
     print("made tool %s: the object has _entry, _tooldef, _metainfo keys, and %s next to the JSON file runs it\n"
           "(a copy of the tool-python skeleton: a working tool that adds two numbers).\n"
-          "Next: in %s change only the part shown below (use edit; keep every line above it, they load tool_spec),\n"
+          "Next: in %s change only the part shown below (use edit; keep every line above it, they load the aos package),\n"
           "then tools_def {\"op\": \"check\", \"path\": %s, \"sample\": {...}}.\n"
           "---- %s, the part to change ----\n%s" % (loc["full"], os.path.basename(script), shown, json.dumps(args["path"]),
                                                     shown, part_to_change(script)))
@@ -223,8 +235,7 @@ def op_new():
             if desc is not None:
                 script = os.path.join(tmp, "tool.py")
                 with open(script, encoding="utf-8") as f:
-                    src = f.read().splitlines(keepends=True)
-                src = ["DESCRIPTION = %r\n" % desc.strip() if x.startswith("DESCRIPTION = ") else x for x in src]
+                    src = with_description(f.read().splitlines(keepends=True), desc)
                 with open(script, "w", encoding="utf-8") as f:
                     f.write("".join(src))
             os.rename(tmp, dest)
@@ -240,7 +251,7 @@ def op_new():
     with open(os.path.join(dest, "tool.py"), encoding="utf-8") as f:
         part = f.read().split(MARK, 1)[-1].strip("\n")
     print("made tool folder %s (a copy of the tool-python skeleton: a working tool that adds two numbers; more in %s/README.md).\n"
-          "Next: in %s/tool.py change only the part shown below (use edit; keep every line above it, they load tool_spec),\n"
+          "Next: in %s/tool.py change only the part shown below (use edit; keep every line above it, they load the aos package),\n"
           "then tools_def {\"op\": \"check\", \"path\": %s, \"sample\": {...}}.\n"
           "---- %s/tool.py, the part to change ----\n%s" % (dest, shown, shown, json.dumps(shown), shown, part))
 
@@ -344,17 +355,13 @@ def check_entry(obj, base):
 
 
 def recompile(script, location, base):
-    try:
-        with open(script, encoding="utf-8") as fh:
-            uses = "tool_spec" in fh.read()
-    except (OSError, UnicodeError):
-        uses = False
-    if not uses:
+    if not uses_fn(script):
         if os.path.isfile(os.path.join(os.path.dirname(script), "_entry.json")) and os.path.basename(script) == "tool.py":
-            line("bad", "defs: tool.py does not use tool_spec any more, so nothing describes it (fix: keep the setup lines "
-                 "of the skeleton and write DESCRIPTION, PARAMS, META, def run(args) and the last line ts.main(...); see README.md)")
+            line("bad", "defs: tool.py does not call fn.main any more, so nothing describes it (fix: keep the setup lines "
+                 "of the skeleton, put @fn.tool on one function with a docstring and typed parameters, and keep the last line "
+                 "fn.main(...); see README.md)")
             return False
-        line("note", "defs: %s does not use tool_spec; _tooldef and _metainfo are kept by hand" % os.path.basename(script))
+        line("note", "defs: %s does not use fn (no fn.main); _tooldef and _metainfo are kept by hand" % os.path.basename(script))
         return True
     code, out, err = run([sys.executable, script, "--compile", location], base)
     if code != 0:
@@ -451,7 +458,7 @@ def op_check():
         line("bad" if probs else "ok", "metainfo: " + ("; ".join(probs) if probs else "valid (%s)" % mi.get("summary", "no summary")))
         has_mi = not probs
     elif not has_mi:
-        line("note", "metainfo: none (optional; a tool_spec script makes it, or tools_def add_metainfo)")
+        line("note", "metainfo: none (optional; a script written with fn makes it, or tools_def add_metainfo)")
     has_td, td, both = load_tooldef(obj, base, mi)
     if both:
         line("note", "tooldef: both %s; %s wins on the same key" % (
@@ -459,14 +466,14 @@ def op_check():
     if has_td and td is not None:
         probs = tool_spec.tooldef_problems(td)
         if isinstance(td, dict) and td.get("description") == skeleton_description() and not os.path.samefile(base, SKELETON):
-            probs.append("description is still the skeleton's (\"Add two numbers ...\"): change DESCRIPTION in tool.py")
+            probs.append("description is still the skeleton's (\"Add two numbers ...\"): change the docstring of the function in tool.py")
         if not probs:
             bad = aos_tools_check(full)
             probs = [bad] if bad else []
         line("bad" if probs else "ok", "tooldef: " + ("; ".join(probs) if probs else "valid, parameters: %s" % (", ".join(td["parameters"].get("properties", {})) or "none")))
         has_td = not probs
     elif not has_td:
-        line("bad", "tooldef: none (fix: describe the tool in a tool_spec script, or tools_def add_tooldef, or write %s)" % ("_tooldef.json" if obj is None else "a _tooldef key"))
+        line("bad", "tooldef: none (fix: describe the tool in a script written with fn, or tools_def add_tooldef, or write %s)" % ("_tooldef.json" if obj is None else "a _tooldef key"))
     example = EXAMPLE_RE.search(td.get("description", "")) if has_td and isinstance(td, dict) and runnable and made else None
     if example:
         try:
@@ -479,7 +486,7 @@ def op_check():
             if code == 0 and same(got, want):
                 line("ok", "example: %s -> %s (as the description says)" % (example.group(1), got))
             else:
-                line("bad", "example: the description says %s -> %s, but the tool gave %s (fix run(args), or the example in DESCRIPTION)"
+                line("bad", "example: the description says %s -> %s, but the tool gave %s (fix the function, or the example in its docstring)"
                      % (example.group(1), want, got if code == 0 else "exit %s: %s" % (code, last_line(out, err))))
     if sample is not None:
         if not runnable or not made:
@@ -489,7 +496,7 @@ def op_check():
             code, out, err = run(["aos-exec", "--ws", tool_io.workspace(), full], tool_io.workspace(), json.dumps(sample), limit)
             shown = " | ".join(out.strip().splitlines()[:3])[:300] if out.strip() else last_line(err)
             if code == 0 and not out.strip():
-                code, shown = "0 but", "no output (run(args) must return the result)"
+                code, shown = "0 but", "no output (the function must return the result)"
             line("ok" if code == 0 else "bad", "try: %s -> %s %s" % (json.dumps(sample, ensure_ascii=False), "exit %s:" % code if code is not None else "", shown if code is not None else err))
     missing = [n for n, ok in (("entry", runnable), ("_metainfo", has_mi), ("_tooldef", has_td)) if not ok]
     n = 3 - len(missing)
@@ -532,10 +539,11 @@ def stage_line(loc):
     return "stage %d of 3 (entry, _metainfo, _tooldef)%s" % (3 - len(missing), "; missing: " + ", ".join(missing) if missing else "")
 
 
-def uses_tool_spec(script):
+def uses_fn(script):
+    """腳本是 fn 寫的嗎（有 fn.main(…)，旗標 --compile／--tooldef／--metainfo 都有）。"""
     try:
         with open(script, encoding="utf-8") as f:
-            return "tool_spec" in f.read()
+            return "fn.main(" in f.read()
     except (OSError, UnicodeError, TypeError):
         return False
 
@@ -583,18 +591,18 @@ def op_add_entry():
 
 
 def from_args_or_script(loc, key):
-    """add_metainfo／add_tooldef 共用：已有＝PathExists；腳本用 tool_spec 又沒給 description＝照腳本產，否則照參數產。"""
+    """add_metainfo／add_tooldef 共用：已有＝PathExists；腳本用 fn 寫又沒給 description＝照腳本產，否則照參數產。"""
     obj, _e, script, has_mi, has_td = staged(loc)
     if (has_mi if key == "_metainfo" else has_td):
-        die("PathExists", "%s already has %s; change it with edit (or, for a tool_spec script, change the script and run check)" % (args["path"], key))
+        die("PathExists", "%s already has %s; change it with edit (or, for a script written with fn, change the script and run check)" % (args["path"], key))
     desc = args.get("description")
-    if desc is None and uses_tool_spec(script):
+    if desc is None and uses_fn(script):
         code, out, err = run([sys.executable, script, "--metainfo" if key == "_metainfo" else "--tooldef"], loc["base"])
         if code != 0:
             die("ArgumentsBad", "%s --%s failed: %s" % (os.path.basename(script), key[1:], last_line(err, out)))
         return json.loads(out), "from %s" % os.path.basename(script)
     if not isinstance(desc, str) or not desc.strip():
-        die("ArgumentsBad", "description is needed (what the tool does, one example call); the entry script does not use tool_spec")
+        die("ArgumentsBad", "description is needed (what the tool does, one example call); the entry script does not use fn")
     try:
         if key == "_metainfo":
             meta = args.get("meta")

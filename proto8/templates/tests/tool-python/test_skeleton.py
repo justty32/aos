@@ -1,4 +1,4 @@
-"""Test the tool-python skeleton: its compiled _tooldef.json/_metainfo.json match tool.py, and a copy outside the repo runs with only AOS_HOME or with a copy of the aos package next to it."""
+"""Test the tool-python skeleton (written with fn): its compiled _tooldef.json/_metainfo.json match tool.py byte for byte, and a copy outside the repo runs with only AOS_HOME or with a copy of the aos package next to it."""
 import json
 import os
 from pathlib import Path
@@ -30,6 +30,17 @@ class Skeleton(unittest.TestCase):
         for flag, name in (("--tooldef", "_tooldef.json"), ("--metainfo", "_metainfo.json")):
             r = subprocess.run([sys.executable, str(SKEL / "tool.py"), flag], capture_output=True, text=True, timeout=30)
             self.assertEqual(json.loads(r.stdout), json.loads((SKEL / name).read_text()), "run tool.py --compile in the skeleton")
+
+    def test_compile_gives_the_committed_bytes(self):
+        dest = self.root / "add"
+        shutil.copytree(SKEL, dest)
+        for name in ("_tooldef.json", "_metainfo.json"):
+            (dest / name).unlink()
+        r = subprocess.run([sys.executable, str(dest / "tool.py"), "--compile"], capture_output=True, text=True, timeout=30)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(r.stdout, "wrote %s/_tooldef.json\nwrote %s/_metainfo.json\n" % (dest, dest))
+        for name in ("_tooldef.json", "_metainfo.json"):
+            self.assertEqual((dest / name).read_bytes(), (SKEL / name).read_bytes(), "run tool.py --compile in the skeleton")
 
     def test_no_tests_or_cache_in_skeleton(self):
         self.assertEqual(sorted(p.name for p in SKEL.iterdir()), ["README.md", "_entry.json", "_metainfo.json", "_tooldef.json", "tool.py"])

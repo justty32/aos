@@ -93,6 +93,12 @@
  "test_flags_anywhere.py": {
   "description": "Check aos_flags.parse(anywhere=True) and the one-layer commands moved to it (P-44 continued, 11-11 \"全部改\")."
  },
+ "test_fn.py": {
+  "description": "Test aos.py.fn marks: description and parameters taken from the function and written out (the written one wins, per parameter), and SpecBad; fn.main …"
+ },
+ "test_fn_run.py": {
+  "description": "Test fn.main: a tool's flags (--compile folder / pointer, --dry-run, --tooldef, --metainfo), its run (defaults, enum, fn.fail, RunFailed, names), and…"
+ },
  "test_hook_point.py": {
   "description": "Test aos.hook_point: the shipped hook_points.json files read and check fine, every check rule rejects a bad example, merging, engine_table and for_de…"
  },
@@ -169,7 +175,7 @@
   "description": "Test tool_io.place and tool_io.os_reason: error lines name program-made paths relative to $AOS_STACK / $AOS_DAEMON / $AOS_WS (counted from the caller…"
  },
  "test_tool_spec.py": {
-  "description": "Test py/aos/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, --compile into a folder and a JSON pointer, --dry-run, and main() at run time."
+  "description": "Test py/aos/tool_spec.py (the internal parts behind fn and tools_def): param, tooldef, metainfo, SpecBad, the problem lists; fn.main is in test_fn_ru…"
  },
  "test_user_zone_guard.py": {
   "description": "user_zone_guard（before_tool 的 hook handler）：參數路徑落在專區、不在 mailbox/、工具不是唯讀＝退 10 擋；mailbox/ 裡、專區外、唯讀工具、相對路徑接 $AOS_WS、~ 展開、JSON 指標、巢狀參數、捷徑都照算；壞事件退 1。"

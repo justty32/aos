@@ -1,4 +1,4 @@
-"""Test tools_def new (copy the skeleton, description, PathExists, outside the workspace, into JSON objects), check (folder, JSON file, FILE#/POINTER, bad lines, sample call, stage) and the step-by-step ops add_entry, add_metainfo, add_tooldef."""
+"""Test tools_def new (copy the fn skeleton, description= in @fn.tool, PathExists, outside the workspace, into JSON objects), check (folder, JSON file, FILE#/POINTER, bad lines, sample call, stage) and the step-by-step ops add_entry, add_metainfo, add_tooldef."""
 import json
 import os
 from pathlib import Path
@@ -30,7 +30,7 @@ class ToolsDef(unittest.TestCase):
         r = self.run_tool({"op": "new", "path": path, "description": 'Multiply. Example: {"a": 6, "b": 7} -> 42'})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         script = (self.ws / path / "tool.py") if not os.path.isabs(path) else Path(path) / "tool.py"
-        script.write_text(script.read_text().replace('return args["a"] + args["b"]', 'return args["a"] * args["b"]'))
+        script.write_text(script.read_text().replace("return a + b", "return a * b"))
         return script
 
     def test_new_copies_and_fills_description(self):
@@ -38,6 +38,7 @@ class ToolsDef(unittest.TestCase):
         d = self.ws / "t" / "mul"
         self.assertEqual(sorted(p.name for p in d.iterdir()), ["README.md", "_entry.json", "_metainfo.json", "_tooldef.json", "tool.py"])
         self.assertTrue(json.loads((d / "_tooldef.json").read_text())["description"].startswith("Multiply."))
+        self.assertIn("@fn.tool(description='Multiply. Example: {\"a\": 6, \"b\": 7} -> 42', meta=", (d / "tool.py").read_text())
         self.assertEqual([p.name for p in (self.ws / "t").iterdir()], ["mul"])           # 沒留暫存夾
         r = self.run_tool({"op": "new", "path": "t/mul"})
         self.assertEqual(r.returncode, 1)
@@ -55,9 +56,9 @@ class ToolsDef(unittest.TestCase):
     def test_check_bad_lines(self):
         script = self.make_mul()
         good = script.read_text()
-        for broken, want in ((good.replace('args["b"]\n', '\n'), "bad   entry: tool.py line"),
-                             (good.replace('"number", "the first number"', '"num", "the first number"'), "SpecBad param a: type 'num'"),
-                             (good.replace('return args["a"] * args["b"]', 'return args["a"] / 0'), "RunFailed run() raised ZeroDivisionError")):
+        for broken, want in ((good.replace("return a * b\n", "return a *\n"), "bad   entry: tool.py line"),
+                             (good.replace("a: float,", "a: complex,"), "SpecBad parameter a needs a type (str, int, float, bool, list, dict)"),
+                             (good.replace("return a * b", "return a / 0"), "RunFailed add() raised ZeroDivisionError")):
             with self.subTest(want=want):
                 script.write_text(broken)
                 r = self.run_tool({"op": "check", "path": "t/mul", "sample": {"a": 1, "b": 2}})
@@ -68,21 +69,21 @@ class ToolsDef(unittest.TestCase):
 
     def test_check_catches_overwritten_or_unchanged_skeleton(self):
         r = self.run_tool({"op": "new", "path": "t/plain"})
-        self.assertIn("---- t/plain/tool.py, the part to change ----\nDESCRIPTION = ", r.stdout)       # new 直接給要改的那段
-        self.assertTrue(r.stdout.rstrip().endswith("ts.main(run, DESCRIPTION, PARAMS, META)"), r.stdout)
+        self.assertIn("---- t/plain/tool.py, the part to change ----\n@fn.tool(meta=", r.stdout)       # new 直接給要改的那段
+        self.assertTrue(r.stdout.rstrip().endswith("fn.main(add)"), r.stdout)
         r = self.run_tool({"op": "check", "path": "t/plain"})
         self.assertIn("description is still the skeleton's", r.stdout)
         (self.ws / "t" / "plain" / "tool.py").write_text("def multiply(a, b):\n    return a * b\n")   # gemma 第 1 輪的寫法
         r = self.run_tool({"op": "check", "path": "t/plain", "sample": {"a": 6, "b": 7}})
         self.assertEqual(r.returncode, 1)
-        self.assertIn("bad   defs: tool.py does not use tool_spec any more", r.stdout)
+        self.assertIn("bad   defs: tool.py does not call fn.main any more", r.stdout)
         self.assertIn("skip  try: not tried", r.stdout)
 
     def test_example_in_description_is_tried(self):
         script = self.make_mul()
         r = self.run_tool({"op": "check", "path": "t/mul"})
         self.assertIn('ok    example: {"a": 6, "b": 7} -> 42 (as the description says)', r.stdout)
-        script.write_text(script.read_text().replace('args["a"] * args["b"]', 'args["a"] + args["b"]'))   # gemma 第 3 輪：只改了說明
+        script.write_text(script.read_text().replace("return a * b", "return a + b"))   # gemma 第 3 輪：只改了說明
         r = self.run_tool({"op": "check", "path": "t/mul"})
         self.assertEqual(r.returncode, 1)
         self.assertIn('bad   example: the description says {"a": 6, "b": 7} -> 42, but the tool gave 13', r.stdout)
@@ -115,7 +116,7 @@ class ToolsDef(unittest.TestCase):
         script = self.ws / "k" / "mul.py"
         script.write_text(script.read_text().replace("Add two numbers and return the sum. Example: {\"a\": 2, \"b\": 3} -> 5",
                                                      "Multiply. Example: {\"a\": 6, \"b\": 7} -> 42")
-                          .replace('return args["a"] + args["b"]', 'return args["a"] * args["b"]'))
+                          .replace("return a + b", "return a * b"))
         r = self.run_tool({"op": "check", "path": "k/box.json#/tools/mul", "sample": {"a": 6, "b": 7}})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("exit 0: 42", r.stdout)
@@ -123,7 +124,7 @@ class ToolsDef(unittest.TestCase):
         r = self.run_tool({"op": "new", "path": "k/box.json#/tools/mul"})
         self.assertTrue(r.stdout.startswith("tools_def: error: PathExists"), r.stdout)
 
-    def test_step_by_step_folder_with_tool_spec_script(self):
+    def test_step_by_step_folder_with_fn_script(self):
         r = self.run_tool({"op": "add_entry", "path": "fn"})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("stage 1 of 3", r.stdout)
@@ -155,7 +156,7 @@ class ToolsDef(unittest.TestCase):
         self.assertIn("stage 3 of 3", r.stdout)
         r = self.run_tool({"op": "check", "path": "h/fs.json#/f", "sample": {"a": 2, "b": 5}})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("note  defs: f.py does not use tool_spec", r.stdout)
+        self.assertIn("note  defs: f.py does not use fn (no fn.main)", r.stdout)
         self.assertIn("ok    example:", r.stdout)
         self.assertIn("exit 0: 10", r.stdout)
         self.assertEqual(json.loads((self.ws / "h" / "fs.json").read_text())["note"], "kept")
