@@ -137,6 +137,6 @@
 - `observed.jsonl`＝每問一次模型記一行（哪封信、哪個端點與模型、token 用量、花幾毫秒）；自動 compact 的 35% 就是讀它。stack 的 `interfaces.json` 寫 `{"aos-observed": {"file": "observed.jsonl"}}` 是在宣告「我有這份觀測檔、檔名是這個」，由 `py/aos/observed.py` 寫。
 - `stop_cause.json`：daemon 送 SIGTERM 之前先寫在那隻的 stack，內容是為什麼要它停（這次是 `shutdown`）；子 loop 收工時讀它，交給 `on_stop`（agent 的 `after_stop` 事件的 `cause`）。出處 [aos-daemon docs/03](../../../cpp/aos-daemon/docs/03-起-停-暫停.md)。
 
-### 沒問的
+### 決定
 
-- `request.json` 的重複要不要改成 `$ref`、`sol` 那包要不要加 `session_key`：他是在問現況，還沒說要改。
+- 頂層問要不要在暫存樹實測加 `session_key` 的差別，他答：「明天吧，這塊確實值得來處理。」（指每輪 1.2 萬 token、快取沒命中這一塊）
