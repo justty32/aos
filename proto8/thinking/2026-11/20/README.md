@@ -10,3 +10,4 @@
 | [初始 kernel＝llm＋權限沙箱（aos-init-kernel-1120）](aos-init-kernel-1120/README.md) | 調查＋發想：今天灌 kernel 實際只灌 llm kernel；權限那側沒有隨灌 kernel 裝上的東西（站與 kernel_gate 預設不裝，limits／sub:N 在 daemon 本體，guard／sandbox 在 agent 與工具）；四種切法與八題待裁，等使用者 |
 | [編譯的通用底座與函數當工具／hook（aos-compile-base-1120）](aos-compile-base-1120/README.md) | 只查只寫：能編譯的只有 agent 與工具、兩支共用 0 行；底座攤五個形狀（甲～戊）；函數當工具／hook 分「抽出來」與「回頭跑」兩大類，小原型兩種都走通；八題待裁，等使用者 |
 | [aos-gdb 問答（aos-gdb-問答-1120）](aos-gdb-問答-1120.md) | 使用者問 a.stop() 是不是阻塞、斷點 id 為什麼是 xxxx_1；只讀快查：把手沒有 a.stop，暫停是 a.bp.pause()、停掉是 a.ctl.stop()，正在跑的一格不被打斷、扣在斷點上停不了，id 是施工線順手定的「種類_N」且刪了會重用；選項框四題已答（pause 加 wait=、不等回可查的物件 is_done()、id 純數字搭配屬性待確認、add 回物件），還沒施工 |
+| [hook 點的介面與耦合（aos-hook-iface-1120）](aos-hook-iface-1120/README.md) | 只查只寫：hook 是程式走到時機明叫、不是每圈觸發；引擎一份、事件表 agent 與 kernel 各一份同形狀，表裡沒有欄位與誰觸發，沒有提供點的條文；fsm 加一個點約 16 處、手抄清單約 19 處（5 處漏改不報錯）；五個形狀、十題待裁，等使用者 |

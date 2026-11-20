@@ -372,6 +372,18 @@
         "[aos-gdb-問答-1120](../proto8/thinking/2026-11/20/aos-gdb-問答-1120.md)"
       ],
       "since": "2026-11-20"
+    },
+    "aos-hook-iface": {
+      "title": "hook 點的介面與耦合",
+      "status": "等使用者",
+      "flow": "",
+      "what": "調查與發想已寫好（只查只寫，沒改程式）：加一個 hook 點要動的地方、呼叫端與手抄清單的耦合、fsm 與 eca 差異；甲～戊五個形狀；十題待裁",
+      "next": "等使用者看待裁題",
+      "see": [
+        "[README](../proto8/thinking/2026-11/20/aos-hook-iface-1120/README.md)",
+        "[待裁題](../proto8/thinking/2026-11/20/aos-hook-iface-1120/08-D-待裁題.md)"
+      ],
+      "since": "2026-11-20"
     }
   }
 }
