@@ -384,6 +384,19 @@
         "[待裁題](../proto8/thinking/2026-11/20/aos-hook-iface-1120/08-D-待裁題.md)"
       ],
       "since": "2026-11-20"
+    },
+    "aos-kres": {
+      "title": "kernel 的資源基底與排程介面",
+      "status": "等使用者",
+      "flow": "",
+      "what": "發想已寫好（只查只寫，沒改程式）：資源基底九個零件與七處兩種讀法、對照現況、十六條邊緣、repo 外粗化／細化原型、形狀；排程介面核實「骨架本來就有」對一半、先後放進骨架的最小樣子與 llm kernel 搬上去的三個卡點；九題待定",
+      "next": "等使用者看理解對不對與待定題",
+      "see": [
+        "[README](../proto8/thinking/2026-11/20/aos-kres-1120/README.md)",
+        "[待定題](../proto8/thinking/2026-11/20/aos-kres-1120/06-F-待定題.md)",
+        "[aos-htop-1119](../proto8/thinking/2026-11/19/aos-htop-1119/README.md)"
+      ],
+      "since": "2026-11-20"
     }
   }
 }
