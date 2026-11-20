@@ -56,6 +56,8 @@ a.bp.add.after_tool().id              # 2（1 刪了也不再用）
 
 ## 待裁小題（沒問，留給使用者）
 
+（已答，見檔尾「留的三小題：使用者 11-20 上午已答」。）
+
 - 號碼要不要補零（`gdb_0002`）讓 hook 照號碼順序跑。
 - `Pending` 要不要有 cancel（現在要停只能 `a.bp.pause()`）。
 - `a.bp.set` 現在回 dict（`get` 那一列）；要不要也回斷點物件。
@@ -103,3 +105,20 @@ gdb> c.fired    → 1
 
 1. 點頭後在要用的那份 proto8 跑 `python3 install.py`（本線沒在 `~/repo/aos/proto8` 跑；改 `py/` 要裝了才生效）。
 2. 照 README「最短試法」起 start-api 的樹，`aos-gdb -d .stack ann`，打上面「寫起來的樣子」那幾行；`wait=False` 想看到 `is_done()` 是 False，可以先 `a.bp.add.after_tool(sh="sleep 3; exit 10")` 讓 act 那一格拖 3 秒。
+
+## 留的三小題：使用者 11-20 上午已答
+
+頂層用一題複選的選項框問。
+
+**題目**：gdb 三小題，要加哪些？（可複選；都不要就選最後一個）
+
+| 選項 |
+|---|
+| Pending 加 cancel() |
+| a.bp.set 也回物件 |
+| 斷點號碼檔名補零 |
+| 都不要 |
+
+**他選的**（原樣）：「Pending 加 cancel(),a.bp.set 也回物件,斷點號碼檔名補零」
+
+頂層的話：三個都要加；開工另外等他點頭。
