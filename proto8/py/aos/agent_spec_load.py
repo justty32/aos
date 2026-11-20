@@ -8,7 +8,8 @@ base.meta、base.interfaces、base.hooks、base.files，與 base.pack(prefix=, r
 底的欄位：tools＝一個帶來源名的包（拿掉的留墓碑 None）、hooks＝agent_spec_hooks.Hooks（帶標記；沒宣告＝空組、當作沒宣告）、fsm＝Fsm（eca 版＝None）、
 meta＝dict、interfaces／files＝dict 或 None；底裡的相對路徑（工具 path／env_file、hook handler、狀態格 argv 裡底那夾真有的檔）照底那夾換算（07 A5）。
 底的 @fn.tool／@fn.hook 函數（編譯程式庫第 3 刀，線 aos-pylib-k3-1120）那格帶著 fn_spec.KEY、不換算：衍生那支編譯時在自己的夾重抽一份 fn/<名>.py，不指回底那夾（N-70）。
-extern 的欄位＝用到那一欄才報 SpecBad（不用就不擋）。錯一律丟 SpecBad；在 agent.py 最外層沒人接時，這裡裝的 sys.excepthook 印成一行「名: error: SpecBad …」、退 1（07 A3）。
+底的 defs.extern（第 4 刀，線 aos-pylib-k4-1120，設計稿 aos-pylib-plan-1120/05）：目標在底那夾外面＝欄位照樣是那個 extern（記下從哪夾算，衍生那支編譯時換算）；
+在底那夾裡面（同夾的手寫檔）＝用到那一欄才報 SpecBad（不用就不擋）。錯一律丟 SpecBad；在 agent.py 最外層沒人接時，這裡裝的 sys.excepthook 印成一行「名: error: SpecBad …」、退 1（07 A3）。
 """
 import json, os, posixpath, runpy, sys, traceback
 
@@ -147,27 +148,48 @@ def _moved(value, root):
     return os.path.normpath(os.path.join(root, value))
 
 
+def _anchored(ext, folder):
+    """底的 defs.extern 記號 → 帶 from（相對路徑從哪一夾算）的一份，衍生那支編譯時再換算成從自己那夾算；目標在底那夾裡面＝None（接不上，N-70）。
+    底自己也是衍生來的（記號已帶 from）＝照它的 from 算。相對路徑從底那支 agent.py 的夾算（它預設編譯進的那一夾）。"""
+    start = ext.get("from", folder)
+    target = os.path.realpath(os.path.join(start, ext["target"]))
+    home = os.path.realpath(folder)
+    if target == home or target.startswith(home + os.sep):
+        return None
+    return dict(ext, **{"from": start})
+
+
 def _based(shown, file, root, given):
-    """底交出的 Agent → 一份新的 Agent（欄位驗過、拷貝過、底裡的相對路徑換算過；每次是新的一份，改了不影響別人）。extern 的欄位不設，一碰就 SpecBad。"""
+    """底交出的 Agent → 一份新的 Agent（欄位驗過、拷貝過、底裡的相對路徑換算過；每次是新的一份，改了不影響別人）。
+    extern 連到底那夾裡面的欄位不設，一碰就 SpecBad；連到夾外的照樣是 extern（帶 from）。"""
     values = {f: given.__dict__.get(f) for f in FIELDS}
-    for f, name in given.__dict__.get("_hand", {}).items():        # 底自己也是 defs.load 來的：它的 extern 欄位照樣是 extern
-        values[f] = {"kind": "extern", "file": name}
+    inner = dict(given.__dict__.get("_hand", {}))                # 底自己也是 defs.load 來的：它那一層就接不上的，這裡照樣接不上
     out = Agent.__new__(Agent)
     out.__dict__.update(_shown=shown, path=os.path.dirname(file), _hand={})
     folder, hand = out.path, out._hand
     for field, value in values.items():
+        if field in inner:
+            hand[field] = inner[field]
+            continue
         parts.raise_bad(value)
-        if parts.kind(value) == "extern":
-            hand[field] = value["file"]
+        if parts.kind(value) == "extern":                       # 第 4 刀（設計稿 05、Argon A8）：連到底那夾外面＝照樣交出、記下從哪夾算；裡面＝用到才 SpecBad
+            values[field] = ext = _anchored(value, folder)
+            if ext is None:
+                hand[field] = value["target"]
     description = values["description"]
     if not isinstance(description, str) or not description.strip():
         raise SpecBad("description must be a non-empty string")
     out.description = description.strip()
-    if "system" not in hand:
+    skip = set(hand)                                            # 下面不再處理的欄：接不上的、連到夾外的（照樣是 extern）
+    for field in ("system", "tools", "llm", "fsm", "hooks"):
+        if field not in hand and parts.kind(values[field]) == "extern":
+            setattr(out, field, _copy(values[field]))
+            skip.add(field)
+    if "system" not in skip:
         if not isinstance(values["system"], str):
             raise SpecBad("system must be a string or defs.extern(...)")
         out.system = values["system"]
-    if "tools" not in hand:
+    if "tools" not in skip:
         tools = values["tools"]
         if not isinstance(tools, (list, tuple)) and parts.kind(tools) != "pack":
             raise SpecBad("tools must be a list or defs.extern(...)")
@@ -177,11 +199,11 @@ def _based(shown, file, root, given):
                 if entry is not None and key in entry and FN_KEY not in entry:     # 函數工具：衍生那支自己重抽
                     entry[key] = _moved(entry[key], root)
         out.tools = {"kind": "pack", "lib": "defs.load", "name": shown, "label": shown, "origins": list(origins), "tools": _copy(table)}
-    if "llm" not in hand:
+    if "llm" not in skip:
         if not isinstance(values["llm"], dict):
             raise SpecBad("llm must be a dict or defs.extern(...)")
         out.llm = _copy(values["llm"])
-    if "fsm" not in hand:
+    if "fsm" not in skip:
         fsm = values["fsm"]
         if fsm is not None and parts.kind(fsm) != "fsm":
             raise SpecBad("fsm must come from defs.fsm(...), std.fsm() or defs.extern(...)")
@@ -199,7 +221,7 @@ def _based(shown, file, root, given):
         if value is not None and not isinstance(value, dict):
             raise SpecBad("%s must be a dict" % field)
         setattr(out, field, None if value is None else _copy(value))
-    if "hooks" not in hand:
+    if "hooks" not in skip:
         hooks = hook_parts.no_hooks(values["hooks"])
         if hooks is None:
             out.hooks = hook_parts.Hooks({}, "the hooks of %s" % shown, declared=False)

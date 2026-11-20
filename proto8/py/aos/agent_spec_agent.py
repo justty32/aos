@@ -3,7 +3,10 @@
 編譯程式庫第 2 刀（線 aos-pylib-k2-1120，設計稿 thinking/2026-11/20/aos-pylib-plan-1120/01、02、07b）：使用者 11-20 選項框
 「.compile(夾) 寫檔、.dry_run() 只算」「小寫」；今天以前 agent_spec 的 compile()／write()／_names() 搬到這裡當 Agent 的方法，算法與產物一字不變。
 建構時只收、不驗（寫錯在 .dry_run()／.compile() 才丟 SpecBad）；編譯不改物件裡的串列與表，同一張 fsm、同一串工具可以放進好幾個 Agent。
-defs.load 交回的也是 Agent（本體 aos/agent_spec_load.py）：欄位是普通屬性；tools 是一個包（底的工具疊完），extern 的欄位一碰就 SpecBad。
+defs.load 交回的也是 Agent（本體 aos/agent_spec_load.py）：欄位是普通屬性；tools 是一個包（底的工具疊完）；extern 連到底那夾裡面的欄位一碰就 SpecBad，
+連到夾外的照樣是 extern（編譯時換算成從衍生那夾算）。
+defs.extern 的連結版（第 4 刀，線 aos-pylib-k4-1120；使用者 11-20「創建一個symlink…編譯的時候就是只生成symlink」）：那一欄出一個 spec_base.Link，
+放在預設檔名上（eca 版放 interfaces.json 宣告的名字），--dry-run 印成 {"$symlink": 目標}，寫的那行是「wrote 夾/檔 -> 目標」；檢查在 _links。
 跟把手 aos.py.agent.Agent（活的那隻）同名不同物（設計稿 07d 意見 9）。只給 aos/agent_spec 用，寫 agent.py 的人叫 defs.Agent。
 tools=[…]／hooks=[…] 裡的 @fn.tool／@fn.hook 函數（第 3 刀，線 aos-pylib-k3-1120；使用者 11-20「抽出來」「一起，同一套寫法」）：
 _files 最後交給 aos/fn_spec.programs，每個函數多一份 fn/<名>.py（程式檔），tools.json／hooks.json 那格指到它；hook 照 events() 那張表查 fn.block 能不能用。
@@ -69,8 +72,9 @@ class _Loop:
 
 
 def _names(decl, fsm, hooks, interfaces, folder):
-    """回四樣：{種類: 這次用的檔名}、{種類: extern 的檔名}、files 不能用的檔名、llm_keys（有 fsm＝None，之後照編譯出的 interfaces.json）。"""
-    hand = {w: v["file"] for w, v in decl.items() if parts.kind(v) == "extern"}
+    """回四樣：{種類: 這次用的檔名}、{種類: extern 記號}、files 不能用的檔名、llm_keys（有 fsm＝None，之後照編譯出的 interfaces.json）。
+    extern 的那一欄照樣坐在這個檔名上（第 4 刀：連結放在預設檔名、eca 版放在 interfaces.json 宣告的名字），interfaces.json 不再寫手寫檔的名字。"""
+    hand = {w: v for w, v in decl.items() if parts.kind(v) == "extern"}
     if fsm is None:
         if interfaces is not None:
             raise SpecBad("interfaces needs fsm: without fsm, interfaces.json belongs to the skeleton you copied; change it by hand")
@@ -84,18 +88,42 @@ def _names(decl, fsm, hooks, interfaces, folder):
             if what not in have:
                 raise DefBad("%s/interfaces.json declares no %s file, so %s has nowhere to go: add \"%s\" to its aos-agent, "
                              "or give fsm" % (folder, what, what, what))
-            if what in hand and hand[what] != have[what]:
-                raise SpecBad("extern(%r) for %s, but interfaces.json names %r for it; use that name" % (hand[what], what, have[what]))
             files[what] = have[what]
         return files, hand, set(have.values()) | set(files.values()), keys
     files = {w: f for w, f in OWN_FILES.items() if w != "hooks" or hooks is not None}
-    files.update(hand)
-    made = set(SKELETON) | set(RUNTIME_FILES) | {"_metainfo.json", "README.md", "agent.py"} | {files[w] for w in files if w not in hand}
-    for what, name in hand.items():
-        if name in made or list(hand.values()).count(name) > 1:
-            raise SpecBad("extern(%r) for %s clashes with a file agent.py writes, a file the running agent writes, or another extern; "
-                          "pick another name" % (name, what))
     return files, hand, set(files.values()), None
+
+
+def _links(hand, names, folder):
+    """extern 的欄位 → {檔名: spec_base.Link(連結裡存的字)}（第 4 刀，設計稿 aos-pylib-plan-1120/05）。相對路徑從連結所在的夾算（通常就是編譯進去的那一夾）；
+    defs.load 的底連到底那夾外面的（記號帶 from）＝現在才換算成從這一夾走過去的相對路徑。照字面存，不碰目標；不驗目標的內容。
+    SpecBad：沒給夾、繞回連結自己、目標不在、目標是資料夾、fsm 指到別的夾（aos-loop 會把連結解開，把目標那一夾當成定義夾）。"""
+    if hand and folder is None:
+        raise SpecBad("defs.extern(...) is a link counted from the folder it is compiled into: give the folder, like .dry_run(\"FOLDER\")")
+    out = {}
+    for what, ext in hand.items():
+        name = names[what]
+        place = os.path.dirname(os.path.join(folder, name))         # 連結所在的夾
+        target = ext["target"]
+        if "from" in ext and not os.path.isabs(target):
+            target = os.path.relpath(os.path.join(ext["from"], target), place)
+        shown = "extern(%r) for %s" % (ext["target"], what)
+        seen = os.path.join(place, target)
+        me = os.path.join(os.path.realpath(place), os.path.basename(name))
+        if me in (os.path.join(os.path.realpath(os.path.dirname(seen)), os.path.basename(seen)), os.path.realpath(seen)):
+            stem, ext_ = os.path.splitext(os.path.basename(name))
+            raise SpecBad("%s links %s to itself: give the file to link to, like defs.extern(\"%s.hand%s\") for a file of this folder "
+                          "kept by hand" % (shown, name, stem, ext_))
+        if not os.path.exists(seen):
+            raise SpecBad("%s: %s does not exist (seen from %s)" % (shown, target, place))
+        if os.path.isdir(seen):
+            raise SpecBad("%s: %s is a folder; link to a file" % (shown, target))
+        if what == "fsm" and (os.path.isabs(target) or os.path.dirname(os.path.normpath(target))
+                              or os.path.normpath(target) in (os.curdir, os.pardir)):
+            raise SpecBad("%s: a state machine can only link to a file in the same folder, like defs.extern(\"fsm.hand.json\"): "
+                          "aos-loop resolves the link and would run the states as if the target's folder were the definition" % shown)
+        out[name] = spec_base.Link(target)
+    return out
 
 
 class Agent(Unit):
@@ -111,8 +139,9 @@ class Agent(Unit):
     def __getattr__(self, name):              # 只在沒有這個屬性時才來：defs.load 交回的 extern 欄位、寫錯的名字
         hand = self.__dict__.get("_hand", {})
         if name in hand:
-            raise SpecBad("%s: %s of %s/agent.py is defs.extern(%r), a file written by hand, so there is nothing to build on: "
-                          "write %s yourself" % (self.__dict__["_shown"], name, self.__dict__["path"], hand[name], name))
+            raise SpecBad("%s: %s of %s/agent.py is defs.extern(%r), a link to a file inside that folder, so there is nothing to build "
+                          "on (a link to it would make this definition run on another one's file, N-70): write %s yourself"
+                          % (self.__dict__["_shown"], name, self.__dict__["path"], hand[name], name))
         raise AttributeError("%s has no %s (it has %s, and .pack(prefix=, rename=, exclude=), .dry_run(), .compile(folder))"
                              % (self._label(), name, ", ".join(FIELDS)))
 
@@ -182,13 +211,14 @@ class Agent(Unit):
         decl = {"system": system, "tools": tools, "llm": llm, "fsm": fsm, "hooks": hooks}
         for value in decl.values():
             parts.raise_bad(value)
-        if fsm is not None and parts.pick(fsm, "fsm must come from defs.fsm(...), std.fsm() or defs.extern(\"fsm.json\") (or leave it out: no fsm)",
+        if fsm is not None and parts.pick(fsm, "fsm must come from defs.fsm(...), std.fsm() or defs.extern(\"fsm.hand.json\") (or leave it out: no fsm)",
                                           lambda v: parts.kind(v) == "fsm"):
             fsm_out = None
         else:
             fsm_out = fsm
         names, hand, taken, keys = _names(decl, fsm, hooks, interfaces, folder)
-        if parts.pick(system, "system must be a string (the system text) or defs.extern(\"system.txt\")", lambda v: isinstance(v, str)):
+        links = _links(hand, names, folder)
+        if parts.pick(system, "system must be a string (the system text) or defs.extern(\"../shared/system.txt\")", lambda v: isinstance(v, str)):
             system = None
         face = None
         if fsm is not None:
@@ -198,14 +228,14 @@ class Agent(Unit):
                 raise SpecBad("interfaces aos-agent llm_keys must be a list of strings")
         tools_out = None if parts.pick(tools, "tools must be a list of std.pack(...), std.tool(...), defs.tool(...), defs.drop(...) "
                                               "(or a library's .pack / .tool, or the tools of defs.load(...): [base.tools, ...]), "
-                                              "or defs.extern(\"tools.json\")",
+                                              "or defs.extern(\"../shared/tools.json\")",
                                        lambda v: isinstance(v, (list, tuple)) or parts.kind(v) == "pack") \
             else parts.tools_json(_tool_list(tools), link, warn)
-        llm_out = None if parts.pick(llm, "llm must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or defs.extern(\"llm.json\")",
+        llm_out = None if parts.pick(llm, "llm must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or defs.extern(\"../shared/llm.json\")",
                                      lambda v: isinstance(v, dict)) else parts.llm_json(llm, keys)
         hooks_out = None if hooks is None or "hooks" in hand else hook_parts.hooks_json(hooks)
         programs = fn_spec.programs(tools_out, names.get("tools"), hooks_out, names.get("hooks"), self.events())
-        extra = parts.extra_files(files, taken | set(hand.values())) if files is not None else {}
+        extra = parts.extra_files(files, taken) if files is not None else {}
         if meta is not None and not isinstance(meta, dict):
             raise SpecBad("meta must be a dict like {\"cost\": {\"time_ms\": 60000}, \"resource\": [\"llm\"]}")
         if meta and not all(isinstance(k, str) for k in meta):
@@ -230,10 +260,11 @@ class Agent(Unit):
         out["README.md"] = description + "\n"
         out = _plain(out)
         for name in programs:                   # fn/<名>.py：程式檔（755），不經 _plain（那會變回普通字串）
-            if name in out or name in hand.values():
+            if name in out or name in links:
                 raise SpecBad("%s, the program of a function, clashes with a file agent.py writes or an extern; rename the function "
                               "(name=)" % name)
         out.update(programs)
+        out.update(links)                       # 連結（第 4 刀）：也不經 _plain
         return out
 
     def _write(self, folder, files):
@@ -257,7 +288,8 @@ class Agent(Unit):
                 value = old
             plan[name] = value
         spec_base.write_files(folder, plan, last=RENAME_LAST)
-        done = ["wrote %s" % os.path.join(folder, name) for name in plan]
+        done = ["wrote %s%s" % (os.path.join(folder, name), " -> %s" % value if isinstance(value, spec_base.Link) else "")
+                for name, value in plan.items()]
         if "README.md" in files and len(plan) < len(files):
             done.append("kept %s (it is already there)" % os.path.join(folder, "README.md"))
         return done

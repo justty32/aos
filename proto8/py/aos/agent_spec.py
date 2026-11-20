@@ -16,7 +16,8 @@
   tool(名, 路徑, **其他) 單一個工具；路徑也可給 my.tool(...)（只拿它的路徑）；同名蓋掉包裡那支。drop(名)＝從展開的包裡拿掉那支
   home(路徑)／env(變數, 路徑)  指示詞 {"$env": …, "$path": …}，原樣吐、不展開
   state(名, argv, next, timeout_ms=None)、fsm(起點, [state…])  fsm 回 Fsm：放進 Agent(fsm=…)，或自己 .compile(夾, name="fsm.json")
-  extern(檔名)         這份檔自己手寫：interfaces.json 指到它、不編、不蓋（system／tools／llm／fsm／hooks 都可用）
+  extern(目標)         那一欄編成一個連結（symlink）指到目標、照字面存；目標不碰（第 4 刀，線 aos-pylib-k4-1120）；
+                       system／tools／llm／hooks 隨便指，fsm 只能指同一夾；別濫用（docstring）
   load(路徑)           衍生（本體 aos/agent_spec_load.py）：base = defs.load("../reviewer") 跑那支 agent.py，交回它交給 defs.main 的那隻（新的一份）；
                        tools=[base.tools, defs.drop(...)]、hooks=[base.hooks, {名: {**base.hooks[名], 鍵: 值}}]、fsm=defs.fsm(base.fsm, [...], drop=[...])、
                        base.pack(prefix=, rename=, exclude=)；只在編譯時算，編出的 json 整份、不記上一層（N-70）
@@ -66,6 +67,8 @@ defs.main; write tools=[base.tools, defs.drop("x")], hooks=[base.hooks, {...}], 
 it is worked out now, so the files written are whole and do not name the other one (README: "Build on").
 A function marked @fn.tool / @fn.hook("event") (from aos.py import fn) in tools=[...] / hooks=[...] is pulled
 out into a program fn/<name>.py of the folder (README: "Functions as tools and hooks").
+defs.extern("PATH") compiles a field (system, tools, llm, hooks; fsm only for a file in the same folder)
+as a symbolic link to PATH instead of writing a file. Use it sparingly: see "extern" in the README.
 Without defs.main (a build script, the REPL): agent.dry_run() gives the files, agent.compile(FOLDER) writes them.
 Then mount it: aos-agent ctl add FOLDER.
 On a wrong declaration: one line "NAME: error: SpecBad ..." on stderr, exit 1, nothing written.
@@ -128,12 +131,34 @@ def drop(name):
     return {"kind": "drop", "name": name}
 
 
-def extern(filename):
-    """這份檔自己手寫：interfaces.json 指到它，agent.py 不編、不蓋。"""
-    if (not isinstance(filename, str) or not filename or os.path.isabs(filename) or ".." in filename.split("/")
-            or os.path.normpath(filename) == "."):
-        return _bad("extern(%r): give a file name relative to the definition folder, like \"system.txt\"" % (filename,))
-    return {"kind": "extern", "file": os.path.normpath(filename)}
+def extern(target):
+    """extern(target): compile this field as a symbolic link to a file you write yourself.
+
+        system=defs.extern("../shared/system.txt")   # system.txt in the definition becomes a link to that file
+
+    The link holds the path exactly as you wrote it: a relative path is counted from the definition folder
+    (the folder it is compiled into). Compiling again only remakes the link; it never touches the target.
+    Editing the target takes effect without recompiling. The target must be there when you compile.
+    Fields: system, tools, llm, hooks; fsm only for a file in the same folder (aos-loop resolves the link
+    and would look for the other files next to the target).
+
+    DO NOT OVERUSE THIS. A link makes the definition depend on a file outside it:
+      - copy or move the definition without the target and it breaks (the agent then runs with no system
+        text, silently); `agent_def check` reports a broken link, nothing else does;
+      - some commands write through the link and change the shared file for every definition that links
+        to it (agent_def llm / tools, aos-tools add --file); others replace the link with a plain file
+        (agent_def system);
+      - git on Windows may check a link out as a text file.
+    If all you want is the text of a file at compile time, read it in Python instead: system=open("x.txt").read().
+    Use extern only when one hand-written file must stay the single live copy. To keep a file of this
+    folder by hand (compiling never touches it), link to it under another name: defs.extern("system.hand.txt")."""
+    # 編譯程式庫第 4 刀（線 aos-pylib-k4-1120）：使用者 11-20「創建一個symlink，指向我們要的檔案路徑，編譯的時候就是只生成symlink…註釋要說別濫用」。
+    # 照字面存（不轉絕對／相對）；指示詞存不進連結＝不收。目標在不在、是不是繞回自己，要知道編譯進哪一夾才判（agent_spec_agent._links）。
+    if _is_directive(target) or isinstance(target, dict):
+        return _bad("extern(%r): give the path as a plain string; a link cannot hold defs.env(...) / defs.home(...)" % (target,))
+    if not isinstance(target, str) or not target or "\0" in target:
+        return _bad("extern(%r): give the path of the file to link to, like \"../shared/system.txt\"" % (target,))
+    return {"kind": "extern", "target": target}
 
 
 def _state_name_bad(name):
@@ -192,6 +217,9 @@ def fsm(start, states, drop=()):
 def _fsm(start, states, drop):
     if parts.kind(start) == "bad":
         return start
+    if parts.kind(start) == "extern":
+        return _bad("defs.fsm: the state machine to build on is a defs.extern(...) link, so there is no table to change: "
+                    "link the same file (fsm=base.fsm) or write the states")
     if parts.kind(start) == "fsm":
         return _refit(start, states, drop)
     if start is None:

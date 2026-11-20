@@ -35,11 +35,10 @@ class Declaration(WithHome):
         self.assertEqual(files["_metainfo.json"], {"summary": "Do it."})
         self.assertEqual(files["README.md"], "Do it.\n")
 
-    def test_extern_meta_and_interfaces(self):
-        files = agent(system=defs.extern("prompt.txt"), meta={"cost": {"time_ms": 1}},
+    def test_meta_and_interfaces(self):
+        files = agent(meta={"cost": {"time_ms": 1}},
                       interfaces={"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}}).dry_run()
-        self.assertNotIn("system.txt", files)
-        self.assertEqual(files["interfaces.json"]["aos-agent"]["system"], "prompt.txt")
+        self.assertEqual(files["interfaces.json"]["aos-agent"]["system"], "system.txt")
         self.assertNotIn("history", files["interfaces.json"]["aos-agent"])
         self.assertEqual(files["interfaces.json"]["aos-observed"], {"file": "observed.jsonl"})
         self.assertEqual(files["tools.json"], {"description": defs.WHAT["tools.json"], "tools": {}})
@@ -80,23 +79,17 @@ class Declaration(WithHome):
                  "hooks holds a tool": dict(hooks=[defs.std.pack("look")]),
                  "stock_hooks bad name": dict(hooks=defs.std.hooks("../x")),
                  "interfaces sets hooks": dict(hooks={}, interfaces={"aos-agent": {"hooks": "h.json"}}),
-                 "extern hooks clashes": dict(hooks=defs.extern("loop.json")),
                  "files not a dict": dict(files=["ladder.json"]),
                  "files takes a declared file": dict(files={"tools.json": {}}),
                  "files takes the skeleton": dict(files={"loop.json": {}}),
                  "files takes a runtime file": dict(files={"state.json": {}}),
                  "files takes agent.py": dict(files={"agent.py": "x"}),
-                 "files takes an extern file": dict(system=defs.extern("prompt.txt"), files={"prompt.txt": "x"}),
                  "files in a sub folder": dict(files={"sub/x.json": {}}),
                  "files hidden": dict(files={".x.json": {}}),
                  "files content a number": dict(files={"x.json": 3}),
                  "meta sets summary": dict(meta={"summary": "x"}),
                  "meta sets lineage": dict(meta={"lineage": {}}),
                  "interfaces sets tools": dict(interfaces={"aos-agent": {"tools": "t.json"}}),
-                 "extern clashes": dict(system=defs.extern("tools.json")),
-                 "extern outside": dict(system=defs.extern("../x.txt")),
-                 "extern ./ clashes": dict(system=defs.extern("./tools.json")),
-                 "extern runtime file": dict(system=defs.extern("history.jsonl")),
                  "drop without a pack": dict(tools=[defs.tool("a", "x"), defs.drop("b")]),
                  "tool env not strings": dict(tools=[defs.tool("x", "a", env={"A": 1})]),
                  "tool env not a dict": dict(tools=[defs.tool("x", "a", env="A")]),
@@ -111,12 +104,10 @@ class Declaration(WithHome):
                 self.assertRaises(defs.SpecBad, defs.Agent(**dict(fine, **change)).dry_run)
 
     def test_holes_from_argon_review(self):
-        """geng-patch-1119 (thinking/2026-11/19/aos-compile-庚/12, class 1): meta keys, extern("agent.py"), the entry message."""
+        """geng-patch-1119 (thinking/2026-11/19/aos-compile-庚/12, class 1): meta keys, the entry message. (② extern("agent.py") went with
+        the link version of defs.extern, cut 4: it is now just a link to agent.py, test_agent_spec_extern.py.)"""
         with self.assertRaisesRegex(defs.SpecBad, "meta keys must be strings"):                  # ① was TypeError
             agent(meta={1: "a"}).dry_run()
-        for what in ("system", "fsm", "tools", "llm", "hooks"):                                 # ② agent.py is not an extern file
-            with self.subTest(what=what), self.assertRaisesRegex(defs.SpecBad, r"extern\('agent.py'\)"):
-                agent(**{what: defs.extern("agent.py")}).dry_run()
         with self.assertRaises(defs.SpecBad) as e:                                                # ⑥ entry cannot take extern
             agent(interfaces={"aos-agent": {"entry": "x.json"}}).dry_run()
         self.assertIn("entry is body.json", str(e.exception))
@@ -184,12 +175,6 @@ class Declaration(WithHome):
         self.assertNotIn("hooks", files["interfaces.json"]["aos-agent"])
         self.assertNotIn("on_start", files["loop.json"])
         self.assertNotIn("hooks.json", files)
-
-    def test_extern_hooks(self):
-        files = agent(hooks=defs.extern("my_hooks.json")).dry_run()
-        self.assertNotIn("my_hooks.json", files)
-        self.assertEqual(files["interfaces.json"]["aos-agent"]["hooks"], "my_hooks.json")
-        self.assertIn("on_start", files["loop.json"])
 
     def test_stock_hooks_needs_a_home_with_the_template(self):
         with unittest.mock.patch.dict(os.environ, {}, clear=False):

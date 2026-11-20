@@ -196,6 +196,24 @@ class DefinitionsTest(unittest.TestCase):
                 if not ok:
                     self.assertIn('aos-agent.system', data['problems'][0]['reason'])
 
+    def test_check_broken_link_is_one_problem(self):
+        """11-20 cut 4 (defs.extern compiles into a link): a link to nothing is one problem, before the checks that read through it."""
+        shared = self.root / 'shared-files'
+        path = self.definition('good')
+        self.write(shared / 'system.txt', 'Shared prompt')
+        self.write(shared / 'tools.json', {'tools': {}})
+        for name in ('system.txt', 'tools.json'):
+            (path / name).unlink()
+            (path / name).symlink_to('../shared-files/' + name)
+        result, data = self.call('check')
+        self.assertEqual((result.returncode, data['problems']), (0, []), result.stderr)     # links that work are fine
+        (shared / 'tools.json').unlink()
+        result, data = self.call('check')
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(len(data['problems']), 1, data)
+        self.assertEqual(data['problems'][0]['path'], 'good')
+        self.assertIn('tools.json is a link to ../shared-files/tools.json, which is not there', data['problems'][0]['reason'])
+
     def test_metadata_only_definition_is_listed_without_brain(self):
         self.write(self.root / 'script/_metainfo.json', {'summary': 'Script'})
         result, data = self.call('ls')

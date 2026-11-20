@@ -22,7 +22,7 @@ def cell(name):
 agent = defs.Agent(
     "Review measured definition costs and prescribe a fix or split when model downgrades fail.",
     meta={"cost": {"time_ms": 60000}, "resource": ["llm"]},
-    system=defs.extern("system.txt"),
+    system=defs.extern("system.hand.txt"),
     tools=[std.tool("aos/" + n) for n in ("review_round", "watch", "promote", "rollback", "measure")]
         + [std.tool("base/" + n) for n in ("json_get", "json_ls", "json_set", "json_del", "read", "ls")],
     llm={},
@@ -171,7 +171,7 @@ class Inherit(WithHome):
         self.assertIn("use base = defs.load", r.stderr)
 
     def test_load_errors_are_one_line(self):
-        self.agent("hand", BASE.replace('system="You review changes in the workspace.\\n"', 'system=defs.extern("system.txt")'))
+        self.agent("hand", BASE.replace('system="You review changes in the workspace.\\n"', 'system=defs.extern("system.hand.txt")'))
         self.agent("broken", BASE.replace("agent = defs.Agent(", "x = undefined_name\nagent = defs.Agent("))
         self.agent("nomain", BASE.replace("defs.main(agent)", "_ = agent"))
         self.agent("badbase", BASE.replace('std.pack("mailbox")', 'std.pack("nope")'))
@@ -179,7 +179,7 @@ class Inherit(WithHome):
         self.agent("b", "a = defs.load('../a')\n" + PLAIN)
         cases = {"no such folder": ("defs.load('../nowhere')", "is not a folder"),
                  "no agent.py there": ("defs.load('../empty')", "there is no"),
-                 "an extern field used": ("defs.load('../hand').system", "system of", "is defs.extern('system.txt')"),
+                 "an extern field used": ("defs.load('../hand').system", "system of", "is defs.extern('system.hand.txt')", "inside that folder"),
                  "the base fails": ("defs.load('../broken')", "agent.py line 5: NameError"),
                  "the base never calls defs.main": ("defs.load('../nomain')", "never calls defs.main"),
                  "a wrong declaration in the base": ("defs.load('../badbase')", "std.pack('nope')", "fix the declaration in"),
@@ -274,13 +274,14 @@ class Reviewer(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="agent-spec-") as tmp:
             dest = Path(tmp) / "reviewer"
             dest.mkdir()
-            shutil.copy(TEMPLATES / "reviewer" / "system.txt", dest)
+            shutil.copy(TEMPLATES / "reviewer" / "system.txt", dest / "system.hand.txt")
             (dest / "agent.py").write_text(HEAD + REVIEWER)
             r = run_agent(dest / "agent.py", "--compile", home=fake_home(tmp))
             self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(os.readlink(dest / "system.txt"), "system.hand.txt")     # cut 4: a link to the file kept by hand
             made = snapshot(dest)
         want = snapshot(TEMPLATES / "reviewer")
-        self.assertEqual(sorted(made), sorted(list(want) + ["agent.py"]))
+        self.assertEqual(sorted(made), sorted(list(want) + ["agent.py", "system.hand.txt"]))
         self.assertEqual(made["system.txt"], want["system.txt"])
         for name in sorted(want):
             if name in ("README.md", "system.txt"):

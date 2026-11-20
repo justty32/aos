@@ -102,11 +102,15 @@ class Script(unittest.TestCase):
         self.assertIn("kept", r.stdout)
 
     def test_extern_file_is_not_touched(self):
-        self.write(BODY.replace('system="You answer questions about the weather.\\n"', 'system=defs.extern("system.txt")'))
-        (self.dir / "system.txt").write_text("Written by hand.\n")
-        r = self.call("--compile")
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.dir / "system.txt").read_text(), "Written by hand.\n")
+        """cut 4: a file kept by hand in the same folder under another name; compiling makes system.txt a link to it, twice over."""
+        self.write(BODY.replace('system="You answer questions about the weather.\\n"', 'system=defs.extern("system.hand.txt")'))
+        (self.dir / "system.hand.txt").write_text("Written by hand.\n")
+        for _ in range(2):                                      # the second compile finds the link there: not "links to itself"
+            r = self.call("--compile")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("wrote %s -> system.hand.txt" % (self.dir / "system.txt"), r.stdout)
+            self.assertEqual(os.readlink(self.dir / "system.txt"), "system.hand.txt")
+            self.assertEqual((self.dir / "system.hand.txt").read_text(), "Written by hand.\n")
         self.assertEqual(json.loads((self.dir / "interfaces.json").read_text())["aos-agent"]["system"], "system.txt")
 
     def test_broken_metainfo_is_def_bad_and_writes_nothing(self):
@@ -215,8 +219,9 @@ class NoFsm(unittest.TestCase):
         files = eca(system="Hi.\n", llm={"model": "m"})
         self.assertEqual(sorted(files), ["README.md", "_metainfo.json", "llm.json", "prompt.md", "tools.json"])
         self.assertRaises(defs.SpecBad, eca, llm={"temperature": 1})                  # eca's llm_keys: model only
-        self.assertRaises(defs.SpecBad, eca, system=defs.extern("system.txt"))
-        self.assertNotIn("prompt.md", eca(system=defs.extern("prompt.md")))
+        (dest / "prompt.hand.md").write_text("Hi by hand.\n")
+        self.assertEqual(eca(system=defs.extern("prompt.hand.md"))["prompt.md"], "prompt.hand.md")    # the link sits on the declared name
+        self.assertRaisesRegex(defs.SpecBad, "links prompt.md to itself", eca, system=defs.extern("prompt.md"))
         # files may write a file the skeleton does not declare (cli.json); not one interfaces.json declares, nor a skeleton name
         self.assertEqual(eca(files={"cli.json": {"a": 1}})["cli.json"], {"a": 1})
         self.assertRaises(defs.SpecBad, eca, files={"prompt.md": "x"})

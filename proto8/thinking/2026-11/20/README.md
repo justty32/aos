@@ -28,3 +28,4 @@
 | [aos-kinit-tpl-1120](aos-kinit-tpl-1120.md) | 照初始 kernel 八題的答案改文件與 start-api：最小核心＋llm 件＋權限件，另有一串可選件待定；llm kernel 改掛同板（llm/）、加選裝不開的權限站 perm/；重建步驟單跟著改；假腦實跑 |
 | [aos-hook-k2-1120](aos-hook-k2-1120.md) | hook 介面施工第 2 刀的庫那一半（2a）：把手 hook_point.open 與 agent_hooks.open、aos-hook --agent；呼叫端沒換，install 後再換（2b） |
 | [aos-compact-twice-1120](aos-compact-twice-1120.md) | 連續兩封 /compact 現況實跑：fsm 第二封已被 4 則門檻擋（但報 LetterDropped）、eca 照做兩次；只查不改 |
+| [編譯程式庫第 4 刀：defs.extern 編成連結（aos-pylib-k4-1120）](aos-pylib-k4-1120.md) | defs.extern(目標) 那一欄編成 symlink、照字面存；fsm 只能同一夾（先實測）；defs.load 底的夾外連結照樣交出；agent_def check 報斷鏈；別濫用寫進 docstring／README／教學；沒用 extern 的產物逐 byte 不變；假腦實掛改共用檔不重編就生效；第二筆 loop= 宣告 |

@@ -70,8 +70,9 @@ def main(unit, script, main_file, help_text):
         die("SpecBad", "%s (fix the declaration in %s)" % (e, base))
     except DefBad as e:
         die("DefBad", str(e))
-    if argv[0] == "--dry-run":
-        print(json.dumps(out, ensure_ascii=False, indent=2))
+    if argv[0] == "--dry-run":                  # 連結（defs.extern，第 4 刀）印成 {"$symlink": 目標}，其他格是內容
+        shown = {k: {"$symlink": str(v)} if isinstance(v, spec_base.Link) else v for k, v in out.items()}
+        print(json.dumps(shown, ensure_ascii=False, indent=2))
         sys.exit(0)
     try:
         lines = unit._write(folder, out)

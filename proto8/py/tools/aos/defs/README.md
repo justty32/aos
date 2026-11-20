@@ -28,6 +28,7 @@ stdin：`{"op":"ls|dup|refs|check","root":"/absolute/defs","match":"optional sub
   - **不查**：`model` 的名字對不對（要問 kernel 的 endpoint 包才知道）；argv 其他位置的字串（分不出是不是檔名）；stack 裡那份疊上去的設定（只看定義）。
   - 查不了的照實說、放進 `warnings`（跟 `problems` 同形狀 `{"path", "reason"}`，有才出現、不讓 check 失敗）：指示詞的變數這裡沒設（`AOS_STACK`、`AOS_CO` 只在執行時有、不查也不提；`AOS_CD`／`AOS_CF` 用寫它的檔的資料夾／檔）、指令名不在這裡的 PATH 上、`aos-tools` 不在 PATH（沒疊 `$override` 的表；疊了的照上面報 problem）。`AOS_WS` 這類照 check 當下的值解，跟 agent 跑時的工作區不同時結果可能不同。
   - 一樣只讀：`aos-tools` 不給 `AOS_STACK`（不留 tooldef 快取）；`exe` 類工具照 aos-tools 的讀法會被叫一次 `--tooldef`。
+- `check` 最先查**斷掉的連結**（11-20 編譯程式庫第 4 刀，線 aos-pylib-k4-1120：`defs.extern` 編成連結，使用者「創建一個symlink…編譯的時候就是只生成symlink」；細則在 `links_check.py` 檔頭）：定義夾最上層有連結指到不在的東西＝每個一條 problem（`system.txt is a link to ../shared/system.txt, which is not there …`）；有斷鏈時這份定義其餘會順著它去讀的檢查先不做，免得同一個斷鏈又被當缺檔報一次。斷掉的 `system.txt` 執行時是靜靜地沒有 system 文字，只有這裡會說。
 - `check` 發現問題仍保留 JSON stdout，stderr 一行 `defs: error: DefBad ...`，退 1；正常退 0。根不在為 `RootMissing`，其他壞宣告為 `DefBad`。所有 op 只讀；根指向空目錄時回空清單。
 - **root 本身就是一份定義**（`agent_def` 的 check 就這樣叫，[defs-check-align](../../../../thinking/2026-11/12/defs-check-align.md) Q10）：路徑照「相對 root」印成 `.`；名字檢查改查這個資料夾自己的名字（樹的根不是定義時，根自己的名字不查）；root 底下找不到任何定義（空夾、只有 README）＝空清單，`check` 也算過——「它是不是一份定義」不歸這支判。
 

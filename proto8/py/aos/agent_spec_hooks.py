@@ -16,7 +16,7 @@ from aos.agent_spec_parts import WHAT, kind, raise_bad
 from aos.spec_base import SpecBad
 
 HOOKS_SHAPE = ("hooks must be a dict {hook name: entry}, std.hooks(...), the hooks of defs.load(...), a function marked @fn.hook, a list of those "
-               "(later ones win, None drops a hook), or defs.extern(\"hooks.json\")")
+               "(later ones win, None drops a hook), or defs.extern(\"../shared/hooks.json\")")
 
 
 class Hooks(dict):
@@ -61,6 +61,9 @@ def stack_hooks(hooks):
                               % (name, by_fn[name], layer.__name__))
             by_fn[name] = layer.__name__
             layer = {name: entry}
+        if kind(layer) == "extern":
+            raise SpecBad("hooks: defs.extern(...) stands for the whole field (a link to one hooks.json): write hooks=defs.extern(...), "
+                          "not inside a list")
         if isinstance(layer, Hooks):
             source = layer.label
             for o in layer.origins:

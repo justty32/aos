@@ -24,7 +24,7 @@ Keep the lines above `# ---- your agent` as they are: they find the `aos` packag
 
 ## Read this before you run --compile
 
-1. **It overwrites, as a whole, every file `agent.py` declares**, every time, without asking. If you run it in a folder that already has hand-written `tools.json`, `fsm.json`, `system.txt` and so on, those are replaced. Look first with `python3 agent.py --dry-run`, or commit first. A file you want to keep writing by hand: declare it with `defs.extern("file name")`.
+1. **It overwrites, as a whole, every file `agent.py` declares**, every time, without asking. If you run it in a folder that already has hand-written `tools.json`, `fsm.json`, `system.txt` and so on, those are replaced. Look first with `python3 agent.py --dry-run`, or commit first. A file you want to keep writing by hand: give it another name and link the field to it, like `system=defs.extern("system.hand.txt")` (see "extern" below).
 2. **Changes made directly in the compiled files are gone when you recompile.** That includes changes made by `agent_def tools` / `llm` / `system` or by an editor. Like a C compiler and its `.o` files: after it writes them, the files are ordinary definition files that anyone may change, and nothing remembers what was written. To keep a change, put it in `agent.py`.
 3. **Renaming or removing a state of `fsm` can stop a running agent** that is sitting in that state (its `stage.txt` names a state that is no longer in `fsm.json`; aos-fsm then fails with `StateUnknown`). Rename states only when no agent using this definition is running.
 
@@ -69,7 +69,7 @@ defs.main(agent)
 `defs.Agent(description, *, system, tools, llm, fsm=None, hooks=None, meta=None, interfaces=None, files=None)` only takes the fields; a wrong field is found when you compile (one `SpecBad` line, for example `tools must be a list ...`).
 
 - the description (first, without a name): one English sentence: what the agent does. It becomes `summary` in `_metainfo.json`.
-- `system`: the system text as a string, or `defs.extern("system.txt")` to keep writing that file yourself (like `extern` in C: `agent.py` only names the file, which is defined elsewhere, by you; compiling neither writes nor overwrites it).
+- `system`: the system text as a string, or `defs.extern("../shared/system.txt")`: `system.txt` becomes a link to a file you write yourself (see "extern" below; use it sparingly).
 - `tools`: a list of
   - `std.pack("look")`: the tools of a pack of `std`, the library that comes with aos (`$AOS_HOME/lib/packs/look.json`). The pack is read when `agent.py` runs and, linked statically (the default), its tools are written into `tools.json` one by one (no `$override`), so a tool added to the pack later shows up after you recompile (dynamic linking: see "Linking tool packs");
   - `std.tool("base/read")`: one tool of `std` (`$AOS_HOME/lib/tools/base/read`), named after its folder (`name="..."` picks another name);
@@ -105,10 +105,35 @@ defs.main(agent)
     - `std.hooks()`: the hooks of the `agent-fsm` template (`std.hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/<template>/hooks.json` and copied in, so recompiling follows a changed template;
     - a Python function marked `@fn.hook("event", ...)` (see "Functions as tools and hooks" below);
     - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `hooks=[std.hooks(), {"timer": None, "mine": {...}}]`; but two hook groups (`std.hooks(...)` of two templates, the `hooks` of `defs.load`) that give one name with different entries are `SpecBad` unless a dict of yours after them names it;
-    - or `defs.extern("hooks.json")`.
+    - or `defs.extern("../shared/hooks.json")`: `hooks.json` becomes a link (see "extern" below; the whole field, not an item of the list).
 
     The skeleton has `hooks={}`: no hooks, but `hooks.json` is declared, so an agent made from it takes breakpoints (`aos-gdb`, `a.bp.add...`) and `aos-agent hook add` without any change. Keep that line when you rewrite the part below `# ---- your agent`; without it, setting a breakpoint is `HooksMissing`. Want the `agent-fsm` template's hooks (a timer that looks at the mailbox, ...)? Write `hooks=std.hooks()`.
   - `files`: other files written as they are, like `{"ladder.json": {...}}` (a dict or list is written as JSON, a string as it is). The name is one file in this folder; it cannot be a file that agent.py, the skeleton or the running agent writes.
+
+## extern: a link to a file you write (do not overuse it)
+
+```python
+system=defs.extern("../shared/system.txt")   # system.txt in the definition becomes a link to that file
+```
+
+`defs.extern(PATH)` compiles a field (`system`, `tools`, `llm`, `hooks`, or `fsm`) as a symbolic link to `PATH` instead of writing a file. The link sits on the field's usual file name (`system.txt`, `tools.json`, ...; without `fsm`, the name the folder's `interfaces.json` gives), and `interfaces.json` names that file as always.
+
+- The link holds the path exactly as you wrote it: a relative path is counted from the folder the definition is compiled into (`--compile other/folder`: from there), an absolute path stays absolute. `defs.env(...)` / `defs.home(...)` cannot go into a link.
+- The target must be there when you compile, and be a file; otherwise `--compile` stops with `SpecBad` and writes nothing. Its content is not checked (it is yours).
+- Compiling again only remakes the link; it never touches the target. Editing the target takes effect without recompiling (from the agent's next brain call). Drop the `extern` and the next compile writes a plain file in place of the link (the target is still not touched).
+- `--dry-run` prints the field as `{"$symlink": "../shared/system.txt"}`; `--compile` prints `wrote .../system.txt -> ../shared/system.txt`.
+- `fsm` can only link to a file in the same folder (`defs.extern("fsm.hand.json")`): aos-loop resolves the link and would run the states as if the target's folder were the definition (tried on 11-20: the cells then miss this folder's `llm.json` and `tools.json`). `system`, `tools`, `llm` and `hooks` can point anywhere; relative paths inside a linked `tools.json` / `hooks.json` (a tool's `path`, a hook's `handler`) are counted from this definition folder, where the link is, not from the target's folder.
+- To keep a file of this folder by hand (compiling never touches it), link to it under another name: `system=defs.extern("system.hand.txt")`. `defs.extern("system.txt")` would be a link to itself: `SpecBad`.
+- `tools` and `hooks`: `defs.extern(...)` stands for the whole field (`tools=defs.extern(...)`), not an item of the list.
+- In `defs.load`: a base's field linked to a file outside the base's folder comes over as the same link (counted again from the folder this one is compiled into); one linked to a file inside the base's folder cannot be built on (using it is one `SpecBad` line), since this definition would then run on another definition's file.
+
+**Do not overuse this.** A link makes the definition depend on a file outside it:
+
+- copy or move the definition without the target and it breaks; the agent then runs with no system text, silently. `agent_def check` reports a broken link (one problem for each), nothing else does. `agent_def new` copies the link as it is (like `cp -r`): a copy at another depth gets a broken relative link.
+- some commands write through the link and change the shared file for every definition that links to it (`agent_def llm` / `tools`, `aos-tools add --file`); others replace the link with a plain file (`agent_def system`).
+- git on Windows may check a link out as a text file.
+
+If all you want is the text of a file at compile time, read it in Python instead: `system=open("x.txt").read()`. Use `extern` only when one hand-written file must stay the single live copy.
 
 ## Functions as tools and hooks
 
@@ -189,7 +214,7 @@ defs.main(agent)
 - **It happens only when you run `--compile`.** The files written are whole, like any other definition: no `extends`, no `$override`, nothing that names the base. The running agent does not know there was a base, and the base folder does not have to be there later.
 - **A changed base is followed only when you recompile** here. `defs.load` runs the base's `agent.py`, not its JSON files, so this folder gets what the base's `agent.py` says now, even if the base itself was not recompiled.
 - `defs.load(path)`: the folder of another `agent.py` (or the `.py` file itself). A relative path starts at the folder of this `agent.py` (in a Python prompt: the current folder); `defs.env("AOS_WS", "/agents/reviewer")` works too. It does not search anywhere. Loading the base writes nothing anywhere.
-- `defs.load` gives the `defs.Agent` that the base's `agent.py` hands to `defs.main` (a new copy each time), with nine fields: `base.description`, `base.system`, `base.tools`, `base.llm`, `base.fsm`, `base.meta`, `base.interfaces`, `base.hooks`, `base.files`. A base without `hooks` gives an empty group (no `hooks.json` here either, unless you add hooks); like every field, the base's `hooks` comes over only when you write it (`hooks=base.hooks`, even when it is the skeleton's empty `{}`): an `agent.py` here without `hooks` has no `hooks.json` and takes no breakpoints; a base without `fsm` (an eca body) gives `base.fsm` = `None`. A field the base writes by hand (`defs.extern(...)`) cannot be built on: using it is one `SpecBad` line; not using it is fine.
+- `defs.load` gives the `defs.Agent` that the base's `agent.py` hands to `defs.main` (a new copy each time), with nine fields: `base.description`, `base.system`, `base.tools`, `base.llm`, `base.fsm`, `base.meta`, `base.interfaces`, `base.hooks`, `base.files`. A base without `hooks` gives an empty group (no `hooks.json` here either, unless you add hooks); like every field, the base's `hooks` comes over only when you write it (`hooks=base.hooks`, even when it is the skeleton's empty `{}`): an `agent.py` here without `hooks` has no `hooks.json` and takes no breakpoints; a base without `fsm` (an eca body) gives `base.fsm` = `None`. A field the base links to a file inside its own folder (`defs.extern("system.hand.txt")`) cannot be built on: using it is one `SpecBad` line; not using it is fine. A field linked to a file outside the base's folder comes over as the same link (see "extern").
 - **Tools.** `base.tools` is one pack. `base.pack(prefix="r_", rename={...}, exclude=[...])` is the same pack with other names, as for `std.pack`. A tool you write yourself (`defs.tool`, `std.tool`) replaces the base's tool of that name; `defs.drop` takes one out. A tool is always replaced as a whole: there is no "change one field of a tool".
 - **Two bases (a diamond).** `tools=[d1.tools, d2.tools]`: a tool the same in both is one tool; a tool that differs, or that one of them took out (`defs.drop`) and the other kept, is `SpecBad`. Say which you mean with `defs.tool(name, ...)` or `defs.drop(name)`. A tool taken out does not come back unseen.
 - **Hooks.** `base.hooks` and `std.hooks()` are hook groups; `base.hooks["timer"]` is a copy of that hook, so `{**base.hooks["timer"], "every_ms": 60000}` changes one field and keeps the rest. When two groups (two bases, or `std.hooks()` of two templates) both have a hook of one name and the entries differ, it is `SpecBad`; pick one by writing that hook yourself in a dict after them (`None` drops it). A dict you write still replaces a hook as a whole, as before.

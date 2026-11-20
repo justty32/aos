@@ -201,6 +201,9 @@ def check(path, root):
             problem('definition folder name %r must match [a-z0-9_-]+' % path.name)
     elif any(not re.fullmatch('[a-z0-9_-]+', part) for part in parts):
         problem('definition path segments must match [a-z0-9_-]+')
+    import links_check                           # 11-20 第 4 刀：斷掉的連結先判、一個只報一條（同夾，同 refs_check）
+    if links_check.check(path, problem):
+        return problems, warnings
     try:
         first = (path / 'README.md').read_text(encoding='utf-8').splitlines()
         if not first or not first[0].strip():

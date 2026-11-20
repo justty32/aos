@@ -14,7 +14,7 @@ LLM_KEYS = ["model", "temperature", "top_p", "max_tokens", "seed", "presence_pen
 PACK_RE = re.compile(r"[a-z0-9][a-z0-9_-]*\Z")
 TOOL_RE = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")                        # aos-tools 的 NAME_RE
 ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")                  # aos-tools 的 ENV_KEY_RE
-RUNTIME_FILES = ("ctl.json", "state.json", "state_flux.json", "history.jsonl")   # loop／腦跑起來寫的檔名，extern、FILES 不能用
+RUNTIME_FILES = ("ctl.json", "state.json", "state_flux.json", "history.jsonl")   # loop／腦跑起來寫的檔名，FILES 不能用
 OWN_FILES = {"tools": "tools.json", "llm": "llm.json", "system": "system.txt", "fsm": "fsm.json", "hooks": "hooks.json"}
 SKELETON = ("_entry", "body.json", "loop.json", "interfaces.json")
 CONTENT = ("system", "tools", "llm", "hooks")                          # 不宣告 FSM 時 agent.py 寫的內容檔（檔名照 interfaces.json）
@@ -30,7 +30,8 @@ WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl ad
 
 
 def kind(value):
-    """宣告小函式回的記號種類（"bad"、"extern"、"stock_hooks"（std.hooks 回的）…）；普通值＝None。hook 表裡叫 kind 的 hook 值是 dict，不會被認錯。"""
+    """宣告小函式回的記號種類（"bad"、"extern"（{"target"}，defs.load 換過的多帶 "from"）、"stock_hooks"（std.hooks 回的）…）；普通值＝None。
+    hook 表裡叫 kind 的 hook 值是 dict，不會被認錯。"""
     return value.get("kind") if isinstance(value, dict) and isinstance(value.get("kind"), str) else None
 
 
@@ -59,6 +60,9 @@ def stack_tools(tools):
         if callable(t) and not isinstance(t, dict):
             t = fn_spec.tool_item(t)
         raise_bad(t)
+        if kind(t) == "extern":
+            raise SpecBad("tools: defs.extern(...) stands for the whole field (a link to one tools.json): write tools=defs.extern(...), "
+                          "not inside a list")
         if kind(t) not in ("pack", "tool", "drop"):
             raise SpecBad("each item of tools must come from std.pack(...), std.tool(...), defs.tool(...) or defs.drop(...) "
                           "(or .pack / .tool of a library from defs.lib, the tools of defs.load(...), or a function marked @fn.tool), "
