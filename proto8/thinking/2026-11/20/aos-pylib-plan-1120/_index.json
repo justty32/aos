@@ -1,0 +1,50 @@
+{
+ "00-使用者原話.md": {
+  "description": "早上（第 3、4 點）"
+ },
+ "01-程式庫長相.md": {
+  "description": "先講結論"
+ },
+ "02-去留對照與kernel接口.md": {
+  "description": "先講結論"
+ },
+ "03-函數當工具與hook.md": {
+  "description": "先講結論"
+ },
+ "04-函數-依賴與互動.md": {
+  "description": "函數用到外面的東西"
+ },
+ "05-extern-symlink.md": {
+  "description": "先講結論"
+ },
+ "06-對照與衝突.md": {
+  "description": "逐條對照"
+ },
+ "07-施工計劃.md": {
+  "description": "先講結論"
+ },
+ "07b-施工計劃-第0到2刀.md": {
+  "description": "第 0 刀 共用的底"
+ },
+ "07c-施工計劃-第3到5刀.md": {
+  "description": "第 3 刀 函數進 agent（抽出來）"
+ },
+ "07d-施工-給設計的意見.md": {
+  "description": "寫施工計劃時讀程式發現、設計稿跟現況對不上或沒定的十八條意見（隊員原文），每條附隊長怎麼定；07b、07c 的「意見 N」指這裡。"
+ },
+ "08-待裁題.md": {
+  "description": "1. 有了連結版的 extern，「defs.main() 收一個設定檔、在裡面寫哪些產物不要產出」還要不要？"
+ },
+ "09-原型.md": {
+  "description": "結論"
+ },
+ "10-Argon原文.md": {
+  "description": "(A) 審查"
+ },
+ "11-採納表.md": {
+  "description": "先講結論"
+ },
+ "README.md": {
+  "description": "「編譯這塊變成整套一個 Python 程式庫」的設計稿與施工計劃（11-20，線 aos-pylib-plan-1120）：只出稿，沒改任何程式、範本、條文、知識庫"
+ }
+}

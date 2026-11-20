@@ -353,12 +353,15 @@
       "title": "編譯的通用底座與 Python 函數直接當工具／hook",
       "status": "等使用者",
       "flow": "",
-      "what": "調查與發想已寫好（只查只寫，沒改程式）：底座五個形狀、函數當工具／hook 四個形狀與一個 repo 外原型；八題待裁。使用者 11-20 選項框答四題：底座做到哪一步「整套是一個程式庫」；函數變成工具或 hook 後產物要不要跟 agent.py 脫鉤「抽出來」；說明與參數從哪來「兩種都收，明寫的贏」；先做哪個「一起，同一套寫法」",
-      "next": "A2、A3、B4、C1 未問；往程式庫走要先規劃，還沒派線",
+      "what": "調查與發想已寫好（只查只寫，沒改程式）：底座五個形狀、函數當工具／hook 四個形狀與一個 repo 外原型；八題待裁。使用者 11-20 選項框答四題：底座做到哪一步「整套是一個程式庫」；函數變成工具或 hook 後產物要不要跟 agent.py 脫鉤「抽出來」；說明與參數從哪來「兩種都收，明寫的贏」；先做哪個「一起，同一套寫法」。11-20 規劃稿已交（線 aos-pylib-plan-1120，只出稿）：程式庫長相（defs.Agent 物件、.dry_run()／.compile(夾)、fn 模組的 @fn.tool／@fn.hook、defs.extern 連結版）、跟已定的逐條對照、施工六刀、Argon 審一次",
+      "next": "A2、A3、B4、C1 未問；往程式庫走要先規劃，還沒派線；規劃稿已交、等使用者看衝突六條與待裁十題（只有第 0 刀不依賴任何題；施工另要他點頭）",
       "see": [
         "[README](../proto8/thinking/2026-11/20/aos-compile-base-1120/README.md)",
         "[待裁題](../proto8/thinking/2026-11/20/aos-compile-base-1120/09-C-待裁題.md)",
-        "[使用者裁定](../proto8/thinking/2026-11/20/aos-compile-base-1120/10-使用者裁定.md)"
+        "[使用者裁定](../proto8/thinking/2026-11/20/aos-compile-base-1120/10-使用者裁定.md)",
+        "[規劃稿 README](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/README.md)",
+        "[要帶給使用者的衝突](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/06-對照與衝突.md)",
+        "[規劃稿的待裁題](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/08-待裁題.md)"
       ],
       "since": "2026-11-20"
     },
