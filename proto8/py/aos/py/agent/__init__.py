@@ -11,7 +11,8 @@
     a.ctl.state(json=True)                  # 解好的 dict
     a.tools.add("lib/my/tools/grep")
     a.bp ...、a.look ...                    # 兩個延伸（斷點、讀 stack 的檔），不是 aos-agent 子指令；第一次用到才載入 aos.gdb
-    from aos.py.agent import defs           # 寫定義：defs.tool、defs.state、defs.fsm、defs.main…（＝aos.agent_spec）
+    from aos.py.agent import defs           # 寫定義：defs.Agent、defs.tool、defs.state、defs.fsm、defs.main…（＝aos.agent_spec）
+                                            # defs.Agent（定義）跟下面的 Agent（把手，活的那隻）同名不同物
 
 a 底下的名字：aos-agent 的子指令（表從 aos.apps.agent.SUBS 讀，不另抄）就是那條指令；不是的只有 bp、look、name、daemon、stack，其他當場 AttributeError。
 attach 只記名字與 daemon（daemon 轉成絕對路徑），不跑指令；a.stack 每次問都跑一條 aos-agent ctl state --json who（不快取）。

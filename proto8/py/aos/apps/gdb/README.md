@@ -139,10 +139,10 @@ gdb> p.wait()                                      # same as a.bp.pause(): "stop
 
 `aos-gdb` 不給 NAME 也行：只放好 `agent`、`daemon_ctl`、`std`、`defs`，自己 `a = agent.attach("ann")`。給了 `-d D`：REPL 裡 `AOS_DAEMON` 設成它，模組層的 `agent.ctl.ls()`、`daemon_ctl.ls()` 也對那台。收樹：`aos-daemon-ctl -d .stack shutdown`、`aos-daemon-ctl -d llms/stacks/llm shutdown`（分兩句打；REPL 裡是 `daemon_ctl.shutdown()`）。
 
-**觸發器掛在 agent 的 hook 上，定義要宣告 hook**（`interfaces.json` 的 `aos-agent.hooks`）。上面 start-api 的 ann 有；`agent-python` 骨架抄出來的也有——骨架帶一行 `HOOKS = {}`（空的，不帶任何現成的 hook；使用者 11-19 下午選「骨架帶一行空的 HOOKS」），什麼都不改就下得了斷點。沒宣告的定義（拿掉那行的 `agent.py`、自己手寫的夾）下斷點＝`HooksMissing`，錯誤行後面補一句怎麼修：
+**觸發器掛在 agent 的 hook 上，定義要宣告 hook**（`interfaces.json` 的 `aos-agent.hooks`）。上面 start-api 的 ann 有；`agent-python` 骨架抄出來的也有——骨架的 `defs.Agent(...)` 帶 `hooks={}`（空的，不帶任何現成的 hook；使用者 11-19 下午選「骨架帶一行空的 HOOKS」），什麼都不改就下得了斷點。沒宣告的定義（拿掉 `hooks=` 的 `agent.py`、自己手寫的夾）下斷點＝`HooksMissing`，錯誤行後面補一句怎麼修：
 
 ```
-aos-agent: error: HooksMissing bob does not declare hooks (...); to fix it in an agent.py definition: add HOOKS = {} to agent.py, pass hooks=HOOKS to defs.main(...), and recompile (python3 agent.py --compile)
+aos-agent: error: HooksMissing bob does not declare hooks (...); to fix it in an agent.py definition: give hooks={} to defs.Agent(...) in agent.py, and recompile (python3 agent.py --compile)
 ```
 
 照做、重新編譯後同一個 REPL 裡再下一次就行（不用重起 agent）。下斷點失敗什麼都不留：`a.bp` 列不出它、id 不跳號（重下 `replace=True` 失敗＝原本那個照舊）。

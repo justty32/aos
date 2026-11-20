@@ -18,15 +18,17 @@ python3 agent.py --compile       # compile: write the definition files into this
 aos-agent ctl add .              # mount it (add -d DAEMON, -w WORKSPACE as usual)
 ```
 
-Keep the lines above `# ---- your agent` as they are: they find the `aos` package (`$AOS_HOME/lib` first, then an `aos/` folder next to `agent.py`, so a file named `aos.py` next to it does not get in the way when `AOS_HOME` is set), then import `defs` with `from aos.py.agent import defs` (everything below is `defs.something`). Keep the last line `defs.main(...)`.
+Keep the lines above `# ---- your agent` as they are: they find the `aos` package (`$AOS_HOME/lib` first, then an `aos/` folder next to `agent.py`, so a file named `aos.py` next to it does not get in the way when `AOS_HOME` is set), then import `defs` with `from aos.py.agent import defs` (everything below is `defs.something`). Keep the last line `defs.main(agent)`: it hands the agent to the command line (`--compile`, `--dry-run`, `--help`).
+
+`defs.Agent` (the definition you write here) is not the `Agent` class of `aos.py.agent` (the handle of a running agent that `agent.attach("ann")` gives): same name, different things. Do not name your variable `agent` and also `from aos.py import agent` in the same file: the variable hides the module.
 
 ## Read this before you run --compile
 
 1. **It overwrites, as a whole, every file `agent.py` declares**, every time, without asking. If you run it in a folder that already has hand-written `tools.json`, `fsm.json`, `system.txt` and so on, those are replaced. Look first with `python3 agent.py --dry-run`, or commit first. A file you want to keep writing by hand: declare it with `defs.extern("file name")`.
 2. **Changes made directly in the compiled files are gone when you recompile.** That includes changes made by `agent_def tools` / `llm` / `system` or by an editor. Like a C compiler and its `.o` files: after it writes them, the files are ordinary definition files that anyone may change, and nothing remembers what was written. To keep a change, put it in `agent.py`.
-3. **Renaming or removing a state of `FSM` can stop a running agent** that is sitting in that state (its `stage.txt` names a state that is no longer in `fsm.json`; aos-fsm then fails with `StateUnknown`). Rename states only when no agent using this definition is running.
+3. **Renaming or removing a state of `fsm` can stop a running agent** that is sitting in that state (its `stage.txt` names a state that is no longer in `fsm.json`; aos-fsm then fails with `StateUnknown`). Rename states only when no agent using this definition is running.
 
-What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set (for example `lineage`, written by `agent_def new`); `README.md` is written only when it is missing (one line: `DESCRIPTION`); any other file in the folder is left alone, also files an older `agent.py` wrote but the current one no longer declares (delete those yourself). Nothing in the folder marks it as compiled: delete `agent.py` and it is a plain definition.
+What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set (for example `lineage`, written by `agent_def new`); `README.md` is written only when it is missing (one line: the description); any other file in the folder is left alone, also files an older `agent.py` wrote but the current one no longer declares (delete those yourself). Nothing in the folder marks it as compiled: delete `agent.py` and it is a plain definition.
 
 ## Files
 
@@ -35,22 +37,39 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
 | `agent.py` | the source of this definition | you |
 | `_entry` | mounts the agent on a daemon (`aos-agent ctl add`) | always written |
 | `body.json` | runs the loop: `aos-loop loop.json` | always written |
-| `loop.json` | runs `fsm.json` every 300 ms; names the ctl, state and state flux files; with `HOOKS`, fires `after_start` / `after_stop` | always written |
-| `fsm.json` | the state machine | `FSM` |
-| `interfaces.json` | names the other files (`entry`, `tools`, `llm`, `llm_keys`, `history`, `system`, and `hooks` with `HOOKS`) | always written; `INTERFACES` is laid over it |
-| `tools.json` | the tools | `TOOLS` |
-| `llm.json` | brain settings | `LLM` |
-| `system.txt` | the system text | `SYSTEM` |
-| `_metainfo.json` | `summary` and `META` keys | `DESCRIPTION`, `META` |
+| `loop.json` | runs `fsm.json` every 300 ms; names the ctl, state and state flux files; with `hooks`, fires `after_start` / `after_stop` | always written |
+| `fsm.json` | the state machine | `fsm=` |
+| `interfaces.json` | names the other files (`entry`, `tools`, `llm`, `llm_keys`, `history`, `system`, and `hooks` with `hooks`) | always written; `interfaces=` is laid over it |
+| `tools.json` | the tools | `tools=` |
+| `llm.json` | brain settings | `llm=` |
+| `system.txt` | the system text | `system=` |
+| `_metainfo.json` | `summary` and `meta` keys | the description, `meta=` |
 | `README.md` | this file | written only when missing |
-| `hooks.json` | the hooks (none in this skeleton: `HOOKS = {}`) | `HOOKS` |
-| any other name (not in this skeleton) | as given | `FILES` |
+| `hooks.json` | the hooks (none in this skeleton: `hooks={}`) | `hooks=` |
+| any other name (not in this skeleton) | as given | `files=` |
 
 ## What you write in agent.py
 
-- `DESCRIPTION`: one English sentence: what the agent does. It becomes `summary` in `_metainfo.json`.
-- `SYSTEM`: the system text as a string, or `defs.extern("system.txt")` to keep writing that file yourself (like `extern` in C: `agent.py` only names the file, which is defined elsewhere, by you; compiling neither writes nor overwrites it).
-- `TOOLS`: a list of
+One `defs.Agent(...)`: the description first, every other field by name (all lower case):
+
+```python
+agent = defs.Agent(
+    "Look things up in the workspace and answer by mail.",
+    system="...",
+    tools=[...],
+    llm={},
+    fsm=std.fsm(),
+    hooks={},
+)
+
+defs.main(agent)
+```
+
+`defs.Agent(description, *, system, tools, llm, fsm=None, hooks=None, meta=None, interfaces=None, files=None)` only takes the fields; a wrong field is found when you compile (one `SpecBad` line, for example `tools must be a list ...`).
+
+- the description (first, without a name): one English sentence: what the agent does. It becomes `summary` in `_metainfo.json`.
+- `system`: the system text as a string, or `defs.extern("system.txt")` to keep writing that file yourself (like `extern` in C: `agent.py` only names the file, which is defined elsewhere, by you; compiling neither writes nor overwrites it).
+- `tools`: a list of
   - `std.pack("look")`: the tools of a pack of `std`, the library that comes with aos (`$AOS_HOME/lib/packs/look.json`). The pack is read when `agent.py` runs and, linked statically (the default), its tools are written into `tools.json` one by one (no `$override`), so a tool added to the pack later shows up after you recompile (dynamic linking: see "Linking tool packs");
   - `std.tool("base/read")`: one tool of `std` (`$AOS_HOME/lib/tools/base/read`), named after its folder (`name="..."` picks another name);
   - `defs.tool("read", defs.home("/lib/tools/base/read"))`: one tool by its path; it replaces a tool of the same name from the packs. The path can also be a library tool: `defs.tool("read", my.tool("read"))`;
@@ -58,14 +77,14 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
   - the `.pack(...)` / `.tool(...)` of another library (see "Libraries" below).
   - `std.pack(...)` and the `.pack(...)` of a library also take `prefix="..."` (put before every tool name), `rename={"read": "cat"}` (the name of one tool, instead of prefix + its name) and `exclude=["grep"]` (leave tools out).
   - When two packs give the same name and the tools are not exactly the same, `--compile` stops with `SpecBad` instead of letting one hide the other. Use `prefix=`, `rename=`, `exclude=`, or pick one with `defs.tool(name, ...)`.
-- `LLM`: a dict. `{}` = the llm kernel's default brain; `{"model": "luna"}` picks a brain pack of the kernel. Other keys must be in `llm_keys` (`temperature`, `max_tokens`, ...).
-- `FSM`: `std.fsm()` borrows the four cells of the `agent-fsm` template (`idle`, `think`, `wait`, `act`; the cell programs stay in `$AOS_HOME/templates/agent-fsm/`). Your own machine:
+- `llm`: a dict. `{}` = the llm kernel's default brain; `{"model": "luna"}` picks a brain pack of the kernel. Other keys must be in `llm_keys` (`temperature`, `max_tokens`, ...).
+- `fsm`: `std.fsm()` borrows the four cells of the `agent-fsm` template (`idle`, `think`, `wait`, `act`; the cell programs stay in `$AOS_HOME/templates/agent-fsm/`). Your own machine:
 
   ```python
   def cell(name):
       return ["python3", defs.home("/templates/agent-fsm/%s.py" % name)]
 
-  FSM = defs.fsm("idle", [
+  cells = defs.fsm("idle", [
       defs.state("idle",  cell("idle"),  {0: "think", 10: "idle"}),
       defs.state("think", cell("brain"), {0: "wait", 10: "idle"}),
       defs.state("wait",  cell("wait"),  {0: "act", 10: "wait", 11: "think"}),
@@ -73,28 +92,31 @@ What it does not touch: `_metainfo.json` keeps every key `agent.py` does not set
   ])
   ```
 
-  `next` maps an exit code (0-255, or `"*"` for any other) to the next state; every state needs `0` or `"*"`.
-- Optional, passed as `defs.main(..., meta=META, interfaces=INTERFACES, hooks=HOOKS, files=FILES)`:
-  - `META`: more keys for `_metainfo.json`, like `{"cost": {"time_ms": 60000}, "resource": ["llm"]}`;
-  - `INTERFACES`: laid over the default `interfaces.json`, like `{"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}}` (`None` removes a default key);
-  - `HOOKS`: writes `hooks.json`, adds `"hooks": "hooks.json"` to `interfaces.json` and the `on_start` / `on_stop` lines (they fire `after_start` / `after_stop`) to `loop.json`. Write it as
+  and then `fsm=cells` in `defs.Agent(...)`. `next` maps an exit code (0-255, or `"*"` for any other) to the next state; every state needs `0` or `"*"`.
+
+  A state machine compiles on its own too: `cells.compile("machines/counter")` writes only `fsm.json` there (`name="fsm.json"` picks another file name), `cells.dry_run()` gives `{"fsm.json": {...}}`, and `defs.main(cells)` as the last line of a script gives it `--compile [folder]` and `--dry-run` (no `--static` / `--dynamic`).
+- Optional fields, by name in `defs.Agent(...)`:
+  - `meta`: more keys for `_metainfo.json`, like `{"cost": {"time_ms": 60000}, "resource": ["llm"]}`;
+  - `interfaces`: laid over the default `interfaces.json`, like `{"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}}` (`None` removes a default key);
+  - `hooks`: writes `hooks.json`, adds `"hooks": "hooks.json"` to `interfaces.json` and the `on_start` / `on_stop` lines (they fire `after_start` / `after_stop`) to `loop.json`. Write it as
     - a dict `{hook name: entry}`, the entries as in any `hooks.json` (`event`, `handler`, `condition`, `every_ms`, `config`, ...);
     - `std.hooks()`: the hooks of the `agent-fsm` template (`std.hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/<template>/hooks.json` and copied in, so recompiling follows a changed template;
-    - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `HOOKS = [std.hooks(), {"timer": None, "mine": {...}}]`; but two hook groups (`std.hooks(...)` of two templates, the `HOOKS` of `defs.load`) that give one name with different entries are `SpecBad` unless a dict of yours after them names it;
+    - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `hooks=[std.hooks(), {"timer": None, "mine": {...}}]`; but two hook groups (`std.hooks(...)` of two templates, the `hooks` of `defs.load`) that give one name with different entries are `SpecBad` unless a dict of yours after them names it;
     - or `defs.extern("hooks.json")`.
 
-    The skeleton has `HOOKS = {}`: no hooks, but `hooks.json` is declared, so an agent made from it takes breakpoints (`aos-gdb`, `a.bp.add...`) and `aos-agent hook add` without any change. Keep that line (and `hooks=HOOKS` in `defs.main(...)`) when you rewrite the part below `# ---- your agent`; without it, setting a breakpoint is `HooksMissing`. Want the `agent-fsm` template's hooks (a timer that looks at the mailbox, ...)? Write `HOOKS = std.hooks()`.
-  - `FILES`: other files written as they are, like `{"ladder.json": {...}}` (a dict or list is written as JSON, a string as it is). The name is one file in this folder; it cannot be a file that agent.py, the skeleton or the running agent writes.
+    The skeleton has `hooks={}`: no hooks, but `hooks.json` is declared, so an agent made from it takes breakpoints (`aos-gdb`, `a.bp.add...`) and `aos-agent hook add` without any change. Keep that line when you rewrite the part below `# ---- your agent`; without it, setting a breakpoint is `HooksMissing`. Want the `agent-fsm` template's hooks (a timer that looks at the mailbox, ...)? Write `hooks=std.hooks()`.
+  - `files`: other files written as they are, like `{"ladder.json": {...}}` (a dict or list is written as JSON, a string as it is). The name is one file in this folder; it cannot be a file that agent.py, the skeleton or the running agent writes.
 
-## Without FSM (eca bodies: Claude Code, pi)
+## Without a state machine (eca bodies: Claude Code, pi)
 
-An eca definition has no state machine: its skeleton (`_entry`, `loop.json`, `cli.json`, `screen/`, `interfaces.json`) comes from its template. Copy the template first, put an `agent.py` in it, and leave `FSM` out:
+An eca definition has no state machine: its skeleton (`_entry`, `loop.json`, `cli.json`, `screen/`, `interfaces.json`) comes from its template. Copy the template first, put an `agent.py` in it, and leave `fsm` out:
 
 ```python
-defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, hooks=HOOKS)      # no FSM
+agent = defs.Agent("...", system="...", tools=[...], llm={}, hooks={})   # no fsm
+defs.main(agent)
 ```
 
-Then `--compile` writes only the content files (`SYSTEM`, `TOOLS`, `LLM`, `HOOKS`, and `FILES`, `META`) under the names the folder's `interfaces.json` gives, and checks `LLM` against its `llm_keys` (eca: `model` only). The skeleton is not touched; `INTERFACES` cannot be used. A folder without `interfaces.json`, or one that declares no file for something you declare, gets one `DefBad` line and nothing is written.
+Then `--compile` writes only the content files (`system`, `tools`, `llm`, `hooks`, and `files`, `meta`) under the names the folder's `interfaces.json` gives, and checks `llm` against its `llm_keys` (eca: `model` only). The skeleton is not touched; `interfaces` cannot be used. A folder without `interfaces.json`, or one that declares no file for something you declare, gets one `DefBad` line and nothing is written.
 
 Paths: write paths outside this folder as `defs.home("/...")` (under `$AOS_HOME`) or `defs.env("AOS_WS", "/...")`; they are written as `{"$env": ..., "$path": ...}` and work on any machine and after any copy. Do not write `../` paths: they break when the folder is copied somewhere else.
 
@@ -105,32 +127,51 @@ Paths: write paths outside this folder as `defs.home("/...")` (under `$AOS_HOME`
 An agent that is another one plus a few changes: load the other `agent.py` and write only the changes.
 
 ```python
-base = defs.load("../reviewer")        # runs ../reviewer/agent.py; its defs.main(...) only hands over its fields
+base = defs.load("../reviewer")        # runs ../reviewer/agent.py and takes the agent it hands to defs.main
 
-DESCRIPTION = "Review a change and refuse anything without a test."
-SYSTEM = base.SYSTEM + "Refuse a change that has no test.\n"
-TOOLS  = [base.TOOLS,                                     # all tools of the base, as one pack
-          defs.drop("grep"),                              # one of them out
-          std.tool("base/peek_now_time", name="now")]     # one more
-LLM    = {**base.LLM, "model": "luna"}
-HOOKS  = [base.HOOKS, {"timer": {**base.HOOKS["timer"], "every_ms": 60000}}]   # one field of one hook; on_error and the rest stay
-FSM    = defs.fsm(base.FSM, [defs.state("think", ["python3", defs.home("/templates/agent-fsm/brain.py")])])   # next stays the base's
-defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM, hooks=HOOKS)
+agent = defs.Agent(
+    "Review a change and refuse anything without a test.",
+    system=base.system + "Refuse a change that has no test.\n",
+    tools=[base.tools,                                    # all tools of the base, as one pack
+           defs.drop("grep"),                             # one of them out
+           std.tool("base/peek_now_time", name="now")],   # one more
+    llm={**base.llm, "model": "luna"},
+    hooks=[base.hooks, {"timer": {**base.hooks["timer"], "every_ms": 60000}}],   # one field of one hook; on_error and the rest stay
+    fsm=defs.fsm(base.fsm, [defs.state("think", ["python3", defs.home("/templates/agent-fsm/brain.py")])]),   # next stays the base's
+)
+
+defs.main(agent)
 ```
 
 - **It happens only when you run `--compile`.** The files written are whole, like any other definition: no `extends`, no `$override`, nothing that names the base. The running agent does not know there was a base, and the base folder does not have to be there later.
 - **A changed base is followed only when you recompile** here. `defs.load` runs the base's `agent.py`, not its JSON files, so this folder gets what the base's `agent.py` says now, even if the base itself was not recompiled.
 - `defs.load(path)`: the folder of another `agent.py` (or the `.py` file itself). A relative path starts at the folder of this `agent.py` (in a Python prompt: the current folder); `defs.env("AOS_WS", "/agents/reviewer")` works too. It does not search anywhere. Loading the base writes nothing anywhere.
-- The base gives nine fields: `DESCRIPTION`, `SYSTEM`, `TOOLS`, `LLM`, `FSM`, `META`, `INTERFACES`, `HOOKS`, `FILES`. A base without `HOOKS` gives an empty group (no `hooks.json` here either, unless you add hooks); like every field, the base's `HOOKS` comes over only when you write it (`hooks=base.HOOKS`, even when it is the skeleton's empty `{}`): an `agent.py` here without `HOOKS` has no `hooks.json` and takes no breakpoints; a base without `FSM` (an eca body) gives `FSM = None`. A field the base writes by hand (`defs.extern(...)`) cannot be built on: using it is one `SpecBad` line; not using it is fine.
-- **Tools.** `base.TOOLS` is one pack. `base.tools(prefix="r_", rename={...}, exclude=[...])` is the same pack with other names, as for `std.pack`. A tool you write yourself (`defs.tool`, `std.tool`) replaces the base's tool of that name; `defs.drop` takes one out. A tool is always replaced as a whole: there is no "change one field of a tool".
-- **Two bases (a diamond).** `TOOLS = [d1.TOOLS, d2.TOOLS]`: a tool the same in both is one tool; a tool that differs, or that one of them took out (`defs.drop`) and the other kept, is `SpecBad`. Say which you mean with `defs.tool(name, ...)` or `defs.drop(name)`. A tool taken out does not come back unseen.
-- **Hooks.** `base.HOOKS` and `std.hooks()` are hook groups; `base.HOOKS["timer"]` is a copy of that hook, so `{**base.HOOKS["timer"], "every_ms": 60000}` changes one field and keeps the rest. When two groups (two bases, or `std.hooks()` of two templates) both have a hook of one name and the entries differ, it is `SpecBad`; pick one by writing that hook yourself in a dict after them (`None` drops it). A dict you write still replaces a hook as a whole, as before.
-- **State machine.** `defs.fsm(base.FSM, [defs.state(...)], drop=["act"])`: a state of the base's name changes only the fields you give (`argv`, `next`, `timeout_ms`; the rest stay), a new name adds a state (give `argv` and `next`), `drop` takes states out; the whole table is checked again.
+- `defs.load` gives the `defs.Agent` that the base's `agent.py` hands to `defs.main` (a new copy each time), with nine fields: `base.description`, `base.system`, `base.tools`, `base.llm`, `base.fsm`, `base.meta`, `base.interfaces`, `base.hooks`, `base.files`. A base without `hooks` gives an empty group (no `hooks.json` here either, unless you add hooks); like every field, the base's `hooks` comes over only when you write it (`hooks=base.hooks`, even when it is the skeleton's empty `{}`): an `agent.py` here without `hooks` has no `hooks.json` and takes no breakpoints; a base without `fsm` (an eca body) gives `base.fsm` = `None`. A field the base writes by hand (`defs.extern(...)`) cannot be built on: using it is one `SpecBad` line; not using it is fine.
+- **Tools.** `base.tools` is one pack. `base.pack(prefix="r_", rename={...}, exclude=[...])` is the same pack with other names, as for `std.pack`. A tool you write yourself (`defs.tool`, `std.tool`) replaces the base's tool of that name; `defs.drop` takes one out. A tool is always replaced as a whole: there is no "change one field of a tool".
+- **Two bases (a diamond).** `tools=[d1.tools, d2.tools]`: a tool the same in both is one tool; a tool that differs, or that one of them took out (`defs.drop`) and the other kept, is `SpecBad`. Say which you mean with `defs.tool(name, ...)` or `defs.drop(name)`. A tool taken out does not come back unseen.
+- **Hooks.** `base.hooks` and `std.hooks()` are hook groups; `base.hooks["timer"]` is a copy of that hook, so `{**base.hooks["timer"], "every_ms": 60000}` changes one field and keeps the rest. When two groups (two bases, or `std.hooks()` of two templates) both have a hook of one name and the entries differ, it is `SpecBad`; pick one by writing that hook yourself in a dict after them (`None` drops it). A dict you write still replaces a hook as a whole, as before.
+- **State machine.** `defs.fsm(base.fsm, [defs.state(...)], drop=["act"])`: a state of the base's name changes only the fields you give (`argv`, `next`, `timeout_ms`; the rest stay), a new name adds a state (give `argv` and `next`), `drop` takes states out; the whole table is checked again.
 - Relative paths inside the base (a tool `path` or `env_file`, a hook `handler`, a file of the base folder named in a state's `argv`) are rewritten from the base folder, so they still point at the base's files here. Write paths in the base as `defs.home(...)` / `defs.env(...)` and nothing needs rewriting.
 - While the base runs, its folder comes first on `sys.path`; afterwards `sys.path` and the modules it imported (other than `aos`) are put back, so `import helper` here gets this folder's `helper.py`. Two `agent.py` files that load each other is `SpecBad`.
 - A wrong base (a missing folder, an error in its `agent.py`, a wrong declaration there) is one line, for example `strict: error: SpecBad defs.load('../reviewer'): ...`, and nothing is written.
-- Do not `import` another `agent.py` instead: its `defs.main(...)` then only prints a warning and does nothing (it used to write the other folder with your arguments).
-- In a Python prompt (`from aos.py.agent import defs`): `r = defs.load("/ws/agents/reviewer")`, then `defs.compile(...)` / `defs.write(...)` with `r.SYSTEM`, `[r.TOOLS, ...]` and so on. A folder written that way has no `agent.py` and cannot be recompiled; keep the lines in an `agent.py` if you want to.
+- Do not `import` another `agent.py` instead: its `defs.main(...)` then only prints a warning and does nothing.
+
+## Compiling from Python (a prompt, or one build script for several folders)
+
+A `defs.Agent` compiles itself; `defs.main` is only the command line around it:
+
+- `agent.dry_run(folder=None, link="static")` gives `{file name: content}` and writes nothing;
+- `agent.compile(folder, link="static")` writes into `folder` (always give it) and gives the list of what it wrote.
+
+So a build script does not need `defs.main`: build the agents and call `.compile(folder)` on each, one script for several folders:
+
+```python
+for name in ["ann", "bob"]:
+    defs.Agent("Answer letters for %s." % name, system="You are %s.\n" % name,
+               tools=[std.pack("mailbox")], llm={}, fsm=std.fsm(), hooks={}).compile("agents/" + name)
+```
+
+In a Python prompt (`from aos.py.agent import defs`): `r = defs.load("/ws/agents/reviewer")`, then `defs.Agent("...", system=r.system, tools=[r.tools, ...], ...).compile("/ws/agents/x")`. A folder written that way has no `agent.py` and cannot be recompiled; keep the lines in an `agent.py` if you want to.
 
 ## Linking tool packs: static or dynamic
 
@@ -143,7 +184,7 @@ python3 agent.py --dry-run --dynamic   # look first
 ```
 
 ```python
-TOOLS = [std.pack("look", link="dynamic"), std.pack("mailbox")]   # one pack its own way; link="static" too
+tools=[std.pack("look", link="dynamic"), std.pack("mailbox")],   # one pack its own way; link="static" too
 ```
 
 - **Static (the default).** The tools of the pack are copied into `tools.json` one by one, with full paths. A tool added to the pack later shows up only after you recompile. Only the list is fixed: each path still points into `$AOS_HOME` (or the library), and the tool program and its `_tooldef.json` there are read when the agent runs, so an upgrade of `$AOS_HOME` changes them for this agent too.
@@ -151,7 +192,7 @@ TOOLS = [std.pack("look", link="dynamic"), std.pack("mailbox")]   # one pack its
 - A `link=` on a pack wins over `--static` / `--dynamic`. Either way the pack is read when you compile, and the same checks run (a name two packs give with different tools is `SpecBad`).
 - What only static linking can do:
   - **renamed tools.** A pack with `prefix=` or `rename=`, which includes every pack of a library other than `std` (its tools get `<name>_` by default), cannot be linked dynamically: at run time aos reads the pack as it is. Under `--dynamic` such a pack is linked statically and you get one `warning` line; `link="dynamic"` on it is `SpecBad`. `my.pack("look", prefix="", link="dynamic")` works (its tools keep their names).
-  - **the `TOOLS` of `defs.load`.** They are the base's tools after its own changes, not a pack file, and the compiled files never name the base; under `--dynamic` they are linked statically, with a `warning` line.
+  - **the `tools` of `defs.load`.** They are the base's tools after its own changes, not a pack file, and the compiled files never name the base; under `--dynamic` they are linked statically, with a `warning` line.
 - `exclude=` and `defs.drop(...)` on a dynamically linked pack write `"name": null` in `tools.json` (null = not a tool).
 - Replacing one tool of a dynamically linked pack (`defs.tool("read", ...)`) works when your tool gives every field the pack's tool has: at run time aos lays your entry over the pack's field by field, so a field you leave out would stay. When that would happen, compiling is `SpecBad`: link that pack statically.
 - What compiling cannot check: a tool added to a dynamically linked pack after you compiled. If it has the name of another tool of this agent, at run time the two are merged without a word, field by field, the later one winning (the packs in `$override` order, then the table). Recompile now and then, or link statically, if that matters.
@@ -162,7 +203,7 @@ A library is a folder of a fixed shape: `packs/<name>.json` (tool packs, like `$
 
 ```python
 my = defs.lib("my", defs.env("AOS_WS", "/lib/my"))  # the name "my" is only for this agent.py
-TOOLS = [std.pack("look"), my.pack("look")]          # the brain sees read, ls, ... and my_read
+tools=[std.pack("look"), my.pack("look")],           # the brain sees read, ls, ... and my_read
 ```
 
 - The tools of another library get the library name and `_` in front (`my_read`); the tools of `std` keep their short names (`read`). The brain allows only letters, digits, `_` and `-` in a tool name.
@@ -178,4 +219,4 @@ TOOLS = [std.pack("look"), my.pack("look")]          # the brain sees read, ls, 
 my_agent: error: SpecBad state think: next state 'wiat' is not one of the states (idle, think, wait, act) (fix the declaration in agent.py)
 ```
 
-Then check the folder as usual: `agent_def` with `{"op": "check", "path": "my_agent"}` should answer `{"problems": []}`. Only check looks at whether what the definition calls is there: tool paths, the programs its states, loop and hooks run, and the types of `LLM` values (`--compile` does not check these); what it cannot check on this machine, like a variable that is not set, comes in `"warnings"`.
+Then check the folder as usual: `agent_def` with `{"op": "check", "path": "my_agent"}` should answer `{"problems": []}`. Only check looks at whether what the definition calls is there: tool paths, the programs its states, loop and hooks run, and the types of `llm` values (`--compile` does not check these); what it cannot check on this machine, like a variable that is not set, comes in `"warnings"`.

@@ -6,7 +6,7 @@
 解析全在編譯時做完（「C 與 .o」）：編譯時一定要讀得到庫根，讀不到＝SpecBad（Argon A3）；json 裡只寫全路徑（指示詞或絕對路徑），不留庫名；動態連結時 $override 寫的是包檔的全路徑，名字照包裡的（所以只有不改名的包能動態）。
 別的庫的路徑在 agent.py 明寫（07 第 6 題：使用者 11-19「先明寫，以後有需要再去弄-I。」）；包怎麼連結是編譯選項
 （07 第 7 題：「或者說，用選項吧，gcc那樣」），預設靜態（選項框「預設靜態 (Recommended)」）。
-寫錯照 agent_spec 的規矩：回 {"kind": "bad"} 記著，compile()／main 再報一行 SpecBad。
+寫錯照 agent_spec 的規矩：回 {"kind": "bad"} 記著，.dry_run()／.compile()／defs.main 再報一行 SpecBad。
 """
 import json, os, posixpath, re
 

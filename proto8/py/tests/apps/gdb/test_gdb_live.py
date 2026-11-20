@@ -560,7 +560,7 @@ class Live(unittest.TestCase):
                 with self.assertRaises(Failed) as e:
                     b.bp.add.before_tool("ls")
                 self.assertEqual(e.exception.code, "HooksMissing")
-                self.assertIn("add HOOKS = {} to agent.py, pass hooks=HOOKS to defs.main(...), and recompile", str(e.exception))
+                self.assertIn("give hooks={} to defs.Agent(...) in agent.py, and recompile", str(e.exception))
                 self.assertFalse(os.path.exists(os.path.join(b.bp._a.stack, "hooks")))   # 小格、hooks/ 都沒留
                 self.assertEqual(b.bp._trigger_ids(), set())
         finally:

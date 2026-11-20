@@ -18,7 +18,7 @@
 | [06 接著開發（一）](06-接著開發-1-改與工具.md) | 改了重新編譯（跑著的立刻讀到）；標準庫的包；自己寫一支工具、讓腦叫它 | `tool.py --compile`、`defs.tool` |
 | [06 接著開發（二）](06-接著開發-2-連結與衍生.md) | 別的庫；靜態／動態連結；從另一隻衍生 | `defs.lib`、`--dynamic`、`defs.load`／`drop`／`extern` |
 | [06 接著開發（三）](06-接著開發-3-除錯與腳本.md) | 下斷點、走一格、看它在幹嘛；用 Python 寫腳本 | `aos-gdb`、`a.bp.*`、`a.look`、`from aos.py import agent` |
-| [07 換成真模型](07-換成真模型.md) | 改哪個檔、哪個欄位、金鑰放哪（未實跑） | `llm/kernel.json`、`LLM = {"model": "luna"}` |
+| [07 換成真模型](07-換成真模型.md) | 改哪個檔、哪個欄位、金鑰放哪（未實跑） | `llm/kernel.json`、`llm={"model": "luna"}` |
 | [08 出事時看哪裡、收尾](08-出事時與收尾.md) | 表、`stderr.txt`、常見錯誤行；全部關掉、刪掉 | `aos-daemon-ctl shutdown` |
 
 走完的樣子：`~/code/aos-tut/` 底下有 `root/`（板子）、`llm/`（kernel）、`agents/ann`、`agents/bob`（應用程式）、`tools/shout`、`mylib/`，跑起來的都在 `.stack/`。
@@ -27,4 +27,4 @@
 
 1. **`root/.env` 那一行**（第 02 章）：範本預設 kernel 在「旁邊另一個專案」；照教學把 kernel 掛上板子，就要先改成 `${AOS_STACK}/procs/llm`，而且要在開板子之前改（改了要重開板子）。
 2. **用了 `$AOS_WS` 下的庫，編譯時要帶 `AOS_WS=$PWD`**（第 06 章之二）：`env.sh` 會清掉所有 `AOS_*`，不帶就 `SpecBad`。
-3. **別刪 `agent.py` 裡 `HOOKS = {}` 那行**（第 04 章、06 之三）：骨架帶著它，agent 才掛得了斷點；拿掉（或衍生時沒寫 `HOOKS`）＝`HooksMissing`，錯誤行後面那句就是修法。
+3. **別刪 `agent.py` 裡 `hooks={}` 那行**（第 04 章、06 之三）：骨架帶著它，agent 才掛得了斷點；拿掉（或衍生時沒寫 `hooks=`）＝`HooksMissing`，錯誤行後面那句就是修法。

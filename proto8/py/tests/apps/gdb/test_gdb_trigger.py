@@ -495,14 +495,14 @@ class AddFails(unittest.TestCase):
             with self.assertRaises(self.g.Failed) as e:
                 self.bp.add.before_tool("write")
             self.assertEqual(e.exception.code, "HooksMissing")
-            self.assertIn("add HOOKS = {} to agent.py", str(e.exception))
+            self.assertIn("give hooks={} to defs.Agent(...) in agent.py", str(e.exception))
             self.assertIn("recompile", str(e.exception))
             self.assertTrue(str(e.exception).startswith("aos-agent: error: HooksMissing ann does not declare hooks"))   # 原本那行原樣在前
             self.assertFalse((self.tmp / "stack" / "hooks").exists())             # 小格（連 hooks/ 夾）都沒留
             self.assertEqual(self.bp._trigger_ids(), set())
         with self.assertRaises(self.g.Failed) as e:
             self.bp.ls()                                                          # 列也是同一句
-        self.assertIn("add HOOKS = {} to agent.py", str(e.exception))
+        self.assertIn("give hooks={} to defs.Agent(...) in agent.py", str(e.exception))
         self.mode("ok")
         self.assertEqual(self.bp.add.before_tool("write").id, 1)                 # id 不跳號
         self.assertEqual([(r["id"], r["enabled"]) for r in self.bp.ls()], [(1, True)])

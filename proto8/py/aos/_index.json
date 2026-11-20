@@ -3,13 +3,16 @@
   "description": "aos - aos 唯一的 Python 套件：指令、工具、範本格共用的模組（from aos import flags, tool_io …）；agent 層的在 aos.agentlib（11-18 S4 收成套件）。"
  },
  "agent_spec.py": {
-  "description": "給人寫 agent 定義的輔助：在一支 agent.py 裡宣告說明、system、工具、腦設定、狀態機、hook、其他檔，就編出一份掛得上去的定義夾；不宣告狀態機時只填一份現成定義夾的內容檔（eca 版）。"
+  "description": "給人寫 agent 定義的輔助（寫 agent.py 的人叫它 defs）：defs.Agent(...) 宣告一隻 agent，.compile(夾) 編出一份掛得上去的定義夾、.dry_run() 只算；這裡是宣告用的小函式與 agent.py 最後一行的 defs.main(物件)。"
+ },
+ "agent_spec_agent.py": {
+  "description": "defs.Agent 與 defs.fsm 回的 Fsm：寫定義變成物件，.dry_run() 算出 {檔名: 內容}、不寫，.compile(夾) 算完寫進夾；loop.json 那段在內部的 _Loop。"
  },
  "agent_spec_lib.py": {
   "description": "agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 defs.lib(\"名\", 根) 宣告的別的庫（工具自動帶「名_」）；包在編譯時讀出來、展開成一支支工具（靜態連結進 tools.json；動態連結見 pack 的 link）。"
  },
  "agent_spec_load.py": {
-  "description": "defs.load(路徑)：一支 agent.py 衍生自另一支（繼承第一刀，線 aos-inherit-cut1-1119）：跑底那支，它最後的 defs.main 只交出九個欄位，正規化成一份「底」交回。"
+  "description": "defs.load(路徑)：一支 agent.py 衍生自另一支（繼承第一刀，線 aos-inherit-cut1-1119）：跑底那支，它最後的 defs.main 只交出那隻 Agent，正規化成一份新的 Agent 交回。"
  },
  "agent_spec_parts.py": {
   "description": "agent_spec 的零件：各份定義檔怎麼從宣告算出來、怎麼先驗（tools.json、llm.json、interfaces.json、hooks.json、FILES），以及不宣告 FSM 時照夾裡現有的 interfaces.json 找檔名。"
@@ -108,6 +111,9 @@
  },
  "spec_base.py": {
   "description": "agent_spec 與 tool_spec 共用的底：例外（SpecBad、DefBad）、從檔名推名字、--compile [位置]／--dry-run 的小旗標殼、寫檔後端（文字、json、程式檔、連結；暫存檔＋改名）。"
+ },
+ "spec_unit.py": {
+  "description": "能編譯的東西的底 Unit（.dry_run() 只算、.compile(夾) 寫進夾）與它的命令列殼 main（--compile [FOLDER]／--dry-run／--help）。"
  },
  "swap.py": {
   "description": "promote 與 rollback 兩支工具共用的換版：查過各 daemon 的公開清單、確認定義沒在用，再換上候選版或退回保留的前版。"

@@ -21,20 +21,17 @@ except ModuleNotFoundError as _e:
     sys.exit(1)
 # ---- your agent: change the lines below ----
 
-DESCRIPTION = "Look things up in the workspace and answer by mail."
-
-SYSTEM = """You are an assistant that looks things up in the workspace.
-Answer each letter with mailbox_send to its reply_to.
-"""
-
 std = defs.std              # the library that comes with aos; another one: my = defs.lib("my", defs.env("AOS_WS", "/lib/my"))
 
-TOOLS = [std.pack("look"), std.pack("mailbox"), std.pack("json")]   # copied into tools.json tool by tool
+agent = defs.Agent(
+    "Look things up in the workspace and answer by mail.",     # one sentence: what the agent does
+    system="""You are an assistant that looks things up in the workspace.
+Answer each letter with mailbox_send to its reply_to.
+""",
+    tools=[std.pack("look"), std.pack("mailbox"), std.pack("json")],   # copied into tools.json tool by tool
+    llm={},                 # {} = the llm kernel's default brain; {"model": "luna"} picks one of its brain packs
+    fsm=std.fsm(),          # the four cells of the agent-fsm template: idle, think, wait, act
+    hooks={},               # no hooks yet, but declared, so breakpoints (aos-gdb) and aos-agent hook work; std.hooks() = the agent-fsm template's hooks
+)
 
-LLM = {}                    # {} = the llm kernel's default brain; {"model": "luna"} picks one of its brain packs
-
-FSM = std.fsm()             # the four cells of the agent-fsm template: idle, think, wait, act
-
-HOOKS = {}                  # no hooks yet, but declared, so breakpoints (aos-gdb) and aos-agent hook work; std.hooks() = the agent-fsm template's hooks
-
-defs.main(DESCRIPTION, SYSTEM, TOOLS, LLM, FSM, hooks=HOOKS)
+defs.main(agent)

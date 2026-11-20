@@ -4,9 +4,10 @@
  "tree": {
   "aos": {
    "__init__.py": "aos - aos 唯一的 Python 套件：指令、工具、範本格共用的模組（from aos import flags, tool_io …）；agent 層的在 aos.agentlib（11-18 S4 收成套件）。",
-   "agent_spec.py": "給人寫 agent 定義的輔助：在一支 agent.py 裡宣告說明、system、工具、腦設定、狀態機、hook、其他檔，就編出一份掛得上去的定義夾；不宣告狀態機時只填一份現成定義夾的內容檔（eca 版）。",
+   "agent_spec.py": "給人寫 agent 定義的輔助（寫 agent.py 的人叫它 defs）：defs.Agent(...) 宣告一隻 agent，.compile(夾) 編出一份掛得上去的定義夾、.dry_run() 只算；這裡是宣告用的小函式與 agent.py 最後一行的 defs.main(物件)。",
+   "agent_spec_agent.py": "defs.Agent 與 defs.fsm 回的 Fsm：寫定義變成物件，.dry_run() 算出 {檔名: 內容}、不寫，.compile(夾) 算完寫進夾；loop.json 那段在內部的 _Loop。",
    "agent_spec_lib.py": "agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 defs.lib(\"名\", 根) 宣告的別的庫（工具自動帶「名_」）；包在編譯時讀出來、展開成一支支工具（靜態連結進 tools.json；動態連結見 pack 的 link）。",
-   "agent_spec_load.py": "defs.load(路徑)：一支 agent.py 衍生自另一支（繼承第一刀，線 aos-inherit-cut1-1119）：跑底那支，它最後的 defs.main 只交出九個欄位，正規化成一份「底」交回。",
+   "agent_spec_load.py": "defs.load(路徑)：一支 agent.py 衍生自另一支（繼承第一刀，線 aos-inherit-cut1-1119）：跑底那支，它最後的 defs.main 只交出那隻 Agent，正規化成一份新的 Agent 交回。",
    "agent_spec_parts.py": "agent_spec 的零件：各份定義檔怎麼從宣告算出來、怎麼先驗（tools.json、llm.json、interfaces.json、hooks.json、FILES），以及不宣告 FSM 時照夾裡現有的 interfaces.json 找檔名。",
    "agentlib": {
     "__init__.py": "aos.agentlib - agent 層的共用模組（hooks、cooldown、claude／codex 對話的 cli_*、cmd_call …；S3 前在 lib/agent）。",
@@ -237,6 +238,7 @@
    "refpath.py": "aos_refpath - `$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。",
    "shell_observed.py": "Reserve a writable shell ledger before execution and record the completed command.",
    "spec_base.py": "agent_spec 與 tool_spec 共用的底：例外（SpecBad、DefBad）、從檔名推名字、--compile [位置]／--dry-run 的小旗標殼、寫檔後端（文字、json、程式檔、連結；暫存檔＋改名）。",
+   "spec_unit.py": "能編譯的東西的底 Unit（.dry_run() 只算、.compile(夾) 寫進夾）與它的命令列殼 main（--compile [FOLDER]／--dry-run／--help）。",
    "swap.py": "promote 與 rollback 兩支工具共用的換版：查過各 daemon 的公開清單、確認定義沒在用，再換上候選版或退回保留的前版。",
    "sweep.py": "aos_sweep 清道夫本體：一輪（封存、保留期、封存總量、行程）與 purge 的流程、鎖、找列、報告；檔案細節在 aos_sweep_files、行程在 aos_sweep_proc；aos-sweeper 與 aos-daemon-ctl sweep 共用。",
    "sweep_files.py": "aos_sweep_files 清道夫的檔案那半：stderr 的 copytruncate 封存（gzip）、封存檔名的 UTC 時間戳、保留期刪除、purge、.bad- 計數、放鎖殘骸；aos_sweep 叫它。",
@@ -292,6 +294,7 @@
    }
   },
   "tests": {
+   "agent_spec_helpers.py": "Shared helpers of the test_agent_spec*.py tests: the agent.py head and example bodies, a fake AOS_HOME, running an agent.py, snapshots.",
    "apps": {
     "agent": {
      "env_helper.py": "aos-agent 測試共用的小零件：乾淨的子行程環境（拿掉 AOS_* 等前綴、不留 .pyc）、輪詢等條件成立。",
@@ -424,7 +427,11 @@
    },
    "fake_mcp_stdio.py": "Provide a standard-library MCP stdio server with tools and failure modes for client tests.",
    "ref_path_cases.json": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per …",
-   "test_agent_spec.py": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files, SpecBad before any write, overwrite rules (C and…",
+   "test_agent_spec.py": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad before any w…",
+   "test_agent_spec_lib.py": "Test the libraries of py/aos/agent_spec.py (std, defs.lib: packs copied in, other libraries prefixed, clashes SpecBad) and how tool packs are linked,…",
+   "test_agent_spec_load.py": "Test defs.load of py/aos/agent_spec.py (one agent.py built on another: the loaded agent's fields, worked out when agent.py runs, nothing of the base …",
+   "test_agent_spec_objects.py": "Test the objects of defs: Fsm compiled alone, build scripts with .compile(folder), .dry_run() equal to what .compile() writes, one object in two agen…",
+   "test_agent_spec_script.py": "Test agent.py run as a script (defs.main(object): --compile / --dry-run, one-line SpecBad, overwrite rules) and the no-fsm (eca) mode.",
    "test_aos_lib_missing.py": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。",
    "test_aos_py.py": "入口 aos.py 的通用代理（不起 daemon）：細則表逐列翻成哪條 argv（用一支假的 aos-agent／aos-daemon-ctl 把 argv 印回來）、把手頂層照 aos-agent 子指令表擋錯、json=True 的整份／JSONL／空、Text 與 None、Failed …",
    "test_aos_py_live.py": "入口 aos.py 對真的 aos 樹（start-api 抄一份、假腦）實跑：把手 a.ctl.state(json=True)、a.tools.ls()、a.say／a.listen、a.stack；模組層 agent.ctl.ls、daemon_ctl；指令自己擋下的（a.ctl.ls 不吃…",

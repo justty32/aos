@@ -1,31 +1,35 @@
-"""agent_spec_load - defs.load(路徑)：一支 agent.py 衍生自另一支（繼承第一刀，線 aos-inherit-cut1-1119）：跑底那支，它最後的 defs.main 只交出九個欄位，正規化成一份「底」交回。
+"""agent_spec_load - defs.load(路徑)：一支 agent.py 衍生自另一支（繼承第一刀，線 aos-inherit-cut1-1119）：跑底那支，它最後的 defs.main 只交出那隻 Agent，正規化成一份新的 Agent 交回。
 
 設計稿 thinking/2026-11/19/aos-inherit-1119/（04 乙修正版、06、07 採納表、08 使用者裁定）；紀錄 thinking/2026-11/19/aos-inherit-第一刀.md；規範 N-70（繼承只在編譯時）。
+交回物件、欄位小寫（編譯程式庫第 2 刀，線 aos-pylib-k2-1120；使用者 11-20 選項框「小寫」）：base.description、base.system、base.tools、base.llm、base.fsm、
+base.meta、base.interfaces、base.hooks、base.files，與 base.pack(prefix=, rename=, exclude=)；交回的是 aos/agent_spec_agent.Agent，本身也能 .compile(夾)。
 只在 agent.py 重新編譯時發生：編出的 json 照舊整份、沒有上一層；執行期一行不動。只收明寫的路徑（不搜尋），相對路徑從叫它的那支 agent.py 的夾算（REPL 從 cwd）。
 載入期間：底在自己的一份 __main__ 下跑（runpy），載完還原 sys.path 與新進 sys.modules 的非 aos 模組（07 A4）；a 載 b、b 載 a＝SpecBad。
-底的欄位：TOOLS＝一個帶來源名的包（拿掉的留墓碑 None）、HOOKS＝agent_spec_parts.Hooks（帶標記；沒宣告＝空組、當作沒宣告）、FSM＝defs.fsm 的值（eca 版＝None）、
-META＝dict、INTERFACES／FILES＝dict 或 None；底裡的相對路徑（工具 path／env_file、hook handler、狀態格 argv 裡底那夾真有的檔）照底那夾換算（07 A5）。
+底的欄位：tools＝一個帶來源名的包（拿掉的留墓碑 None）、hooks＝agent_spec_parts.Hooks（帶標記；沒宣告＝空組、當作沒宣告）、fsm＝Fsm（eca 版＝None）、
+meta＝dict、interfaces／files＝dict 或 None；底裡的相對路徑（工具 path／env_file、hook handler、狀態格 argv 裡底那夾真有的檔）照底那夾換算（07 A5）。
 extern 的欄位＝用到那一欄才報 SpecBad（不用就不擋）。錯一律丟 SpecBad；在 agent.py 最外層沒人接時，這裡裝的 sys.excepthook 印成一行「名: error: SpecBad …」、退 1（07 A3）。
 """
 import json, os, posixpath, runpy, sys, traceback
 
 from aos import flags
 from aos import agent_spec_parts as parts
+from aos.agent_spec_agent import Agent, Fsm, FIELDS
 from aos.spec_base import SpecBad, DefBad
 
-FIELDS = ("DESCRIPTION", "SYSTEM", "TOOLS", "LLM", "FSM", "META", "INTERFACES", "HOOKS", "FILES")
 _chain = []          # 正在載入的檔（真路徑），最外面那支（叫第一個 defs.load 的）排第一
-_got = {}            # 真路徑 → defs.main 交出的九個值
+_got = {}            # 真路徑 → defs.main 交出的物件
 _hook = []           # 裝過的 excepthook（只裝一次）
 
 
-def hand_over(script, values):
-    """defs.main 問：叫我的這支正在被 defs.load 載入嗎？是＝收下欄位、回 True（defs.main 直接回）。"""
+def hand_over(script, unit, bad=None):
+    """defs.main 問：叫我的這支正在被 defs.load 載入嗎？是＝收下物件、回 True（defs.main 直接回）；交的不對（bad）＝SpecBad。"""
     if len(_chain) < 2 or _chain[-1] != script:
         return False
+    if bad:
+        raise SpecBad(bad)
     if script in _got:
         raise SpecBad("%s calls defs.main(...) twice" % script)
-    _got[script] = values
+    _got[script] = unit
     return True
 
 
@@ -109,9 +113,13 @@ def load(path):
         except Exception as e:
             raise SpecBad("%s: %s%s: %s: %s" % (shown, file, _line(e, file), type(e).__name__, e)) from None
         if file not in _got:
-            raise SpecBad("%s: %s never calls defs.main(...), so there is nothing to build on" % (shown, file))
+            raise SpecBad("%s: %s never calls defs.main(...) (an agent.py that only calls .compile(...) hands nothing over), "
+                          "so there is nothing to build on" % (shown, file))
+        if not isinstance(_got[file], Agent):
+            raise SpecBad("%s: %s hands defs.main a %s, not an agent (defs.Agent(...)), so there is nothing to build on"
+                          % (shown, file, type(_got[file]).__name__))
         try:
-            return Base(shown, file, root, _got[file])
+            return _based(shown, file, root, _got[file])
         except SpecBad as e:
             raise SpecBad("%s: %s (fix the declaration in %s)" % (shown, e, file)) from None
     finally:
@@ -136,104 +144,67 @@ def _moved(value, root):
     return os.path.normpath(os.path.join(root, value))
 
 
-class Base:
-    """defs.load 交回的底：DESCRIPTION、SYSTEM、TOOLS、LLM、FSM、META、INTERFACES、HOOKS、FILES 九個欄位（每次是新的一份，改了不影響別人）。"""
-
-    def __init__(self, shown, file, root, values):
-        self._shown, self.path, self._hand = shown, os.path.dirname(file), {}
-        folder = self.path
-        description, system, tools, llm, fsm, meta, interfaces, hooks, files = values
-        for field, value in zip(FIELDS, values):
-            parts.raise_bad(value)
-            if parts.kind(value) == "extern":
-                self._hand[field] = value["file"]
-        if not isinstance(description, str) or not description.strip():
-            raise SpecBad("DESCRIPTION must be a non-empty string")
-        self.DESCRIPTION = description.strip()
-        if "SYSTEM" not in self._hand:
-            if not isinstance(system, str):
-                raise SpecBad("SYSTEM must be a string or defs.extern(...)")
-            self.SYSTEM = system
-        if "TOOLS" not in self._hand:
-            if not isinstance(tools, (list, tuple)):
-                raise SpecBad("TOOLS must be a list or defs.extern(...)")
-            table, origins = parts.stack_tools(tools)
+def _based(shown, file, root, given):
+    """底交出的 Agent → 一份新的 Agent（欄位驗過、拷貝過、底裡的相對路徑換算過；每次是新的一份，改了不影響別人）。extern 的欄位不設，一碰就 SpecBad。"""
+    values = {f: given.__dict__.get(f) for f in FIELDS}
+    for f, name in given.__dict__.get("_hand", {}).items():        # 底自己也是 defs.load 來的：它的 extern 欄位照樣是 extern
+        values[f] = {"kind": "extern", "file": name}
+    out = Agent.__new__(Agent)
+    out.__dict__.update(_shown=shown, path=os.path.dirname(file), _hand={})
+    folder, hand = out.path, out._hand
+    for field, value in values.items():
+        parts.raise_bad(value)
+        if parts.kind(value) == "extern":
+            hand[field] = value["file"]
+    description = values["description"]
+    if not isinstance(description, str) or not description.strip():
+        raise SpecBad("description must be a non-empty string")
+    out.description = description.strip()
+    if "system" not in hand:
+        if not isinstance(values["system"], str):
+            raise SpecBad("system must be a string or defs.extern(...)")
+        out.system = values["system"]
+    if "tools" not in hand:
+        tools = values["tools"]
+        if not isinstance(tools, (list, tuple)) and parts.kind(tools) != "pack":
+            raise SpecBad("tools must be a list or defs.extern(...)")
+        table, origins = parts.stack_tools([tools] if parts.kind(tools) == "pack" else tools)
+        for entry in table.values():
+            for key in ("path", "env_file"):
+                if entry is not None and key in entry:
+                    entry[key] = _moved(entry[key], root)
+        out.tools = {"kind": "pack", "lib": "defs.load", "name": shown, "label": shown, "origins": list(origins), "tools": _copy(table)}
+    if "llm" not in hand:
+        if not isinstance(values["llm"], dict):
+            raise SpecBad("llm must be a dict or defs.extern(...)")
+        out.llm = _copy(values["llm"])
+    if "fsm" not in hand:
+        fsm = values["fsm"]
+        if fsm is not None and parts.kind(fsm) != "fsm":
+            raise SpecBad("fsm must come from defs.fsm(...), std.fsm() or defs.extern(...)")
+        out.fsm = None if fsm is None else Fsm(_copy(fsm))
+        for cell in (out.fsm or {"states": {}})["states"].values():       # argv 裡只換底那夾真有的檔（"python3" 這種指令不動）
+            run = cell.get("exec")
+            if isinstance(run, dict) and isinstance(run.get("argv"), list):
+                run["argv"] = [_moved(a, root) if isinstance(a, str) and a and not os.path.isabs(a)
+                               and os.path.exists(os.path.join(folder, a)) else a for a in run["argv"]]
+    if values["meta"] is not None and not isinstance(values["meta"], dict):
+        raise SpecBad("meta must be a dict")
+    out.meta = _copy(values["meta"] or {})
+    for field in ("interfaces", "files"):
+        value = values[field]
+        if value is not None and not isinstance(value, dict):
+            raise SpecBad("%s must be a dict" % field)
+        setattr(out, field, None if value is None else _copy(value))
+    if "hooks" not in hand:
+        hooks = parts.no_hooks(values["hooks"])
+        if hooks is None:
+            out.hooks = parts.Hooks({}, "the hooks of %s" % shown, declared=False)
+        else:
+            table, origins = parts.stack_hooks(hooks)
+            table = _copy(table)
             for entry in table.values():
-                for key in ("path", "env_file"):
-                    if entry is not None and key in entry:
-                        entry[key] = _moved(entry[key], root)
-            self._table, self._origins = _copy(table), origins
-            self.TOOLS = self.tools()
-        if "LLM" not in self._hand:
-            if not isinstance(llm, dict):
-                raise SpecBad("LLM must be a dict or defs.extern(...)")
-            self.LLM = _copy(llm)
-        if "FSM" not in self._hand:
-            if fsm is not None and parts.kind(fsm) != "fsm":
-                raise SpecBad("FSM must come from defs.fsm(...), std.fsm() or defs.extern(...)")
-            self.FSM = None if fsm is None else _copy(fsm)
-            for cell in (self.FSM or {"states": {}})["states"].values():       # argv 裡只換底那夾真有的檔（"python3" 這種指令不動）
-                run = cell.get("exec")
-                if isinstance(run, dict) and isinstance(run.get("argv"), list):
-                    run["argv"] = [_moved(a, root) if isinstance(a, str) and a and not os.path.isabs(a)
-                                   and os.path.exists(os.path.join(folder, a)) else a for a in run["argv"]]
-        if meta is not None and not isinstance(meta, dict):
-            raise SpecBad("META must be a dict")
-        self.META = _copy(meta or {})
-        for field, value in (("INTERFACES", interfaces), ("FILES", files)):
-            if value is not None and not isinstance(value, dict):
-                raise SpecBad("%s must be a dict" % field)
-            setattr(self, field, None if value is None else _copy(value))
-        if "HOOKS" not in self._hand:
-            hooks = parts.no_hooks(hooks)
-            if hooks is None:
-                self.HOOKS = parts.Hooks({}, "the HOOKS of %s" % shown, declared=False)
-            else:
-                table, origins = parts.stack_hooks(hooks)
-                table = _copy(table)
-                for entry in table.values():
-                    if entry is not None and "handler" in entry:
-                        entry["handler"] = _moved(entry["handler"], root)
-                self.HOOKS = parts.Hooks(table, "the HOOKS of %s" % shown, origins)
-
-    def __getattr__(self, name):
-        hand = self.__dict__.get("_hand", {})
-        if name in hand:
-            raise SpecBad("%s: %s of %s/agent.py is defs.extern(%r), a file written by hand, so there is nothing to build on: "
-                          "write %s yourself" % (self.__dict__["_shown"], name, self.__dict__["path"], hand[name], name))
-        raise AttributeError("%s has no %s (it has %s, and .tools(prefix=, rename=, exclude=))" % (
-            self.__dict__.get("_shown", "defs.load(...)"), name, ", ".join(FIELDS)))
-
-    def __repr__(self):
-        return "<agent.py loaded by %s from %s>" % (self._shown, self.path)
-
-    def tools(self, prefix="", rename=None, exclude=None):
-        """底的 TOOLS 當一個包，可以改名：prefix＝每支前面加、rename＝{原名: 新名}、exclude＝不要的（原名；連墓碑一起不要），同 std.pack。"""
-        if "TOOLS" in self._hand:
-            return self.__getattr__("TOOLS")
-        call = "%s.tools(...)" % self._shown
-        rename = {} if rename is None else rename
-        exclude = [] if exclude is None else exclude
-        if not isinstance(prefix, str) or not (prefix == "" or all(c.isalnum() or c in "_-" for c in prefix)):
-            return {"kind": "bad", "bad": "%s: prefix must be letters, digits, _ or -" % call}
-        if not isinstance(rename, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in rename.items()):
-            return {"kind": "bad", "bad": "%s: rename must be a dict {name in the base: new name}" % call}
-        if not isinstance(exclude, (list, tuple)) or not all(isinstance(n, str) for n in exclude):
-            return {"kind": "bad", "bad": "%s: exclude must be a list of tool names in the base" % call}
-        for what, names in (("rename", list(rename)), ("exclude", list(exclude))):
-            for n in names:
-                if n not in self._table:
-                    return {"kind": "bad", "bad": "%s: %s %r: the base has no tool %s (tools: %s)" % (
-                        call, what, n, n, ", ".join(sorted(self._table)))}
-        out = {}
-        for n, entry in self._table.items():
-            if n in exclude:
-                continue
-            final = rename.get(n, prefix + n)
-            if final in out or not parts.TOOL_RE.match(final):
-                return {"kind": "bad", "bad": "%s: tool %s ends up as %r: two tools with one name, or not 1-64 letters, digits, _ or -"
-                        % (call, n, final)}
-            out[final] = _copy(entry)
-        label = self._shown if (prefix, rename, exclude) == ("", {}, []) else "%s.tools(prefix=%r, rename=%r, exclude=%r)" % (
-            self._shown, prefix, rename, list(exclude))
-        return {"kind": "pack", "lib": "defs.load", "name": self._shown, "label": label, "origins": list(self._origins), "tools": out}
+                if entry is not None and "handler" in entry:
+                    entry["handler"] = _moved(entry["handler"], root)
+            out.hooks = parts.Hooks(table, "the hooks of %s" % shown, origins)
+    return out

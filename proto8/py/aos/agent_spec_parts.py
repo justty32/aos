@@ -1,6 +1,6 @@
 """agent_spec_parts - agent_spec 的零件：各份定義檔怎麼從宣告算出來、怎麼先驗（tools.json、llm.json、interfaces.json、hooks.json、FILES），以及不宣告 FSM 時照夾裡現有的 interfaces.json 找檔名。
 
-只給 aos/agent_spec.py 用（第三刀 geng3-1119 從它拆出來，免得單檔過 300 行）；對外的名字（WHAT…；SpecBad、DefBad 在 aos/spec_base）由 agent_spec 轉出，agent.py 只認 agent_spec。
+只給 aos/agent_spec.py、agent_spec_agent.py 用（第三刀 geng3-1119 從 agent_spec 拆出來，免得單檔過 300 行；欄位名與訊息 11-20 第 2 刀改小寫）；對外的名字（WHAT…；SpecBad、DefBad 在 aos/spec_base）由 agent_spec 轉出，agent.py 只認 agent_spec。
 驗的規矩不自己發明，照讀那份檔的一方：工具格照 aos-tools 的 registry.finish，hook 格照 aos/agentlib/hooks.py 的 validate_entry 與 hook_run.validate_name（直接叫，不抄一份）。
 """
 import json, os, re
@@ -27,7 +27,7 @@ WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl ad
         "tools.json": "Tools this agent can call.",
         "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",
         "hooks.json": "Hooks of this agent: aos functions run when an event happens; the stack copy of this file overrides it by name, null turns one off."}
-HOOKS_SHAPE = ("HOOKS must be a dict {hook name: entry}, std.hooks(...), the HOOKS of defs.load(...), a list of those "
+HOOKS_SHAPE = ("hooks must be a dict {hook name: entry}, std.hooks(...), the hooks of defs.load(...), a list of those "
                "(later ones win, None drops a hook), or defs.extern(\"hooks.json\")")
 
 
@@ -78,8 +78,8 @@ def stack_tools(tools):
     for t in tools:
         raise_bad(t)
         if kind(t) not in ("pack", "tool", "drop"):
-            raise SpecBad("each item of TOOLS must come from std.pack(...), std.tool(...), defs.tool(...) or defs.drop(...) "
-                          "(or .pack / .tool of a library from defs.lib, or the TOOLS of defs.load(...)), got %r" % (t,))
+            raise SpecBad("each item of tools must come from std.pack(...), std.tool(...), defs.tool(...) or defs.drop(...) "
+                          "(or .pack / .tool of a library from defs.lib, or the tools of defs.load(...)), got %r" % (t,))
         if t["kind"] == "pack":
             label = t.get("label") or "%s.pack(%r)" % (t["lib"], t["name"])
             if label in packs:
@@ -103,7 +103,7 @@ def stack_tools(tools):
             order.append(t["name"])
     for name in drops:
         if name not in packed:
-            raise SpecBad("defs.drop(%r) takes a tool out of the packs, but no pack in TOOLS has a tool %s%s" % (
+            raise SpecBad("defs.drop(%r) takes a tool out of the packs, but no pack in tools has a tool %s%s" % (
                 name, name, " (packs give: %s)" % ", ".join(sorted(packed)) if packed else ""))
     out = {}
     for name in order:
@@ -200,9 +200,9 @@ def tools_json(tools, link="static", warn=None):
 def llm_json(llm, keys):
     for k in llm:
         if k != "description" and k not in keys:
-            raise SpecBad("LLM key %r is not one of llm_keys (%s)" % (k, ", ".join(keys)))
+            raise SpecBad("llm key %r is not one of llm_keys (%s)" % (k, ", ".join(keys)))
     if "model" in llm and (not isinstance(llm["model"], str) or not llm["model"]):
-        raise SpecBad("LLM model must be a non-empty string: the name of a brain pack of the llm kernel, like \"luna\"")
+        raise SpecBad("llm model must be a non-empty string: the name of a brain pack of the llm kernel, like \"luna\"")
     return dict({"description": WHAT["llm.json"]}, **llm)
 
 
@@ -217,18 +217,18 @@ def interfaces_json(over, files, description):
     if over is None:
         return out
     if not isinstance(over, dict):
-        raise SpecBad("INTERFACES must be a dict laid over the default interfaces.json, like {\"aos-observed\": {\"file\": \"observed.jsonl\"}}")
+        raise SpecBad("interfaces must be a dict laid over the default interfaces.json, like {\"aos-observed\": {\"file\": \"observed.jsonl\"}}")
     for key, value in over.items():
         if key == "aos-agent" and value is None:
-            raise SpecBad("INTERFACES cannot remove aos-agent: without it the folder is not an agent")
+            raise SpecBad("interfaces cannot remove aos-agent: without it the folder is not an agent")
         if key == "aos-agent":
             if not isinstance(value, dict):
-                raise SpecBad("INTERFACES aos-agent must be a dict (a value of None removes a default key)")
+                raise SpecBad("interfaces aos-agent must be a dict (a value of None removes a default key)")
             for k, v in value.items():
                 if k == "entry":
-                    raise SpecBad("INTERFACES aos-agent entry is body.json, the skeleton agent.py writes; it cannot be changed")
+                    raise SpecBad("interfaces aos-agent entry is body.json, the skeleton agent.py writes; it cannot be changed")
                 if k in ("tools", "llm", "system", "hooks"):
-                    raise SpecBad("INTERFACES aos-agent %s is set by agent.py; to point it at a file you write yourself use defs.extern(...)" % k)
+                    raise SpecBad("interfaces aos-agent %s is set by agent.py; to point it at a file you write yourself use defs.extern(...)" % k)
                 if v is None:
                     agent.pop(k, None)
                 else:
@@ -267,16 +267,16 @@ def stack_hooks(hooks):
             source = None
         for name, entry in dict.items(layer):
             if not isinstance(name, str):
-                raise SpecBad("HOOKS hook name %r must be a string" % (name,))
+                raise SpecBad("hooks: hook name %r must be a string" % (name,))
             if entry is not None:
                 try:
                     hook_run.validate_name(name)
                 except hook_run.HooksBad as e:
-                    raise SpecBad("HOOKS hook name %r %s" % (name, e))
+                    raise SpecBad("hooks: hook name %r %s" % (name, e))
                 try:
                     agent_hooks.validate_entry(entry)
                 except hook_run.HooksBad as e:
-                    raise SpecBad("HOOKS hook %s: %s" % (name, e))
+                    raise SpecBad("hooks: hook %s: %s" % (name, e))
             if source is None:
                 clash.pop(name, None)                               # 自己寫在它們後面的＝選好了
             else:
@@ -304,15 +304,15 @@ def hooks_json(hooks):
 def extra_files(files, taken):
     """FILES＝{檔名: 內容} 原樣吐：dict／list 寫成 JSON、字串照字面。檔名只能是夾裡的一個檔，不能搶 agent.py、跑起來的 agent 或宣告用的檔。"""
     if not isinstance(files, dict):
-        raise SpecBad("FILES must be a dict {file name: content}, like {\"ladder.json\": {...}}")
+        raise SpecBad("files must be a dict {file name: content}, like {\"ladder.json\": {...}}")
     for name, value in files.items():
         if not isinstance(name, str) or not name or "/" in name or name.startswith(".") or name != name.strip():
-            raise SpecBad("FILES name %r must be one plain file name in the definition folder (no /, not starting with .), like \"ladder.json\"" % (name,))
+            raise SpecBad("files: name %r must be one plain file name in the definition folder (no /, not starting with .), like \"ladder.json\"" % (name,))
         if name in RESERVED or name in taken:
-            raise SpecBad("FILES %s: that file belongs to agent.py, the skeleton, the running agent or a declaration "
-                          "(SYSTEM, TOOLS, LLM, FSM, HOOKS, INTERFACES, META); declare it there instead" % name)
+            raise SpecBad("files: %s: that file belongs to agent.py, the skeleton, the running agent or a declaration "
+                          "(system, tools, llm, fsm, hooks, interfaces, meta); declare it there instead" % name)
         if not isinstance(value, (dict, list, str)):
-            raise SpecBad("FILES %s: the content must be a dict or list (written as JSON) or a string (written as it is)" % name)
+            raise SpecBad("files: %s: the content must be a dict or list (written as JSON) or a string (written as it is)" % name)
     return dict(files)
 
 
@@ -320,9 +320,9 @@ def existing_names(folder):
     """不宣告 FSM：夾裡現有的 interfaces.json 宣告的 {種類: 檔名}（tools／llm／system／hooks）與 llm_keys。夾不對丟 DefBad。"""
     path = os.path.join(folder, "interfaces.json")
     if not os.path.isfile(path):
-        raise DefBad("%s has no interfaces.json: without FSM, agent.py writes only the content files (system, tools, llm, hooks) "
+        raise DefBad("%s has no interfaces.json: without fsm, agent.py writes only the content files (system, tools, llm, hooks) "
                      "of a definition that already has its skeleton; copy one first (agent_def new, template eca-claude or eca-pi) "
-                     "or declare FSM" % folder)
+                     "or give fsm" % folder)
     try:
         names = declared_files(folder)
         with open(path, encoding="utf-8") as f:

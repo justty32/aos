@@ -69,8 +69,9 @@ KINDS = EVENTS + (TOOL_ERROR, WATCH)
 SUBJECT = {e: ("code" if e == "brain_failed" else "tool") for e in NAMED + (TOOL_ERROR,)}   # 有主詞的種類 → 主詞的參數名
 RELEASE_WAIT_S = 10
 POLL_S = 0.05
-# HooksMissing 後面補的那一句（使用者 11-19 下午「派線修」，線 aos-bpfix-1119）：agent-python 骨架已帶 HOOKS = {}，這句給拿掉那行的 agent.py、沒寫 HOOKS 的衍生、手寫的定義
-HOOKS_FIX = ("to fix it in an agent.py definition: add HOOKS = {} to agent.py, pass hooks=HOOKS to defs.main(...), "
+# HooksMissing 後面補的那一句（使用者 11-19 下午「派線修」，線 aos-bpfix-1119）：agent-python 骨架已帶 hooks={}，這句給拿掉那行的 agent.py、沒寫 hooks 的衍生、手寫的定義
+# （寫法 11-20 改成 defs.Agent(..., hooks={})，編譯程式庫第 2 刀 aos-pylib-k2-1120）
+HOOKS_FIX = ("to fix it in an agent.py definition: give hooks={} to defs.Agent(...) in agent.py, "
              "and recompile (python3 agent.py --compile)")
 _SHARED = {}                                      # (daemon, 名字) → 那一隻的等的設定與自己送出的 pause（a.bp 每次取都是新的）
 

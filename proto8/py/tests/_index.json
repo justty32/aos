@@ -1,4 +1,7 @@
 {
+ "agent_spec_helpers.py": {
+  "description": "Shared helpers of the test_agent_spec*.py tests: the agent.py head and example bodies, a fake AOS_HOME, running an agent.py, snapshots."
+ },
  "apps": {
   "description": "Python 指令（py/aos/apps/<名>）的測試，一個指令一夾、夾名同 apps 底下（原 cmd/<指令>/tests，11-18 S5 搬來）；不是套件，要逐夾 unittest discover",
   "index": "apps/_index.json"
@@ -13,7 +16,19 @@
   "description": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per rule, run by py/tests/test_ref_path.py."
  },
  "test_agent_spec.py": {
-  "description": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files, SpecBad before any write, overwrite rules (C and…"
+  "description": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad before any w…"
+ },
+ "test_agent_spec_lib.py": {
+  "description": "Test the libraries of py/aos/agent_spec.py (std, defs.lib: packs copied in, other libraries prefixed, clashes SpecBad) and how tool packs are linked,…"
+ },
+ "test_agent_spec_load.py": {
+  "description": "Test defs.load of py/aos/agent_spec.py (one agent.py built on another: the loaded agent's fields, worked out when agent.py runs, nothing of the base …"
+ },
+ "test_agent_spec_objects.py": {
+  "description": "Test the objects of defs: Fsm compiled alone, build scripts with .compile(folder), .dry_run() equal to what .compile() writes, one object in two agen…"
+ },
+ "test_agent_spec_script.py": {
+  "description": "Test agent.py run as a script (defs.main(object): --compile / --dry-run, one-line SpecBad, overwrite rules) and the no-fsm (eca) mode."
  },
  "test_aos_lib_missing.py": {
   "description": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。"
