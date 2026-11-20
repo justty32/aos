@@ -1,8 +1,9 @@
-"""Test agent_def new (copy, rebase, directive from, DefExists, outside the workspace) and check (wraps py/tools/aos/defs) in a temp folder."""
+"""Test agent_def new (a plain copy: byte for byte, no path rewritten; directive from, DefExists, outside the workspace) and check (wraps py/tools/aos/defs) in a temp folder."""
 import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -12,6 +13,24 @@ sys.dont_write_bytecode = True
 TOOL = Path(__file__).resolve().parents[1] / "_entry"
 PROTO = Path(__file__).resolve().parents[5]
 NAME = TOOL.parent.name
+
+
+def tree(root):
+    """{相對路徑: (種類, 內容)}：檔＝(file, bytes, 權限位)、捷徑＝(link, 目標字串)、夾＝(dir, 權限位)；不跟捷徑走。"""
+    out = {}
+    for dirpath, dirnames, filenames in os.walk(root):
+        for n in dirnames + filenames:
+            p = os.path.join(dirpath, n)
+            rel = os.path.relpath(p, root)
+            st = os.lstat(p)
+            if stat.S_ISLNK(st.st_mode):
+                out[rel] = ("link", os.readlink(p))
+            elif stat.S_ISDIR(st.st_mode):
+                out[rel] = ("dir", stat.S_IMODE(st.st_mode))
+            else:
+                with open(p, "rb") as f:
+                    out[rel] = ("file", f.read(), stat.S_IMODE(st.st_mode))
+    return out
 
 
 def good_def(d, tools='{"tools": {}}'):
@@ -44,6 +63,72 @@ class AgentDef(unittest.TestCase):
     def tools(self, path="born"):
         return json.loads((self.ws / path / "tools.json").read_text())
 
+    def assert_same_copy(self, src, born, lineage):
+        """born＝src 逐 byte 照抄；設計上該不同的只有兩處：__pycache__ 不抄、_metainfo.json 多（或換掉）lineage 一個鍵。"""
+        want = {k: v for k, v in tree(src).items() if "__pycache__" not in Path(k).parts}
+        got = tree(born)
+        meta = got.pop("_metainfo.json")
+        old = want.pop("_metainfo.json", None)
+        self.assertEqual(got, want)
+        self.assertEqual(meta[0], "file")
+        new_meta = json.loads(meta[1])
+        self.assertEqual(new_meta.pop("lineage"), lineage)
+        if old is None:
+            self.assertEqual(new_meta, {})
+        else:
+            src_meta = json.loads((Path(src) / "_metainfo.json").read_text())   # 捷徑也照它指的那份讀
+            src_meta.pop("lineage", None)
+            self.assertEqual(new_meta, src_meta)
+
+    # ---- new 純粹 cp（使用者 11-20 第 10 題：「純粹的cp過去，各種相對路徑就這樣」）----
+    def test_copy_is_byte_for_byte_and_rewrites_no_path(self):
+        tpl = self.ws / "tpls" / "tpl"
+        (tpl / "fn").mkdir(parents=True)
+        (tpl / "sub" / "empty").mkdir(parents=True)
+        (tpl / "__pycache__").mkdir()
+        (tpl / "__pycache__" / "x.pyc").write_bytes(b"\0")
+        (tpl / "interfaces.json").write_text('{"aos-agent": {"tools": "tools.json", "hooks": "hooks.json"}}')
+        tools = ('{"$override": "../base.json",\n "tools": {"add": {"path": "fn/add.py"},  "t": {"path": "../tool", "env_file": "../k.env"},'
+                 ' "abs": {"path": "/opt/x"}, "d": {"path": {"$env": "AOS_HOME", "$path": "/lib/x"}}}}')
+        (tpl / "tools.json").write_text(tools)                                    # 排版怪、有夾內夾外的相對路徑
+        (tpl / "hooks.json").write_text('{"hooks": {"h": {"event": "before_tool", "handler": "fn/no_secrets.py"}}}')
+        (tpl / "fn" / "add.py").write_text("#!/usr/bin/env python3\nprint(1)\n")
+        (tpl / "fn" / "add.py").chmod(0o750)
+        (tpl / "fsm.json").write_text('{"states": {"a": {"exec": {"argv": ["python3", "../../shared/x.py"]}}}}')
+        (tpl / "_metainfo.json").write_text('{"summary": "t", "lineage": {"from": "old"}}')
+        (tpl / "in_link").symlink_to("fn/add.py")
+        (tpl / "out_link").symlink_to("../../outside")                          # 指夾外（斷的也照搬）
+        (tpl / "abs_link").symlink_to("/etc/hostname")
+        for dest in ("born", "a/b/c/born", str(self.root / "elsewhere" / "born")):
+            with self.subTest(dest=dest):
+                r = self.new("tpls/tpl", dest)
+                self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+                born = Path(dest) if os.path.isabs(dest) else self.ws / dest
+                self.assert_same_copy(tpl, born, {"from": "tpls/tpl"})
+                self.assertEqual((born / "tools.json").read_text(), tools)        # 一字不改（含指夾外的 ../tool）
+
+    def test_symlinked_tools_file_stays_a_link(self):
+        tpl = good_def(self.ws / "tpl")
+        (self.ws / "shared_tools.json").write_text('{"tools": {"t": {"path": "../tool"}}}')
+        (tpl / "tools.json").unlink()
+        (tpl / "tools.json").symlink_to("../shared_tools.json")
+        self.assertEqual(self.new("tpl", "a/born").returncode, 0)
+        link = self.ws / "a" / "born" / "tools.json"
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(os.readlink(link), "../shared_tools.json")             # 照抄；從新位置指到哪裡就是哪裡
+        self.assertFalse(link.exists())
+
+    def test_every_stock_template_is_copied_byte_for_byte(self):
+        """repo 的每份範本（有 interfaces.json 的）抄到深一層的地方：除了 lineage，跟範本逐 byte 相同。"""
+        root = PROTO / "templates"
+        names = sorted(d.name for d in root.iterdir() if (d / "interfaces.json").is_file())
+        self.assertIn("agent-fsm", names)
+        for name in names:
+            with self.subTest(template=name):
+                r = self.run_tool({"op": "new", "template": name, "path": "deep/er/" + name}, AOS_HOME=str(PROTO))
+                self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+                self.assert_same_copy(root / name, self.ws / "deep" / "er" / name, {"template": name})
+
     # ---- new（舊 test_copy_repo 的案例改成新介面）----
     def test_repo_template_is_copied_as_written(self):
         tpl = PROTO / "templates" / "agent-fsm"
@@ -70,22 +155,9 @@ class AgentDef(unittest.TestCase):
         (self.ws / "alias").symlink_to(real, target_is_directory=True)
         r = self.new("alias")
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
-        # 字面路徑 alias/../tool＝<ws>/tool（不是解開捷徑後的 far/deep/tool）
-        self.assertEqual(self.tools()["tools"]["t"]["path"], "../tool")
-
-    def test_env_file_and_override_rebased(self):
-        tpl = self.ws / "tpls" / "tpl"
-        tpl.mkdir(parents=True)
-        (tpl / "interfaces.json").write_text('{"aos-agent": {"tools": "tools.json"}}')
-        (tpl / "tools.json").write_text('{"$override": "../base.json", "tools": {"t": {"path": "../tool", "env_file": "../k.env"},'
-                                        ' "abs": {"path": "/opt/x"}, "d": {"path": {"$env": "AOS_HOME", "$path": "/lib/x"}}}}')
-        r = self.new("tpls/tpl")
-        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
-        reg = self.tools()
-        self.assertEqual(reg["tools"]["t"], {"path": "../tpls/tool", "env_file": "../tpls/k.env"})
-        self.assertEqual(reg["tools"]["abs"], {"path": "/opt/x"})
-        self.assertEqual(reg["tools"]["d"], {"path": {"$env": "AOS_HOME", "$path": "/lib/x"}})
-        self.assertEqual(reg["$override"], "../tpls/base.json")
+        self.assertIn("(copied from %s)" % (self.ws / "alias"), r.stdout)         # 字面路徑，不解開捷徑
+        self.assert_same_copy(real, self.ws / "born", {"from": "alias"})
+        self.assertEqual(self.tools()["tools"]["t"]["path"], "../tool")         # 照抄
 
     def test_symlinks_copied_as_links(self):
         tpl = good_def(self.ws / "tpl")
@@ -101,8 +173,8 @@ class AgentDef(unittest.TestCase):
         r = self.new("tpl", str(out))
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
         self.assertTrue((out / "interfaces.json").is_file())
-        # 從新位置走回 <ws>/tool
-        self.assertEqual(json.loads((out / "tools.json").read_text())["tools"]["t"]["path"], "../../../ws/tool")
+        # 純粹 cp：照抄，從新位置算就指到 elsewhere/deep/tool（使用者選「也不管，跟 #include 一樣」）
+        self.assertEqual((out / "tools.json").read_text(), '{"tools": {"t": {"path": "../tool"}}}')
 
     def test_directive_from(self):
         good_def(self.root / "home" / "templates" / "t1")
@@ -135,14 +207,15 @@ class AgentDef(unittest.TestCase):
             self.assertIn("%s: error: DefMissing" % NAME, r.stdout)
         self.assertFalse((self.ws / "born").exists())
 
-    def test_failure_removes_temp_folder(self):
+    def test_broken_interfaces_is_just_copied(self):
+        """new 不讀 interfaces.json（沒有要改寫的路徑）：壞的也照抄，留給 check 報。失敗清暫存夾見 test_lineage_bad_metainfo。"""
         tpl = self.ws / "tpl"
         tpl.mkdir()
         (tpl / "interfaces.json").write_text("not json")
         r = self.new("tpl")
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("DefBad", r.stdout)
-        self.assertEqual(sorted(p.name for p in self.ws.iterdir()), ["tpl"])
+        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+        self.assertEqual((self.ws / "born" / "interfaces.json").read_text(), "not json")
+        self.assertEqual(sorted(p.name for p in self.ws.iterdir()), ["born", "tpl"])
 
     def test_plain_folder_just_copied(self):
         (self.ws / "plain").mkdir()

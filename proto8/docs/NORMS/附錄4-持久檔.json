@@ -88,21 +88,21 @@
    "path": "<定義資料夾>/interfaces.json",
    "lifetime": "持久",
    "writer": "人手寫；stack 那份由 py/aos/observed.py 補 aos-observed 宣告",
-   "reader": "aos-agent、aos/declared_files、templates/agent-fsm（brain、wait）、py/tools/agent/agent_def（new 找 tools 宣告）、py/tools/aos/measure",
+   "reader": "aos-agent、aos/declared_files、templates/agent-fsm（brain、wait）、py/tools/aos/measure",
    "image": "看情況：定義那份不算 image；$AOS_STACK/interfaces.json 進",
    "on_bad": "讀不了、不是物件＝報錯（ValueError→各呼叫者的錯誤行）；不在＝沒宣告",
    "note": "01 盤點沒列這份。11-10 aos-agent 那格多三個選填鍵：history（self-family）、hooks（hook）、llm_keys（self-tools 05，身體認的 llm 鍵名）；舊定義沒寫＝沒有那項，不用重建",
-   "evidence": "proto8/py/aos/declared_files.py（declared_files）、proto8/py/aos/observed.py（prepare_strict）、proto8/py/tools/aos/measure/ledger.py（_records）、proto8/py/tools/agent/agent_def/_entry（tools_file）"
+   "evidence": "proto8/py/aos/declared_files.py（declared_files）、proto8/py/aos/observed.py（prepare_strict）、proto8/py/tools/aos/measure/ledger.py（_records）"
   },
   {
    "path": "<定義資料夾>/tools.json",
    "lifetime": "持久",
-   "writer": "aos-tools（add／rm）、py/tools/agent/agent_def（new 換算相對路徑後重寫）、人手寫",
+   "writer": "aos-tools（add／rm）、人手寫（agent_def new 整份照抄、不改，路徑也不改寫）",
    "reader": "aos-tools、aos-mcp、templates/agent-fsm（brain）",
    "image": "看情況：定義＝原始碼、不算 image（C-79）；登記檔存絕對 path 是已知代價（N-67 ⑦）",
    "on_bad": "不是物件、tools 形狀錯、頂層有 add／rm＝RegistryBad；不在＝沒登記任何工具；值是 null 的工具格不算工具、null 欄位＝沒設",
    "note": "11-10 aos-tools-cli：登記格不再存 cache 物件（只收 false；快取搬到 $AOS_STACK/tooldef_cache.json）、多選填 env_file（只記位置）、可寫 \"$override\" 疊在別份上；有 cache 物件的舊檔＝RegistryBad，刪那格或重登記",
-   "evidence": "proto8/py/aos/apps/tools/main.py（read_layer、finish）、proto8/py/tools/agent/agent_def/_entry（rebase_tools）"
+   "evidence": "proto8/py/aos/apps/tools/main.py（read_layer、finish）"
   },
   {
    "path": "$AOS_STACK/<宣告的 tools 路徑>（這隻自己那份）",
