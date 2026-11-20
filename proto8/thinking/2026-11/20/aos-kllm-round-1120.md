@@ -20,7 +20,13 @@
 
 ### 全套測試逐夾比
 
-（交件前填，見下方「全套」一節。）
+兩份乾淨複本（`base`＝`git archive f522b5570`；`m2`＝同一份疊本線三個程式／測試檔），各自 install，清掉 `AOS_*` 後逐夾跑 unittest，共 79 夾（`~/.aos/scratch/aos-kllm-round-1120/suite-base.txt`、`suite-m2.txt`，比對 `cmp.sh`）：
+
+- 78 夾的支數與結果逐夾相同。
+- `py/tools/aos/kernel/tests`：base 122 支 OK，m2 126 支 OK（多出的 4 支是新加的 `test_kernel_rank.py`）。
+- `py/tools/aos/kernel_llm/tests` 兩邊都是 80 支 OK。
+- 兩邊都退 5 的 `templates/kernel/tests`、`templates/tests/image-move-check` 是 0 支（不是 unittest，前幾條線也一樣）。
+- 第一筆 commit `f7b0e3d05` 交出時這一段還是空的，第二筆補上。
 
 ### 假腦＋真 daemon 實跑
 
