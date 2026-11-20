@@ -1,4 +1,4 @@
-"""Test the 11-11 hook events: on_clock (hooks.clock_tick in the cells), after_start / after_stop (py/tools/agent/hook_fire)."""
+"""Test the 11-11 hook events: on_clock (hook_clock.clock_tick, through H.clock_tick() in the cells), after_start / after_stop (py/tools/agent/hook_fire)."""
 import json
 import os
 from pathlib import Path
@@ -9,6 +9,7 @@ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_hooks import CELLS, PROTO, Hooks, hooks  # noqa: E402
+from aos.agentlib import hook_clock  # noqa: E402  （on_clock 的看時鐘 11-20 從 hooks.py 搬到這裡）
 
 FIRE = PROTO / "py" / "tools" / "agent" / "hook_fire" / "_entry"
 CAUSE_KEY, CAUSE_ENV = "cause", "AOS_LOOP_CAUSE"   # 11-14 B7：after_stop 的欄位名與環境變數名（同 hook_fire 的模組常數）
@@ -33,7 +34,7 @@ class ClockHook(Hooks):
             if v is None:
                 os.environ.pop(k, None)
         try:
-            return hooks.clock_tick(str(self.defn), str(self.stack), warn=self.warned.append)
+            return hook_clock.clock_tick(str(self.defn), str(self.stack), warn=self.warned.append)
         finally:
             for k, v in old.items():
                 if v is None:

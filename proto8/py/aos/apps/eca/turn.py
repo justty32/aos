@@ -4,11 +4,11 @@ import os
 from aos import flags as aos_flags
 from aos import ws as aos_ws
 
-from .common import (NAME, Fail, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, hooks, goal_state, letters_answered, letters_drop,
+from .common import (NAME, Fail, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, goal_state, letters_answered, letters_drop,
                      mailbox_warning, must_post, names, post)
 from . import retry
 from .history import SUM, append_history, history_changed, history_sum, note_sum
-from .hook import before_queue, fire, tool_added
+from .hook import before_queue, open_hooks, tool_added
 from .batch import SEP, goal_prompt, letter_body, note_progress, pick_one, take_all, transcript_now
 from .slash import is_alone, slash_of, slash_turn
 from .reseed import reseed
@@ -20,10 +20,8 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     box = os.path.join(stack, "queue")
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
         must_post(["init", box])                                   # 先建好，aos-agent say／listen 認得
-    try:                                                           # ⑫ on_clock：每輪開頭（queue 建好之後）看一次時鐘（冷卻、退讓的那輪也看）
-        hooks.clock_tick(template, stack, warn=lambda line: aos_flags.warn(NAME, line))
-    except (hooks.HookFailed, hooks.HooksBad) as e:
-        raise Fail(type(e).__name__, e)
+    hooks = open_hooks(template, stack)                            # ⑪ 這一輪的 hook 遙控器，一路傳下去（hook 停下＝Fail）
+    hooks.clock_tick()                                             # ⑫ on_clock：每輪開頭（queue 建好之後）看一次時鐘（冷卻、退讓的那輪也看）
     cfg = cli_cfg.load_cfg(template)
     cell = cli_cell.Cell(os.path.join(stack, cfg["kind"]))
     cli_mcp.note_env(cell)                                         # 11-13：loop 這邊的 AOS_CLOCK 等記進小格，人開畫面（aos-agent open）時照它給
@@ -32,10 +30,10 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         return 0                                                    # 一封都不認領：new/、cur/、history 都不動
     rec = retry.read(stack) if cfg["kind"] == "claude" else None
     if rec is not None:
-        return redo_turn(template, stack, ws, box, cfg, cell, on_busy, rec)
+        return redo_turn(hooks, stack, ws, box, cfg, cell, on_busy, rec)
     goal = None                                                     # ⑬ 這輪是 goal 提醒＝(題目, 交出去那刻寫的 goal)
     if cool == "due":
-        good, bodies, dropped = pick_one(stack, box, prompt, template)       # 冷卻到了：只試最舊的一封
+        good, bodies, dropped = pick_one(stack, box, prompt, hooks)          # 冷卻到了：只試最舊的一封
         if not good:
             if dropped:
                 return 0
@@ -61,7 +59,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             alone = is_alone(body["content"])                       # slash 一定單獨一批（跟別封併了 ⑭ 認不出來、會變成給模型的話）：
             if alone and good:                                      # 11-15 compact-1115 只管 /compact，11-16 ok-pano-b 擴到全部 slash
                 break                                               # 前面已有好信：這輪先答它們，slash 跟後面的留在 cur/ 下一輪
-            body = before_queue(stack, box, sig, body, template)   # hook：可改 content、可丟掉這封（整批都丟＝同整批壞信）
+            body = before_queue(hooks, box, sig, body)              # hook：可改 content、可丟掉這封（整批都丟＝同整批壞信）
             if body is None:
                 continue
             bodies.append(body)
@@ -72,33 +70,33 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             return 0
     parts = [(b.get("name"), b["content"]) for b in bodies]         # 11-13：信的 name＝寄件人（aos-agent say 填；沒有＝機器通知），只給信封用
     bodies = [unnamed(b) for b in bodies]                           # 接進 history 的照舊不帶寄件人
-    tool_added(cfg, template, stack)                                # hook：登記檔多了誰（交出去之前；hook 停下＝信留 cur/）
+    tool_added(hooks, cfg)                                          # hook：登記檔多了誰（交出去之前；hook 停下＝信留 cur/）
     history_changed(stack, cell)                                    # ⑩ history 被改過＝開新對話
     command = slash_of(bodies, goal)
     if command:                                                     # ⑭ 一封信就是一個 slash 指令：aos 這層照 CLI 的意思做
-        return slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_busy)
+        return slash_turn(command, cfg, cell, hooks, ws, stack, box, good, bodies, on_busy)
 
     def count_goal():                                               # ⑬ 交出去才算丟了一次：先記數再接進 history
         try:
             goal_state.write(stack, goal[1])
         except OSError as w:
             aos_flags.warn(NAME, "cannot write %s: %s" % (goal_state.path(stack), w))
-    hand = Handoff(template, stack, box, good, bodies, count_goal if goal else None, redo=True)
+    hand = Handoff(hooks, stack, box, good, bodies, count_goal if goal else None, redo=True)
     before = transcript_now(cfg, cell)                              # ⑬ 進展：交出去之前對話檔多大
     had_sum = os.path.exists(cell.file(SUM))                        # ⑭ 畫面 hook 跟上 CLI 改 history 時會刪掉它（cli_hook.replace_history）
     text = hand.ask(cfg, cell, ws, SEP.join(b["content"] for b in bodies), on_busy,
                     lambda limit: reseed(stack, ws, limit), parts,  # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
-                    None if cool == "due" else More(hand, template, stack, box))   # 等回答時又來的信馬上投（冷卻剛到的那輪只試一封，不加）
+                    None if cool == "due" else More(hand, stack, box))   # 等回答時又來的信馬上投（冷卻剛到的那輪只試一封，不加）
     if text is None:
         return 0                                                    # SessionBad 留 cur/；claude 暫時失敗已記冷卻與續做欠帳
     return finish(stack, cell, cfg, hand, text, had_sum, before)
 
 
-def redo_turn(template, stack, ws, box, cfg, cell, on_busy, rec):
+def redo_turn(hooks, stack, ws, box, cfg, cell, on_busy, rec):
     body = {"role": "user", "content": retry.prompt(rec)}
-    tool_added(cfg, template, stack)
+    tool_added(hooks, cfg)
     history_changed(stack, cell)
-    hand = Handoff(template, stack, box, [], [body], owed=rec["letters"], redo=True)
+    hand = Handoff(hooks, stack, box, [], [body], owed=rec["letters"], redo=True)
     before = transcript_now(cfg, cell)
     had_sum = os.path.exists(cell.file(SUM))
     text = hand.ask(cfg, cell, ws, body["content"], on_busy,

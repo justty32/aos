@@ -18,7 +18,7 @@
   "description": "aos/apps/eca/history.py - $AOS_STACK/history.jsonl 的讀、附加，與 .history_sum（⑩ history 被改過＝開新對話）。"
  },
  "hook.py": {
-  "description": "aos/apps/eca/hook.py - 這支跑的 hook（before_queue、tool_added；fire 把 hook 停下換成 Fail）。"
+  "description": "aos/apps/eca/hook.py - 這支的 hook 遙控器（open：hook 停下換成 Fail）與 before_queue、tool_added 兩個點的這支這邊。"
  },
  "hook_points.json": {
   "description": "Hook points fired by aos-eca-turn (the eca body); tool hooks are in ../mcp/hook_points.json, the loop points in ../hook/loop_points.json."

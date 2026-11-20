@@ -11,7 +11,7 @@ from unittest.mock import patch
 sys.dont_write_bytecode = True
 LIB = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(LIB), str(LIB / "tools/agent/subagent/tests")]
-from aos.agentlib import hooks
+from aos.agentlib import hook_clock, hooks
 from kernel_fixture import KernelFixture
 
 
@@ -27,10 +27,10 @@ class ClockKernel(unittest.TestCase):
         KernelFixture.save(definition / "hooks.json", {"hooks": {"tick": {
             "event": "on_clock", "handler": "unused", "clock": "mom", "every_cycles": 5}}})
         warnings = []
-        tick = lambda: hooks.clock_tick(str(definition), str(stack), warn=warnings.append)
+        tick = lambda: hook_clock.clock_tick(str(definition), str(stack), warn=warnings.append)
         state = stack / "hooks/tick/on_clock.json"
         with patch.dict(os.environ, fixture.env, clear=True), patch.object(hooks, "fire") as fire:
-            with patch.object(hooks.subprocess, "run", wraps=subprocess.run) as query:
+            with patch.object(hook_clock.subprocess, "run", wraps=subprocess.run) as query:
                 self.assertEqual(tick(), ["tick"])
                 query.assert_called_once_with(["aos-agent", "ctl", "ls", "--json"], stdin=subprocess.DEVNULL,
                                               capture_output=True, text=True, timeout=5)
@@ -46,14 +46,14 @@ class ClockKernel(unittest.TestCase):
             (new_stack / "clock").write_text("20\n")
             clock.rename(clock.with_name("clock.old"))
             rows = [{"name": "mom", "stack": str(new_stack)}]
-            with patch.object(hooks.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(rows), "")) as query:
+            with patch.object(hook_clock.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(rows), "")) as query:
                 self.assertEqual(tick(), ["tick"])
                 self.assertEqual(query.call_count, 1)
             self.assertEqual(json.loads(state.read_text())["clock"], str(new_stack / "clock"))
             self.assertTrue(fire.call_args.args[1]["first"])
             # 壞掉的快取鐘也只重查一次；查回的鐘仍壞，不起 handler。
             (new_stack / "clock").write_text("not a cycle")
-            with patch.object(hooks.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(rows), "")) as query:
+            with patch.object(hook_clock.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(rows), "")) as query:
                 self.assertEqual(tick(), [])
                 self.assertEqual(query.call_count, 1)
             self.assertEqual(fire.call_count, 3)
@@ -62,7 +62,7 @@ class ClockKernel(unittest.TestCase):
             KernelFixture.save(definition / "hooks.json", {"hooks": {"tick": {
                 "event": "on_clock", "handler": "unused", "clock": "renamed", "every_cycles": 5}}})
             rows[0]["name"] = "renamed"
-            with patch.object(hooks.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(rows), "")) as query:
+            with patch.object(hook_clock.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(rows), "")) as query:
                 self.assertEqual(tick(), [])
                 self.assertEqual(tick(), [])
                 self.assertEqual(query.call_count, 1)
@@ -81,9 +81,9 @@ class ClockKernel(unittest.TestCase):
             warnings = []
             with patch.dict(os.environ, {"AOS_KERNEL": str(root / "requests")}, clear=True), patch.object(hooks, "fire") as fire:
                 result = subprocess.CompletedProcess([], 1, "", "aos-agent: error: KernelFailed no reply")
-                with patch.object(hooks.subprocess, "run", return_value=result) as query:
+                with patch.object(hook_clock.subprocess, "run", return_value=result) as query:
                     for _ in range(2):
-                        self.assertEqual(hooks.clock_tick(str(definition), str(stack), warn=warnings.append), [])
+                        self.assertEqual(hook_clock.clock_tick(str(definition), str(stack), warn=warnings.append), [])
                     self.assertEqual(query.call_count, 2)
                 fire.assert_not_called()
             self.assertEqual(len(warnings), 1)

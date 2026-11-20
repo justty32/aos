@@ -61,13 +61,13 @@
      交出去之後的失敗（CliFailed、ReplyMissing；看 handed 有沒有被叫過）＝cooldown.fail（dropped＝這批的封數）再照舊報錯退 1；
      交出去之前的錯不寫冷卻、SessionBad 退讓不算失敗；寫冷卻檔失敗只多一行 warning。成功（assistant 接進 history 之後）＝cooldown.clear。
      冷卻檔多寫 retry 一欄（cooldown-1118）：claude 的暫時錯（退 0、冷卻完自己接著試）＝true，其他（退 1 停下）＝false；listen 讀它判斷停了沒。
-  ⑪ hook（11-10 晚 self-family/hook，圖紙 § 6 eca 縮水版；py/aos/agentlib/hooks.py，定義＝DEF_DIR、stack＝$AOS_STACK）：好信讀出來、交出去之前每封
+  ⑪ hook（11-10 晚 self-family/hook，圖紙 § 6 eca 縮水版；每輪開一個 py/aos/agentlib/agent_hooks.py 的遙控器〔hook.open_hooks〕一路傳下去，定義＝DEF_DIR、stack＝$AOS_STACK）：好信讀出來、交出去之前每封
      before_queue（可改 content；攔下＝aos-post done 收掉、不交、不進 history、mailbox_warning.txt 寫 `letter SIG dropped by hook HOOK`；整批都被丟＝同整批壞信）；
      交出去之前 tool_added（這輪生效的登記檔比上次多的名字；有這種 hook 才多叫一次 aos-tools ls --json）；handed 裡信接進 history、收掉之後每封 after_queue；
      交出去之後的 CliFailed／ReplyMissing＝記冷卻之前 brain_failed（name＝代號、reason＝這支那行的原因）。before_tool／after_tool 在 aos-mcp（cli_session 帶 --hooks DEF_DIR）。
      hook 停下＝HookFailed／HooksBad 退 1：交出去之前＝信留 cur/、history 不動；after_queue 停下＝回答照樣接進 history 才報；brain_failed 停下＝冷卻不記。
   ⑫ on_clock（11-11 thinking/2026-11/11/clock-hook，使用者「hook就可以添加一個類型……去看指定的clock proc」）：每輪開頭、queue 建好之後（冷卻中、退讓的那輪也是）
-     hooks.clock_tick 看時鐘，條件到了的 on_clock hook 才跑；handler 預設什麼都不做、history 不多任何一則；要叫腦＝handler 自己往 <stack>/queue 寄信。
+     hook 遙控器的 clock_tick（agentlib/hook_clock.py）看時鐘，條件到了的 on_clock hook 才跑；handler 預設什麼都不做、history 不多任何一則；要叫腦＝handler 自己往 <stack>/queue 寄信。
      hook 停下＝HookFailed 退 1（還沒碰信）。after_start／after_stop 不在這支：在 loop.json 的 on_start／on_stop（py/tools/agent/hook_fire）。
   ⑬ goal（11-11 thinking/2026-11/11/goal/02，使用者「當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他」，裁「fsm 和 eca 都做」）：
      認領之後一封好信都沒有（queue 空；信優先）、history 最後一則是 assistant（上一輪 CLI 答完了）或 history 還空（還沒答過；外面先 set 的 goal

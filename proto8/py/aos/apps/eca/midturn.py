@@ -15,8 +15,8 @@ def unnamed(body):
 
 
 class More:
-    def __init__(self, hand, template, stack, box):
-        self.hand, self.template, self.stack, self.box = hand, template, stack, box
+    def __init__(self, hand, stack, box):
+        self.hand, self.stack, self.box = hand, stack, box               # hook 遙控器用 hand.hooks（同一輪那個）
         self.stopped, self.pending = False, None
 
     def take(self):
@@ -41,7 +41,7 @@ class More:
                 if slash_of([body], None):                             # slash 指令：先認、不過 hook，留在 cur/ 給下一輪（那輪 turn.py 過唯一
                     self.stopped = True                                # 一次 before_queue；使用者 11-20「修：只過一次」）
                     return []
-                body = before_queue(self.stack, self.box, sig, body, self.template)
+                body = before_queue(self.hand.hooks, self.box, sig, body)
                 if body is None:
                     continue
                 if slash_of([body], None):                             # hook 把信改成 slash：一樣停手（這種下一輪會再過一次 hook）

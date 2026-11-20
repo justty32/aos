@@ -33,3 +33,4 @@
 | [稱呼不用比喻（aos-plain-terms-1120）](aos-plain-terms-1120.md) | 偏好寫進 wf/（手、門→kernel／daemon；把手→遙控器，經過「物件」「操控器」兩次改口）；比喻詞盤點＋逐檔 csv；改了明確的三種：把手→遙控器、指 kernel 的門→kernel、總機→llm kernel（CONCEPTS、NORMS 逐條列）；站、板子、鐘、清道夫、手把等 18 題等使用者定；測試前後全綠 |
 | [編譯程式庫第 5 刀：教學照新寫法實跑（aos-pylib-k5-1120）](aos-pylib-k5-1120.md) | 教學 01～08 在乾淨複本、真 daemon、假腦從頭打兩遍；程式沒錯，改教學五處字（舊詞兩處、aos-llm ls 的順序、衍生例子兩個前提）；逐章實跑表；C-87 加註只擬字等使用者點頭；hook 兩條線交後要再對的節 |
 | [aos-hook-k5-1120](aos-hook-k5-1120.md) | hook 介面施工第 5 刀的 aos-loop 那一半：before_run／after_run 兩個點、旗標檔、四個點失敗都收工；範本接線等第 3 刀 |
+| [aos-hook-k2b-1120](aos-hook-k2b-1120.md) | hook 介面施工第 2 刀的後半：fsm 格程式與抄本、eca、mcp、kernel、hook_fire 全改用 hook 遙控器；lists.py 刪掉；hooks.py 拆出 hook_clock.py |

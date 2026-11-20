@@ -59,8 +59,10 @@ class AfterVerdictExtraTest(unittest.TestCase):
                 change(data["error"])
                 changed = ["error"]
             return {"data": data, "changed": changed, "blocked": False, "hook": "h", "text": ""}
-        with mock.patch.object(hooks, "fire", fire):
-            result = hooks.after_verdict(ctx, "L1", {"body": {}}, verdict, detail)
+        # 假的 hook 遙控器（ctx.hooks，11-20 hook 介面第 2 刀：kernel 經它發）：名單就是 h，fire 交給上面的假 fire
+        ctx.hooks = types.SimpleNamespace(names=lambda event, data: ["h"],
+                                          fire=lambda event, data, only=None: fire(ctx, event, data))
+        result = hooks.after_verdict(ctx, "L1", {"body": {}}, verdict, detail)
         return result, seen[0]
 
     def test_pack_extra_reaches_the_hook_and_the_reply(self):

@@ -45,7 +45,7 @@ def opening(stack, box, path):
 SEP = "\n\n"                                   # 一批好幾封時，各封 content 照順序用一個空行接起來（11-03 代定）
 
 
-def pick_one(stack, box, prompt, template):
+def pick_one(stack, box, prompt, hooks):
     """冷卻到了（06）：只拿最舊的一封好信——cur/ 先、照 letter_key；cur/ 沒有好信才從 new/ 用 aos-post take 一次認領一封。
     壞信照舊丟、記 mailbox_warning，再往下找。回 ([sig], [body], 丟了幾封)；一封好信都沒有＝([], [], 丟了幾封)。"""
     if not names(box, "new") and not names(box, "cur"):
@@ -55,7 +55,7 @@ def pick_one(stack, box, prompt, template):
         for sig in names(box, "cur"):
             body, why = letter_body(box, sig)
             if body is not None:
-                body = before_queue(stack, box, sig, body, template)
+                body = before_queue(hooks, box, sig, body)
                 if body is not None:
                     return [sig], [body], dropped
                 dropped += 1

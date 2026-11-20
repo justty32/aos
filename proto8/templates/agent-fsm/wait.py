@@ -52,13 +52,13 @@
 #   11-14：正要寄時 AOS_LLM_KERNEL 沒設或去空白後為空＝先 brain_failed，再 LlmKernelMissing 退 1、不記冷卻，request.json 留著；環境不會自己補上，要重掛。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、BrainFailed（kernel 回錯且 retry 非 true）、BudgetMissing（只有 window all）、
 #   LlmKernelMissing（寄之前 AOS_LLM_KERNEL 沒設或空白）、SendFailed（aos-llm 起不來、或 send 退 0 卻沒印信件名稱）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
-# hook（py/aos/agentlib/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：BudgetMissing、BrainFailed、SendFailed（send 退非 0、或退 0 沒印信名）、ReplyBad
+# hook（圖紙 thinking/2026-11/10/self-family/hook；經 py/aos/agentlib/agent_hooks.py 的遙控器 H）：BudgetMissing、BrainFailed、SendFailed（send 退非 0、或退 0 沒印信名）、ReplyBad
 #   照原本行為退出／記冷卻之前觸發 brain_failed（name＝代號、reason＝這格那行的原因）；hook 停下＝HookFailed／HooksBad 退 1（冷卻不記）。
 # 回答配對（thinking/2026-11/14/reply-match-1114/03 §1）：端點回的 message 自帶的 aos 鍵一律拿掉；最終回答（沒有 tool_calls）帶
 #   "aos": {"answer_to": $AOS_STACK/letters.json 的 pending}（沒有 pending＝不帶），接進 history 之後才清 pending；腦失敗、還沒最終回答＝pending 留著，
 #   算進下一則最終回答。比對 request.json 是否過期時，history 最後一則先剝 aos 鍵再比（送端點的 messages 本來就剝過）。
 # --help 印英文用法；Ctrl-C 退 130。
-# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
+# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 H.clock_tick()——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 # Compact replies are observed as kind compact, folded instead of answering pending tasks, then return to think with exit 11.
 import datetime, json, math, os, signal, subprocess, sys, time
 from pathlib import Path
@@ -73,8 +73,8 @@ try:
     from aos.observed import append as append_observed  # noqa: E402
     from aos.declared_files import declared_files  # noqa: E402
     from aos.agentlib import cooldown  # noqa: E402
-    from aos.agentlib import hooks  # noqa: E402
-    try:                                         # 「很久沒動靜」標記（11-15）；舊的定義副本沒帶 quiet.py 也照跑，只是不標
+    from aos.agentlib import agent_hooks  # noqa: E402
+    try:                                        # 「很久沒動靜」標記（11-15）；舊的定義副本沒帶 quiet.py 也照跑，只是不標
         from aos.agentlib import quiet  # noqa: E402
     except ImportError:
         quiet = None
@@ -195,7 +195,9 @@ if rest:
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
-cell_common.clock_tick(hooks, stack, lambda line: aos_flags.warn("agent-fsm", line), die)   # 11-11 on_clock：每格開頭看一次時鐘，到了才起 handler
+H = agent_hooks.open(os.environ.get("AOS_CD") or ".", stack, fail=die,   # hook 遙控器：停下（HookFailed／HooksBad）＝die、退 1
+                     warn=lambda line: aos_flags.warn("agent-fsm", line))
+H.clock_tick()                                   # 11-11 on_clock：每格開頭看一次時鐘，到了才起 handler
 think = os.path.join(stack, "think")
 request, pending, box = (os.path.join(think, n) for n in ("request.json", "pending.txt", "reply"))
 history_path = os.path.join(stack, "history.jsonl")
@@ -235,11 +237,7 @@ def brain_failed(code, reason, error=None, extra=None):
         data["error"] = error
     if extra:
         data.update(extra)
-    try:
-        hooks.fire("brain_failed", data, os.environ.get("AOS_CD") or ".", stack,
-                   warn=lambda line: aos_flags.warn("agent-fsm", line))
-    except (hooks.HookFailed, hooks.HooksBad) as e:
-        die(type(e).__name__, str(e))
+    H.fire("brain_failed", data)
 
 
 def record_failure(code, reason, retry, error=None):

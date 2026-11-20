@@ -1,8 +1,8 @@
-# kernel 的三個 hook 時機：設定、事件欄位與判決回話，執行一律交給共用引擎。
+# kernel 的三個 hook 時機：設定、事件欄位與判決回話；發事件經 aos.hook_point 的 hook 遙控器（open，錯交 ctx.die），執行一律交給共用引擎。
 import json
 import os
 
-from aos import hook_run
+from aos import hook_point, hook_run
 
 
 EVENTS = {
@@ -40,10 +40,11 @@ def check(ctx, event, key, value):
         ctx.check_next(value)
 
 
-def fire(ctx, event, data, entries=None):
-    return hook_run.fire(event, data, ctx.cfg["hooks"] if entries is None else entries,
-                         ctx.stack, EVENTS, warn=ctx.warn,
-                         check=lambda event, key, value: check(ctx, event, key, value))
+def open(ctx):
+    """這一輪的 hook 遙控器：表照舊（第 3 刀才讀 hook_points.json）、清單＝已讀好的 ctx.cfg["hooks"]；
+    hook 停下（HookFailed／HooksBad）＝ctx.die（11-20 hook 介面第 2 刀，原本 round.py 自己接）。"""
+    return hook_point.open(table=EVENTS, entries=lambda: ctx.cfg["hooks"], stack=ctx.stack, fail=ctx.die, warn=ctx.warn,
+                           check=lambda event, key, value: check(ctx, event, key, value))
 
 
 def request_data(name, letter):
@@ -70,7 +71,7 @@ def rejected(result):
 
 
 def before_verdict(ctx, name, letter):
-    result = fire(ctx, "before_verdict", request_data(name, letter))
+    result = ctx.hooks.fire("before_verdict", request_data(name, letter))
     if not result["blocked"]:
         letter["body"] = result["data"]["body"]
     return result
@@ -90,14 +91,10 @@ def after_verdict(ctx, name, letter, verdict, detail, decided=False):
         data["decision"] = "pass" if decided else None  # null＝沒人表態過。
     if ctx.check_next is not None:
         data["next"] = None  # null＝沒指定，照站原本的下一站。
-    # 比對沿用引擎的語意：condition 看最初判決；逐格 fire 才能把預設拒因歸給正確的 hook。
-    eligible = {n: e for n, e in ctx.cfg["hooks"].items()
-                if e["event"] == "after_verdict" and hook_run.matches(e, EVENTS, data)}
-    for hook in sorted(eligible):
-        entry = dict(eligible[hook])
-        entry.pop("condition", None)  # 上面已比過；前一格改判不會改變這次要通知的名單。
+    # 比對沿用引擎的語意：condition 看最初判決（names 只比這一次）；逐格 fire 才能把預設拒因歸給正確的 hook。
+    for hook in ctx.hooks.names("after_verdict", data):
         before = data["verdict"]
-        result = fire(ctx, "after_verdict", data, {hook: entry})
+        result = ctx.hooks.fire("after_verdict", data, only=[hook])  # only：不再比 condition，前一格改判不會改變名單
         if result["blocked"]:
             return "refuse", rejected(result)
         data = result["data"]
@@ -132,7 +129,7 @@ def before_reply(ctx, original, letter):
     data = {"letter": original["letter"], "sender": original.get("sender"),
             "reply_to": original["reply_to"], "reply_sender": letter.get("sender"),
             "body": letter["body"]}
-    result = fire(ctx, "before_reply", data)
+    result = ctx.hooks.fire("before_reply", data)
     if result["blocked"]:
         return {"applied": False, "error": {"code": "HookRejected",
                 "msg": "reply blocked by hook %s: %s" % (result["hook"], result["text"].strip())}}

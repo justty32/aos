@@ -11,7 +11,6 @@ from aos import ws as aos_ws
 
 from .common import Fail, cli_ask, cli_base, cli_cell, cli_hook, letters_answered, letters_take, must_post
 from .history import append_history, history_rows, note_sum
-from .hook import fire
 from .handoff import Handoff
 from .screen_slash import SCREEN_ONLY, input_clear, screen_slash, typed_warning
 
@@ -237,8 +236,9 @@ def pi_compact(cfg, cell, ws, stack, typed):
                 % (cell.read("session.txt"), moved))
 
 
-def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_busy):
+def slash_turn(command, cfg, cell, hooks, ws, stack, box, good, bodies, on_busy):
     """⑭ 做這個指令、照一般一輪記 history（user 那封＋一則回答；/clear、/compact 先改 history 再記），信收掉、after_queue 照跑。
+    hooks＝這一輪的 hook 遙控器（hook.open_hooks）。
     沒畫面、交給 claude -p 的 /goal、/compact 整段照一般一輪（Handoff：交出去那刻收信、失敗記冷卻與 brain_failed、成功冷卻歸零；11-12 晚）。
     畫面開著時 /clear、/compact 打進畫面（on_screen；畫面正在跑一輪＝busy.txt 在＝這次不動、信留 cur/、下一輪再試），/exit＝關畫面。"""
     kind, alive = cfg["kind"], cell.alive()
@@ -257,7 +257,7 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
             text = note("/goal: typed into the open screen; the CLI's own answer shows there (a goal it runs on is also kept in turns.jsonl)%s"
                         % (confirm_goal_replace(cell) if kind == "codex" and full != GOAL else ""))
         elif kind == "claude":
-            hand = Handoff(template, stack, box, good, bodies)
+            hand = Handoff(hooks, stack, box, good, bodies)
             got = hand.ask(cfg, cell, ws, full, on_busy)              # claude -p 認得：設了就照跑一輪
             if got is None:
                 return 0                                            # SessionBad：同一般一輪，信留 cur/
@@ -284,7 +284,7 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
         if not cell.read("session.txt"):
             text = note("/compact: no conversation yet, nothing to compact")
         else:
-            hand = Handoff(template, stack, box, good, bodies)
+            hand = Handoff(hooks, stack, box, good, bodies)
             got = hand.ask(cfg, cell, ws, bodies[0]["content"].strip(), on_busy)   # claude -p --resume 認得：同一個 id 壓縮（帶指示＝原樣）
             if got is None:
                 return 0                                            # SessionBad：同一般一輪，整批留 cur/，下一次再試
@@ -339,7 +339,7 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
         must_post(["done", box, sig])
     try:
         for sig, body in zip(good, bodies):
-            fire("after_queue", {"letter": sig, "content": body["content"]}, template, stack)
+            hooks.fire("after_queue", {"letter": sig, "content": body["content"]})
     finally:
         append_history(stack, aos_ws.mark_answer({"role": "assistant", "content": text}, good))
         letters_answered(stack, good)

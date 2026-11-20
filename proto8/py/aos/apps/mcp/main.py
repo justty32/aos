@@ -37,13 +37,14 @@ import json, os, subprocess, sys, time
 from aos import flags as aos_flags  # noqa: E402  proto8/py/aos/flags.py：P-44 的解析
 from aos import metainfo  # noqa: E402
 from aos import process_group  # noqa: E402  py/aos/process_group.py：逾時收整群（TERM→等→KILL）
-from aos.agentlib import hooks  # noqa: E402  py/aos/agentlib/hooks.py：before_tool／after_tool（--hooks DEF）
+from aos.agentlib import agent_hooks  # noqa: E402  py/aos/agentlib/agent_hooks.py：hook 遙控器，before_tool／after_tool（--hooks DEF）
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
 USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--hooks DEF] [--own FILE] [REGISTRY...]"
 OWN = None                                      # --own FILE（11-10 深夜 tools-def）：這隻自己那份登記檔；在＝用它代替 REGISTRY（每次重看，self_tools 第一次加就建出來）
 HOOKS = None                                    # --hooks DEF（11-10）：定義資料夾的絕對路徑；None＝沒有 hook
+H = None                                        # hook 遙控器（main 開一次；HOOKS None＝空遙控器，什麼都不跑、原樣回）
 DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.json（跟 aos-tools 一致；11-02 改回）
 LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
 LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對路徑）；None＝不記（預設）
@@ -218,18 +219,13 @@ def record(line):
         f.write(json.dumps(line, ensure_ascii=False) + "\n")
 
 
-def fire(event, data, stack):
-    """跑 hook（--hooks 沒給＝不跑、原樣回）；hook 停下丟 HookStop 帶那一行錯。"""
-    if HOOKS is None:
-        return {"data": data, "changed": [], "blocked": False, "hook": None, "text": ""}
-    try:
-        return hooks.fire(event, data, HOOKS, stack, warn=lambda line: aos_flags.warn(NAME, line))
-    except (hooks.HookFailed, hooks.HooksBad) as e:
-        raise HookStop(aos_flags.error_line(NAME, type(e).__name__, e))
-
-
 class HookStop(Exception):
     """hook 停下：這次 tools/call 回 isError（櫃台不死）。"""
+
+
+def hook_stop(code, sentence):
+    """hook 遙控器的 fail：丟 HookStop 帶那一行錯（tools_call 把它變成這次的 isError）。"""
+    raise HookStop(aos_flags.error_line(NAME, code, sentence))
 
 
 def tools_call(params, tools, ws, stack, timeout_s, mid=None):
@@ -244,11 +240,9 @@ def run_tool(params, tools, ws, stack, timeout_s, mid):
     if name not in tools:
         return None, (-32602, "no such tool: %s" % name)
     cid = "" if mid is None else str(mid)
-    hooked = fire("before_tool", {"name": name, "id": cid, "arguments": args}, stack)
-    if hooked["blocked"]:                       # 攔下：不跑、不記、不觸發 after_tool
-        text = hooked["text"] if hooked["text"].strip() else aos_flags.aos_note("hook", "tool %s blocked by hook %s." % (name, hooked["hook"]))
-        return {"content": [{"type": "text", "text": text}], "isError": False}, None
-    args = hooked["data"]["arguments"]
+    verdict, args = H.guard_tool(name, cid, args)
+    if verdict == "blocked":                    # 攔下：不跑、不記、不觸發 after_tool；args＝給外部 agent 看的字
+        return {"content": [{"type": "text", "text": args}], "isError": False}, None
     code, out, tail, ms, limit = call(name, tools[name], args, ws, stack, timeout_s)
     record({"name": name, "arguments": args, "code": code, "elapsed_ms": ms,
                    "called_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
@@ -261,8 +255,8 @@ def run_tool(params, tools, ws, stack, timeout_s, mid):
     content = [{"type": "text", "text": text}]
     if code != 0 and tail:                      # 失敗時附 stderr 尾巴，外部 agent 才看得到原因（11-05，edge-basics 題 1）
         content.append({"type": "text", "text": "%s\n%s" % (aos_flags.aos_note("tool", "%s stderr (last %d bytes at most):" % (name, STDERR_TAIL)), tail)})
-    after = fire("after_tool", {"name": name, "id": cid, "arguments": args, "content": "\n".join(c["text"] for c in content),
-                                "code": code, "timed_out": code is None}, stack)
+    after = H.fire("after_tool", {"name": name, "id": cid, "arguments": args, "content": "\n".join(c["text"] for c in content),
+                                  "code": code, "timed_out": code is None})
     if "content" in after["changed"]:           # hook 改了結果：整段換成它給的一段文字
         content = [{"type": "text", "text": after["data"]["content"]}]
     return {"content": content, "isError": code != 0}, None
@@ -299,7 +293,9 @@ def signature(tools):
 
 
 def main():
+    global H
     ws, stack, timeout_s, regs = parse_args(sys.argv[1:])
+    H = agent_hooks.open(HOOKS, stack, fail=hook_stop, warn=lambda line: aos_flags.warn(NAME, line))
     try:
         shown = signature(load_tools(regs))     # 啟動時先讀一次：壞了就別開櫃台
     except ToolsBad as e:

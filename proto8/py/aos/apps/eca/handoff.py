@@ -5,15 +5,16 @@ from aos import ws as aos_ws
 from .common import NAME, Fail, cli_ask, cooldown, letters_drop, letters_take, must_post, quiet
 from . import retry
 from .history import append_history, history_sum, note_sum
-from .hook import fire
 
 
 class Handoff:
     """一批（good＝信名、bodies＝接進 history 的 user 訊息）交給 CLI：ask 問、拿回答；回答接進 history 之後叫 done。
+    hooks＝這一輪的 hook 遙控器（hook.open_hooks；定義資料夾＝hooks.def_folder，也給 cli_ask）。
     first＝選填、不帶參數：交出去那刻、接進 history 之前叫一次（⑬ goal 計數）。mid＝交出去那刻的 history（⑩；沒交出去或收信出錯＝None）。"""
 
-    def __init__(self, template, stack, box, good, bodies, first=None, owed=None, redo=False):
-        self.template, self.stack, self.box, self.good, self.bodies, self.first = template, stack, box, good, bodies, first
+    def __init__(self, hooks, stack, box, good, bodies, first=None, owed=None, redo=False):
+        self.hooks, self.template = hooks, hooks.def_folder
+        self.stack, self.box, self.good, self.bodies, self.first = stack, box, good, bodies, first
         self.owed, self.redo = list(owed or ()), redo
         self.retrying = owed is not None                            # 續做輪（retry.json 的欠帳；goal 輪欠的是 0 封也算）
         self.given, self.mid, self.late, self.after = False, None, None, None
@@ -40,7 +41,7 @@ class Handoff:
             return
         try:
             for sig, body in zip(self.good, self.bodies):           # hook：接進 history、收掉之後，每封一次
-                fire("after_queue", {"letter": sig, "content": body["content"]}, self.template, self.stack)
+                self.hooks.fire("after_queue", {"letter": sig, "content": body["content"]})
         except Fail as e:
             self.after = e                                          # 回答照樣接進 history，最後才報（不掉回答）
 
@@ -58,7 +59,7 @@ class Handoff:
         self.good.append(sig)
         self.bodies.append(body)
         try:
-            fire("after_queue", {"letter": sig, "content": body["content"]}, self.template, self.stack)
+            self.hooks.fire("after_queue", {"letter": sig, "content": body["content"]})
         except Fail as e:
             self.after = self.after or e
 
@@ -80,7 +81,7 @@ class Handoff:
                 if cfg["kind"] == "claude":
                     return self._claude_failed(cfg, cell, e)
                 letters_drop(self.stack, self.left, "failed")       # 回答配對：已收掉的信不會有回答了（還在 cur/ 的下一輪再交）
-                fire("brain_failed", {"name": e.code, "reason": str(e)}, self.template, self.stack)   # hook 停下＝HookFailed，冷卻不記（同 agent-fsm wait）
+                self.hooks.fire("brain_failed", {"name": e.code, "reason": str(e)})   # hook 停下＝HookFailed，冷卻不記（同 agent-fsm wait）
                 try:
                     cooldown.fail(self.stack, e.code, e, dropped=len(self.good), retry=False)   # 照舊報錯退 1：停在這個錯上（cooldown-1118 的 retry 欄）
                 except OSError as w:
@@ -134,7 +135,7 @@ class Handoff:
                 event["status"] = status
             if isinstance(info.get("cause"), str):
                 event["cause"] = info["cause"]
-        fire("brain_failed", event, self.template, self.stack)
+        self.hooks.fire("brain_failed", event)
         try:
             cooldown.fail(self.stack, e.code, e, dropped=dropped, retry=temporary)   # 暫時＝退 0、冷卻完自己接著試；永久＝退 1 停下
         except OSError as w:

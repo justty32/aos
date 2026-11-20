@@ -1,9 +1,10 @@
 """hook_point - read the hook_points.json declarations (the hook points a program offers), check them, turn them into the table the hook engine wants, and open a handle a program fires its points with.
 
 Design: proto8/thinking/2026-11/20/aos-hook-plan-1120 (01 format, 04 this library, 12 what changed after review).
-Cut 1 added the reading; cut 2a (library half) added open() and the handle. aos-hook uses the handle; the agent
-bodies and the kernel still fire through their own tables (aos.agentlib.hooks.EVENTS, the kernel's hooks.EVENTS)
-until cut 2b / 3 switch them; py/tests/test_hook_points_match.py checks that the declarations say the same.
+Cut 1 added the reading; cut 2 added open() and the handle, and every program that fires points now goes through a
+handle (aos-hook; the agent bodies through aos.agentlib.agent_hooks; the kernel). The agents and the kernel still open
+theirs with their own tables (table=aos.agentlib.hooks.EVENTS, the kernel's hooks.EVENTS) until cut 3 switches them to
+the declarations; py/tests/test_hook_points_match.py checks that the declarations say the same.
 Standard library plus the engine (aos.hook_run, aos.hook_lists); prints nothing, never exits: errors are PointsBad,
 or go to the handle's fail().
 

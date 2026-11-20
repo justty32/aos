@@ -5,7 +5,7 @@ from aos import flags as aos_flags
 from aos import ws as aos_ws
 
 # aos.agentlib 的共用模組（bin/aos-eca-turn 入口已把 lib 放進 sys.path）；問 CLI 那段在 cli_*.py 分檔。
-from aos.agentlib import cli_ask, cli_base, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, goal_state, hooks, quiet  # noqa: E402,F401
+from aos.agentlib import cli_ask, cli_base, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, goal_state, quiet  # noqa: E402,F401
 
 NAME = "aos-eca-turn"
 NOT_FOUND = 10

@@ -11,10 +11,10 @@
 #   都不在、或沒宣告＝沒有 system；給了 --system＝照它、不看 stack（同 --tools）。文字空＝不送 system 訊息。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
-# hook（py/aos/agentlib/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：有 tool_added hook 時，工具清單比上次（$AOS_STACK/hook_tools_seen.json）
-#   多出來的名字一個觸發一次（第一次只記不觸發；沒有這種 hook＝刪那份檔）。hook 停下＝HookFailed／HooksBad 退 1。
+# hook（圖紙 thinking/2026-11/10/self-family/hook；經 py/aos/agentlib/agent_hooks.py 的遙控器 H）：有 tool_added hook 時，工具清單比上次
+#   （$AOS_STACK/hook_tools_seen.json）多出來的名字一個觸發一次（H.announce_tools；第一次只記不觸發；沒有這種 hook＝刪那份檔）。hook 停下＝HookFailed／HooksBad 退 1。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。
-# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
+# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 H.clock_tick()——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 # 讀 history、決定用哪份工具登記檔跟 act.py 同一套，在 cell_common.py。
 # 回答配對（thinking/2026-11/14/reply-match-1114/03 §4）：messages 每列先過 aos_ws.for_endpoint（拷貝、只拿掉 aos 鍵），history 本身不動。
 # Mid-turn /compact requests use full history without tools; task history retains the latest applicable compact summary.
@@ -29,7 +29,7 @@ try:
     from aos import flags as aos_flags  # noqa: E402
     from aos import ws as aos_ws  # noqa: E402  （回答配對：for_endpoint）
     from aos.declared_files import declared_files  # noqa: E402
-    from aos.agentlib import hooks  # noqa: E402
+    from aos.agentlib import agent_hooks  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
     if _error.name not in ("aos", "aos.agentlib"):
         raise
@@ -102,7 +102,9 @@ if system_file and not os.path.isfile(system_file):
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
-cell_common.clock_tick(hooks, stack, lambda line: aos_flags.warn("agent-fsm", line), die)   # 11-11 on_clock：每格開頭看一次時鐘，到了才起 handler
+H = agent_hooks.open(os.environ.get("AOS_CD") or ".", stack, fail=die,   # hook 遙控器：停下（HookFailed／HooksBad）＝die、退 1
+                     warn=lambda line: aos_flags.warn("agent-fsm", line))
+H.clock_tick()                                   # 11-11 on_clock：每格開頭看一次時鐘，到了才起 handler
 try:
     files = declared_files(os.environ.get("AOS_CD") or ".")
 except ValueError as e:
@@ -195,17 +197,8 @@ if tools_file and os.path.isfile(tools_file):
 else:
     listed = []
 
-try:                                             # tool_added：比上次多出來的名字，一個一次
-    cd = os.environ.get("AOS_CD") or "."
-    for added, where in hooks.tools_added(stack, [(t["name"], os.path.abspath(t["path"]) if t.get("path") else None)
-                                                  for t in listed],
-                                          hooks.has("tool_added", cd, stack)):
-        hooks.fire("tool_added", {"name": added, "path": where}, cd, stack,
-                   warn=lambda line: aos_flags.warn("agent-fsm", line))
-except (hooks.HookFailed, hooks.HooksBad) as e:
-    die(type(e).__name__, str(e))
-except OSError as e:
-    die("WriteFailed", "cannot write %s: %s" % (os.path.join(stack, hooks.SEEN), e))
+H.announce_tools([(t["name"], os.path.abspath(t["path"]) if t.get("path") else None)   # tool_added：比上次多出來的名字，一個一次
+                  for t in listed])
 
 system_text = ""
 if system_file:

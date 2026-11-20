@@ -188,7 +188,7 @@ def loaded_nulled(folder, stack):
 
 
 def config_value(help, event, text):
-    """--config 的字 → JSON 值；只有 on_clock 的 handler 拿得到 config（hooks.clock_tick），別的事件給了＝ArgumentsBad。"""
+    """--config 的字 → JSON 值；只有 on_clock 的 handler 拿得到 config（hook_clock.clock_tick），別的事件給了＝ArgumentsBad。"""
     if event != hooks.CLOCK_EVENT:
         raise bad_args(help, "--config is only for event %s (only its handler gets the config)" % hooks.CLOCK_EVENT)
     def no_nan(word):

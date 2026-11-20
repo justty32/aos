@@ -113,7 +113,7 @@
    "module": "aos.apps.eca",
    "unit": "proto8/py/aos/apps/eca",
    "used_by": "",
-   "uses": "aos.agentlib.cli_ask aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_cfg aos.agentlib.cli_hook aos.agentlib.cli_mcp aos.agentlib.cli_pi aos.agentlib.cli_screen aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.agentlib.quiet aos.daemon_ctl aos.flags aos.ws"
+   "uses": "aos.agentlib.agent_hooks aos.agentlib.cli_ask aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_cfg aos.agentlib.cli_hook aos.agentlib.cli_mcp aos.agentlib.cli_pi aos.agentlib.cli_screen aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.daemon_ctl aos.flags aos.ws"
   },
   {
    "kind": "app",
@@ -141,7 +141,7 @@
    "module": "aos.apps.hook",
    "unit": "proto8/py/aos/apps/hook",
    "used_by": "",
-   "uses": "aos.agentlib.hooks aos.flags aos.hook_point aos.hook_run"
+   "uses": "aos.agentlib.agent_hooks aos.agentlib.hook_clock aos.flags aos.hook_point aos.hook_run"
   },
   {
    "kind": "app",
@@ -162,7 +162,7 @@
    "module": "aos.apps.mcp",
    "unit": "proto8/py/aos/apps/mcp",
    "used_by": "",
-   "uses": "aos.agentlib.hooks aos.flags aos.metainfo aos.process_group"
+   "uses": "aos.agentlib.agent_hooks aos.flags aos.metainfo aos.process_group"
   },
   {
    "kind": "app",
@@ -322,7 +322,7 @@
    "kind": "lib",
    "module": "aos.hook_point",
    "unit": "proto8/py/aos/hook_point.py",
-   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/hook",
+   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/hook proto8/py/tools/aos/kernel",
    "uses": "aos.hook_handle"
   },
   {
@@ -610,7 +610,7 @@
    "module": "",
    "unit": "proto8/py/tools/agent/hook_fire",
    "used_by": "",
-   "uses": "aos.agentlib.hooks aos.tool_io"
+   "uses": "aos.agentlib.agent_hooks aos.agentlib.hook_clock aos.tool_io"
   },
   {
    "kind": "tool",
@@ -820,7 +820,7 @@
    "module": "",
    "unit": "proto8/py/tools/aos/kernel",
    "used_by": "",
-   "uses": "aos.hook_run aos.tool_io"
+   "uses": "aos.hook_point aos.hook_run aos.tool_io"
   },
   {
    "kind": "tool",
@@ -1114,7 +1114,7 @@
    "module": "",
    "unit": "proto8/templates/agent-fsm",
    "used_by": "",
-   "uses": "aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.agentlib.quiet aos.declared_files aos.flags aos.metainfo aos.observed aos.observed_children aos.ws"
+   "uses": "aos.agentlib.agent_hooks aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.declared_files aos.flags aos.metainfo aos.observed aos.observed_children aos.ws"
   },
   {
    "kind": "template",
@@ -1142,7 +1142,7 @@
    "module": "",
    "unit": "proto8/templates/start-api",
    "used_by": "",
-   "uses": "aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.agentlib.quiet aos.declared_files aos.flags aos.metainfo aos.observed aos.observed_children aos.tool_io aos.ws"
+   "uses": "aos.agentlib.agent_hooks aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.declared_files aos.flags aos.metainfo aos.observed aos.observed_children aos.tool_io aos.ws"
   },
   {
    "kind": "template",

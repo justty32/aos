@@ -11,11 +11,11 @@
 #   history 裡沒有 assistant、aos-tools 起不來。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
-# hook（py/aos/agentlib/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：確認登記過、arguments 是 JSON 之後 before_tool（可改 arguments；
+# hook（圖紙 thinking/2026-11/10/self-family/hook；經 py/aos/agentlib/agent_hooks.py 的遙控器 H）：確認登記過、arguments 是 JSON 之後 before_tool（H.guard_tool：可改 arguments；
 #   攔下＝不跑，tool 訊息＝hook 的 stdout，空就「[aos] hook: tool NAME blocked by hook HOOK.」，不記 observed、不觸發 after_tool）；
 #   跑完、content 組好（含失敗尾巴）之後、接進 history 之前 after_tool（可改 content）。history 裡 assistant 的 tool_calls 不動。
 #   hook 停下＝HookFailed／HooksBad 退 1（這個 id 還沒有 tool 訊息，重跑會再跑一次）。
-# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
+# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 H.clock_tick()——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 # 讀 history、決定用哪份工具登記檔跟 brain.py 同一套，在 cell_common.py。
 import json, os, signal, subprocess, sys, time
 from pathlib import Path
@@ -30,7 +30,7 @@ try:
     from aos.observed_children import clear_child, take_child  # noqa: E402
     from aos import metainfo  # noqa: E402
     from aos.declared_files import declared_files  # noqa: E402
-    from aos.agentlib import hooks  # noqa: E402
+    from aos.agentlib import agent_hooks  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
     if _error.name not in ("aos", "aos.agentlib"):
         raise
@@ -87,7 +87,9 @@ opts = {flag: items[-1] for flag, items in values.items()}
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
-cell_common.clock_tick(hooks, stack, lambda line: aos_flags.warn("agent-fsm", line), die)   # 11-11 on_clock：每格開頭看一次時鐘，到了才起 handler
+H = agent_hooks.open(os.environ.get("AOS_CD") or ".", stack, fail=die,   # hook 遙控器：停下（HookFailed／HooksBad）＝die、退 1
+                     warn=lambda line: aos_flags.warn("agent-fsm", line))
+H.clock_tick()                                   # 11-11 on_clock：每格開頭看一次時鐘，到了才起 handler
 try:
     files = declared_files(os.environ.get("AOS_CD") or ".")
 except ValueError as e:
@@ -112,15 +114,6 @@ def append(message):
             f.write(json.dumps(message, ensure_ascii=False) + "\n")
     except OSError as e:
         die("WriteFailed", "cannot append to history.jsonl: %s" % e)
-
-
-def fire(event, data):
-    """跑 hook；hook 停下＝這格的錯（HookFailed／HooksBad）、退 1。"""
-    try:
-        return hooks.fire(event, data, os.environ.get("AOS_CD") or ".", stack,
-                          warn=lambda line: aos_flags.warn("agent-fsm", line))
-    except (hooks.HookFailed, hooks.HooksBad) as e:
-        die(type(e).__name__, str(e))
 
 
 def stop_group(p):
@@ -180,13 +173,12 @@ for call in calls:
     except ValueError as e:
         append({"role": "tool", "tool_call_id": cid, "content": aos_flags.error_line("act", "ArgumentsBad", "%s: %s" % (name, e)) + "\n"})
         continue
-    hooked = fire("before_tool", {"name": name, "id": cid, "arguments": parsed})
-    if hooked["blocked"]:                        # 攔下：不跑、不記 observed、不觸發 after_tool
-        append({"role": "tool", "tool_call_id": cid,
-                "content": hooked["text"] if hooked["text"].strip() else aos_flags.aos_note("hook", "tool %s blocked by hook %s." % (name, hooked["hook"]))})
+    verdict, given = H.guard_tool(name, cid, parsed)
+    if verdict == "blocked":                     # 攔下：不跑、不記 observed、不觸發 after_tool；given＝給腦看的字
+        append({"role": "tool", "tool_call_id": cid, "content": given})
         continue
-    if "arguments" in hooked["changed"]:          # 改過的只交給工具，history 裡的 tool_calls 不動
-        parsed = hooked["data"]["arguments"]
+    if given is not parsed:                      # 改過的只交給工具，history 裡的 tool_calls 不動
+        parsed = given
         arguments = json.dumps(parsed, ensure_ascii=False)
     tool_stack = Path(stack) / "tools" / name    # 只用來看子帳記號；小格不先建（11-11 tool-cells-lazy，工具要寫自己建）
     clear_child(tool_stack)
@@ -235,7 +227,7 @@ for call in calls:
         content += "%s%s\n" % ("" if content.endswith("\n") or not content else "\n", aos_flags.aos_note("tool", "%s exit code %d." % (name, p.returncode)))
     if (timed_out or p.returncode != 0) and err:
         content += "%s\n%s\n" % (aos_flags.aos_note("tool", "%s stderr (last 2048 bytes at most):" % name), err[-2048:].decode("utf-8", "replace").strip())
-    content = fire("after_tool", {"name": name, "id": cid, "arguments": parsed, "content": content,
+    content = H.fire("after_tool", {"name": name, "id": cid, "arguments": parsed, "content": content,
                                   "code": None if timed_out else p.returncode, "timed_out": timed_out})["data"]["content"]
     append({"role": "tool", "tool_call_id": cid, "content": content})
 sys.exit(0)

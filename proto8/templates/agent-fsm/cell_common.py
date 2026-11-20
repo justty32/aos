@@ -1,17 +1,9 @@
-"""cell_common - agent-fsm 的格共用的開頭幾步：四格的 on_clock 看時鐘（clock_tick），brain、act 的讀 history.jsonl 與決定用哪份工具登記檔。
+"""cell_common - agent-fsm 的格共用的開頭幾步：brain、act 的讀 history.jsonl 與決定用哪份工具登記檔（四格的 on_clock 看時鐘改在 hook 遙控器 H.clock_tick()，11-20）。
 
-錯誤行由呼叫端那支的 die 印（程式名、格式照它自己），這裡只給代號與原因；hooks 模組與 warn 由呼叫端傳進來，不 import aos_flags、hooks，跟 atomic_file 一樣只靠標準庫。
+錯誤行由呼叫端那支的 die 印（程式名、格式照它自己），這裡只給代號與原因；不 import aos_flags，跟 atomic_file 一樣只靠標準庫。
 """
 import json
 import os
-
-
-def clock_tick(hooks, stack, warn, die):
-    """時鐘走到了的 on_clock hook 才跑（hooks.clock_tick）；hook 停下＝這格的錯（HookFailed／HooksBad）、退 1。"""
-    try:
-        hooks.clock_tick(os.environ.get("AOS_CD") or ".", stack, warn=warn)
-    except (hooks.HookFailed, hooks.HooksBad) as e:
-        die(type(e).__name__, str(e))
 
 
 def read_history(history_path, die):

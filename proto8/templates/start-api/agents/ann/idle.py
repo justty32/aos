@@ -5,11 +5,11 @@
 # 回答配對（thinking/2026-11/14/reply-match-1114/03 §1）：好信照序 aos_ws.letters_take（加進 $AOS_STACK/letters.json 的 pending）→ history 的 user 列帶
 #   "aos": {"letter": 信名}（信裡自帶的 aos 鍵蓋掉）→ done；壞信、被 before_queue 擋的信在 done 之前記進 dropped（reason bad／blocked）。goal 提醒不經 queue、不帶 aos。
 # --prompt FILE＝開場白（相對路徑從範本資料夾＝AOS_CD 算）：history 空、queue 也沒好信時投一次進 queue 再收；沒給＝沒有開場白。
-# hook（py/aos/agentlib/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：好信接進 history 之前 before_queue（可改 content；攔下＝aos-post done 丟掉、
-#   不進 history、不算好信、mailbox_warning.txt 寫一行是哪個 hook 丟的），接進去並 done 之後 after_queue。hook 停下（HookFailed／HooksBad）時
-#   還沒 done 的信留在 cur/、下次重跑再接（P-12）。
+# hook（圖紙 thinking/2026-11/10/self-family/hook；經 py/aos/agentlib/agent_hooks.py 的遙控器 H，11-20 hook 介面第 2 刀）：好信接進 history 之前
+#   before_queue（H.take_letter：可改 content；攔下＝aos-post done 丟掉、不進 history、不算好信、mailbox_warning.txt 寫一行是哪個 hook 丟的），
+#   接進去並 done 之後 after_queue。hook 停下（HookFailed／HooksBad）時還沒 done 的信留在 cur/、下次重跑再接（P-12）。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10）。--help 印英文用法；Ctrl-C 退 130。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
-# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格建好 queue 之後、收信之前先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
+# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格建好 queue 之後、收信之前先 H.clock_tick()——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 # goal（11-11 thinking/2026-11/11/goal/02，使用者「當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他」）：
 #   收不到信（信優先）、history 最後一則是沒有 tool_calls 的 assistant（或 history 還空：外面先 set 的 goal 當開場題目，11-11 稍後使用者「也丟，當開場題目」）、
 #   $AOS_STACK/goal.json 是 active＝把一則 user「[aos] goal: …」直接接進 history、退 0 去 think（不走 queue、不觸發 before_queue／after_queue）。
@@ -31,7 +31,7 @@ sys.path[:0] = _import_paths
 try:
     from aos import flags as aos_flags  # noqa: E402
     from aos import ws as aos_ws  # noqa: E402  （回答配對：letters_take／letters_drop／mark_letter）
-    from aos.agentlib import hooks  # noqa: E402
+    from aos.agentlib import agent_hooks  # noqa: E402
     from aos.agentlib import goal_state  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
     if _error.name not in ("aos", "aos.agentlib"):
@@ -99,6 +99,8 @@ if not stack:
     die("StackMissing", "AOS_STACK is not set")
 box = os.path.join(stack, "queue")
 history_path = os.path.join(stack, "history.jsonl")
+H = agent_hooks.open(os.environ.get("AOS_CD") or ".", stack, fail=die,   # hook 遙控器：停下（HookFailed／HooksBad）＝die、退 1
+                     warn=lambda line: aos_flags.warn("agent-fsm", line))
 
 
 def post(args, stdin_text="", ok=(0,)):
@@ -182,14 +184,10 @@ def take():
             if len(compact_letters) == 1:
                 compact_extra = extra
             continue
-        r = fire("before_queue", {"letter": sig, "content": content})
-        if r["blocked"]:                         # hook 丟掉這封：收掉、不進 history、不算好信
-            drop(sig, "blocked")
-            post(["done", box, sig])
-            write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s dropped by hook %s\n" % (sig, r["hook"]), die)
+        content = H.take_letter(box, sig, content)
+        if content is None:                      # hook 丟掉這封：已收掉（記 dropped、done、mailbox_warning），不進 history、不算好信
             continue
-        content = r["data"]["content"]
-        try:                                     # 回答配對：先記 pending、再接 history（帶 aos.letter）、最後 done（讀的一方照這個方向查）
+        try:                                    # 回答配對：先記 pending、再接 history（帶 aos.letter）、最後 done（讀的一方照這個方向查）
             aos_ws.letters_take(stack, [sig])
         except OSError as e:
             die("WriteFailed", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
@@ -201,7 +199,7 @@ def take():
             die("WriteFailed", "cannot append to history.jsonl: %s" % e)
         post(["done", box, sig])                 # 接進 history 就算收到（使用者 11-04「接進對話紀錄就收」）
         good += 1
-        fire("after_queue", {"letter": sig, "content": content})
+        H.fire("after_queue", {"letter": sig, "content": content})
     if compact_letters:
         history = cell_common.read_history(history_path, die)
         count = compact.foldable(stack, history, aos_ws)
@@ -238,15 +236,6 @@ def drop(sig, reason):
         aos_flags.warn("agent-fsm", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
 
 
-def fire(event, data):
-    """跑 hook；hook 停下＝這格的錯（HookFailed／HooksBad）、退 1。"""
-    try:
-        return hooks.fire(event, data, os.environ.get("AOS_CD") or ".", stack,
-                          warn=lambda line: aos_flags.warn("agent-fsm", line))
-    except (hooks.HookFailed, hooks.HooksBad) as e:
-        die(type(e).__name__, str(e))
-
-
 def opening():
     """history 空、給了 --prompt、內容非空＝把開場白當一則 user 投進 queue（有序）。回 True＝投了。"""
     if not prompt or not history_empty():
@@ -267,7 +256,7 @@ def opening():
 
 if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
     post(["init", box])                          # 先建好，aos-agent say／listen 認得（同 aos-eca-turn）
-cell_common.clock_tick(hooks, stack, lambda line: aos_flags.warn("agent-fsm", line), die)   # 11-11 on_clock：idle 在建好 queue 之後看時鐘（第一次就跑的 handler 可能往 queue 寄信），到了才起 handler
+H.clock_tick()                                   # 11-11 on_clock：idle 在建好 queue 之後看時鐘（第一次就跑的 handler 可能往 queue 寄信），到了才起 handler
 def history_tail():
     """只讀最後 262144 bytes；截斷的首行丟掉，壞 JSON／編碼回 None（不猜）。"""
     try:

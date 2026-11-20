@@ -34,7 +34,8 @@
     "context_use.py": "一隻 agent 現在的 context 用了多少（給 aos 層的「快滿了先收尾再 compact」判斷，py/tools/agent/context_wrap）；各種腦各一個讀法，讀不到＝None。",
     "cooldown.py": "失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-agent ctl ls／listen 讀。",
     "goal_state.py": "agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。",
-    "hooks.py": "agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、on_clock 的檢查、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 py/aos/hook_run.py。",
+    "hook_clock.py": "agent 的 on_clock hook：讀時鐘、比上次記的 cycle，到了才跑那個 hook（clock_tick）；loop 起來時清掉狀態（clock_restart）。",
+    "hooks.py": "agent 的 hook 共用模組：事件表、讀 hooks 清單（定義那份疊 stack 那份、驗形狀，含 on_clock 格的鍵）、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 py/aos/hook_run.py。",
     "mailbox_call.py": "mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。",
     "pi_aos_screen.mjs": "aos's extension for pi's interactive screen: reports turns to aos's hook and hands aos's letters to pi (11-18 eca-pi plan C)",
     "quiet.py": "「很久沒動靜」的共用讀寫：$AOS_STACK/quiet.json（不進 git）；aos-eca-turn（一輪 CLI 在跑）與 agent-fsm 的 wait.py（等腦回信）寫，誰都能讀。"
@@ -102,7 +103,7 @@
      "common.py": "aos/apps/eca/common.py - 共用的名字、錯誤（Fail）、lib 模組的載入、aos-post 介面、mailbox_warning 與 letters.json（回答配對）。",
      "handoff.py": "aos/apps/eca/handoff.py - 一批信交給 CLI 的前後（一般一輪與 slash 交給 claude 的那幾條共用）：交出去那刻收信、交出去後失敗記冷卻、成功收尾。",
      "history.py": "aos/apps/eca/history.py - $AOS_STACK/history.jsonl 的讀、附加，與 .history_sum（⑩ history 被改過＝開新對話）。",
-     "hook.py": "aos/apps/eca/hook.py - 這支跑的 hook（before_queue、tool_added；fire 把 hook 停下換成 Fail）。",
+     "hook.py": "aos/apps/eca/hook.py - 這支的 hook 遙控器（open：hook 停下換成 Fail）與 before_queue、tool_added 兩個點的這支這邊。",
      "hook_points.json": "Hook points fired by aos-eca-turn (the eca body); tool hooks are in ../mcp/hook_points.json, the loop points in ../hook/loop_points.json.",
      "main_screen.py": "aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。",
      "main_turn.py": "aos-eca-turn - 外部 coding agent（claude／codex，eca）的一輪：把 stack 的 queue 裡的信照順序全部一起交給 CLI——交出去就收信——等它答完、回答接進 history。",
@@ -127,8 +128,7 @@
      "main.py": "aos-grow - 把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。"
     },
     "hook": {
-     "__init__.py": "aos.apps.hook - the aos-hook command (main.py; lists.py reads the hooks lists for it) and loop_points.json, the hook points of the aos-loop layer.",
-     "lists.py": "where aos-hook takes the points and the hooks lists from: --points FILE and --list FILE, or --agent DEF_DIR (an agent's own declarations and its two …",
+     "__init__.py": "aos.apps.hook - the aos-hook command (main.py; the hooks lists are read by aos.hook_lists through aos.hook_point.open) and loop_points.json, the hook…",
      "loop_points.json": "Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop, today through py/tools/agent/hook…",
      "main.py": "aos-hook - fire a hook event from any program (C++, shell, ...), list the points of hook_points.json declarations, check declarations and hooks lists."
     },
@@ -732,7 +732,7 @@
      "forwarding.py": "轉寄對照表 forwarded.json：讀寫、防重、寄到一半的待定列，與靠它做的轉寄、代回。",
      "hold.py": "「先留著等表態」：hold.json 記留著的信，decisions/<信名>.json 是別人對某一封的表態（pass／refuse）。",
      "hook_points.json": "Hook points of the generic kernel framework (the hooks table of kernel.json): before_verdict, after_verdict, before_reply.",
-     "hooks.py": "kernel 的三個 hook 時機：設定、事件欄位與判決回話，執行一律交給共用引擎。",
+     "hooks.py": "kernel 的三個 hook 時機：設定、事件欄位與判決回話；發事件經 aos.hook_point 的 hook 遙控器（open，錯交 ctx.die），執行一律交給共用引擎。",
      "letters.py": "包 aos-post 的信件本身：認領、看信、收信、拒信與排隊 body；轉寄、代回與轉寄對照表在 forwarding.py。",
      "limits_rule.py": "驗證 kernel 站的份額與身分設定，並在轉寄前套用到新 proc。",
      "procs_rules.py": "掛 proc 那一包：收下游答案、驗信、先來先掛與白名單及 running 上限。",

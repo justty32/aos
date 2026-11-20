@@ -4,8 +4,8 @@ Design: proto8/thinking/2026-11/20/aos-hook-plan-1120/05 (the command) with 12 (
 11-20: "任何子程式，含非 Python", then "先開第 4 刀". Cut 4 only adds this command: nothing calls it yet, hook_fire stays.
 The hooks run in aos.hook_run (the engine the agents and the kernel use) through an aos.hook_point handle: order, exit
 10, on_error, timeout_ms and which keys a hook may change are the engine's rules; the handle reads the lists and checks
-the changed values' declared types. lists.py picks the source: --points / --list, or --agent DEF_DIR (cut 2a: the
-agent's hook_points, its two hooks layers and on_clock rules; after_start first clears the on_clock state).
+the changed values' declared types. The source: --points / --list, or --agent DEF_DIR (aos.agentlib.agent_hooks.source:
+the agent's hook_points, its two hooks layers and on_clock rules; after_start first clears the on_clock state).
 Exit codes: 0 ok (also when no hook listens), 10 blocked (fire only), 1 error (one line "aos-hook: error: CODE reason").
 """
 import json
@@ -15,7 +15,6 @@ import sys
 
 from aos import flags as aos_flags
 from aos import hook_point, hook_run
-from aos.apps.hook import lists
 
 PROG = "aos-hook"
 HELP = """aos-hook - fire a hook event from any program, and list or check hook point declarations
@@ -116,8 +115,24 @@ def stack_dir():
 
 
 def declared(stack=""):
-    """Where the points and the lists come from (lists.source): --points / --list, or --agent."""
-    return lists.source(ROOT, stack, failed)
+    """Where the points and the lists come from: --points / --list, or --agent (aos.agentlib is imported only then)."""
+    agent = ROOT.get("agent")
+    if agent is None:
+        paths = ROOT.get("points", [])
+        if not paths:
+            raise Fail("ArgumentsBad", "give at least one --points FILE, or --agent DEF_DIR")
+        try:
+            points = hook_point.read(paths)
+        except hook_point.PointsBad as e:
+            raise Fail("PointsBad", str(e))
+        return {"points": points, "lists": ROOT.get("list", []), "files": len(paths), "entry_check": None,
+                "label": ", ".join(paths), "agent": None}
+    if ROOT.get("points") or ROOT.get("list"):
+        raise Fail("ArgumentsBad", "give either --agent DEF_DIR or --points / --list, not both")
+    if not (agent and os.path.isdir(agent)):
+        raise Fail("ArgumentsBad", "--agent needs an agent definition folder, got %r" % agent)
+    from aos.agentlib import agent_hooks
+    return agent_hooks.source(os.path.abspath(agent), stack, failed)
 
 
 def handle(src, stack):
@@ -214,7 +229,8 @@ def fire(argv):
     data = event_data(points, event, opts)
     if src["agent"] and event == "after_start":   # as hook_fire did: the first clock check after a start runs at once
         try:
-            lists.agent_hooks().clock_restart(stack)
+            from aos.agentlib import hook_clock
+            hook_clock.clock_restart(stack)
         except OSError as e:
             warn("cannot reset the on_clock state in %s: %s" % (stack, e))
     result = hooks.fire(event, data, entries=entries)

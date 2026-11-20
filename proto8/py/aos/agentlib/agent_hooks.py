@@ -1,15 +1,19 @@
 """agent_hooks - agent 一家的 hook 遙控器：open 一次（定義那份疊 stack 那份），之後每個點一行；丟信三步、工具被攔的預設字、tool_added 那串只在這裡一份。
 
-圖紙：proto8/thinking/2026-11/20/aos-hook-plan-1120/04「agent 一家」（11-20 使用者「宣告式＋小函式都做」）；第 2 刀 2a（庫那一半）。
+圖紙：proto8/thinking/2026-11/20/aos-hook-plan-1120/04「agent 一家」（11-20 使用者「宣告式＋小函式都做」）；第 2 刀。
 事件表照舊用 hooks.EVENTS、清單照舊經 hooks.load 讀（第 3 刀才改讀宣告）；跑的那段是 aos.hook_point 的遙控器（再交引擎 hook_run）。
 錯一律交給 open 時給的 fail(代號, 一句英文)：fail 自己丟的例外原樣往外走；fail 竟然回來＝丟 hook_point.FailReturned。
-格程式（templates/agent-fsm）、aos-eca-turn、aos-mcp 還沒改叫這裡（2b：要等 install 之後，格程式存檔即生效）。從 hooks.py 拆出來只為檔案大小（F10）。
+發事件的都叫這裡：格程式（templates/agent-fsm 與抄本）、aos-eca-turn、aos-mcp、hook_fire（第 2 刀後半）；aos-hook --agent 用 source。
+從 hooks.py 拆出來只為檔案大小（F10）。
 
 對外：
     open(def_folder, stack, fail, warn=None) -> 遙控器；def_folder None＝沒有 hook 的空遙控器（aos-mcp 沒給 --hooks）
+    source(def_dir, stack, fail) -> aos-hook --agent 的點與清單：{"points": 這隻 interfaces.json 的 hook_points,
+                    "lists": [定義那份, stack 那份]（stack 空＝只有定義那份）, "files": 宣告幾份, "entry_check": hooks.check_clock,
+                    "label": 給錯誤句用, "agent": def_dir}；def_dir 要是絕對路徑。PointsBad／HooksBad 交 fail
     遙控器.fire(event, data, only=None) -> 引擎的結果（形狀同 hooks.fire）
     遙控器.has(event)、遙控器.names(event, data)
-    遙控器.clock_tick() -> [跑了的 hook 名]（同 hooks.clock_tick）
+    遙控器.clock_tick() -> [跑了的 hook 名]（hook_clock.clock_tick）
     遙控器.take_letter(box, sig, content) -> 改過的 content；被 before_queue 攔下＝letters.json 記 dropped（寫不成只 warning）、
                     aos-post done（起不來或退非 0＝PostFailed）、mailbox_warning.txt 寫一行（寫不成＝WriteFailed），回 None
     遙控器.guard_tool(name, cid, arguments) -> ("run", arguments：沒人改＝給的那個物件本身、改了＝新的)
@@ -23,7 +27,7 @@ import os
 from aos import flags as aos_flags
 from aos import hook_point
 from aos import ws as aos_ws
-from aos.agentlib import hooks
+from aos.agentlib import hook_clock, hooks
 
 MAILBOX_WARNING = "mailbox_warning.txt"
 
@@ -34,6 +38,22 @@ def open(def_folder, stack, fail, warn=None):
     return AgentHooks(def_folder, stack, fail, warn,
                       hook_point.open(table=hooks.EVENTS, entries=entries, stack=stack, fail=fail, warn=warn,
                                       check=hooks._check))
+
+
+def source(def_dir, stack, fail):
+    """aos-hook --agent 的點與清單（見檔頭）：宣告＝interfaces.json 的 hook_points，清單＝定義那份疊 stack 那份，on_clock 照 agent 的驗法。"""
+    try:
+        points = hook_point.for_definition(def_dir)
+    except hook_point.PointsBad as e:
+        hook_point.call_fail(fail, "PointsBad", str(e))
+    try:
+        layers = hooks.layers(def_dir, stack or def_dir)
+    except hooks.HooksBad as e:
+        hook_point.call_fail(fail, "HooksBad", str(e))
+    files = len({said["path"] for point in points.values() for said in point["said"]})
+    return {"points": points, "lists": layers if stack else layers[:1], "files": files,
+            "entry_check": hooks.check_clock,
+            "label": "the hook_points of %s" % os.path.join(def_dir, "interfaces.json"), "agent": def_dir}
 
 
 def _write_atomic(path, text):
@@ -66,7 +86,7 @@ class AgentHooks:
         if self.def_folder is None:
             return []
         try:
-            return hooks.clock_tick(self.def_folder, self.stack, warn=self._warn)
+            return hook_clock.clock_tick(self.def_folder, self.stack, warn=self._warn)
         except (hooks.HookFailed, hooks.HooksBad) as e:
             self._die(type(e).__name__, str(e))
 
