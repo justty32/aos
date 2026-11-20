@@ -454,7 +454,7 @@ class Check:
         self.make()
         self.start()
         self.stage = "1"
-        # 仿 llm_fake 的 script/tool_calls；手動驅動這一輪，不另外搭問腦總機。
+        # 仿 llm_fake 的 script/tool_calls；手動驅動這一輪，不另外搭 llm kernel。
         arguments = {"op": "add", "def": str(self.defs / "idle"), "name": "kid_tool",
                      "ws": str(self.work), "timeout_s": self.timeout}
         fake = {"endpoint": {"script": [{"tool_calls": [{"name": "subagent", "arguments": arguments}]}]},

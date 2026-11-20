@@ -20,8 +20,8 @@
 | 塊 | 是什麼 | 今天在哪 | 可不可選 |
 |---|---|---|---|
 | 最小核心 | 板子本身（daemon：表、ctl 信箱、limits、自動重起）、身分（信封的 `sender`＝寄件人自己的 stack，自報不驗）、信箱（`aos-post`）、時鐘 `_clock`、清道夫 `_sweeper` | 起根就有：[daemon-root](../daemon-root/README.md) | 一定有。鐘與清道夫也算核心（使用者 11-20「算核心」），不是可以拿掉的件 |
-| llm 件 | 問腦的總機：排隊、格數、能力包、帳本、**問腦的額度**（`budget`，使用者 11-20「留在 llm 件」） | `llm-kernel/`，掛成板子上的一列 `llm`（使用者 11-20「掛同一塊板子」）；agent 從 `AOS_LLM_KERNEL` 找它 | 可選，但**只對不會想的 proc 成立**：agent-fsm、agent-python 只會寄信問總機，沒裝就在第一次問腦時 `LlmKernelMissing` 停下（使用者 11-20「不能，維持現狀」） |
-| 權限件 | 門：准不准開 proc、同時幾個、上限夾、`users`→`sub:N` | 一台框架站（`procs-kernel/` 掛成一列；或 `daemon-kernel/`、`kernel_gate`），寄件人把 `AOS_KERNEL` 設成它的 `requests/` | 可選、預設不開；start-api 帶一份沒掛的 `perm/`。guard、sandbox 不算權限件（使用者 11-20「不算」），留在 agent 與工具那邊 |
+| llm 件 | llm kernel：排隊、格數、能力包、帳本、**問腦的額度**（`budget`，使用者 11-20「留在 llm 件」） | `llm-kernel/`，掛成板子上的一列 `llm`（使用者 11-20「掛同一塊板子」）；agent 從 `AOS_LLM_KERNEL` 找它 | 可選，但**只對不會想的 proc 成立**：agent-fsm、agent-python 只會寄信問 llm kernel，沒裝就在第一次問腦時 `LlmKernelMissing` 停下（使用者 11-20「不能，維持現狀」） |
+| 權限件 | 決定准不准開 proc、同時幾個、上限夾、`users`→`sub:N` | 一台框架站（`procs-kernel/` 掛成一列；或 `daemon-kernel/`、`kernel_gate`），寄件人把 `AOS_KERNEL` 設成它的 `requests/` | 可選、預設不開；start-api 帶一份沒掛的 `perm/`。guard、sandbox 不算權限件（使用者 11-20「不算」），留在 agent 與工具那邊 |
 | 一串可選件 | 使用者舉了「需要額外依賴的權限那塊，還有一堆比較麻煩的東西」 | 待定 | 有哪些件、怎麼裝：待定 |
 
 - **沒裝權限件時**，擋得住的只剩 Linux 的檔案權限，與 daemon 本體的 limits、`sub:N`（表上那列寫了才套）；daemon 自己來者不拒。
@@ -47,7 +47,7 @@
 | 回信 | 下游的回信直接回給寄件人，或先回到我這站再代回 | `reply_via_me` |
 | 排隊 | 沒格時先來先掛地排，或立刻拒 | `queue` |
 | hook | 在三個時機插自己的程式：判之前、判之後、代回回信之前 | `hooks` |
-| 留著等表態 | `after_verdict` hook 回 `{"verdict": "hold"}`：信留在站裡，等有人把 pass／refuse 寫進 `decisions/<信名>.json`，站再照平常的路轉寄或回拒信 | 寫在 hook 裡；agent 當門用工具 `kernel_gate`（[02](docs/02-kernel-modes.md#agent-當門請求先留著等它表態)） |
+| 留著等表態 | `after_verdict` hook 回 `{"verdict": "hold"}`：信留在站裡，等有人把 pass／refuse 寫進 `decisions/<信名>.json`，站再照平常的路轉寄或回拒信 | 寫在 hook 裡；agent 當 kernel 用工具 `kernel_gate`（[02](docs/02-kernel-modes.md#agent-當-kernel請求先留著等它表態)） |
 
 ## `kernel.json` 的鍵
 
@@ -105,5 +105,5 @@
 | 分檔 | 涵蓋的段 |
 |---|---|
 | [01-llm-kernel](docs/01-llm-kernel.md) | llm kernel 範本 llm-kernel（問腦＝寄信給它、收回信；自己一台 daemon；能力包、`aos-llm ls`） |
-| [02-kernel-modes](docs/02-kernel-modes.md) | kernel 是什麼（資源管理＋排程、從寄件人看）；框架站怎麼判、怎麼排隊、怎麼回信；三種擺法與手跑指令；鏈與 hook 的例子；agent 當門（留著等表態、`kernel_gate`）；`AOS_KERNEL`、誰能繞過 kernel（靠 Linux 權限）；已知限制 |
+| [02-kernel-modes](docs/02-kernel-modes.md) | kernel 是什麼（資源管理＋排程、從寄件人看）；框架站怎麼判、怎麼排隊、怎麼回信；三種擺法與手跑指令；鏈與 hook 的例子；agent 當 kernel（留著等表態、`kernel_gate`）；`AOS_KERNEL`、誰能繞過 kernel（靠 Linux 權限）；已知限制 |
 | [03-feat-proto](docs/03-feat-proto.md) | 新功能原型的假腦劇本：agent 給自己加工具、能力包與排程、agent 生 agent、資源份額 |

@@ -36,7 +36,7 @@
   "description": "通用 kernel 的站（框架站、不是腦的工具）：每次跑一輪，收 requests/ 的 procs_* 信，照 kernel.json 判掛、排隊或轉寄給下一站"
  },
  "kernel_llm": {
-  "description": "問腦總機：通用 kernel 的骨架加問腦專屬那一包，每跑一次做一輪。"
+  "description": "llm kernel：通用 kernel 的骨架加問腦專屬那一包，每跑一次做一輪。"
  },
  "llm_forward": {
   "description": "llm_forward（tools/aos 層的端點函數）：把問腦請求轉交包指定的下一層 kernel，成功用 child 串起兩本帳，失敗原樣轉交"

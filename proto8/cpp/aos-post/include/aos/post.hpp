@@ -1,6 +1,6 @@
 // aos/post.hpp：aos-post 的公開介面——投遞（NORMS N-16）：寄信、認領、讀信、處理完、撤回。
 // aos-post＝IPC 的語法糖、基底工具（thinking 11-03 aos-post）：跟 aos proc 的關聯不深，proc 自己拿它組出想要的效果。
-// aos-post 命令列用這組；aos-daemon 的信箱模式、aos-llm 的寄信與回信信箱直接連這個庫（問腦總機是 Python 的 py/tools/aos/kernel_llm，不連）。
+// aos-post 命令列用這組；aos-daemon 的信箱模式、aos-llm 的寄信與回信信箱直接連這個庫（llm kernel 是 Python 的 py/tools/aos/kernel_llm，不連）。
 //
 //   信箱＝一個資料夾，底下的格（各函式只驗自己用到的格，少了丟 MailboxMissing，不替人建——init、take、done keep 例外）：
 //     tmp/<信件名稱>/      寄信人正在寫、或正在撤回／丟掉的信；處理者永遠不看這格

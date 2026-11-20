@@ -38,7 +38,7 @@
 | 線未（kernel 框架站照規則分流） | `7694e05f7`（kernel tests 51 例 OK、鏈劇本 6/6）；[開工紀錄第十三節](../../../proto8/thinking/2026-11/13/kernel-framework-開工.md#十三照規則分流線未hook-替單封信指定下一站) | 11-13 12:12 |
 | 線巳（ops-agent 六點裡要做的五件：A1、A2、B1～B3） | `d23e1528e`、`dee207ef8`、`2c3f853c1`、`2e907fb4e`、`be818bcbd`；結果檔 [ops-fixes-施工結果](../../../proto8/thinking/2026-11/13/ops-fixes-施工結果.md) | 11-13 12:21 |
 | 線申（agent 當 kernel 的設計與暫存樹原型，真 haiku 跑通） | [eca-as-kernel](../../../proto8/thinking/2026-11/13/eca-as-kernel.md) 第一～九節與 [01 原型實跑](../../../proto8/thinking/2026-11/13/eca-as-kernel/01-原型實跑.md)（檔由線酉的 `6f83a431a` 帶進 git） | 11-13 13:07 前 |
-| 線酉（kernel 第二輪七題、留著等表態、工具包 `kernel_gate`、`route_ordered`） | `6f83a431a`、`306078925`、`0fe01b6b8`、`12942854f`、`9be257271`、`dd32bef00`、`1c973e47e`、`d8384df9b`、`adee4511d`、收尾 `fd9ae490a`；[開工紀錄第十四節](../../../proto8/thinking/2026-11/13/kernel-framework-開工.md#十四下午線酉kernel-第二輪七題的裁定留著等表態agent-當門) | 11-13 13:36 |
+| 線酉（kernel 第二輪七題、留著等表態、工具包 `kernel_gate`、`route_ordered`） | `6f83a431a`、`306078925`、`0fe01b6b8`、`12942854f`、`9be257271`、`dd32bef00`、`1c973e47e`、`d8384df9b`、`adee4511d`、收尾 `fd9ae490a`；[開工紀錄第十四節](../../../proto8/thinking/2026-11/13/kernel-framework-開工.md#十四下午線酉kernel-第二輪七題的裁定留著等表態agent-當-kernel) | 11-13 13:36 |
 | 線天（一段文字可以寫成字串或字串陣列：`index_view`、`index_check`、`index_gen` 與 knowledge 說明） | `2c8020148`；結果檔 [text-as-string-array](../../../proto8/thinking/2026-11/13/text-as-string-array.md) | 11-13 14:04 |
 | 線地（`wf/tools/json_text` 折行修正、拆成兩支） | `b374ac376`、`a5ab5d4dd` | 11-13 14:51 |
 | 線玄（workflows 模板併入 aos：調查＋意見稿、使用者裁定、第 1 塊進 `proto8/knowledge/wf/`） | `2784848aa`、`bf305f206`、`745975e82`、`159414053`；結果檔 [workflows-into-aos](../../../proto8/thinking/2026-11/13/workflows-into-aos.md) | 11-13 15:00 |

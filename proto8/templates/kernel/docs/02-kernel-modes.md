@@ -14,7 +14,7 @@
 
 | 擺法 | 像什麼 | 要掛 proc 寄到哪（`AOS_KERNEL`） | 範本 |
 |---|---|---|---|
-| 不擺站 | 來者不拒的門房：信進來就照辦 | daemon 的 ctl 信箱（沒設 `AOS_KERNEL` 就是這個） | 任何一台 daemon |
+| 不擺站 | daemon 自己就是 kernel，來者不拒：信進來就照辦 | daemon 的 ctl 信箱（沒設 `AOS_KERNEL` 就是這個） | 任何一台 daemon |
 | daemon 的身體 | daemon 自己的身體就是站：過了規則才轉寄進自己的 ctl 信箱 | `<daemon 的 stack>/requests` | [`kernel/daemon-kernel/`](../daemon-kernel) |
 | daemon 底下一個 loop proc | daemon 底下一個專門收請求的 proc（像 Linux 的 0 號），過了規則替你寄進 daemon 的 ctl 信箱 | `<那個 proc 的 stack>/requests` | [`kernel/procs-kernel/`](../procs-kernel) |
 | 鏈的中間站 | 上面兩種任一種，但放行的信不給自己那台 daemon，而是轉給另一個站 | `<這一站的 stack>/requests` | 沒有現成範本，見下面「鏈的例子」 |
@@ -41,8 +41,8 @@
 - 值＝一般 proc 送 syscall 請求的信箱資料夾（C-47「一律寄 `AOS_KERNEL`」）；現在收的是 `procs_*` 信，形狀跟 daemon 的 ctl 信箱一模一樣，所以 daemon 的 ctl 信箱本身就是最基礎的那個。
 - **沒設＝kernel 就是 daemon**：寄到 `$AOS_DAEMON` 的 ctl 信箱（不報錯）。`AOS_DAEMON` 也沒設時，再找 cwd 的 `./.stack`，也不是資料夾才 `DaemonMissing`（[N-63「`AOS_DAEMON` 沒設＝找 cwd 的 `./.stack`」](../../../docs/NORMS/10-基礎設施-定義與工作區/07-hub-型環境變數與父子交代/02-N-63-實例-AOS_DAEMON與沒有AOS_HUB.md)）。
 - **有設**：`aos-agent ctl` 的 `procs_*` 信改寄到 `$AOS_KERNEL`。站當 daemon 身體時設成 `<daemon 的 stack>/requests`，當 loop proc 時設成 `<那個 proc 的 stack>/requests`；可以由人設，或寫進 daemon 的 `.env` 帶給子項。
-- **`aos-daemon-ctl` 不看它、一律直寄 daemon**（使用者 11-07 選項框「aos-daemon-ctl 永遠直寄」，[os-impl 08](../../../thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md)）：它是「指名 daemon」的工具，直寄＝不經過站，有 Linux 權限就能用。使用者 11-13 裁定照現況：`aos-daemon-ctl` 是人直接敲板子的保底，「唯一的門」只約束 proc（[裁定落地-1113](../../../thinking/2026-11/13/裁定落地-1113.md)）。
-- 站自己要把信轉去哪，照三段找：`kernel.json` 的 `next`；沒寫看站自己環境的 `AOS_KERNEL`（指到自己的 `requests/` 就跳過）；再沒有才是 `$AOS_DAEMON` 的 ctl 信箱（[入口「下一站怎麼找」](../README.md)）。所以站自己繼承到指向自己的 `AOS_KERNEL` 也沒事（跳過、照舊轉給自己那台 daemon）。整棵樹 export `AOS_KERNEL` 時，沒寫 `next` 的站也會繼承到它：指到自己才跳過，指到別站就把信轉給那一站。不想要就在起那一站的殼 `unset AOS_KERNEL`，或明寫 `next`。（同使用者 11-13 對問腦總機的備註「可以用unset吧」。）問腦的 llm kernel 用另一個變數 `AOS_LLM_KERNEL`（[01](01-llm-kernel.md)）。
+- **`aos-daemon-ctl` 不看它、一律直寄 daemon**（使用者 11-07 選項框「aos-daemon-ctl 永遠直寄」，[os-impl 08](../../../thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md)）：它是「指名 daemon」的工具，直寄＝不經過站，有 Linux 權限就能用。使用者 11-13 裁定照現況：`aos-daemon-ctl` 是人直接敲板子的保底，「只能經過 kernel」只約束 proc（[裁定落地-1113](../../../thinking/2026-11/13/裁定落地-1113.md)）。
+- 站自己要把信轉去哪，照三段找：`kernel.json` 的 `next`；沒寫看站自己環境的 `AOS_KERNEL`（指到自己的 `requests/` 就跳過）；再沒有才是 `$AOS_DAEMON` 的 ctl 信箱（[入口「下一站怎麼找」](../README.md)）。所以站自己繼承到指向自己的 `AOS_KERNEL` 也沒事（跳過、照舊轉給自己那台 daemon）。整棵樹 export `AOS_KERNEL` 時，沒寫 `next` 的站也會繼承到它：指到自己才跳過，指到別站就把信轉給那一站。不想要就在起那一站的殼 `unset AOS_KERNEL`，或明寫 `next`。（同使用者 11-13 對 llm kernel 的備註「可以用unset吧」。）問腦的 llm kernel 用另一個變數 `AOS_LLM_KERNEL`（[01](01-llm-kernel.md)）。
 
 ### 誰能繞過 kernel：靠 Linux 權限
 
@@ -240,11 +240,11 @@ cat $T/me/box4/new/*/letter.json                                 # 兩封都是 
 
 收工：`aos-daemon-ctl -d $T/front/st shutdown`、`aos-daemon-ctl -d $T/back/st shutdown`、`aos-daemon-ctl -d $T/side/st shutdown`，最後 `rm -r $T`。
 
-### agent 當門：請求先留著，等它表態
+### agent 當 kernel：請求先留著，等它表態
 
 使用者 11-13：「讓agent成為kernel，我期望看到的景象是：一個普通的agent隨便弄些hook、json設定啥的，就可以收請求了。請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」。做法是把框架站掛在 agent 自己身上，站多一個判決「先留著」（`hold`）：信留在站裡，agent 表態之後由站照平常的路轉寄或回拒信。
 
-一隻普通的 eca 兩次工具呼叫就成為門（真 haiku 實跑過，通知、工具呼叫、回信原文在 [thinking 11-13 eca-as-kernel 02](../../../thinking/2026-11/13/eca-as-kernel/02-正式版實跑.md)）：
+一隻普通的 eca 兩次工具呼叫就成為 kernel（真 haiku 實跑過，通知、工具呼叫、回信原文在 [thinking 11-13 eca-as-kernel 02](../../../thinking/2026-11/13/eca-as-kernel/02-正式版實跑.md)）：
 
 ```text
 self_tools  {"op": "add", "path": "<AOS_HOME>/lib/tools/agent/kernel_gate"}
@@ -257,7 +257,7 @@ kernel_gate {"op": "on"}        印出收件信箱 <它的 stack>/hooks/kernel_g
 - 機器先照 `kernel.json` 的規則判，規則拒的直接拒；規則放行的才留給 agent（預設那支 hook 的 `condition` 是 `pass`）。只想看其中一部分，把 hook 換成自己的（例子在 [py/tools/aos/kernel README「先留著等表態」](../../../py/tools/aos/kernel/README.md)）。
 - agent 表態 pass 蓋不過規則與寄件人的期限：站會重判一次，期限過了就拒 `SlotMissing`。`aos-agent ctl add` 預設只等 30 秒，要讓腦來得及判，寄件人加 `--timeout-s`。
 - agent 自己在一輪裡（等模型回答）或睡著時，它身上的 hook 不跑，站也就不跑：信躺在信箱裡沒被認領，帶期限的寄件人到期自己撤信。
-- 請求信裡多帶什麼鍵都可以（使用者 11-13：「反正json，不認得的key，只要沒設限制，就能過」）：站原樣給 agent 看、原樣轉寄，不過濾；寫的內容會進 agent 的對話，風險由當門的那一站自己承擔（使用者 11-13：「提示注入這塊就是風險自己承擔」）。
+- 請求信裡多帶什麼鍵都可以（使用者 11-13：「反正json，不認得的key，只要沒設限制，就能過」）：站原樣給 agent 看、原樣轉寄，不過濾；寫的內容會進 agent 的對話，風險由當 kernel 的那一站自己承擔（使用者 11-13：「提示注入這塊就是風險自己承擔」）。
 - 不用這支工具也做得到（`self_hook` 掛一支跑框架站的腳本、手寫 `kernel.json` 與 hook、表態＝寫一個檔 `decisions/<信名>.json`）：步驟在知識庫 `aos/kernel.json#/write_your_own`。
 
 ### 改成自己的

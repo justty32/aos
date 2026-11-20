@@ -52,7 +52,7 @@
 
 | 包 | 檔 | 工具 |
 |---|---|---|
-| kernel 的門 | [kernel_gate.json](kernel_gate.json) | kernel_gate（讓 agent 自己當 kernel 的門：`on` 把框架站掛在自己身上、請求先留著並通知自己，`pass`／`refuse` 表態、轉寄由站做，`ls`、`off`；使用者 11-13「一個普通的agent隨便弄些hook、json設定啥的，就可以收請求了。請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」，[eca-as-kernel](../../thinking/2026-11/13/eca-as-kernel.md)）——要用的 agent 自己 `self_tools {"op": "add", "path": "<AOS_HOME>/lib/tools/agent/kernel_gate"}`，或定義的 `$override` 串加這一包 |
+| agent 當 kernel | [kernel_gate.json](kernel_gate.json) | kernel_gate（讓 agent 自己當 kernel：`on` 把框架站掛在自己身上、請求先留著並通知自己，`pass`／`refuse` 表態、轉寄由站做，`ls`、`off`；使用者 11-13「一個普通的agent隨便弄些hook、json設定啥的，就可以收請求了。請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」，[eca-as-kernel](../../thinking/2026-11/13/eca-as-kernel.md)）——要用的 agent 自己 `self_tools {"op": "add", "path": "<AOS_HOME>/lib/tools/agent/kernel_gate"}`，或定義的 `$override` 串加這一包 |
 | 工作區寫文字 | [ws-write.json](ws-write.json) | ws_write（只在自己的 `$AOS_WS` 裡建檔、追加或替換文字，每次上限 262144 UTF-8 bytes，自己的 `$AOS_STACK`、`$AOS_CD`、放各 agent stack 的那個夾（鄰居的 stack）和任何 `.stack` 夾底下，就算在工作區裡也拒絕；來源：wf/advices/fsm範本.md，ok-view 11-14） |
 
 ## 怎麼用、怎麼關

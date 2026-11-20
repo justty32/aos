@@ -1,4 +1,4 @@
-// aos/llm.hpp：aos-llm 的公開介面——寄給 LLM kernel 的信與回信的協定（寄信人的鎖、priority、回信格式、錯誤代號）；kernel 那頭是 Python 的問腦總機 py/tools/aos/kernel_llm，照同一套。
+// aos/llm.hpp：aos-llm 的公開介面——寄給 LLM kernel 的信與回信的協定（寄信人的鎖、priority、回信格式、錯誤代號）；kernel 那頭是 Python 的 llm kernel py/tools/aos/kernel_llm，照同一套。
 //
 //   信箱（N-16 資料夾式，Maildir）：一個資料夾，底下三格、一封信＝一個資料夾（名字＝信件名稱，下面寫 id）：
 //     tmp/<id>/、tmp/.<id>/   寄信的正在寫（aos-post 寫 tmp/<id>；aos-llm ask 寫 tmp/.<id>）；撤信、丟信先改名回這裡再刪

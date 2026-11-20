@@ -1,4 +1,4 @@
-# 問腦總機：通用 kernel 的骨架加問腦專屬那一包，每跑一次做一輪。
+# llm kernel：通用 kernel 的骨架加問腦專屬那一包，每跑一次做一輪。
 
 `_entry` 把 `llm_rules` 交給 `round.run(pack, cfg_path, name="kernel_llm")`（骨架在 [`../kernel/`](../kernel/README.md)）。一輪做的事：收上一輪掛出去、已經跑完的問腦結果寄回信；再看 `$AOS_STACK/requests/new/` 裡排隊的請求信，照急不急排好，在格數與額度內請 daemon 把每封掛成一個問腦 proc（`llm_<信名>`），然後結束，不等它跑完。由那台 llm daemon 當身體一次次叫。
 
@@ -44,7 +44,7 @@
 |---|---|
 | `before_verdict` | 每封新信一次，在驗信之前。`body` 就是問腦信的 body（`endpoint`、`request`、`priority`）；改過的 body 之後驗信、額度、掛載都照它。退 10 預設回 `{"error": {"code": "HookRejected", ...}}`（晚點再試的寫法見下方） |
 | `after_verdict` | `verdict` 是 `pass`／`refuse`／`queue`。把沒格的改成 `pass` 就照掛（會超過格數）；把驗不過的信改成 `pass` 沒有包可跑，照原本的錯回信 |
-| `before_reply` | 只有掛出去跑過、有結果的信（成功或失敗）在寄回信前跑一次；不用開 `reply_via_me`。`body` 是要寄回去的那份（已拿掉 `child`）；`reply_sender` 是 null。總機自己拒掉的信（`LetterBad`、`BudgetMissing`…）不跑。退 10 改回 `{"error": {"code": "HookRejected", "msg": "reply blocked by hook <名>: <stdout>"}}` |
+| `before_reply` | 只有掛出去跑過、有結果的信（成功或失敗）在寄回信前跑一次；不用開 `reply_via_me`。`body` 是要寄回去的那份（已拿掉 `child`）；`reply_sender` 是 null。llm kernel 自己拒掉的信（`LetterBad`、`BudgetMissing`…）不跑。退 10 改回 `{"error": {"code": "HookRejected", "msg": "reply blocked by hook <名>: <stdout>"}}` |
 
 `before_verdict`／`after_verdict` 退 10 且 stdout 印 `{"error":{"code":"BudgetMissing","msg":"dept quota used up","resets_at":"2026-11-14T16:00:00+08:00"}}`，就是叫寄信的人晚點再試；`msg` 要是非空字串，`resets_at` 只收字串或 null，回信另加 `scope: "hook"`、`hook: <名>`，其餘鍵一律不帶。`resets_at` 給 ISO 8601 帶時區，agent-fsm 就等到那時（加 5 秒、至少 30 秒）；不給或給 null，照 30 秒起加倍、30 分鐘封頂的間隔重試；要對方停下，照舊印純文字（`HookRejected`）。`before_reply` 不變；`after_verdict` 退 0 改判的 error 也照舊原樣帶欄位，不套用退 10 的篩選。
 
@@ -67,9 +67,9 @@ exit 10
 
 自己的錯印 `kernel_llm: error: CODE reason`、退 1：`ArgumentsBad`、`FlagUnknown`、`StackMissing`、`CfgMissing`、`CfgBad`、`DirectiveBad`、`DaemonMissing`、`MailboxMissing`、`CommandMissing`、`PostFailed`、`LockFailed`、`QueueBad`、`UsedBad`、`CounterBad`、`ClockBad`、`StateBad`、`WriteFailed`、`HookFailed`。
 
-回信裡的代號（一封信的錯不是總機的錯，一輪照樣退 0）：`LetterBad`、`RequestBad`、`EndpointMissing`、`EndpointUnknown`、`DirectiveBad`、`CfgBad`、`DeadlineBad`、`BudgetMissing`、`LaunchFailed`、`EndpointFailed`、`ReplyBad`、`HookRejected`，以及端點函數自己回的錯誤物件。
+回信裡的代號（一封信的錯不是 llm kernel 的錯，一輪照樣退 0）：`LetterBad`、`RequestBad`、`EndpointMissing`、`EndpointUnknown`、`DirectiveBad`、`CfgBad`、`DeadlineBad`、`BudgetMissing`、`LaunchFailed`、`EndpointFailed`、`ReplyBad`、`HookRejected`，以及端點函數自己回的錯誤物件。
 
-收成品時，總機自己產生的掛載失敗、重掛兩次仍沒結果、停太久、逾時、非 0 退出的普通文字與看不懂的成功輸出，錯誤物件另帶 `retry: true`；`WriteFailed` 與總機拒絕請求的錯誤不帶。端點函數非 0 退出時送來的合格單行錯誤物件原樣轉交，`retry`、`status` 等欄位與型別都不改。
+收成品時，llm kernel 自己產生的掛載失敗、重掛兩次仍沒結果、停太久、逾時、非 0 退出的普通文字與看不懂的成功輸出，錯誤物件另帶 `retry: true`；`WriteFailed` 與 llm kernel 拒絕請求的錯誤不帶。端點函數非 0 退出時送來的合格單行錯誤物件原樣轉交，`retry`、`status` 等欄位與型別都不改。
 
 ## 幾個細節
 

@@ -47,13 +47,13 @@ aos-daemon-ctl -d .stack stop ann && aos-daemon-ctl -d .stack start ann   # 3. a
 |---|---|---|---|
 | `env.sh` | 薄的：`AOS_HOME` 沒設報一行錯；有就 `source "$AOS_HOME/env.sh"`（清掉別棵樹的 `AOS_*`、把 `$AOS_HOME/bin` 放上 `PATH`）；最後可以加這棵樹自己的 `export` | — | — |
 | `root/` | 根 daemon 的定義：最小核心（板子、時鐘、清道夫） | [daemon-root](../daemon-root/README.md) | `.env` 的 `AOS_LLM_KERNEL` 指 `${AOS_STACK}/procs/llm`（掛在根上的那一列） |
-| `llm/` | llm kernel（問腦的總機）的定義，`add` 之後是根上的一列 `llm` | [kernel/llm-kernel](../kernel/docs/01-llm-kernel.md) | 沒有 |
+| `llm/` | llm kernel 的定義，`add` 之後是根上的一列 `llm` | [kernel/llm-kernel](../kernel/docs/01-llm-kernel.md) | 沒有 |
 | `perm/` | 權限站（選裝，出廠沒掛） | [kernel/procs-kernel](../kernel/README.md) | `kernel.json` 是 `{}` |
 | `agents/ann/` | 一隻 agent | [agent-fsm](../docs/02-agent-fsm.md) | `llm.json` 是 `{"model": "fake"}`（假腦，先試流程）；要真模型就換成 `llm/kernel.json` 的 `endpoints` 裡的名字。多一個 `.env`：只有一行註解掉的 `AOS_KERNEL`（開權限件用） |
 
 跑起來後樹裡多出 `.stack/`：根的 stack；llm kernel 的在 `.stack/procs/llm/`，agent 的在 `.stack/procs/ann/`，開了權限站的話站的在 `.stack/procs/perm/`。
 
-不想掛在根上、要 llm kernel 自己一台（關板子時不跟著關、好幾塊板子共用一台總機）也可以：`aos-exec --stack <它的 stack> llm` 另起，`root/.env` 的 `AOS_LLM_KERNEL` 改指那個 stack（[kernel 01](../kernel/docs/01-llm-kernel.md)）。主線是掛在根上。
+不想掛在根上、要 llm kernel 自己一台（關板子時不跟著關、好幾塊板子共用一台 llm daemon）也可以：`aos-exec --stack <它的 stack> llm` 另起，`root/.env` 的 `AOS_LLM_KERNEL` 改指那個 stack（[kernel 01](../kernel/docs/01-llm-kernel.md)）。主線是掛在根上。
 
 ## 維護
 

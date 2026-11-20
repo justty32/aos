@@ -202,7 +202,7 @@
   "aos-llm": {
    "include": {
     "aos": {
-     "llm.hpp": "aos-llm 的公開介面——寄給 LLM kernel 的信與回信的協定（寄信人的鎖、priority、回信格式、錯誤代號）；kernel 那頭是 Python 的問腦總機 py/tools/aos/kernel_llm，照同一套。"
+     "llm.hpp": "aos-llm 的公開介面——寄給 LLM kernel 的信與回信的協定（寄信人的鎖、priority、回信格式、錯誤代號）；kernel 那頭是 Python 的 llm kernel py/tools/aos/kernel_llm，照同一套。"
     }
    },
    "src": {

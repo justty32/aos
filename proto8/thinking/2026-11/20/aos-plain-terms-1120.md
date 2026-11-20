@@ -21,6 +21,45 @@
 
 交 [01-盤點](aos-plain-terms-1120/01-盤點.md)＋逐檔分布 [01-盤點-分布.csv](aos-plain-terms-1120/01-盤點-分布.csv)。坑：`git ls-files` 預設把中文檔名加引號轉義，第一輪數字漏了所有中文檔名的檔，改用 `git -c core.quotepath=off ls-files` 重數。
 
+## 第 3 步：改明確的
+
+只改三種，其餘列進 [02-要他定的詞](aos-plain-terms-1120/02-要他定的詞.md)。做法：`~/.aos/scratch/aos-plain-terms-1120/apply.py`（逐條替換、受保護字串不動），改完逐處看 word diff，讀不通的手改。程式識別字、檔名、錨點不動（只有兩個標題換字，連結跟著改）。檔的執行權限沒變（`git diff --summary` 沒有 mode 行）。
+
+1. **把手 → 遙控器**（翻 handle）：`py/aos/agentlib/agent_hooks.py`、`hooks.py`（hook 那個寫「hook 遙控器」）、`py/aos/py/__init__.py`、`py/aos/py/agent/__init__.py`、`py/aos/py/daemon_ctl.py`、`py/aos/gdb/__init__.py`、`look.py`、`py/aos/apps/gdb/README.md`、`py/aos/apps/hook/README.md`、`py/README.md`、教學 `06-接著開發-3`、測試檔頭與註解 `test_aos_py.py`、`test_aos_py_live.py`、`apps/gdb/test_gdb_live.py`、`test_gdb_trigger.py`。「把手上的事」（eca 範本 README，「把 手上的事」）是普通用法，不動。
+2. **指 kernel 的「門」→ kernel**：`templates/kernel/docs/02-kernel-modes.md`（「門房」那格改「daemon 自己就是 kernel，來者不拒」；標題「agent 當門」→「agent 當 kernel」）、`templates/kernel/README.md`（權限件「門：」→「決定」；連到上面標題的錨點跟著改）、`py/packs/README.md`、`py/aos/flags.py` 註解、`wf/workflows/dispatch/CLAIMS.md`（同一個錨點）、CONCEPTS、NORMS 見下表。
+3. **總機 → llm kernel**（指跑它的那台 daemon 時寫 llm daemon）：cpp 各 README 與 docs、`llm.hpp`、`post.hpp` 檔頭、CONCEPTS、NORMS、教學 01～04、06-1、07、08、`py/docs/02`、`py/aos/apps/agent/docs/04-搬家`、`py/aos/apps/sandbox/README.md`、`py/tools/aos/kernel_llm/README.md`、templates（daemon-root、kernel、start-api、start-eca、tests）、`wf/knowledge/code-map.json`、`wf/workflows/common/conventions/01-程式碼慣例.md`。教學 07 標題「1. 總機那邊」→「1. llm kernel 那邊」（查過沒有連結指它）。
+
+CONCEPTS、NORMS 逐條只換稱呼、不動意思：
+
+| 檔 | 條 | 改了哪幾個字 |
+|---|---|---|
+| CONCEPTS/01-設計理念/01-C-01～C-48 | C-48 一帶 | 問腦總機→llm kernel |
+| CONCEPTS/01-設計理念/02-C-51 | C-51 | 問腦總機→llm kernel |
+| CONCEPTS/01-設計理念/03-續-C-52-例外 | C-52 表 ③ | 問腦總機→llm kernel |
+| CONCEPTS/01-設計理念/05-布局成長與檔案權限 | val 那句 | 問腦總機→llm kernel |
+| CONCEPTS/04-kernel | 檔頭實作 | 「LLM kernel 是問腦總機 [路徑]」→「LLM kernel 在 [路徑]」 |
+| CONCEPTS/04-kernel/02-續-C-47 | C-47 ② | 問腦總機→llm kernel ×2、「當門」→「當 kernel」×2、「隊 kernel → 總機」→「→ llm kernel」；使用者原話「問腦總機要收進框架」與錨點不動 |
+| NORMS/00-規範-3 | kernel 位置 | 問腦總機→llm kernel |
+| NORMS/05/N-09 state與計數器、state_flux與讀不了、N-15、N-16、N-16/02 | 各 1 處 | 問腦總機→llm kernel（N-16 的連結文字＝檔名，不動） |
+| NORMS/08-待定/01 | 待定之一 | 「是問腦總機」→「在」、問腦總機→llm kernel |
+| NORMS/09-kernel | 檔頭、N-42 | 問腦總機→llm kernel ×3（原話與錨點不動） |
+| NORMS/09-kernel/01-N-42-1、02-N-42-1 | 各 1 處 | 問腦總機→llm kernel |
+| NORMS/09-kernel/03-N-42-2 | aos-daemon-ctl 那句 | 「唯一的門」→「只能經過 kernel」 |
+| NORMS/10/07/01-N-63、03-AOS_ 變數 | 4 處 | 問腦總機→llm kernel |
+| NORMS/主題 | LLM kernel 列 | 刪「問腦總機」四字（後面就是路徑） |
+| NORMS/命名-續/02 | 1 處 | 問腦總機→llm kernel |
+
+沒改、各有理由：
+- `wf/progress.json`（把手 5 處）：活狀態，只能用 `--op progress_upsert` 整條換，那幾條是別線的。
+- `wf/HANDOFF.md`（把手 1 處）：頂層的交接。
+- `wf/tools/index_gen_desc.json`：生成器從檔頭抄的，源頭改了排隊重生。
+- `wf/workflows/common/` 三份偏好檔裡的「把手」「操控器」「物件」：都在記原話的引號裡。
+- 打比方的兩句「像一台專門打電話的總機」（教學 03 第 7 行、`templates/kernel/docs/01-llm-kernel.md` 第 8 行）：解釋用，列在 02 第 18 題。
+- 被別線 claim 跳過：`py/aos/agent_spec_agent.py`（把手 1 處，aos-pylib-k4-1120）。
+
 替使用者做的選擇：
+- 「總機」指那台 daemon 的地方（「領班、總機」「共用一台總機」「總機 daemon」）寫 llm daemon，其餘寫 llm kernel；大小寫一律小寫 llm（start-api 範本的寫法）。
+- 「唯一的門」是頂層 11-12 提的說法、不是使用者原話（他只回「kb-ctl:A*」），所以照新規矩改成「只能經過 kernel」。
+- 「門房」那格改寫成「daemon 自己就是 kernel，來者不拒」，意思沒變。
 - 同一節原有「術語第一次出現用日常比喻帶過」（09-01 起）。新段落寫明兩者的分界：第一次解釋時可以打比方，比喻不拿來當東西的名字。這是我對兩條原話的調和，他若不同意改那句即可。
 - 程式裡的中文註解算「文件」，照新說法改（任務書這樣定）。

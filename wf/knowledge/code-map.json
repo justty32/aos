@@ -17,7 +17,7 @@
   {
    "domain": "C／C++ 基礎層與標準庫",
    "files": "proto8/cpp/*",
-   "role": "一份 `proto8/cpp/Makefile` 編全家（11-17 換掉 CMake／vcpkg；nlohmann json 是收進 repo 的單檔 `cpp/third_party/nlohmann/json.hpp`），由 `proto8/install.py` 呼叫、產物裝進 `bin/ lib/ include/`。aos-inst 是 C 函式庫（另出 .so），其餘 C++；最底是 aos-util（全家共用）與 aos-inst（C，什麼都不連）；aos-directive 連 util；aos-exec 連 directive、inst；往上 aos-loop → aos-fsm／aos-daemon；aos-lock → aos-post（信箱），aos-daemon 也連 post；aos-llm（寄信收信的命令列，自帶 LLM 信件協定）連 aos-post、aos-lock；aos-json 連 aos-directive。問腦總機不在這裡，是 Python 工具 `proto8/py/tools/aos/kernel_llm`。誰連誰看 `deps.cpp`。",
+   "role": "一份 `proto8/cpp/Makefile` 編全家（11-17 換掉 CMake／vcpkg；nlohmann json 是收進 repo 的單檔 `cpp/third_party/nlohmann/json.hpp`），由 `proto8/install.py` 呼叫、產物裝進 `bin/ lib/ include/`。aos-inst 是 C 函式庫（另出 .so），其餘 C++；最底是 aos-util（全家共用）與 aos-inst（C，什麼都不連）；aos-directive 連 util；aos-exec 連 directive、inst；往上 aos-loop → aos-fsm／aos-daemon；aos-lock → aos-post（信箱），aos-daemon 也連 post；aos-llm（寄信收信的命令列，自帶 LLM 信件協定）連 aos-post、aos-lock；aos-json 連 aos-directive。llm kernel 不在這裡，是 Python 工具 `proto8/py/tools/aos/kernel_llm`。誰連誰看 `deps.cpp`。",
    "tests": "proto8/cpp/<專案>/tests/",
    "per_file": "wf/knowledge/code-map/proto8/cpp.json"
   },
@@ -80,7 +80,7 @@
   {"want": "Python 共用模組怎麼找到、repo 外的複本怎麼 import", "where": "一律 `from aos import …`；bin/ 的入口把同家的 lib/ 放上 sys.path，工具往上找祖先夾裡有 aos/__init__.py 的那層（找不到印 ModuleMissing aos …）；家外的程式只經 $AOS_HOME/lib、沒設報 HomeMissing；說明在 proto8/py/docs/04-共用模組.md"},
   {"want": "claude／codex 對話、tools／llm 宣告檔位置", "where": "proto8/py/aos/agentlib/cli_session.py、proto8/py/aos/declared_files.py（指令與範本共用）"},
   {"want": "某支 bin/ 指令的原始碼", "where": "wf/knowledge/code-map/deps/bin.json（Python 的本體在 proto8/py/aos/apps/<名>/，說明在 proto8/py/docs/05-commands.md；C++ 的在 proto8/cpp/aos-<名>/src/main.cpp）"},
-  {"want": "agent 範本、問腦的 kernel、通用 kernel 的站（框架站）", "where": "proto8/templates/（kernel 範本在 proto8/templates/kernel/；框架站的程式本身在 proto8/py/tools/aos/kernel，問腦總機在 proto8/py/tools/aos/kernel_llm）"},
+  {"want": "agent 範本、問腦的 kernel、通用 kernel 的站（框架站）", "where": "proto8/templates/（kernel 範本在 proto8/templates/kernel/；框架站的程式本身在 proto8/py/tools/aos/kernel，llm kernel 在 proto8/py/tools/aos/kernel_llm）"},
   {"want": "誰連誰（C++）", "where": "wf/knowledge/code-map/deps/cpp.json（例 `tabledb.py wf/knowledge/code-map/deps/cpp.json find project=aos-daemon`）"},
   {"want": "誰 import 某個 aos 模組（Python）", "where": "wf/knowledge/code-map/deps/py.json 的 used_by（例 `tabledb.py wf/knowledge/code-map/deps/py.json find module=aos.flags`）"},
   {"want": "一個資料夾程式怎麼被找到、怎麼起", "where": "proto8/cpp/aos-exec（條文在 proto8 NORMS N-57～N-62）"},

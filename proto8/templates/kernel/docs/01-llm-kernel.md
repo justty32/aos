@@ -2,9 +2,9 @@
 
 ## llm kernel 範本 llm-kernel
 
-使用者 11-04 晚：「llm呼叫這塊，我希望是把請求丟到llm kernel(一個loop)，處理好後收回信」「也可以是一個daemon，實際endpoint呼叫就是aos exec」「包起來的」「我是希望走2」「各種llm設定也可以包裝，這樣寄信的時候只要寫簡單的代號就可以」。11-05：「問腦，他本身也可以包裝成一個aos函數，掛成proc去跑。我也建議這樣」「cd ~/llm_kernel && aos-exec --stack . def，把llm的daemon+kernel叫起來」。11-05 午：「把endpoint打包成smart-high, stupid-fast, ...這類，並且附上各種屬性(各種temperature也固定)」。設計：[thinking 11-04 think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)、[11-05 kernel-daemon 03、07](../../../thinking/2026-11/05/kernel-daemon/07-llm-daemon佈局.md)、[feat-proto 02 能力包](../../../thinking/2026-11/05/feat-proto/02-endpoint-packs.md)。
+使用者 11-04 晚：「llm呼叫這塊，我希望是把請求丟到 llm kernel(一個loop)，處理好後收回信」「也可以是一個daemon，實際endpoint呼叫就是aos exec」「包起來的」「我是希望走2」「各種llm設定也可以包裝，這樣寄信的時候只要寫簡單的代號就可以」。11-05：「問腦，他本身也可以包裝成一個aos函數，掛成proc去跑。我也建議這樣」「cd ~/llm_kernel && aos-exec --stack . def，把llm的daemon+kernel叫起來」。11-05 午：「把endpoint打包成smart-high, stupid-fast, ...這類，並且附上各種屬性(各種temperature也固定)」。設計：[thinking 11-04 think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)、[11-05 kernel-daemon 03、07](../../../thinking/2026-11/05/kernel-daemon/07-llm-daemon佈局.md)、[feat-proto 02 能力包](../../../thinking/2026-11/05/feat-proto/02-endpoint-packs.md)。
 
-**問腦＝寄一封請求信進 `$AOS_LLM_KERNEL/requests/`、之後收回信**。這個資料夾是一台 **llm daemon** 的定義：daemon 的身體就是問腦總機 [`py/tools/aos/kernel_llm`](../../../py/tools/aos/kernel_llm/README.md)（通用 kernel 框架＋問腦那一包，`aos-exec` 跑），每 300 ms 拍一次；每封請求，kernel 請這台 daemon 掛成一個問腦 proc（`llm_<信件名稱>`），跑完收結果寄回信。呼叫端只看到信箱＋[`aos-llm`](../../../cpp/aos-llm/README.md)（`send`／`recv`／`ask`／`regret`／`ls`），裡面怎麼跑不用知道。
+**問腦＝寄一封請求信進 `$AOS_LLM_KERNEL/requests/`、之後收回信**。這個資料夾是一台 **llm daemon** 的定義：daemon 的身體就是 llm kernel [`py/tools/aos/kernel_llm`](../../../py/tools/aos/kernel_llm/README.md)（通用 kernel 框架＋問腦那一包，`aos-exec` 跑），每 300 ms 拍一次；每封請求，kernel 請這台 daemon 掛成一個問腦 proc（`llm_<信件名稱>`），跑完收結果寄回信。呼叫端只看到信箱＋[`aos-llm`](../../../cpp/aos-llm/README.md)（`send`／`recv`／`ask`／`regret`／`ls`），裡面怎麼跑不用知道。
 像一台專門打電話的總機：各部門（agent daemon）把要問的事丟進總機的收件匣，總機自己排隊、撥號、把答案送回各部門；整棟樓的電話費（`slots`、`budget`）都記在總機這裡。
 
 ```
@@ -32,7 +32,7 @@ llm-kernel/
 
 **主線：掛成板子上的一列**（使用者 11-20「掛同一塊板子」；教學 [03](../../../docs/tutorial/03-灌kernel.md)、起手範本 [start-api](../../start-api/README.md) 都這樣擺）：`cp -r $AOS_HOME/templates/kernel/llm-kernel llm`，再 `aos-daemon-ctl -d <根的 stack> add --auto-restart llm`，根的 `.env` 寫 `AOS_LLM_KERNEL=${AOS_STACK}/procs/llm`。板子管它的生死：掉了自己再起，關板子一句全關、再開一起醒；金鑰在起根的那個視窗 export（它從板子繼承環境）。
 
-**另一種擺法：自己一台、自己起停**（關板子時不跟著關、好幾塊板子共用一台總機；PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的），或 `source "$AOS_HOME/env.sh"`）：
+**另一種擺法：自己一台、自己起停**（關板子時不跟著關、好幾塊板子共用一台 llm daemon；PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的），或 `source "$AOS_HOME/env.sh"`）：
 
 ```sh
 mkdir ~/llm_kernel && cd ~/llm_kernel
@@ -62,7 +62,7 @@ aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 
 - **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台；非空路徑的 `new/` 不是資料夾時，每輪 warning 一行，仍用原路徑、不改退路、不因此報錯，後續掛 proc 失敗照舊（[已知限制](../../../py/tools/aos/kernel_llm/docs/04-已知限制.md)）。
 - agent-fsm 問腦一定經這裡（沒設 `AOS_LLM_KERNEL`＝`LlmKernelMissing`），要先起這個。初始 kernel 裡「llm 件可選」只對不會想的 proc 成立；沒裝 llm 件的板子上，agent 不能想（使用者 11-20「不能，維持現狀」）。
 
-範本出廠帶 stdout log、**不帶鐘列**（鐘只放在根 daemon，總機掛在樹裡就聽根的鐘；單獨起又沒設 `AOS_CLOCK`＝退牆鐘）；正式使用可在自己的副本拿掉 `_entry` 的 `--enable-logs`。真要總機自己的鐘，照 [aos-daemon docs/02](../../../cpp/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列) 加鐘列＋`.env`（掛在樹裡時還要掛它的那列加 `--dotenv-override`）。
+範本出廠帶 stdout log、**不帶鐘列**（鐘只放在根 daemon，llm kernel 掛在樹裡就聽根的鐘；單獨起又沒設 `AOS_CLOCK`＝退牆鐘）；正式使用可在自己的副本拿掉 `_entry` 的 `--enable-logs`。真要 llm kernel 自己的鐘，照 [aos-daemon docs/02](../../../cpp/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列) 加鐘列＋`.env`（掛在樹裡時還要掛它的那列加 `--dotenv-override`）。
 
 ## 隊 kernel 範本 llm-team：一封信走兩層
 
