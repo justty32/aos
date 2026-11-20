@@ -27,3 +27,4 @@
 | [aos-hook-drift-1120](aos-hook-drift-1120.md) | hook 待裁第 8 題：17 項文件漂移補齊、一致性測試守住；eca 中途來的 /compact 信過兩次 before_queue 實跑屬實，沒修 |
 | [aos-kinit-tpl-1120](aos-kinit-tpl-1120.md) | 照初始 kernel 八題的答案改文件與 start-api：最小核心＋llm 件＋權限件，另有一串可選件待定；llm kernel 改掛同板（llm/）、加選裝不開的權限站 perm/；重建步驟單跟著改；假腦實跑 |
 | [aos-hook-k2-1120](aos-hook-k2-1120.md) | hook 介面施工第 2 刀的庫那一半（2a）：把手 hook_point.open 與 agent_hooks.open、aos-hook --agent；呼叫端沒換，install 後再換（2b） |
+| [aos-compact-twice-1120](aos-compact-twice-1120.md) | 連續兩封 /compact 現況實跑：fsm 第二封已被 4 則門檻擋（但報 LetterDropped）、eca 照做兩次；只查不改 |
