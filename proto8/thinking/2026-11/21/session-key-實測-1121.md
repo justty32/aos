@@ -106,3 +106,14 @@
 `astra` 的 `context` 272000 是代理 `models/chatgpt.yaml` 裡 chatgpt 那組共用的 `max_input_tokens`；沒加 `fixed`（`luna`、`terra` 也沒有）；`summary` 那句價格照 [team-model/grades](../../../../wf/workflows/team-model/grades.md)「astra 實際價格約 sol 的 3 倍」。`~/aos-home/llm/kernel.json` 是活樹，沒碰。
 
 真模型這次共叫 26 次（luna 8、terra 8、astra 6、sol 長句 4）。
+
+## 範本與 ~/aos-home 已改（11-21）
+
+線 top-1121-skey3。
+
+- 改了三個檔：`proto8/templates/kernel/llm-kernel/kernel.json`、`proto8/templates/start-api/llm/kernel.json`（兩份逐字相同）、`~/aos-home/llm/kernel.json`。`luna`、`terra`、`sol` 三包各加 `"session_key": "litellm_session_id"`，`sol` 後面新增 `astra` 一包。`~/aos-home` 那份有備份 `kernel.json.bak-1121`。
+- 使用者原話：
+  - 「範本可以改，aos-home也改，改之前跟我說你要怎麼改，會怎麽影響我，我該做啥。luna/terra/astra也都順便去量，astra好像還沒被納入，那就也派線去做。」
+  - 「可以，就這樣。不過litellm_session_id...」
+  - 「沒事，這個OK。只是說以後公開發佈的時候，我怕別人誤以爲aos需要依賴litellm」
+- 最後這點只記錄，沒有動手；`session_key` 的值是欄位名（LiteLLM 認的那個），換別家代理就填那家的欄位名。
