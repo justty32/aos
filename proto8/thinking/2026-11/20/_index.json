@@ -48,6 +48,12 @@
  "aos-kask-1120.md": {
   "description": "線 aos-kask-1120 紀錄：「寄信問 kernel」基礎協議的調查與發想——只寫 thinking，原型在暫存夾"
  },
+ "aos-kask-proto-1120": {
+  "description": "「寄信問 kernel」放 body 的原型（線 aos-kask-proto-1120）：骨架每輪開頭先回特殊信箱的問句信，兩種 kernel 都一問一答、約 0.4 秒；灌 30 封不拖慢後面的請求；信箱怎麼有六種、十題等你"
+ },
+ "aos-kask-proto-1120.md": {
+  "description": "線 aos-kask-proto-1120 紀錄：「寄信問 kernel」放 body 的原型——只交 thinking，原型在暫存夾的乾淨複本"
+ },
  "aos-kinit-tpl-1120.md": {
   "description": "線 aos-kinit-tpl-1120：把使用者對「初始 kernel」八題的答案落到文件與起手範本（start-api 改成 llm kernel 掛同板、加選裝不開的權限站）"
  },

@@ -29,3 +29,4 @@
 | [aos-hook-k2-1120](aos-hook-k2-1120.md) | hook 介面施工第 2 刀的庫那一半（2a）：把手 hook_point.open 與 agent_hooks.open、aos-hook --agent；呼叫端沒換，install 後再換（2b） |
 | [aos-compact-twice-1120](aos-compact-twice-1120.md) | 連續兩封 /compact 現況實跑：fsm 第二封已被 4 則門檻擋（但報 LetterDropped）、eca 照做兩次；只查不改 |
 | [編譯程式庫第 4 刀：defs.extern 編成連結（aos-pylib-k4-1120）](aos-pylib-k4-1120.md) | defs.extern(目標) 那一欄編成 symlink、照字面存；fsm 只能同一夾（先實測）；defs.load 底的夾外連結照樣交出；agent_def check 報斷鏈；別濫用寫進 docstring／README／教學；沒用 extern 的產物逐 byte 不變；假腦實掛改共用檔不重編就生效；第二筆 loop= 宣告 |
+| [寄信問 kernel 放 body 的原型（aos-kask-proto-1120）](aos-kask-proto-1120/README.md) | 原型：骨架 round.py 每輪開頭先回特殊信箱 <stack>/kask/ 的問句信（不排隊、不過 hook、不記帳），llm kernel 與權限站都一問一答、中位數約 0.4 秒；灌 30 封不拖慢後面的請求（上一條線掛 hook 慢約 5 倍）；特殊信箱不用動 daemon 就能有，寄件人怎麼找到它沒地方寫，六種做法；寄錯到 requests/ 站仍回假成功；十題等使用者 |
