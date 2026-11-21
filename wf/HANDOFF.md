@@ -12,35 +12,53 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-21 15:10（家機，使用者在場、要 compact）——hook 整套換新已交並裝進 `~/aos-home`；兩條線在跑（gdb、fsm-guard）；今天的 commit 都沒 push
+## 2026-11-21 15:20（家機，使用者 15:00 出門、約 18:00 回來，晚上要自己玩 aos）——活樹已裝到 `2060ee9d5`；四條線在跑（知識庫、md 映照、教學、前端）；今天的 commit 都沒 push
 
-**使用者今天開場的指示（逐字）**：「事情盡量交給agent做，你就負責跟我交流。普通工作交給opus，簡單工作與雜活交給sonnet。agent做事前也要讀過wf/規矩，簡單工作與雜活除外。agent可以再派agent，模型隨意。用繁體中文跟我說話。」早上的 /goal 他下午已 `/goal clear`，**現在沒有 goal**。他說想玩 aos：頂層已告訴他樹可以起、起法與可試的東西，他答「那個我晚上再說。你這邊我想先compact」。
+**使用者今天開場的指示（逐字）**：「事情盡量交給agent做，你就負責跟我交流。普通工作交給opus，簡單工作與雜活交給sonnet。agent做事前也要讀過wf/規矩，簡單工作與雜活除外。agent可以再派agent，模型隨意。用繁體中文跟我說話。」**現在沒有 goal**（他下午 `/goal clear`）。15:00 他說：「好了，我要出門走走。現在時間下午三點，大概六點回來。」「幫我把該準備的準備好」「你說OK，我就出門」——頂層答 OK。**他回來前要備好：教學走到第一個 eca_main、知識庫更新、知識庫中文映照版 md、前端能用。**
 
 **授權（11-21 當場；只限這個 session）**：
-- push：開場問了沒答 → **不推**。本地領先 origin 約 80 筆（`git log origin/main..HEAD`）。
-- `~/aos-home`：「可以開始改，改好後去幫我把~/aos-home更新一下，把更新過程寫成html放到桌面」「好，install.py你跑就行」。已更新三次（`e8d87d7cd`、`dff53b667`、`62129fe49`；現在裝的是 `97d4abc16`）。備份 `.bak-1121`／`b`／`c`／`d` 都留著。**再裝之前先跟他說一聲。**
-- 刪檔：同意過的四批都做完了，不延伸（`hook_fire`；範本 ann 的 9 個檔；`~/aos-home/agents/ann` 同名 9 個；`py/aos/hook_handle.py`＋`hook_flags.py`，他「2.刪掉。」，`ae6838e60`）。
-- **他會擋下看不懂的長指令**：下午頂層代 compact4 線交件，把交件、查結果、grep 串成一個指令，被他擋兩次；解釋後他「噢噢，沒事了，跑吧」。→ 指令一次做一件事、說明寫清楚。子 agent 的 `commit-request submit` 也可能被權限擋（compact4 那次），任務書寫明「被擋不要繞，備好檔案清單與訊息檔回報頂層代交」。
-- LiteLLM 代理是他起的（localhost:4000），不停不改。
-- 「活樹跟repo共用這塊先不管」：他的 `AOS_HOME` 就是 repo 的 `proto8/`，ann 動態連結 `templates/agent-fsm/` 的格程式——**派線時寫明：往工作樹寫檔一次寫完整；動到 `py/` 又動格程式的改動交了之後，活樹要先 `install.py` 才能起，要馬上告訴他別起樹。**
+- push：沒給 → **不推**。本地領先 origin 88 筆。
+- `~/aos-home`：「可以開始改…」「好，install.py你跑就行」＋「幫我把該準備的準備好」。已更新四次（最後 `370962554`，裝的是 `2060ee9d5`；樹停著、乾淨；ann 的 history 多一問一答「4+5→9」）。**再裝之前先跟他說；他在玩的時候不要裝。**
+- 刪檔：同意過的四批都做完，不延伸。
+- 他會擋看不懂的長指令 → 指令一次一件事、說明寫清楚。子 agent 的 `commit-request submit` 被權限擋時不要繞，回報頂層代交。
+- LiteLLM（localhost:4000）是他起的，不停不改。
+- 活樹的 `AOS_HOME` 就是 repo 的 `proto8/`：`knowledge/`、`frontend/`、範本格程式存檔即生效；動 `py/`、`cpp/` 要 `install.py`。
 
-**還在跑的線（Claude 子 agent，背景；顯示 completed 可能只是在等自己的測試；等別線放 claim 的線可能要叫一聲才醒）**：
+**還在跑的線（Claude 子 agent；顯示 completed 可能只是在等自己的測試）**：
 | 線名 | agent id | 做什麼 |
 |---|---|---|
-| `top-1121-gdbdecl` | `a27f95e0ab50c4107` | aos-gdb 啟動時可帶選項參考 hook 宣告（他：「4.要做，我覺得可以在gdb啓動時給他選項，跟他說可以參考這份宣告，然後再去做一些事情。」）；改 `py/`，交了要再裝才吃到——**裝之前先跟他說，他在玩的時候不要自己去裝** |
-| `top-1121-fsmguard` | `ae392f437a9afdc0e` | 修 `wf/public/tools/fsm-guard/` 跟上 hook 新格式（他「3.派。」），順便列 `wf/` 底下其他還是舊寫法的地方 |
+| `top-1121-kbsync` | `ae39dbd875d8b8e1a` | 知識庫 `proto8/knowledge/aos/` 對齊今天的程式（他：「aos知識庫也麻煩你去更新一下吧」）；改名可、刪整頁只列不做。**它交完要通知 mdjson 線** |
+| `top-1121-mdjson` | `a40b7d9ae0e561288` | md↔json 尋址與互轉調查；交完接第二階段：知識庫**中文**映照版 md（他三句：「…中英雙語各一套的，.json硬照版的.md，我要來審…」「"硬照"->"映照"」「等等，中文一套就好。英文的以後再說」）。要等 kbsync 交完才轉。位置頂層代定：優先 `proto8/knowledge/aos-zh-md/`，會被 agent 查法撈到就改放 thinking 夾 |
+| `top-1121-tutorial` | `af455381b56d784f6` | 教學 `proto8/docs/tutorial/` 更新到第一個 eca_main（他：「教學稍微更新一下就好，只要弄到第一個eca_main出來就好，剩下的我直接問agent。」）；會回報今晚在活樹加 eca_main 還是另起新樹、他要先自己做什麼 |
+| `top-1121-frontend` | `a2ad3ef4b9822c487` | aos-frontend 備妥（他：「aos frontend也幫我準備好，能先動工的就先動工。」）。**頂層代定的讀法**：今晚能用＋今天改動弄壞的現在修；大修大重構是方向題不動工、只列清單；11-18 說先留著的三個小毛病不趁機修 |
 
-**hook 的定案（他 11-21 定的；逐字在 `proto8/thinking/2026-11/21/`）**：`hook-points-格式-使用者審-1121.md`（8 則）、`aos-hook-簡化-1121/07-使用者已答.md`、`kernel-宣告進interfaces-1121/09-使用者已答.md`。摘要：宣告檔＝物件、鍵是 id、硬性只要 input schema、其餘鍵自由；`hooks.json`＝有哪些鉤子、`hookeds.json`＝有哪些被勾著；`interfaces.json` 最外層 `"hooks"`／`"hookeds"`（檔名或檔名陣列、支援指示詞、不收直接寫內容）；宣告只是參考、沒宣告照樣跑；引擎簡化到第四層（`aos-hook fire` 與 Python 庫只叫 handler；逾時留著；退出碼用旗標 `--stop-on-nonzero` 選；沒有旗標檔、編譯時決定接不接 `before_run`／`after_run`）；「發事件的程式自己決定」；kernel 做甲案（`kernel_hooks.json`、`kernel_hookeds.json`、最外層 `"kernel": {}`），模型清單 `llm_kernel: {"models": "llm_models.json"}`「另外做」、對外另一份 json「之後再來串」。施工 `97d4abc16`（247 檔；紀錄 `hook-新格式施工-1121/`，34 條替他做的選擇在 02，**只念了最要緊的五條**，他沒要求念完）。
+**他回來要聽的（代定清單與待答）**：
+- 代定兩件：前端的讀法、映照版放哪（見上表）。
+- 各線回報裡「替使用者做的選擇」逐條念。
+- 教學線回來後，整理「今晚從哪一行指令開始」給他。
+- gdb 線（`2060ee9d5`）12 條代選只念了 7 條要緊的。
+- 驗寄件人還有五題「可晚點再答」沒念（`驗寄件人-規劃-1121/08`）。
+- kernel 攔截頁第 10 節三題、七種可能的樣子：他說「這需要我思考好一段時間」，不催。
+- `wf/tools/index_gen_desc.json:246` 一句說明還寫 `hooks.json`（該是 `hookeds.json`），fsmguard 線只列沒動，已告訴他、他沒接話。
+- 程式旁文件對不上五處（permdoc 線列的：`share/README`、`asuser/README` 等），沒改，已告訴他。
+- fsmguard 線曾把整份環境變數印到自己的工具輸出（它說沒進檔），已告訴他。
 
-**今天已交的（紀錄都在 `proto8/thinking/2026-11/21/`，日索引有列）**：早上那批（`session_key`、hook 第 5 刀後半、`reasoning_effort`、工具說明瘦身、AOS_DAEMON 調查、shell 比喻）；`aos-agent` 省略 `-t`／`-d`；`hook_fire` 換掉並刪；`self_history` 減號值與 `history -n K`；kernel 入口 `aos.py.kernel.defs`；起手範本 ann 動態連結＋刪 9 檔；compact 規劃與第 1 刀（他：「compact這塊，反正各agent有需要的，可以自訂自己的compact程式和流程」）；eca 思考程度／工具包／壓縮兩點（`9aab22baf`、`661801492`、`1c4e39074`）；小事八題（`小事八題-使用者已答-1121.md`：補 +x 測試、daemon on_start 也停、`agent_def new` 不寫 lineage、`defs.loop` 任意鍵；後續「every_ms感覺可以拿掉，反正有interval_ms？lineage都拿掉吧。」→ `ecedfa41c`、`e781ef00e`）；遙控器類別改名 `Attached`（`ca4ac9242`）；hook 整套換新＋kernel 甲案（`97d4abc16`）；hook 總文件（`693512c85`，在 `proto8/py/aos/apps/hook/docs/`）；compact 第 4 刀 agent-fsm 的 `before_compact`／`after_compact`（`14c2de1de`，他「1.允許commit。」；9 條替他做的選擇已念；規矩在範本 `compact.py`、handler 壞掉只 warning；因為 ann 動態連結，已在他的樹上生效、不用重裝）；桌面頁四份：`aos-AOS_DAEMON調查-1121.html`、`aos-shell指令的比喻-1121.html`、`aos-hook點宣告-1121.html`（內容是定案前的四題，已過時）、`aos-kernel的宣告-1121.html`、`aos-home更新過程-1121.html`。
+**今天下午聊出來的（他的原話都逐字記在對應 thinking 檔）**：
+- shell 比喻（`shell-指令的比喻-1121/04-使用者回應.md`、`05-切點.md`）：不執著單一比喻；放信也算塞指令、只是非侵入式；aos 樹沒有唯一起頭點、有一些切點（八個）；侵入式不實測。
+- kernel 攔截 daemon 存取（`kernel-攔截daemon存取-1121/`，`42a50a5f9`；桌面 `aos-kernel攔截daemon存取-1121.html`）：原則「只防走規矩的存取，不守規矩的就是要自己承擔風險。真的要硬防，那就要多依賴linux的權限體系」；想探索「寄一封信給kernel，kernel返回他想要存取的daemon的東西的位置」（取一份／暫時開權限／兩者皆有）；「不是說要讓kernel完全替代daemon的用途」。今天 kernel 只攔到起停信與「表在哪」查詢信。
+- 權限零件說明頁（桌面 `aos-權限零件-1121/`，留底 `46d9226e5`）：他擔心「目前aos在這方面不夠全面」。**更正舊說法：daemon 11-19 起已認 `sub:N`**；家機卡在家目錄 700。
+- 驗寄件人規劃（`驗寄件人-規劃-1121/`，`8fc27cfb2`；答案 `09`，`dcaef7f4d`）：他按直覺答 1D、2C、3C、4A，「晚一點我開沙箱，裏面開一個新session去嘗試」→ **頂層沒派施工**；4A 的 `setfacl` 動他的家目錄，頂層不代下。
+- gdb 停法：「停法按照gdb自己的，之後可以開一個口子，實時修改…但不急」（`85694d214`）。
 
-**等他的（不催）**：
-- gpt 包預設走 `/v1/responses` 要不要改成「設了程度才走」；`history set` 要不要收 `-n`（線評估三個坑，沒做）；N-63 加註；stack 要不要記定義夾與工作區；eca 才有的三包（events、def、jsonx，佔工具清單七成）要不要瘦；條文要補的字（各刀紀錄末節都有，他說條文會整體大修）。
-- AOS_DAEMON 調查、shell 比喻兩份：他「我慢慢看，就先放着」。kernel 編譯：「我之後再來玩」。
-- 他問過「假如我想要替換compact，有不透過hook的方法嗎？」頂層答了兩種（把 `compact.py` 與用到它的格抄進自己夾並改 `fsm.json`；不走 `/compact`、直接用 `aos-agent history summarize/rm`），他沒再接話。
-- 沒排的：compact 第 3 刀 `history clear-tools`、pi 的壓縮 hook 點、llm 模型清單、對外另一份 json、「問特定的東西、直接回」、改名大工程、教學重寫。
+**hook 的定案（11-21）**：逐字在 `hook-points-格式-使用者審-1121.md`（8 則）、`aos-hook-簡化-1121/07-使用者已答.md`、`kernel-宣告進interfaces-1121/09-使用者已答.md`。摘要：`hooks.json`＝有哪些鉤子、`hookeds.json`＝有哪些被勾著；宣告檔＝物件、鍵是 id、硬性只要 input schema；`interfaces.json` 最外層 `"hooks"`／`"hookeds"`／`"kernel"`；宣告只是參考；引擎極簡；kernel 甲案。施工 `97d4abc16`。
 
-**記給公司機的**：小事第 8 題他選「都清掉」——下次在公司機刪 `~/code/rv`（刪前照規矩再確認）；GitHub 上的 `rv` 他自己刪。公司 WSL 要重裝才吃到今天的東西（hook 換新後舊定義夾與 stack 要照 `hook-新格式施工-1121/03` 搬）。
+**今天已交的**：早上那批；`aos-agent` 省略 `-t`／`-d`；`history -n K`；kernel 入口 `aos.py.kernel.defs`；起手範本動態連結；compact 第 1、4 刀；eca 思考程度與壓縮點；小事八題；`Attached` 改名；hook 整套換新＋總文件；fsm-guard 跟上新格式（`dae2e460f`）；aos-gdb 參考宣告（`2060ee9d5`，`--hooks FILE`／`--def-hooks`）；下午四份調查與規劃（見上）。桌面頁：`aos-AOS_DAEMON調查-1121.html`、`aos-shell指令的比喻-1121.html`、`aos-hook點宣告-1121.html`（已過時）、`aos-kernel的宣告-1121.html`、`aos-home更新過程-1121.html`（四次）、`aos-kernel攔截daemon存取-1121.html`、`aos-權限零件-1121/`。
+
+**等他的（不催）**：gpt 包預設走 `/v1/responses`；`history set` 收不收 `-n`；N-63 加註；stack 要不要記定義夾與工作區；eca 三包要不要瘦；條文整體大修；kernel 編譯「我之後再來玩」。沒排的：compact 第 3 刀、pi 的壓縮 hook 點、llm 模型清單、對外另一份 json、改名大工程、教學 eca_main 之後的章節、前端大修。
+
+**記給公司機的**：刪 `~/code/rv`（刪前再確認）；GitHub 的 `rv` 他自己刪；公司 WSL 要重裝並照 `hook-新格式施工-1121/03` 搬。
+
+**暫存夾留著的**：`~/.aos/scratch/top-1121-*`；其中 `top-1121-ownerplan/exp/owner/` 有歸子帳號的信夾，一般刪不掉，要 `aos-asuser --fix`。
 
 **派線的做法（家機）**：Agent 工具派 Claude 子 agent（普通 opus、雜活 sonnet、發想他點名才 fable）；任務書寫明：先讀知識庫入口與規矩卡、線名 `top-1121-<名>`、乾淨複本＝`git archive HEAD` 解到 `~/.aos/scratch/<線名>/` 只疊自己的檔、這台沒有 pytest 用 unittest 逐夾跑、不在 repo 跑 `install.py`、不碰 `~/aos-home`、清 `AOS_*`、收行程只准兩種、不刪檔不 push、交件走 `commit-request`（zsh 路徑用陣列；日索引與進度條用 `--op`，寫法在 `wf/tools/commit_queue.py` 檔頭）、別線 claim 的檔等它交、背景等待腳本用完自己收。續派用 SendMessage 給 agent id。回報先 `git log`／`git show --stat` 核對再轉述；它替使用者做的選擇逐條念給他聽。頂層記他的原話時直接追加進對應的 thinking 檔、用線名 `top-1121-home` 交。
 
