@@ -157,7 +157,7 @@
      "brain.py": "think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。",
      "cell_common.py": "agent-fsm 的格共用的開頭幾步：brain、act 的讀 history.jsonl 與決定用哪份工具登記檔（四格的 on_clock 看時鐘改在 hook 遙控器 H.clock_tick()，11-20）。",
      "compact.py": "Compact agent-fsm conversations while preserving unanswered letters and original messages.",
-     "fsm.json": "入口 `aos-fsm $AOS_CF`；鍵：start、states",
+     "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
      "hook_points.json": "Hook points fired by the agent-fsm cells (idle, think, wait, act); the loop points after_start / after_stop are in py/aos/apps/hook/loop_points.json.",
      "hooks.json": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_sta…",
      "idle.py": "idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。",
@@ -270,7 +270,7 @@
    "test_fake_slow.py": "the demo endpoint function fake_slow (templates/kernel/llm-kernel) finds lib/tools/base/llm_fake and passes its answer back.",
    "test_paths_move.py": "Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to anothe…",
    "test_screen_linger.py": "驗 eca 範本的延後關畫面 hook 兩格存在、驗格成功且啟動撤單排第一。",
-   "test_start.py": "the two starter templates (start-api, start-eca) stay verbatim copies of the templates they were made from, except the few files their README names, …",
+   "test_start.py": "the two starter templates (start-api, start-eca) stay verbatim copies of the templates they were made from, except the few files their README names a…",
    "tool-python": {
     "test_skeleton.py": "Test the tool-python skeleton (written with fn): its compiled _tooldef.json/_metainfo.json match tool.py byte for byte, and a copy outside the repo r…"
    }

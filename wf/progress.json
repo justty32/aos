@@ -461,11 +461,12 @@
       "title": "使用者 11-20 晚瀏覽 ~/aos-home 提的問題與改進點（陸續記）",
       "status": "暫停",
       "flow": "",
-      "what": "他說「總之我接下來說的，都麻煩先記下來」；逐字與當場查的現況在筆記裡，一則一段。已裁：起手範本的格程式改成借的（從 AOS_HOME 取，不整份帶進定義夾），「之後做」；interfaces.json 保持想加啥就加啥、有需求再定規矩；description 放著。待討論：hook_points.json 的宣告格式他要審、會提建議（例：直接拿 json schema），審之前現在的格式算暫定。另見 agent-fsm-py-folder（.py 收進子夾、重新規劃架構）",
-      "next": "要做的：起手範本改成借的（等他說開工）；hook 點宣告格式找時間跟他討論（hook 第 6、7 刀與總文件動到這格式前先問他）",
+      "what": "他說「總之我接下來說的，都麻煩先記下來」；逐字與當場查的現況在筆記裡，一則一段。已裁：起手範本的格程式改成借的（從 AOS_HOME 取，不整份帶進定義夾）——11-21 線 top-1121-borrow 做完：start-api 的 ann 的 fsm.json 四格與 hook_points 動態連結 $AOS_HOME/templates/agent-fsm；interfaces.json 保持想加啥就加啥、有需求再定規矩；description 放著。待討論：hook_points.json 的宣告格式他要審、會提建議（例：直接拿 json schema），審之前現在的格式算暫定。另見 agent-fsm-py-folder（.py 收進子夾、重新規劃架構）",
+      "next": "1. 起手範本 ann 夾裡已沒人引用的九個檔（八支 .py＋hook_points.json）等使用者點頭刪；~/aos-home 的 ann 怎麼跟上寫在紀錄。2. start-eca 的 compact_hook 要不要也改（是 Claude Code 設定裡的 shell 字串，不在現有寫法裡），等使用者說。3. hook 點宣告格式找時間跟他討論（hook 第 6、7 刀與總文件動到這格式前先問他）",
       "see": [
         "[aos-home-瀏覽筆記-1120](../proto8/thinking/2026-11/20/aos-home-瀏覽筆記-1120.md)",
-        "[agent-fsm-py-收進子夾-1120](../proto8/thinking/2026-11/20/agent-fsm-py-收進子夾-1120.md)"
+        "[agent-fsm-py-收進子夾-1120](../proto8/thinking/2026-11/20/agent-fsm-py-收進子夾-1120.md)",
+        "[起手範本-動態連結-1121](../proto8/thinking/2026-11/21/起手範本-動態連結-1121.md)"
       ],
       "since": "2026-11-20"
     },

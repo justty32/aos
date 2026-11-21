@@ -49,7 +49,7 @@ aos-daemon-ctl -d .stack stop ann && aos-daemon-ctl -d .stack start ann   # 3. a
 | `root/` | 根 daemon 的定義：最小核心（板子、時鐘、清道夫） | [daemon-root](../daemon-root/README.md) | `.env` 的 `AOS_LLM_KERNEL` 指 `${AOS_STACK}/procs/llm`（掛在根上的那一列） |
 | `llm/` | llm kernel 的定義，`add` 之後是根上的一列 `llm` | [kernel/llm-kernel](../kernel/docs/01-llm-kernel.md) | 沒有 |
 | `perm/` | 權限站（選裝，出廠沒掛） | [kernel/procs-kernel](../kernel/README.md) | `kernel.json` 是 `{}` |
-| `agents/ann/` | 一隻 agent | [agent-fsm](../docs/02-agent-fsm.md) | `llm.json` 是 `{"model": "fake"}`（假腦，先試流程）；要真模型就換成 `llm/kernel.json` 的 `endpoints` 裡的名字。多一個 `.env`：只有一行註解掉的 `AOS_KERNEL`（開權限件用） |
+| `agents/ann/` | 一隻 agent | [agent-fsm](../docs/02-agent-fsm.md) | `llm.json` 是 `{"model": "fake"}`（假腦，先試流程）；要真模型就換成 `llm/kernel.json` 的 `endpoints` 裡的名字。多一個 `.env`：只有一行註解掉的 `AOS_KERNEL`（開權限件用）。**不帶格程式**（11-21）：`fsm.json` 四格動態連結 `$AOS_HOME/templates/agent-fsm/` 的 `idle.py`…（跟 `agent.py` 的 `std.fsm()` 編出來的一字不差），`interfaces.json` 的 `hook_points` 寫 `{"provider": "agent-fsm"}`；所以沒有那八支 `.py` 與 `hook_points.json`，`README.md` 在原樣後面多一段說明怎麼改某一格（[ann 的 README](agents/ann/README.md#起手範本這一隻格程式動態連結11-21)） |
 
 跑起來後樹裡多出 `.stack/`：根的 stack；llm kernel 的在 `.stack/procs/llm/`，agent 的在 `.stack/procs/ann/`，開了權限站的話站的在 `.stack/procs/perm/`。
 
@@ -57,6 +57,6 @@ aos-daemon-ctl -d .stack stop ann && aos-daemon-ctl -d .stack start ann   # 3. a
 
 ## 維護
 
-`root/`、`llm/`、`perm/`、`agents/ann/` 是原範本的逐字抄本，只差上表那幾處；改了原範本要同步抄過來，[templates/tests/test_start.py](../tests/test_start.py) 會逐檔比對、不一樣就紅。`env.sh` 兩包是同一份。
+`root/`、`llm/`、`perm/`、`agents/ann/` 是原範本的逐字抄本，只差上表那幾處（`agents/ann/` 另外不帶格程式，執行時從 `$AOS_HOME` 拿）；改了原範本要同步抄過來，[templates/tests/test_start.py](../tests/test_start.py) 會逐檔比對、不一樣就紅。`env.sh` 兩包是同一份。
 
 repo 更新後，已經抄出去的樹哪些要重抄（`env.sh` 幾乎不用；各格的程式、接線檔可能要）見 [14-更新與重新複製](../../thinking/2026-11/17/cpp-py-改名/14-更新與重新複製.md)。

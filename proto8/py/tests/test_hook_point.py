@@ -47,9 +47,13 @@ class Shipped(unittest.TestCase):
                  for n, p in hook_point.read_file(path)[1].items() if "not_fired_yet" in p}
         self.assertEqual(found, set())
 
-    def test_start_api_copy_is_the_same_file(self):
-        copy = PY.parent / "templates" / "start-api" / "agents" / "ann" / "hook_points.json"
-        self.assertEqual(copy.read_bytes(), Path(hook_point.PROVIDERS["agent-fsm"]).read_bytes())
+    def test_start_api_ann_links_the_shipped_file(self):
+        """11-21: start-api's ann carries no hook_points.json of its own; it names the provider, so it reads agent-fsm's declaration."""
+        ann = str(PY.parent / "templates" / "start-api" / "agents" / "ann")
+        points = hook_point.for_definition(ann)
+        self.assertEqual(points, hook_point.read([hook_point.provider_path("aos-loop"), hook_point.provider_path("agent-fsm")]))
+        self.assertEqual({s["path"] for p in points.values() for s in p["said"]},
+                         {hook_point.provider_path("aos-loop"), hook_point.provider_path("agent-fsm")})
 
     def test_unknown_provider(self):
         with self.assertRaisesRegex(PointsBad, "unknown hook point provider"):

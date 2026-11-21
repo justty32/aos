@@ -11,7 +11,7 @@ export AOS_HOME=$HOME/repo/aos/proto8   # 每台設一次＝放 lib、templates�
 cp -r $AOS_HOME/templates/agent-fsm bob
 ```
 
-範本裡指到範本外、落在 proto8 的路徑一律寫成 `{"$env": "AOS_HOME", "$path": "/…"}`（`tools.json` 的工具、reviewer 的 `fsm.json` 借 agent-fsm 的格、kernel 範本的 `handler` 與 `endpoints`、daemon.json／loop.json 的 argv），範本裡沒有捷徑；解出來的值不寫回任何檔，每次用到才由讀它的程式解。所以抄到哪、兩台各放哪，檔都一字不差，只要每台的 `AOS_HOME` 對。`AOS_HOME` 三種給法（使用者 11-10 午「要用相對位置、絕對位置、環境變數指定都可」）：
+範本裡指到範本外、落在 proto8 的路徑一律寫成 `{"$env": "AOS_HOME", "$path": "/…"}`（`tools.json` 的工具、reviewer 與起手範本 `start-api/agents/ann` 的 `fsm.json` 動態連結 agent-fsm 的格、kernel 範本的 `handler` 與 `endpoints`、daemon.json／loop.json 的 argv），範本裡沒有捷徑；解出來的值不寫回任何檔，每次用到才由讀它的程式解。所以抄到哪、兩台各放哪，檔都一字不差，只要每台的 `AOS_HOME` 對。`AOS_HOME` 三種給法（使用者 11-10 午「要用相對位置、絕對位置、環境變數指定都可」）：
 
 | 給法 | 寫在哪 | 這台要備好 |
 |---|---|---|
