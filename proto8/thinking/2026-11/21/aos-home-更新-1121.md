@@ -1,4 +1,4 @@
-家機 `~/aos-home` 更新三次：早上到 repo `88ea321f4`（install.py、kernel.json 補思考程度、ann 照 start-api 範本換、保留 model=sol、sol 驗四題，線 top-1121-homeup）；上午再到 `5a99e1320`（ann 改動態連結 agent-fsm 的格程式、刪夾裡 9 個舊抄本、sol 驗九次含 /compact 先清工具輸出，線 top-1121-homeup2）；中午到 `97d4abc16`（hook 換新格式：ann 的 hooks.json→hookeds.json、kernel 加 interfaces.json／kernel_hooks.json／kernel_hookeds.json、stack 的 hooks/→hookeds/，4 個 hook 一個不少，sol 驗五次，線 top-1121-homeup3）；三次都關回原狀。
+家機 `~/aos-home` 更新四次：早上到 repo `88ea321f4`（install.py、kernel.json 補思考程度、ann 照 start-api 範本換、保留 model=sol、sol 驗四題，線 top-1121-homeup）；上午再到 `5a99e1320`（ann 改動態連結 agent-fsm 的格程式、刪夾裡 9 個舊抄本、sol 驗九次含 /compact 先清工具輸出，線 top-1121-homeup2）；中午到 `97d4abc16`（hook 換新格式：ann 的 hooks.json→hookeds.json、kernel 加 interfaces.json／kernel_hooks.json／kernel_hookeds.json、stack 的 hooks/→hookeds/，4 個 hook 一個不少，sol 驗五次，線 top-1121-homeup3）；下午到 `2060ee9d5`（只跑 install.py、樹裡不改檔，sol 答一句、`aos-gdb --def-hooks` 在活樹列得出 13 點，線 top-1121-home4）；四次都關回原狀。
 
 ← [2026-11-21](README.md)｜前情：[aos-hook-fire換-1121](aos-hook-fire換-1121.md)、[llm-effort-1121](llm-effort-1121.md)、[tool-desc-瘦身-1121](tool-desc-瘦身-1121/)、[aos-agent-預設目標-1121](aos-agent-預設目標-1121.md)｜給使用者看的過程頁：`~/Desktop/aos-home更新過程-1121.html`
 
@@ -175,3 +175,41 @@
 ### 沒發現新版程式的問題
 
 照 03 的步驟走完沒有卡住；03 的指令跟實物對得上，差別只有 perm 單獨起要有下一站（03 沒寫，因為 perm 平常掛在板子上、有 `AOS_DAEMON`）。
+
+## 第四次更新（到 `2060ee9d5`，只換程式，線 top-1121-home4）
+
+授權：同上兩句；頂層事先跟使用者說過「gdb 那條線交了就重裝一次、裝完用真模型起一次確認」。這次只准 install＋驗收，不改樹裡的檔。
+
+### 做了什麼
+
+1. 開工核對：`pgrep -a aos` 只有線 top-1121-tutorial 的樹（cwd、執行檔都在 `~/.aos/scratch/top-1121-tutorial/`，用它自己複本的 `bin/`），沒有從 `~/aos-home` 起的；表上四隻 `sleeping`（記的 daemon pid 已不在）。`git status -- proto8/py proto8/cpp proto8/templates` 乾淨，HEAD `2060ee9d5`。
+2. `97d4abc16..HEAD` 動到 `templates/` 的：agent-fsm 的格程式與 `hooks.json`（ann 動態連結，裝完就生效）、`start-api/agents/ann/README.md`（多一句壓縮前後兩個 hook 點，純說明）。樹裡沒有要換的定義檔、不用搬夾、不用重新編譯；ann 的 README 沒抄（不在這次准做的範圍，跟 HEAD 只差這一句）。
+3. proto8 跑 `python3 install.py`：30 支指令（9 C++、21 Python）、`py/` 597 檔與 12 個 C++ 函式庫進 `lib/`，清掉 22 個舊檔。
+4. **lib 殘留**：裝前 `lib/aos/hook_handle.py`、`lib/aos/hook_flags.py` 都在；install 自己會清 `py/` 已經沒有的檔，裝完兩支都不在了（我沒動手刪）。`lib/aos/gdb/decl.py`、`lib/tools/agent/gdb_trigger/_entry` 在。
+5. 起樹（清掉繼承的 `AOS_*`、`AOS_HOME` 指 repo 的 proto8、`source env.sh`、背景 `aos-exec root`，輸出寫 `~/.aos/scratch/top-1121-home4/`）：四隻 `running`。
+6. 驗收（見下），`aos-daemon-ctl -d .stack shutdown`：根行程退出、沒有 cwd 在 `~/aos-home` 的行程，表上四隻 `sleeping`。
+7. 桌面過程頁加「第四次更新」一節，最上面的結論改成涵蓋四次。
+
+### 驗收
+
+| 項目 | 結果 |
+|---|---|
+| ann 真模型（sol＝`chatgpt-gpt-6.1-sol`，1 次呼叫） | 問「請只回一個數字：4+5 等於多少？」答 `9`；prompt_tokens 7,416、cached 0、reasoning 0、3.7 秒 |
+| `aos-gdb -d .stack --def-hooks ann` | 起得來，開場印 `hook declarations: 13 point(s) from 2 file(s)`；`hooks` 列出 `lib/aos/apps/hook/loop_hooks.json` 與 `templates/agent-fsm/hooks.json` 兩份、13 個點，含新的 `before_compact`／`after_compact`（14c2de1de 動態連結生效的證據）；Ctrl-D（stdin 結束）離開，沒下斷點 |
+| ann 的 hook | `hook ls -l` 進 gdb 前（樹沒起時）與出 gdb 後逐字相同：brain_notify、context_wrap、mail_notify、timer |
+| on_clock | 起樹那刻 `hookeds/` 三個工作夾的 `on_clock.json` 都更新 |
+| ann stderr | 沒多任何一行 |
+
+- `aos-hook check` 新版已經沒有（`CommandUnknown`），第三次也沒用它；改用上面的 `hook ls` 比對。
+- 第一句快取 0：跟第三次第 1 句一樣（距上次呼叫幾小時，上游快取過期），只記。
+
+### ann 多了哪一輪
+
+`.stack/procs/ann/history.jsonl` 16 → 18 則：第 17 則 user「請只回一個數字：4+5 等於多少？」、第 18 則 assistant「9」。沒刪；這次沒另外備份 history（樹裡沒改任何檔），要拿掉就在樹關著時刪最後兩行。
+
+### 替使用者做的選擇
+
+1. 樹裡一個檔都沒改：ann 的 `README.md` 跟 HEAD 範本差一句說明，沒抄。
+2. 驗收只問 1 句（不重做第三次那套 5 題），gdb 只打 `hooks`、不下斷點。
+3. lib 那兩支由 install 自己清掉，沒另外處理。
+4. 起樹輸出寫暫存區；沒設 `LITELLM_KEY`。
