@@ -28,7 +28,8 @@ import procs_rules
 HELP = """usage: kernel KERNEL.json   (run with aos-exec as a daemon body or loop proc)
 Run one round: collect replies, claim requests, admit, refuse or queue, then forward.
 KERNEL.json is resolved by aos-directive; relative paths start at its directory.
-Hooks in KERNEL.json run before_verdict, after_verdict and before_reply.
+Hooks run before_verdict, after_verdict and before_reply: the hooked lists named by "hookeds" in
+the interfaces.json next to KERNEL.json (the templates use kernel_hookeds.json).
 An after_verdict hook may print {"next": "/abs/mailbox"} to send that one letter there.
 It may print {"verdict": "hold"} to keep a letter until STACK/decisions/LETTER.json says
 {"verdict": "pass"} or {"verdict": "refuse", "error": {"code": ..., "msg": ...}}.

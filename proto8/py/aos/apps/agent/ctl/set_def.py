@@ -16,7 +16,8 @@ HELP = """aos-agent ctl set-def - give an agent another definition; its stack an
 
 usage: aos-agent [--daemon D] ctl set-def [--kit KIT] [--timeout-s S] NAME DEF
 
-DEF is the new agent folder (checked like ctl add: it must declare aos-agent in interfaces.json).
+DEF is the new agent folder, checked like ctl add (a folder; declaring aos-agent in its
+interfaces.json is optional, a declared "entry" must exist in it).
 set-def closes NAME's screen (an answering screen = SessionBad, nothing changed), stops it
 (after this round, like ctl stop), detaches it (like ctl rm: its stack stays) and attaches it
 again under the same name with DEF. Everything else on its table row stays: stack (history,

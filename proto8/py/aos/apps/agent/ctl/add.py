@@ -16,9 +16,11 @@ HELP = """aos-agent ctl add - attach one agent to the daemon
 
 usage: aos-agent [--daemon D] ctl add [-n N] [-w WS | --ws-json J] [-s S | --stack-json J] [--path-json J] [--limits JSON] [--envs K=V ...] [--parent P] [--notify-box B] [--dotenv-override] [--auto-restart] [--kit KIT] [--timeout-s S] [--on-queued fail|ok] XXX
 
-XXX is the agent folder; it must declare aos-agent in interfaces.json. The letter goes
-through $AOS_KERNEL when that is set (a warning line says so). Waits until the agent is on
-the table, then prints its stack; the daemon refusing it = AddRejected.
+XXX is the agent folder (not a folder = PathMissing). Its interfaces.json may declare aos-agent;
+without that the folder itself is the entry. A declared "entry" must be a relative path that exists
+in the folder (else InterfaceBad). The letter goes through $AOS_KERNEL when that is set (a
+warning line says so). Waits until the agent is on the table, then prints its stack; the
+daemon refusing it = AddRejected.
 With $AOS_KERNEL set (and no --daemon) it reads only the reply to its own letter: no table
 lookup first, no check that the daemon is up; it prints the stack only when -s gave one
 (otherwise a warning says to ask aos-agent ctl where N); paths in the letter stay absolute.

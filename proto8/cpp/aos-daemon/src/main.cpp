@@ -22,6 +22,12 @@ Look after a group of procs (daemon.json "procs"): start them, restart or stop t
 as the ctl window says, and report them in the state windows. Optional own body
 ("exec") runs like aos-loop; a failing body is retried next round (warning line).
 ARGS after -- are appended to the daemon's own exec.
+Optional daemon.json keys on_start / on_stop (written like exec, on_timeout_ms as in aos-loop):
+run once before the first round / once when the daemon is about to exit. A failing on_start
+(non-zero, timed out, cannot run) = "aos-daemon: error: PointFailed on_start ...", no proc is
+started, exit with its code; a failing on_stop changes the exit code only when it would have
+been 0. on_before_run, on_after_run, on_before_run_if and on_after_run_if are not taken
+(CfgBad).
 Poke: SIGRTMIN+1/+2/+3 wake it at once to read ctl / ctl + mailbox / run a full
 round early (aos-daemon-ctl poke). SIGUSR1 and SIGUSR2 are blocked.
 All procs share lifecycle rules regardless of launch syntax: stop writes their public

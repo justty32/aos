@@ -31,7 +31,8 @@ HELP = """usage: kernel_llm [--enable-counters] KERNEL.json   (run with aos-exec
 One round of the LLM kernel: collect finished brain calls and reply to their letters, then pick
 the best waiting request letters from $AOS_STACK/requests/ and ask the daemon to run them on an
 endpoint pack. A bad letter is answered with an error reply; it is not the kernel's error.
-Hooks in KERNEL.json run before_verdict, after_verdict and before_reply.
+Hooks run before_verdict, after_verdict and before_reply: the hooked lists named by "hookeds" in
+the interfaces.json next to KERNEL.json (the templates use kernel_hookeds.json).
   --enable-counters   count rounds in $AOS_STACK/counter_kernel_runs.txt
 Needs AOS_STACK and AOS_DAEMON; add letters go to AOS_KERNEL when it is set.
 Exit 0 after a round, including an empty inbox; errors go to stderr and exit 1.
