@@ -68,7 +68,7 @@ q.wait()                      # stopped waiting (cancel()); nothing is taken bac
 | `a.bp.add.after_start()`、`a.bp.add.after_stop()` | loop 起來、要退 | 暫停 |
 | `a.bp.add.watch(py=…, every_ms=500, also=["bob"])` | 觀察者：另一支 proc 輪詢，條件成立（一定要給 sh 或 py） | 暫停（晚一格） |
 
-- **主詞**（第一個位置參數）只有能篩名字的種類有：工具名（`tool=`），`brain_failed` 是錯誤代號（`code=`）；其他種類不收位置參數。種類表從 hook 的事件表（`aos.agentlib.hooks.EVENTS`，`on_clock` 不收）長出來，以後 hook 加事件這裡自動多一種。
+- **主詞**（第一個位置參數）只有能篩名字的種類有：工具名（`tool=`），`brain_failed` 是錯誤代號（`code=`）；其他種類不收位置參數。種類表＝agent 一家自己發的點（`aos.agentlib.hooks.POINTS`，`on_clock` 不收）加上經 `aos-hook fire` 發的 eca 壓縮兩點與 loop 四點（寫在 `aos.gdb` 裡；11-21 起宣告只是參考，不從宣告算）。
 - **條件**（都是關鍵字）：不給＝事件來了就算；`sh="..."`＝一段 shell（觸發器：事件 JSON 在 stdin；觀察者：cwd＝目標 stack；退 0＝算、**退 10＝不算**、其他＝條件壞了，所以 `grep -q x || exit 10`）；`py=`＝觸發器 `f(ev)`／運算式字串（變數 `ev`），觀察者 `f(t)`／運算式字串（變數 `t`），看得到 `json`、`re`、`os` 與內建，外層變數要當預設值傳。
 - **選項**：`times=`＝連續幾次才算；`once=True`＝只停一次；`id="mine"`＝自己取名（不能全是數字；不給＝下一個號碼）；`replace=True`＝同 id 已有就換掉（`id=` 給已有的號碼或斷點物件也行；沒有的號碼不能自己挑）；觀察者另有 `every_ms`、`also`。
 
@@ -89,7 +89,7 @@ b.fired       # Failed: breakpoint 3: it is gone from ann (removed); a.bp.ls() l
 
 - 屬性＝`a.bp.get(id)` 那一列的每一欄（`.kind`、`.how`、`.about`、`.enabled`、`.times`、`.once`、`.seen`、`.fired`、`.spent`、`.last_error`、`.here`、`.condition`…；觀察者另有 `.targets`、`.phase`…），每讀一次就查一次（會跑 `hook ls`、讀小格）；唯讀，改用 `a.bp.set(b, ...)`。`b.id` 固定，刪了也讀得到；`b == 3` 比的是 id。
 - **號碼不重用**：計數器存在 agent 的 stack（`gdb/next_id.json`），重開 REPL、重新取 `a.bp` 照樣接著數。觀察者的號碼從它看的每一隻的計數器一起拿（也躲開這個 daemon 上觀察者用過的號碼），所以每隻的 `a.bp` 裡觸發器與觀察者不撞；觸發器也躲開表上觀察者的號碼。下斷點失敗＝號碼還回去（不跳號）。計數器跟著 stack 走：換成一個新的 stack 夾就從 1 數起。
-- **磁碟上的名字號碼補零到 4 位**（使用者 11-20 選「斷點號碼檔名補零」）：號碼 3 的觸發器 hook 名與小格夾是 `gdb_0003`、觀察者的 proc 名是 `gdbw_0003`，所以 `ls hooks/`、`aos-agent hook ls`、`aos-daemon-ctl ls` 列出來照號碼排（10 個以上也對），同一事件上的 hook 也照號碼先後跑。`b.id` 照舊是 `3`（int），指令的輸出與 `a.bp.why()` 裡看到的是 `gdb_0003`。過了 9999 就是 5 位，順序從那裡起不保證。
+- **磁碟上的名字號碼補零到 4 位**（使用者 11-20 選「斷點號碼檔名補零」）：號碼 3 的觸發器 hook 名與小格夾是 `gdb_0003`、觀察者的 proc 名是 `gdbw_0003`，所以 `ls hookeds/`、`aos-agent hook ls`、`aos-daemon-ctl ls` 列出來照號碼排（10 個以上也對），同一事件上的 hook 也照號碼先後跑。`b.id` 照舊是 `3`（int），指令的輸出與 `a.bp.why()` 裡看到的是 `gdb_0003`。過了 9999 就是 5 位，順序從那裡起不保證。
 - `a.bp.set(b, ...)` 回斷點物件（使用者 11-20 選「a.bp.set 也回物件」），跟 `add` 回的同一種（屬性每次讀都重新查）；要一份當下的 dict 用 `a.bp.get(b)`。
 - 自己取的名字照留（`id="mine"`，str）：hook 名 `gdb_mine`（不補零），不吃號碼；`ls` 號碼在前、名字在後。
 - 不用遙控器也行：`from aos.py import breakpoint as bp; bp.attach("ann", daemon=".stack").add.before_tool("write")`（跟 `a.bp` 同一種；別用原名 `breakpoint`，會蓋掉內建的）。
@@ -146,7 +146,7 @@ gdb> p.wait()                                      # same as a.bp.pause(): "stop
 
 `aos-gdb` 不給 NAME 也行：只放好 `agent`、`daemon_ctl`、`std`、`defs`，自己 `a = agent.attach("ann")`。給了 `-d D`：REPL 裡 `AOS_DAEMON` 設成它，模組層的 `agent.ctl.ls()`、`daemon_ctl.ls()` 也對那台。收樹：`aos-daemon-ctl -d .stack shutdown`（一句全關，llm kernel 是根上一列；REPL 裡是 `daemon_ctl.shutdown()`）。
 
-**觸發器掛在 agent 的 hook 上，定義要宣告 hook**（`interfaces.json` 的 `aos-agent.hooks`）。上面 start-api 的 ann 有；`agent-python` 骨架抄出來的也有——骨架的 `defs.Agent(...)` 帶 `hooks={}`（空的，不帶任何現成的 hook；使用者 11-19 下午選「骨架帶一行空的 HOOKS」），什麼都不改就下得了斷點。沒宣告的定義（拿掉 `hooks=` 的 `agent.py`、自己手寫的夾）下斷點＝`HooksMissing`，錯誤行後面補一句怎麼修：
+**觸發器掛在 agent 的 hook 上，定義要宣告被勾清單**（`interfaces.json` 最外層的 `hookeds`）。上面 start-api 的 ann 有；`agent-python` 骨架抄出來的也有——骨架的 `defs.Agent(...)` 帶 `hooks={}`（空的，不帶任何現成的 hook；使用者 11-19 下午選「骨架帶一行空的 HOOKS」），什麼都不改就下得了斷點。沒宣告的定義（拿掉 `hooks=` 的 `agent.py`、自己手寫的夾）下斷點＝`HooksMissing`，錯誤行後面補一句怎麼修：
 
 ```
 aos-agent: error: HooksMissing bob does not declare hooks (...); to fix it in an agent.py definition: give hooks={} to defs.Agent(...) in agent.py, and recompile (python3 agent.py --compile)
@@ -208,9 +208,9 @@ aos-agent: error: HooksMissing bob does not declare hooks (...); to fix it in an
 
 ## 檔與防呆
 
-- 觸發器：`<stack>/hooks/gdb_<id>/trigger.json`（`<id>` 是補零到 4 位的號碼，例 `gdb_0003`，或自己取的名字）（`how` 由事件定）、`count.json`（`pending`＝扣住被打斷的那一次、`decided`＝放行過的那一次）；字條：`<stack>/gdb/log.jsonl`（只往後加；`by` 是 `hook`、`repl`、`ctl`、`watch`）；扣住時 `<stack>/gdb/hold.json`、放行單 `gdb/release.json`；號碼計數器 `<stack>/gdb/next_id.json`（`{"next": N}`，鎖檔 `next_id.lock`）。
+- 觸發器：`<stack>/hookeds/gdb_<id>/trigger.json`（`<id>` 是補零到 4 位的號碼，例 `gdb_0003`，或自己取的名字）（`how` 由事件定）、`count.json`（`pending`＝扣住被打斷的那一次、`decided`＝放行過的那一次）；字條：`<stack>/gdb/log.jsonl`（只往後加；`by` 是 `hook`、`repl`、`ctl`、`watch`）；扣住時 `<stack>/gdb/hold.json`、放行單 `gdb/release.json`；號碼計數器 `<stack>/gdb/next_id.json`（`{"next": N}`，鎖檔 `next_id.lock`）。
 - hook 照名字的字典順序跑；號碼補零，所以同一事件上 `gdb_0002` 排在 `gdb_0010` 前面（號碼小的先扣住）。自己取的名字排在全部號碼後面（字母在數字後）。
 - 觀察者：`<daemon>/procs/gdbw_<id>/watch.json`、`watch_state.json`、`watch_loop.json`（交給 `aos-daemon-ctl add` 的那份；同夾的 `loop.json` 是 daemon 自己寫的）。
-- 觸發器一律 `--on-error continue`、`--no-intercept`：條件或 handler 壞了，agent 只多一行 warning，不會掛掉、不會被 daemon 連環重起；handler 印什麼都擋不下工具。扣住型不限時（等人）；暫停型 15 秒（sh／py 條件 40 秒）。
+- 觸發器是一個普通 hook（11-21 起 hook 沒有 `on_error`、`intercept` 這兩個選項）：handler `gdb_trigger` stdout 什麼都不印、自己壞了（讀不到設定、寫不了檔）只印一行 warning 並退 0，所以條件或 handler 壞了，agent 只多一行 warning，不會掛掉、不會被 daemon 連環重起；handler 什麼都擋不下工具。扣住型不限時（等人）；暫停型 15 秒（sh／py 條件 40 秒）。
 - shell 這邊沒有對應的 `a.bp.*` 指令（要 `aos-bp ...` 還是 `aos-gdb bp ...` 待使用者裁，見[第二版紀錄末節](../../../../thinking/2026-11/19/aos-gdb-lib-第二版.md)；照 C-86 兩者都不進 `aos-agent`）。
 - 沒做：一包現成觸發器（丁）、`on_clock`、eca 身（claude、codex 當腦）上的扣住沒測（before_tool 在 aos-mcp 裡跑，扣太久 CLI 那邊可能自己逾時）。

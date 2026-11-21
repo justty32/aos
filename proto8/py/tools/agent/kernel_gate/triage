@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # kernel_gate/triage - 框架站的 after_verdict hook handler：有效狀態查詢直接放行，其餘照 triage.json 判，混寫查詢仍判其他鍵，每封記一行進 triage.jsonl。
 # 使用者 11-14：「太多的請求...你可以派一個claude subagent幫你寫程式，你把需求交給他，讓他幫你弄一些可以自動對請求做初步處理的。」
-# 換掉 kernel_gate 預設的 hold（純狀態查詢以外都留）：kernel.json 的 hooks 寫 {"triage": {"event": "after_verdict", "condition": "pass", "handler": <這支>}}。
+# 換掉 kernel_gate 預設的 hold（純狀態查詢以外都留）：站的 kernel_hookeds.json 寫 {"triage": {"event": "after_verdict", "condition": "pass", "handler": <這支>}}（11-21 起不在 kernel.json）。
 # 規則檔＝<站的 stack>/triage.json（事件的 stack；就是 kernel.json 那一夾），每封重讀；沒有或讀不懂＝有效的純狀態查詢以外都留著並記帳。
 # 判法（一封信裡每一項都過才放行；任一項該拒就整封拒；其餘留著）：
 #   procs_added 每一項：名字在 protect＝拒；def／exec／ws／stack（含 as_written）解成絕對路徑後，在 deny_roots 底下或不在任何 home_roots 底下＝拒；

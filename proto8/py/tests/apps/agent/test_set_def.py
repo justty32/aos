@@ -221,10 +221,18 @@ class SetDef(unittest.TestCase):
         self.assertIn("warning: ann has its own tools.json in its stack, which still overrides the old definition's (%s)" % with_tools, r.stderr)
         self.assertTrue((self.stack / "tools.json").exists())  # warned, not rewritten
 
+    def test_undeclared_definition_is_taken(self):
+        """11-21: a definition that does not declare aos-agent is taken too (the declaration is only for reading; the entry is the folder itself)."""
+        plain = self.definition("plain")
+        (plain / "interfaces.json").unlink()
+        r = self.agent("ctl", "set-def", "ann", "plain")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("InterfaceMissing", r.stderr)
+        until(lambda: self.ran() == ["old", "plain"])
+        self.assertEqual(os.path.normpath(self.d / self.row()["def"]), str(plain))
+
     def test_errors_change_nothing(self):
-        plain = self.tmp / "plain"
-        plain.mkdir()
-        for args, code in ((("ghost", "new"), "InstanceMissing"), (("ann", "plain"), "InterfaceMissing"),
+        for args, code in ((("ghost", "new"), "InstanceMissing"),
                            (("ann", "nowhere"), "PathMissing"), (("ann",), "ArgumentsBad")):
             with self.subTest(args=args):
                 r = self.agent("ctl", "set-def", *args)

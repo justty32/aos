@@ -130,7 +130,7 @@ class Live(unittest.TestCase):
     def test_compiled_and_checked(self):
         self.assertEqual(self.compiled.returncode, 0, self.compiled.stderr)
         self.assertEqual(json.loads((self.defn / "tools.json").read_text())["tools"]["add"], {"path": "fn/add.py"})
-        self.assertEqual(json.loads((self.defn / "hooks.json").read_text())["hooks"]["no_secrets"],
+        self.assertEqual(json.loads((self.defn / "hookeds.json").read_text())["no_secrets"],
                          {"event": "before_tool", "handler": "fn/no_secrets.py", "condition": "ws_write"})
         r = subprocess.run(["aos-exec", str(PROTO / "lib" / "tools" / "agent" / "agent_def")], cwd=self.tree, env=dict(ENV, AOS_WS=str(self.tree)),
                            input=json.dumps({"op": "check", "path": str(self.defn)}), text=True, capture_output=True, timeout=60)

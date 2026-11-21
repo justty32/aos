@@ -35,7 +35,7 @@ aos-daemon-ctl -d .stack stop ann && aos-daemon-ctl -d .stack start ann   # 3. a
 
 之後 ann 的開 proc、停 proc、「我是誰」、讀表都先寄這一站（`AOS_KERNEL` 指 `<根的 stack>/procs/perm/requests`），站照 `perm/kernel.json` 判了再轉給根。11-20 在暫存樹照這三步跑過：ann 的環境多了 `AOS_KERNEL=…/.stack//procs/perm/requests`，再問一句照樣回 `FAKE ANSWER to: hello again …`。
 
-- **出廠的 `perm/kernel.json` 是 `{}`**：什麼都不管、全部原樣轉給根（啥都不管也是一種管理）。要管什麼自己加鍵：`allowed`（名字白名單）、`max_running`（同時幾個在跑，數根的表，站自己、`llm`、鐘、清道夫都算）、`queue`、`hooks`…，鍵的意思在 [kernel 入口](../kernel/README.md#kerneljson-的鍵)。設定每輪重讀，改了不用重起。這是唯一跟原範本不一樣的檔（原範本的白名單只放 `peek_now_time`，照抄的話 ann 生不了任何子）。
+- **出廠的 `perm/kernel.json` 是 `{}`**：什麼都不管、全部原樣轉給根（啥都不管也是一種管理）。要管什麼自己加鍵：`allowed`（名字白名單）、`max_running`（同時幾個在跑，數根的表，站自己、`llm`、鐘、清道夫都算）、`queue`…，鍵的意思在 [kernel 入口](../kernel/README.md#kerneljson-的鍵)。hook 不在 `kernel.json`：掛在同夾的 `kernel_hookeds.json`（`interfaces.json` 最外層的 `hookeds` 指它，出廠沒有 hook）。設定每輪重讀，改了不用重起。這是唯一跟原範本不一樣的檔（原範本的白名單只放 `peek_now_time`，照抄的話 ann 生不了任何子）。
 - **那行寫在 ann 的 `.env`，不寫在 `root/.env`**：寫在根上，整塊板子都繼承到，llm kernel 也會把每一次問腦的 proc 經這一站掛到根上（它自己的表上看不到、問腦失敗）。11-20 實跑過寫在根上的樣子：ann 的問腦失敗，根的表上多一列 `llm_<信名> stopped`。要讓別隻 agent 也經這站，在牠的 `.env` 寫同一行。
 - **一開就要知道（基底體檢 P4，使用者 11-19 選「維持現狀，只寫明」）**：開了之後，ann 的「我是誰」、讀自己信箱、設鬧鐘、`self_*` 都要先問這一站，**站 3 秒不回＝這些全部 `KernelFailed`**。11-20 實跑：把 `perm` 停掉，經站的 `aos-agent ctl ls` 等 3.8 秒後 `KernelFailed no reply from AOS_KERNEL=… within 3 s`。站是 `--auto-restart` 掛的，掉了會自己起；被人 `stop`、`sleep` 了要自己 `start`／`wake`。
 - **權限件是給守規矩的人用的規矩，不是牆；牆是換 Linux 帳號**（使用者 11-20「明寫」）：`AOS_KERNEL` 是寄件人自己的環境變數，拿掉它、直接寫根的 ctl 信箱就繞過這一站；`aos-daemon-ctl` 也一律直寄根。同一個 Linux 帳號底下擋不住（[kernel 02「誰能繞過 kernel」](../kernel/docs/02-kernel-modes.md#誰能繞過-kernel靠-linux-權限)）。
@@ -49,7 +49,7 @@ aos-daemon-ctl -d .stack stop ann && aos-daemon-ctl -d .stack start ann   # 3. a
 | `root/` | 根 daemon 的定義：最小核心（板子、時鐘、清道夫） | [daemon-root](../daemon-root/README.md) | `.env` 的 `AOS_LLM_KERNEL` 指 `${AOS_STACK}/procs/llm`（掛在根上的那一列） |
 | `llm/` | llm kernel 的定義，`add` 之後是根上的一列 `llm` | [kernel/llm-kernel](../kernel/docs/01-llm-kernel.md) | 沒有 |
 | `perm/` | 權限站（選裝，出廠沒掛） | [kernel/procs-kernel](../kernel/README.md) | `kernel.json` 是 `{}` |
-| `agents/ann/` | 一隻 agent | [agent-fsm](../docs/02-agent-fsm.md) | `llm.json` 是 `{"model": "fake"}`（假腦，先試流程）；要真模型就換成 `llm/kernel.json` 的 `endpoints` 裡的名字。多一個 `.env`：只有一行註解掉的 `AOS_KERNEL`（開權限件用）。**不帶格程式**（11-21）：`fsm.json` 四格動態連結 `$AOS_HOME/templates/agent-fsm/` 的 `idle.py`…（跟 `agent.py` 的 `std.fsm()` 編出來的一字不差），`interfaces.json` 的 `hook_points` 寫 `{"provider": "agent-fsm"}`；所以沒有那八支 `.py` 與 `hook_points.json`，`README.md` 在原樣後面多一段說明怎麼改某一格（[ann 的 README](agents/ann/README.md#起手範本這一隻格程式動態連結11-21)） |
+| `agents/ann/` | 一隻 agent | [agent-fsm](../docs/02-agent-fsm.md) | `llm.json` 是 `{"model": "fake"}`（假腦，先試流程）；要真模型就換成 `llm/kernel.json` 的 `endpoints` 裡的名字。多一個 `.env`：只有一行註解掉的 `AOS_KERNEL`（開權限件用）。**不帶格程式**（11-21）：`fsm.json` 四格動態連結 `$AOS_HOME/templates/agent-fsm/` 的 `idle.py`…（跟 `agent.py` 的 `std.fsm()` 編出來的一字不差），`interfaces.json` 的 `hooks`（宣告，只是參考）指 `$AOS_HOME/templates/agent-fsm/hooks.json`；所以沒有那八支 `.py` 與宣告 `hooks.json`（被勾清單 `hookeds.json` 照樣在），`README.md` 在原樣後面多一段說明怎麼改某一格（[ann 的 README](agents/ann/README.md#起手範本這一隻格程式動態連結11-21)） |
 
 跑起來後樹裡多出 `.stack/`：根的 stack；llm kernel 的在 `.stack/procs/llm/`，agent 的在 `.stack/procs/ann/`，開了權限站的話站的在 `.stack/procs/perm/`。
 

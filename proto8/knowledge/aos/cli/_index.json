@@ -21,7 +21,7 @@
   "description": "Use aos-agent hook to list, add or remove the hooks of one agent (including on_clock timers)."
  },
  "hook_points.json": {
-  "description": "Use aos-hook to let others hook into a program you write (C++, shell...): a hook_points.json declaration plus aos-hook fire at that moment; points and check."
+  "description": "Use aos-hook to let others hook into a program you write (C++, shell...): a hooks.json declaration (only for reading) plus aos-hook fire at that moment; what an exit code or stdout means is up to your program."
  },
  "goal.json": {
   "description": "Use aos-agent goal to give one agent a goal it is reminded of when it stops by itself; get, set, done, pause, resume, clear."

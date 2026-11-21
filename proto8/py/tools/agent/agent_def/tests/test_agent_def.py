@@ -75,11 +75,11 @@ class AgentDef(unittest.TestCase):
         (tpl / "sub" / "empty").mkdir(parents=True)
         (tpl / "__pycache__").mkdir()
         (tpl / "__pycache__" / "x.pyc").write_bytes(b"\0")
-        (tpl / "interfaces.json").write_text('{"aos-agent": {"tools": "tools.json", "hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}')
+        (tpl / "interfaces.json").write_text('{"aos-agent": {"tools": "tools.json"}, "hooks": "hooks.json", "hookeds": "hookeds.json"}')
         tools = ('{"$override": "../base.json",\n "tools": {"add": {"path": "fn/add.py"},  "t": {"path": "../tool", "env_file": "../k.env"},'
                  ' "abs": {"path": "/opt/x"}, "d": {"path": {"$env": "AOS_HOME", "$path": "/lib/x"}}}}')
         (tpl / "tools.json").write_text(tools)                                    # 排版怪、有夾內夾外的相對路徑
-        (tpl / "hooks.json").write_text('{"hooks": {"h": {"event": "before_tool", "handler": "fn/no_secrets.py"}}}')
+        (tpl / "hookeds.json").write_text('{"h": {"event": "before_tool", "handler": "fn/no_secrets.py"}}')
         (tpl / "fn" / "add.py").write_text("#!/usr/bin/env python3\nprint(1)\n")
         (tpl / "fn" / "add.py").chmod(0o750)
         (tpl / "fsm.json").write_text('{"states": {"a": {"exec": {"argv": ["python3", "../../shared/x.py"]}}}}')

@@ -167,7 +167,7 @@ class AddParentDaemon(unittest.TestCase):
 
     def test_parent_is_looked_up_from_the_requester(self):
         """--envs from the agent's root, a tool cell and a hook cell: parent = the agent's root stack; the child sees it itself"""
-        for n, stack in enumerate((self.mom, self.mom / "tools" / "agents_ctl", self.mom / "hooks" / "guard")):
+        for n, stack in enumerate((self.mom, self.mom / "tools" / "agents_ctl", self.mom / "hookeds" / "guard")):
             with self.subTest(stack=str(stack)):
                 kid, ws = self.attach("kid%d" % n, "--envs", "FAKE_TOKEN=secret-value-1114", stack=stack)
                 self.assertEqual(self.cell_envs("kid%d" % n), {"AOS_PARENT_STACK": str(self.mom), "AOS_NOTIFY_BOX": ""})

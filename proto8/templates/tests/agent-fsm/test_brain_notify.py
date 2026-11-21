@@ -26,7 +26,7 @@ class BrainNotify(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         self.agent = self.root / "procs" / "worker"
-        self.cell = self.agent / "hooks" / "brain_notify"
+        self.cell = self.agent / "hookeds" / "brain_notify"
         self.cell.mkdir(parents=True)
         self.history = self.agent / "history.jsonl"
         self.seen = self.cell / "notified.json"
@@ -269,11 +269,11 @@ class BrainNotify(unittest.TestCase):
         self.assertEqual(self.calls(), [])
 
     def test_template_mount(self):
-        hooks = json.loads((PROTO / "templates" / "agent-fsm" / "hooks.json").read_text())
-        self.assertEqual(hooks["hooks"]["brain_notify"],
+        hooks = json.loads((PROTO / "templates" / "agent-fsm" / "hookeds.json").read_text())
+        self.assertEqual(hooks["brain_notify"],
                          {"event": "brain_failed", "condition": ["BudgetMissing", "BrainFailed"],
                           "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/brain_notify"},
-                          "on_error": "continue", "timeout_ms": 10000})
+                          "timeout_ms": 10000})
         self.assertIn("AOS_NOTIFY_BOX", hooks["description"])
 
     def test_eca_retry_series_arms_then_notifies_once_and_rearms(self):
@@ -388,11 +388,11 @@ class BrainNotify(unittest.TestCase):
                          '(30 s doubling to 30 min; changing llm.json clears it).')
 
     def test_eca_template_mount(self):
-        hooks = json.loads((PROTO / 'templates' / 'eca-claude' / 'hooks.json').read_text())
-        self.assertEqual(hooks['hooks']['brain_notify'],
+        hooks = json.loads((PROTO / 'templates' / 'eca-claude' / 'hookeds.json').read_text())
+        self.assertEqual(hooks['brain_notify'],
                          {'event': 'brain_failed', 'condition': ['CliFailed', 'ReplyMissing'],
                           'handler': {'$env': 'AOS_HOME', '$path': '/lib/tools/agent/brain_notify'},
-                          'on_error': 'continue', 'timeout_ms': 10000})
+                          'timeout_ms': 10000})
         self.assertIn('AOS_NOTIFY_BOX', hooks['description'])
         self.assertIn('codex events are ignored', hooks['description'])
 

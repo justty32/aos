@@ -528,7 +528,7 @@ class Live(unittest.TestCase):
         b = a.bp.add.before_tool("peek_now_time", once=True)
         names = [r["name"] for r in a.hook.ls(json=True)]
         self.assertIn("gdb_%04d" % b.id, names)                    # 磁碟上的名字補零；.id 照舊是 int
-        self.assertTrue(os.path.isdir(os.path.join(a.stack, "hooks", "gdb_%04d" % b.id)))
+        self.assertTrue(os.path.isdir(os.path.join(a.stack, "hookeds", "gdb_%04d" % b.id)))
         x = a.say("twenty three")
         self.assertEqual(a.bp.resume().head, "stopped at breakpoint %d (before_tool: peek_now_time)" % b.id)
         p = a.bp.step(wait=False)                                  # 放行就回；act 還要約 3 秒
@@ -556,9 +556,9 @@ class Live(unittest.TestCase):
         if drop_hooks:
             ij = d / "interfaces.json"
             doc = json.loads(ij.read_text())
-            del doc["aos-agent"]["hooks"]
+            del doc["hookeds"]
             ij.write_text(json.dumps(doc))
-            (d / "hooks.json").unlink()
+            (d / "hookeds.json").unlink()
         self.sh("aos-agent -d .stack ctl add -w . agents/%s" % name)
         b = agent.attach(name, daemon=self.daemon)
         b.bp.timeout_s = 60
@@ -589,7 +589,7 @@ class Live(unittest.TestCase):
                     b.bp.add.before_tool("ls")
                 self.assertEqual(e.exception.code, "HooksMissing")
                 self.assertIn("give hooks={} to defs.Agent(...) in agent.py, and recompile", str(e.exception))
-                self.assertFalse(os.path.exists(os.path.join(b.bp._a.stack, "hooks")))   # 小格、hooks/ 都沒留
+                self.assertFalse(os.path.exists(os.path.join(b.bp._a.stack, "hookeds")))   # 小格、hookeds/ 都沒留
                 self.assertEqual(b.bp._trigger_ids(), set())
         finally:
             self.sh("aos-agent -d .stack ctl rm nohooks", check=False)

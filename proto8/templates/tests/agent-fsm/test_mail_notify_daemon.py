@@ -1,6 +1,6 @@
 """範本預設的 mail_notify hook 實跑（真 root daemon＋時鐘、假腦）：寄一封＝間隔內收到一則 [aos] new_mail；連寄三封只多一則；self_hook 改間隔照新間隔；self_hook rm＝不再收到。"""
 # 11-11 mail-notify（使用者「用on_clock」「預設開」「合成一句」）。用這份 clone 的 cpp／cmd（PATH 最前）、py／lib（PYTHONPATH）。
-# 跑法：python3 test_mail_notify_daemon.py [-v]；KEEP=1 留下試驗資料夾。約一分鐘（範本間隔 11-11 翻案起是 60 秒，這裡把抄來的 hooks.json 改成 10 秒；根的時鐘 1 秒一格）。
+# 跑法：python3 test_mail_notify_daemon.py [-v]；KEEP=1 留下試驗資料夾。約一分鐘（範本間隔 11-11 翻案起是 60 秒，這裡把抄來的 hookeds.json 改成 10 秒；根的時鐘 1 秒一格）。
 import json
 import os
 from pathlib import Path
@@ -35,10 +35,10 @@ class MailNotifyDaemon(unittest.TestCase):
         shutil.copytree(PROTO / "templates" / "agent-fsm", bob, ignore=shutil.ignore_patterns("__pycache__"))
         (bob / "llm.json").write_text(json.dumps({"model": "fake"}))
         (bob / "tools.json").write_text(json.dumps({"tools": {}}))   # 假腦看到工具會先叫一支；這裡只看 history 裡的提醒
-        hooks = json.loads((bob / "hooks.json").read_text())
-        self.assertEqual(hooks["hooks"]["mail_notify"]["every_ms"], 60000)   # 範本預設每 1 分鐘（使用者 11-11 選項框「每 1 分鐘」）
-        hooks["hooks"]["mail_notify"]["every_ms"] = 10000                    # 測試等不了一分鐘：抄來的那份改 10 秒，其餘照範本
-        (bob / "hooks.json").write_text(json.dumps(hooks))
+        hooks = json.loads((bob / "hookeds.json").read_text())
+        self.assertEqual(hooks["mail_notify"]["every_ms"], 60000)            # 範本預設每 1 分鐘（使用者 11-11 選項框「每 1 分鐘」）
+        hooks["mail_notify"]["every_ms"] = 10000                             # 測試等不了一分鐘：抄來的那份改 10 秒，其餘照範本
+        (bob / "hookeds.json").write_text(json.dumps(hooks))
         self.err = open(self.root / "root.err", "w")
         self.addCleanup(self.err.close)
         self.kernel = subprocess.Popen(["aos-daemon", str(self.root / "kernel_daemon.json")], cwd=self.root,
@@ -97,7 +97,7 @@ class MailNotifyDaemon(unittest.TestCase):
     def test_notify_batch_interval_and_off(self):
         self.run_ok(["aos-agent", "-d", "stacks/root", "ctl", "add", "-w", ".", "defs/bob"])
         stack = self.root / "stacks" / "root" / "procs" / "bob"
-        self.until(lambda: (stack / "hooks" / "mail_notify" / "on_clock.json").exists())   # 起來第一次已看過（空信箱：安靜）
+        self.until(lambda: (stack / "hookeds" / "mail_notify" / "on_clock.json").exists())   # 起來第一次已看過（空信箱：安靜）
         self.assertEqual(self.notes(), [])
         self.send("amy")
         t0 = time.monotonic()
@@ -112,7 +112,7 @@ class MailNotifyDaemon(unittest.TestCase):
         self.assertTrue(self.notes()[1].startswith("[aos] new_mail: 3 new letters from cody."), self.notes())
         # 改間隔（免打擾的反面：改快）：self_hook add replace 同名
         self.self_hook({"op": "add", "name": "mail_notify", "event": "on_clock", "every_ms": 2000, "replace": True,
-                        "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/mail_notify"}, "on_error": "continue",
+                        "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/mail_notify"},
                         "timeout_ms": 10000})
         time.sleep(3)
         self.send("dan")

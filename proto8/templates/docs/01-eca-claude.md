@@ -26,7 +26,7 @@ claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是�
 eca-claude/
   _entry      ["aos-loop", "loop.json"]（JSON 入口）
   loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 0},
-               "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；三扇窗落在 $AOS_STACK）
+               "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json", "on_start": …, "on_stop": …}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；三扇窗落在 $AOS_STACK；on_start／on_stop＝aos-hook fire -q --stop-on-nonzero --def $AOS_CD 發 after_start／after_stop，before_run／after_run 預設不接）
   cli.json    怎麼叫 CLI（kind、flags、print_flags、tools_sub、timeout_ms〔0＝不限時〕）：--tools Read,Write,Edit,Glob,Grep,Bash,Agent,Skill、--permission-mode dontAsk、--allowedTools Write,Edit,Bash、--strict-mcp-config；
               tools_sub＝子 agent 那台的登記檔（見下「子 agent 與 skill」）
               （claude 內建的寫檔、改檔、指令都開，aos 不給檔案與 shell 工具；--model 不寫在這，見 llm.json；不加全繞過權限的旗標）
@@ -36,9 +36,9 @@ eca-claude/
   tools.json  aos-tools 的登記檔：`"$override"` 一串 [py/packs](../../py/packs/README.md) 八包（gadgets、events、self、def、mailbox、json〔json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set〕、jsonx〔jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del、jsonx_multi_get、jsonx_multi_set〕、index〔index_view〕），self 包比照 agent-fsm 關掉 self_llm、self_system、self_history、self_ctl（11-21 線 top-1121-ecaeffort，照使用者對 agent-fsm 選的「self 只留兩支」，[tool-desc-瘦身 04](../../thinking/2026-11/21/tool-desc-瘦身-1121/04-使用者已答.md)；要用 `self_tools add` 加回），共 30 支；不掛通用四包 look、change、delete（含 trash）、shell（11-11 晚使用者「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」）與 subagent、goal、todo（原話與代定見範本 README）；do_task 只給 agent-fsm，寫 `"do_task": null`；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__peek_now_time…；帶 `--own <stack>/tools.json`，self_tools 加減工具後 aos-mcp 送 list_changed，同一輪就叫得到，使用者「3.同一輪就生效」）；不要工具就刪掉它
   tools_sub.json  子 agent 那台的登記檔：gadgets、json、index 三包裡不改東西的九支（peek_clock、peek_now_time、math、json_get、json_ls、json_search、json_len、json_multi_get、index_view）
-  interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model", "reasoning_effort"], "history": "history.jsonl", "hooks": "hooks.json", "system": "system.txt"}}（history 鍵給 aos-agent history 找檔；llm_keys：aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
+  interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model", "reasoning_effort"], "history": "history.jsonl", "system": "system.txt"}, "hooks": [loop_hooks.json、eca/hooks.json、mcp/hooks.json 三個 {"$env": "AOS_HOME", "$path": …} 指示詞], "hookeds": "hookeds.json"}（hooks＝hook 點的宣告，只是參考；hookeds＝被勾清單；history 鍵給 aos-agent history 找檔；llm_keys：aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
   system.txt  兩段短文（自己是 aos agent、知識庫在 $AOS_HOME/knowledge/ 怎麼找），以 --append-system-prompt-file 接在 CLI 自己的系統提示後面；11-21 比照 agent-fsm 補知識庫路徑（線 top-1121-ecaeffort；之前範本沒有這個檔）
-  hooks.json  hook 清單（預設一格 timer：on_clock 每 300000 ms、handler py/tools/agent/hook_noop 什麼都不做；另一格 mail_notify：on_clock 每 60000 ms（使用者「每 1 分鐘」）、handler py/tools/agent/mail_notify，有新信才往 queue 寄一則 `[aos] new_mail: …`；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
+  hookeds.json  被勾清單（預設一格 timer：on_clock 每 300000 ms、handler py/tools/agent/hook_noop 什麼都不做；另一格 mail_notify：on_clock 每 60000 ms（使用者「每 1 分鐘」）、handler py/tools/agent/mail_notify，有新信才往 queue 寄一則 `[aos] new_mail: …`；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
   screen/     子介面：_entry＝["aos-eca-screen", "--eca", ".."]（aos-agent open／close／watch 叫它；動作接在最後）
   README.md、_metainfo.json  首行一句話與 summary 一致；估時 cost.time_ms 60000、resource ["llm"]，沒有頂層 timeout_ms（讓 agent_def check 過）
 ```
@@ -87,12 +87,13 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 | `before_tool`（可改 arguments、可攔）／`after_tool`（可改結果） | 只有經 aos-mcp 叫的 aos 工具 | aos-mcp 的 tools/call（cli_session 起它時帶 `--hooks <定義>`） |
 | `brain_failed` | 有（`name`＝`CliFailed`／`ReplyMissing`，交出去之後才算） | aos-eca-turn |
 | `tool_added` | 有（看這隻生效的 aos 登記檔，交出去之前比一次） | aos-eca-turn |
-| `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop` → `aos-hook fire --agent` |
+| `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop` → `aos-hook fire --def` |
+| `before_run`／`after_run`（每一輪前後；before_run 退 10＝跳過這輪） | loop.json 接了線才有（範本預設不接） | loop.json 的 `on_before_run`／`on_after_run` → `aos-hook fire --def` |
 | `on_clock`（[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)） | 有（每輪最開頭判，冷卻中、退讓的那輪也判；到了才起 handler） | aos-eca-turn |
-| `before_compact`（可改摘要指示、可交壓完補回的字、可攔）／`after_compact`（只告知） | 只有 claude 身、`cli.json` 掛了範本的 `compact_hook` 時（見下「壓縮前後的 hook 點」） | `compact_hook`（Claude Code 自己的 PreCompact／PostCompact hook）→ `aos-hook fire --agent $AOS_CLI_DEF` |
+| `before_compact`（可改摘要指示、可交壓完補回的字、可攔）／`after_compact`（只告知） | 只有 claude 身、`cli.json` 掛了範本的 `compact_hook` 時（見下「壓縮前後的 hook 點」） | `compact_hook`（Claude Code 自己的 PreCompact／PostCompact hook）→ `aos-hook fire --def $AOS_CLI_DEF` |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos |
 
-**壓縮前後的 hook 點**（11-21 線 top-1121-ecaeffort；使用者「compact的機制不管，但可以試試看提供相應的hook點」）：壓縮是 Claude Code 自己做的（`/compact` 或它自己快滿時），aos 不改它怎麼壓；範本的 `compact_hook` 掛在 Claude Code 給的三個時刻，其中兩個接成 aos 的點（宣告在 [py/aos/apps/eca/hook_points.json](../../py/aos/apps/eca/hook_points.json)，照現行格式；hook 點宣告的新格式定了之後跟著換）：
+**壓縮前後的 hook 點**（11-21 線 top-1121-ecaeffort；使用者「compact的機制不管，但可以試試看提供相應的hook點」）：壓縮是 Claude Code 自己做的（`/compact` 或它自己快滿時），aos 不改它怎麼壓；範本的 `compact_hook` 掛在 Claude Code 給的三個時刻，其中兩個接成 aos 的點（宣告在 [py/aos/apps/eca/hooks.json](../../py/aos/apps/eca/hooks.json)，只是參考）。`compact_hook` 經 `aos-hook fire --def $AOS_CLI_DEF` 發，自己讀結果：第一個退 10 的攔下；退 0 的 stdout 物件依名字順序設 `instructions`／`restore`（每個 handler 拿同一份事件）；失敗的一行 warning：
 
 | Claude Code 的 hook | aos 的點 | 欄位 | hook 能做什麼 |
 |---|---|---|---|
@@ -106,7 +107,7 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 - **出錯不擋 Claude**：`AOS_HOME`、`AOS_CLI_DEF`、`AOS_STACK` 少一個就不發；`aos-hook` 起不來或報錯＝stderr 一行 warning、照沒有 hook 的樣子做。`cli.json` 裡這三個 hook 的 `timeout` 是 60 秒（以前 10 秒），hook 的 handler 各自的 `timeout_ms` 要在這之內。
 - 畫面開著時在畫面裡壓、自動壓縮兩條路沒實測；pi、codex 不發這兩個點（pi 有自己的 `session_before_compact`／`session_compact` 外掛事件，這次沒接，見紀錄）。
 
-hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停的，信留在 `queue/cur/`、history 不動，修好照問；aos-mcp 裡停的＝那次工具呼叫回錯（isError）給 CLI，不整支死。
+hook 失敗（退 0／10 以外、逾時、起不來、stdout 不合）：能攔的點停下——`before_queue` 的＝`aos-eca-turn: error: HookFailed …` 退 1，信留在 `queue/cur/`、history 不動，修好照問；aos-mcp 裡 `before_tool` 的＝那次工具呼叫回錯（isError）給 CLI，不整支死。其他點＝一行 warning、照常。loop 的四個點照 aos-loop 的規矩（非 0＝loop 停，before_run 退 10＝跳過這輪）。
 
 **長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 與 `loop.json.exec.timeout_ms` 範本都是 0＝不限時（11-15 起；以前 600000／900000。使用者 11-15：「AI一輪跑個二三十分鐘都很正常，eca也是可能長時間不回應，逾時這東西應該要默認爲0，也就是不限時間，除非是一些有特殊需求的。」；cli.json 沒寫 `timeout_ms` 也是不限時）。要上限才寫正整數毫秒：`cli.json` 那層限制 CLI 呼叫，`loop.json` 那層限制整次 aos-eca-turn，兩層都寫時外層要比內層長，讓它有時間收尾。不限時的時候一輪很久沒動靜（`live.jsonl`、`turns.jsonl`、`busy.txt`、對話 transcript 都沒在變）滿 10 分鐘就在 stack 寫 `quiet.json`（py/aos/agentlib/quiet.py；只標記、不殺不丟信），一有動靜或這輪結束就收掉。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
 

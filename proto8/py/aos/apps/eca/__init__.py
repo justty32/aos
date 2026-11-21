@@ -41,12 +41,13 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
     gone, a new one carries the history record. The 10th temporary failure in a row is treated as permanent. Slash failures also exit 0 when temporary, but the slash letter is
     dropped failed and is not retried. Other failures stop as before; codex always behaves as before.
     Non-text claude results are CliFailed.
-  Hooks (hooks.json declared in DEF_DIR's interfaces.json, the stack copy on top): before_queue before a good letter is handed over
+  Hooks (the hookeds of DEF_DIR's interfaces.json, the stack copy on top): before_queue before a good letter is handed over
     (may change content or drop it; a dropped letter is done and noted in mailbox_warning.txt), tool_added before handing over,
     after_queue after the letters went into history, brain_failed on CliFailed / ReplyMissing after handing over. before_tool /
     after_tool run in aos-mcp. on_clock is checked first thing every turn (it runs only when its clock condition is met).
     Claude's brain_failed also carries code, retry, attempt, dropped, wait_s (temporary only), status and cause
-    (when available); codex keeps only name and reason. A failing hook = HookFailed (letters not yet handed over stay in cur/).
+    (when available); codex keeps only name and reason. A failing before_queue hook = HookFailed (letters not yet handed over
+    stay in cur/); a failing hook of the other events is one warning line.
   Goal: with no letter, when the CLI answered the last turn (or history is still empty) and $AOS_STACK/goal.json is active, the prompt of this turn is one
     message "[aos] goal: TEXT (reminder N of LIMIT...)" (it goes into history like a letter). A turn in which the CLI called tools
     (seen in its own transcript) sets the count back to 0; LIMIT reminders in a row without progress pause the goal.

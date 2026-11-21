@@ -10,7 +10,7 @@
 - **掛 proc 那一包**（`procs_rules.py`、`queue_fifo.py`）是蓋在骨架上的通用基礎包：白名單、數量上限（`max_running`、`count_daemon`）、先來先掛的排隊、寄件人的期限，都是這一包的做法，不是框架的規定。它故意做得簡單、通用：例如分流之後所有下一站合算一個上限，要分開管就在各下一站自己的設定各設各的（使用者 11-13 對「分流後數量上限怎麼算」選「甲」＝維持現況）。
 - 要別種規則：寫 hook，或另寫一包交給骨架（問腦那一包 [`py/tools/aos/kernel_llm`](../kernel_llm/README.md) 就是）。
 
-下面 `kernel.json` 的鍵裡，`hooks` 是骨架的；`next`、`count_daemon`、`allowed`、`max_running`、`queue`、`keep_ordered`、`route_ordered`、`reply_via_me` 是掛 proc 這一包認的。
+hook 不寫在 `kernel.json`：被勾清單是同夾 `interfaces.json` 最外層 `hookeds` 指的檔（見下方「hooks」），由骨架讀。下面 `kernel.json` 的鍵裡，`next`、`count_daemon`、`allowed`、`max_running`、`queue`、`keep_ordered`、`route_ordered`、`reply_via_me` 是掛 proc 這一包認的。
 
 ## 零件怎麼用
 
@@ -58,7 +58,6 @@
 | `limits` | `{default, max, by_sender}`：每支新 proc 的份額預設、天花板、照寄件人的預設（值是正整數，鍵同 daemon 的 `limits`） | 不改份額 |
 | `users` | `{名字樣式: 帳號}`，帳號是字串（`sub:N` 或帳號名）或 `{user, groups}` | 不填身分 |
 | `groups` | `{群組名: 60001～65536}`，給 `users` 的 `groups` 換號 | 沒有 |
-| `hooks` | `{名字: 一格}`，只讀這一份；格的鍵見下方 | 沒有 hook |
 
 寫了 `next` 與 `max_running` 就須寫 `count_daemon`，即使上限值為 null；不猜下一站是哪台。下一站取自 `AOS_KERNEL` 時同理：寫了 `max_running` 卻沒寫 `count_daemon`＝`CfgBad`。`count_daemon` 必須是資料夾；表還沒有時 running 為 0，讀不懂時整輪報錯。只數 `running`、`stuck` 與本輪放行的新名字，在飛的信不算。數量另指時不看那台的 ctl 信箱。轉寄目標解開捷徑後若等於自己的 `requests/`，設定不成立。
 
@@ -99,7 +98,9 @@
 
 ## hooks
 
-每格必填 `event`、`handler`；`handler` 是非空路徑字串或指示詞物件，相對路徑從 `kernel.json` 所在夾算。選填 `intercept`（預設 true）、`async`（預設 false）、`on_error`（stop／continue，預設 stop）、`timeout_ms`（正整數，預設 60000）。`condition` 是字串或字串陣列，只有 `after_verdict` 收，用來比 `verdict`。名字須非空、不含 `/`、不以 `.` 開頭；清單或格的形狀錯、事件名不認得，都是 `CfgBad`。掛 proc 這一包有 `before_reply` hook 時必須開 `reply_via_me`，由包的 `load` 檢查。
+被勾清單不在 `kernel.json`：骨架每輪照 `kernel.json` 所在夾（定義夾）的 `interfaces.json` 最外層 `hookeds` 讀（檔名、指示詞或它們的陣列，後面的同名蓋前面、`null`＝關掉；沒寫、檔不在＝沒有 hook）。編譯（`aos.py.kernel.defs`）與範本都寫 `"hookeds": "kernel_hookeds.json"`，loop 身體的 loop 四點也掛在同一份；三個點的宣告 `kernel_hooks.json`（正本在本夾，每個 kernel 定義夾一份抄本）只是參考，程式不讀。
+
+清單是 `{"description": "一句話", 名字: 一格 或 null}`。每格必填 `event`、`handler`；`handler` 是非空路徑字串或指示詞物件，相對路徑從那份清單所在夾算。選填 `timeout_ms`（非負整數，0＝不限，預設 60000）、`condition`（字串或字串陣列，只有 `after_verdict` 拿來比 `verdict`，別的點寫了不看）；以前的 `intercept`、`async`、`on_error` 拿掉了，寫了也不讀。事件名不驗。名字須非空、不含 `/`、不以 `.` 開頭、不叫 `description`；清單或格的形狀錯＝`CfgBad`。掛 proc 這一包有 `before_reply` hook 時必須開 `reply_via_me`，由包的 `load` 檢查。掛 proc 這一包有 `before_reply` hook 時必須開 `reply_via_me`，由包的 `load` 檢查。
 
 | 事件 | 時機與事件欄位 | 能改 |
 |---|---|---|
@@ -107,7 +108,7 @@
 | `after_verdict` | 新信判完一次；隊中信出隊再一次，繼續排不跑。上述欄位再加 `verdict`、`error`（拒信的 `{code, msg}`，否則 null）、`next`（null；只有會轉寄的包有這一欄）、`decision`（平常 null；留著的信有人表態 pass、重判那一次是 `"pass"`；只有收 hold 的包有這一欄） | `verdict`（pass／refuse／hold；hold 見「先留著等表態」）、`error`、`next`（這一封的下一站，見「分流」） |
 | `before_reply` | 下游回信代回前；`letter`（原信名）、`sender`（原寄件人）、`reply_to`（原回信箱）、`reply_sender`、`body` | `body` |
 
-每份事件 JSON 都有 `event`、`hook`、`stack`（站的 stack），沒有 `names` 等 proc 專用欄。事件從 handler 的 stdin 進，也留在 `hooks/<名>/event.json`；handler 經 `aos-exec --stack <小格>/ <handler>` 跑。同一事件照 hook 名字排序，前一個改過的內容後一個看得到。退 0、stdout 空＝不改；stdout 是 JSON 物件時只取允許改的鍵。`intercept: false` 或 `async: true` 是純通知，不看 stdout，退 10 也不攔。
+每份事件 JSON 都有 `event`、`hook`、`stack`（站的 stack），沒有 `names` 等 proc 專用欄。事件從 handler 的 stdin 進，也留在 `hookeds/<名>/event.json`；handler 經共用引擎 `aos.hook_run` 以 `aos-exec --stack <小格>/ <handler>` 跑。這一家的規矩（能攔、能改哪些鍵、condition 比哪欄、失敗怎麼算）寫在 [`hooks.py`](hooks.py) 的 `POINTS`。同一事件照 hook 名字排序，前一個改過的內容後一個看得到。退 0、stdout 空＝不改；stdout 是 JSON 物件時只取允許改的鍵。
 
 `after_verdict` 的 condition 沿名單引擎的做法，先比這次內建判決來挑 hook；前一格改判，後一格仍會收到改過的判決。每格拒因的預設值在下一格之前補好。
 
@@ -117,12 +118,12 @@
 
 `after_verdict` 改成 refuse 卻沒完整的 `error`（物件、`code` 與 `msg` 都是字串），補 `{"code": "HookRejected", "msg": "refused by hook <name>"}`。把 refuse 或 queue 改成 pass 就照放行，不回頭驗期限、白名單或上限；改成 hold＝先留著；其他 verdict 值算 hook 自己失敗。
 
-hook 自己逾時、退非 0／10、起不來或回話不合：`on_error: stop` 印 `kernel: error: HookFailed ...`、這輪退 1，信留在 cur，下輪重來；`before_reply` 失敗時回信留在 replies/cur。只有上一輪已寫進 `queue.json` 的信算隊中信，其他信下輪仍跑 `before_verdict`。`continue` 印一行 warning、當沒這個 hook。async 放出去就不等結果。
+hook 自己逾時、退非 0／10、起不來或回話不合：印 `kernel: error: HookFailed ...`、這輪退 1，信留在 cur，下輪重來；`before_reply` 失敗時回信留在 replies/cur。只有上一輪已寫進 `queue.json` 的信算隊中信，其他信下輪仍跑 `before_verdict`。三個點都一樣，沒有「只 warning」的選項。
 
-最小例子：`kernel.json` 與可執行的 `rewrite` 放在同一夾，每封新信都換成這個 body。
+最小例子：`kernel.json`、`interfaces.json`（寫 `"hookeds": "kernel_hookeds.json"`）與可執行的 `rewrite` 放在同一夾，每封新信都換成這個 body。`kernel_hookeds.json`：
 
 ```json
-{"hooks": {"rewrite": {"event": "before_verdict", "handler": "rewrite"}}}
+{"rewrite": {"event": "before_verdict", "handler": "rewrite"}}
 ```
 
 ```sh
@@ -136,10 +137,10 @@ printf '%s\n' '{"body":{"ping":true}}'
 
 使用者 11-13：「按照規則分流吧。就用hook」——`next` 維持一個；要照規則把不同的信轉給不同的下一站，寫 `after_verdict` hook，stdout 回 `{"next": "<信箱的絕對路徑>"}`。這一封放行時就寄到那裡、不寄站原本的下一站；一封信只去一處。沒回 `next`（或回 null）＝照原本三段。三個時機只有 `after_verdict` 收 `next`；另外兩個回了也不看。
 
-最小例子：`kernel.json` 與可執行的 `route` 放同一夾。body 的 `lane` 是 `side` 的信寄到旁邊那一站，其餘照 `next`。
+最小例子：`kernel.json` 寫 `{"next": "/srv/main/requests"}`，同夾的 `kernel_hookeds.json` 掛可執行的 `route`。body 的 `lane` 是 `side` 的信寄到旁邊那一站，其餘照 `next`。
 
 ```json
-{"next": "/srv/main/requests", "hooks": {"route": {"event": "after_verdict", "condition": "pass", "handler": "route"}}}
+{"route": {"event": "after_verdict", "condition": "pass", "handler": "route"}}
 ```
 
 ```python
@@ -153,7 +154,7 @@ if body.get("lane") == "side":
 ```
 
 - **何時生效**：只有這一封最後的判決是 pass 才用得上。判決是留隊時給的 `next` 不記；那封信出隊時 `after_verdict` 會再跑一次，那時給的才算。被拒的信不轉寄，給了也沒用。`condition` 比的是內建判決：寫 `"pass"` 的 hook 不會看到別的 hook 從拒改成放行的信；改判的那個 hook 可以自己一起回 `next`。
-- **值**：非空的絕對路徑字串或 null。相對路徑、空字串、別的型別、解開捷徑後是自己的 `requests/`＝hook 自己失敗（照 `on_error`：stop 這輪退 1、信留著；continue 印 warning、當沒這個 hook，信照原本的下一站）。站不驗那個信箱在不在；寄不進去照 `ForwardFailed` 拒信。
+- **值**：非空的絕對路徑字串或 null。相對路徑、空字串、別的型別、解開捷徑後是自己的 `requests/`＝hook 自己失敗（這輪退 1、信留著）。站不驗那個信箱在不在；寄不進去照 `ForwardFailed` 拒信。
 - **站自己仍要有原本的下一站**：三段都用不上照舊 `DaemonMissing`，即使 hook 會替每一封指定。
 - **回信**：跟沒分流時一樣。開 `reply_via_me` 時不管信去哪一站，下游都回到本站的 `replies/`，`forwarded.json` 照轉寄後的信名對回原信、代回原寄件人；對照表的正式列不記信去了哪一站（只有寄到一半的待定列記）。
 - **數量上限**（掛 proc 這一包的做法）：站只在一個地方數（`count_daemon`），不知道 hook 指的站後面是哪台 daemon。hook 給了 `next`、設定有 `max_running`、卻沒寫 `count_daemon`＝`CfgBad`（沒寫 `next` 時原本預設數 `AOS_DAEMON`，這裡不沿用）。寫了就照字面：不管信去哪一站，都算進同一個上限。各站各自的上限要在各站自己的 `kernel.json` 設。
@@ -187,10 +188,10 @@ if body.get("lane") == "side":
 - **站裡沒有這封信的表態檔**（信已離站、或信名打錯）：每輪收尾時刪掉。
 - **只有掛 proc 這一包收 `hold`**；問腦那一包沒有 `held` 這個口，hook 回 `hold` 算 hook 自己失敗。
 
-最小例子：機器先照 `kernel.json` 的規則判，規則放行的信裡只有帶 `desc` 的留給人看，其餘直接放行。`kernel.json` 與可執行的 `ask` 放同一夾。
+最小例子：機器先照 `kernel.json` 的規則判（`{"allowed": ["worker"]}`），規則放行的信裡只有帶 `desc` 的留給人看，其餘直接放行。同夾的 `kernel_hookeds.json` 掛可執行的 `ask`：
 
 ```json
-{"allowed": ["worker"], "hooks": {"ask": {"event": "after_verdict", "condition": "pass", "handler": "ask"}}}
+{"ask": {"event": "after_verdict", "condition": "pass", "handler": "ask"}}
 ```
 
 ```python
@@ -221,7 +222,7 @@ bodies/<信名>.json before_verdict 改過且還在排隊的 body，原子寫入
 replies/           下游回信箱
 forwarded.json     {轉寄後信名: {"letter": 原信名, "reply_to": 原信箱或null, "sender": 原寄件人}}
                    寄到一半的待定列：鍵是 "pending/<原信名>"，多一欄 "pending": {"box": 去的信箱, "tail": 尾名, "ordered": 是否保有序, "before": [寄之前那個信箱裡同尾名的有序信名]}
-hooks/<名>/        hook 小格，event.json 是最後一次事件
+hookeds/<名>/      hook 小格，event.json 是最後一次事件
 ```
 
 開 `queue` 或既有窗存在時寫窗。改過的 body 不放進公開的 queue.json；之後每輪從 bodies/ 讀回來判。開代回或已有回信／對照時收 replies。保有序時不管原信有沒有 `reply_to` 都先記防重列；沒有代回需求的列 `reply_to` 是 null，原信收掉即刪。待定列只在寄的那一下存在，正常跑完的一輪不會留下；形狀不對＝`StateBad`。
@@ -236,7 +237,7 @@ hooks/<名>/        hook 小格，event.json 是最後一次事件
 |---|---|
 | `ArgumentsBad` | 不是恰好一個非空設定檔參數 |
 | `CfgMissing` | 設定檔不存在 |
-| `CfgBad` | 設定讀不懂、鍵的型別錯、缺數量來源（寫了 `next`、下一站取自 `AOS_KERNEL` 或 hook 替單封信給了 `next`，有 `max_running` 沒 `count_daemon`）、`keep_ordered` 開著而 `route_ordered` 關著時 hook 給了 `next`、轉寄目標是自己，或 hooks 設定不合 |
+| `CfgBad` | 設定讀不懂、鍵的型別錯、缺數量來源（寫了 `next`、下一站取自 `AOS_KERNEL` 或 hook 替單封信給了 `next`，有 `max_running` 沒 `count_daemon`）、`keep_ordered` 開著而 `route_ordered` 關著時 hook 給了 `next`、轉寄目標是自己，或被勾清單（`interfaces.json` 的 `hookeds`）不合 |
 | `StackMissing` | 沒設 AOS_STACK |
 | `DaemonMissing` | 下一站三段都用不上（沒寫 `next`、`AOS_KERNEL` 沒設或指到自己、`AOS_DAEMON` 未設或不是資料夾），或 `count_daemon` 不是資料夾 |
 | `StateBad` | daemon 表、轉寄對照讀不懂，或對照／窗／保存的 body 讀寫不了 |
@@ -244,7 +245,7 @@ hooks/<名>/        hook 小格，event.json 是最後一次事件
 | `CommandMissing` | aos-post 或 aos-directive 起不來 |
 | `PostFailed` | 建信箱、認領、看信或收信失敗 |
 | `LockFailed` | 不能取得 requests/.flock |
-| `HookFailed` | on_error: stop 的 hook 自己失敗，信留著下一輪重來 |
+| `HookFailed` | hook 自己失敗，信留著下一輪重來 |
 
 | 拒信代號 | 原因 |
 |---|---|

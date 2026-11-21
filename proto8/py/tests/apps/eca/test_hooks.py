@@ -28,7 +28,7 @@ class EcaHooks(unittest.TestCase):
             d.mkdir()
         (self.bin / "claude").symlink_to(HERE / "fake_claude")
         (self.defn / "cli.json").write_text(json.dumps({"kind": "claude", "timeout_ms": 30000}))
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json", "hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "eca"}, {"provider": "mcp"}]}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json"}, "hookeds": "hookeds.json"}))
         self.log, self.cli_log, self.tools_log = self.t / "hooks.jsonl", self.t / "cli.jsonl", self.t / "tools.jsonl"
         subprocess.run(["aos-post", "init", str(self.stack / "queue")], env=self.env(), check=True, capture_output=True)
 
@@ -48,7 +48,7 @@ class EcaHooks(unittest.TestCase):
         return path.name
 
     def declare(self, table):
-        (self.defn / "hooks.json").write_text(json.dumps({"hooks": table}))
+        (self.defn / "hookeds.json").write_text(json.dumps(dict({"description": "test hooks"}, **table)))
 
     def tools(self, names):
         """登記檔＋假的 aos-tools：ls --json 列 names，每次叫都記一行。"""
@@ -79,8 +79,7 @@ class EcaHooks(unittest.TestCase):
 
     # ---- 測試
     def test_queue_before_changes_content_and_queue_after_sees_it(self):
-        self.declare({"up": {"event": "before_queue", "handler": self.hook("up", 'print(json.dumps({"content": ev["content"].upper()}))\n'),
-                             "intercept": True},
+        self.declare({"up": {"event": "before_queue", "handler": self.hook("up", 'print(json.dumps({"content": ev["content"].upper()}))\n')},
                       "seen": {"event": "after_queue", "handler": self.hook("seen")}})
         self.say("hello")
         sig = self.queue("new")
@@ -95,7 +94,7 @@ class EcaHooks(unittest.TestCase):
         self.assertTrue(ev[0]["letter"])
 
     def test_queue_before_drops_one_letter(self):
-        self.declare({"drop": {"event": "before_queue", "intercept": True,
+        self.declare({"drop": {"event": "before_queue",
                                "handler": self.hook("drop", 'sys.exit(10 if ev["content"] == "spam" else 0)\n')}})
         self.say("spam", "keep")
         r = self.turn()
@@ -106,7 +105,7 @@ class EcaHooks(unittest.TestCase):
         self.assertEqual(self.queue(), [])
 
     def test_queue_before_drops_all_no_cli(self):
-        self.declare({"drop": {"event": "before_queue", "intercept": True, "handler": self.hook("drop", "sys.exit(10)\n")}})
+        self.declare({"drop": {"event": "before_queue", "handler": self.hook("drop", "sys.exit(10)\n")}})
         self.say("a", "b")
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -128,7 +127,7 @@ class EcaHooks(unittest.TestCase):
         self.assertEqual([m["content"] for m in self.history()], ["hello", "FAKE: hello"])
 
     def test_hooks_bad(self):
-        (self.defn / "hooks.json").write_text("not json")
+        (self.defn / "hookeds.json").write_text("not json")
         self.say("hello")
         r = self.turn()
         self.assertEqual(r.returncode, 1)
@@ -138,7 +137,7 @@ class EcaHooks(unittest.TestCase):
     def test_on_clock_each_turn_history_stays(self):   # 11-11 clock-hook：每輪開頭看時鐘；第一次立刻跑、之後到了才跑；queue 空也看；history 不多東西
         clock = self.t / "clock"
         clock.write_text("10\n")
-        self.declare({"t": {"event": "on_clock", "every_cycles": 2, "handler": self.hook("t"), "on_error": "continue"}})
+        self.declare({"t": {"event": "on_clock", "every_cycles": 2, "handler": self.hook("t")}})
         self.assertEqual(self.turn(AOS_CLOCK=str(clock)).returncode, 0)          # 第一次：跑一次
         clock.write_text("11\n")
         self.turn(AOS_CLOCK=str(clock))
@@ -151,11 +150,12 @@ class EcaHooks(unittest.TestCase):
         self.assertEqual(self.history(), [])
 
     def test_queue_after_failing_keeps_answer(self):
+        # after_queue cannot block: a failing hook is one warning line, the turn goes on (11-21 agent family rule)
         self.declare({"bad": {"event": "after_queue", "handler": self.hook("bad", "sys.exit(3)\n")}})
         self.say("hello")
         r = self.turn()
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("HookFailed hook bad (event after_queue)", r.stderr)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("aos-eca-turn: warning: hook bad (event after_queue) failed: exited 3", r.stderr)
         self.assertEqual([m["content"] for m in self.history()], ["hello", "FAKE: hello"])
         self.assertEqual(self.queue(), [])
 
@@ -194,13 +194,16 @@ class EcaHooks(unittest.TestCase):
         self.assertEqual(self.queue(), [])
         self.assertTrue((self.stack / "cooldown.json").exists())
 
-    def test_brain_failed_hook_stops(self):
+    def test_brain_failed_hook_failure_warns(self):
+        # brain_failed cannot block: a failing hook is one warning line; the brain's own failure goes on as without it
         self.declare({"bf": {"event": "brain_failed", "handler": self.hook("bf", "sys.exit(3)\n")}})
         self.say("hello")
         r = self.turn(FAKE_CLI_FAIL="1")
         self.assertEqual(r.returncode, 1)
-        self.assertIn("HookFailed hook bf (event brain_failed)", r.stderr)
-        self.assertFalse((self.stack / "cooldown.json").exists())
+        self.assertIn("aos-eca-turn: warning: hook bf (event brain_failed) failed: exited 3", r.stderr)
+        self.assertNotIn("HookFailed", r.stderr)
+        self.assertIn("aos-eca-turn: error: CliFailed", r.stderr)
+        self.assertTrue((self.stack / "cooldown.json").exists())
 
     def test_tool_added(self):
         self.tools(["a"])

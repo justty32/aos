@@ -160,10 +160,9 @@ class State(unittest.TestCase):
 
     def test_hooks_with_one_hook(self):   # 11-10 最後一輪：hook 鍵改名 event 後 part_hooks 還讀 "on"，有 hook 就 KeyError
         iface = json.loads((self.defn / "interfaces.json").read_text())
-        iface["aos-agent"]["hooks"] = "hooks.json"
-        iface["aos-agent"]["hook_points"] = [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]
+        iface["hookeds"] = "hookeds.json"
         (self.defn / "interfaces.json").write_text(json.dumps(iface))
-        (self.defn / "hooks.json").write_text(json.dumps({"hooks": {"logger": {"event": "after_tool", "handler": "/bin/true"}}}))
+        (self.defn / "hookeds.json").write_text(json.dumps({"logger": {"event": "after_tool", "handler": "/bin/true"}}))
         row = {l.split()[0]: l.split(None, 1)[1] for l in self.state().stdout.splitlines()}
         self.assertEqual(row["hooks"], "1 hooks (logger on after_tool)")
         j = json.loads(self.state("-j", "hooks").stdout)
@@ -171,12 +170,11 @@ class State(unittest.TestCase):
 
     def test_hooks_with_new_events(self):   # 11-11 clock-hook：新事件與 on_clock 的鍵，part_hooks 不崩
         iface = json.loads((self.defn / "interfaces.json").read_text())
-        iface["aos-agent"]["hooks"] = "hooks.json"
-        iface["aos-agent"]["hook_points"] = [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]
+        iface["hookeds"] = "hookeds.json"
         (self.defn / "interfaces.json").write_text(json.dumps(iface))
-        (self.defn / "hooks.json").write_text(json.dumps({"hooks": {
+        (self.defn / "hookeds.json").write_text(json.dumps({"description": "test",
             "timer": {"event": "on_clock", "every_ms": 300000, "handler": "/bin/true"},
-            "up": {"event": "after_start", "handler": "/bin/true"}}}))
+            "up": {"event": "after_start", "handler": "/bin/true"}}))
         row = {l.split()[0]: l.split(None, 1)[1] for l in self.state().stdout.splitlines()}
         self.assertEqual(row["hooks"], "2 hooks (timer on on_clock, up on after_start)")
         j = json.loads(self.state("-j", "hooks").stdout)

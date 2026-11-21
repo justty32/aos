@@ -15,7 +15,7 @@ aos-daemon-ctl add perm           # mount it, from the folder above (add -d DAEM
 
 Keep the lines above `# ---- your kernel` as they are: they find the `aos` package and import `defs` with `from aos.py.kernel import defs`. Keep the last line `defs.main(kernel)`: it hands the kernel to the command line (`--compile`, `--dry-run`, `--help`).
 
-Compiling again overwrites, as a whole, every file `kernel.py` declares (`_entry`, `loop.json` or `daemon.json`, `kernel.json`, `loop_hooks.json`, `interfaces.json`, `fn/<name>.py`), without asking; a change made directly in one of them is gone. `README.md` is written only when it is missing; any other file (`.env`, an endpoint program of an llm kernel) is left alone. The station reads `kernel.json` again every round, so a recompile takes effect at the next round; a change of the body (`body=`) needs the row restarted.
+Compiling again overwrites, as a whole, every file `kernel.py` declares (`_entry`, `loop.json` or `daemon.json`, `kernel.json`, `interfaces.json`, `kernel_hooks.json`, `kernel_hookeds.json`, `fn/<name>.py`), without asking; a change made directly in one of them is gone. `README.md` is written only when it is missing; any other file (`.env`, an endpoint program of an llm kernel) is left alone. The station reads `kernel.json` again every round, so a recompile takes effect at the next round; a change of the body (`body=`) needs the row restarted.
 
 ## What you write in kernel.py
 
@@ -33,7 +33,7 @@ kernel = defs.Kernel(
     "Let at most two procs run at once, and no night jobs.",
     knobs={"max_running": 2, "queue": True},   # the rest of kernel.json, written as given
     hooks=[no_night_jobs],                     # a dict {name: entry}, @fn.hook functions, or a list of those
-    program="kernel",                          # or "kernel_llm" (the llm kernel: adds interfaces.json with the ledger)
+    program="kernel",                          # or "kernel_llm" (the llm kernel: its interfaces.json also names the ledger)
     body=defs.loop(interval_ms=300),           # or defs.daemon(interval_ms=300)
 )
 defs.main(kernel)
@@ -43,7 +43,7 @@ defs.main(kernel)
 |---|---|---|
 | description (first) | one sentence; goes into `kernel.json` and the seed `README.md` | required |
 | `knobs=` | the keys of `kernel.json` (`allowed`, `max_running`, `queue`, `next`... for `kernel`; `slots`, `endpoints`... for `kernel_llm`), written as given and not checked here: the program ignores keys it does not know | `{}`: manage nothing |
-| `hooks=` | hooks of `before_verdict`, `after_verdict`, `before_reply` go into `kernel.json`; with `body=defs.loop(...)`, hooks of `after_start`, `after_stop`, `before_run`, `after_run` go into `loop_hooks.json`. A function is pulled out into `fn/<name>.py` (same rules as in `agent.py`: it may use builtins, `fn` and modules imported at the top) | no hooks |
+| `hooks=` | all hooks go into `kernel_hookeds.json`, which `interfaces.json` names (`"hookeds"`): those of `before_verdict`, `after_verdict`, `before_reply`, and with `body=defs.loop(...)` those of `after_start`, `after_stop`, `before_run`, `after_run` (`loop.json` wires `on_before_run` / `on_after_run` only when a hook listens to them; one added later needs a recompile and a restart). A function is pulled out into `fn/<name>.py` (same rules as in `agent.py`: it may use builtins, `fn` and modules imported at the top) | no hooks |
 | `program=` | `"kernel"` (the station that admits procs) or `"kernel_llm"` (the llm kernel) | `"kernel"` |
 | `body=` | `defs.loop(...)`: one row of a daemon (`_entry` runs `aos-loop loop.json`, like `procs-kernel`); `defs.daemon(...)`: a daemon of its own with a sweeper row (`aos-daemon daemon.json`, like `daemon-kernel` and `llm-kernel`). Their keywords go into that file as they are, unchecked, and replace a key of the same name the compile writes: `interval_ms=N` = run every N ms (left out: 300); `defs.daemon(procs={...})` = no sweeper row | like `templates/start-api`: `loop` for `kernel`, `daemon` for `kernel_llm` |
 

@@ -8,7 +8,7 @@
 |---|---|
 | 0 | allowed (nothing on stdout) |
 | 10 | blocked: one line `[aos] guard: blocked: ...` on stdout, which the agent sees as the tool result. Also when an argument has a wrong type or shape (the agent can fix it and call again) and when the daemon table cannot be read (see "Write scope") |
-| 1 | error: one line `guard: error: CODE reason` on stderr (`CfgMissing`, `CfgBad`, `ArgumentsBad`, `WsMissing`): a broken config or event. Mounted with `on_error: "stop"` the call does not run, and the hook runner stops the whole agent (not only this call) |
+| 1 | error: one line `guard: error: CODE reason` on stderr (`CfgMissing`, `CfgBad`, `ArgumentsBad`, `WsMissing`): a broken config or event. A failing `before_tool` hook stops the event (the agent family's rule since 11-21): the call does not run, and the whole agent stops (not only this call) |
 
 It checks: file-tool paths against the write scope (below) and the path rules (`deny_parts`, `proc-stack`, `definition-marker`, `no-hash-outside-json`, `no-tilde`); mail `keep` files like write paths; shell commands (`shell_deny` regexes, with the relaxed check below); `subagent` ops; `clock_register` boxes and daemon; `mailbox_send` boxes, names and daemon; `kernel_gate` ops; `agents_ctl` (ring the bell: stop yourself only). Every other tool name is blocked.
 
@@ -43,16 +43,16 @@ Tools in the shipped packs that can change files or the agent itself and have no
 
 ## Mount it
 
-hooks.json of the definition (or a stack copy written by `self_hook`):
+hookeds.json of the definition (or a stack copy written by `self_hook`):
 
     "guard": {"event": "before_tool",
               "condition": ["write", "edit", "copy", "move", "mkdir", "trash", "remove", "json_set", "json_add", "json_del", "json_multi_set", "mailbox_send", "mailbox_read"],
               "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/guard"},
-              "on_error": "stop", "timeout_ms": 10000}
+              "timeout_ms": 10000}
 
-Always mount it with a `condition`, and list in it only tools from the table above that the kit gives: add `ws_write`, `shell`, `run_python`, `clock_register`, `subagent`, `kernel_gate`, `agents_ctl` only if the agent has them (see "Known limits" for the last two). A tool in the condition that the guard does not know is blocked on every call; a writing tool left out of the condition is not checked at all. The hook must be `before_tool`, with `on_error: "stop"` (a broken config is an error, exit 1, and with `"continue"` an error would let the call through), `intercept` true (the default) and not `async`. Remove the guard = drop the hook entry.
+Always mount it with a `condition`, and list in it only tools from the table above that the kit gives: add `ws_write`, `shell`, `run_python`, `clock_register`, `subagent`, `kernel_gate`, `agents_ctl` only if the agent has them (see "Known limits" for the last two). A tool in the condition that the guard does not know is blocked on every call; a writing tool left out of the condition is not checked at all. The hook must be `before_tool`: only there exit 10 blocks the call, and a broken config (an error, exit 1) stops the event instead of letting the call through. Remove the guard = drop the hook entry.
 
-The hook runs with the agent's environment, except that `AOS_STACK` is the hook's own cell `<stack>/hooks/guard/` and `AOS_CD` is this folder. Put `AOS_GUARD_CFG`, `AOS_WRITE_ALLOW` and `AOS_WRITE_DENY` in the agent's environment (the definition's `.env`, or `aos-agent ctl add --envs`).
+The hook runs with the agent's environment, except that `AOS_STACK` is the hook's own cell `<stack>/hookeds/guard/` and `AOS_CD` is this folder. Put `AOS_GUARD_CFG`, `AOS_WRITE_ALLOW` and `AOS_WRITE_DENY` in the agent's environment (the definition's `.env`, or `aos-agent ctl add --envs`).
 
 ## Write scope (scope.py)
 
@@ -82,7 +82,7 @@ A file-tool path may be written when it passes, in this order: `no-tilde` and `n
 
 - allow: `realpath($AOS_WS)` always, plus each entry of `AOS_WRITE_ALLOW` (separated by `:`, the OS path separator).
 - deny, none of which the config can lift:
-  - `AOS_STACK`: the agent's own stack (a hook or tool cell `<stack>/hooks/<name>` or `<stack>/tools/<name>` counts as `<stack>`, so the whole stack of the agent is denied, not just the cell);
+  - `AOS_STACK`: the agent's own stack (a hook or tool cell `<stack>/hookeds/<name>` or `<stack>/tools/<name>` counts as `<stack>`, so the whole stack of the agent is denied, not just the cell);
   - `event` (the guard only; `--scope` reads no event): the `stack` field of the hook event, cut the same way. The hook runner writes it (`hook_run.py`), and the agent's arguments cannot change it; a value that is not a path string blocks the call;
   - `AOS_CD`: when set (in a hook: this folder);
   - `definition`: the `def` of the row in `$AOS_DAEMON/procs_state.json` whose `stack` holds `AOS_STACK` (the deepest such row, as `aos-agent ctl who` does);
@@ -110,7 +110,7 @@ The scope is a snapshot of the folders and rules for file writes. A sandbox (or 
 - later changes to the daemon table (a new row's stack and definition) and `AOS_HOME` folders that did not exist when the scope was printed;
 - the checks that are not about file paths: mail `box`, `to` and `daemon`, `clock_register` boxes and daemon, `subagent`, `kernel_gate`, `agents_ctl`, `shell_deny`, and the block of tools the guard has no rule for;
 - `no-hash-outside-json` and `no-tilde` are about how the tools read their path arguments; a program that opens a path itself does not need them;
-- `AOS_STACK` is cut by one cell level (`<stack>/hooks/<name>` or `<stack>/tools/<name>`); a scope printed from a deeper cell (a tool called by a tool) lists that cell, not the whole stack, unless the daemon table or `proc-stack` names the stack.
+- `AOS_STACK` is cut by one cell level (`<stack>/hookeds/<name>` or `<stack>/tools/<name>`); a scope printed from a deeper cell (a tool called by a tool) lists that cell, not the whole stack, unless the daemon table or `proc-stack` names the stack.
 
 ## Config (guard.json)
 
@@ -126,7 +126,7 @@ Defaults: no `shell_deny` key = `shell` and `run_python` are blocked (an empty l
 - `daemon` (`mailbox_send`, and `clock_register`): allowed only when absent or when its realpath equals `realpath($AOS_DAEMON)`; with `AOS_DAEMON` unset any `daemon` is blocked.
 - `box` given: it must be on the agent's own tree. Its real path must be at or under one of: `<stack>/mailbox` of a row on the own daemon's table (`$AOS_DAEMON/procs_state.json`, the same rows as `daemon-table`); the agent's own `<stack>/mailbox` and `<stack>/queue` (from `AOS_STACK` and the event's `stack`); with `"mail_foreign_queue": "allow"` also `<stack>/queue` of every row; the workspace (`realpath($AOS_WS)`); an entry of `mail_allow_box`. Anything else is blocked (`a box must be the mailbox of a proc on your own daemon's table, a folder in your workspace, or one listed in the guard config (mail_allow_box)`): another tree's or another daemon's agents, and the user zone (`~/.aos/user/`), which is allowed only when listed in `mail_allow_box`. A crew member's report to its lead passes: the `reply_to` of the lead's letter is `<lead stack>/mailbox`, and the lead is a row on the same daemon (if it is not, list its mailbox in `mail_allow_box`, or mail it by name). With `AOS_DAEMON` unset or no table file there are no rows, so only the agent itself, the workspace and `mail_allow_box` remain; an unreadable table blocks. `to` with no `daemon` always goes to the own daemon. Before that list, a `box` is blocked when its real path is at or under
   - a daemon ctl mailbox: a daemon stack is a folder with `procs_state.json`; its ctl mailbox is the folder named by that file's `procs_requests` key (default `procs_requests`). Any path part named `procs_requests` also counts, marker or not;
-  - a kernel mailbox: any path part named `requests` (`<station stack>/requests`, `$AOS_LLM_KERNEL/requests`, `<stack>/hooks/kernel_gate/requests`, `<stack>/hooks/<gate>/requests`), or `$AOS_KERNEL` / `$AOS_LLM_KERNEL` when set;
+  - a kernel mailbox: any path part named `requests` (`<station stack>/requests`, `$AOS_LLM_KERNEL/requests`, `<stack>/hookeds/kernel_gate/requests`, `<stack>/hookeds/<gate>/requests`), or `$AOS_KERNEL` / `$AOS_LLM_KERNEL` when set;
   - another agent's queue: any path part named `queue` whose parent is not the agent's own stack (a letter there goes straight into that agent's conversation). The agent's own `<stack>/queue` is allowed. This is the only check that `"mail_foreign_queue": "allow"` turns off (default `"deny"`); the other three stay;
   - a `mail_deny` root.
 - `to` given: blocked only when `mail_allow_to` is set and the name does not fully match it.
@@ -148,7 +148,7 @@ Examples that pass: `rg -n 'rm accepted' x`, `pgrep -u "$USER" -af aos-daemon`, 
 
 ## Stack overlay
 
-The guard is only an entry in the agent's hooks.json. An agent with `self_hook` can drop or replace it in its stack copy; one with `self_tools` can add a tool that does. A kit that relies on the guard must not give its agents `self_hook` or `self_tools`. (The guard denies file-tool writes to the agent's own stack, so the stack copy of hooks.json cannot be changed with the file tools.)
+The guard is only an entry in the agent's hookeds.json. An agent with `self_hook` can drop or replace it in its stack copy; one with `self_tools` can add a tool that does. A kit that relies on the guard must not give its agents `self_hook` or `self_tools`. (The guard denies file-tool writes to the agent's own stack, so the stack copy of hookeds.json cannot be changed with the file tools.)
 
 ## Known limits
 
@@ -159,8 +159,8 @@ d. Tool versions: the whitelist was reviewed against GNU coreutils 9, ripgrep 14
 e. Deliberately allowed, not blocked: `cd` (changes the directory for later commands); `sort` writes temp files in `$TMPDIR` on large input; `df --sync` calls sync(2); `tail -f` hangs (until the tool's timeout). Reading is not limited: `cat` / `jq` / `copy.from` can read any file the tool may read, secrets included; that is not the guard's job.
 f. Shell tool parameters other than `command`: only `command` (shell) and `code` (run_python) are looked at; the shell tool has only `command` and `timeout_s` today. If it gains `cwd`, `env` or similar, the guard must look at them.
 g. TOCTOU: a path is resolved (realpath) when it is checked, so a symlink can be swapped between the check and the write; the sandbox is the backstop.
-h. `kernel_gate` and `agents_ctl` are only checked when hooks.json's `condition` lists them; listing them without a rule in the config blocks them completely. The same holds for `subagent`, and for `shell` / `run_python` without `shell_deny`.
-i. Mount: the guard only works mounted as described in "Mount it": `before_tool`, `on_error: "stop"`, `intercept` true, not `async`, with a `condition`. With `on_error: "continue"`, `intercept: false` or `async: true` it blocks nothing. Another `before_tool` hook that changes the arguments after the guard has run is not covered: the guard checks the arguments it was given.
+h. `kernel_gate` and `agents_ctl` are only checked when the hookeds.json entry's `condition` lists them; listing them without a rule in the config blocks them completely. The same holds for `subagent`, and for `shell` / `run_python` without `shell_deny`.
+i. Mount: the guard only works mounted as described in "Mount it": `before_tool`, with a `condition`. On any other event it blocks nothing. Another `before_tool` hook that changes the arguments after the guard has run is not covered: the guard checks the arguments it was given.
 j. Missing config: without `AOS_GUARD_CFG` only the built-in denies apply (the stack, definition, daemon-table, daemon, `AOS_HOME` and `AOS_WRITE_DENY` entries and the rules); `deny_roots` is gone, and the tools that need a config rule (`shell`, `run_python`, `subagent`, `kernel_gate`, `agents_ctl`) are blocked. A config that is set but missing or broken is an error (exit 1). Likewise, an unset `AOS_DAEMON` or `AOS_HOME` drops the entries taken from it; the `proc-stack` and `definition-marker` rules still apply.
 k. Recognition by names and marker files: mail boxes are judged by folder names (any path part named `requests`, `procs_requests` or `queue` not directly under the agent's own stack), so an ordinary folder with one of these names is refused as a `mailbox_send` box. The other way round, unusual daemon settings (no `procs_state.json`, a ctl mailbox placed outside the daemon folder, a kernel mailbox reached through a link) are not recognised as such by the mail rule. `proc-stack` and `definition-marker` go by layout and marker files; they back up the daemon table, and an ordinary folder named `.stack`, a stray `procs_state.json` or `interfaces.json` makes the folders around it unwritable.
 l. If an agent's workspace lies inside its own stack, inside any proc's or daemon's stack, or inside a definition folder, every file-tool write is blocked. The default layout is the other way round.

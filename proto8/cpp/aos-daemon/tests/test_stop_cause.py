@@ -1,4 +1,4 @@
-# Verify the after_stop cause (B7) end to end: a real daemon writes stop_cause.json, its child aos-loop reads it, aos-hook fire reports it.
+# Verify the after_stop cause (B7) end to end: a real daemon writes stop_cause.json, its child aos-loop reads it, the after_stop handler run by aos-hook fire reads it from AOS_LOOP_CAUSE (11-21: the event has only event / hook / stack).
 import json
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ import unittest
 from support import ENV, PROTO, Fixture, dc, read, until, write
 
 CAUSE_FILE = 'stop_cause.json'   # 同 aos/loop.hpp 的 StopCauseWindow::default_name（測試另寫一份，不 import C++）
-HOOK = PROTO / 'bin' / 'aos-hook'   # the templates' on_stop: aos-hook fire -q --agent DEF after_stop
+HOOK = PROTO / 'bin' / 'aos-hook'   # the templates' on_stop: aos-hook fire -q --stop-on-nonzero --def DEF after_stop
 BODY = '''#!/usr/bin/env python3
 # Test body: write ready, sleep; on SIGTERM wait SLOW seconds before exiting 0 (so the daemon is still "stopping").
 import os, pathlib, signal, sys, time
@@ -25,10 +25,12 @@ signal.signal(signal.SIGTERM, term)
 time.sleep(float(sys.argv[1]))
 '''
 HANDLER = '''#!%s
-# after_stop handler: append the event JSON to a log.
-import json, sys
+# after_stop handler: append the event JSON plus the loop's AOS_LOOP_CODE / AOS_LOOP_SIGNAL / AOS_LOOP_CAUSE to a log.
+import json, os, sys
+ev = json.load(sys.stdin)
+env = {k: os.environ.get('AOS_LOOP_' + k.upper()) for k in ('code', 'signal', 'cause')}
 with open(%r, 'a') as f:
-    f.write(json.dumps(json.load(sys.stdin)) + '\\n')
+    f.write(json.dumps({'event': ev, 'env': env}) + '\\n')
 '''
 
 
@@ -47,8 +49,8 @@ class StopCause(unittest.TestCase):
         self.defn = f.root / 'def'   # 最小的 agent 定義：只有 after_stop 一格 hook
         self.defn.mkdir(exist_ok=True)
         self.events = f.root / 'events.jsonl'
-        (self.defn / 'interfaces.json').write_text(json.dumps({'aos-agent': {'hooks': 'hooks.json', 'hook_points': [{'provider': 'aos-loop'}]}}))
-        (self.defn / 'hooks.json').write_text(json.dumps({'hooks': {'log': {'event': 'after_stop', 'handler': 'log.py'}}}))
+        (self.defn / 'interfaces.json').write_text(json.dumps({'hookeds': 'hookeds.json'}))
+        (self.defn / 'hookeds.json').write_text(json.dumps({'description': 'test', 'log': {'event': 'after_stop', 'handler': 'log.py'}}))
         handler = self.defn / 'log.py'
         handler.write_text(HANDLER % (sys.executable, str(self.events)))
         handler.chmod(0o755)
@@ -57,7 +59,7 @@ class StopCause(unittest.TestCase):
 
     def add_loop(self, f, seconds=30, slow=0):
         spec = {'exec': [str(self.body), str(seconds), str(slow)], 'interval_ms': 30,
-                'on_stop': [str(HOOK), 'fire', '-q', '--agent', str(self.defn), 'after_stop']}
+                'on_stop': [str(HOOK), 'fire', '-q', '--stop-on-nonzero', '--def', str(self.defn), 'after_stop']}
         reply = dc.ask(str(f.stack), {'procs_added': {'job': spec}})
         self.assertTrue(reply['applied'], reply)
         f.phase('running')
@@ -72,9 +74,11 @@ class StopCause(unittest.TestCase):
                 return None
             return lines if len(lines) >= n else None
         events = until(got, timeout=15)
-        for ev in events:
-            self.assertEqual(ev['event'], 'after_stop')
-        return [ev['cause'] for ev in events]
+        for row in events:
+            self.assertEqual(set(row['event']), {'event', 'hook', 'stack'})   # no code / signal / cause in the event
+            self.assertEqual((row['event']['event'], row['event']['hook']), ('after_stop', 'log'))
+            self.assertIsNotNone(row['env']['code'])
+        return [row['env']['cause'] for row in events]
 
     def test_sleep(self):
         f = self.fixture('sleep').start()

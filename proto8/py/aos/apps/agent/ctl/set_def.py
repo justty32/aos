@@ -51,7 +51,7 @@ flags:
       --timeout-s S   seconds to wait for the daemon at each step (default 30)
   -h, --help          show this help
 
-exit codes: 0 set; 1 error (InstanceMissing, PathMissing, InterfaceMissing, InterfaceBad,
+exit codes: 0 set; 1 error (InstanceMissing, PathMissing, InterfaceBad,
   ArgumentsBad, CtlRejected, AddRejected, SessionBad, WaitFailed, DaemonMissing,
   KitMissing, KitBad...).
 """

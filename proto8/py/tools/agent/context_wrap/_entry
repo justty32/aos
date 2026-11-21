@@ -4,7 +4,7 @@
 #   跟agent說整理收尾，然後跑compact。」裁定「3.我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook。」「門檻用35%」；
 #   「不要耦合太深」：只用 aos 自己的介面（queue、letters.json、py/context_use），不依賴任何顯示端。
 # 介面：hook handler（py/aos/agentlib/hooks.py 用 aos-exec 起）：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、config…），$AOS_STACK＝這個 hook 自己的小格
-#   （$AGENT_STACK/hooks/<名>/），狀態記在 $AOS_STACK/state.json。config：percent（1～100，預設35）、wrap（bool，預設true）、window（正整數，選填）。
+#   （$AGENT_STACK/hookeds/<名>/），狀態記在 $AOS_STACK/state.json。config：percent（1～100，預設35）、wrap（bool，預設true）、window（正整數，選填）。
 #   wrap=false 過門檻直接寄 /compact，不等 queue 空。--reading STACK [--window N] 只印讀數，不需要 $AOS_STACK、不寫 state。
 # 用量：py/context_use.read(agent stack)；讀不到（不是 claude 身、還沒答過一輪、檔壞）＝什麼都不做、不報錯。
 # 狀態（phase）：
@@ -14,7 +14,7 @@
 #   compacted  讀到「別的一輪」的讀數而且低於門檻＝回 idle（之後再過門檻才再觸發）；壓完還是高於門檻＝留在 compacted，不重複寄
 #   /compact 跟別的信撞在同一批也沒關係：aos-eca-turn 會讓 /compact 那封單獨成一批（turn.py）。
 # 錯：stderr 一行「context_wrap: error: 代號 原因」、退 1（ArgumentsBad 事件 JSON 壞或 config 不對、StackMissing、LaunchFailed、CommandFailed、WriteFailed）；
-#   範本掛它用 on_error: continue，壞了只是 agent 那邊一行 warning。需要 PATH 上有 aos-post。--help 印英文用法。
+#   on_clock 的 hook 壞了只是 agent 那邊一行 warning（agent 一家的規矩）。需要 PATH 上有 aos-post。--help 印英文用法。
 import json, os, subprocess, sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # 放 aos 套件的那層：py/（或裝好的 lib/）
@@ -36,7 +36,7 @@ At or over the limit (config {"percent": N} in the hook entry, default 35):
   3. after /compact is answered, wait for a reading from a later turn that is under the limit before
      watching again (no repeats while it stays over the limit).
 State: $AOS_STACK/state.json. Turn it off with self_hook rm; change the limit in config.percent of the hook entry
-(the definition's hooks.json, or a same-named entry in the stack copy).
+(the definition's hookeds.json, or a same-named entry in the stack copy).
 exit codes: 0 done (also when nothing was due); 1 error ("context_wrap: error: CODE reason").
 """
 STEP_S = 8

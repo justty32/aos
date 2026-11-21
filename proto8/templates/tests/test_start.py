@@ -2,7 +2,7 @@
 # 起手範本（使用者 11-17 L-10 A）裡的 root/、llm/、perm/、agents/ann/ 是 daemon-root、kernel/llm-kernel、kernel/procs-kernel、agent-fsm、eca-claude 的抄本：
 # 原範本改了沒同步抄過來，這支就紅（逐檔比內容與執行位）。樹裡 env.sh 的行為（AOS_HOME 沒設報錯、轉去家裡那份）在
 # py/tests/test_env_sh.py 驗。只讀檔、不起任何行程。
-# 11-21 起 start-api 的 ann 不帶格程式：fsm.json 四格與 hook_points 動態連結 $AOS_HOME/templates/agent-fsm 那份（使用者 11-20「起手範本確實該改成要借的」，
+# 11-21 起 start-api 的 ann 不帶格程式：fsm.json 四格與 hook 宣告（11-21 起叫 hooks.json）動態連結 $AOS_HOME/templates/agent-fsm 那份（使用者 11-20「起手範本確實該改成要借的」，
 #   紀錄 thinking/2026-11/21/起手範本-動態連結-1121.md）；README 是 agent-fsm 那份原樣再接一段。
 import filecmp
 import json
@@ -26,7 +26,7 @@ EXTRA = {("start-api", "agents/ann"): {".env"}}   # files a copy has on top of i
 CELLS = ("idle.py", "brain.py", "wait.py", "act.py")
 SHARED = ("atomic_file.py", "cell_common.py", "compact.py", "llm_settings.py")
 # files of the template a copy links dynamically instead of carrying; leftovers may still sit there, but nothing may name them
-LINKED = {("start-api", "agents/ann"): set(CELLS + SHARED + ("hook_points.json",))}
+LINKED = {("start-api", "agents/ann"): set(CELLS + SHARED + ("hooks.json",))}
 LLM_LINE = {"start-api": "AOS_LLM_KERNEL=${AOS_STACK}/procs/llm\n", "start-eca": "AOS_LLM_KERNEL=${AOS_WS}/llms/stacks/llm\n"}
 TOP = {"README.md", "env.sh"}           # the only files directly in a starter, besides the folders above
 
@@ -71,7 +71,8 @@ class StartTest(unittest.TestCase):
             self.assertEqual(prog["$env"], "AOS_HOME")
             self.assertTrue((TEMPLATES.parent / prog["$path"].lstrip("/")).is_file(), prog)
         want = json.loads((fsm / "interfaces.json").read_text(encoding="utf-8"))
-        want["aos-agent"]["hook_points"] = [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]
+        want["hooks"] = [h if h != "hooks.json" else {"$env": "AOS_HOME", "$path": "/templates/agent-fsm/hooks.json"}
+                         for h in want["hooks"]]
         self.assertEqual(json.loads((ann / "interfaces.json").read_text(encoding="utf-8")), want)
         self.assertTrue((ann / "README.md").read_bytes().startswith((fsm / "README.md").read_bytes()),
                         "start-api/agents/ann/README.md must start with templates/agent-fsm/README.md as it is")

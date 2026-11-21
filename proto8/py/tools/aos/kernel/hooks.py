@@ -1,28 +1,31 @@
-# kernel 的三個 hook 時機：設定、事件欄位與判決回話；發事件經 aos.hook_point 的 hook 遙控器（open，錯交 ctx.die），執行一律交給共用引擎。
+# kernel 的三個 hook 時機：這一家自己的規矩（能攔、能改哪些鍵、condition 比哪個欄、失敗＝停）、事件欄位與判決回話；跑 handler 一律交給共用引擎 aos.hook_run。
+# 11-21（線 top-1121-hooknew，使用者「簡化到第四層」「發事件的程式自己決定」）：引擎只叫 handler、交回退出碼與 stdout；規矩寫在這裡，不讀宣告
+#（宣告 kernel_hooks.json 只是參考，使用者 kernel 第 4 題「宣告這東西只是參考」）。被勾清單＝定義夾 interfaces.json 最外層 hookeds 指的檔
+#（kernel_hookeds.json，kernel 第 3 題），每輪重讀；kernel.json 不再有 hooks。三個點都能攔（退 10）；hook 失敗（退 0／10 以外、逾時、起不來、
+# stdout 不合）＝這一輪停（HookFailed，同以前 on_error 的預設 stop）。
+import copy
 import json
 import os
 
-from aos import hook_point, hook_run
+from aos import hook_lists, hook_point, hook_run
+
+# 這一家自己發的三個點：condition 比哪個欄（None＝不收）、hook 能改哪些鍵。
+POINTS = {"before_verdict": {"field": None, "change": ("body",)},
+          "after_verdict": {"field": "verdict", "change": ("verdict", "error", "next")},
+          "before_reply": {"field": None, "change": ("body",)}}
 
 
-# 11-20 hook 第 3 刀：三個點只寫在同夾的 hook_points.json（使用者待裁第 14 題「一起搬」）；EVENTS 由它算出，驗清單用。
-POINTS_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "hook_points.json")
-POINTS = hook_point.read([POINTS_FILE])
-EVENTS = hook_point.engine_table(POINTS)
+def check_entry(entry):
+    hook_lists.check_entry(entry)
+    if "condition" in entry:
+        m = entry["condition"]
+        if not ((isinstance(m, str) and m) or (isinstance(m, list) and all(isinstance(x, str) and x for x in m))):
+            raise hook_lists.HooksBad("condition must be a non-empty string or an array of them")
 
 
-def load(table, path):
-    if not isinstance(table, dict):
-        raise hook_run.HooksBad("hooks must be an object of named entries")
-    entries = {}
-    for name, entry in table.items():
-        try:
-            hook_run.validate_name(name)
-            hook_run.validate_entry(entry, EVENTS)
-        except hook_run.HooksBad as error:
-            raise hook_run.HooksBad("hook %s: %s" % (name, error)) from None
-        entries[name] = hook_run.complete(entry, path)
-    return entries
+def load(def_dir):
+    """定義夾 interfaces.json 的 hookeds 指的被勾清單 → {名: 格}；沒寫、檔不在＝{}。壞＝ValueError（HooksBad／InterfaceBad）。"""
+    return hook_lists.load(hook_point.files(def_dir, "hookeds"), check_entry)
 
 
 def check(ctx, event, key, value):
@@ -39,11 +42,64 @@ def check(ctx, event, key, value):
         ctx.check_next(value)
 
 
+def matches(entry, data):
+    field = POINTS.get(entry["event"], {}).get("field")
+    if field is None or "condition" not in entry:
+        return True
+    m = entry["condition"]
+    return data.get(field) in ([m] if isinstance(m, str) else m)
+
+
+class Hooks:
+    """這一輪的 hook 遙控器：names／fire；hook 失敗＝ctx.die("HookFailed")。"""
+
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    def names(self, event, data):
+        entries = self.ctx.cfg["hooks"]
+        return [n for n in hook_run.names(entries, event) if matches(entries[n], data)]
+
+    def fire(self, event, data, only=None):
+        """照名字跑（前一個改的後一個看得到）；退 10＝攔下就停；only＝只跑這幾個（不再比 condition）。"""
+        entries, ctx = self.ctx.cfg["hooks"], self.ctx
+        result = {"data": copy.deepcopy(data), "changed": [], "blocked": False, "hook": None, "text": ""}
+        for name in hook_run.names(entries, event):
+            if (only is not None and name not in only) or (only is None and not matches(entries[name], data)):
+                continue
+            r = hook_run.run(name, entries[name], event, result["data"], ctx.stack)
+            try:
+                if r["error"]:
+                    raise ValueError(r["error"])
+                if r["code"] == hook_run.BLOCK:
+                    result.update(blocked=True, hook=name, text=r["stdout"])
+                    return result
+                if r["code"] != 0:
+                    raise ValueError("exited %d" % r["code"])
+                got = {}
+                if r["stdout"].strip():
+                    try:
+                        reply = json.loads(r["stdout"])
+                    except ValueError as e:
+                        raise ValueError("stdout is not JSON: %s" % e) from None
+                    if not isinstance(reply, dict):
+                        raise ValueError("stdout is not a JSON object")
+                    for key in POINTS.get(event, {"change": ()})["change"]:
+                        if key in reply:
+                            check(ctx, event, key, reply[key])
+                            got[key] = reply[key]
+            except ValueError as e:
+                ctx.die("HookFailed", "hook %s (event %s) failed: %s" % (name, event, e))
+            for key, v in got.items():
+                result["data"][key] = v
+                if key not in result["changed"]:
+                    result["changed"].append(key)
+        return result
+
+
 def open(ctx):
-    """這一輪的 hook 遙控器：點＝同夾 hook_points.json 的宣告（第 3 刀；宣告的 change 型別先驗、check 接著驗）、清單＝已讀好的 ctx.cfg["hooks"]；
-    hook 停下（HookFailed／HooksBad）＝ctx.die（11-20 hook 介面第 2 刀，原本 round.py 自己接）。"""
-    return hook_point.open(POINTS, entries=lambda: ctx.cfg["hooks"], stack=ctx.stack, fail=ctx.die, warn=ctx.warn,
-                           check=lambda event, key, value: check(ctx, event, key, value))
+    """這一輪的 hook 遙控器：清單＝已讀好的 ctx.cfg["hooks"]（讀設定時 load 的）。"""
+    return Hooks(ctx)
 
 
 def request_data(name, letter):

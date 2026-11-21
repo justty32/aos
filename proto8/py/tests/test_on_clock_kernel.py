@@ -23,12 +23,12 @@ class ClockKernel(unittest.TestCase):
         clock = fixture.mom / "clock"
         clock.write_text("10\n")
         definition, stack = fixture.definition, fixture.mom
-        KernelFixture.save(definition / "interfaces.json", {"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}})
-        KernelFixture.save(definition / "hooks.json", {"hooks": {"tick": {
-            "event": "on_clock", "handler": "unused", "clock": "mom", "every_cycles": 5}}})
+        KernelFixture.save(definition / "interfaces.json", {"aos-agent": {}, "hookeds": "hookeds.json"})
+        KernelFixture.save(definition / "hookeds.json", {"tick": {
+            "event": "on_clock", "handler": "unused", "clock": "mom", "every_cycles": 5}})
         warnings = []
         tick = lambda: hook_clock.clock_tick(str(definition), str(stack), warn=warnings.append)
-        state = stack / "hooks/tick/on_clock.json"
+        state = stack / "hookeds/tick/on_clock.json"
         with patch.dict(os.environ, fixture.env, clear=True), patch.object(hooks, "fire") as fire:
             with patch.object(hook_clock.subprocess, "run", wraps=subprocess.run) as query:
                 self.assertEqual(tick(), ["tick"])
@@ -59,8 +59,8 @@ class ClockKernel(unittest.TestCase):
             self.assertEqual(fire.call_count, 3)
             # 改成另一個名字、但指同一鐘檔且尚未到期，也要記下新的名字，下一拍不再問表。
             (new_stack / "clock").write_text("21\n")
-            KernelFixture.save(definition / "hooks.json", {"hooks": {"tick": {
-                "event": "on_clock", "handler": "unused", "clock": "renamed", "every_cycles": 5}}})
+            KernelFixture.save(definition / "hookeds.json", {"tick": {
+                "event": "on_clock", "handler": "unused", "clock": "renamed", "every_cycles": 5}})
             rows[0]["name"] = "renamed"
             with patch.object(hook_clock.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(rows), "")) as query:
                 self.assertEqual(tick(), [])
@@ -75,9 +75,9 @@ class ClockKernel(unittest.TestCase):
             definition, stack = root / "def", root / "stack"
             definition.mkdir()
             stack.mkdir()
-            KernelFixture.save(definition / "interfaces.json", {"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}})
-            KernelFixture.save(definition / "hooks.json", {"hooks": {"tick": {
-                "event": "on_clock", "handler": "unused", "clock": "mom", "every_cycles": 1}}})
+            KernelFixture.save(definition / "interfaces.json", {"aos-agent": {}, "hookeds": "hookeds.json"})
+            KernelFixture.save(definition / "hookeds.json", {"tick": {
+                "event": "on_clock", "handler": "unused", "clock": "mom", "every_cycles": 1}})
             warnings = []
             with patch.dict(os.environ, {"AOS_KERNEL": str(root / "requests")}, clear=True), patch.object(hooks, "fire") as fire:
                 result = subprocess.CompletedProcess([], 1, "", "aos-agent: error: KernelFailed no reply")

@@ -42,11 +42,11 @@ def tool(func=None, *, name=None, description=None, params=None, errors=None, me
 
 
 def hook(event=None, *, name=None, **entry):
-    """@fn.hook("before_tool", condition=..., timeout_ms=..., name=...): mark a function as a hook handler; async_= is the async key."""
+    """@fn.hook("before_tool", condition=..., timeout_ms=..., name=...): mark a function as a hook handler; its other keywords go into the entry as written."""
     if callable(event):                         # bare @fn.hook: remembered, reported by fn.main
         setattr(event, MARK, {"kind": "hook", "event": None, "name": name, "entry": entry})
         return event
-    cell = {("async" if k == "async_" else k): v for k, v in entry.items()}
+    cell = dict(entry)
 
     def mark(f):
         setattr(f, MARK, {"kind": "hook", "event": event, "name": name, "entry": dict(cell)})

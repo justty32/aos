@@ -41,13 +41,13 @@ USAGE = "usage: kernel_llm [--enable-counters] kernel.json"
 
 def load(enable_counters):
     def read(path):
-        """問腦的設定每組指示詞用到才解，所以不走骨架「整份先過 aos-directive」的讀法；hooks 照骨架驗。"""
+        """問腦的設定每組指示詞用到才解，所以不走骨架「整份先過 aos-directive」的讀法；被勾清單照骨架讀（定義夾的 hookeds）。"""
         stack = os.environ.get("AOS_STACK")
         if not stack:
             tool_io.die("StackMissing", "AOS_STACK is not set")
         try:
             cfg = packs.read_cfg(path, os.path.abspath(stack))
-            cfg["hooks"] = hooks.load(cfg["hooks"], cfg["file"])
+            cfg["hooks"] = hooks.load(os.path.dirname(cfg["file"]))   # 被勾清單：定義夾 interfaces.json 的 hookeds（11-21）
             cfg["host"] = llm_rules.find_host()
         except tool_io.Error as error:
             tool_io.die(error.code, str(error))

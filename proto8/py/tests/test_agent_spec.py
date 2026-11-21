@@ -70,7 +70,6 @@ class Declaration(WithHome):
                  "no fsm and no folder": dict(fsm=None),
                  "interfaces without fsm": dict(fsm=None, interfaces={"x": 1}),
                  "fsm not from defs.fsm": dict(fsm={"start": "a"}),
-                 "hook bad event": dict(hooks={"h": {"event": "on_lunch", "handler": "x"}}),
                  "hook without handler": dict(hooks={"h": {"event": "after_tool"}}),
                  "hook bad name": dict(hooks={".h": {"event": "after_tool", "handler": "x"}}),
                  "hook clock key on other event": dict(hooks={"h": {"event": "after_tool", "handler": "x", "every_ms": 5}}),
@@ -78,7 +77,7 @@ class Declaration(WithHome):
                  "hooks list item not a table": dict(hooks=[{"h": None}, 3]),
                  "hooks holds a tool": dict(hooks=[defs.std.pack("look")]),
                  "stock_hooks bad name": dict(hooks=defs.std.hooks("../x")),
-                 "interfaces sets hooks": dict(hooks={}, interfaces={"aos-agent": {"hooks": "h.json"}}),
+                 "interfaces sets hookeds": dict(hooks={}, interfaces={"hookeds": "h.json"}),
                  "files not a dict": dict(files=["ladder.json"]),
                  "files takes a declared file": dict(files={"tools.json": {}}),
                  "files takes the skeleton": dict(files={"loop.json": {}}),
@@ -144,29 +143,31 @@ class Declaration(WithHome):
         mine = {"event": "before_tool", "condition": "shell", "handler": defs.home("/lib/tools/agent/hook_noop")}
         files = agent(hooks=[defs.std.hooks(), {"timer": None, "mine": mine}],
                       files={"ladder.json": {"repeat": 3}, "notes.txt": "plain text\n"}).dry_run()
-        stock = json.loads((TEMPLATES / "agent-fsm" / "hooks.json").read_text())["hooks"]
+        stock = json.loads((TEMPLATES / "agent-fsm" / "hookeds.json").read_text())
         self.assertEqual(list(files), ["_entry", "body.json", "loop.json", "fsm.json", "interfaces.json", "tools.json",
-                                       "llm.json", "system.txt", "hooks.json", "ladder.json", "notes.txt", "_metainfo.json",
+                                       "llm.json", "system.txt", "hookeds.json", "ladder.json", "notes.txt", "_metainfo.json",
                                        "README.md"])
-        table = dict(stock)
-        del table["timer"]
+        table = {k: v for k, v in stock.items() if k not in ("description", "timer")}   # the list file: {name: entry}, no "hooks" wrap
         table["mine"] = mine
-        self.assertEqual(files["hooks.json"]["hooks"], table)
-        self.assertIn("templates/agent-fsm/hooks.json", files["hooks.json"]["description"])
+        self.assertEqual({k: v for k, v in files["hookeds.json"].items() if k != "description"}, table)
+        self.assertIn("templates/agent-fsm/hookeds.json", files["hookeds.json"]["description"])
         self.assertEqual(list(files["interfaces.json"]["aos-agent"]),
-                         ["entry", "tools", "llm", "llm_keys", "history", "hooks", "hook_points", "system"])
-        self.assertEqual(files["interfaces.json"]["aos-agent"]["hooks"], "hooks.json")
-        self.assertEqual(files["interfaces.json"]["aos-agent"]["hook_points"],
-                         [{"provider": "aos-loop"}, {"provider": "agent-fsm"}])   # hook cut 3: written with hooks
-        fire = ["aos-hook", "fire", "-q", "--agent", {"$env": "AOS_CD"}]   # line top-1121-hookfire: start / stop through aos-hook too
+                         ["entry", "tools", "llm", "llm_keys", "history", "system"])   # no hooks / hook_points in the aos-agent cell
+        self.assertEqual(files["interfaces.json"]["hookeds"], "hookeds.json")         # the two hook keys are top level
+        self.assertEqual(files["interfaces.json"]["hooks"],
+                         [{"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"},
+                          {"$env": "AOS_HOME", "$path": "/templates/agent-fsm/hooks.json"}])
+        fire = ["aos-hook", "fire", "-q", "--stop-on-nonzero", "--def", {"$env": "AOS_CD"}]
         self.assertEqual(files["loop.json"]["on_start"], {"argv": fire + ["after_start"]})
         self.assertEqual(files["loop.json"]["on_stop"], {"argv": fire + ["after_stop"]})
-        before = files["loop.json"]["on_before_run"]["argv"]   # hook cut 5, second half: the loop points through aos-hook
-        self.assertEqual(before[:5] + before[-1:], ["aos-hook", "fire", "-q", "--agent", {"$env": "AOS_CD"}, "before_run"])
-        self.assertIn({"$ref": "fsm.json#/start", "$prefix": "stage="}, before)
-        self.assertEqual(files["loop.json"]["on_before_run_if"], {"$env": "AOS_STACK", "$path": "/hook_before_run.flag"})
-        self.assertEqual(files["loop.json"]["on_after_run"]["argv"][-1], "after_run")
-        self.assertEqual(files["loop.json"]["on_after_run_if"], {"$env": "AOS_STACK", "$path": "/hook_after_run.flag"})
+        self.assertNotIn("on_before_run", files["loop.json"])   # nothing hooked on before_run / after_run: not wired (no flag files)
+        self.assertNotIn("on_after_run", files["loop.json"])
+        self.assertFalse([k for k in files["loop.json"] if k.endswith("_if")])
+        for event in ("before_run", "after_run"):                # a hook on one of them at compile time wires that one only
+            with self.subTest(event=event):
+                loop = agent(hooks={"h": {"event": event, "handler": "x"}}).dry_run()["loop.json"]
+                self.assertEqual(loop["on_" + event], {"argv": fire + [event]})
+                self.assertNotIn("on_" + ({"before_run": "after_run", "after_run": "before_run"}[event]), loop)
         self.assertEqual(files["ladder.json"], {"repeat": 3})
         self.assertEqual(files["notes.txt"], "plain text\n")
 
@@ -175,7 +176,7 @@ class Declaration(WithHome):
         files = agent(hooks={}).dry_run()
         loop = json.loads((TEMPLATES / "agent-fsm" / "loop.json").read_text())
         self.assertEqual(plain(files["loop.json"]), plain(loop))
-        self.assertEqual(files["hooks.json"]["hooks"], {})
+        self.assertEqual(files["hookeds.json"], {"description": defs.WHAT["hookeds.json"]})
 
     def test_llm_keys_take_reasoning_effort(self):
         """reasoning_effort (11-21, the brain's thinking level; the agent-fsm cells read it from llm.json) is one of the llm_keys
@@ -187,10 +188,11 @@ class Declaration(WithHome):
 
     def test_no_hooks_no_hooks_key(self):
         files = agent().dry_run()
-        self.assertNotIn("hooks", files["interfaces.json"]["aos-agent"])
+        self.assertNotIn("hooks", files["interfaces.json"])
+        self.assertNotIn("hookeds", files["interfaces.json"])
         self.assertNotIn("on_start", files["loop.json"])
         self.assertNotIn("on_before_run", files["loop.json"])
-        self.assertNotIn("hooks.json", files)
+        self.assertNotIn("hookeds.json", files)
 
     def test_stock_hooks_needs_a_home_with_the_template(self):
         with unittest.mock.patch.dict(os.environ, {}, clear=False):
@@ -235,14 +237,14 @@ class Skeleton(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in SKEL.iterdir()), sorted(SKEL_GENERATED + ["README.md", "agent.py"]))
 
     def test_declares_empty_hooks(self):
-        """the skeleton declares hooks={} (user 11-19 "骨架帶一行空的 HOOKS"): hooks.json with no hooks, named in interfaces.json, so an agent
+        """the skeleton declares hooks={} (user 11-19 "骨架帶一行空的 HOOKS"): hookeds.json with no hooks, named in interfaces.json, so an agent
         made from it takes breakpoints (aos-gdb) and aos-agent hook without changing anything; still no hook group of a template."""
-        self.assertEqual(json.loads((SKEL / "hooks.json").read_text())["hooks"], {})
-        self.assertEqual(json.loads((SKEL / "interfaces.json").read_text())["aos-agent"]["hooks"], "hooks.json")
+        self.assertEqual(list(json.loads((SKEL / "hookeds.json").read_text())), ["description"])
+        self.assertEqual(json.loads((SKEL / "interfaces.json").read_text())["hookeds"], "hookeds.json")
         self.assertEqual(json.loads((SKEL / "loop.json").read_text())["on_start"]["argv"][:2], ["aos-hook", "fire"])
 
     def test_built_on_the_skeleton(self):
-        """defs.load of the skeleton: its hooks are an empty group; a derived agent.py that gives no hooks gets no hooks.json, one that gives
+        """defs.load of the skeleton: its hooks are an empty group; a derived agent.py that gives no hooks gets no hookeds.json, one that gives
         hooks=base.hooks or [base.hooks, {...}] gets those (the inheritance examples keep working)."""
         with tempfile.TemporaryDirectory(prefix="agent-python-") as tmp:
             home = fake_home(tmp)
@@ -265,10 +267,12 @@ class Skeleton(unittest.TestCase):
                     r = run_agent(d / "agent.py", "--compile", home=home)
                     self.assertEqual(r.returncode, 0, r.stderr)
                     if want[name] is None:
-                        self.assertFalse((d / "hooks.json").exists())
-                        self.assertNotIn("hooks", json.loads((d / "interfaces.json").read_text())["aos-agent"])
+                        self.assertFalse((d / "hookeds.json").exists())
+                        self.assertNotIn("hookeds", json.loads((d / "interfaces.json").read_text()))
                     else:
-                        self.assertEqual(json.loads((d / "hooks.json").read_text())["hooks"], want[name])
+                        got = json.loads((d / "hookeds.json").read_text())
+                        got.pop("description")
+                        self.assertEqual(got, want[name])
 
     def test_committed_files_match_agent_py(self):
         with tempfile.TemporaryDirectory(prefix="agent-python-") as tmp:

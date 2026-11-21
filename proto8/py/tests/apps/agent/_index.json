@@ -36,10 +36,10 @@
   "description": "Test aos-agent history on a fake daemon table (11-10 self-family): ls, rm, summarize, set, the kept originals (default, --keep, --no-keep), ranges an…"
  },
  "test_hook.py": {
-  "description": "Test aos-agent hook on a fake daemon table: add writes only the agent's own hooks list (flags, path forms, --path-json), HookExists / --replace, rm (…"
+  "description": "Test aos-agent hook on a fake daemon table: add writes only the agent's own hookeds copy (flags, path forms, --path-json), HookExists / --replace, rm…"
  },
  "test_hook_flags.py": {
-  "description": "Test that aos-agent hook add / rm / reset keep the before_run / after_run flag files in the agent's stack (hook cut 5, second half), and that ls / ge…"
+  "description": "Test that aos-agent hook add on a loop point (before_run / after_run / after_start / after_stop) warns in one stderr line when the definition's loop.…"
  },
  "test_kernel_screen.py": {
   "description": "驗證 kernel 畫面入口環境與 purge 的回信、關畫面、刪 stack 次序。"

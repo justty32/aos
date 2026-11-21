@@ -168,7 +168,7 @@ cat $T/me/box3/new/*/letter.json
 
 ### hook 的例子：前站多管兩件事
 
-hook 是站在三個時機叫的小程式（設定寫在 `kernel.json` 的 `hooks`，契約跟 agent 的 hook 一樣，細節在 [py/tools/aos/kernel README「hooks」](../../../py/tools/aos/kernel/README.md#hooks)）：
+hook 是站在三個時機叫的小程式（掛在定義夾的被勾清單，`interfaces.json` 最外層 `"hookeds"` 指它，範本叫 `kernel_hookeds.json`；不在 `kernel.json`。跑法跟 agent 的 hook 一樣經共用引擎，三個點都能攔、hook 失敗＝這輪停，細節在 [py/tools/aos/kernel README「hooks」](../../../py/tools/aos/kernel/README.md#hooks)）：
 
 | 事件 | 什麼時候 | 能改什麼 |
 |---|---|---|
@@ -179,20 +179,21 @@ hook 是站在三個時機叫的小程式（設定寫在 `kernel.json` 的 `hook
 接著上面的鏈，給前站加兩個 hook：`no_rm` 不准「收掉 proc」的信經過，`hide` 把代回的回信換成一句短的。事件 JSON 從 handler 的 stdin 進來。
 
 ```sh
-mkdir -p $T/front-def/hooks
-cat > $T/front-def/hooks/no_rm <<'EOF'
+mkdir -p $T/front-def/handlers
+cat > $T/front-def/handlers/no_rm <<'EOF'
 #!/bin/sh
 # refuse letters that remove procs; everything else passes untouched
 if grep -q procs_removed; then echo "rm is not allowed through this station"; exit 10; fi
 EOF
-cat > $T/front-def/hooks/hide <<'EOF'
+cat > $T/front-def/handlers/hide <<'EOF'
 #!/bin/sh
 # replace every relayed reply with a short one
 cat >/dev/null
 printf '%s\n' '{"body": {"applied": true, "note": "via front"}}'
 EOF
-chmod +x $T/front-def/hooks/no_rm $T/front-def/hooks/hide
-echo "{\"next\": \"$T/back/st/requests\", \"reply_via_me\": true, \"hooks\": {\"no_rm\": {\"event\": \"before_verdict\", \"handler\": \"hooks/no_rm\"}, \"hide\": {\"event\": \"before_reply\", \"handler\": \"hooks/hide\"}}}" > $T/front-def/kernel.json
+chmod +x $T/front-def/handlers/no_rm $T/front-def/handlers/hide
+echo '{"hookeds": "kernel_hookeds.json"}' > $T/front-def/interfaces.json
+echo '{"no_rm": {"event": "before_verdict", "handler": "handlers/no_rm"}, "hide": {"event": "before_reply", "handler": "handlers/hide"}}' > $T/front-def/kernel_hookeds.json
 ```
 
 設定每輪重讀，不用重起前站。再寄兩封到 `$T/front/st/requests`：
@@ -200,7 +201,7 @@ echo "{\"next\": \"$T/back/st/requests\", \"reply_via_me\": true, \"hooks\": {\"
 - `{"procs_removed": ["kid"]}`：被 `no_rm` 攔下，回信是 `{"applied": false, "error": {"code": "HookRejected", "msg": "rm is not allowed through this station"}}`，前站 stderr 一行 `kernel: warning: letter <信名> refused: HookRejected rm is not allowed through this station`。
 - `procs_added` 的 `kid2`：照常轉給後站、掛上去；回信經過 `hide`，寄件人收到的是 `{"applied": true, "note": "via front"}`。
 
-每個 hook 在前站的 stack 有自己的小格 `hooks/<名>/`，裡面的 `event.json` 是它最後一次收到的事件。
+每個 hook 在前站的 stack 有自己的小格 `hookeds/<名>/`，裡面的 `event.json` 是它最後一次收到的事件。
 
 ### 分流的例子：照規則把信分到兩個下一站
 
@@ -212,7 +213,7 @@ echo "{\"next\": \"$T/back/st/requests\", \"reply_via_me\": true, \"hooks\": {\"
 mkdir -p $T/side && cd $T/side
 aos-exec --stack $T/side/st $P/kernel/daemon-kernel &            # 旁站
 
-cat > $T/front-def/hooks/route <<EOF
+cat > $T/front-def/handlers/route <<EOF
 #!/usr/bin/env python3
 # send letters that add the proc kid4 to the side station; say nothing for the rest
 import json, sys
@@ -221,8 +222,8 @@ body = event["body"] if isinstance(event["body"], dict) else {}
 if "kid4" in (body.get("procs_added") or {}):
     print(json.dumps({"next": "$T/side/st/requests"}))
 EOF
-chmod +x $T/front-def/hooks/route
-echo "{\"next\": \"$T/back/st/requests\", \"reply_via_me\": true, \"hooks\": {\"route\": {\"event\": \"after_verdict\", \"condition\": \"pass\", \"handler\": \"hooks/route\"}}}" > $T/front-def/kernel.json
+chmod +x $T/front-def/handlers/route
+echo '{"route": {"event": "after_verdict", "condition": "pass", "handler": "handlers/route"}}' > $T/front-def/kernel_hookeds.json   # 換掉上面那兩個 hook
 
 aos-post init $T/me/box4
 # 寄 procs_added 的 kid4 與 kid3 到 $T/front/st/requests（都帶 --reply-to $T/me/box4）
@@ -233,7 +234,7 @@ cat $T/me/box4/new/*/letter.json                                 # 兩封都是 
 
 兩封回信都經前站代回，`in_reply_to` 是各自的原信名：不管信去了哪一站，下游都回到前站的 `replies/`。`condition: "pass"` 讓 hook 只在信放行時被叫。要記得的幾件事（細節在 [py/tools/aos/kernel README「分流」](../../../py/tools/aos/kernel/README.md#分流hook-替這一封指定下一站)）：
 
-- 只有 `after_verdict` 收 `next`；值要是絕對路徑，寫錯或指到自己＝hook 自己失敗（預設這輪退 1、信留著）。指的信箱寄不進去＝這封拒 `ForwardFailed`。
+- 只有 `after_verdict` 收 `next`；值要是絕對路徑，寫錯或指到自己＝hook 自己失敗（這輪退 1、信留著）。指的信箱寄不進去＝這封拒 `ForwardFailed`。
 - 前站如果設了 `max_running`，一定要寫 `count_daemon`，而且不管信去哪一站都算進同一個上限；各站各自的上限在各站自己設。
 - `keep_ordered` 開著時不能分流（`CfgBad`）：分到不同站的信沒有先後保證。
 - 分流規則對同一封信每次要給同一個答案（站重起後靠它認出已經轉過的信）。
@@ -248,17 +249,17 @@ cat $T/me/box4/new/*/letter.json                                 # 兩封都是 
 
 ```text
 self_tools  {"op": "add", "path": "<AOS_HOME>/lib/tools/agent/kernel_gate"}
-kernel_gate {"op": "on"}        印出收件信箱 <它的 stack>/hooks/kernel_gate/requests；寄件人把 AOS_KERNEL 設成它
+kernel_gate {"op": "on"}        印出收件信箱 <它的 stack>/hookeds/kernel_gate/requests；寄件人把 AOS_KERNEL 設成它
 ```
 
 之後有請求被留下，它收到一則 `[aos] kernel_hold: …`（每封列信名、寄件人、request、期限、寄件人多寫的其他鍵原樣），用 `kernel_gate {"op": "pass", "letter": …}` 或 `{"op": "refuse", "letter": …, "reason": …}` 表態；`{"op": "off"}` 收掉。
 
-- 站就是同一支框架站，stack 是 agent 的 `<stack>/hooks/kernel_gate/`，由它身上一支 `on_clock` hook 每個時鐘週期叫一輪；`kernel.json` 在那個夾裡，agent 自己可以加 `allowed`、`max_running`、`next`、別的 hook。
+- 站就是同一支框架站，stack 是 agent 的 `<stack>/hookeds/kernel_gate/`，由它身上一支 `on_clock` hook 每個時鐘週期叫一輪；`kernel.json`、`interfaces.json` 與被勾清單 `kernel_hookeds.json`（預設那支 hold 在這裡）在那個夾裡，agent 自己可以在 `kernel.json` 加 `allowed`、`max_running`、`next`，在 `kernel_hookeds.json` 加別的 hook。
 - 機器先照 `kernel.json` 的規則判，規則拒的直接拒；規則放行的才留給 agent（預設那支 hook 的 `condition` 是 `pass`）。只想看其中一部分，把 hook 換成自己的（例子在 [py/tools/aos/kernel README「先留著等表態」](../../../py/tools/aos/kernel/README.md)）。
 - agent 表態 pass 蓋不過規則與寄件人的期限：站會重判一次，期限過了就拒 `SlotMissing`。`aos-agent ctl add` 預設只等 30 秒，要讓腦來得及判，寄件人加 `--timeout-s`。
 - agent 自己在一輪裡（等模型回答）或睡著時，它身上的 hook 不跑，站也就不跑：信躺在信箱裡沒被認領，帶期限的寄件人到期自己撤信。
 - 請求信裡多帶什麼鍵都可以（使用者 11-13：「反正json，不認得的key，只要沒設限制，就能過」）：站原樣給 agent 看、原樣轉寄，不過濾；寫的內容會進 agent 的對話，風險由當 kernel 的那一站自己承擔（使用者 11-13：「提示注入這塊就是風險自己承擔」）。
-- 不用這支工具也做得到（`self_hook` 掛一支跑框架站的腳本、手寫 `kernel.json` 與 hook、表態＝寫一個檔 `decisions/<信名>.json`）：步驟在知識庫 `aos/kernel.json#/write_your_own`。
+- 不用這支工具也做得到（`self_hook` 掛一支跑框架站的腳本、手寫 `kernel.json`、`interfaces.json` 與 `kernel_hookeds.json`、表態＝寫一個檔 `decisions/<信名>.json`）：步驟在知識庫 `aos/kernel.json#/write_your_own`。
 
 ### 改成自己的
 
@@ -271,6 +272,6 @@ kernel_gate {"op": "on"}        印出收件信箱 <它的 stack>/hooks/kernel_g
 - 沒開 `reply_via_me` 的無序信，防重的依據只有下一站信箱 `new/`、`cur/` 裡的同名信。下游已做完並移走那封信、站才重起，站認不出原信已經轉過，可能再轉一次。
 - 站當 loop proc 時跟 daemon 各自打拍子：轉了、daemon 還沒套的不算在跑，連著很快寄好幾封時可能多放幾個。當 daemon 身體時沒這個問題（站跑在 daemon 那一圈裡，下一圈之前 daemon 已套完）。
 - **當 loop proc 的站睡著或停著**：信照 `AOS_KERNEL` 寄、不認誰是 kernel、不預判收件者有沒有在跑；沒有回信就等寄件人期限。站睡著＝這是設計系統的人要管的風險（使用者 11-07），手動叫醒：`aos-daemon-ctl wake NAME`（停著用 `start`；這支是指名 daemon 的工具，一律直寄 daemon、不看 `AOS_KERNEL`）。程式不自動辨識、不自動叫醒、不自動繞過。逾時撤信與已轉寄後撤不回的競態見 [aos-agent 已知限制](../../../py/aos/apps/agent/docs/02-已知限制.md)。
-- 站自己的錯（`kernel.json` 壞、下一站三段都找不到、daemon 沒開 ctl 信箱、`on_error: stop` 的 hook 失敗）退 1。當 daemon 身體時 daemon 不停——stderr 一行 `aos-daemon: warning: body … failed (code N), retrying next round`（碼變了才印，好了印 ok again）、`state.json` 記 `body_code`、下一圈再跑（使用者裁「記一行、下一圈再跑 (Recommended)」，N-28「daemon 的身體失敗」）；那段時間站沒在跑、`requests/` 的信沒人判。當 loop proc 時那個 proc 出錯結束、表上留 `stopped`＋`reason`，修好 `start`（P-20）。
+- 站自己的錯（`kernel.json` 壞、下一站三段都找不到、daemon 沒開 ctl 信箱、hook 失敗）退 1。當 daemon 身體時 daemon 不停——stderr 一行 `aos-daemon: warning: body … failed (code N), retrying next round`（碼變了才印，好了印 ok again）、`state.json` 記 `body_code`、下一圈再跑（使用者裁「記一行、下一圈再跑 (Recommended)」，N-28「daemon 的身體失敗」）；那段時間站沒在跑、`requests/` 的信沒人判。當 loop proc 時那個 proc 出錯結束、表上留 `stopped`＋`reason`，修好 `start`（P-20）。
 - **留著等表態的信**：站沒有自己的「最多留多久」，只認寄件人的 `queue_wait_ms`；沒帶期限的信會一直留到有人表態。留著的信不佔 `max_running` 的格。
 - 同一個收件箱同時只能有一個站在跑：第二個會拿不到 `requests/.flock`，報 `LockFailed` 退 1。

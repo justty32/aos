@@ -64,10 +64,10 @@ class CompactAlone(Base):
 class WrapThenCompact(Base):
     def setUp(self):
         super().setUp()
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "eca"}, {"provider": "mcp"}], "history": "history.jsonl"}}))
-        (self.defn / "hooks.json").write_text(json.dumps({"hooks": {"context_wrap": {
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"history": "history.jsonl"}, "hookeds": "hookeds.json"}))
+        (self.defn / "hookeds.json").write_text(json.dumps({"context_wrap": {
             "event": "on_clock", "every_cycles": 1, "config": {"percent": 35}, "handler": str(HANDLER),
-            "on_error": "stop", "timeout_ms": 20000}}}))
+            "timeout_ms": 20000}}))
         self.clock = self.t / "clock"
         self.cycle = 0
         self.clock.write_text("0\n")
@@ -79,7 +79,7 @@ class WrapThenCompact(Base):
         return self.ok_turn(**env)
 
     def state(self):
-        p = self.stack / "hooks" / "context_wrap" / "state.json"
+        p = self.stack / "hookeds" / "context_wrap" / "state.json"
         return json.loads(p.read_text()) if p.exists() else None
 
     def wraps(self):
@@ -158,9 +158,9 @@ class WrapThenCompact(Base):
         self.assertIsNone(self.state())
 
     def test_limit_comes_from_the_hook_config(self):
-        hooks = json.loads((self.defn / "hooks.json").read_text())
-        hooks["hooks"]["context_wrap"]["config"] = {"percent": 15}
-        (self.defn / "hooks.json").write_text(json.dumps(hooks))
+        hooks = json.loads((self.defn / "hookeds.json").read_text())
+        hooks["context_wrap"]["config"] = {"percent": 15}
+        (self.defn / "hookeds.json").write_text(json.dumps(hooks))
         self.say("hello")
         self.tick_turn(FAKE_CLI_USAGE="200000/1000000")
         self.tick_turn(FAKE_CLI_USAGE="200000/1000000")

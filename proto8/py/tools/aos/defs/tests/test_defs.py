@@ -291,15 +291,16 @@ class DefinitionsTest(unittest.TestCase):
         return result, [p['reason'] for p in data['problems']], [w['reason'] for w in data.get('warnings', [])]
 
     def runnable(self, name='a', fsm=None, loop=None, hooks=None):
-        """A definition with an entry → aos-loop loop.json → fsm.json, like the agent-fsm template, and a hooks file."""
+        """A definition with an entry → aos-loop loop.json → fsm.json, like the agent-fsm template, and a hookeds list."""
         path = self.definition(name)
         self.write(path / 'interfaces.json', {'aos-agent': {'entry': 'body.json', 'tools': 'tools.json', 'llm': 'llm.json',
-                                                            'llm_keys': ['model', 'temperature', 'max_tokens', 'top_p'], 'hooks': 'hooks.json'}})
+                                                            'llm_keys': ['model', 'temperature', 'max_tokens', 'top_p']},
+                                                'hookeds': 'hookeds.json'})
         self.write(path / 'body.json', {'argv': ['aos-loop', 'loop.json']})
         self.write(path / 'loop.json', loop or {'exec': 'fsm.json', 'interval_ms': 300})
         self.write(path / 'fsm.json', fsm or {'start': 'idle', 'states': {'idle': {'exec': {'argv': ['python3', 'idle.py']}, 'next': {'0': 'idle'}}}})
         self.write(path / 'idle.py', 'print(1)\n')
-        self.write(path / 'hooks.json', hooks or {'hooks': {}})
+        self.write(path / 'hookeds.json', hooks or {})
         return path
 
     def test_check_tool_path_that_does_not_exist(self):
@@ -349,8 +350,8 @@ class DefinitionsTest(unittest.TestCase):
             'sub': {'exec': {'argv': ['./gone.sh'], 'cwd': 'cells'}, 'next': {'0': 'idle'}},
             'tool': {'exec': 'missing_tool', 'next': {'0': 'idle'}}}},
             loop={'exec': 'fsm.json', 'on_start': {'argv': [home, 'after_start', {'$env': 'AOS_CD'}]}},
-            hooks={'hooks': {'gone': {'event': 'on_clock', 'handler': 'hooks/gone'}, 'off': None,
-                             'ok': {'event': 'on_clock', 'handler': {'$env': 'AOS_HOME', '$path': '/lib/tools/agent/hook_noop'}}}})
+            hooks={'description': 'test hooks', 'gone': {'event': 'on_clock', 'handler': 'hookeds/gone'}, 'off': None,
+                   'ok': {'event': 'on_clock', 'handler': {'$env': 'AOS_HOME', '$path': '/lib/tools/agent/hook_noop'}}})
         result, problems, warnings = self.reasons()
         self.assertEqual(result.returncode, 1, result.stdout)
         text = '\n'.join(problems)
@@ -359,7 +360,7 @@ class DefinitionsTest(unittest.TestCase):
                      'fsm.json#/states/sub/exec/argv/0: program "./gone.sh" does not exist (looked for cells/gone.sh)',
                      'fsm.json#/states/tool/exec: target "missing_tool" does not exist',
                      'loop.json#/on_start/argv/0: program {"$env": "AOS_HOME", "$path": "/lib/tools/agent/nope"} does not exist',
-                     'hooks.json#/hooks/gone/handler: handler "hooks/gone" does not exist'):
+                     'hookeds.json#/gone/handler: handler "hookeds/gone" does not exist'):
             self.assertIn(want, text)
         self.assertEqual(len(problems), 6, text)       # idle.py、-m、out.txt、AOS_CD、null 的 hook、在的 handler 都不報
         self.assertEqual(warnings, [])

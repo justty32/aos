@@ -1,54 +1,44 @@
-"""Test aos.hook_flags.sync: the before_run / after_run flag files follow the hooks in effect, only for declared loop points, and are written whole (no temp file left)."""
-import os
+"""Test that before_run / after_run are wired at compile time (no flag files any more, the user 11-21 "編譯時決定"): an agent.py or kernel.py writes on_before_run / on_after_run into loop.json only when a hook listens to them; on_start / on_stop whenever hooks are declared; all through aos-hook fire --stop-on-nonzero --def $AOS_CD."""
 from pathlib import Path
 import sys
-import tempfile
 import unittest
 
-sys.dont_write_bytecode = True
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from aos import hook_flags
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from agent_spec_helpers import agent  # noqa: E402
+from aos.py.kernel import defs as kdefs  # noqa: E402
 
-LOOP = {"before_run": {}, "after_run": {}, "after_start": {}}
+FIRE = ["aos-hook", "fire", "-q", "--stop-on-nonzero", "--def", {"$env": "AOS_CD"}]
 
 
-class Sync(unittest.TestCase):
-    def setUp(self):
-        tmp = tempfile.TemporaryDirectory(prefix="hook-flags-")
-        self.addCleanup(tmp.cleanup)
-        self.stack = tmp.name
+class AgentWiring(unittest.TestCase):
+    def test_no_hooks_declared_no_loop_points(self):
+        loop = agent().dry_run()["loop.json"]
+        self.assertFalse({"on_start", "on_stop", "on_before_run", "on_after_run"} & set(loop))
 
-    def flag(self, point):
-        return os.path.join(self.stack, hook_flags.FLAGS[point])
+    def test_hooks_but_not_on_the_run_points(self):
+        loop = agent(hooks={"t": {"event": "after_tool", "handler": "h"}}).dry_run()["loop.json"]
+        self.assertEqual(loop["on_start"], {"argv": FIRE + ["after_start"]})
+        self.assertEqual(loop["on_stop"], {"argv": FIRE + ["after_stop"]})
+        self.assertFalse({"on_before_run", "on_after_run", "on_before_run_if", "on_after_run_if"} & set(loop))
+        self.assertIn("recompile", loop["description"])
 
-    def test_on_and_off(self):
-        got = hook_flags.sync(self.stack, LOOP, {"a": {"event": "before_run"}, "b": {"event": "after_tool"}})
-        self.assertEqual(got, {"before_run": True, "after_run": False})
-        self.assertTrue(os.path.isfile(self.flag("before_run")))
-        self.assertFalse(os.path.exists(self.flag("after_run")))
-        self.assertIn("on_before_run", Path(self.flag("before_run")).read_text())
-        self.assertEqual(sorted(os.listdir(self.stack)), [hook_flags.FLAGS["before_run"]])   # no temp file left
-        got = hook_flags.sync(self.stack, LOOP, {"c": {"event": "after_run"}})
-        self.assertEqual(got, {"before_run": False, "after_run": True})
-        self.assertFalse(os.path.exists(self.flag("before_run")))
-        self.assertTrue(os.path.isfile(self.flag("after_run")))
-        self.assertEqual(hook_flags.sync(self.stack, LOOP, {}), {"before_run": False, "after_run": False})
-        self.assertEqual(os.listdir(self.stack), [])
+    def test_a_hook_on_before_run_wires_it(self):
+        loop = agent(hooks={"b": {"event": "before_run", "handler": "h"}}).dry_run()["loop.json"]
+        self.assertEqual(loop["on_before_run"], {"argv": FIRE + ["before_run"]})
+        self.assertNotIn("on_after_run", loop)
+        loop = agent(hooks=[{"b": {"event": "before_run", "handler": "h"}, "a": {"event": "after_run", "handler": "h"}},
+                            {"b": None}]).dry_run()["loop.json"]
+        self.assertEqual((loop.get("on_before_run"), loop["on_after_run"]), (None, {"argv": FIRE + ["after_run"]}))
 
-    def test_undeclared_points_left_alone(self):
-        Path(self.flag("before_run")).write_text("x\n")
-        self.assertEqual(hook_flags.sync(self.stack, {"after_run": {}}, {}), {"after_run": False})
-        self.assertTrue(os.path.isfile(self.flag("before_run")))   # not declared here: not ours to judge
-        self.assertEqual(hook_flags.sync(self.stack, {"before_tool": {}}, {"a": {"event": "before_run"}}), {})
 
-    def test_existing_flag_kept_as_is(self):
-        Path(self.flag("after_run")).write_text("hand made\n")
-        hook_flags.sync(self.stack, LOOP, {"a": {"event": "after_run"}})
-        self.assertEqual(Path(self.flag("after_run")).read_text(), "hand made\n")
-
-    def test_cannot_write(self):
-        with self.assertRaises(OSError):
-            hook_flags.sync(os.path.join(self.stack, "missing"), LOOP, {"a": {"event": "before_run"}})
+class KernelWiring(unittest.TestCase):
+    def test_loop_body(self):
+        files = kdefs.Kernel("K.", body=kdefs.loop()).dry_run()
+        self.assertEqual(files["loop.json"]["on_start"], {"argv": FIRE + ["after_start"]})
+        self.assertNotIn("on_before_run", files["loop.json"])
+        files = kdefs.Kernel("K.", body=kdefs.loop(), hooks={"r": {"event": "after_run", "handler": "h"}}).dry_run()
+        self.assertEqual(files["loop.json"]["on_after_run"], {"argv": FIRE + ["after_run"]})
+        self.assertEqual(files["kernel_hookeds.json"]["r"], {"event": "after_run", "handler": "h"})
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 # kernel_gate/tick - agent 身上的 on_clock hook handler：叫框架站做一輪，再把新留下的請求合成一則「[aos] kernel_hold: …」寄進 agent 的 queue。
 # 介面：stdin＝事件 JSON（stack＝agent 的 stack）；$AOS_STACK＝這支 hook 的小格＝站的 stack（kernel.json、requests/、hold.json、decisions/ 都在這裡）。
 # 小格裡沒有 kernel.json（沒開過 kernel_gate on）＝什麼都不做。通知過的信名記在 $AOS_STACK/notified.json（只留還留著的）。
-# 錯：stderr 一行「kernel_gate: error: 代號 原因」、退 1；站那一輪自己的錯誤行原樣在上面。掛它用 on_error: continue。
+# 錯：stderr 一行「kernel_gate: error: 代號 原因」、退 1；站那一輪自己的錯誤行原樣在上面。on_clock 的 hook 失敗在 agent 那邊只是一行 warning。
 import json, os, sys, time
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True

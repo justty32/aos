@@ -9,7 +9,7 @@ import runner
 from budget import MAX, dumps, is_count
 from aos.tool_io import Error
 
-TOP_KEYS = ("slots", "reserved", "aging_cycles", "budget", "exec", "endpoint", "timeout_ms", "backends", "hooks")
+TOP_KEYS = ("slots", "reserved", "aging_cycles", "budget", "exec", "endpoint", "timeout_ms", "backends")
 PACK_KEYS = ("exec", "slots", "budget", "speed", "backend", "session_key", "reasoning_efforts")   # kernel 看的，不交給端點函數
 WINDOW_KEYS = ("slots", "budget", "speed", "cost", "context", "summary", "fixed", "backend", "reasoning_efforts")
 # 思考程度（11-21 使用者「或是llm kernel要接受的請求中，允許添加思考程度這個key，然後具體的則由llm kernel處理」「走乙吧」
@@ -225,7 +225,7 @@ def read_cfg(spec, stack):
     else:
         raise Error("CfgBad", spec + " must be a JSON object")
     cfg = {"base": base[0], "file": file, "slots": 1, "reserved_high": 0, "aging_cycles": 3,
-           "backends": {}, "endpoint": None, "timeout_ms": None, "hooks": doc.get("hooks", {}), "groups": {}}
+           "backends": {}, "endpoint": None, "timeout_ms": None, "hooks": {}, "groups": {}}   # hooks：_entry 照定義夾的 hookeds 讀（11-21）
     if "aging_cycles" in doc:
         aging = doc["aging_cycles"]
         if not is_count(aging) or not 1 <= aging <= MAX:

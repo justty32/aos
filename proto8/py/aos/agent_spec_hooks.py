@@ -1,22 +1,22 @@
-"""agent_spec_hooks - agent_spec 的 hook 那塊：hooks=… 怎麼疊（一張表、std.hooks(...)、defs.load 的 hooks、@fn.hook 的函數、它們的串列）、怎麼驗、怎麼算出 hooks.json。
+"""agent_spec_hooks - agent_spec 的 hook 那塊：hooks=… 怎麼疊（一張表、std.hooks(...)、defs.load 的 hooks、@fn.hook 的函數、它們的串列）、怎麼驗、怎麼算出被勾清單 hookeds.json。
 
 編譯程式庫第 3 刀（線 aos-pylib-k3-1120，設計稿 thinking/2026-11/20/aos-pylib-plan-1120/03、04、07c）從 agent_spec_parts 拆出來（免得單檔過 300 行），
 加上函數 hook：hooks=[…] 裡放 @fn.hook 標的函數＝一格 {"event", "handler": "fn/<hook 名>.py", 其餘鍵}，handler 的程式由 aos/fn_spec 編譯時抽出來寫。
 函數 hook 跟自己寫的 dict 同一類：同名＝後面的蓋前面（設計稿 07d 意見 10）；兩個函數 hook 同名＝SpecBad。
-驗的規矩不自己發明，照讀 hooks.json 的一方：每格照 aos/agentlib/hooks.py 的 validate_entry 與 hook_run.validate_name（直接叫，不抄一份）；
-事件名不在表上＝SpecBad，跟今天一樣（使用者 11-20 選「掛到這隻 agent 不會發的事件：照舊不管」，不多加擋人的檢查）。
+驗的規矩不自己發明，照讀清單的一方：每格照 aos/agentlib/hooks.py 的 check_entry 與 hook_lists.check_name（直接叫，不抄一份）；
+11-21 起（線 top-1121-hooknew）事件名不驗（宣告只是參考，使用者「沒宣告的照樣跑」）；hookeds.json 是 {hook 名: 格}，不再包一層 hooks。
 只給 aos/agent_spec_agent.py、agent_spec_load.py、agent_spec_lib.py 用。
 """
 import json
 
-from aos import hook_run
+from aos import hook_lists
 from aos import fn_spec
 from aos.agentlib import hooks as agent_hooks
 from aos.agent_spec_parts import WHAT, kind, raise_bad
 from aos.spec_base import SpecBad
 
 HOOKS_SHAPE = ("hooks must be a dict {hook name: entry}, std.hooks(...), the hooks of defs.load(...), a function marked @fn.hook, a list of those "
-               "(later ones win, None drops a hook), or defs.extern(\"../shared/hooks.json\")")
+               "(later ones win, None drops a hook), or defs.extern(\"../shared/hookeds.json\")")
 
 
 class Hooks(dict):
@@ -62,7 +62,7 @@ def stack_hooks(hooks):
             by_fn[name] = layer.__name__
             layer = {name: entry}
         if kind(layer) == "extern":
-            raise SpecBad("hooks: defs.extern(...) stands for the whole field (a link to one hooks.json): write hooks=defs.extern(...), "
+            raise SpecBad("hooks: defs.extern(...) stands for the whole field (a link to one hookeds.json): write hooks=defs.extern(...), "
                           "not inside a list")
         if isinstance(layer, Hooks):
             source = layer.label
@@ -78,12 +78,12 @@ def stack_hooks(hooks):
                 raise SpecBad("hooks: hook name %r must be a string" % (name,))
             if entry is not None:
                 try:
-                    hook_run.validate_name(name)
-                except hook_run.HooksBad as e:
-                    raise SpecBad("hooks: hook name %r %s" % (name, e))
+                    hook_lists.check_name(name)
+                except hook_lists.HooksBad as e:
+                    raise SpecBad("hooks: %s" % e)
                 try:
-                    agent_hooks.validate_entry(entry)
-                except hook_run.HooksBad as e:
+                    agent_hooks.check_entry(entry)
+                except hook_lists.HooksBad as e:
                     raise SpecBad("hooks: hook %s: %s" % (name, e))
             if source is None:
                 clash.pop(name, None)                               # 自己寫在它們後面的＝選好了
@@ -101,10 +101,10 @@ def stack_hooks(hooks):
 
 
 def hooks_json(hooks):
-    """HOOKS → hooks.json 的內容：stack_hooks 疊完、濾掉墓碑；說明列抄自哪些範本（去重），不提 defs.load 的底。
+    """HOOKS → hookeds.json 的內容（{"description", 名: 格}）：stack_hooks 疊完、濾掉墓碑；說明列抄自哪些範本（去重），不提 defs.load 的底。
     函數 hook 那格還帶著 fn_spec.KEY（指回函數），由 Agent._files 交給 fn_spec.programs 換成真的 handler。"""
     table, origins = stack_hooks(hooks)
-    desc = WHAT["hooks.json"]
+    desc = WHAT["hookeds.json"]
     if origins:
         desc += " Taken from %s; see the description there for what each hook does." % ", ".join(origins)
-    return {"description": desc, "hooks": {n: e for n, e in table.items() if e is not None}}
+    return dict({"description": desc}, **{n: e for n, e in table.items() if e is not None})

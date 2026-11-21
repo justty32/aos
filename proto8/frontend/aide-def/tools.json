@@ -1,2 +1,2 @@
-{"description": "The aide has no tools: its whole job is the on_clock hook aide_tick (hooks.json); the brain is fake and is never asked in phase 1.",
+{"description": "The aide has no tools: its whole job is the on_clock hook aide_tick (hookeds.json); the brain is fake and is never asked in phase 1.",
  "tools": {}}

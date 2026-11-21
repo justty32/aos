@@ -52,7 +52,7 @@ class Fork(unittest.TestCase):
             env.update(AOS_STACK=str(daemon_stack), AOS_CD=str(root), AOS_WS=str(root), AOS_HOME=str(PROTO),
                        AOS_DAEMON=str(daemon_stack), AOS_LLM_KERNEL=str(kernel_stack))
             defs = {}
-            for model in ('plain', 'kept'):             # 兩份定義：範本原樣（hooks.json 照帶），工具只有 fork，腦各一份劇本
+            for model in ('plain', 'kept'):             # 兩份定義：範本原樣（hookeds.json 照帶），工具只有 fork，腦各一份劇本
                 own = root / ('def_' + model)
                 shutil.copytree(CELLS, own, ignore=shutil.ignore_patterns('tests', '__pycache__'))
                 write(own / 'llm.json', {'model': model})

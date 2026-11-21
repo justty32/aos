@@ -26,7 +26,7 @@
 
 ## 一輪的順序
 
-1. 讀 `kernel.json`：頂層的格（`slots`、`reserved`、`aging_cycles`、`budget`、`exec`、`endpoint`、`timeout_ms`、`backends`、`hooks`）先解指示詞；`endpoints` 每一組到用的時候才解，解不開只有用那組的信回 `DirectiveBad`，別的信照跑。找 daemon 與掛信信箱。
+1. 讀 `kernel.json`：頂層的格（`slots`、`reserved`、`aging_cycles`、`budget`、`exec`、`endpoint`、`timeout_ms`、`backends`）先解指示詞；被勾清單另照同夾 `interfaces.json` 的 `hookeds` 讀；`endpoints` 每一組到用的時候才解，解不開只有用那組的信回 `DirectiveBad`，別的信照跑。找 daemon 與掛信信箱。
 2. 骨架建信箱、鎖 `requests/.flock`。
 3. 收成品：讀 `queue.json`、`used.json`、daemon 的表，寫窗 `endpoints.json`。`cur/` 裡掛出去的每封交給 `runner.settle`：跑完的解讀成回信（成功、合格的錯誤物件原樣、`EndpointFailed`、`ReplyBad`），被收掉或死在半路的重掛一次，第二次還是沒結果回 `EndpointFailed`。有結果的先記 `ledger.jsonl` 與 `used.json`，再跑 `before_reply`，然後寄回信、整封刪。
 4. 收拾：`new/`、`tmp/` 裡有 `sender.flock` 而沒人鎖著的信刪掉（寄件人走了）。不算判決，不跑 hook。
@@ -38,7 +38,7 @@
 
 ## hooks
 
-寫在 `kernel.json` 的 `hooks`，格的鍵與規則同[框架站](../kernel/README.md#hooks)。問腦這包的差別：
+不寫在 `kernel.json`：被勾清單是同夾 `interfaces.json` 最外層 `hookeds` 指的檔（範本與編譯都叫 `kernel_hookeds.json`），格的鍵與規則同[框架站](../kernel/README.md#hooks)。問腦這包的差別：
 
 | 事件 | 在問腦上 |
 |---|---|
@@ -58,7 +58,7 @@ exit 10
 ```
 
 - 帳在 `before_reply` 之前記，記的是端點函數原本的回話；hook 只改寄出去的那一份。
-- `before_reply` 自己失敗（`on_error: stop`）：這輪退 1，信留在 `cur/`、`proc.json` 多一個 `"counted": true`，下一輪從 hook 重來，帳不記第二次。
+- `before_reply` 自己失敗：這輪退 1，信留在 `cur/`、`proc.json` 多一個 `"counted": true`，下一輪從 hook 重來，帳不記第二次。
 - 重掛不重跑判決的 hook。
 - `before_verdict` 改過、還在排的 body 存 `$AOS_STACK/bodies/<信名>.json`；信離開隊（掛上、拒掉、被撤、寄件人走了）就刪。
 - 骨架先排序才跑 `before_verdict`，所以新信第一輪的位置照改之前的 body 排；還在排的下一輪起照改過的 body 排。

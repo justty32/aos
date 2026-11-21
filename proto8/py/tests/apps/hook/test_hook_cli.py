@@ -1,4 +1,4 @@
-"""Test aos-hook (fire, points, check) through bin/aos-hook: exit codes 0/10/1, the stdout line, where event data comes from, changes and their types, blocking, failing hooks, bad declarations and lists (real aos-exec; no daemon)."""
+"""Test aos-hook fire through bin/aos-hook: the stdout line, event data from stdin only, name order with the same data for every handler, failing and timed-out handlers, lists layered and turned off, bad lists and arguments (real aos-exec; no daemon)."""
 import json
 import os
 from pathlib import Path
@@ -10,15 +10,6 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[4]
 HOOK = PROTO / "bin" / "aos-hook"
-LOOP = PROTO / "py" / "aos" / "apps" / "hook" / "loop_points.json"
-POINTS = {"description": "a test provider", "provider": "saver", "points": {
-    "before_save": {"when": "before a file is saved", "phase": "before",
-                    "fields": {"file": "the file name", "size": {"about": "bytes", "env": "T_SIZE", "type": "int"},
-                               "who": {"about": "user", "env": "T_WHO"}},
-                    "condition": "who", "change": {"file": "nonempty_string"}, "block": True,
-                    "if_blocked": "not saved"},
-    "after_save": {"when": "after a file is saved", "phase": "after", "fields": {"file": "the file name", "meta": "extra"},
-                   "change": {"meta": "object"}, "entry_keys": ["every_ms"]}}}
 
 
 class HookCli(unittest.TestCase):
@@ -27,8 +18,7 @@ class HookCli(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.d = Path(os.path.realpath(tmp.name))
         self.stack = self.d / "stack"
-        self.points = self.write("hook_points.json", POINTS)
-        self.list = self.d / "hooks.json"
+        self.list = self.d / "hookeds.json"
         self.hooks = {}
         self.env = {k: v for k, v in os.environ.items() if not k.startswith(("AOS_", "T_"))}
         self.env["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -44,14 +34,14 @@ class HookCli(unittest.TestCase):
         p.write_text(("#!/usr/bin/env python3\nimport json, sys\nev = json.load(sys.stdin)\n" if py else "#!/bin/sh\n") + body + "\n")
         p.chmod(0o755)
         self.hooks[name] = dict({"event": "before_save", "handler": p.name}, **entry)
-        self.write("hooks.json", {"hooks": self.hooks})
+        self.write("hookeds.json", dict({"description": "test hooks"}, **self.hooks))
 
     def run_hook(self, *args, stdin="", env=None):
         return subprocess.run([sys.executable, str(HOOK)] + [str(a) for a in args], input=stdin, capture_output=True,
                               text=True, env=dict(self.env, **(env or {})), cwd=self.d, timeout=60)
 
     def fire(self, *args, **kw):
-        return self.run_hook("fire", "--points", self.points, "--list", self.list, "--stack", self.stack, *args, **kw)
+        return self.run_hook("fire", "--list", self.list, "--stack", self.stack, *args, **kw)
 
     def assertError(self, r, code, part=""):
         self.assertEqual(r.returncode, 1, r.stderr)
@@ -64,148 +54,112 @@ class HookCli(unittest.TestCase):
         lines = r.stdout.splitlines()
         self.assertEqual(len(lines), 1, r.stdout)
         out = json.loads(lines[0])
-        self.assertEqual(set(out), {"data", "changed", "blocked", "hook", "text"})
+        self.assertEqual(set(out), {"event", "hooks"})
+        for h in out["hooks"]:
+            self.assertEqual(set(h), {"hook", "code", "stdout", "error"})
         return out
 
     # ---- the shape of the command
     def test_help_and_subcommands(self):
         r = self.run_hook("--help")
         self.assertEqual((r.returncode, r.stderr), (0, ""))
-        self.assertIn("usage: aos-hook SUBCOMMAND", r.stdout)
-        self.assertIn("usage: aos-hook fire", self.run_hook("fire", "--help").stdout)
+        self.assertIn("usage: aos-hook fire", r.stdout)
+        self.assertIn("--stop-on-nonzero", self.run_hook("fire", "--help").stdout)
         self.assertError(self.run_hook(), "ArgumentsBad", "missing subcommand")
-        self.assertError(self.run_hook("shoot"), "CommandUnknown")
+        for gone in ("points", "check", "shoot"):
+            self.assertError(self.run_hook(gone), "CommandUnknown")
         self.assertError(self.run_hook("fire", "--nope"), "FlagUnknown")
-        self.assertError(self.run_hook("fire", "before_save"), "ArgumentsBad", "--points")
-        self.assertError(self.run_hook("fire", "--agent", self.d, "--points", self.points, "before_save"),
+        for gone in ("--field", "--field-file", "--field-default", "--points", "--agent"):
+            self.assertError(self.run_hook("fire", gone, "x", "before_save"), "FlagUnknown")
+        self.assertError(self.run_hook("fire", "--stack", self.stack, "before_save"), "ArgumentsBad", "--list")
+        self.assertError(self.run_hook("fire", "--def", self.d, "--list", self.list, "--stack", self.stack, "before_save"),
                          "ArgumentsBad", "not both")
+        self.assertError(self.fire(), "ArgumentsBad", "give one EVENT")
+        self.assertError(self.fire("a", "b"), "ArgumentsBad", "give one EVENT")
 
-    # ---- fire: exit 0, data, -q
+    # ---- fire: exit 0, the line, -q
     def test_nobody_listens(self):
-        out = self.result(self.fire("--field", "file=a.txt", "before_save"))
-        self.assertEqual(out, {"data": {"file": "a.txt", "size": None, "who": None}, "changed": [], "blocked": False,
-                               "hook": None, "text": ""})
+        out = self.result(self.fire("before_save", stdin=json.dumps({"file": "a.txt"})))
+        self.assertEqual(out, {"event": "before_save", "hooks": []})
         r = self.fire("-q", "before_save")
         self.assertEqual((r.returncode, r.stdout, r.stderr), (0, "", ""))
+        self.handler("other", "exit 3", event="after_save")              # another event's hook does not run
+        self.assertEqual(self.result(self.fire("before_save"))["hooks"], [])
 
-    def test_data_sources(self):
-        stdin = json.dumps({"file": "in.txt", "size": 1, "who": "stdin", "extra": [1]})
-        out = self.result(self.fire("before_save", stdin=stdin, env={"T_SIZE": " ", "T_WHO": ""}))
-        self.assertEqual(out["data"], {"file": "in.txt", "size": 1, "who": "stdin", "extra": [1]})   # empty env keeps stdin
-        out = self.result(self.fire("before_save", stdin=stdin, env={"T_SIZE": "42", "T_WHO": " ann "}))
-        self.assertEqual((out["data"]["size"], out["data"]["who"]), (42, "ann"))
-        out = self.result(self.fire("--field", "size=7", "--field", "who=bob", "--field", "who=cy", "before_save",
-                                    stdin=stdin, env={"T_SIZE": "42"}))
-        self.assertEqual((out["data"]["size"], out["data"]["who"]), (7, "cy"))
-        self.write("name.txt", "  from_file.txt\n")
-        out = self.result(self.fire("--field-file", "file=name.txt", "--field-file", "who=missing.txt",
-                                    "--field-default", "who=dflt", "--field-default", "file=unused", "before_save"))
-        self.assertEqual((out["data"]["file"], out["data"]["who"]), ("from_file.txt", "dflt"))
-        for args, part in ((["--field", "size=many"], "is a whole number"), (["--field", "file"], "NAME=VALUE"),
-                           (["--field", "file=a", "--field-file", "file=b"], "give it once")):
-            self.assertError(self.fire(*args, "before_save"), "ArgumentsBad", part)
-        self.assertError(self.fire("before_save", env={"T_SIZE": "1.5"}), "ArgumentsBad", "$T_SIZE")
+    def test_data_from_stdin(self):
+        self.handler("seen", 'cat > "$AOS_STACK/seen.json"')
+        stdin = json.dumps({"file": "in.txt", "size": 1, "extra": [1], "event": "spoofed", "hook": "x"})
+        out = self.result(self.fire("before_save", stdin=stdin, env={"T_SIZE": "42"}))
+        self.assertEqual(out["hooks"], [{"hook": "seen", "code": 0, "stdout": "", "error": None}])
+        cell = self.stack / "hookeds" / "seen"
+        seen = json.loads((cell / "seen.json").read_text())
+        self.assertEqual(seen, {"event": "before_save", "hook": "seen", "stack": str(self.stack),
+                                "file": "in.txt", "size": 1, "extra": [1]})   # event / hook / stack win; no env fields
+        self.assertEqual(json.loads((cell / "event.json").read_text()), seen)
+        for empty in ("", " \n"):
+            self.result(self.fire("before_save", stdin=empty))
+            self.assertEqual(set(json.loads((cell / "seen.json").read_text())), {"event", "hook", "stack"})
         self.assertError(self.fire("before_save", stdin="{"), "ArgumentsBad", "stdin is not JSON")
         self.assertError(self.fire("before_save", stdin="[1]"), "ArgumentsBad", "JSON object")
 
-    def test_change_block_and_order(self):
-        self.handler("a_deny", 'if ev["file"].startswith("secret"):\n    print("no secrets")\n    sys.exit(10)', py=True)
-        self.handler("b_rename", "f=$(python3 -c 'import json,sys; print(json.load(sys.stdin)[\"file\"])')\n"
-                                 "printf '{\"file\": \"%s.bak\", \"size\": 9}' \"$f\"")
-        out = self.result(self.fire("--field", "file=notes", "before_save"))
-        self.assertEqual((out["data"]["file"], out["data"]["size"], out["changed"]), ("notes.bak", None, ["file"]))
-        self.assertTrue((self.stack / "hooks" / "b_rename" / "event.json").is_file())
-        out = self.result(self.fire("--field", "file=secret", "before_save"), 10)
-        self.assertEqual((out["blocked"], out["hook"], out["text"]), (True, "a_deny", "no secrets\n"))
-        self.assertEqual(out["data"]["file"], "secret")
-        self.assertEqual(self.fire("-q", "--field", "file=secret", "before_save").returncode, 10)
-
-    def test_condition_and_lists(self):
-        self.handler("only_ann", "echo '{\"file\": \"ann\"}'", condition="ann")
-        self.assertEqual(self.result(self.fire("--field", "who=bob", "--field", "file=x", "before_save"))["changed"], [])
-        self.assertEqual(self.result(self.fire("--field", "who=ann", "--field", "file=x", "before_save"))["data"]["file"], "ann")
-        off = self.write("off.json", {"hooks": {"only_ann": None}})
-        out = self.result(self.fire("--list", off, "--list", self.d / "missing.json", "--field", "who=ann", "before_save"))
-        self.assertEqual(out["changed"], [])
+    def test_order_and_same_data(self):
+        self.handler("b_second", 'import os\nprint(json.dumps(ev["file"]))\nopen(os.environ["AOS_STACK"] + "/../../order", "a").write("b")', py=True)
+        self.handler("a_first", 'import os\nprint(json.dumps({"file": "changed"}))\nopen(os.environ["AOS_STACK"] + "/../../order", "a").write("a")\nsys.exit(10)', py=True)
+        out = self.result(self.fire("before_save", stdin='{"file": "notes"}'))
+        self.assertEqual([(h["hook"], h["code"], h["stdout"]) for h in out["hooks"]],
+                         [("a_first", 10, '{"file": "changed"}\n'), ("b_second", 0, '"notes"\n')])   # not blocked, not changed
+        self.assertEqual((self.stack / "order").read_text(), "ab")
 
     def test_failing_hooks(self):
-        self.handler("boom", "exit 3")
-        self.assertError(self.fire("before_save"), "HookFailed", "hook boom (event before_save) failed: exited 3")
-        self.handler("boom", "exit 3", on_error="continue")
+        self.handler("a_boom", "echo out; exit 3")
+        self.handler("b_after", "echo 'not json'")
         r = self.fire("before_save")
-        self.assertEqual(r.returncode, 0)
-        self.assertIn("aos-hook: warning: hook boom (event before_save) failed: exited 3", r.stderr)
-        self.handler("boom", "echo 'not json'")
-        self.assertError(self.fire("before_save"), "HookFailed", "stdout is not JSON")
-        self.handler("boom", "sleep 5", timeout_ms=200)
-        self.assertError(self.fire("before_save"), "HookFailed", "did not finish in 200 ms")
-
-    def test_change_types(self):
-        self.handler("a_empty", "echo '{\"file\": \" \"}'", on_error="continue")
-        self.handler("b_seen", 'cat > "$AOS_STACK/seen.json"')
-        r = self.fire("--field", "file=keep", "before_save")
-        self.assertIn("file in stdout must be a non-empty string", r.stderr)
-        self.assertEqual(self.result(r)["data"]["file"], "keep")
-        self.assertEqual(json.loads((self.stack / "hooks" / "b_seen" / "seen.json").read_text())["file"], "keep")
+        out = self.result(r)
+        self.assertEqual(out["hooks"], [{"hook": "a_boom", "code": 3, "stdout": "out\n", "error": None},
+                                        {"hook": "b_after", "code": 0, "stdout": "not json\n", "error": None}])
+        self.assertEqual(r.stderr, "")
         self.hooks = {}
-        self.handler("meta", "echo '{\"meta\": [1]}'", event="after_save")
-        self.assertError(self.fire("after_save"), "HookFailed", "meta in stdout must be a JSON object")
-        self.handler("meta", "echo '{\"meta\": {\"k\": 1}}'", event="after_save")
-        self.assertEqual(self.result(self.fire("after_save"))["data"]["meta"], {"k": 1})
+        self.handler("slow", "sleep 5", timeout_ms=200)
+        r = self.fire("before_save")
+        out = self.result(r)
+        self.assertEqual(out["hooks"][0]["code"], None)
+        self.assertIn("did not finish in 200 ms", out["hooks"][0]["error"])
+        self.assertIn("aos-hook: warning: hook slow (event before_save): did not finish in 200 ms", r.stderr)
+        self.hooks = {}
+        self.handler("gone", "true")
+        self.hooks["gone"]["handler"] = "no_such_handler"
+        self.write("hookeds.json", self.hooks)
+        h = self.result(self.fire("before_save"))["hooks"][0]          # aos-exec starts, the target is not there
+        self.assertNotIn(h["code"], (0, None))
+
+    def test_lists(self):
+        self.handler("a", "echo a")
+        self.handler("b", "echo b")
+        off = self.write("off.json", {"description": "turn a off", "a": None})
+        more = self.write("more.json", {"b": {"event": "before_save", "handler": str(self.d / "h_a")}})
+        out = self.result(self.fire("--list", off, "--list", self.d / "missing.json", "--list", more, "before_save"))
+        self.assertEqual([(h["hook"], h["stdout"]) for h in out["hooks"]], [("b", "a\n")])   # later wins by name
+        r = self.run_hook("fire", "--list", self.d / "missing.json", "--stack", self.stack, "before_save")
+        self.assertEqual(self.result(r)["hooks"], [])
+        self.handler("x", "true", intercept=False, on_error="continue", condition="ann")   # other keys are kept, not read
+        self.assertEqual(len(self.result(self.fire("before_save"))["hooks"]), 3)
 
     def test_bad_inputs(self):
-        self.assertError(self.fire("before_sav"), "EventUnknown", "points: before_save, after_save")
-        r = self.run_hook("fire", "--points", self.points, "before_save")
-        self.assertError(r, "StackMissing")
-        self.assertEqual(self.run_hook("fire", "--points", self.points, "-q", "before_save",
+        self.assertError(self.run_hook("fire", "--list", self.list, "before_save"), "StackMissing")
+        self.assertEqual(self.run_hook("fire", "--list", self.list, "-q", "before_save",
                                        env={"AOS_STACK": str(self.stack)}).returncode, 0)
-        bad = self.write("bad.json", {"provider": "x", "points": {"Bad-Name": {}}})
-        self.assertError(self.run_hook("points", "--points", bad), "PointsBad", "may only have a-z")
-        other = json.loads(json.dumps(POINTS))
-        other["points"]["before_save"]["block"] = False
-        other["points"]["before_save"].pop("if_blocked")
-        two = self.write("two.json", other)
-        self.assertError(self.run_hook("check", "--points", self.points, "--points", two), "PointsBad", "block differs")
-        for hooks, part in (({"h": {"event": "nope", "handler": "x"}}, "event must be one of"),
-                            ({"h": {"event": "before_save", "handler": "x", "every_ms": 5}}, "every_ms is only for event after_save"),
-                            ({".h": {"event": "before_save", "handler": "x"}}, "hook name '.h'")):
-            self.write("hooks.json", {"hooks": hooks})
+        self.assertEqual(self.result(self.fire("anything_at_all"))["event"], "anything_at_all")   # event names are not checked
+        for hooks, part in (({"h": {"handler": "x"}}, "event must be a non-empty string"),
+                            ({"h": {"event": "before_save"}}, "handler must be"),
+                            ({"h": {"event": "before_save", "handler": "x", "timeout_ms": -1}}, "timeout_ms"),
+                            ({".h": {"event": "before_save", "handler": "x"}}, "hook name '.h'"),
+                            ({"h": [1]}, "must be a JSON object or null")):
+            self.write("hookeds.json", hooks)
             self.assertError(self.fire("before_save"), "HooksBad", part)
-            self.assertError(self.run_hook("check", "--points", self.points, "--list", self.list), "HooksBad", part)
-        self.write("hooks.json", "[]")
+        self.write("hookeds.json", "[]")
         self.assertError(self.fire("before_save"), "HooksBad", "must be a JSON object")
-
-    # ---- the loop points, points and check
-    def test_loop_points(self):
-        self.hooks = {}
-        self.handler("skip", "exit 10", event="before_run", condition="act")
-        args = ("fire", "--points", LOOP, "--list", self.list, "--stack", self.stack)
-        out = self.result(self.run_hook(*args, "--field-file", "stage=nope", "--field-default", "stage=act", "before_run",
-                                        env={"AOS_LOOP_RUNS": "3"}), 10)
-        self.assertEqual((out["data"], out["hook"]), ({"counter_runs": 3, "stage": "act"}, "skip"))
-        out = self.result(self.run_hook(*args, "after_stop", env={"AOS_LOOP_CODE": "0", "AOS_LOOP_CAUSE": " stop "}))
-        self.assertEqual(out["data"], {"code": 0, "signal": None, "cause": "stop"})
-
-    def test_points_and_check(self):
-        r = self.run_hook("points", "--points", self.points)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout.splitlines()[0], "before_save  before  condition who  change file (nonempty_string)  can block")
-        self.assertIn("  saver, if blocked: not saved", r.stdout)
-        self.assertIn("  field size: bytes ($T_SIZE, int)", r.stdout)
-        doc = json.loads(self.run_hook("points", "-j", "--points", self.points).stdout)
-        self.assertEqual(list(doc), ["before_save", "after_save"])
-        self.assertEqual(doc["before_save"]["said"][0]["provider"], "saver")
-        self.handler("x", "true")
-        r = self.run_hook("check", "--points", self.points, "--list", self.list)
-        self.assertEqual((r.returncode, r.stderr), (0, ""))
-        self.assertEqual(r.stdout, "ok: 2 points from 1 declarations, 1 hooks from 1 lists\n")
-        ahead = self.d / "ahead.json"   # since cut 5 no shipped point is not_fired_yet: declare one here
-        ahead.write_text(json.dumps({"description": "x", "provider": "ahead", "points": {"on_tick": {
-            "when": "some day", "phase": "on", "fields": {}, "not_fired_yet": "nothing fires it yet"}}}))
-        self.handler("later", "true", event="on_tick")
-        r = self.run_hook("check", "--points", self.points, "--points", ahead, "--list", self.list)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("aos-hook: warning: hook later (in %s) is on point on_tick, which nothing fires yet" % self.list, r.stderr)
+        self.write("hookeds.json", "{")
+        self.assertError(self.fire("before_save"), "HooksBad", "cannot read")
 
 
 if __name__ == "__main__":

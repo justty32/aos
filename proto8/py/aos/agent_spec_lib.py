@@ -169,8 +169,8 @@ class Std(Lib):
         Lib.__init__(self, "std", {"$env": "AOS_HOME", "$path": ""}, packs="lib/packs", tools="lib/tools", prefix="")
 
     def hooks(self, template="agent-fsm"):
-        """某個範本 hooks.json 的那組 hook（agent-fsm、eca-claude、eca-pi）。interfaces.json 的 hooks 只能指夾內的檔，所以借不了，
-        編譯時從 $AOS_HOME/templates/<template>/hooks.json 讀出來抄進這夾的 hooks.json（範本改了，下次重新編譯跟著變）。
+        """某個範本被勾清單 hookeds.json 的那組 hook（agent-fsm、eca-claude、eca-pi）。編譯時從 $AOS_HOME/templates/<template>/hookeds.json
+        讀出來抄進這夾的 hookeds.json（範本改了，下次重新編譯跟著變；11-21 起檔名 hookeds.json、不再包一層 hooks）。
         回一個帶來源標記的 dict（agent_spec_hooks.Hooks）：跟另一組（另一個範本、defs.load 的 HOOKS）同名又不同＝SpecBad。"""
         call = "std.hooks(%r)" % (template,)
         if not isinstance(template, str) or not parts.PACK_RE.match(template):
@@ -179,18 +179,20 @@ class Std(Lib):
         if err:
             return _bad(err)
         try:
-            with open(os.path.join(where, template, "hooks.json"), encoding="utf-8") as f:
-                table = json.load(f).get("hooks")
+            with open(os.path.join(where, template, "hookeds.json"), encoding="utf-8") as f:
+                table = json.load(f)
+            if isinstance(table, dict):
+                table = {n: e for n, e in table.items() if n != "description"}
         except FileNotFoundError:
-            have = sorted(t for t in os.listdir(where) if os.path.isfile(os.path.join(where, t, "hooks.json"))) \
+            have = sorted(t for t in os.listdir(where) if os.path.isfile(os.path.join(where, t, "hookeds.json"))) \
                 if os.path.isdir(where) else []
-            return _bad("%s: there is no $AOS_HOME/templates/%s/hooks.json (templates with hooks: %s)"
+            return _bad("%s: there is no $AOS_HOME/templates/%s/hookeds.json (templates with hooks: %s)"
                         % (call, template, ", ".join(have) or "none"))
         except (OSError, ValueError, AttributeError) as e:
-            return _bad("%s: cannot read $AOS_HOME/templates/%s/hooks.json: %s" % (call, template, e))
+            return _bad("%s: cannot read $AOS_HOME/templates/%s/hookeds.json: %s" % (call, template, e))
         if not isinstance(table, dict):
-            return _bad("%s: $AOS_HOME/templates/%s/hooks.json has no hooks object" % (call, template))
-        return Hooks(table, call, ["templates/%s/hooks.json" % template])   # 帶標記的一組：std.hooks()["timer"] 取一格（繼承第一刀）
+            return _bad("%s: $AOS_HOME/templates/%s/hookeds.json is not a JSON object of hooks" % (call, template))
+        return Hooks(table, call, ["templates/%s/hookeds.json" % template])   # 帶標記的一組：std.hooks()["timer"] 取一格（繼承第一刀）
 
     def fsm(self, group="agent-fsm"):
         """agent-fsm 範本那四格（idle、think、wait、act），格的程式借 $AOS_HOME/templates/agent-fsm/ 那份（不抄、編譯時不讀）。"""

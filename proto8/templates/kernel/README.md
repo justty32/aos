@@ -10,7 +10,7 @@
 | `procs-kernel/` | 同一支框架站，改成掛在一台普通 daemon 底下的一個 loop proc |
 | `llm-kernel/` | 問腦的那台：agent 寄請求信、它挑能力包（`smart-high`、`stupid-fast`…）問模型、寄回信；自己一台 daemon，主線是掛成板子上的一列（見下面「初始 kernel」） |
 | [`llm-team/`](llm-team/) | 隊 kernel：能力包寫下一層 stack 與代號，經 llm_forward 轉交；自己一台 daemon |
-| [`kernel-python/`](kernel-python/README.md) | 用一支 `kernel.py` 寫的 kernel 定義（`from aos.py.kernel import defs`；使用者 11-20 待裁第 9 題、11-21「編譯的kernel入口那塊可以派」，線 top-1121-kdefs）：`defs.Kernel("說明", knobs={…}, hooks=[…], program="kernel"／"kernel_llm", body=defs.loop()／defs.daemon())`，`python3 kernel.py --compile` 編譯出上面幾種的樣子（`_entry`、`loop.json` 或 `daemon.json`、`kernel.json`、有 hook 時 `loop_hooks.json`、llm kernel 多 `interfaces.json`）；`@fn.hook` 的函數抽成 `fn/<名>.py`，跟 `agent.py` 同一套 |
+| [`kernel-python/`](kernel-python/README.md) | 用一支 `kernel.py` 寫的 kernel 定義（`from aos.py.kernel import defs`；使用者 11-20 待裁第 9 題、11-21「編譯的kernel入口那塊可以派」，線 top-1121-kdefs）：`defs.Kernel("說明", knobs={…}, hooks=[…], program="kernel"／"kernel_llm", body=defs.loop()／defs.daemon())`，`python3 kernel.py --compile` 編譯出上面幾種的樣子（`_entry`、`loop.json` 或 `daemon.json`、`kernel.json`、`interfaces.json`、宣告 `kernel_hooks.json`、被勾清單 `kernel_hookeds.json`）；`@fn.hook` 的函數抽成 `fn/<名>.py`，跟 `agent.py` 同一套 |
 
 ## 初始 kernel：買了板子之後灌什麼
 
@@ -47,12 +47,12 @@
 | 數量另指 | 「幾個在跑」去哪一台 daemon 的表上數 | `count_daemon` |
 | 回信 | 下游的回信直接回給寄件人，或先回到我這站再代回 | `reply_via_me` |
 | 排隊 | 沒格時先來先掛地排，或立刻拒 | `queue` |
-| hook | 在三個時機插自己的程式：判之前、判之後、代回回信之前 | `hooks` |
+| hook | 在三個時機插自己的程式：判之前、判之後、代回回信之前 | 不在 `kernel.json`：同夾 `interfaces.json` 最外層 `hookeds` 指的 `kernel_hookeds.json` |
 | 留著等表態 | `after_verdict` hook 回 `{"verdict": "hold"}`：信留在站裡，等有人把 pass／refuse 寫進 `decisions/<信名>.json`，站再照平常的路轉寄或回拒信 | 寫在 hook 裡；agent 當 kernel 用工具 `kernel_gate`（[02](docs/02-kernel-modes.md#agent-當-kernel請求先留著等它表態)） |
 
 ## `kernel.json` 的鍵
 
-設定檔每一輪都重讀，改了下一輪生效。內容可以寫 `{"$env": …, "$path": …}` 這類指示詞。`next`、`count_daemon` 與 hook 的 `handler` 寫相對路徑時，從 `kernel.json` 所在的資料夾算。不認得的鍵不管。
+設定檔每一輪都重讀，改了下一輪生效。內容可以寫 `{"$env": …, "$path": …}` 這類指示詞。`next`、`count_daemon` 寫相對路徑時，從 `kernel.json` 所在的資料夾算（hook 的 `handler` 從被勾清單所在的資料夾算，範本裡是同一夾）。不認得的鍵不管。
 
 | 鍵 | 意思 | 沒寫時 |
 |---|---|---|
@@ -63,7 +63,6 @@
 | `queue` | 沒格時排隊（`true`）還是立刻拒（`false`） | `false` |
 | `keep_ordered` | 有序信是否照有序轉寄 | `false` |
 | `reply_via_me` | 下游的回信是否先回到我這站、再由我代回 | `false` |
-| `hooks` | `{名字: 一格}`，每格寫 `event` 與 `handler` | 沒有 hook |
 
 最小的設定是 `{}`：什麼都不管，全部原樣轉給下一站（啥都不管也是一種管理）。寫了 `next` 又寫了 `max_running` 的話，一定要寫 `count_daemon`，不然報 `CfgBad`（站不去猜下一站是哪一台）；下一站取自 `AOS_KERNEL` 時也一樣。
 
@@ -97,7 +96,7 @@
 | daemon 底下一個 loop proc | `loop.json` 的 `exec` 寫框架站，掛到一台普通 daemon 上 | `<那個 proc 的 stack>/requests` | `procs-kernel/` |
 | 鏈的中間站 | 上面兩種任一種，`kernel.json` 多寫 `next` 指到別的站（或站的環境 `AOS_KERNEL` 指到別的站） | 同上 | 沒有現成範本，例子在 [02](docs/02-kernel-modes.md) |
 
-**`procs-kernel/` 每一輪的前後也能掛 hook**（hook 第 5 刀後半，使用者 11-20 待裁第 7 題選「接：改 procs-kernel 範本的 loop.json」，線 top-1121-hook5）：它的 `loop.json` 把 aos-loop 的四個點（`after_start`、`after_stop`、`before_run`＝每一輪之前、`after_run`＝每一輪之後；[宣告](../../py/aos/apps/hook/loop_points.json)）接到 `aos-hook fire`，清單是**同夾的 `loop_hooks.json`**（`{"hooks": {名字: 一格}}`，格的寫法同 `kernel.json` 的 `hooks`；檔不在＝沒有 hook，出廠沒有這個檔）。kernel 的程式沒改：`kernel.json` 的 `hooks` 照舊只收判前、判後、代回之前三個點，loop 的四個點寫在 `loop_hooks.json`。`before_run` 退 10＝這一輪不跑；四個點的 hook 失敗（`on_error` stop）＝站停下。`before_run`／`after_run` 只在站的 stack 裡有 `hook_before_run.flag`／`hook_after_run.flag` 時才起 `aos-hook`：站起來（`after_start`）時照 `loop_hooks.json` 對一次；改了 `loop_hooks.json` 要重起這一站，或跑 `aos-hook check --points $AOS_HOME/lib/aos/apps/hook/loop_points.json --list <這一夾>/loop_hooks.json --stack <站的 stack>`。代價：站每次起、停各多起一支 `aos-hook`（約 36 毫秒）。`daemon-kernel/` 是 daemon 的身體，aos-daemon 不收這幾個鍵，沒接。
+**每個 kernel 定義夾的 hook 檔**（11-21 新格式，線 top-1121-hooknew）：`interfaces.json` 最外層寫 `"hooks"`（hook 點的宣告：`kernel_hooks.json`＝kernel 三點，正本在 [py/tools/aos/kernel](../../py/tools/aos/kernel/kernel_hooks.json)、每夾一份抄本；loop 身體另加一項指示詞指 aos-loop 的 [loop_hooks.json](../../py/aos/apps/hook/loop_hooks.json)；只是參考，程式不讀）與 `"hookeds": "kernel_hookeds.json"`（被勾清單，kernel 三點與 loop 四點的格都放這一份，kernel 程式每輪照它讀；出廠是空的），另有 `"kernel": {}`（這次裡面沒東西）。**loop 身體（`procs-kernel/`、`kernel-python/`）每一輪的前後也能掛 hook**（使用者 11-20 待裁第 7 題選「接：改 procs-kernel 範本的 loop.json」）：`loop.json` 的 `on_start`／`on_stop` 經 `aos-hook fire -q --stop-on-nonzero --def $AOS_CD` 發 `after_start`／`after_stop`；`before_run`（每一輪之前）／`after_run`（每一輪之後）只在編譯時有 hook 掛才接，手寫範本預設不接（要掛就照 `on_start` 的樣子加 `on_before_run`／`on_after_run` 再重起這一站）。handler 的碼原樣交給 aos-loop：`before_run` 退 10＝這一輪不跑；其他非 0（四個點都一樣）＝站停下。代價：站每次起、停各多起一支 `aos-hook`（約 36 毫秒）。`daemon-kernel/` 是 daemon 的身體，aos-daemon 不收 `on_before_run`／`on_after_run`，沒接。
 
 `daemon-kernel/`、`procs-kernel/` 兩份範本原樣只能當**最後一站**用：它們的 `kernel.json` 寫了 `max_running`、沒寫 `next` 與 `count_daemon`，所以站的環境裡 `AOS_KERNEL` 要嘛沒設、要嘛指到這一站自己的 `requests/`（跳過，轉給 `$AOS_DAEMON` 那台、也在那台的表上數）。繼承到指向**別站**的 `AOS_KERNEL` 時，每一輪都是 `CfgBad`（站不猜要去哪台數）。要改當鏈的中間站，自己在 `kernel.json` 補上 `count_daemon`（或寫 `next` 連同 `count_daemon`），或在起那一站的殼 `unset AOS_KERNEL`。範本沒有預先寫 `count_daemon`：寫死某一台就等於替你猜了要數哪台。
 

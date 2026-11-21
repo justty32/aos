@@ -5,7 +5,7 @@
 # 介面：hook handler（py/aos/agentlib/hooks.py 用 aos-exec 起）：stdin＝事件 JSON（name、arguments、stack…）；$AOS_WS＝agent 的工作區（相對路徑照它解）。
 #   專區＝$AOS_USER_ZONE ＞ ~/.aos/user（跟 aos-user 同一套）。參數裡每個字串（含巢狀）像路徑的（有 / 或開頭 ~）都看：去掉 #/… 指標、展開 ~、相對路徑接 $AOS_WS、realpath。
 #   落在專區裡、不在 mailbox/ 裡、工具名不是唯讀（*_get *_ls *_len *_search *_peek *_view、peek_*）＝stdout 一句原因、退 10（工具不跑，agent 看到那句當結果）。其餘＝什麼都不印、退 0。
-# 錯：事件 JSON 壞＝stderr 一行「user_zone_guard: error: ArgumentsBad …」、退 1；掛它時用 on_error: continue，壞了只是一行 warning、不停 agent。
+# 錯：事件 JSON 壞＝stderr 一行「user_zone_guard: error: ArgumentsBad …」、退 1（11-21 起 before_tool 的 hook 失敗＝這一格停下，沒有 on_error 可選）。
 import json, os, re, sys
 
 NAME = "user_zone_guard"
@@ -15,7 +15,7 @@ but not inside its mailbox/, unless the tool only reads (*_get, *_ls, *_len, *_s
 Blocked = one sentence on stdout and exit 10; the tool does not run. Allowed = nothing printed, exit 0.
 Relative paths are taken from $AOS_WS. Only aos tools are seen (on eca, not the CLI's own Bash/Write).
 Add it: self_hook {"op": "add", "event": "before_tool", "name": "user_zone_guard",
-  "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/user_zone_guard"}, "on_error": "continue", "timeout_ms": 5000}
+  "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/user_zone_guard"}, "timeout_ms": 5000}
 exit codes: 0 allowed; 10 blocked; 1 error ("user_zone_guard: error: CODE reason").
 """
 READ_ONLY = re.compile(r"(_get|_ls|_len|_search|_peek|_view)$|^peek_|multi_get")

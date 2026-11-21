@@ -17,7 +17,7 @@ class MailNotify(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.stack = Path(os.path.realpath(self.tmp.name)) / "b"
-        self.cell = self.stack / "hooks" / "mail_notify"
+        self.cell = self.stack / "hookeds" / "mail_notify"
         self.cell.mkdir(parents=True)
 
     def fire(self, first=False):

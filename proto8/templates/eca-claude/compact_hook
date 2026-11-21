@@ -3,7 +3,8 @@
 # 使用者 11-15 裁定「我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook」：通用那段是 py/tools/agent/context_wrap（過門檻先叫它收尾、再寄 /compact），
 #   這支只管 Claude Code 壓縮那一刻的前後；自動壓縮（不經 aos）也會跑到它。參考 repo 的 wf/tools/compact_reload.sh（壓完重讀偏好與交接）。
 # 11-21 線 top-1121-ecaeffort（使用者「compact的機制不管，但可以試試看提供相應的hook點」）：壓縮本身還是 Claude Code 的，這支只把它給的三個時刻接成 aos 的 hook 點
-#   （宣告在 py/aos/apps/eca/hook_points.json，經 $AOS_HOME/bin/aos-hook fire --agent $AOS_CLI_DEF 發）：
+#   （宣告在 py/aos/apps/eca/hooks.json，經 $AOS_HOME/bin/aos-hook fire --def $AOS_CLI_DEF 發；11-21 起 aos-hook 只交回每個 handler 的退出碼與 stdout，
+#   怎麼算攔、怎麼改由這支自己讀：第一個退 10 的攔下，退 0 的 stdout 物件依名字順序設 instructions／restore，每個 handler 拿同一份事件，失敗的一行 warning）：
 #   pre   ＝before_compact：欄位 trigger（manual／auto）、asked（/compact 後面的字，沒有＝""）、instructions（這支要給 CLI 的摘要指示，起始＝PRE）、
 #           restore（null）；hook 可改 instructions（""＝不給）、可交 restore（一段字，壓完接進對話）、可攔（退 10）＝這支退 2、stderr 寫誰攔的，
 #           Claude Code 就不壓（手動 /compact 會看到那句；自動的照它的規則跳過或失敗）。restore 寫進 $AOS_STACK/claude/compact_restore.txt
@@ -21,7 +22,7 @@ import sys
 
 LIMIT = 8000                                       # handoff.md 最多附這麼多字（太長只留尾巴，最新的通常在後面）
 RESTORE = "compact_restore.txt"                    # before_compact 的 hook 交的補回字，放在 $AOS_STACK/claude/ 等 SessionStart 印
-BLOCKED = 10                                       # aos-hook fire：被 hook 攔下
+BLOCKED = 10                                       # handler 退 10：攔下 before_compact
 
 PRE = """When you write the summary, keep:
 - the task you are working on and who asked for it (quote their words when they decided something);
@@ -39,24 +40,46 @@ def warn(line):
 
 
 def fire(event, data):
-    """經 aos-hook 發 aos 的 hook 點；回 (退出碼, 結果物件或 None)。沒有定義夾、stack 或 aos-hook＝(None, None)，不發。"""
+    """經 aos-hook 發 aos 的 hook 點，自己讀結果；回 {"blocked": 攔下的 hook 名或 None, "text": 它的 stdout, "data": 改過的 data}，
+    或 None（沒有定義夾、stack、aos-hook，或 aos-hook 報錯＝當作沒人掛）。"""
     home, cli_def, stack = (os.environ.get(k, "") for k in ("AOS_HOME", "AOS_CLI_DEF", "AOS_STACK"))
     if not (home and cli_def and stack):
-        return None, None
-    argv = [os.path.join(home, "bin", "aos-hook"), "fire", "--agent", cli_def, "--stack", stack, event]
+        return None
+    argv = [os.path.join(home, "bin", "aos-hook"), "fire", "--def", cli_def, "--stack", stack, event]
     try:
         r = subprocess.run(argv, input=json.dumps(data, ensure_ascii=False), stdout=subprocess.PIPE, text=True)
     except OSError as e:
         warn("cannot run aos-hook for %s: %s" % (event, e))
-        return None, None
+        return None
     try:
         out = json.loads(r.stdout.strip().splitlines()[-1]) if r.stdout.strip() else None
     except ValueError:
         out = None
-    if r.returncode not in (0, BLOCKED) or not isinstance(out, dict):
+    if r.returncode != 0 or not isinstance(out, dict) or not isinstance(out.get("hooks"), list):
         warn("aos-hook fire %s exited %d; going on as if no hook listened" % (event, r.returncode))
-        return None, None
-    return r.returncode, out
+        return None
+    got = {"blocked": None, "text": "", "data": dict(data)}
+    for h in out["hooks"]:
+        name, code, text = h.get("hook"), h.get("code"), h.get("stdout") or ""
+        if code == BLOCKED:
+            got.update(blocked=name, text=text)
+            return got
+        if code != 0:
+            warn("hook %s (event %s) failed: %s; going on without it" % (name, event, h.get("error") or "exited %s" % code))
+            continue
+        if not text.strip():
+            continue
+        try:
+            reply = json.loads(text)
+        except ValueError:
+            reply = None
+        if not isinstance(reply, dict):
+            warn("hook %s (event %s) printed something that is not a JSON object; going on without it" % (name, event))
+            continue
+        for key in ("instructions", "restore"):
+            if isinstance(reply.get(key), str):
+                got["data"][key] = reply[key]
+    return got
 
 
 def keep_restore(restore):
@@ -80,12 +103,12 @@ def keep_restore(restore):
 
 def pre(given):
     asked = given.get("custom_instructions")
-    code, out = fire("before_compact", {"trigger": given.get("trigger"), "asked": asked if isinstance(asked, str) else "",
-                                        "instructions": PRE, "restore": None})
-    if code == BLOCKED:
+    out = fire("before_compact", {"trigger": given.get("trigger"), "asked": asked if isinstance(asked, str) else "",
+                                  "instructions": PRE, "restore": None})
+    if out and out["blocked"]:
         keep_restore(None)
-        text = (out.get("text") or "").strip()
-        print("compact blocked by hook %s%s" % (out.get("hook"), (": " + text) if text else ""), file=sys.stderr)
+        text = out["text"].strip()
+        print("compact blocked by hook %s%s" % (out["blocked"], (": " + text) if text else ""), file=sys.stderr)
         return 2
     keep_restore(out["data"].get("restore") if out else None)
     text = PRE if out is None else out["data"].get("instructions")

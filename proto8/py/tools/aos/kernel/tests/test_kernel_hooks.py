@@ -140,46 +140,39 @@ class KernelHooksTest(unittest.TestCase):
                 self.assertEqual(event["letter"], name)
                 self.assertEqual(event["body"], {"secret": "original"})
 
-    def test_05_notification_hooks_do_not_change_or_block(self):
+    def test_05_old_intercept_and_async_keys_are_not_read(self):
+        # 11-21 起引擎沒有 intercept／async：寫了也不讀，退 10 照樣攔。
         for options in ({"intercept": False}, {"async": True}):
             with self.subTest(options=options):
                 self.fresh()
-                finished = self.root / "finished"
-                script = "print('{\"body\": {\"wrong\": true}}')\npathlib.Path(%r).touch()\nsys.exit(10)" % str(finished)
-                self.configure(hooks=self.hook("notice", "before_verdict", script, **options))
-                body = {"ping": "original"}
-                self.send(body)
+                self.configure(hooks=self.hook("notice", "before_verdict", "print('no')\nsys.exit(10)", **options))
+                self.send({"ping": "original"})
                 self.assert_round()
-                deadline = time.monotonic() + 3
-                while not finished.exists() and time.monotonic() < deadline:
-                    time.sleep(0.01)
-                self.assertTrue(finished.exists())
-                self.assertEqual(self.read_new(self.ctl)[1]["body"], body)
+                self.assertEqual(self.reply_error(), {"code": "HookRejected", "msg": "no"})
+                self.assertEqual(list((self.ctl / "new").iterdir()), [])
 
-    def test_06_hook_failures_stop_or_continue(self):
+    def test_06_hook_failures_stop_the_round(self):
+        # 11-21 起沒有 on_error：hook 失敗一律停這一輪（HookFailed）；寫了 on_error: continue 也一樣。
         for failure in ("timeout", "exit"):
-            for mode in ("stop", "continue"):
-                with self.subTest(failure=failure, mode=mode):
+            for written in ({}, {"on_error": "continue"}):
+                with self.subTest(failure=failure, written=written):
                     self.fresh()
                     script = "time.sleep(30)" if failure == "timeout" else "sys.exit(7)"
-                    hooks = self.hook("broken", "before_verdict", script, on_error=mode, timeout_ms=200)
+                    hooks = self.hook("broken", "before_verdict", script, timeout_ms=200, **written)
                     self.configure(hooks=hooks)
                     name = self.send({"ping": True})
                     result = self.kernel()
-                    if mode == "stop":
-                        self.assertEqual(result.returncode, 1, result.stderr)
-                        self.assertIn("kernel: error: HookFailed", result.stderr)
-                        self.assertTrue((self.requests / "cur" / name).exists())
-                        self.assertEqual(list((self.ctl / "new").iterdir()), [])
-                        # 成功入隊以前的失敗不會消掉新信身分。
-                        hooks["broken"] = dict(hooks["broken"], handler=self.handler("fixed", ""))
-                        self.configure(hooks=hooks)
-                        self.assert_round()
-                        self.assertEqual(len(self.events()), 2)
-                    else:
-                        self.assertEqual(result.returncode, 0, result.stderr)
-                        self.assertIn("kernel: warning: hook broken", result.stderr)
-                        self.assertIn("on_error: continue", result.stderr)
+                    self.assertEqual(result.returncode, 1, result.stderr)
+                    self.assertIn("kernel: error: HookFailed", result.stderr)
+                    self.assertIn("hook broken (event before_verdict) failed: %s"
+                                  % ("did not finish in 200 ms" if failure == "timeout" else "exited 7"), result.stderr)
+                    self.assertTrue((self.requests / "cur" / name).exists())
+                    self.assertEqual(list((self.ctl / "new").iterdir()), [])
+                    # 成功入隊以前的失敗不會消掉新信身分。
+                    hooks["broken"] = dict(hooks["broken"], handler=self.handler("fixed", ""))
+                    self.configure(hooks=hooks)
+                    self.assert_round()
+                    self.assertEqual(len(self.events()), 2)
                     self.assertTrue((self.ctl / "new" / name).exists())
 
     def test_07_waiting_letter_does_not_repeat_hooks(self):
@@ -247,13 +240,29 @@ class KernelHooksTest(unittest.TestCase):
         self.assertIn("kernel: error: CfgBad", result.stderr)
 
     def test_11_invalid_hooks_configuration_is_rejected(self):
-        for hooks in ([], {"bad": {"event": "unknown", "handler": "unused"}}):
+        for hooks in ([], {"bad": {"event": "before_verdict"}}, {"bad": {"event": "after_verdict", "handler": "x", "condition": 3}},
+                      {"bad": {"event": "before_verdict", "handler": "x", "timeout_ms": -1}}):
             with self.subTest(hooks=hooks):
                 self.configure(hooks=hooks)
                 result = self.kernel()
                 self.assertEqual(result.returncode, 1, result.stderr)
                 self.assertIn("kernel: error: CfgBad", result.stderr)
 
+    def test_12_event_names_are_not_checked_and_hookeds_come_from_interfaces(self):
+        # 事件名不驗：沒人發的點掛著也不錯、不跑；清單照 interfaces.json 的 hookeds 讀，kernel.json 的 hooks 不讀。
+        self.configure(hooks=self.hook("later", "unknown", "sys.exit(7)"))
+        self.send({"ping": True})
+        self.assert_round()
+        self.assertEqual(self.events(), [])
+        self.policy.write_text(json.dumps({"hooks": self.hook("old", "before_verdict", "sys.exit(7)")}))
+        (self.root / "kernel_hookeds.json").unlink()                 # named but not there: no hooks
+        self.send({"ping": True}, name="second")
+        self.assert_round()
+        (self.root / "interfaces.json").unlink()                     # no interfaces.json: no hooks
+        self.send({"ping": True}, name="third")
+        self.assert_round()
+        self.assertEqual(self.events(), [])
+        self.assertEqual(len(list((self.ctl / "new").iterdir())), 3)
 
 if __name__ == "__main__":
     unittest.main()

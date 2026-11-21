@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-# self_hook - aos-agent hook 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份 hooks 清單，定義不動
+# self_hook - aos-agent hook 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份被勾清單（hookeds），定義不動
 # 使用者 11-10 晚：「還有self_hook，用於在有東西進到queue，或是一些事件發生……時，執行指定aos函數」；圖紙 thinking/2026-11/10/self-family/hook/01-圖紙.md § 5。
 # **對應關係**：aos-agent hook 加了動作或旗標，這支要跟著加（參數一對一，不多給、不多擋）。
 # 介面（py/README 的契約）：stdin 收 {"op": "ls"|"get"|"add"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
 #   ls {long?}                   ＝hook ls --json（long: true＝ls -l 的文字，含被設成 null 的格）
 #   get {name}                   ＝hook get NAME
-#   add {event, path | path_json, name?, condition?（字串或字串陣列）, every_cycles?, every_ms?, clock?（11-11 on_clock）, config?（11-16 on_clock 的 config，任意 JSON）, intercept?（false＝--no-intercept；預設開）, async?（true＝--async）, on_error?, timeout_ms?, replace?}
-#                                ＝hook add --event E [--name] [--condition M]… [--every-cycles N] [--every-ms N] [--clock C] [--config JSON] [--no-intercept] [--async] [--on-error] [--timeout-ms] [--replace] (XXX | --path-json)
-#                                （鍵名 11-10 深夜改，使用者「hook這塊，主要走A, 但filter改condition。」）
+#   add {event, path | path_json, name?, condition?（字串或字串陣列）, every_cycles?, every_ms?, clock?（11-11 on_clock）, config?（11-16 on_clock 的 config，任意 JSON）, timeout_ms?, replace?}
+#                                ＝hook add --event E [--name] [--condition M]… [--every-cycles N] [--every-ms N] [--clock C] [--config JSON] [--timeout-ms] [--replace] (XXX | --path-json)
+#                                （鍵名 11-10 深夜改，使用者「hook這塊，主要走A, 但filter改condition。」；11-21 線 top-1121-hooknew 拿掉 intercept、async、on_error，使用者「簡化到第四層」）
 #   rm {name}                    ＝hook rm NAME
 #   reset {}                     ＝hook reset -y（腦叫了就算確認過）
 #   先 aos-agent ctl who（$AOS_STACK＝<agent stack>/tools/self_hook/ 查 daemon 表）認出是哪隻；aos-agent 在 $AOS_WS 跑（相對 path 從工作區算）。
@@ -61,8 +61,8 @@ def agent(*args):
 cmd_call.catch_signals()                       # TERM 與 Ctrl-C：先收掉正在跑的那一群，退 128＋N（Ctrl-C 130、不吐 traceback，R12）
 args = arguments()
 OPS = {"ls": ("long",), "get": ("name",),
-       "add": ("event", "path", "path_json", "name", "condition", "every_cycles", "every_ms", "clock", "config", "intercept", "async",
-               "on_error", "timeout_ms", "replace"),
+       "add": ("event", "path", "path_json", "name", "condition", "every_cycles", "every_ms", "clock", "config", "timeout_ms",
+               "replace"),
        "rm": ("name",), "reset": ()}
 op = args.get("op")
 if op is None:
@@ -118,10 +118,9 @@ else:
     every += ["--clock", clock] if clock else []
     if args.get("config") is not None:           # 11-16 ok-small：任意 JSON 原樣轉成 --config（只收 on_clock 由 aos-agent hook 說）；null＝沒給
         every += ["--config", json.dumps(args["config"], ensure_ascii=False)]
-    on, name, on_fail = text("event", True), text("name"), text("on_error")
+    on, name = text("event", True), text("name")
     cmd += ["--event", on] + (["--name", name] if name else []) + [x for m in match for x in ("--condition", m)] \
-        + ([] if flag("intercept", True) else ["--no-intercept"]) + (["--async"] if flag("async") else []) \
-        + (["--on-error", on_fail] if on_fail else []) + (["--timeout-ms", str(timeout)] if timeout is not None else []) \
+        + (["--timeout-ms", str(timeout)] if timeout is not None else []) \
         + (["--replace"] if flag("replace") else []) + every
     if "path_json" in args:
         pj = args["path_json"]

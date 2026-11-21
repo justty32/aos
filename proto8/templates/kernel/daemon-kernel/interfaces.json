@@ -1,0 +1,1 @@
+{"description": "What this kernel offers: its hook points (hooks), what is hooked on it (hookeds).", "hooks": "kernel_hooks.json", "hookeds": "kernel_hookeds.json", "kernel": {}}

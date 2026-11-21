@@ -1086,7 +1086,7 @@ def aide_tick(home, team_name=None, event=None, t=None):
     stack = event.get("stack") or ""
     if not stack:
         hs = os.environ.get("AOS_STACK", "").rstrip("/")
-        stack = hs.split("/hooks/")[0] if "/hooks/" in hs else hs
+        stack = hs.split("/hookeds/")[0] if "/hookeds/" in hs else hs
     stack = stack.rstrip("/")
     if not stack:
         raise Fail("StackMissing", "no stack: run as an on_clock hook (event field stack) or set AOS_STACK")

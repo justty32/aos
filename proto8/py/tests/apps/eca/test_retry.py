@@ -22,11 +22,11 @@ class RetryBase(Base):
             "with open(%r, 'a') as f:\n    f.write(json.dumps(event) + '\\n')\n"
             % str(self.events_path))
         self.capture.chmod(0o755)
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "eca"}, {"provider": "mcp"}]}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"hookeds": "hookeds.json"}))
         self.declare({"failed": {"event": "brain_failed", "handler": self.capture.name}})
 
     def declare(self, hooks):
-        (self.defn / "hooks.json").write_text(json.dumps({"hooks": hooks}))
+        (self.defn / "hookeds.json").write_text(json.dumps(hooks))
 
     def events(self):
         return [json.loads(line) for line in self.events_path.read_text().splitlines()] if self.events_path.exists() else []
@@ -302,20 +302,23 @@ class ClaudeRetry(RetryBase):
                 self.assert_one_cli_error(result, "def")
                 self.assertIn("claude's result is not text", result.stderr)
 
-    def test_brain_failed_hook_stops_after_retry_and_sum_before_cooldown(self):
+    def test_brain_failed_hook_failure_warns_and_retry_goes_on(self):
+        # 11-21: brain_failed cannot block; a failing hook is one warning line and the temporary error is retried as without it
         self.capture.write_text(self.capture.read_text() + "sys.exit(3)\n")
         self.say("owed")
         sigs = self.queue()
         result = self.turn(FAKE_CLI_API_ERROR="529")
-        self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn("HookFailed", result.stderr)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("aos-eca-turn: warning: hook failed (event brain_failed) failed: exited 3", result.stderr)
+        self.assertNotIn("HookFailed", result.stderr)
         self.assertEqual(self.retry()["letters"], sigs)
         self.assertEqual(self.letters()["pending"], sigs)
         self.assert_sum_noted()
-        self.assertIsNone(cooldown.read(str(self.stack)))
+        self.assertIs(cooldown.read(str(self.stack))["retry"], True)
         self.assertTrue(self.events()[-1]["retry"])
 
-    def test_after_queue_hook_failure_makes_api_error_permanent(self):
+    def test_after_queue_hook_failure_warns_and_api_error_stays_temporary(self):
+        # 11-21: after_queue cannot block; a failing hook is one warning line, the 529 stays a temporary error (retried)
         after = self.defn / "after.py"
         after.write_text("#!" + sys.executable + "\nimport sys\nsys.exit(3)\n")
         after.chmod(0o755)
@@ -324,12 +327,11 @@ class ClaudeRetry(RetryBase):
         self.say("task")
         sigs = self.queue()
         result = self.turn(FAKE_CLI_API_ERROR="529")
-        self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn("CliFailed", result.stderr)
-        self.assert_failed_letters(sigs)
-        self.assertFalse(self.events()[-1]["retry"])
-        self.assertFalse((self.stack / "retry.json").exists())
-        self.assertEqual(cooldown.read(str(self.stack))["dropped"], 1)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("aos-eca-turn: warning: hook after (event after_queue) failed: exited 3", result.stderr)
+        self.assertEqual(self.letters(), {"pending": sigs, "dropped": []})
+        self.assertTrue(self.events()[-1]["retry"])
+        self.assertEqual(self.retry()["letters"], sigs)
 
 
 class CodexUnchanged(RetryBase):

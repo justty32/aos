@@ -26,7 +26,7 @@ def out(msg):
 
 
 def fail(code, why):
-    # a broken config or event: an error line and exit 1; mounted with on_error "stop" the call never runs
+    # a broken config or event: an error line and exit 1; a failing before_tool hook stops the event, so the call never runs
     sys.stderr.write("guard: error: %s %s\n" % (code, " ".join(str(why).split())))
     sys.exit(1)
 
@@ -410,7 +410,7 @@ def daemon_ctl_box(real):
 
 def kernel_box(real):
     """True if real is a kernel request mailbox: a path part named requests (<station stack>/requests,
-    $AOS_LLM_KERNEL/requests, <stack>/hooks/kernel_gate/requests, <stack>/hooks/<gate>/requests), or at or
+    $AOS_LLM_KERNEL/requests, <stack>/hookeds/kernel_gate/requests, <stack>/hookeds/<gate>/requests), or at or
     under $AOS_KERNEL or $AOS_LLM_KERNEL when they are set."""
     if "requests" in real.split("/"):
         return True

@@ -52,7 +52,7 @@ pi --mode rpc --no-approve --session-dir $AOS_STACK/pi/pi-sessions --session-id 
 - 外掛做的事：`session_start`（startup／new／resume／fork）、`agent_start`、`agent_settled`（連同這輪的 messages）、`session_compact` 各叫一次 `cli_session.py hook pi <小格>`；aos 那邊跟上對話 id、把每輪的回答記進小格的 `turns.jsonl`、畫面打 `/new`＝aos 的 history 清掉、pi 壓縮＝history 換成摘要。
 - **畫面開著時 aos 的信**：寫進小格的 `pi_inbox/`（一封一個 `.json`），外掛每 0.5 秒看一次，讀了就刪、用 `pi.sendUserMessage` 送進對話（正在答＝`deliverAs: "steer"`），再回報收據；回答從 `turns.jsonl` 拿（同 claude 畫面的收件口）。
 - tmux 設定是小格自己那份（`-f <小格>/tmux.conf`，不讀 `~/.tmux.conf`），pi 身多兩行：`set -g extended-keys on`、`set -gq extended-keys-format csi-u`（pi 開場會提醒；後者 tmux 3.5 起才有，`-q`＝舊版不認也不報錯）。
-- `Ctrl-]` 跳出、畫面留著；`aos-agent close` 關。`ctl stop` 之後畫面留 `screen_close_after_s` 秒（預設 600）再關，`ctl start` 會取消（`hooks.json` 的 `screen_linger_start`／`screen_linger_stop`，同 eca-claude）。
+- `Ctrl-]` 跳出、畫面留著；`aos-agent close` 關。`ctl stop` 之後畫面留 `screen_close_after_s` 秒（預設 600）再關，`ctl start` 會取消（`hookeds.json` 的 `screen_linger_start`／`screen_linger_stop`，同 eca-claude）。
 
 ## cli.json
 

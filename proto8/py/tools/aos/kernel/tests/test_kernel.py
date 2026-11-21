@@ -142,7 +142,11 @@ class KernelTest(unittest.TestCase):
 
 
     def configure(self, **policy):
+        """kernel.json without hooks; hooks= goes to kernel_hookeds.json, named by the hookeds of interfaces.json beside it (11-21)."""
+        hooked = policy.pop("hooks", {})
         self.policy.write_text(json.dumps(policy))
+        (self.policy.parent / "interfaces.json").write_text(json.dumps({"hookeds": "kernel_hookeds.json", "kernel": {}}))
+        (self.policy.parent / "kernel_hookeds.json").write_text(json.dumps(hooked))
 
     def assert_round(self):
         result = self.kernel()

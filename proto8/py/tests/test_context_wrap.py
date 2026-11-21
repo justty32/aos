@@ -361,7 +361,7 @@ class ContextWrap(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.stack = Path(os.path.realpath(self.tmp.name)) / "b"
-        self.cell = self.stack / "hooks" / "context_wrap"
+        self.cell = self.stack / "hookeds" / "context_wrap"
         self.cell.mkdir(parents=True)
         self.n = 0
 

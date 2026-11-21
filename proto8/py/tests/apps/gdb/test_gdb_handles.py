@@ -105,7 +105,7 @@ class Padding(unittest.TestCase):
         self.mode("ok")
         got = [self.bp.add.after_tool().id for _ in range(12)]
         self.assertEqual(got, list(range(1, 13)))
-        cells = sorted(os.listdir(self.tmp / "stack" / "hooks"))                 # 照名字排＝照號碼排
+        cells = sorted(os.listdir(self.tmp / "stack" / "hookeds"))                 # 照名字排＝照號碼排
         self.assertEqual(cells, ["gdb_%04d" % i for i in range(1, 13)])
         self.assertEqual(json.loads((self.tmp / "hooks.json").read_text()), cells)   # hook 名同一個（假的 aos-agent 照名字排）
         self.assertEqual([r["id"] for r in self.bp.ls()], list(range(1, 13)))
@@ -113,7 +113,7 @@ class Padding(unittest.TestCase):
         self.bp.rm(10)
         self.assertEqual(self.bp.add.before_tool().id, 13)                       # 不重用
         m = self.bp.add.after_tool(id="mine")
-        self.assertEqual(sorted(os.listdir(self.tmp / "stack" / "hooks"))[-1], "gdb_mine")   # 名字原樣、排在號碼後面
+        self.assertEqual(sorted(os.listdir(self.tmp / "stack" / "hookeds"))[-1], "gdb_mine")   # 名字原樣、排在號碼後面
         self.assertEqual(m.id, "mine")
 
 
@@ -131,7 +131,7 @@ class SetReturnsTheBreakpoint(unittest.TestCase):
         self.assertEqual((s.kind, s.times, s.enabled), ("after_tool", 3, True))
         off = self.bp.set("1", enabled=False)                                    # 給數字字串：回的 .id 是 int
         self.assertEqual((off.id, off.enabled), (1, False))
-        trigger.write_json(str(self.tmp / "stack" / "hooks" / "gdb_0001" / trigger.COUNT), {"fired": 5})
+        trigger.write_json(str(self.tmp / "stack" / "hookeds" / "gdb_0001" / trigger.COUNT), {"fired": 5})
         self.assertEqual(s.fired, 5)                                             # 每次讀都重新查
         self.assertIn("breakpoint 1 of ann: after_tool", repr(s))
         n = self.bp.set(self.bp.add.before_tool(id="mine"), once=True)

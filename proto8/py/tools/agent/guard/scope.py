@@ -34,7 +34,7 @@ Read from the environment:
   AOS_WRITE_ALLOW  more folders that may be written, separated by %(sep)r; ~ is the home folder,
                    a relative entry counts from AOS_WS
   AOS_WRITE_DENY   folders that may never be written, same form
-  AOS_STACK        the agent's stack (a hook or tool cell <stack>/hooks/<name> or <stack>/tools/<name>
+  AOS_STACK        the agent's stack (a hook or tool cell <stack>/hookeds/<name> or <stack>/tools/<name>
                    counts as <stack>); always denied
   AOS_CD           the folder of the running program (the guard's own folder in a hook); denied when set
   AOS_DAEMON       the daemon stack: denied as a whole; every row of its procs_state.json names a stack and a
@@ -47,7 +47,7 @@ exit codes: 0 printed; 1 error ("scope: error: CODE reason": WsMissing, CfgMissi
 """
 
 SCOPE_VERSION = 1                  # the shape of the --scope JSON; a reader refuses versions it does not know
-STACK_CELLS = ("hooks", "tools")   # a hook or tool runs with AOS_STACK = <stack>/<cell kind>/<name>
+STACK_CELLS = ("hookeds", "tools")   # a hook or tool runs with AOS_STACK = <stack>/<cell kind>/<name>
 JSON_TOOLS = ("json_set", "json_add", "json_del", "json_multi_set")   # the only write tools that cut FILE#/POINTER
 HOME_PARTS = ("lib", "templates", "knowledge", "cpp", "py", "bin", "include")   # product folders under AOS_HOME
 DEF_MARKER = "interfaces.json"     # a folder holding this file is an agent definition (rule definition-marker)
@@ -103,7 +103,7 @@ def under(path, roots):
 
 
 def own_stack(env=None):
-    """The agent's stack from AOS_STACK, with a hook or tool cell <stack>/hooks/<name> stripped; "" when unset."""
+    """The agent's stack from AOS_STACK, with a hook or tool cell <stack>/hookeds/<name> stripped; "" when unset."""
     st = environ(env).get("AOS_STACK", "")
     if not st:
         return ""

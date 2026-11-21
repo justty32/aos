@@ -269,14 +269,14 @@ class Phase1(unittest.TestCase):
         fake_home = os.path.join(self.tmp, "aoshome")
         os.makedirs(os.path.join(fake_home, "frontend", "bin"))
         os.symlink(VIEW, os.path.join(fake_home, "frontend", "bin", "aos-frontend"))
-        cell = os.path.join(self.aide, "hooks", "aide_tick") + "/"
+        cell = os.path.join(self.aide, "hookeds", "aide_tick") + "/"
         ev = {"event": "on_clock", "hook": "aide_tick", "stack": self.aide, "first": True, "missed": 0}
         handler = os.path.join(os.path.dirname(HERE), "aide-def", "aide_tick.json")
         out = self.ok(["aos-exec", "--stack", cell, handler], stdin=json.dumps(ev),
                       env={"AOS_HOME": fake_home, "AOS_VIEW_HOME": self.home})
         self.assertIn("aide-tick ok-t: passed 0, report sent, beat sent", out)
-        hooks = self.load(os.path.join(os.path.dirname(HERE), "aide-def", "hooks.json"))["hooks"]
-        self.assertEqual(list(hooks), ["aide_tick"])
+        hooks = self.load(os.path.join(os.path.dirname(HERE), "aide-def", "hookeds.json"))
+        self.assertEqual([n for n in hooks if n != "description"], ["aide_tick"])
         self.assertEqual((hooks["aide_tick"]["event"], hooks["aide_tick"]["every_cycles"]), ("on_clock", 60))
         self.assertEqual(self.load(os.path.join(os.path.dirname(HERE), "aide-def", "llm.json")), {"model": "fake"})
 
@@ -360,7 +360,7 @@ class AideDef(unittest.TestCase):
         for f in self.files(dest):                                  # every file as it is, _metainfo.json too (user 11-21)
             src = os.path.join(self.AIDE if f in overlay else self.TEMPLATE, f)
             self.assertEqual(self.read(os.path.join(dest, f)), self.read(src), f)
-        self.assertEqual(json.loads(self.read(os.path.join(dest, "hooks.json")))["hooks"].keys(), {"aide_tick"})
+        self.assertEqual(json.loads(self.read(os.path.join(dest, "hookeds.json"))).keys(), {"description", "aide_tick"})
         self.assertFalse([f for f in os.listdir(os.path.join(ws, "defs")) if f.startswith(".")])   # no temp folder left
         again = self.run_view(["defs/t-aide"], AOS_WS=ws, AOS_HOME=os.path.dirname(os.path.dirname(self.TEMPLATE)))
         self.assertEqual(again.returncode, 1)

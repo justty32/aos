@@ -1,0 +1,41 @@
+{
+ "description": "Hook points of anything run by aos-loop whose loop.json wires them (the templates wire them through aos-hook fire --stop-on-nonzero): after_start / after_stop (on_start / on_stop) and before_run / after_run (on_before_run / on_after_run). The event JSON has only event, hook and stack; what the loop knows comes in the handler's environment (AOS_LOOP_*). Exit codes reach aos-loop as they are: a non-zero code stops the loop at all four points, except 10 at before_run, which skips that run.",
+ "after_start": {
+  "description": "the loop started, before the first run of its body (loop.json on_start; also after a wake or an auto_restart, not after a hard kill)",
+  "input": {"type": "object", "properties": {
+   "event": {"const": "after_start"}, "hook": {"type": "string", "description": "the hook's name"},
+   "stack": {"type": "string", "description": "the stack of the program the loop runs (the handler's own AOS_STACK is STACK/hookeds/NAME/)"}}},
+  "phase": "after",
+  "if_failed": "the loop stops: the body never runs, after_stop still fires"
+ },
+ "after_stop": {
+  "description": "the loop is about to exit (loop.json on_stop: stop, sleep, remove, shutdown, a failing run; not after a hard kill)",
+  "input": {"type": "object", "properties": {
+   "event": {"const": "after_stop"}, "hook": {"type": "string"}, "stack": {"type": "string"}}},
+  "environment": {"AOS_LOOP_CODE": "the code the loop exits with", "AOS_LOOP_SIGNAL": "the signal it got, or empty",
+                  "AOS_LOOP_CAUSE": "stop, sleep, remove, shutdown, stuck, signal, max, body_exit or error; empty when not known"},
+  "phase": "after",
+  "if_failed": "the loop exits with the hook's code when it would have exited 0; when it already exits with another code, that code stays and the failure is one warning"
+ },
+ "before_run": {
+  "description": "before each run of the loop body, after the pause check and the wait for interval_ms",
+  "input": {"type": "object", "properties": {
+   "event": {"const": "before_run"}, "hook": {"type": "string"}, "stack": {"type": "string"}}},
+  "environment": {"AOS_LOOP_RUNS": "which run this will be (from 1)"},
+  "notes": "an fsm body's state about to run is in STACK/stage.txt (missing on the first run: the table's start state)",
+  "phase": "before",
+  "block": true,
+  "if_blocked": "exit 10: the loop skips this run (the body does not run, the run is not counted, after_run does not fire) and asks again after interval_ms",
+  "if_failed": "the loop stops, as after a failing run; the body does not run"
+ },
+ "after_run": {
+  "description": "after each run of the loop body, whatever its exit code (not when the body could not start, not when the loop got a signal)",
+  "input": {"type": "object", "properties": {
+   "event": {"const": "after_run"}, "hook": {"type": "string"}, "stack": {"type": "string"}}},
+  "environment": {"AOS_LOOP_RUNS": "which run this was (the number before_run got)", "AOS_LOOP_RUN_CODE": "the body's exit code",
+                  "AOS_LOOP_RUN_SIGNAL": "the signal that ended the body, or empty", "AOS_LOOP_RUN_MS": "how long the body ran"},
+  "notes": "an fsm body's state now (the next one after a taken step) is in STACK/stage.txt",
+  "phase": "after",
+  "if_failed": "any non-zero code, 10 too: the loop stops with that code when the body exited 0; when the body itself ends the loop, the body's result counts and the failure is one warning"
+ }
+}

@@ -17,7 +17,7 @@ class Failed(Exception):
 
 
 def cell_of(stack):
-    return os.path.join(stack, "hooks", HOOK)
+    return os.path.join(stack, "hookeds", HOOK)                # agent 那支 hook 的小格（11-21 起 hookeds/）
 
 
 def run(argv, text=None, env=None):

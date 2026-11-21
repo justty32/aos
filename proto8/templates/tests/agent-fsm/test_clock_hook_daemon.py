@@ -1,5 +1,6 @@
 """Acceptance on a real root daemon (no brain needed): after_start / after_stop on start, stop, sleep, wake, kill -9 + auto_restart, rm; on_clock with the root clock; history stays empty."""
-# 11-11 clock-hook：範本 loop.json 的 on_start／on_stop（aos-loop）→ aos-hook fire --agent → hooks.json 的 after_start／after_stop；
+# 11-11 clock-hook：範本 loop.json 的 on_start／on_stop（aos-loop）→ aos-hook fire --def → hookeds.json 的 after_start／after_stop；
+# 11-21 起事件只有 event／hook／stack：測試 hook 自己讀 AOS_LOOP_CODE／AOS_LOOP_SIGNAL 記進 log（code、signal）；on_clock 起來後第一次看 state.json 換了沒。
 # 每格開頭 hook 遙控器的 clock_tick（agentlib/hook_clock.py）→ on_clock。用這份 proto8 的 bin（PATH 最前）、py（PYTHONPATH）。
 # 跑法：python3 test_clock_hook_daemon.py [-v]；KEEP=1 留下試驗資料夾。
 import json
@@ -15,10 +16,14 @@ import unittest
 
 PROTO = Path(__file__).resolve().parents[3]
 LOGGER = """#!%s
-# test hook: append the event JSON to a log
-import json, sys
+# test hook: append the event JSON to a log, plus code / signal from AOS_LOOP_CODE / AOS_LOOP_SIGNAL (after_stop only has them)
+import json, os, sys
+ev = json.load(sys.stdin)
+if "AOS_LOOP_CODE" in os.environ:
+    ev["code"] = int(os.environ["AOS_LOOP_CODE"])
+    ev["signal"] = int(os.environ["AOS_LOOP_SIGNAL"]) if os.environ.get("AOS_LOOP_SIGNAL") else None
 with open(%r, "a") as f:
-    f.write(json.dumps(json.load(sys.stdin)) + "\\n")
+    f.write(json.dumps(ev) + "\\n")
 """
 
 
@@ -38,12 +43,11 @@ class Daemon(unittest.TestCase):
         hook = ann / "log_hook"
         hook.write_text(LOGGER % (sys.executable, str(self.log)))
         hook.chmod(0o755)
-        doc = json.loads((ann / "hooks.json").read_text())
-        doc["hooks"].update({"up": {"event": "after_start", "handler": "log_hook", "on_error": "continue", "timeout_ms": 5000},
-                             "down": {"event": "after_stop", "handler": "log_hook", "on_error": "continue", "timeout_ms": 5000},
-                             "tick": {"event": "on_clock", "every_cycles": 2, "handler": "log_hook", "on_error": "continue",
-                                      "timeout_ms": 5000}})
-        (ann / "hooks.json").write_text(json.dumps(doc))
+        doc = json.loads((ann / "hookeds.json").read_text())
+        doc.update({"up": {"event": "after_start", "handler": "log_hook", "timeout_ms": 5000},
+                    "down": {"event": "after_stop", "handler": "log_hook", "timeout_ms": 5000},
+                    "tick": {"event": "on_clock", "every_cycles": 2, "handler": "log_hook", "timeout_ms": 5000}})
+        (ann / "hookeds.json").write_text(json.dumps(doc))
         self.err = open(self.root / "root.err", "w")
         self.addCleanup(self.err.close)
         self.daemon = subprocess.Popen(["aos-exec", "--stack", "stacks/root", "defs"], cwd=self.root, env=self.env,

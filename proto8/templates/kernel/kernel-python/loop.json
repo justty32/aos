@@ -1,5 +1,5 @@
 {
-  "description": "Run the kernel once every 300 ms over kernel.json. The four aos-loop hook points (after_start, after_stop, before_run = before each round, after_run = after it) fire through aos-hook with the hooks of loop_hooks.json next to this file (no such file = no hooks); before_run / after_run only while their flag file is in the stack (hook_before_run.flag, hook_after_run.flag, set at start and by aos-hook check).",
+  "description": "Run the kernel once every 300 ms over kernel.json. on_start / on_stop fire the aos-loop points after_start / after_stop through aos-hook with the hookeds of interfaces.json (a failing hook stops the loop); nothing listened to before_run / after_run when this was compiled, so they are not wired (a hook added for them needs a recompile and a restart).",
   "exec": {
     "argv": [
       "aos-exec",
@@ -19,15 +19,10 @@
       "aos-hook",
       "fire",
       "-q",
-      "--points",
+      "--stop-on-nonzero",
+      "--def",
       {
-        "$env": "AOS_HOME",
-        "$path": "/lib/aos/apps/hook/loop_points.json"
-      },
-      "--list",
-      {
-        "$env": "AOS_CD",
-        "$path": "/loop_hooks.json"
+        "$env": "AOS_CD"
       },
       "after_start"
     ]
@@ -37,61 +32,12 @@
       "aos-hook",
       "fire",
       "-q",
-      "--points",
+      "--stop-on-nonzero",
+      "--def",
       {
-        "$env": "AOS_HOME",
-        "$path": "/lib/aos/apps/hook/loop_points.json"
-      },
-      "--list",
-      {
-        "$env": "AOS_CD",
-        "$path": "/loop_hooks.json"
+        "$env": "AOS_CD"
       },
       "after_stop"
     ]
-  },
-  "on_before_run": {
-    "argv": [
-      "aos-hook",
-      "fire",
-      "-q",
-      "--points",
-      {
-        "$env": "AOS_HOME",
-        "$path": "/lib/aos/apps/hook/loop_points.json"
-      },
-      "--list",
-      {
-        "$env": "AOS_CD",
-        "$path": "/loop_hooks.json"
-      },
-      "before_run"
-    ]
-  },
-  "on_before_run_if": {
-    "$env": "AOS_STACK",
-    "$path": "/hook_before_run.flag"
-  },
-  "on_after_run": {
-    "argv": [
-      "aos-hook",
-      "fire",
-      "-q",
-      "--points",
-      {
-        "$env": "AOS_HOME",
-        "$path": "/lib/aos/apps/hook/loop_points.json"
-      },
-      "--list",
-      {
-        "$env": "AOS_CD",
-        "$path": "/loop_hooks.json"
-      },
-      "after_run"
-    ]
-  },
-  "on_after_run_if": {
-    "$env": "AOS_STACK",
-    "$path": "/hook_after_run.flag"
   }
 }

@@ -1,0 +1,99 @@
+{
+ "description": "Hook points fired by aos-mcp: aos tools called through it (the CLI's own tools do not pass here). The agent family's rules (aos.agentlib.hooks, in code; this file only tells): exit 10 blocks a point with block true; on a point with output, exit 0 and a JSON object on stdout replace those keys; condition names the field a hookeds entry's condition is compared with (only for these tool names / error codes); a failing hook stops a point with block true and is one warning elsewhere. A hook that stops before_tool / after_tool makes that tool call an error result; the agent goes on.",
+ "before_tool": {
+  "description": "before an aos tool called through aos-mcp runs",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "before_tool"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "name": {
+     "description": "tool name"
+    },
+    "id": {
+     "description": "the JSON-RPC id as a string (empty when none)"
+    },
+    "arguments": {
+     "description": "the arguments the tool will get"
+    }
+   }
+  },
+  "output": {
+   "type": "object",
+   "properties": {
+    "arguments": {}
+   },
+   "description": "exit 0 with a JSON object on stdout: these keys replace the event's"
+  },
+  "phase": "before",
+  "condition": "name",
+  "subject": "tool",
+  "block": true,
+  "if_blocked": "the tool does not run; the CLI gets the hook's stdout (or a default line) as the result",
+  "key": "id",
+  "fired_in": [
+   "main.py"
+  ]
+ },
+ "after_tool": {
+  "description": "an aos tool called through aos-mcp finished (not for a blocked tool)",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "after_tool"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "name": {
+     "description": "tool name"
+    },
+    "id": {
+     "description": "the JSON-RPC id as a string (empty when none)"
+    },
+    "arguments": {
+     "description": "what the tool got"
+    },
+    "content": {
+     "description": "all text parts joined into one"
+    },
+    "code": {
+     "description": "the tool's exit code, null when it timed out"
+    },
+    "timed_out": {
+     "description": "true or false"
+    }
+   }
+  },
+  "output": {
+   "type": "object",
+   "properties": {
+    "content": {
+     "type": "string"
+    }
+   },
+   "description": "exit 0 with a JSON object on stdout: these keys replace the event's"
+  },
+  "phase": "after",
+  "condition": "name",
+  "subject": "tool",
+  "fired_in": [
+   "main.py"
+  ]
+ }
+}

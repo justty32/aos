@@ -4,7 +4,8 @@ import os
 
 
 def declared_files(folder):
-    """未宣告介面＝空表；宣告的 tools／llm／hooks／system 只接受定義內相對檔名（system：11-11 self-system）。"""
+    """未宣告介面＝空表；宣告的 tools／llm／system 只接受定義內相對檔名（system：11-11 self-system）。
+    hook 的兩個檔 11-21 起在 interfaces.json 的最外層（hooks、hookeds），由 aos.hook_point 讀，不在這裡。"""
     path = os.path.join(folder, "interfaces.json")
     try:
         with open(path, encoding="utf-8") as stream:
@@ -19,7 +20,7 @@ def declared_files(folder):
     if not isinstance(decl, dict):
         raise ValueError("aos-agent in %s must be a JSON object" % path)
     result = {}
-    for key in ("tools", "llm", "hooks", "system"):
+    for key in ("tools", "llm", "system"):
         if key not in decl:
             continue
         rel = decl[key]

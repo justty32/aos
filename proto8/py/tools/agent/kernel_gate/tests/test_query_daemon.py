@@ -62,9 +62,10 @@ class QueryDaemonTest(unittest.TestCase):
             with self.subTest(reply_via_me=relay):
                 cfg = self.station / "kernel.json"
                 cfg.write_text(json.dumps({
-                    "next": str(self.stack / "procs_requests"), "reply_via_me": relay,
-                    "hooks": {"hold": {"event": "after_verdict", "condition": "pass", "handler": str(GATE / "hold")}},
-                }))
+                    "next": str(self.stack / "procs_requests"), "reply_via_me": relay}))
+                (self.station / "interfaces.json").write_text(json.dumps({"hookeds": "kernel_hookeds.json", "kernel": {}}))
+                (self.station / "kernel_hookeds.json").write_text(json.dumps(
+                    {"hold": {"event": "after_verdict", "condition": "pass", "handler": str(GATE / "hold")}}))
                 station_env = dict(self.env, AOS_STACK=str(self.station))
                 argv = [sys.executable, str(KERNEL), str(cfg)]
                 first = subprocess.run(argv, cwd=self.root, env=station_env, text=True, capture_output=True, timeout=10)

@@ -171,7 +171,7 @@ class NoFsm(unittest.TestCase):
                 r = run_agent(dest / "agent.py", "--compile", home=self.home)
                 self.assertEqual(r.returncode, 0, r.stderr)
                 after = tree(dest)
-                written = {"tools.json", "llm.json", "system.txt", "hooks.json", "_metainfo.json"}
+                written = {"tools.json", "llm.json", "system.txt", "hookeds.json", "_metainfo.json"}
                 for name in set(before) | set(after):          # the skeleton, cli.json, screen/, README.md: not touched
                     if name not in written:
                         self.assertEqual(after.get(name), before.get(name), name)
@@ -179,7 +179,8 @@ class NoFsm(unittest.TestCase):
                 self.assertNotIn("$override", load("tools.json", after))      # packs copied in: the same tools as the template's
                 self.assertEqual(load("tools.json", after)["tools"], borrowed(load("tools.json", before), self.home))
                 self.assertEqual(plain(load("llm.json", after)), plain(load("llm.json", before)))
-                self.assertEqual(load("hooks.json", after)["hooks"], load("hooks.json", before)["hooks"])
+                entries = lambda files: {k: v for k, v in load("hookeds.json", files).items() if k != "description"}  # noqa: E731
+                self.assertEqual(entries(after), entries(before))
                 self.assertEqual(load("_metainfo.json", after), load("_metainfo.json", before))
                 self.assertEqual(after["system.txt"], b"You are the docs team's writer.\n")
                 printed = json.loads(run_agent(dest / "agent.py", "--dry-run", home=self.home).stdout)
@@ -200,14 +201,15 @@ class NoFsm(unittest.TestCase):
     def test_interfaces_without_a_hooks_file_is_def_bad(self):
         dest = self.copy("eca-pi")
         face = json.loads((dest / "interfaces.json").read_text())
-        del face["aos-agent"]["hooks"]
+        del face["hookeds"]                                   # the list of what is hooked: top level (11-21)
         (dest / "interfaces.json").write_text(json.dumps(face))
         (dest / "agent.py").write_text(HEAD + ECA % {"summary": "S.", "llm": {}, "template": "eca-pi"})
         before = tree(dest)
         r = run_agent(dest / "agent.py", "--compile", home=self.home)
         self.assertEqual(r.returncode, 1)
         self.assertIn("DefBad", r.stderr)
-        self.assertIn("declares no hooks file", r.stderr)
+        self.assertIn("names no hookeds file", r.stderr)
+        self.assertIn('"hookeds"', r.stderr)                 # the fix it names: the top-level key, not one in the aos-agent cell
         self.assertEqual(tree(dest), before)
 
     def test_names_come_from_interfaces(self):

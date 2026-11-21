@@ -5,10 +5,10 @@
   "aide-def": {
    "_metainfo.json": "The view aide of one team: an agent-fsm with a fake brain and no tools whose on_clock hook runs aos-frontend aide-tick (phase 1 of view-1114: only ca…",
    "aide_tick.json": "入口：`$AOS_HOME aide-tick`",
-   "hooks.json": "The aide's only hook: every 60 clock cycles (about a minute at 1000 ms a cycle) run aos-frontend aide-tick (aide_tick.json, next to this file). It ca…",
+   "hookeds.json": "The aide's only hook: every 60 clock cycles (about a minute at 1000 ms a cycle) run aos-frontend aide-tick (aide_tick.json, next to this file). It ca…",
    "llm.json": "設定（鍵：model）",
    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-   "tools.json": "The aide has no tools: its whole job is the on_clock hook aide_tick (hooks.json); the brain is fake and is never asked in phase 1."
+   "tools.json": "The aide has no tools: its whole job is the on_clock hook aide_tick (hookeds.json); the brain is fake and is never asked in phase 1."
   },
   "bin": {
    "aos-frontend": "one local page that shows every agent and proc on the daemon table as a tree,"

@@ -17,7 +17,7 @@ class CfgBad(ValueError):
 def load(pack, path):
     path = os.path.abspath(path)
     if hasattr(pack, "read"):
-        # 包自己讀設定（問腦那包：每組指示詞用到才解，不能整份先過 aos-directive）；hooks 也由它驗。
+        # 包自己讀設定（問腦那包：每組指示詞用到才解，不能整份先過 aos-directive）；被勾清單也由它讀。
         return pack.read(path)
     try:
         with open(path, encoding="utf-8") as stream:
@@ -38,7 +38,7 @@ def load(pack, path):
                 if not isinstance(cfg[key], str) or not cfg[key]:
                     raise ValueError("%s must be a non-empty path string" % key)
                 cfg[key] = os.path.abspath(os.path.join(os.path.dirname(path), cfg[key]))
-        cfg["hooks"] = hooks.load(cfg.get("hooks", {}), path)
+        cfg["hooks"] = hooks.load(os.path.dirname(path))   # 被勾清單：定義夾 interfaces.json 最外層的 hookeds（11-21 起不在 kernel.json）
         pack.load(cfg, os.path.dirname(path))
     except (ValueError, TypeError) as error:
         tool_io.die("CfgBad", str(error))

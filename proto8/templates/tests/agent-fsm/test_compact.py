@@ -259,8 +259,8 @@ class Compact(unittest.TestCase):
         hook = self.defn / "fail.py"
         hook.write_text("#!" + sys.executable + "\nimport sys\nsys.exit(1)\n")
         hook.chmod(0o755)
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
-        (self.defn / "hooks.json").write_text(json.dumps({"hooks": {name: {"event": name, "handler": "fail.py"} for name in ("before_queue", "after_queue")}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {}, "hookeds": "hookeds.json"}))
+        (self.defn / "hookeds.json").write_text(json.dumps({name: {"event": name, "handler": "fail.py"} for name in ("before_queue", "after_queue")}))
         self.start_idle()
         self.assertTrue(compact.asking(str(self.stack), self.history()))
 
@@ -325,9 +325,9 @@ class CompactDaemon(unittest.TestCase):
 
         write(definition / "llm.json", {"model": "growing"})
         write(definition / "tools.json", {"tools": {"peek_now_time": {"path": str(PROTO / "py/tools/base/peek_now_time")}}})
-        write(definition / "hooks.json", {"hooks": {"context_wrap": {
+        write(definition / "hookeds.json", {"context_wrap": {
             "event": "on_clock", "every_cycles": 1, "config": {"percent": 35, "wrap": False},
-            "handler": str(PROTO / "py/tools/agent/context_wrap"), "on_error": "stop", "timeout_ms": 20000}}})
+            "handler": str(PROTO / "py/tools/agent/context_wrap"), "timeout_ms": 20000}})
         write(definition / "loop.json", {"exec": "fsm.json", "interval_ms": 10,
                                         "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"})
         endpoint = root / "endpoint.py"
@@ -420,7 +420,7 @@ print(json.dumps({'message':message,'usage':{'prompt_tokens':used,'completion_to
         until(lambda: (root / "endpoint_state.json").exists() and
               json.loads((root / "endpoint_state.json").read_text())["compacts"] >= 2)
         until(lambda: aos_ws.answer_for(str(stack), task)[0] == "answered")
-        until(lambda: json.loads((stack / "hooks/context_wrap/state.json").read_text())["phase"] == "idle")
+        until(lambda: json.loads((stack / "hookeds/context_wrap/state.json").read_text())["phase"] == "idle")
         agent("ctl", "pause", "compact")
         history = aos_ws.history(str(stack))
         self.assertTrue(history[0]["content"].startswith("[aos] summary:"))

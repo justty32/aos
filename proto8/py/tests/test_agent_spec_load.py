@@ -112,9 +112,10 @@ class Inherit(WithHome):
         self.assertEqual(sorted(set(base_tools) - set(tools)), ["grep"])
         self.assertEqual(sorted(set(tools) - set(base_tools)), ["now"])
         self.assertEqual(made["system.txt"].decode(), "You review changes in the workspace.\nRefuse a change that has no test.\n")
-        hooks, base_hooks = load(made, "hooks.json")["hooks"], load(want, "hooks.json")["hooks"]
+        hooks, base_hooks = load(made, "hookeds.json"), load(want, "hookeds.json")
+        hooks.pop("description"), base_hooks.pop("description")
         self.assertEqual(hooks["timer"], dict(base_hooks["timer"], every_ms=60000))
-        self.assertEqual(hooks["timer"]["on_error"], "continue")             # one field changed, on_error kept
+        self.assertEqual(hooks["timer"]["timeout_ms"], 5000)                 # one field changed, timeout_ms kept
         self.assertEqual({k: v for k, v in hooks.items() if k != "timer"}, {k: v for k, v in base_hooks.items() if k != "timer"})
         for name, data in made.items():                                     # no trace of the base in what was written
             if name != "agent.py":
@@ -144,7 +145,7 @@ class Inherit(WithHome):
         self.assertNotIn("grep", tools([d1.tools, d2.tools, defs.drop("grep")]))
         self.assertIn("grep", tools([d1.tools, d2.tools, defs.tool("grep", defs.home("/lib/tools/base/grep"))]))
         self.assertEqual(sorted(tools([d1.tools, d2.tools, defs.drop("grep")])), sorted(set(tools([d2.tools])) - {"grep"}))
-        hooks = lambda h: agent(hooks=h).dry_run()["hooks.json"]["hooks"]  # noqa: E731
+        hooks = lambda h: agent(hooks=h).dry_run()["hookeds.json"]  # noqa: E731
         with self.assertRaisesRegex(defs.SpecBad, "hook timer comes from both"):
             hooks([d1.hooks, d2.hooks])
         self.assertNotIn("timer", hooks([d1.hooks, d2.hooks, {"timer": None}]))
@@ -214,7 +215,7 @@ class Inherit(WithHome):
         self.assertEqual(tools["mine"], {"path": str(base / "tools" / "mine"), "env_file": str(base / "my.env")})
         argv = json.loads((derived_ / "fsm.json").read_text())["states"]["act"]["exec"]["argv"]
         self.assertEqual(argv, ["python3", str(base / "act.py")])           # "python3" is a command, not a file of the base
-        self.assertEqual(json.loads((derived_ / "hooks.json").read_text())["hooks"]["h"]["handler"], str(base / "hooks" / "h"))
+        self.assertEqual(json.loads((derived_ / "hookeds.json").read_text())["h"]["handler"], str(base / "hooks" / "h"))
         sys.modules.pop("helper", None)
         got = defs.load(str(base))                                            # in this process: sys.path and sys.modules put back
         self.assertEqual(sys.path, path)
@@ -249,18 +250,18 @@ class Inherit(WithHome):
         eca, stock = defs.std.hooks("eca-claude"), defs.std.hooks()
         both = sorted(n for n in set(eca) & set(stock) if eca[n] != stock[n])       # today: brain_notify, context_wrap
         self.assertTrue(both)
-        hooks = lambda h: agent(hooks=h).dry_run()["hooks.json"]  # noqa: E731
+        hooks = lambda h: agent(hooks=h).dry_run()["hookeds.json"]  # noqa: E731
         self.assertRaisesRegex(defs.SpecBad, "hook %s comes from both std.hooks\\('agent-fsm'\\) and std.hooks\\('eca-claude'\\)"
                                % both[0], hooks, [stock, eca])
         mine = {n: stock[n] for n in both}
-        self.assertEqual(hooks([stock, eca, mine])["hooks"][both[0]], stock[both[0]])        # written after them: picked
+        self.assertEqual(hooks([stock, eca, mine])[both[0]], stock[both[0]])        # written after them: picked
         self.assertRaises(defs.SpecBad, hooks, [stock, mine, eca])                              # written between: not picked
-        self.assertEqual(hooks([defs.std.hooks(), defs.std.hooks()])["description"].count("templates/agent-fsm/hooks.json"), 1)
+        self.assertEqual(hooks([defs.std.hooks(), defs.std.hooks()])["description"].count("templates/agent-fsm/hookeds.json"), 1)
         h = defs.std.hooks()["timer"]
         h["every_ms"] = 1
         self.assertNotEqual(defs.std.hooks()["timer"]["every_ms"], 1)
         base = defs.load(str(self.agent("base", BASE.replace("    hooks=std.hooks(),\n", ""))))
-        self.assertNotIn("hooks.json", agent(hooks=base.hooks).dry_run())   # base had no hooks: none
+        self.assertNotIn("hookeds.json", agent(hooks=base.hooks).dry_run())   # base had no hooks: none
         self.assertEqual(sorted(agent(tools=[base.pack(prefix="r_", exclude=["grep"])]).dry_run()["tools.json"]["tools"]),
                          sorted("r_" + n for n in base.tools["tools"] if n != "grep"))
         self.assertIn("the base has no tool cat", base.pack(rename={"cat": "x"})["bad"])

@@ -65,9 +65,8 @@ class ReplyMatch(Base):
         hook = self.defn / "drop.py"
         hook.write_text("#!%s\nimport json, sys\nev = json.load(sys.stdin)\nsys.exit(10 if ev['content'] == 'spam' else 0)\n" % sys.executable)
         hook.chmod(0o755)
-        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "eca"}, {"provider": "mcp"}]}}))
-        (self.defn / "hooks.json").write_text(json.dumps({"hooks": {"drop": {"event": "before_queue", "intercept": True,
-                                                                             "handler": "drop.py"}}}))
+        (self.defn / "interfaces.json").write_text(json.dumps({"hookeds": "hookeds.json"}))
+        (self.defn / "hookeds.json").write_text(json.dumps({"drop": {"event": "before_queue", "handler": "drop.py"}}))
         self.say("spam", "keep")
         spam, keep = self.queue()
         self.ok_turn()

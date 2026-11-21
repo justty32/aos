@@ -29,8 +29,9 @@ class DeclaredFiles(unittest.TestCase):
         self.assertEqual(self.declare({"another-interface": {"tools": "ignored.json"}}), {})
 
     def test_only_known_declarations_are_returned(self):
-        files = {key: "cfg/%s.json" % key for key in ("tools", "llm", "hooks", "system")}
-        self.assertEqual(self.declare({"aos-agent": dict(files, other="ignored")}), files)
+        files = {key: "cfg/%s.json" % key for key in ("tools", "llm", "system")}
+        self.assertEqual(self.declare({"aos-agent": dict(files, other="ignored", hooks="cfg/hooks.json")}), files)
+        self.assertEqual(self.declare({"aos-agent": files, "hooks": "hooks.json", "hookeds": "hookeds.json"}), files)   # top level: aos.hook_point's
 
     def test_bad_shapes(self):
         for value, message in (([], "%s must be a JSON object" % self.path),
@@ -41,7 +42,7 @@ class DeclaredFiles(unittest.TestCase):
 
     def test_bad_relative_paths(self):
         (self.folder / "directory").mkdir()
-        for key in ("tools", "llm", "hooks", "system"):
+        for key in ("tools", "llm", "system"):
             for value in (None, 1, "", "/absolute.json", "../outside.json", "cfg/../outside.json", "directory"):
                 with self.subTest(key=key, value=value), self.assertRaises(ValueError) as cm:
                     self.declare({"aos-agent": {key: value}})

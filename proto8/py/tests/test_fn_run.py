@@ -183,14 +183,15 @@ class Hook(Base):
         stack.mkdir()
         (defn / "no_secrets.py").write_text(HOOK)
         (defn / "no_secrets.py").chmod(0o755)
-        (defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
-        (defn / "hooks.json").write_text(json.dumps({"hooks": {"no_secrets": {"event": "before_tool", "condition": "write",
-                                                                             "handler": "no_secrets.py"}}}))
-        got = hooks.fire("before_tool", {"name": "write", "arguments": {"text": "a secret"}}, str(defn), str(stack))
+        (defn / "interfaces.json").write_text(json.dumps({"aos-agent": {}, "hookeds": "hookeds.json"}))
+        (defn / "hookeds.json").write_text(json.dumps({"no_secrets": {"event": "before_tool", "condition": "write",
+                                                                      "handler": "no_secrets.py"}}))
+        entries = hooks.load(str(defn), str(stack))
+        got = hooks.fire("before_tool", {"name": "write", "arguments": {"text": "a secret"}}, entries, str(stack))
         self.assertEqual((got["blocked"], got["hook"], got["text"]), (True, "no_secrets", "the arguments mention a secret\n"))
-        got = hooks.fire("before_tool", {"name": "write", "arguments": {"text": "fix"}}, str(defn), str(stack))
+        got = hooks.fire("before_tool", {"name": "write", "arguments": {"text": "fix"}}, entries, str(stack))
         self.assertEqual((got["blocked"], got["changed"], got["data"]["arguments"]), (False, ["arguments"], {"text": "fixed"}))
-        got = hooks.fire("before_tool", {"name": "read", "arguments": {"text": "a secret"}}, str(defn), str(stack))
+        got = hooks.fire("before_tool", {"name": "read", "arguments": {"text": "a secret"}}, entries, str(stack))
         self.assertFalse(got["blocked"])                                                      # condition write only
 
 

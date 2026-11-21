@@ -13,7 +13,8 @@ Without arguments, read an after_start or after_stop hook event as JSON on stdin
 Use the event's stack, not the handler's AOS_STACK. after_start cancels pending screen
 closures; after_stop schedules them (cli.json screen_close_after_s, default 600).
 reap is called by tmux; KIND is claude or codex. No daemon or kernel is needed.
-Exit 0 on success or stale orders; exit 1 on invalid input or I/O errors.
+Exit 0 on success or stale orders; as a hook (no arguments) a bad event or an I/O error is one
+warning line and exit 0, so a screen problem never stops the agent's loop; reap: exit 1 on errors.
 """
 
 
@@ -40,8 +41,10 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except (OSError, ValueError) as error:
+        hook = len(sys.argv) == 1                # 掛在 after_start／after_stop：失敗會讓 loop 收工（11-21 沒有 on_error 了），所以只提醒
         try:
-            sys.stderr.write("screen_linger: error: CommandFailed %s\n" % " ".join(str(error).splitlines()))
+            sys.stderr.write("screen_linger: %s %s\n" % ("warning:" if hook else "error: CommandFailed",
+                                                         " ".join(str(error).splitlines())))
         except BrokenPipeError:
             pass
-        sys.exit(1)
+        sys.exit(0 if hook else 1)

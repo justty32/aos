@@ -2,8 +2,8 @@
 # kernel_gate - 讓叫我的那隻 agent 當 kernel 的門：on 把框架站掛在自己身上（請求先留著、通知自己）、ls 看留著的、pass／refuse 表態（轉寄由站做）、off 收掉
 # 使用者 11-13：「一個普通的agent隨便弄些hook、json設定啥的，就可以收請求了。請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」；
 #   四題回覆「1乙，總之先做。」＝重用框架站、agent 只表態、機器轉寄（thinking/2026-11/13/eca-as-kernel.md）。
-# 做法：站＝py/tools/aos/kernel，stack＝agent 的 <stack>/hooks/kernel_gate/（就是那支 on_clock hook 的小格），設定 kernel.json 也在那裡、agent 自己可以改。
-#   on    建小格與 requests 信箱；沒有 kernel.json 才寫預設那份（一支 after_verdict hook＝同夾的 hold，condition pass）；
+# 做法：站＝py/tools/aos/kernel，stack＝agent 的 <stack>/hookeds/kernel_gate/（就是那支 on_clock hook 的小格），設定 kernel.json、被勾清單 kernel_hookeds.json（interfaces.json 指過去，11-21）也在那裡、agent 自己可以改。
+#   on    建小格與 requests 信箱；沒有 kernel.json 才寫預設那幾份（kernel_hookeds.json 一支 after_verdict hook＝同夾的 hold，condition pass）；
 #         掛 on_clock hook kernel_gate（同夾的 tick：每個時鐘週期跑站一輪＋通知）；印收件信箱路徑。
 #   ls    列留著的信（機器讀到的事實＋寄件人多寫的鍵原樣）。
 #   pass／refuse  寫 <小格>/decisions/<信名>.json，當場叫站跑一輪，回報結果（站那一輪的拒信行轉成自己的話）。
@@ -41,7 +41,10 @@ import gate_lib as g  # noqa: E402
 NAME = "kernel_gate"
 tool_io.start(NAME, HELP)
 die = tool_io.die
-DEFAULT_CFG = {"hooks": {"hold": {"event": "after_verdict", "condition": "pass", "handler": None}}}
+DEFAULT_CFG = {}                                         # 站的 kernel.json（11-21 起 hook 不在這裡）
+DEFAULT_HOOKEDS = {"description": "What is hooked on this station: hold (after_verdict, verdict pass) holds the request for the agent to decide.",
+                   "hold": {"event": "after_verdict", "condition": "pass", "handler": None}}
+INTERFACES = {"description": "The kernel_gate station of this agent (its stack is this hook's cell).", "hookeds": "kernel_hookeds.json", "kernel": {}}
 
 
 def agent(*args):
@@ -93,22 +96,26 @@ try:
     if op == "on":
         os.makedirs(cell, exist_ok=True)
         kept = os.path.isfile(cfg_path)
-        if not kept:
-            cfg = json.loads(json.dumps(DEFAULT_CFG))
-            cfg["hooks"]["hold"]["handler"] = g.handler_ref("hold")
-            g.write_json(cfg_path, cfg)
+        if not kept:                             # 被勾清單在站的 kernel_hookeds.json、interfaces.json 指過去（11-21 kernel 甲案）
+            hooked = json.loads(json.dumps(DEFAULT_HOOKEDS))
+            hooked["hold"]["handler"] = g.handler_ref("hold")
+            for name, doc in (("kernel_hookeds.json", hooked), ("interfaces.json", INTERFACES)):
+                if not os.path.isfile(os.path.join(cell, name)):
+                    g.write_json(os.path.join(cell, name), doc)
+            g.write_json(cfg_path, DEFAULT_CFG)
         code, _, err = g.run(["aos-post", "init", requests])
         if code != 0:
             die("PostFailed", "cannot create the request mailbox %s: %s" % (requests, (err.strip().splitlines() or ["?"])[-1]))
-        agent("hook", "--target", me, "add", "--event", "on_clock", "--every-cycles", "1", "--on-error", "continue",
+        agent("hook", "--target", me, "add", "--event", "on_clock", "--every-cycles", "1",
               "--timeout-ms", "60000", "--name", g.HOOK, "--replace", "--path-json", json.dumps(g.handler_ref("tick")))
         print("kernel_gate is on. Requests go to this mailbox: %s" % requests)
         print("A sender uses it by setting AOS_KERNEL to that path (or a station names it as next).")
         print("The station on you runs once every clock cycle while you are not in a turn. It holds each request its rules "
               "let through and tells you once: \"[aos] kernel_hold: ...\". Answer each with op pass or op refuse.")
         print("What you pass, the station forwards to: %s." % next_text(cell))
-        print("Its settings (%s): %s. Edit it to add rules (allowed, max_running, next, hooks ...): aos/kernel.json#/gate."
-              % ("kept as you left them" if kept else "written now", cfg_path))
+        print("Its settings (%s): %s, and its hooks in %s. Edit them to add rules (allowed, max_running, next ...; hooks): "
+              "aos/kernel.json#/gate." % ("kept as you left them" if kept else "written now", cfg_path,
+                                         os.path.join(cell, "kernel_hookeds.json")))
     elif op == "ls":
         rows = g.held(cell)
         if not rows:

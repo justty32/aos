@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # guard - before_tool hook handler: stdin = the tool call event ({"name", "arguments", ...}); exit 0 = allowed,
 # exit 10 with "[aos] guard: blocked: ..." on stdout = blocked, exit 1 with "guard: error: CODE reason" on stderr =
-# broken config or event (mount it with on_error "stop" so that this blocks too). The logic is in guard.py,
+# broken config or event (a failing before_tool hook stops the call too: the agent family's rule since 11-21). The logic is in guard.py,
 # the write scope in scope.py; "_entry --scope" prints the write scope as JSON (same as python3 scope.py).
 import os, sys
 

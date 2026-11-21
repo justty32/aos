@@ -9,7 +9,7 @@
   "description": "defs.Agent 與 defs.fsm 回的 Fsm：寫定義變成物件，.dry_run() 算出 {檔名: 內容}、不寫，.compile(夾) 算完寫進夾；loop.json 那段在內部的 _Loop。"
  },
  "agent_spec_hooks.py": {
-  "description": "agent_spec 的 hook 那塊：hooks=… 怎麼疊（一張表、std.hooks(...)、defs.load 的 hooks、@fn.hook 的函數、它們的串列）、怎麼驗、怎麼算出 hooks.json。"
+  "description": "agent_spec 的 hook 那塊：hooks=… 怎麼疊（一張表、std.hooks(...)、defs.load 的 hooks、@fn.hook 的函數、它們的串列）、怎麼驗、怎麼算出被勾清單 hookeds.json。"
  },
  "agent_spec_lib.py": {
   "description": "agent.py 裡的「庫」（命名空間第一刀）：隨 aos 發的 std（腦看到短名）與 defs.lib(\"名\", 根) 宣告的別的庫（工具自動帶「名_」）；包在編譯時讀出來、展開成一支支工具（靜態連結進 tools.json；動態連結見 pack 的 link）。"
@@ -77,13 +77,13 @@
   "description": "the handle aos.hook_point.open returns: fire a program's hook points through the engine, with errors going to the program's own fail()."
  },
  "hook_lists.py": {
-  "description": "read hooks lists (JSON files with a \"hooks\" table) against a hook point table, and check the values hooks change against the declared types; the part…"
+  "description": "read hookeds lists (what is hooked: a JSON object {hook name: entry or null}) in order, a later file overriding an earlier one by name."
  },
  "hook_point.py": {
-  "description": "read the hook_points.json declarations (the hook points a program offers), check them, turn them into the table the hook engine wants, and open a han…"
+  "description": "where a definition's hook files are (the \"hooks\" and \"hookeds\" keys at the top of its interfaces.json, directives allowed) and how to read hook point…"
  },
  "hook_run.py": {
-  "description": "hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。"
+  "description": "the hook engine, kept minimal: run the handlers hooked on one event (name order), hand each the event JSON, give back each one's exit code and stdout."
  },
  "index.py": {
   "description": "aos_index - index_view：透過 index（視角）看節點，一行一項「鍵 TAB description」；index 放哪只寫在 spot() 一處。"

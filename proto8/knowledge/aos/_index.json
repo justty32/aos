@@ -15,7 +15,7 @@
   "description": "The mental model: daemon = hardware, stack = memory, workspace = external memory, definition = source code, kernel = where you send requests."
  },
  "definition.json": {
-  "description": "What each file in a definition folder does (interfaces.json, loop.json, tools.json, hooks.json, cli.json ...), and which ones you have your own copy of."
+  "description": "What each file in a definition folder does (interfaces.json, loop.json, tools.json, hooks.json and hookeds.json, cli.json ...), and which ones you have your own copy of."
  },
  "body.json": {
   "description": "Two kinds of body, agent-fsm and eca (claude, codex): brain, tools, hooks, system text, history; how to tell which you are."

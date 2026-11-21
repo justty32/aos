@@ -45,10 +45,13 @@ class HookTests(unittest.TestCase):
         handler = self.stack / 'hook_handler'
         handler.write_text(HANDLER % code)
         handler.chmod(0o755)
-        cfg = {'exec': str(test_ledger.FAKE.parent), 'endpoints': {'fake': {}, 'other': {}}, 'endpoint': 'fake',
-               'hooks': {'probe': {'event': event, 'handler': str(handler)}}}
+        cfg = {'exec': str(test_ledger.FAKE.parent), 'endpoints': {'fake': {}, 'other': {}}, 'endpoint': 'fake'}
         cfg.update(more)
         self.config.write_text(json.dumps(cfg))
+        # since 11-21 the hooks are in kernel_hookeds.json, named by the hookeds of interfaces.json next to the config
+        (self.config.parent / 'interfaces.json').write_text(json.dumps({'hookeds': 'kernel_hookeds.json', 'kernel': {}}))
+        (self.config.parent / 'kernel_hookeds.json').write_text(json.dumps(
+            {'probe': {'event': event, 'handler': str(handler)}}))
         self.box = self.stack / 'replies'
         for part in ('new', 'tmp', 'cur'):
             (self.box / part).mkdir(parents=True, exist_ok=True)

@@ -1,14 +1,17 @@
-"""hook_clock - agent 的 on_clock hook：讀時鐘、比上次記的 cycle，到了才跑那個 hook（clock_tick）；loop 起來時清掉狀態（clock_restart）。
+"""hook_clock - the agent's on_clock hooks: read the clock, compare with the cycle recorded last time, run the hook only when it is due (clock_tick); the first check after a loop start runs at once.
 
-圖紙：proto8/thinking/2026-11/11/clock-hook（使用者 11-11「hook就可以添加一個類型……去看指定的clock proc……每隔十個cycle就幹嘛，
-或是透過cycle換算，若超過十秒就幹嘛」；判斷在行程內做，到了才起 handler）。11-20 hook 介面第 2 刀後半從 hooks.py 搬出來（只因檔案大小）；
-格的鍵（CLOCK_KEYS）與驗法（check_clock）留在 hooks.py。呼叫的人：agent_hooks 的遙控器（clock_tick）、aos-hook --agent 的
-after_start（clock_restart）。純標準庫，不印東西、不 sys.exit。
+Design: proto8/thinking/2026-11/11/clock-hook (the user 11-11 "hook就可以添加一個類型……去看指定的clock proc……每隔十個cycle就幹嘛，
+或是透過cycle換算，若超過十秒就幹嘛"; decided inside the process, a handler starts only when due). Moved out of hooks.py
+11-20 (file size). The entry keys (CLOCK_KEYS) and their checks stay in hooks.py. Caller: the agent_hooks remote (clock_tick).
+11-21 (line top-1121-hooknew, the user's fourth layer: aos-hook fire does nothing agent-specific): "a loop start" is no
+longer told by after_start clearing the state; each hook's state records which loop run it saw (pid, started_at_ticks and
+boot_id of STACK/state.json, the loop's own window), and a different one = the first check of a new start.
+Standard library only; prints nothing, never exits.
 
-對外：
-    CLOCK_STATE = "on_clock.json"：$AOS_STACK/hooks/<名>/on_clock.json，上次觸發（或基準）的 cycle
-    clock_tick(def_folder, stack, warn=None) -> [跑了的 hook 名]；沒有這種 hook＝只讀清單、不起行程；hook 停下＝HookFailed（同 hooks.fire）
-    clock_restart(stack) -> None：清掉各 hook 小格的 on_clock.json（下一次檢查＝第一次、立刻跑）；刪不掉＝OSError
+API:
+    CLOCK_STATE = "on_clock.json": $AOS_STACK/hookeds/NAME/on_clock.json, the cycle of the last run (or the base)
+    clock_tick(def_folder, stack, warn=None) -> [names run]; no such hook = only the list is read, no process;
+                    a failing hook = one warning (on_clock cannot be blocked; hooks.fire)
 """
 import json
 import os
@@ -16,7 +19,8 @@ import subprocess
 
 from aos.agentlib import hooks
 
-CLOCK_STATE = "on_clock.json"                   # $AOS_STACK/hooks/<名>/on_clock.json：上次觸發（或基準）的 cycle
+CLOCK_STATE = "on_clock.json"                   # $AOS_STACK/hookeds/NAME/on_clock.json: the cycle of the last run (or the base)
+LOOP_KEYS = ("boot_id", "pid", "started_at_ticks")   # which run of the loop: from STACK/state.json (aos-loop's state window)
 
 
 def _clock_file(entry, stack):
@@ -68,6 +72,16 @@ def _interval_ms():
     return int(text) if text.isdigit() and int(text) > 0 else 1000
 
 
+def _loop_run(stack):
+    """[boot_id, pid, started_at_ticks] of the loop now running in stack (its state.json); none readable = None."""
+    try:
+        with open(os.path.join(stack, "state.json"), encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, ValueError):
+        return None
+    return [doc.get(k) for k in LOOP_KEYS] if isinstance(doc, dict) else None
+
+
 def _state(stack, name):
     path = os.path.join(os.path.abspath(stack), hooks.CELLS, name, CLOCK_STATE)
     try:
@@ -87,15 +101,16 @@ def _put_state(path, doc):
 
 
 def clock_tick(def_folder, stack, warn=None):
-    """on_clock 的檢查：每個 on_clock hook 讀它的時鐘、比 hooks/<名>/on_clock.json 記的 cycle，到了才跑那個 hook。
-    到了＝cycle − 上次 ≥ 條件格數（every_cycles；every_ms＝ceil(every_ms ÷ AOS_CLOCK_INTERVAL)）；跑了就把上次記成這次的 cycle（不補跑：
-    錯過的只寫進 missed）。第一次（沒有狀態檔、時鐘換了、cycle 倒退〔根重起、換台〕）＝立刻跑一次並記基準，事件 first: true、
-    last_cycle: null、missed: 0（11-11 使用者選「起來就先觸發一次」：「一起來立刻跑一次，之後照間隔。每次睡醒、重起也都會先跑一次。」）；
-    每次 loop 起來（aos-hook fire --agent … after_start）先 clock_restart 清掉狀態檔，所以睡醒、重起、auto_restart 後的第一次檢查也算第一次。
-    找不到時鐘＝不跑、warning 只在原因變了時說一次（記在狀態檔）。回跑了的 hook 名。hook 停下＝HookFailed（同 fire）。
-    寫不了狀態檔＝warning、這次不跑（免得每拍都跑）。"""
+    """The on_clock check: each on_clock hook reads its clock and compares with hookeds/NAME/on_clock.json; due = run it.
+    Due = cycle - last >= its cycles (every_cycles; every_ms = ceil(every_ms / AOS_CLOCK_INTERVAL)); after a run the last cycle is
+    this one (no catching up: what was missed only goes into missed). The first time (no state file, another clock, the cycle
+    went back [root restarted, other machine], or another run of the loop than the state saw: a start, a wake, a restart) =
+    run at once and record the base: first true, last_cycle null, missed 0 (the user 11-11 "一起來立刻跑一次，之後照間隔。
+    每次睡醒、重起也都會先跑一次。"). No clock = not run, a warning only when the reason changed (kept in the state file).
+    Cannot write the state file = a warning and no run this time (so it does not run every tick). Returns the names run."""
     entries = hooks.load(def_folder, stack)
     names = sorted(n for n, e in entries.items() if e["event"] == hooks.CLOCK_EVENT)
+    run_id = _loop_run(stack) if names else None
     ran = []
     for name in names:
         entry = entries[name]
@@ -105,12 +120,12 @@ def clock_tick(def_folder, stack, warn=None):
         cached = named and st.get("clock_source") == source and isinstance(st.get("clock"), str)
         clock, why = (st["clock"], None) if cached else _clock_file(entry, stack)
         cycle = _read_cycle(clock) if clock else None
-        if cached and cycle is None:             # 記住的鐘讀不到：只重查一次，不退回直接讀 daemon 表
+        if cached and cycle is None:             # the remembered clock cannot be read: look it up once more
             clock, why = _clock_file(entry, stack)
             cycle = _read_cycle(clock) if clock else None
         if clock and cycle is None:
             why = "clock file %s does not hold a cycle number" % clock
-        remembered = {"clock_source": source} if named else {}
+        remembered = dict({"clock_source": source} if named else {}, loop=run_id)
         try:
             if why:
                 if st.get("warned") != why:
@@ -119,37 +134,23 @@ def clock_tick(def_folder, stack, warn=None):
                     _put_state(spath, dict(st, warned=why))
                 continue
             last = st.get("cycle")
-            first = st.get("clock") != clock or not isinstance(last, int) or isinstance(last, bool) or cycle < last
+            first = (st.get("clock") != clock or not isinstance(last, int) or isinstance(last, bool) or cycle < last
+                     or st.get("loop") != run_id)
             iv = _interval_ms()
             every = entry["every_cycles"] if "every_cycles" in entry else max(1, -(-entry["every_ms"] // iv))
             if not first and cycle - last < every:
                 if st.get("warned") or (named and st.get("clock_source") != source):
                     _put_state(spath, dict(remembered, clock=clock, cycle=last))
                 continue
-            _put_state(spath, dict(remembered, clock=clock, cycle=cycle))             # 先記再跑：handler 失敗也不每拍重跑
+            _put_state(spath, dict(remembered, clock=clock, cycle=cycle))             # record first, then run: a failing handler does not run every tick
         except OSError as e:
             if warn:
                 warn("hook %s (event %s): cannot write %s: %s" % (name, hooks.CLOCK_EVENT, spath, e))
             continue
-        data = {"clock": clock, "cycle": cycle, "interval_ms": iv, "first": first,   # first＝剛起來／沒基準／倒退的那一次
+        data = {"clock": clock, "cycle": cycle, "interval_ms": iv, "first": first,
                 "last_cycle": None if first else last, "missed": 0 if first else (cycle - last) // every - 1}
-        if "config" in entry:                    # 11-15 compact-1115：格裡的 config 原樣帶給 handler（例 context_wrap 的門檻）
+        if "config" in entry:                    # 11-15 compact-1115: the entry's config goes to the handler as it is
             data["config"] = entry["config"]
-        hooks.fire(hooks.CLOCK_EVENT, data, def_folder, stack, warn=warn, only=[name], entries=entries)
+        hooks.fire(hooks.CLOCK_EVENT, data, entries, stack, warn=warn, only=[name])
         ran.append(name)
     return ran
-
-
-def clock_restart(stack):
-    """loop 起來的那一刻（aos-hook fire --agent … after_start）：刪掉各 hook 小格的 on_clock.json，下一次 clock_tick 就當第一次、立刻跑
-    （使用者 11-11「每次睡醒、重起也都會先跑一次」）。刪不掉＝OSError 往上丟；沒有小格＝什麼都不做。"""
-    cells = os.path.join(os.path.abspath(stack), hooks.CELLS)
-    try:
-        names = os.listdir(cells)
-    except (FileNotFoundError, NotADirectoryError):
-        return
-    for name in names:
-        try:
-            os.remove(os.path.join(cells, name, CLOCK_STATE))
-        except (FileNotFoundError, NotADirectoryError):
-            pass

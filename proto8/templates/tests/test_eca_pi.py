@@ -35,13 +35,14 @@ class EcaPiTemplate(unittest.TestCase):
         self.assertEqual((PI / "_entry").read_text(), (PROTO / "templates/eca-claude/_entry").read_text())
 
     def test_hooks_validate(self):
-        table = json.loads((PI / "hooks.json").read_text())["hooks"]
+        table = json.loads((PI / "hookeds.json").read_text())
+        self.assertIsInstance(table.pop("description"), str)
         self.assertEqual(sorted(table), ["mail_notify", "screen_linger_start", "screen_linger_stop", "timer"])
-        claude = json.loads((PROTO / "templates/eca-claude/hooks.json").read_text())["hooks"]
+        claude = json.loads((PROTO / "templates/eca-claude/hookeds.json").read_text())
         for name in ("screen_linger_start", "screen_linger_stop"):
             self.assertEqual(table[name], claude[name])
         for entry in table.values():
-            hooks.validate_entry(entry)
+            hooks.check_entry(entry)
 
 
 if __name__ == "__main__":

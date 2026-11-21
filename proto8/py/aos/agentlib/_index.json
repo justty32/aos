@@ -3,7 +3,7 @@
   "description": "aos.agentlib - agent 層的共用模組（hooks、cooldown、claude／codex 對話的 cli_*、cmd_call …；S3 前在 lib/agent）。"
  },
  "agent_hooks.py": {
-  "description": "agent 一家的 hook 遙控器：open 一次（定義那份疊 stack 那份），之後每個點一行；丟信三步、工具被攔的預設字、tool_added 那串只在這裡一份。"
+  "description": "the agent family's hook remote: open once (the definition's hookeds with the stack's copy on top), then one line per point; dropping a letter, a bloc…"
  },
  "agent_tool.py": {
   "description": "claude、codex 共用的工具形入口 ask_cli。"
@@ -69,10 +69,10 @@
   "description": "agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。"
  },
  "hook_clock.py": {
-  "description": "agent 的 on_clock hook：讀時鐘、比上次記的 cycle，到了才跑那個 hook（clock_tick）；loop 起來時清掉狀態（clock_restart）。"
+  "description": "the agent's on_clock hooks: read the clock, compare with the cycle recorded last time, run the hook only when it is due (clock_tick); the first check…"
  },
  "hooks.py": {
-  "description": "agent 的 hook 共用模組：事件表、讀 hooks 清單（定義那份疊 stack 那份、驗形狀，含 on_clock 格的鍵）、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 py/aos/hook_run.py。"
+  "description": "the agent family's own hook rules (agent-fsm cells, aos-eca-turn, aos-mcp): which of its points can be blocked, which keys a hook may change, what co…"
  },
  "mailbox_call.py": {
   "description": "mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。"

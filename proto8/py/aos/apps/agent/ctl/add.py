@@ -70,19 +70,19 @@ flags:
       --on-queued MODE  fail or ok when still queued (default fail)
   -h, --help          show this help
 
-exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing, DaemonFailed,
+exit codes: 0 attached; 1 error (InstanceExists, AddRejected, DaemonMissing, DaemonFailed,
   KitMissing, KitBad...).
 """
 
 def definition(arg, verb="add"):
-    """XXX 是不是一份掛得上的 agent 定義（add 與 set-def 共用）：是資料夾、interfaces.json 宣告了 aos-agent、宣告的 entry 在。
+    """XXX 是不是一份掛得上的 agent 定義（add 與 set-def 共用）：是資料夾、宣告了 entry 的話 entry 在（沒宣告 aos-agent 也收，11-21）。
     回 (定義絕對路徑, 宣告, 入口, def_dir)；宣告 entry 時入口與定義資料夾分開給（def_dir＝定義），沒宣告＝def_dir None。"""
     xxx = os.path.abspath(arg)
     if not os.path.isdir(xxx):
         raise Fail("PathMissing", "%s does not exist (%s takes an agent folder)" % (arg, verb))
     decl, why = read_decl(xxx, IFACE)
-    if decl is None:
-        raise Fail("InterfaceMissing", "%s does not declare the aos-agent interface (%s); put interfaces.json at its top: {\"aos-agent\": {}}" % (xxx, why))
+    if decl is None:                                  # 11-21 宣告只是參考（使用者 kernel 第 4 題「沒宣告的照樣跑」）：沒宣告 aos-agent＝當作 {}，入口就是夾本身
+        decl = {}
     entry_target, def_dir = xxx, None
     ent = decl.get("entry")
     if ent is not None:
@@ -248,7 +248,7 @@ def add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, w
 
 def looked_up_parent(envs, parent, notify_box):
     """ok-devt-1114 05 修訂 1：這個 add 會帶 envs、又沒明給 parent 時，parent＝表上包住 $AOS_STACK 的最深那列的 stack（同 ctl who；
-    工具的小格 <agent stack>/tools/<名>、hooks/<名> 都認成那隻 agent；設了 AOS_KERNEL 就經 kernel 查表）。
+    工具的小格 <agent stack>/tools/<名>、hook 的小格 hookeds/<名> 都認成那隻 agent；設了 AOS_KERNEL 就經 kernel 查表）。
     不帶 envs、明給了、沒有 AOS_STACK、表讀不到、沒找到＝None。查不到不擋 add：parent 只是登記。"""
     if parent is not None or dc.PARENT_ENV in envs or not (envs or notify_box is not None):
         return None

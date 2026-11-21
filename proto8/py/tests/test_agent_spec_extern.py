@@ -35,13 +35,13 @@ class Link(WithHome):
         self.assertEqual((self.shared / "tools.json").read_text(), "not even json\n")
 
     def test_every_field_and_dry_run(self):
-        for what, name in (("system", "system.txt"), ("tools", "tools.json"), ("llm", "llm.json"), ("hooks", "hooks.json")):
+        for what, name in (("system", "system.txt"), ("tools", "tools.json"), ("llm", "llm.json"), ("hooks", "hookeds.json")):
             with self.subTest(what=what):
                 (self.shared / name).write_text("{}\n")
                 files = agent(**{what: defs.extern("../../shared/" + name)}).dry_run(str(self.dir))
                 self.assertIsInstance(files[name], spec_base.Link)
                 self.assertEqual(files[name], "../../shared/" + name)
-        self.assertIn("on_start", agent(hooks=defs.extern("../../shared/hooks.json")).dry_run(str(self.dir))["loop.json"])
+        self.assertIn("on_start", agent(hooks=defs.extern("../../shared/hookeds.json")).dry_run(str(self.dir))["loop.json"])
         (self.dir / "agent.py").write_text(HEAD + "defs.main(defs.Agent('D.', system=defs.extern('../../shared/system.txt'), "
                                            "tools=[], llm={}, fsm=defs.std.fsm()))\n")
         r = run_agent(self.dir / "agent.py", "--dry-run", home=self.home)

@@ -1,11 +1,12 @@
 """fork_copy - 工具 fork 用：把一隻 agent-fsm 的 stack 裡定義宣告的東西（history、tools／llm／hooks／system 覆蓋檔）抄進新 stack，history 尾巴補上沒回的工具呼叫。
 
 11-11 使用者「fork，也就是自身的各種東西複製一份，然後等他跑好後留下結論」；裁「一律連對話複製」、「eca不給fork。」（thinking/2026-11/11/fork-and-do-task/01-fork.md）。
-只抄 interfaces.json 的 aos-agent 宣告過的檔（history 必要；tools、llm、hooks、system 有宣告、stack 裡有那份才抄），其他（goal.json、工具小格、
+只抄 interfaces.json 的 aos-agent 宣告過的檔（history 必要；tools、llm、system 有宣告、stack 裡有那份才抄），加上最外層 hookeds 的第一個相對檔名
+（11-21 起被勾清單在最外層，stack 裡自己那份有才抄），其他（goal.json、工具小格、
 hook 狀態、queue、think/、stage.txt、observed）都不抄——身體從頭起、工具小格是各工具自己的帳。
 history 照行原樣抄；最後一則 assistant 的 tool_calls 還沒回的補 tool 訊息（第一個沒回的＝正在跑的這次 fork，act 是一支一支照順序跑的）。
 history 裡找不到叫到一半的 tool call（eca：工具來回在 CLI 裡、history 沒有這種行）＝BodyUnsupported（判法同 do_task）。
-登記檔裡相對路徑的格（tools：$override、tools.*.path、tools.*.env_file；hooks：hooks.*.handler）從舊 stack 換算到新 stack；指示詞物件照原樣。
+登記檔裡相對路徑的格（tools：$override、tools.*.path、tools.*.env_file；hookeds：*.handler）從舊 stack 換算到新 stack；指示詞物件照原樣。
 純標準庫；錯一律丟 ForkCopyBad（工具接成錯誤行）。"""
 import json
 import os
@@ -24,7 +25,7 @@ UNSUPPORTED = ("fork works only in an agent-fsm body, where each tool call is a 
 OWN_CALL = ("[aos] fork: you are the copy made by this call; the original agent is waiting for your conclusion. "
             "Your task is in the next message.")
 OTHER_CALL = "[aos] fork: not run in the copy (the original runs it after the fork call returns)."
-KEYS = ("tools", "llm", "hooks", "system")
+KEYS = ("tools", "llm", "system")
 
 
 class ForkCopyBad(Exception):
@@ -92,6 +93,16 @@ def pending_tools(lines):
     return out
 
 
+def _hookeds(def_folder):
+    """最外層 hookeds 的第一個相對檔名（stack 裡自己那份就叫這個名字）；沒有＝None。"""
+    try:
+        from aos import hook_point
+        own = hook_point.own(def_folder, "/")
+    except (ImportError, ValueError) as e:
+        raise ForkCopyBad("InterfaceBad", str(e))
+    return os.path.relpath(own, "/") if own else None
+
+
 def _move(value, src, dst):
     """相對路徑字串從 src 資料夾換算成相對 dst；絕對、空、指示詞物件照原樣。"""
     if isinstance(value, str) and value and not os.path.isabs(value):
@@ -113,9 +124,9 @@ def rebase(key, value, src, dst):
         if isinstance(table, dict):
             value["tools"] = {n: (dict(e, **{k: _move(e[k], src, dst) for k in ("path", "env_file") if k in e})
                                   if isinstance(e, dict) else e) for n, e in table.items()}
-    elif key == "hooks" and isinstance(value.get("hooks"), dict):
-        value["hooks"] = {n: (dict(e, handler=_move(e["handler"], src, dst)) if isinstance(e, dict) and "handler" in e else e)
-                          for n, e in value["hooks"].items()}
+    elif key == "hooks":
+        value = {n: (dict(e, handler=_move(e["handler"], src, dst)) if isinstance(e, dict) and "handler" in e else e)
+                 for n, e in value.items()}
     return value
 
 
@@ -136,6 +147,7 @@ def check(def_folder, src):
         raise ForkCopyBad("HistoryMissing", "the definition %s declares no history (aos-agent.history), so there is no conversation to copy"
                           % def_folder)
     rels = {k: _rel(decl, k) for k in KEYS}
+    rels["hooks"] = _hookeds(def_folder)
     lines = read_lines(os.path.join(src, hist))
     filled = pending_tools(lines)
     if not filled:

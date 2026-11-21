@@ -81,7 +81,7 @@ class Handoff:
                 if cfg["kind"] == "claude":
                     return self._claude_failed(cfg, cell, e)
                 letters_drop(self.stack, self.left, "failed")       # 回答配對：已收掉的信不會有回答了（還在 cur/ 的下一輪再交）
-                self.hooks.fire("brain_failed", {"name": e.code, "reason": str(e)})   # hook 停下＝HookFailed，冷卻不記（同 agent-fsm wait）
+                self.hooks.fire("brain_failed", {"name": e.code, "reason": str(e)})   # hook 失敗＝一行 warning（brain_failed 不能攔，11-21）
                 try:
                     cooldown.fail(self.stack, e.code, e, dropped=len(self.good), retry=False)   # 照舊報錯退 1：停在這個錯上（cooldown-1118 的 retry 欄）
                 except OSError as w:

@@ -224,11 +224,11 @@ class Bad(unittest.TestCase):
 
 class Marks(unittest.TestCase):
     def test_hook_mark(self):
-        @fn.hook("on_clock", every_cycles=10, name="tidy", async_=True)
+        @fn.hook("on_clock", every_cycles=10, name="tidy", timeout_ms=5000)
         def h(event):
             pass
         self.assertEqual(getattr(h, fn_mark.MARK), {"kind": "hook", "event": "on_clock", "name": "tidy",
-                                                    "entry": {"every_cycles": 10, "async": True}})
+                                                    "entry": {"every_cycles": 10, "timeout_ms": 5000}})
         self.assertEqual(repr(fn.block("why")), "fn.block('why')")
 
 

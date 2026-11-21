@@ -36,7 +36,7 @@ class Base(unittest.TestCase):
             self.addCleanup(shutil.rmtree, self.root, True)
         self.defn, self.d, self.ws, self.kernel = (self.root / n for n in ("def", "d", "ws", "kernel"))
         shutil.copytree(CELLS, self.defn, ignore=shutil.ignore_patterns("__pycache__"))
-        (self.defn / "hooks.json").write_text('{"hooks": {}}')         # 不要範本的 on_clock 鉤子攪局
+        (self.defn / "hookeds.json").write_text('{}')         # 不要範本的 on_clock 鉤子攪局
         (self.defn / "llm.json").write_text('{"model": "fake"}')
         (self.defn / "tools.json").write_text(json.dumps({"tools": {
             "peek_now_time": {"path": str(PROTO / "py/tools/base/peek_now_time")}, "goal": {"path": str(GOAL_TOOL)}}}))

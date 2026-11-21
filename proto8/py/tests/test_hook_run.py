@@ -1,4 +1,4 @@
-"""Verify the shared hook engine: entry validation, running handlers through aos-exec, replies, blocking, on_error, timeouts, ordering and conditions."""
+"""Verify the minimal hook engine: reading hookeds lists (aos.hook_lists), running handlers through aos-exec in name order with the same data, timeouts, and handler directives."""
 
 import json
 import os
@@ -10,40 +10,69 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from aos import hook_run
-
-EVENTS = {
-    "before": {"condition": None, "intercept": ("body",), "block": True},
-    "after": {"condition": "kind", "intercept": ("body", "note"), "block": False},
-    "plain": {"condition": "kind", "intercept": (), "block": False},
-}
+from aos import hook_lists, hook_run
 
 
-class ValidateTests(unittest.TestCase):
-    def test_validate_entry(self):
-        good = {"event": "after", "handler": "h", "intercept": False, "async": True, "condition": ["a", "b"],
-                "on_error": "continue", "timeout_ms": 5, "every_ms": "not ours"}
-        self.assertIsNone(hook_run.validate_entry(good, EVENTS))
-        self.assertIsNone(hook_run.validate_entry({"event": "before", "handler": {"$path": "h"}}, EVENTS))
-        bad = (
-            ([], "must be a JSON object or null"),
-            ({"event": "nope", "handler": "h"}, "event must be one of before, after, plain"),
-            ({"event": "after", "handler": ""}, "handler must be a non-empty string or a directive object"),
-            ({"event": "after", "handler": {}}, "handler must be a non-empty string or a directive object"),
-            ({"event": "after", "handler": "h", "intercept": 1}, "intercept must be true or false"),
-            ({"event": "after", "handler": "h", "async": "no"}, "async must be true or false"),
-            ({"event": "after", "handler": "h", "condition": ["a", 1]}, "condition must be a string or an array of strings"),
-            ({"event": "before", "handler": "h", "condition": "a"}, "event before takes no condition"),
-            ({"event": "after", "handler": "h", "on_error": "skip"}, "on_error must be stop or continue"),
-            ({"event": "after", "handler": "h", "timeout_ms": -1}, "timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)"),
-            ({"event": "after", "handler": "h", "timeout_ms": True}, "timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)"),
-            ({"event": "after", "handler": "h", "timeout_ms": 1.5}, "timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)"),
-        )
+class ListTests(unittest.TestCase):
+    def setUp(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.root = os.path.realpath(folder.name)
+
+    def write(self, name, doc):
+        path = os.path.join(self.root, name)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(doc if isinstance(doc, str) else json.dumps(doc))
+        return path
+
+    def test_check_entry_and_name(self):
+        hook_lists.check_entry({"event": "x", "handler": "h", "timeout_ms": 0, "condition": 5, "on_error": "nope"})
+        hook_lists.check_entry({"event": "x", "handler": {"$path": "h"}})
+        bad = (([], "must be a JSON object or null"),
+               ({"handler": "h"}, "event must be a non-empty string"),
+               ({"event": "", "handler": "h"}, "event must be a non-empty string"),
+               ({"event": "x", "handler": ""}, "handler must be a non-empty string or a directive object"),
+               ({"event": "x", "handler": {}}, "handler must be a non-empty string or a directive object"),
+               ({"event": "x", "handler": "h", "timeout_ms": -1}, "timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)"),
+               ({"event": "x", "handler": "h", "timeout_ms": True}, "timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)"))
         for entry, message in bad:
-            with self.subTest(message=message, entry=entry):
-                with self.assertRaises(hook_run.HooksBad) as caught:
-                    hook_run.validate_entry(entry, EVENTS)
-                self.assertEqual(str(caught.exception), message)
+            with self.subTest(entry=entry):
+                with self.assertRaises(hook_lists.HooksBad) as cm:
+                    hook_lists.check_entry(entry)
+                self.assertEqual(str(cm.exception), message)
+        for name in ("", "a/b", ".x", "description"):
+            with self.subTest(name=name), self.assertRaises(hook_lists.HooksBad):
+                hook_lists.check_name(name)
+
+    def test_load_layers(self):
+        a = self.write("a.json", {"description": "first", "x": {"event": "e", "handler": "hx"},
+                                  "y": {"event": "e", "handler": "hy"}})
+        b = self.write("b.json", {"x": {"event": "f", "handler": "../hx2"}, "y": None})
+        got = hook_lists.load([a, b, os.path.join(self.root, "missing.json")])
+        self.assertEqual(sorted(got), ["x"])
+        self.assertEqual(got["x"], {"event": "f", "handler": "../hx2", "from": b, "base": self.root})
+        self.assertEqual(hook_lists.read(os.path.join(self.root, "missing.json")), {})
+
+    def test_load_bad(self):
+        cases = ((self.write("n.json", "[1]"), "must be a JSON object"),
+                 (self.write("j.json", "{"), "cannot read"),
+                 (self.write("e.json", {"x": {"event": "e"}}), "hook x in "),
+                 (self.write("m.json", {"a/b": None}), "hook name 'a/b'"))
+        for path, word in cases:
+            with self.subTest(path=path):
+                with self.assertRaises(hook_lists.HooksBad) as cm:
+                    hook_lists.load([path])
+                self.assertIn(word, str(cm.exception))
+
+    def test_caller_check(self):
+        path = self.write("c.json", {"x": {"event": "e", "handler": "h", "every_ms": 0}})
+
+        def check(entry):
+            if "every_ms" in entry:
+                raise hook_lists.HooksBad("no every_ms here")
+        with self.assertRaises(hook_lists.HooksBad) as cm:
+            hook_lists.load([path], check)
+        self.assertEqual(str(cm.exception), "hook x in %s: no every_ms here" % path)
 
 
 class FireTests(unittest.TestCase):
@@ -55,23 +84,19 @@ class FireTests(unittest.TestCase):
         os.mkdir(self.stack)
         self.log = os.path.join(self.root, "log")
         self.entries = {}
-        self.warned = []
 
     def hook(self, name, event, reply="", code=0, extra="", **keys):
-        """一個 sh handler：把名字記進 log、印 reply、退 code；登記成一格。"""
+        """A sh handler: logs its name, prints reply, exits code; listed as one entry."""
         path = os.path.join(self.root, "handler_" + name)
         with open(path + ".reply", "w", encoding="utf-8") as f:
-            f.write(reply if isinstance(reply, str) else json.dumps(reply))
+            f.write(reply)
         with open(path, "w", encoding="utf-8") as f:
             f.write("#!/bin/sh\ncat > '%s.stdin'\necho %s >> '%s'\n%s\ncat '%s.reply'\nexit %d\n"
                     % (path, name, self.log, extra, path, code))
         os.chmod(path, 0o755)
         entry = dict({"event": event, "handler": "handler_" + name}, **keys)
-        hook_run.validate_entry(entry, EVENTS)
-        self.entries[name] = hook_run.complete(entry, os.path.join(self.root, "hooks.json"))
-
-    def fire(self, event, data, **more):
-        return hook_run.fire(event, data, self.entries, self.stack, EVENTS, warn=self.warned.append, **more)
+        hook_lists.check_entry(entry)
+        self.entries[name] = dict(entry, **{"from": os.path.join(self.root, "hookeds.json"), "base": self.root})
 
     def ran(self):
         try:
@@ -80,223 +105,108 @@ class FireTests(unittest.TestCase):
         except FileNotFoundError:
             return []
 
-    def test_reply_changes_only_listed_keys(self):
-        self.hook("a_quiet", "after")
-        data = {"body": "old", "kind": "x"}
-        result = self.fire("after", data)
-        self.assertEqual(result, {"data": data, "changed": [], "blocked": False, "hook": None, "text": ""})
-        self.assertIsNot(result["data"], data)
-
-        self.hook("b_edit", "after", reply={"body": "new", "kind": "hacked", "other": 1})
-        result = self.fire("after", data)
-        self.assertEqual(result["data"], {"body": "new", "kind": "x"})
-        self.assertEqual(result["changed"], ["body"])
-        self.assertEqual(data, {"body": "old", "kind": "x"})
-
-    def test_check_rejecting_a_value_is_a_hook_failure(self):
-        self.hook("edit", "after", reply={"body": 5})
-        seen = []
-
-        def check(event, key, value):
-            seen.append((event, key, value))
-            if not isinstance(value, str):
-                raise ValueError("body in stdout must be a string")
-
-        with self.assertRaises(hook_run.HookFailed) as caught:
-            self.fire("after", {"body": "old"}, check=check)
-        self.assertEqual(str(caught.exception), "hook edit (event after) failed: body in stdout must be a string")
-        self.assertEqual(seen, [("after", "body", 5)])
-
-    def test_exit_10_blocks_only_on_block_events(self):
-        self.hook("a_block", "before", reply="not json", code=10)
-        self.hook("b_later", "before", reply={"body": "new"})
-        result = self.fire("before", {"body": "old"})
-        self.assertEqual(result, {"data": {"body": "old"}, "changed": [], "blocked": True, "hook": "a_block",
-                                  "text": "not json"})
-        self.assertEqual(self.ran(), ["a_block"])
-
-        self.hook("c_after", "after", reply={"body": "new"}, code=10)
-        result = self.fire("after", {"body": "old"})
-        self.assertFalse(result["blocked"])
-        self.assertIsNone(result["hook"])
-        self.assertEqual(result["data"], {"body": "new"})
-
-    def test_other_exit_codes_follow_on_error(self):
-        self.hook("a_fail", "after", reply={"body": "new"}, code=3, on_error="continue")
-        self.hook("b_edit", "after", reply={"note": "kept"})
-        result = self.fire("after", {"body": "old"})
-        self.assertEqual(self.warned, ["hook a_fail (event after) failed: exited 3; going on without it (on_error: continue)"])
-        self.assertEqual(result["data"], {"body": "old", "note": "kept"})
-        self.assertEqual(result["changed"], ["note"])
-
-        self.entries["a_fail"]["on_error"] = "stop"
-        os.remove(self.log)
-        with self.assertRaises(hook_run.HookFailed) as caught:
-            self.fire("after", {"body": "old"})
-        self.assertEqual(str(caught.exception), "hook a_fail (event after) failed: exited 3")
-        self.assertEqual(self.ran(), ["a_fail"])
-
-    def test_zero_timeout_waits_for_handler(self):
-        self.hook("slow", "after", reply={"body": "done"}, extra="sleep 1", timeout_ms=0)
-        result = self.fire("after", {"body": "old"})
-        self.assertEqual(result["data"]["body"], "done")
-        self.assertEqual(self.warned, [])
-
-    def test_timeout_kills_the_group_and_follows_on_error(self):
-        child = os.path.join(self.root, "child.pid")
-        self.hook("slow", "after", extra="sleep 30 &\necho $! > '%s'\nsleep 30" % child, timeout_ms=300, on_error="continue")
-        started = time.monotonic()
-        result = self.fire("after", {"body": "old"})
-        self.assertLess(time.monotonic() - started, 10)
-        self.assertEqual(self.warned, ["hook slow (event after) failed: did not finish in 300 ms (its process group was killed)"
-                                       "; going on without it (on_error: continue)"])
-        self.assertEqual(result["changed"], [])
-        with open(child, encoding="utf-8") as f:
-            pid = int(f.read())
-        with self.assertRaises(ProcessLookupError):
-            os.kill(pid, 0)
-
-        self.entries["slow"]["on_error"] = "stop"
-        with self.assertRaises(hook_run.HookFailed) as caught:
-            self.fire("after", {"body": "old"})
-        self.assertEqual(str(caught.exception),
-                         "hook slow (event after) failed: did not finish in 300 ms (its process group was killed)")
-
-    def test_async_and_intercept_false_ignore_the_reply(self):
-        done = os.path.join(self.root, "done")
-        self.hook("bg", "before", reply={"body": "new"}, code=10, extra="sleep 1\ntouch '%s'" % done, **{"async": True})
-        started = time.monotonic()
-        result = self.fire("before", {"body": "old"})
-        self.assertLess(time.monotonic() - started, 0.9)
-        self.assertFalse(os.path.exists(done))
-        self.assertEqual(result, {"data": {"body": "old"}, "changed": [], "blocked": False, "hook": None, "text": ""})
-        deadline = time.monotonic() + 10
-        while not os.path.exists(done) and time.monotonic() < deadline:
-            time.sleep(0.05)
-        self.assertTrue(os.path.exists(done))
-        time.sleep(0.2)                          # 讓它印完退掉，暫存夾才清得掉
-
-        del self.entries["bg"]
-        self.hook("deaf", "before", reply={"body": "new"}, code=10, intercept=False)
-        self.hook("z_next", "before")
-        result = self.fire("before", {"body": "old"})
-        self.assertEqual(result, {"data": {"body": "old"}, "changed": [], "blocked": False, "hook": None, "text": ""})
-        self.assertEqual(self.ran(), ["bg", "deaf", "z_next"])
-
-    def test_hooks_run_in_name_order_and_see_earlier_changes(self):
-        self.hook("b_second", "after", reply={"note": "two"})
-        self.hook("a_first", "after", reply={"body": "one"})
-        self.hook("c_third", "after")
-        result = self.fire("after", {"body": "old"})
-        self.assertEqual(self.ran(), ["a_first", "b_second", "c_third"])
-        self.assertEqual(result["data"], {"body": "one", "note": "two"})
-        self.assertEqual(result["changed"], ["body", "note"])
-        seen = {}
-        for name in ("a_first", "b_second", "c_third"):
+    def test_name_order_same_data_codes_and_stdout(self):
+        self.hook("b", "e", reply='{"k": "changed"}')
+        self.hook("a", "e", reply="hi\n", code=10)
+        self.hook("c", "e", code=3)
+        self.hook("z", "other")
+        got = hook_run.fire("e", {"k": "v"}, self.entries, self.stack)
+        self.assertEqual(self.ran(), ["a", "b", "c"])
+        self.assertEqual([(r["hook"], r["code"], r["stdout"], r["error"]) for r in got],
+                         [("a", 10, "hi\n", None), ("b", 0, '{"k": "changed"}', None), ("c", 3, "", None)])
+        for name in ("a", "b", "c"):
             with open(os.path.join(self.root, "handler_%s.stdin" % name), encoding="utf-8") as f:
-                seen[name] = json.load(f)
-        self.assertEqual(seen["a_first"]["body"], "old")
-        self.assertNotIn("note", seen["a_first"])
-        self.assertEqual(seen["b_second"]["body"], "one")
-        self.assertEqual((seen["c_third"]["body"], seen["c_third"]["note"]), ("one", "two"))
+                self.assertEqual(json.load(f)["k"], "v")       # nobody's stdout changes what the next one gets
 
-    def test_condition_and_only(self):
-        self.hook("any", "plain")
-        self.hook("one", "plain", condition="x")
-        self.hook("some", "plain", condition=["y", "z"])
-        self.hook("elsewhere", "after")
-        self.fire("plain", {"kind": "x"})
-        self.assertEqual(self.ran(), ["any", "one"])
-        os.remove(self.log)
-        self.fire("plain", {"kind": "z"})
-        self.assertEqual(self.ran(), ["any", "some"])
-        os.remove(self.log)
-        self.fire("plain", {})
-        self.assertEqual(self.ran(), ["any"])
-        os.remove(self.log)
-        self.fire("plain", {"kind": "x"}, only=["one", "some"])
-        self.assertEqual(self.ran(), ["one"])
-        with self.assertRaises(ValueError) as caught:
-            self.fire("nope", {})
-        self.assertEqual(str(caught.exception), "unknown hook event nope")
+    def test_stop_on_nonzero(self):
+        self.hook("a", "e")
+        self.hook("b", "e", code=10)
+        self.hook("c", "e")
+        got = hook_run.fire("e", {}, self.entries, self.stack, stop_on_nonzero=True)
+        self.assertEqual([r["hook"] for r in got], ["a", "b"])
+        self.assertEqual(self.ran(), ["a", "b"])
+
+    def test_nobody_listens(self):
+        self.assertEqual(hook_run.fire("e", {}, {}, self.stack), [])
+        self.assertFalse(os.path.exists(os.path.join(self.stack, hook_run.CELLS)))
 
     def test_event_json(self):
         self.hook("look", "after")
-        self.fire("after", {"body": "ö", "kind": "x", "event": "fake", "hook": "fake", "stack": "fake"})
-        expected = {"event": "after", "hook": "look", "stack": self.stack, "body": "ö", "kind": "x"}
-        cell = os.path.join(self.stack, "hooks", "look")
+        hook_run.fire("after", {"body": "ö", "event": "fake", "hook": "fake", "stack": "fake"}, self.entries, self.stack)
+        expected = {"event": "after", "hook": "look", "stack": self.stack, "body": "ö"}
+        cell = os.path.join(self.stack, "hookeds", "look")
         with open(os.path.join(cell, "event.json"), encoding="utf-8") as f:
             text = f.read()
         self.assertEqual(json.loads(text), expected)
         self.assertTrue(text.endswith("\n") and "ö" in text, text)
         self.assertEqual(os.listdir(cell), ["event.json"])
-        with open(os.path.join(self.root, "handler_look.stdin"), encoding="utf-8") as f:
-            self.assertEqual(json.load(f), expected)
+
+    def test_zero_timeout_waits(self):
+        self.hook("slow", "e", extra="sleep 0.3", timeout_ms=0)
+        self.assertEqual(hook_run.fire("e", {}, self.entries, self.stack)[0]["code"], 0)
+
+    def test_timeout_kills_the_group(self):
+        marker = os.path.join(self.root, "child_alive")
+        self.hook("slow", "e", extra="(sleep 3; touch '%s') & sleep 5" % marker, timeout_ms=300)
+        start = time.monotonic()
+        got = hook_run.fire("e", {}, self.entries, self.stack)
+        self.assertLess(time.monotonic() - start, 3)
+        self.assertEqual(got[0]["code"], None)
+        self.assertEqual(got[0]["error"], "did not finish in 300 ms (its process group was killed)")
+        time.sleep(3.3)
+        self.assertFalse(os.path.exists(marker))
+
+    def test_cannot_start(self):
+        self.entries["gone"] = {"event": "e", "handler": "nowhere", "from": os.path.join(self.root, "h.json"), "base": self.root}
+        with mock.patch.dict(os.environ, {"PATH": os.path.join(self.root, "empty")}):
+            got = hook_run.fire("e", {}, self.entries, self.stack)
+        self.assertIsNone(got[0]["code"])
+        self.assertTrue(got[0]["error"].startswith("cannot start: "), got[0]["error"])
 
 
 @unittest.skipUnless(__import__("shutil").which("aos-directive"), "aos-directive not on PATH")
 class TargetAt(unittest.TestCase):
-    """11-13 線址二：handler 的指示詞照它在清單裡的位置 /hooks/<名>/handler 解，#./、#../ 從那裡算。"""
+    """A handler directive resolves from its place NAME/handler in its list: #./ and #../ count from there."""
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = os.path.realpath(self.tmp.name)
-        self.path = os.path.join(self.root, "hooks.json")
-        self.doc = {"handler_dir": "top/h", "hooks": {
-            "a": {"event": "before", "path": "near/h", "handler": {"$ref": "#./path"}},
-            "b": {"event": "before", "handler": {"$ref": "#../../handler_dir"}}}}
+        self.path = os.path.join(self.root, "hookeds.json")
+        self.doc = {"handler_dir": "top/h", "count": 5,
+                    "a": {"event": "before", "path": "near/h", "handler": {"$ref": "#./path"}},
+                    "b": {"event": "before", "handler": {"$ref": "#../handler_dir"}},
+                    "c": {"event": "before", "handler": {"$ref": "#./nowhere"}},
+                    "d": {"event": "before", "handler": {"$ref": "#/count"}}}
         with open(self.path, "w") as f:
             json.dump(self.doc, f)
 
     def entry(self, name):
-        return hook_run.complete(self.doc["hooks"][name], self.path)
+        return dict(self.doc[name], **{"from": self.path, "base": self.root})
 
-    def test_dot(self):
+    def test_dot_and_dotdot(self):
         self.assertEqual(hook_run.target(self.entry("a"), "a"), os.path.join(self.root, "near/h"))
-
-    def test_dotdot(self):
         self.assertEqual(hook_run.target(self.entry("b"), "b"), os.path.join(self.root, "top/h"))
 
-    def test_no_name_is_unchanged(self):
-        """沒給名字＝照舊包成 {"v": …}：#./path 從根算，根沒有 path＝解不開。"""
-        with self.assertRaises(OSError) as cm:
-            hook_run.target(self.entry("a"))
-        self.assertRegex(str(cm.exception), r"^cannot resolve handler directive: aos-directive exited \d+$")
-
-    def test_directive_error_line_is_swallowed(self):
-        """aos-directive 自己的錯誤行不照轉到 stderr（11-18 使用者「改回去」）；原因仍由 OSError 帶。"""
-        import tempfile
-        with tempfile.TemporaryFile() as tmp:
-            saved = os.dup(2)
-            os.dup2(tmp.fileno(), 2)
-            try:
-                with self.assertRaises(OSError):
-                    hook_run.target(self.entry("a"))
-            finally:
-                os.dup2(saved, 2)
-                os.close(saved)
-            tmp.seek(0)
-            self.assertEqual(tmp.read(), b"")
-
-    def test_reasons_come_from_directive_value(self):
-        """解不開的原因照共用的 directive_value 說（11-18 換成共用版）；解出來不是非空字串的那句是 hook_run 自己的。"""
-        self.doc["hooks"]["c"] = {"event": "before", "handler": {"$ref": "#./nowhere"}}
-        self.doc["count"] = 5
-        self.doc["hooks"]["d"] = {"event": "before", "handler": {"$ref": "#/count"}}
-        with open(self.path, "w") as f:
-            json.dump(self.doc, f)
+    def test_reasons(self):
         with self.assertRaises(OSError) as cm:
             hook_run.target(self.entry("c"), "c")
         self.assertRegex(str(cm.exception), r"^cannot resolve handler directive: aos-directive exited \d+$")
         with self.assertRaises(OSError) as cm:
             hook_run.target(self.entry("d"), "d")
         self.assertEqual(str(cm.exception), "handler directive did not resolve to a non-empty path")
-        empty = os.path.join(self.root, "empty-bin")
-        os.mkdir(empty)
-        with mock.patch.dict(os.environ, {"PATH": empty}), self.assertRaises(OSError) as cm:
-            hook_run.target(self.entry("a"), "a")
-        self.assertTrue(str(cm.exception).startswith(
-            "cannot resolve handler directive: aos-directive failed to start (must be on PATH): "), cm.exception)
+
+    def test_directive_error_line_is_swallowed(self):
+        with tempfile.TemporaryFile() as tmp:
+            saved = os.dup(2)
+            os.dup2(tmp.fileno(), 2)
+            try:
+                with self.assertRaises(OSError):
+                    hook_run.target(self.entry("c"), "c")
+            finally:
+                os.dup2(saved, 2)
+                os.close(saved)
+            tmp.seek(0)
+            self.assertEqual(tmp.read(), b"")
 
 
 if __name__ == "__main__":

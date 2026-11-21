@@ -32,7 +32,7 @@ class KernelGateTest(unittest.TestCase):
             ["mktemp", "-d", str(Path(scratch) / "kernel-gate-test.XXXXXX")], text=True).strip())
         self.addCleanup(shutil.rmtree, self.root)
         self.stack = self.root / "kay"
-        self.cell = self.stack / "hooks" / "kernel_gate"
+        self.cell = self.stack / "hookeds" / "kernel_gate"
         self.requests = self.cell / "requests"
         self.daemon = self.root / "daemon"
         self.ctl = self.daemon / "procs_requests"
@@ -91,13 +91,20 @@ class KernelGateTest(unittest.TestCase):
         out = self.ok(op="on")
         self.assertIn("Requests go to this mailbox: %s" % self.requests, out)
         self.assertIn("the ctl mailbox of your daemon", out)
+        self.assertIn("its hooks in %s" % (self.cell / "kernel_hookeds.json"), out)
         cfg = json.loads((self.cell / "kernel.json").read_text())
-        self.assertEqual(cfg, {"hooks": {"hold": {"event": "after_verdict", "condition": "pass",
-                                                  "handler": str(GATE / "hold")}}})
+        self.assertEqual(cfg, {})                                    # since 11-21 the hooks are not in kernel.json
+        hooked = json.loads((self.cell / "kernel_hookeds.json").read_text())
+        self.assertEqual({k: v for k, v in hooked.items() if k != "description"},
+                         {"hold": {"event": "after_verdict", "condition": "pass", "handler": str(GATE / "hold")}})
+        interfaces = json.loads((self.cell / "interfaces.json").read_text())
+        self.assertEqual((interfaces["hookeds"], interfaces["kernel"]), ("kernel_hookeds.json", {}))
+        self.assertNotIn("hooks", interfaces)
         self.assertTrue((self.requests / "new").is_dir())
         hook = json.loads((self.root / "hooks.log").read_text().splitlines()[0])
         self.assertEqual(hook[:6], ["hook", "--target", "kay", "add", "--event", "on_clock"])
         self.assertEqual(json.loads(hook[hook.index("--path-json") + 1]), str(GATE / "tick"))
+        self.assertNotIn("--on-error", hook)
         (self.cell / "kernel.json").write_text(json.dumps(dict(cfg, allowed=["a"])))
         self.assertIn("kept as you left them", self.ok(op="on"))
         self.assertEqual(json.loads((self.cell / "kernel.json").read_text())["allowed"], ["a"])
@@ -227,11 +234,13 @@ class KernelGateTest(unittest.TestCase):
                 self.assertEqual(result.stdout, expected)
 
     def test_09_by_hand_without_the_tool(self):
-        # 知識庫 aos/kernel.json#/write_your_own 第 3 種：只用 self_hook 掛一支 run、手寫 kernel.json 與一支 hook、表態＝寫一個檔。
+        # 知識庫 aos/kernel.json#/write_your_own 第 3 種：只用 self_hook 掛一支 run、手寫 kernel.json、interfaces.json＋kernel_hookeds.json 與一支 hook、表態＝寫一個檔。
         gate = self.root / "ws" / "gate"
         gate.mkdir()
-        (gate / "kernel.json").write_text(json.dumps(
-            {"hooks": {"ask": {"event": "after_verdict", "condition": "pass", "handler": "ask"}}}))
+        (gate / "kernel.json").write_text("{}")
+        (gate / "interfaces.json").write_text(json.dumps({"hookeds": "kernel_hookeds.json", "kernel": {}}))
+        (gate / "kernel_hookeds.json").write_text(json.dumps(
+            {"ask": {"event": "after_verdict", "condition": "pass", "handler": "ask"}}))
         (gate / "run").write_text('#!/bin/sh\nexec aos-exec --stack "$AOS_STACK" "$AOS_HOME/lib/tools/aos/kernel" "$(dirname "$0")/kernel.json"\n')
         (gate / "ask").write_text(
             "#!%s\n"
@@ -244,7 +253,7 @@ class KernelGateTest(unittest.TestCase):
             "print(json.dumps({'verdict': 'hold'}))\n" % sys.executable)
         for name in ("run", "ask"):
             (gate / name).chmod(0o755)
-        cell = self.stack / "hooks" / "gate"
+        cell = self.stack / "hookeds" / "gate"
         cell.mkdir(parents=True)
         env = dict(self.env, AOS_STACK=str(cell), AOS_HOME=str(PROTO8))
 

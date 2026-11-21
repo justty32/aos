@@ -5,7 +5,7 @@
 - 工具：交給 aos-tools --file 表 ls -l（agent 跑起來拿工具清單的同一支，$override 照疊、指示詞照解）；它標 broken 的那支＝problem
   （執行時那支會被略過、只在 stderr 留一行，腦看不到它）。
 - 程式：入口（aos-agent.entry）的 argv；入口是 aos-loop／aos-fsm 時跟著讀它的設定檔：loop 的 exec、on_start、on_stop、on_before_run、on_after_run，exec 指到的
-  狀態表每格的 exec；hooks 檔（aos-agent.hooks）每格的 handler。相對路徑照執行時的基準：單子（{"argv": …}）從它的 cwd 欄、沒寫從寫它的檔的
+  狀態表每格的 exec；被勾清單（interfaces.json 最外層 hookeds 的相對檔，11-21）每格的 handler。相對路徑照執行時的基準：單子（{"argv": …}）從它的 cwd 欄、沒寫從寫它的檔的
   資料夾；字串目標、[目標, 參數…] 的目標與 handler 從寫它的檔的資料夾；aos-exec 的「補找 .json」「檔#/指標」照認。
   argv 是任意命令列，只查分得出是檔的位置：argv[0]、直譯器（python3、bash…）後第一個不是旗標的字（-m、-c、-e 之後不查）、aos-loop／aos-fsm 的
   設定檔，以及任何位置寫成 {"$env": "AOS_HOME", "$path": …} 的（std 的檔不會是輸出）。
@@ -190,21 +190,26 @@ class Refs:
                                         os.path.dirname(file), file, ''))
 
     def hooks(self, agent):
-        name = agent.get('hooks')
-        if not isinstance(name, str) or not name or not (self.defdir / name).is_file():
-            return
-        file = str(self.defdir / name)
         try:
-            with open(file, encoding='utf-8') as f:
-                table = json.load(f).get('hooks')
+            with open(self.defdir / 'interfaces.json', encoding='utf-8') as f:
+                value = json.load(f).get('hookeds')
         except (OSError, ValueError, UnicodeError, AttributeError):
             return
-        if not isinstance(table, dict):
-            return
-        for hook in sorted(table):
-            e = table[hook]
-            if isinstance(e, dict) and e.get('handler') is not None:
-                self.need(e['handler'], os.path.dirname(file), file, '/hooks/%s/handler' % esc(hook), 'handler')
+        for name in (value if isinstance(value, list) else [value]):
+            if not isinstance(name, str) or not name or os.path.isabs(name) or not (self.defdir / name).is_file():
+                continue                         # 指示詞與定義外的檔不在這裡查
+            file = str(self.defdir / name)
+            try:
+                with open(file, encoding='utf-8') as f:
+                    table = json.load(f)
+            except (OSError, ValueError, UnicodeError):
+                continue
+            if not isinstance(table, dict):
+                continue
+            for hook in sorted(table):
+                e = table[hook]
+                if isinstance(e, dict) and e.get('handler') is not None:
+                    self.need(e['handler'], os.path.dirname(file), file, '/%s/handler' % esc(hook), 'handler')
 
     def tools(self, agent):
         name = agent.get('tools')

@@ -16,7 +16,7 @@
   "description": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per rule, run by py/tests/test_ref_path.py."
  },
  "test_agent_hooks.py": {
-  "description": "Test aos.agentlib.agent_hooks, the agent's hook handle (cut 2a): fire like hooks.fire, the two layers, take_letter's three steps, guard_tool's defaul…"
+  "description": "Test aos.agentlib.agent_hooks, the agent's hook remote: fire like hooks.fire (the agent family's rules), the two layers, take_letter's three steps, g…"
  },
  "test_agent_spec.py": {
   "description": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad before any w…"
@@ -139,25 +139,25 @@
   "description": "cut 3 for real: an agent.py with @fn.tool add and @fn.hook no_secrets compiled with the installed aos, checked by agent_def check, mounted in a copy …"
  },
  "test_fn_spec_more.py": {
-  "description": "Test cut 3 of the compile library beyond what a function may use: @fn.hook into hooks.json (events, condition, fn.block, same names), renames and cla…"
+  "description": "Test cut 3 of the compile library beyond what a function may use: @fn.hook into hookeds.json (events, condition, fn.block, same names), renames and c…"
  },
  "test_hook_flags.py": {
-  "description": "Test aos.hook_flags.sync: the before_run / after_run flag files follow the hooks in effect, only for declared loop points, and are written whole (no …"
+  "description": "Test that before_run / after_run are wired at compile time (no flag files any more, the user 11-21 \"編譯時決定\"): an agent.py or kernel.py writes on_befor…"
  },
  "test_hook_point.py": {
-  "description": "Test aos.hook_point: the shipped hook_points.json files read and check fine, every check rule rejects a bad example, merging, engine_table and for_de…"
+  "description": "Test aos.hook_point's declarations: every shipped hook point declaration reads (an object of ids, each with an input schema), the few rules, and that…"
  },
  "test_hook_point_open.py": {
-  "description": "Test aos.hook_point.open and its handle: where points and hooks come from, lists read again on every fire, the declared change types checked per hook…"
+  "description": "Test where aos.hook_point finds a definition's hook files: \"hooks\" and \"hookeds\" at the top of interfaces.json (a file name, a directive, or an array…"
  },
  "test_hook_points_match.py": {
-  "description": "Consistency test: the hook_points.json declarations say the same as the event tables the programs use today and as the hand copies (docs, knowledge, …"
+  "description": "Consistency test: the hook point declarations (only for reading) say the same as the rules the firing programs keep in code (the agent family, the ke…"
  },
  "test_hook_run.py": {
-  "description": "Verify the shared hook engine: entry validation, running handlers through aos-exec, replies, blocking, on_error, timeouts, ordering and conditions."
+  "description": "Verify the minimal hook engine: reading hookeds lists (aos.hook_lists), running handlers through aos-exec in name order with the same data, timeouts,…"
  },
  "test_hooks_engine.py": {
-  "description": "驗 py/aos/agentlib/hooks.py 用的是共用引擎 py/aos/hook_run.py（11-13 kernel-framework 批 1b）：類別同一個、跑與解回話沒有第二份、只把 py/ 放上路徑也找得到引擎、agent 自己的檢查（on_clock 的鍵、content…"
+  "description": "驗 py/aos/agentlib/hooks.py：agent 一家自己的 hook 規矩（11-21 第四層：引擎只叫 handler，攔、改、condition、失敗怎麼算在這裡）——能攔的點退 10、能改的鍵與型別、condition、能攔的點失敗＝停、其餘失敗＝warning、照名字串改…"
  },
  "test_index_extra_keys.py": {
   "description": "index_view 對 index 一項裡多出來的鍵（timeout_ms、自訂鍵…）照常印「名<TAB>description」、不報錯：index 的格都只是參考（使用者 11-12 晚）。"

@@ -1,4 +1,5 @@
-"""Test the hooks of agent-fsm (py/aos/agentlib/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added."""
+"""Test the hooks of agent-fsm (py/aos/agentlib/hooks.py and the four cells): six events, changes, blocking, failures, timeout, match, layering, tool_added.
+11-21 top-1121-hooknew: no intercept / async / on_error; before_queue / before_tool failing = HookFailed (the cell stops), the other points = one warning line."""
 import json
 import os
 from pathlib import Path
@@ -32,7 +33,7 @@ class Hooks(unittest.TestCase):
         for d in (self.defn, self.stack, self.bin):
             d.mkdir()
         (self.defn / "interfaces.json").write_text(json.dumps(
-            {"aos-agent": {"tools": "tools.json", "llm": "llm.json", "hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
+            {"aos-agent": {"tools": "tools.json", "llm": "llm.json"}, "hookeds": "hookeds.json"}))
         (self.defn / "tools.json").write_text("{}")
         (self.defn / "llm.json").write_text('{"model":"local"}')
         self.log = self.root / "log.jsonl"
@@ -72,7 +73,7 @@ sys.exit(code)
         return path.name
 
     def declare(self, table, where=None):
-        (where or self.defn).joinpath("hooks.json").write_text(json.dumps({"hooks": table}))
+        (where or self.defn).joinpath("hookeds.json").write_text(json.dumps(dict({"description": "test"}, **table)))
 
     def events(self):
         if not self.log.exists():
@@ -107,8 +108,7 @@ sys.exit(code)
 
     # ---- queue
     def test_queue_before_changes_content_and_queue_after_sees_it(self):
-        self.declare({"a_up": {"event": "before_queue",          # change 預設開（11-10 深夜）
-
+        self.declare({"a_up": {"event": "before_queue",
                                "handler": self.hook("up", 'print(json.dumps({"content": ev["content"].upper()}))')},
                       "b_after": {"event": "after_queue", "handler": self.hook("after")}})
         name = self.letter("hello")
@@ -119,10 +119,10 @@ sys.exit(code)
         self.assertEqual((before["event"], before["hook"], before["content"]), ("before_queue", "a_up", "hello"))
         self.assertEqual(before["stack"], str(self.stack))
         self.assertEqual((after["event"], after["content"], after["letter"]), ("after_queue", "HELLO", before["letter"]))
-        self.assertTrue((self.stack / "hooks" / "a_up" / "event.json").is_file())
+        self.assertTrue((self.stack / "hookeds" / "a_up" / "event.json").is_file())
 
     def test_queue_before_drops_letter(self):
-        self.declare({"drop": {"event": "before_queue", "intercept": True, "handler": self.hook("drop", "sys.exit(10)")},
+        self.declare({"drop": {"event": "before_queue", "handler": self.hook("drop", "sys.exit(10)")},
                       "z": {"event": "after_queue", "handler": self.hook("z")}})
         name = self.letter("spam")
         self.run_cell("idle", code=10)
@@ -133,14 +133,16 @@ sys.exit(code)
         self.assertIn("dropped by hook drop", (self.stack / "mailbox_warning.txt").read_text())
         self.assertEqual([e["event"] for e in self.events()], ["before_queue"])
 
-    def test_without_change_stdout_and_10_do_nothing(self):
-        self.declare({"n": {"event": "before_queue", "intercept": False, "handler": self.hook("n", 'print(json.dumps({"content": "X"})); sys.exit(10)')}})
+    def test_exit_10_on_a_point_that_cannot_block_does_nothing(self):
+        self.declare({"n": {"event": "after_queue", "handler": self.hook("n", 'print(json.dumps({"content": "X"})); sys.exit(10)')}})
         name = self.letter("keep")
-        self.run_cell("idle")
+        r = self.run_cell("idle")
         self.assertEqual(self.history(), [{"role": "user", "content": "keep", "aos": {"letter": name}}])
+        self.assertEqual(self.letters()["pending"], [name])
+        self.assertNotIn("warning", r.stderr)
 
-    # ---- on_fail、逾時、wait false
-    def test_on_fail_stop_keeps_letter_in_cur(self):
+    # ---- 失敗、逾時
+    def test_before_queue_failure_stops_keeps_letter_in_cur(self):
         self.declare({"bad": {"event": "before_queue", "handler": self.hook("bad", "sys.exit(3)")}})
         name = self.letter("again")
         r = self.run_cell("idle", code=1)
@@ -153,41 +155,42 @@ sys.exit(code)
         self.assertEqual(self.history(), [{"role": "user", "content": "again", "aos": {"letter": name}}])
         self.assertEqual(self.letters(), {"pending": [name], "dropped": []})
 
-    def test_on_fail_continue_warns_and_goes_on(self):
-        self.declare({"bad": {"event": "before_queue", "on_error": "continue", "intercept": True,
-                              "handler": self.hook("bad", 'print("not json")')}})
+    def test_before_queue_bad_stdout_stops(self):
+        self.declare({"bad": {"event": "before_queue", "handler": self.hook("bad", 'print("not json")')}})
+        self.letter("go")
+        r = self.run_cell("idle", code=1)
+        self.assertIn("agent-fsm: error: HookFailed hook bad (event before_queue) failed: stdout is not JSON", r.stderr)
+        self.assertEqual(self.history(), [])
+
+    def test_failure_on_a_point_that_cannot_block_warns_and_goes_on(self):
+        self.declare({"a_bad": {"event": "after_queue", "handler": self.hook("bad", "sys.exit(3)")},
+                      "b_next": {"event": "after_queue", "handler": self.hook("next")}})
         name = self.letter("go")
         r = self.run_cell("idle")
-        self.assertIn("agent-fsm: warning: hook bad (event before_queue) failed: stdout is not JSON", r.stderr)
+        self.assertIn("agent-fsm: warning: hook a_bad (event after_queue) failed: exited 3; going on without it", r.stderr)
         self.assertEqual(self.history(), [{"role": "user", "content": "go", "aos": {"letter": name}}])
+        self.assertEqual([e["hook"] for e in self.events()], ["a_bad", "b_next"])
 
     def test_timeout_kills_and_fails(self):
-        self.declare({"slow": {"event": "after_queue", "timeout_ms": 300, "handler": self.hook("slow", "time.sleep(30)")}})
+        self.declare({"slow": {"event": "before_queue", "timeout_ms": 300, "handler": self.hook("slow", "time.sleep(30)")}})
         self.letter("t")
         started = time.monotonic()
         r = self.run_cell("idle", code=1)
         self.assertLess(time.monotonic() - started, 10)
-        self.assertIn("HookFailed hook slow (event after_queue) failed: did not finish in 300 ms", r.stderr)
+        self.assertIn("HookFailed hook slow (event before_queue) failed: did not finish in 300 ms", r.stderr)
 
-    def test_no_wait_does_not_block(self):
-        self.declare({"bg": {"event": "after_queue", "async": True,
-                             "handler": self.hook("bg", 'time.sleep(1.5); open(%r, "w").write("x")' % str(self.root / "late"))}})
-        self.letter("w")
+    def test_timeout_on_after_queue_is_a_warning(self):
+        self.declare({"slow": {"event": "after_queue", "timeout_ms": 300, "handler": self.hook("slow", "time.sleep(30)")}})
+        name = self.letter("t")
         started = time.monotonic()
-        with open(self.root / "err.txt", "w") as err:              # stderr 是透出的：管子會被 hook 拿著，改接檔
-            p = subprocess.run([sys.executable, str(CELLS / "idle.py")], env=self.env, stdout=subprocess.DEVNULL,
-                               stderr=err, timeout=20)
-        self.assertEqual(p.returncode, 0)
-        self.assertLess(time.monotonic() - started, 1.4)
-        self.assertFalse((self.root / "late").exists())
-        deadline = time.monotonic() + 10
-        while not (self.root / "late").exists() and time.monotonic() < deadline:
-            time.sleep(0.1)
-        self.assertTrue((self.root / "late").exists())
+        r = self.run_cell("idle")
+        self.assertLess(time.monotonic() - started, 10)
+        self.assertIn("agent-fsm: warning: hook slow (event after_queue) failed: did not finish in 300 ms", r.stderr)
+        self.assertEqual(self.history(), [{"role": "user", "content": "t", "aos": {"letter": name}}])
 
     # ---- tool
     def test_tool_before_changes_arguments(self):
-        self.declare({"args": {"event": "before_tool", "intercept": True, "condition": "echo",
+        self.declare({"args": {"event": "before_tool", "condition": "echo",
                                "handler": self.hook("args", 'print(json.dumps({"arguments": {"text": "rain"}}))')},
                       "after": {"event": "after_tool", "handler": self.hook("after")}})
         self.act_history()
@@ -201,20 +204,20 @@ sys.exit(code)
                          ("after_tool", {"text": "rain"}, 0, False))
 
     def test_tool_before_blocks(self):
-        self.declare({"no": {"event": "before_tool", "intercept": True, "handler": self.hook("no", 'print("not allowed"); sys.exit(10)')},
+        self.declare({"no": {"event": "before_tool", "handler": self.hook("no", 'print("not allowed"); sys.exit(10)')},
                       "after": {"event": "after_tool", "handler": self.hook("after")}})
         self.act_history()
         self.run_cell("act")
         self.assertEqual(self.history()[-1]["content"], "not allowed\n")
         self.assertEqual([e["event"] for e in self.events()], ["before_tool"])   # 攔下的不觸發 after_tool
         self.assertFalse((self.stack / "observed.jsonl").exists())
-        self.declare({"no": {"event": "before_tool", "intercept": True, "handler": self.hook("no", "sys.exit(10)")}})
+        self.declare({"no": {"event": "before_tool", "handler": self.hook("no", "sys.exit(10)")}})
         self.act_history()
         self.run_cell("act")
         self.assertEqual(self.history()[-1]["content"], "[aos] hook: tool echo blocked by hook no.")
 
     def test_tool_after_changes_content_and_match_filters(self):
-        self.declare({"a": {"event": "after_tool", "intercept": True, "condition": ["echo"],
+        self.declare({"a": {"event": "after_tool", "condition": ["echo"],
                             "handler": self.hook("a", 'print(json.dumps({"content": "[" + ev["content"] + "]"}))')},
                       "b": {"event": "after_tool", "condition": "other", "handler": self.hook("b")}})
         self.act_history()
@@ -222,11 +225,18 @@ sys.exit(code)
         self.assertEqual(self.history()[-1]["content"], '[{"text":"snow"}]')
         self.assertEqual([e["hook"] for e in self.events()], ["a"])
 
-    def test_bad_content_type_is_a_failure(self):
-        self.declare({"a": {"event": "after_tool", "intercept": True, "handler": self.hook("a", 'print(json.dumps({"content": 5}))')}})
+    def test_bad_content_type_on_after_tool_is_a_warning(self):
+        self.declare({"a": {"event": "after_tool", "handler": self.hook("a", 'print(json.dumps({"content": 5}))')}})
+        self.act_history()
+        r = self.run_cell("act")
+        self.assertIn("agent-fsm: warning: hook a (event after_tool) failed: content in stdout must be a string", r.stderr)
+        self.assertEqual(self.history()[-1]["content"], '{"text":"snow"}')   # the tool's own result, unchanged
+
+    def test_before_tool_failure_stops(self):
+        self.declare({"a": {"event": "before_tool", "handler": self.hook("a", "sys.exit(3)")}})
         self.act_history()
         r = self.run_cell("act", code=1)
-        self.assertIn("HookFailed hook a (event after_tool) failed: content in stdout must be a string", r.stderr)
+        self.assertIn("agent-fsm: error: HookFailed hook a (event before_tool) failed: exited 3", r.stderr)
         self.assertEqual(len(self.history()), 2)                             # 沒接進 history，重跑再跑一次
 
     # ---- brain_failed、tool_added
@@ -305,13 +315,13 @@ sys.exit(code)
         self.declare({"a": {"event": "after_queue", "handler": self.hook("mine", folder=self.stack)}, "b": None}, self.stack)
         loaded = hooks.load(str(self.defn), str(self.stack))
         self.assertEqual(sorted(loaded), ["a"])
-        self.assertEqual((loaded["a"]["from"], loaded["a"]["base"], loaded["a"]["async"], loaded["a"]["timeout_ms"]),
-                         (str(self.stack / "hooks.json"), str(self.stack), False, 60000))
+        self.assertEqual((loaded["a"]["from"], loaded["a"]["base"]), (str(self.stack / "hookeds.json"), str(self.stack)))
+        self.assertNotIn("timeout_ms", loaded["a"])                         # the engine's default (60000) is not written in
         self.assertEqual(hooks.nulled(str(self.defn), str(self.stack)), ["b"])
         self.letter("x")
         self.run_cell("idle")
         self.assertEqual([e["hook"] for e in self.events()], ["a"])
-        self.assertTrue((self.stack / "hooks" / "a" / "event.json").is_file())
+        self.assertTrue((self.stack / "hookeds" / "a" / "event.json").is_file())
 
     def test_directive_exec(self):
         self.hook("viaenv")
@@ -321,21 +331,24 @@ sys.exit(code)
         self.assertEqual([e["hook"] for e in self.events()], ["d"])
 
     def test_bad_list_is_hooks_bad(self):
-        (self.defn / "hooks.json").write_text('{"hooks": {"a": {"event": "after_queue"}}}')
+        (self.defn / "hookeds.json").write_text('{"a": {"event": "after_queue"}}')
         self.letter("x")
         r = self.run_cell("idle", code=1)
         self.assertIn("agent-fsm: error: HooksBad hook a in", r.stderr)
-        for entry in ({"event": "before_queue", "handler": "x", "condition": "m"},
-                      {"event": "before_tool", "handler": "x", "on_error": "maybe"},
+        for entry in ({"event": "before_tool"},
+                      {"handler": "x"},
                       {"event": "before_tool", "handler": "x", "timeout_ms": -1},
-                      {"event": "nope", "handler": "x"}):
-            with self.assertRaises(hooks.HooksBad):
-                hooks.validate_entry(entry)
-        hooks.validate_entry({"event": "before_tool", "handler": "x", "intercept": True, "condition": ["a"], "whatever": 1})
-        hooks.validate_entry({"event": "before_tool", "handler": "x", "timeout_ms": 0})   # 0＝不限時（252669c47，頂層 11-14）
-        # change 預設開之後：不能改的事件、不等的 hook 寫 change: true＝自然不看回話，不報錯（11-10 深夜）
-        hooks.validate_entry({"event": "after_queue", "handler": "x", "intercept": True})
-        hooks.validate_entry({"event": "before_tool", "handler": "x", "intercept": True, "async": True})
+                      {"event": "before_tool", "handler": "x", "condition": [3]},
+                      {"event": "after_queue", "handler": "x", "every_ms": 1000},
+                      {"event": "on_clock", "handler": "x"}):
+            with self.assertRaises(hooks.HooksBad, msg=entry):
+                hooks.check_entry(entry)
+        hooks.check_entry({"event": "before_tool", "handler": "x", "condition": ["a"], "whatever": 1})
+        hooks.check_entry({"event": "before_tool", "handler": "x", "timeout_ms": 0})   # 0＝不限時（252669c47，頂層 11-14）
+        # 11-21: the engine checks no event name, and the gone keys are only ignored
+        hooks.check_entry({"event": "nope", "handler": "x"})
+        hooks.check_entry({"event": "before_tool", "handler": "x", "intercept": True, "async": True, "on_error": "maybe"})
+        hooks.check_entry({"event": "before_queue", "handler": "x", "condition": "m"})   # no field to compare there: never filters
 
     def test_change_on_unchangeable_event_ignores_stdout(self):
         self.declare({"talk": {"event": "after_queue", "handler": self.hook("talk", 'print("not json at all")')}})
@@ -343,15 +356,20 @@ sys.exit(code)
         self.run_cell("idle")
         self.assertEqual(self.history(), [{"role": "user", "content": "hi", "aos": {"letter": name}}])
 
-    def test_nothing_declared_starts_nothing(self):
+    def test_nothing_hooked_starts_nothing(self):
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {}}))
+        self.declare({"a": {"event": "before_queue", "handler": "x"}})       # there, but interfaces.json names no hookeds
         with mock.patch("subprocess.Popen", side_effect=AssertionError("started a process")), \
                 mock.patch("subprocess.run", side_effect=AssertionError("started a process")):
-            r = hooks.fire("before_queue", {"content": "c"}, str(self.defn), str(self.stack))
+            entries = hooks.load(str(self.defn), str(self.stack))
+            self.assertEqual(entries, {})
+            r = hooks.fire("before_queue", {"content": "c"}, entries, str(self.stack))
             self.assertEqual((r["data"], r["blocked"]), ({"content": "c"}, False))
             self.declare({"a": {"event": "after_queue", "handler": "x"}})
-            (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
-            hooks.fire("before_queue", {"content": "c"}, str(self.defn), str(self.stack))
+            (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {}, "hookeds": "hookeds.json"}))
+            entries = hooks.load(str(self.defn), str(self.stack))
+            self.assertEqual(sorted(entries), ["a"])
+            hooks.fire("before_queue", {"content": "c"}, entries, str(self.stack))
 
 
 if __name__ == "__main__":

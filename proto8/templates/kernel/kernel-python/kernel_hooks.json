@@ -1,0 +1,165 @@
+{
+  "description": "Hook points every kernel station fires (the kernel and kernel_llm programs): before_verdict, after_verdict, before_reply. The canonical copy is in the kernel program's folder; each kernel definition folder carries one (kernel_hooks.json, named by \"hooks\" at the top of its interfaces.json), with the four aos-loop points added by a directive when the kernel runs under aos-loop. The kernel's own rules (in its code, tools/aos/kernel/hooks.py; this file only tells): exit 10 blocks (all three points); exit 0 with a JSON object on stdout replaces the keys of output; after_verdict's condition is compared with verdict; a failing hook stops the round (HookFailed).",
+  "before_verdict": {
+    "description": "a new request letter is about to be judged by the built-in rules (letters already in the queue do not pass here again)",
+    "input": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "before_verdict"
+        },
+        "hook": {
+          "type": "string",
+          "description": "the hook's name"
+        },
+        "stack": {
+          "type": "string",
+          "description": "the kernel's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+        },
+        "letter": {
+          "description": "letter name"
+        },
+        "sender": {
+          "description": "who sent it"
+        },
+        "sent_at": {
+          "description": "when it was sent"
+        },
+        "reply_to": {
+          "description": "where the answer goes"
+        },
+        "body": {
+          "description": "the request"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "body": {}
+      },
+      "description": "exit 0 with a JSON object on stdout: these keys replace the event's"
+    },
+    "phase": "before",
+    "block": true,
+    "if_blocked": "the letter is refused (HookRejected, or BudgetMissing when the hook's stdout says so); the built-in rules and after_verdict do not run",
+    "key": "letter",
+    "fired_in": [
+      "hooks.py"
+    ]
+  },
+  "after_verdict": {
+    "description": "the station judged a new letter, or a queued letter leaves the queue; fired hook by hook",
+    "input": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "after_verdict"
+        },
+        "hook": {
+          "type": "string",
+          "description": "the hook's name"
+        },
+        "stack": {
+          "type": "string",
+          "description": "the kernel's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+        },
+        "letter": {
+          "description": "letter name"
+        },
+        "sender": {
+          "description": "who sent it"
+        },
+        "sent_at": {
+          "description": "when it was sent"
+        },
+        "reply_to": {
+          "description": "where the answer goes"
+        },
+        "body": {
+          "description": "the request"
+        },
+        "verdict": {
+          "description": "the verdict so far: pass, refuse or queue from the rules (an earlier hook may have changed it, also to hold)"
+        },
+        "error": {
+          "description": "the refusal {code, msg}, or null"
+        },
+        "decision": {
+          "description": "stations that can hold only: pass when someone already said so, else null"
+        },
+        "next": {
+          "description": "stations that forward only: null (the hook may give the next mailbox)"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "verdict": {
+          "type": "string"
+        },
+        "error": {},
+        "next": {}
+      },
+      "description": "exit 0 with a JSON object on stdout: these keys replace the event's"
+    },
+    "phase": "after",
+    "condition": "verdict",
+    "subject": "verdict",
+    "block": true,
+    "if_blocked": "the letter is refused (HookRejected, or BudgetMissing when the hook's stdout says so)",
+    "key": "letter",
+    "fired_in": [
+      "hooks.py"
+    ]
+  },
+  "before_reply": {
+    "description": "a reply passes this station on its way back (only with reply_via_me)",
+    "input": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "before_reply"
+        },
+        "hook": {
+          "type": "string",
+          "description": "the hook's name"
+        },
+        "stack": {
+          "type": "string",
+          "description": "the kernel's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+        },
+        "letter": {
+          "description": "the original letter name"
+        },
+        "sender": {
+          "description": "who sent the original"
+        },
+        "reply_to": {
+          "description": "the original reply mailbox"
+        },
+        "reply_sender": {
+          "description": "who answered"
+        },
+        "body": {
+          "description": "the reply"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "body": {}
+      },
+      "description": "exit 0 with a JSON object on stdout: these keys replace the event's"
+    },
+    "phase": "before",
+    "block": true,
+    "if_blocked": "the reply is not applied: {\"applied\": false, \"error\": {\"code\": \"HookRejected\", ...}} goes back instead",
+    "key": "letter",
+    "fired_in": [
+      "hooks.py"
+    ]
+  }
+}

@@ -20,10 +20,10 @@
 #   兩者 0 都是不設上限；到了整群 TERM、2 秒後 KILL。呼叫紀錄預設不記（11-02 使用者「默認不留」）：給 --enable-logs＝每次叫完在
 #   <stack>/aos-mcp-logs.jsonl 記一行（名字、arguments、結束碼、花多久），再加 --logs-path FILE＝記在 FILE（相對路徑從啟動時的 cwd 算）；
 #   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。
-#   --hooks DEF（11-10 hook，圖紙 thinking/2026-11/10/self-family/hook § 6 eca 縮水版）：DEF＝定義資料夾（interfaces.json 宣告 hooks），stack＝上面那個 stack；
+#   --hooks DEF（11-10 hook，圖紙 thinking/2026-11/10/self-family/hook § 6 eca 縮水版）：DEF＝定義資料夾（interfaces.json 最外層的 hookeds，11-21 起），stack＝上面那個 stack；
 #   cli_session 起它時帶上。tools/call 跑之前 before_tool（name、id＝請求 id 轉字串、arguments；可改 arguments、攔下＝不跑，結果文字＝hook stdout，
 #   空就「[aos] hook: tool NAME blocked by hook HOOK.」，不算 isError）、跑完 after_tool（加 content、code〔逾時 null〕、timed_out；可改 content）。
-#   hook 停下（HookFailed／HooksBad）＝這次 tools/call 回 isError、文字是那行錯，櫃台不死；on_error continue 的 warning 走 stderr。沒給＝沒有 hook。
+#   hook 停下（before_tool 的 hook 失敗＝HookFailed、清單壞＝HooksBad）＝這次 tools/call 回 isError、文字是那行錯，櫃台不死；after_tool 的 hook 失敗＝stderr 一行 warning（11-21 agent 一家的規矩，aos.agentlib.hooks）。沒給＝沒有 hook。
 # 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
 # 錯：自己的錯 stderr 一行「aos-mcp: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、WsMissing、ToolMissing、ToolsBad；11-05 stdio-unify R1）。
 #   --help＝英文說明到 stdout、退 0（R3）；不給參數照常（讀 ./tools.json）；Ctrl-C＝退 130、不吐 traceback（R12）。
@@ -62,9 +62,10 @@ Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call
   AOS_WS=WS AOS_STACK=<stack> aos-tools --file REGISTRY call NAME (aos-tools selects tools/NAME/); arguments go to stdin, stdout goes back as the
   result, exit non-zero = isError (the last 2048 bytes of the tool's stderr are attached). Timeout = the tool's _metainfo timeout_ms,
   otherwise --timeout-s (default 60; a bad timeout_ms = a warning and this); 0 = no limit for either. Then TERM to the whole group, KILL 2 s later.
---hooks DEF: DEF is the agent definition folder (its interfaces.json declares hooks.json; the stack copy goes on top). On tools/call,
+--hooks DEF: DEF is the agent definition folder (the hookeds of its interfaces.json; the stack copy goes on top). On tools/call,
   before_tool may change the arguments or block the call (the result text = the hook's stdout, or "[aos] hook: tool NAME blocked by hook HOOK.";
-  not an error), after_tool may change the result text. A failing hook = that call returns isError with a HookFailed line. No --hooks = no hooks.
+  not an error), after_tool may change the result text. A failing before_tool hook = that call returns isError with a HookFailed
+  line; a failing after_tool hook = one warning line. No --hooks = no hooks.
 --own FILE: the agent's own registry (in its stack); whenever it exists it is used instead of REGISTRY
   (checked on every read, so one made by the first self_tools add counts at once).
 --enable-logs: log one line per call to <stack>/aos-mcp-logs.jsonl (or --logs-path FILE). Off by default.

@@ -1,95 +1,86 @@
-"""agent_hooks - agent 一家的 hook 遙控器：open 一次（定義那份疊 stack 那份），之後每個點一行；丟信三步、工具被攔的預設字、tool_added 那串只在這裡一份。
+"""agent_hooks - the agent family's hook remote: open once (the definition's hookeds with the stack's copy on top), then one line per point; dropping a letter, a blocked tool's default text and tool_added's list live only here.
 
-圖紙：proto8/thinking/2026-11/20/aos-hook-plan-1120/04「agent 一家」（11-20 使用者「宣告式＋小函式都做」）；第 2 刀。
-點讀這隻定義夾 interfaces.json 的 hook_points（第 3 刀；沒寫＝沒有人能掛）、清單經 hooks.load 讀；跑的那段是 aos.hook_point 的遙控器（再交引擎 hook_run）。
-錯一律交給 open 時給的 fail(代號, 一句英文)：fail 自己丟的例外原樣往外走；fail 竟然回來＝丟 hook_point.FailReturned。
-發事件的都叫這裡：格程式（templates/agent-fsm 與抄本）、aos-eca-turn、aos-mcp；aos-hook --agent 用 source（loop.json 的起停與每格前後都經它）。
-從 hooks.py 拆出來只為檔案大小（F10）。
+Design: proto8/thinking/2026-11/20/aos-hook-plan-1120/04 "agent 一家" (11-20 the user "宣告式＋小函式都做"); since 11-21 (line
+top-1121-hooknew, the user's fourth layer) the rules (what blocks, what may change, condition) are the agent family's own
+in aos.agentlib.hooks, and the engine aos.hook_run only runs handlers. The list is read again on every fire (an added hook
+counts from the next event). Errors go to the fail(code, sentence) given to open: what fail raises goes out as it is; if
+fail returns, FailReturned is raised.
+Firing programs call this: the cells (templates/agent-fsm and copies), aos-eca-turn, aos-mcp.
 
-對外：
-    open(def_folder, stack, fail, warn=None) -> 遙控器；def_folder None＝沒有 hook 的空遙控器（aos-mcp 沒給 --hooks）
-    source(def_dir, stack, fail) -> aos-hook --agent 的點與清單：{"points": 這隻 interfaces.json 的 hook_points,
-                    "lists": [定義那份, stack 那份]（stack 空＝只有定義那份）, "files": 宣告幾份, "entry_check": hooks.check_clock,
-                    "label": 給錯誤句用, "agent": def_dir}；def_dir 要是絕對路徑。PointsBad／HooksBad 交 fail
-    遙控器.fire(event, data, only=None) -> 引擎的結果（形狀同 hooks.fire）
-    遙控器.has(event)、遙控器.names(event, data)
-    遙控器.clock_tick() -> [跑了的 hook 名]（hook_clock.clock_tick）
-    遙控器.take_letter(box, sig, content) -> 改過的 content；被 before_queue 攔下＝letters.json 記 dropped（寫不成只 warning）、
-                    aos-post done（起不來或退非 0＝PostFailed）、mailbox_warning.txt 寫一行（寫不成＝WriteFailed），回 None
-    遙控器.guard_tool(name, cid, arguments) -> ("run", arguments：沒人改＝給的那個物件本身、改了＝新的)
-                    或 ("blocked", 給腦看的字：hook 的 stdout，空的＝「[aos] hook: tool NAME blocked by hook HOOK.」)
-    遙控器.announce_tools(tools) -> None：tool_added，這次比上次多出來的名字一個發一次；tools＝[(name, path)]，
-                    或不收參數、回那串的函式（有人掛 tool_added 才叫）；記名單寫不成＝WriteFailed
+API:
+    open(def_folder, stack, fail, warn=None) -> remote; def_folder None = an empty remote (no hooks; aos-mcp without --hooks)
+    remote.fire(event, data, only=None) -> the result of hooks.fire ({"data", "changed", "blocked", "hook", "text"})
+    remote.has(event), remote.names(event, data)
+    remote.clock_tick() -> [names run] (hook_clock.clock_tick)
+    remote.take_letter(box, sig, content) -> the (maybe changed) content; blocked by before_queue = letters.json records it
+                    as dropped (cannot write = a warning), aos-post done (cannot start or exits non-zero = PostFailed),
+                    mailbox_warning.txt gets one line (cannot write = WriteFailed), returns None
+    remote.guard_tool(name, cid, arguments) -> ("run", arguments: the given object when nobody changed it, else the new one)
+                    or ("blocked", the text for the brain: the hook's stdout, empty = "[aos] hook: tool NAME blocked by hook HOOK.")
+    remote.announce_tools(tools) -> None: tool_added once for each name new since last time; tools = [(name, path)], or a
+                    function returning that, called only when some hook listens to tool_added; cannot record = WriteFailed
+    FailReturned    raised when fail() returned; .code
 """
 import io
 import os
 
 from aos import flags as aos_flags
-from aos import hook_point
 from aos import ws as aos_ws
 from aos.agentlib import hook_clock, hooks
 
 MAILBOX_WARNING = "mailbox_warning.txt"
 
 
+class FailReturned(RuntimeError):
+    """The fail() given to open() returned instead of leaving; raised so a bad result never goes on."""
+
+    def __init__(self, code, sentence):
+        super().__init__("%s %s" % (code, sentence))
+        self.code = code
+
+
 def open(def_folder, stack, fail, warn=None):
-    """agent 的 hook 遙控器；def_folder None＝空遙控器（沒有 hook，fire 原樣回）。"""
-    if def_folder is None:
-        points, entries = {}, {}
-    else:
-        try:
-            points = hooks.points(def_folder)
-        except hooks.HooksBad as e:
-            hook_point.call_fail(fail, "PointsBad", str(e))
-        entries = lambda: hooks.load(def_folder, stack)
-    if points:   # 這隻宣告的點；宣告的 change 型別先驗、hooks._check（content 的規矩）接著驗
-        handle = hook_point.open(points, entries=entries, stack=stack, fail=fail, warn=warn, check=hooks._check)
-    else:        # 沒寫 hook_points：沒有人能掛（hooks.load 擋有 hook 的），點照 EVENTS 認、發了也沒人聽
-        handle = hook_point.open(table=hooks.EVENTS, entries=entries, stack=stack, fail=fail, warn=warn, check=hooks._check)
-    return AgentHooks(def_folder, stack, fail, warn, handle)
-
-
-def source(def_dir, stack, fail):
-    """aos-hook --agent 的點與清單（見檔頭）：宣告＝interfaces.json 的 hook_points，清單＝定義那份疊 stack 那份，on_clock 照 agent 的驗法。"""
-    try:
-        points = hook_point.for_definition(def_dir)
-    except hook_point.PointsBad as e:
-        hook_point.call_fail(fail, "PointsBad", str(e))
-    try:
-        layers = hooks.layers(def_dir, stack or def_dir)
-    except hooks.HooksBad as e:
-        hook_point.call_fail(fail, "HooksBad", str(e))
-    files = len({said["path"] for point in points.values() for said in point["said"]})
-    return {"points": points, "lists": layers if stack else layers[:1], "files": files,
-            "entry_check": hooks.check_clock,
-            "label": "the hook_points of %s" % os.path.join(def_dir, "interfaces.json"), "agent": def_dir}
+    """The agent's hook remote; def_folder None = an empty one (no hooks, fire gives the data back)."""
+    return AgentHooks(def_folder, stack, fail, warn)
 
 
 def _write_atomic(path, text):
-    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".tmp")   # N-05：先寫暫存再改名
-    with io.open(tmp, "w", encoding="utf-8") as f:                 # io.open：這個模組自己的 open 是遙控器
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".tmp")   # N-05: temp file, then rename
+    with io.open(tmp, "w", encoding="utf-8") as f:                 # io.open: this module's own open is the remote
         f.write(text)
     os.replace(tmp, path)
 
 
 class AgentHooks:
-    """agent 的 hook 遙控器（見檔頭）。"""
+    """The agent's hook remote (see the module doc)."""
 
-    def __init__(self, def_folder, stack, fail, warn, handle):
+    def __init__(self, def_folder, stack, fail, warn):
         self.def_folder, self.stack = def_folder, stack
-        self._fail, self._warn, self._h = fail, warn, handle
+        self._fail, self._warn = fail, warn
 
     def _die(self, code, sentence):
-        hook_point.call_fail(self._fail, code, sentence)
+        self._fail(code, sentence)
+        raise FailReturned(code, sentence)
+
+    def load(self):
+        if self.def_folder is None:
+            return {}
+        try:
+            return hooks.load(self.def_folder, self.stack)
+        except hooks.HooksBad as e:
+            self._die("HooksBad", str(e))
 
     def fire(self, event, data, only=None):
-        return self._h.fire(event, data, only=only)
+        try:
+            return hooks.fire(event, data, self.load(), self.stack, warn=self._warn, only=only)
+        except hooks.HookFailed as e:
+            self._die("HookFailed", str(e))
 
     def has(self, event):
-        return self._h.has(event)
+        return any(e["event"] == event for e in self.load().values())
 
     def names(self, event, data):
-        return self._h.names(event, data)
+        return [n for n, e in sorted(self.load().items()) if e["event"] == event and hooks.matches(e, data)]
 
     def clock_tick(self):
         if self.def_folder is None:

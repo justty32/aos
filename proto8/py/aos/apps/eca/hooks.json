@@ -1,0 +1,279 @@
+{
+ "description": "Hook points fired by aos-eca-turn (the eca body), and before_compact / after_compact fired by the eca-claude template's compact_hook from Claude Code's own compaction hooks; tool hooks are in ../mcp/hooks.json, the loop points in ../hook/loop_hooks.json. The agent family's rules (aos.agentlib.hooks, in code; this file only tells): exit 10 blocks a point with block true; on a point with output, exit 0 and a JSON object on stdout replace those keys; condition names the field a hookeds entry's condition is compared with (only for these tool names / error codes); a failing hook stops a point with block true and is one warning elsewhere.",
+ "before_queue": {
+  "description": "turn: every good letter before it is handed to the CLI, slash letters too; also letters that arrive while waiting for the answer",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "before_queue"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "letter": {
+     "description": "letter name"
+    },
+    "content": {
+     "description": "the text that will be handed over"
+    }
+   }
+  },
+  "output": {
+   "type": "object",
+   "properties": {
+    "content": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "description": "exit 0 with a JSON object on stdout: these keys replace the event's"
+  },
+  "phase": "before",
+  "block": true,
+  "if_blocked": "the letter is closed and dropped; mailbox_warning.txt says which hook dropped it",
+  "key": "letter",
+  "fired_in": [
+   "hook.py"
+  ]
+ },
+ "after_queue": {
+  "description": "the letter was handed to the CLI, joined history and was closed; a failing hook is reported only after the answer is in history",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "after_queue"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "letter": {
+     "description": "letter name"
+    },
+    "content": {
+     "description": "the text that was handed over"
+    }
+   }
+  },
+  "phase": "after",
+  "fired_in": [
+   "handoff.py",
+   "slash.py"
+  ]
+ },
+ "brain_failed": {
+  "description": "turn: the CLI failed after the letters were handed over",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "brain_failed"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "name": {
+     "description": "error code: CliFailed or ReplyMissing"
+    },
+    "reason": {
+     "description": "one sentence"
+    },
+    "code": {
+     "description": "claude only: the same error code"
+    },
+    "retry": {
+     "description": "claude only: true when the letters are sent again after a cooldown"
+    },
+    "attempt": {
+     "description": "claude only: failures in a row"
+    },
+    "dropped": {
+     "description": "claude only: how many letters were dropped"
+    },
+    "wait_s": {
+     "description": "claude only, when retry is true: seconds of cooldown"
+    },
+    "status": {
+     "description": "claude only, when known: the HTTP status"
+    },
+    "cause": {
+     "description": "claude only, when known: the CLI's own failure cause"
+    }
+   }
+  },
+  "phase": "after",
+  "condition": "name",
+  "subject": "code",
+  "fired_in": [
+   "handoff.py"
+  ]
+ },
+ "tool_added": {
+  "description": "turn: before each handoff to the CLI, a tool name appeared in this agent's tool registry (the first look only remembers the names)",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "tool_added"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "name": {
+     "description": "tool name"
+    },
+    "path": {
+     "description": "where it is (absolute), or null"
+    }
+   }
+  },
+  "phase": "after",
+  "condition": "name",
+  "subject": "tool",
+  "fired_in": [
+   "hook.py"
+  ]
+ },
+ "on_clock": {
+  "description": "start of every turn (also turns in a cooldown or that give way): the hook's clock moved on by its own every_cycles / every_ms",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "on_clock"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "clock": {
+     "description": "clock file"
+    },
+    "cycle": {
+     "description": "its number now"
+    },
+    "interval_ms": {
+     "description": "ms per cycle"
+    },
+    "first": {
+     "description": "true right after a start, a wake or a clock change"
+    },
+    "last_cycle": {
+     "description": "cycle of the last run, or null"
+    },
+    "missed": {
+     "description": "runs skipped"
+    },
+    "config": {
+     "description": "the entry's config, when it has one"
+    }
+   }
+  },
+  "phase": "on",
+  "entry_keys": [
+   "clock",
+   "every_cycles",
+   "every_ms"
+  ],
+  "fired_in": [
+   "turn.py"
+  ]
+ },
+ "before_compact": {
+  "description": "claude kind only, from the definition's compact_hook, which the eca-claude template wires as Claude Code's own PreCompact hook (cli.json settings): Claude Code is about to compact the conversation, for a /compact or on its own; pi and codex do not fire it (compact_hook fires it through aos-hook fire and reads the results itself: the first hook that exits 10 blocks; each JSON object on stdout of a hook that exits 0 sets instructions / restore, in name order; every hook gets the same event; a failing hook is a warning)",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "before_compact"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "trigger": {
+     "description": "manual (a /compact) or auto (Claude Code compacts on its own)"
+    },
+    "asked": {
+     "description": "the words after /compact, or an empty string"
+    },
+    "instructions": {
+     "description": "the summary instructions compact_hook gives Claude Code on top of asked (the template's list of what to keep); a hook may change them, an empty string gives none"
+    },
+    "restore": {
+     "description": "null; a hook may set text that compact_hook adds to the compacted conversation (through Claude Code's SessionStart compact hook, after the handoff notes), for this compaction only"
+    }
+   }
+  },
+  "output": {
+   "type": "object",
+   "properties": {
+    "instructions": {
+     "type": "string"
+    },
+    "restore": {
+     "type": "string"
+    }
+   },
+   "description": "exit 0 with a JSON object on stdout: these keys replace the event's"
+  },
+  "phase": "before",
+  "block": true,
+  "if_blocked": "compact_hook exits 2 and Claude Code does not compact; for a /compact the CLI says the hook's name and stdout, an automatic compaction is skipped (or the request that needed the room fails); the summary and history stay as they were"
+ },
+ "after_compact": {
+  "description": "claude kind only, from compact_hook as Claude Code's own PostCompact hook: the conversation was compacted; it only tells (nothing can be changed any more; text to add after the compaction is before_compact's restore, since Claude Code runs its SessionStart compact hook before PostCompact) (compact_hook fires it through aos-hook fire and ignores the results)",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "after_compact"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "trigger": {
+     "description": "manual or auto, as for before_compact"
+    },
+    "summary": {
+     "description": "the summary Claude Code wrote, or null"
+    }
+   }
+  },
+  "phase": "after"
+ }
+}

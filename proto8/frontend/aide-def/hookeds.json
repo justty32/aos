@@ -1,12 +1,9 @@
 {
  "description": "The aide's only hook: every 60 clock cycles (about a minute at 1000 ms a cycle) run aos-frontend aide-tick (aide_tick.json, next to this file). It carries the team's decision files (~/.aos/view/teams/<team>/outbox/) to the relay mailbox ~/.aos/view/mailbox as pass letters, sends a report when the facts changed and a beat every 15 minutes. Nothing enters the history; no brain call. The stock timer and mail_notify hooks are left out on purpose (mail_notify would wake the brain).",
- "hooks": {
-  "aide_tick": {
-   "event": "on_clock",
-   "every_cycles": 60,
-   "handler": "aide_tick.json",
-   "on_error": "continue",
-   "timeout_ms": 30000
-  }
+ "aide_tick": {
+  "event": "on_clock",
+  "every_cycles": 60,
+  "handler": "aide_tick.json",
+  "timeout_ms": 30000
  }
 }

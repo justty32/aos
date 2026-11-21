@@ -270,10 +270,16 @@ class Linger(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(self.order())
         linger.cancel(str(self.stack))
-        (self.stack / "hooks.json").write_text(json.dumps({"hooks": {"screen_linger_stop": None}}))
-        with patch.object(hooks.hook_run, "fire", wraps=hooks.hook_run.fire):
-            hooks.fire("after_stop", {}, str(proto / "templates/eca-claude"), str(self.stack))
+        (self.stack / "hookeds.json").write_text(json.dumps({"screen_linger_stop": None}))   # the stack copy: null turns it off
+        defn = str(proto / "templates/eca-claude")
+        entries = hooks.load(defn, str(self.stack))
+        self.assertNotIn("screen_linger_stop", entries)
+        hooks.fire("after_stop", {}, entries, str(self.stack))
         self.assertFalse(self.order())
+        result = subprocess.run([sys.executable, linger.ENTRY], input="not JSON", env=env,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)          # as a hook a bad event only warns: the loop goes on
+        self.assertTrue(result.stderr.startswith("screen_linger: warning: "), result.stderr)
 
 
 if __name__ == "__main__":

@@ -1,93 +1,98 @@
-"""hook_lists - read hooks lists (JSON files with a "hooks" table) against a hook point table, and check the values hooks change against the declared types; the part aos.hook_point.open puts between the declarations and the engine.
+"""hook_lists - read hookeds lists (what is hooked: a JSON object {hook name: entry or null}) in order, a later file overriding an earlier one by name.
 
-Design: proto8/thinking/2026-11/20/aos-hook-plan-1120 (04 the small library, 01 entry_keys, 12 what holds after review).
-Moved here from py/aos/apps/hook/lists.py (cut 4) in cut 2, so aos-hook and every program that opens a hook_point
-handle read lists the same way. Standard library plus the engine aos.hook_run; prints nothing, never exits.
+Design: the user 11-21 (proto8/thinking/2026-11/21/hook-points-格式-使用者審-1121.md, 6th and 7th: "hooks.json, hookeds.json,
+hooks表示有哪些鉤子，hookeds表示有哪些被勾着"; aos-hook-簡化-1121/07: "簡化到第四層", "庫也極簡"); line top-1121-hooknew.
+The one reader of hookeds lists: aos-hook fire, the agent family (aos.agentlib.hooks) and the kernel all read theirs here.
+It checks only what the engine itself needs (a name it can make a folder of, an event, a handler, timeout_ms); every
+other key of an entry belongs to whoever fires the event (the agent's condition and on_clock keys...) and is kept as it is.
+Standard library only; prints nothing, never exits: a bad list is HooksBad.
+
+A hookeds list (hookeds.json, kernel_hookeds.json, the stack's copy...):
+    {"description": "a sentence (optional; not a hook)", "NAME": {"event": "before_tool", "handler": PATH or directive,
+     "timeout_ms": 60000, ...the firing program's own keys}, "OTHER": null}
+    null turns off a hook of an earlier file of the same name. A file that does not exist has no hooks.
 
 API:
-    owners(points)        -> {key: [points that take it]} from the points' entry_keys
-    load(paths, table, owners=None, entry_check=None) -> {name: entry} for aos.hook_run.fire: the hooks tables of
-                             the files in order, a later file overrides an earlier one by name, null = turned off;
-                             a missing file = no hooks. Each entry: the engine's common checks against table, a key of
-                             owners only on its points, then entry_check(entry) (the provider's own rules; raises
-                             HooksBad). Bad = hook_run.HooksBad naming the hook and the file
-    type_check(points)    -> check(event, key, value) for hook_run.fire: a changed value must have the declared
-                             change type (string, nonempty_string, object, any); bad = ValueError, one English sentence
+    HooksBad                  a list (or a name, or an entry) is bad; ValueError subclass
+    check_name(name)          a hook name: non-empty, no /, not starting with ., not "description"
+    check_entry(entry)        an entry: object; event a non-empty string; handler a non-empty string or directive
+                              object; timeout_ms (when given) a whole number >= 0
+    read(path)                -> {name: entry or None} of one file, checked; missing file = {}
+    load(paths)               -> {name: entry} over the files in order (later wins by name, null = off); each entry
+                              gets "from" (its file) and "base" (the folder relative handler paths start from)
 """
 import json
 import os
 
-from aos import hook_run
+RESERVED = "description"                         # a sentence about the file, not a hook
 
 
-def owners(points):
-    """{key: [points that take it]} from the points' entry_keys."""
-    out = {}
-    for name, point in points.items():
-        for key in point.get("entry_keys", []):
-            out.setdefault(key, []).append(name)
-    return out
+class HooksBad(ValueError):
+    """A hookeds list, a hook name or an entry is bad."""
 
 
-def _check_entry(entry, table, owned, entry_check):
-    """The engine's checks of the common keys, then: a key of some point's entry_keys only on that point (01, B5)."""
-    hook_run.validate_entry(entry, table)
-    for key, events in sorted(owned.items()):
-        if key in entry and entry["event"] not in events:
-            raise hook_run.HooksBad("%s is only for event %s" % (key, " or ".join(sorted(events))))
-    if entry_check is not None:
-        entry_check(entry)
+def check_name(name):
+    """A hook name is also the name of its folder in the stack (STACK/hookeds/NAME/)."""
+    if not isinstance(name, str) or not name or "/" in name or name.startswith(".") or name == RESERVED:
+        raise HooksBad("hook name %r must be non-empty, without / and not start with . (and not be %r)" % (name, RESERVED))
 
 
-def _read(path, table, owned, entry_check):
-    """One list file -> {name: entry or None}; missing = {}."""
+def check_entry(entry):
+    """The keys the engine reads; unknown keys are kept for the firing program (C-48). Bad = HooksBad (no name in it)."""
+    if not isinstance(entry, dict):
+        raise HooksBad("must be a JSON object or null")
+    if not (isinstance(entry.get("event"), str) and entry["event"]):
+        raise HooksBad("event must be a non-empty string")
+    target = entry.get("handler")
+    if not ((isinstance(target, str) and target) or (isinstance(target, dict) and target)):
+        raise HooksBad("handler must be a non-empty string or a directive object")
+    if "timeout_ms" in entry:
+        t = entry["timeout_ms"]
+        if not isinstance(t, int) or isinstance(t, bool) or t < 0:
+            raise HooksBad("timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)")
+
+
+def read(path):
+    """One list file -> {name: entry or None}; missing = {}; bad = HooksBad naming the file and the hook."""
     try:
         with open(path, encoding="utf-8") as f:
             doc = json.load(f)
     except FileNotFoundError:
         return {}
     except (OSError, ValueError) as e:
-        raise hook_run.HooksBad("cannot read %s: %s" % (path, e)) from None
+        raise HooksBad("cannot read %s: %s" % (path, e)) from None
     if not isinstance(doc, dict):
-        raise hook_run.HooksBad("%s must be a JSON object" % path)
-    hooks = doc.get("hooks", {})
-    if not isinstance(hooks, dict):
-        raise hook_run.HooksBad("hooks in %s must be a JSON object" % path)
-    for name, entry in hooks.items():
+        raise HooksBad("%s must be a JSON object {hook name: entry or null}" % path)
+    out = {}
+    for name, entry in doc.items():
+        if name == RESERVED:
+            continue
         try:
-            hook_run.validate_name(name)
-        except hook_run.HooksBad as e:
-            raise hook_run.HooksBad("hook name %r in %s %s" % (name, path, e)) from None
+            check_name(name)
+        except HooksBad as e:
+            raise HooksBad("%s: %s" % (path, e)) from None
         if entry is not None:
             try:
-                _check_entry(entry, table, owned, entry_check)
-            except hook_run.HooksBad as e:
-                raise hook_run.HooksBad("hook %s in %s: %s" % (name, path, e)) from None
-    return hooks
-
-
-def load(paths, table, owners=None, entry_check=None):
-    """The list files in order -> {name: entry} completed with the engine's defaults, "from" and "base"."""
-    owned = owners or {}
-    out = {}
-    for path in paths:
-        path = os.path.abspath(path)
-        for name, entry in _read(path, table, owned, entry_check).items():
-            if entry is None:
-                out.pop(name, None)
-            else:
-                out[name] = hook_run.complete(entry, path)
+                check_entry(entry)
+            except HooksBad as e:
+                raise HooksBad("hook %s in %s: %s" % (name, path, e)) from None
+        out[name] = entry
     return out
 
 
-def type_check(points):
-    """The engine's check hook: a changed value must have the type the point declares for that key."""
-    def one(event, key, value):
-        want = points[event].get("change", {}).get(key, "any")
-        if want == "string" and not isinstance(value, str):
-            raise ValueError("%s in stdout must be a string" % key)
-        if want == "nonempty_string" and not (isinstance(value, str) and value.strip()):
-            raise ValueError("%s in stdout must be a non-empty string" % key)
-        if want == "object" and not isinstance(value, dict):
-            raise ValueError("%s in stdout must be a JSON object" % key)
-    return one
+def load(paths, check=None):
+    """The list files in order -> {name: entry + "from" + "base"}; check(entry) = the caller's own rules (raise HooksBad)."""
+    out = {}
+    for path in paths:
+        path = os.path.abspath(path)
+        for name, entry in read(path).items():
+            if entry is None:
+                out.pop(name, None)
+                continue
+            if check is not None:
+                try:
+                    check(entry)
+                except HooksBad as e:
+                    raise HooksBad("hook %s in %s: %s" % (name, path, e)) from None
+            out[name] = dict(entry, **{"from": path, "base": os.path.dirname(path)})
+    return out

@@ -23,8 +23,6 @@ from aos.spec_base import SpecBad, DefBad
 from aos.agent_spec_parts import WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FILES
 
 FIELDS = ("description", "system", "tools", "llm", "fsm", "hooks", "meta", "interfaces", "files", "loop")
-FLAG_IF = {"before_run": {"$env": "AOS_STACK", "$path": "/hook_before_run.flag"},   # loop.json 的 on_before_run_if／on_after_run_if（檔名同 aos.hook_flags.FLAGS）
-           "after_run": {"$env": "AOS_STACK", "$path": "/hook_after_run.flag"}}
 RENAME_LAST = {"loop.json": 1, "body.json": 2, "interfaces.json": 3, "_entry": 4, "_metainfo.json": 5}   # 改名時被指的檔先換、索引檔最後（其他＝0）
 SEE_CHANGE = ("agents that use this definition see the change from their next brain call "
               "(state machine and loop changes: from their next tick or restart)")
@@ -55,39 +53,33 @@ class Fsm(dict, Unit):
         return _plain({name: _fsm_json(self)})
 
 
-def fire(event, fields=()):
-    """loop.json 裡發一個 hook 點的單子：aos-hook fire -q --agent $AOS_CD [欄位旗標…] EVENT（照 agent-fsm 範本；
-    on_start／on_stop 也走這裡，線 top-1121-hookfire）。"""
-    return {"argv": ["aos-hook", "fire", "-q", "--agent", {"$env": "AOS_CD"}] + list(fields) + [event]}
-
-
-def run_points(fsm_file):
-    """有 hooks 的 fsm agent 的 loop.json 多的四鍵：身體（一格）前後經 aos-hook fire --agent 發 before_run／after_run，旗標檔在才跑
-    （hook 第 5 刀後半，線 top-1121-hook5；寫法照設計 aos-hook-plan-1120/06：stage 從 stack 的 stage.txt 讀，第一圈還沒有那個檔時用 fsm 的起始格）。"""
-    return {"on_before_run": fire("before_run", ["--field-file", {"$env": "AOS_STACK", "$path": "/stage.txt", "$prefix": "stage="},
-                                                 "--field-default", {"$ref": fsm_file + "#/start", "$prefix": "stage="}]),
-            "on_before_run_if": dict(FLAG_IF["before_run"]),
-            "on_after_run": fire("after_run", ["--field-file", {"$env": "AOS_STACK", "$path": "/stage.txt", "$prefix": "next_stage="}]),
-            "on_after_run_if": dict(FLAG_IF["after_run"])}
+def fire(event):
+    """loop.json 裡發一個 hook 點的單子：aos-hook fire -q --stop-on-nonzero --def $AOS_CD EVENT（照 agent-fsm 範本；
+    handler 的退出碼原樣交給 aos-loop，11-21 使用者「用旗標選」、loop.json 那幾行帶這個旗標）。"""
+    return {"argv": ["aos-hook", "fire", "-q", "--stop-on-nonzero", "--def", {"$env": "AOS_CD"}, event]}
 
 
 class _Loop:
-    """loop.json：每格跑 fsm 那份、公開 ctl／state／state_flux；有 hooks 才接 on_start／on_stop（after_start／after_stop）與
-    on_before_run／on_after_run 和兩個 _if（before_run／after_run，run_points）。
+    """loop.json：每格跑 fsm 那份、公開 ctl／state／state_flux；有 hooks 才接 on_start／on_stop（after_start／after_stop）；
+    on_before_run／on_after_run 只在編譯時有 hook 掛 before_run／after_run 才接（11-21 使用者「編譯時決定」，沒有旗標檔了）。
     內部的一塊（設計稿 02「loop 與 fsm 在庫裡的地位」）；人能宣告的是 defs.Agent(..., loop=defs.loop(interval_ms=…, …))（待裁第 8 題「加一個宣告」，
-    線 aos-pylib-k4-1120）：這份算完之後原樣蓋上去（11-21「任意鍵照傳」，在 Agent._files），間隔不給＝300。hook 那幾個鍵由 hook 介面線帶（07「跟 hook 介面線共用的檔」；第 5 刀後半加了 run_points 那四個）。"""
+    線 aos-pylib-k4-1120）：這份算完之後原樣蓋上去（11-21「任意鍵照傳」，在 Agent._files），間隔不給＝300。"""
 
     def __init__(self, fsm_file, hooks):
-        self.fsm_file, self.hooks = fsm_file, hooks
+        self.fsm_file, self.hooks = fsm_file, hooks   # hooks＝None（沒宣告）或 {名: 格}
 
     def json(self):
         loop = {"description": WHAT["loop.json"] % self.fsm_file, "exec": self.fsm_file, "interval_ms": 300,
                 "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}
-        if self.hooks:
+        if self.hooks is not None:
             loop["description"] += WHAT["loop_hooks"]
             loop["on_start"] = fire("after_start")
             loop["on_stop"] = fire("after_stop")
-            loop.update(run_points(self.fsm_file))
+            events = {e.get("event") for e in self.hooks.values() if isinstance(e, dict)}
+            loop["description"] += WHAT["loop_run" if events & {"before_run", "after_run"} else "loop_norun"]
+            for event in ("before_run", "after_run"):
+                if event in events:
+                    loop["on_" + event] = fire(event)
         return loop
 
 
@@ -106,6 +98,9 @@ def _names(decl, fsm, hooks, interfaces, folder):
             if what == "hooks" and hooks is None:
                 continue
             if what not in have:
+                if what == "hooks":                      # 被勾清單在 interfaces.json 最外層的 hookeds（11-21）
+                    raise DefBad("%s/interfaces.json names no hookeds file, so hooks have nowhere to go: add \"hookeds\": "
+                                 "\"hookeds.json\" at its top, or give fsm" % folder)
                 raise DefBad("%s/interfaces.json declares no %s file, so %s has nowhere to go: add \"%s\" to its aos-agent, "
                              "or give fsm" % (folder, what, what, what))
             files[what] = have[what]
@@ -177,11 +172,6 @@ class Agent(Unit):
     def __repr__(self):
         shown = self.__dict__.get("_shown")
         return "<agent.py loaded by %s from %s>" % (shown, self.path) if shown else "<%s>" % self._label()
-
-    def events(self):
-        """這隻收的 hook 事件表：agent 的 hooks.EVENTS（11-20 hook 第 3 刀起由 aos 自己帶的宣告合起來算出）。
-        不照這隻自己的 hook_points 縮小：掛到這隻不會發的事件照舊掛得上（使用者 11-20 待裁第 5 題「照舊不管」）。"""
-        return agent_hooks.EVENTS
 
     def pack(self, prefix="", rename=None, exclude=None):
         """這隻的 tools 當一個包，可以改名：prefix＝每支前面加、rename＝{原名: 新名}、exclude＝不要的（原名；連墓碑一起不要），同 std.pack。寫錯先記著。"""
@@ -255,7 +245,7 @@ class Agent(Unit):
         llm_out = None if parts.pick(llm, "llm must be a dict like {\"model\": \"luna\"} ({} = the kernel's default), or defs.extern(\"../shared/llm.json\")",
                                      lambda v: isinstance(v, dict)) else parts.llm_json(llm, keys)
         hooks_out = None if hooks is None or "hooks" in hand else hook_parts.hooks_json(hooks)
-        programs = fn_spec.programs(tools_out, names.get("tools"), hooks_out, names.get("hooks"), self.events())
+        programs = fn_spec.programs(tools_out, names.get("tools"), hooks_out, names.get("hooks"))
         extra = parts.extra_files(files, taken) if files is not None else {}
         if meta is not None and not isinstance(meta, dict):
             raise SpecBad("meta must be a dict like {\"cost\": {\"time_ms\": 60000}, \"resource\": [\"llm\"]}")
@@ -276,7 +266,8 @@ class Agent(Unit):
             out["_entry"] = {"description": WHAT["_entry"], "argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}],
                              "cwd": {"$env": "AOS_WS"}}
             out["body.json"] = {"description": WHAT["body.json"], "argv": ["aos-loop", "loop.json"]}
-            out["loop.json"] = {**_Loop(names["fsm"], hooks is not None).json(), **loop_keys}   # 任意鍵照傳、你給的蓋過去（11-21）
+            loop_hooks = None if hooks is None else ({} if hooks_out is None else hooks_out)   # extern＝編譯時不看內容：只接起停兩點
+            out["loop.json"] = {**_Loop(names["fsm"], loop_hooks).json(), **loop_keys}   # 任意鍵照傳、你給的蓋過去（11-21）
             if fsm_out is not None:
                 out["fsm.json"] = _fsm_json(fsm_out)
             out["interfaces.json"] = face

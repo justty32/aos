@@ -3,7 +3,7 @@
 # 使用者 11-11：「我們可以透過hook，當有新信來的時候執行一次aos-say "[aos] new_mail: you got a new mail from xxx"這樣。當然，具體這是可調整的，
 #   agent自身也可以調整hook，類似免打擾」；選項框：怎麼做「用on_clock」、範本「預設開」、多封新信「合成一句」（thinking/2026-11/11/mail-notify.md）。
 # 介面：hook handler（py/aos/agentlib/hooks.py 用 aos-exec 起）：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、first…），$AOS_STACK＝這個 hook 自己的小格
-#   （$AGENT_STACK/hooks/<名>/），已通知過的信名記在 $AOS_STACK/notified.json。
+#   （$AGENT_STACK/hookeds/<名>/），已通知過的信名記在 $AOS_STACK/notified.json。
 # 做法：aos-mailbox --stack <agent stack> peek -j 列還在 new/ 的信 → 沒通知過的＝新信 → 合成一句（只帶封數與寄件人，不帶內文）
 #   用 aos-post send --ordered <agent stack>/queue 寄一則 {"role": "user", "content": …}（同 aos-agent say；queue 沒有就先 aos-post init）→ 寄成了才記 notified。
 #   沒新信（含沒信箱）＝不寄、不動 history、什麼都不印。notified 只留還在信箱裡的信名（讀掉的自然消失，檔不會一直長）。
@@ -13,7 +13,7 @@
 #   history 不在或是空的＝全新起來，只把在等的記成已知、不提醒；不是 first 時沒記錄＝全算新的。
 #   所以每次跑都留記錄（沒信箱、沒信也寫 []）：檔在＝「一直在看」，睡著時才到的第一封信醒來也提得到。自己寄給自己的信照樣算（代定）。
 # 錯：stderr 一行「mail_notify: error: 代號 原因」、退 1（ArgumentsBad 事件 JSON 壞、StackMissing、LaunchFailed、CommandFailed 下層退非 0 或逾時、WriteFailed）；
-#   範本掛它用 on_error: continue，壞了只是 agent 那邊一行 warning、不停 agent。需要 PATH 上有 aos-mailbox、aos-post。--help 印英文用法。
+#   on_clock 的 hook 壞了只是 agent 那邊一行 warning、不停 agent（agent 一家的規矩）。需要 PATH 上有 aos-mailbox、aos-post。--help 印英文用法。
 import json, os, subprocess, sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # 放 aos 套件的那層：py/（或裝好的 lib/）

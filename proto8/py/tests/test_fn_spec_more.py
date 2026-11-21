@@ -1,4 +1,4 @@
-"""Test cut 3 of the compile library beyond what a function may use: @fn.hook into hooks.json (events, condition, fn.block, same names), renames and clashing file names, and how function tools meet static / dynamic linking, packs, defs.drop, defs.load, the eca body and old fn/ files."""
+"""Test cut 3 of the compile library beyond what a function may use: @fn.hook into hookeds.json (events, condition, fn.block, same names), renames and clashing file names, and how function tools meet static / dynamic linking, packs, defs.drop, defs.load, the eca body and old fn/ files."""
 import json
 import os
 from pathlib import Path
@@ -27,7 +27,8 @@ class Hooks(FnCase):
         d = self.agent(body(HOOK, tools="", hooks="no_secrets"))
         r = run_agent(d / "agent.py", "--compile", home=self.home)
         self.assertEqual(r.returncode, 0, r.stderr)
-        hooks = json.loads((d / "hooks.json").read_text())["hooks"]
+        hooks = json.loads((d / "hookeds.json").read_text())
+        hooks.pop("description")
         self.assertEqual(hooks, {"no_secrets": {"event": "before_tool", "handler": "fn/no_secrets.py", "condition": "write",
                                                 "timeout_ms": 5000}})
         prog = d / "fn" / "no_secrets.py"
@@ -37,12 +38,13 @@ class Hooks(FnCase):
         self.assertEqual(self.call(prog, json.dumps({"event": "before_tool", "arguments": {}})).returncode, 0)
 
     def test_events_are_checked(self):
-        self.bad(body(HOOK.replace('"before_tool"', '"before_tol"'), tools="", hooks="no_secrets"),
-                 "hooks: hook no_secrets: event must be one of before_queue")
-        self.bad(body(HOOK.replace('"before_tool"', '"after_start"'), tools="", hooks="no_secrets"),
-                 "hooks: hook no_secrets: event after_start takes no condition")
-        self.bad(body(HOOK.replace('"before_tool"', '"after_tool"'), tools="", hooks="no_secrets"),
-                 "hook no_secrets: after_tool cannot be blocked; fn.block has no effect there")
+        """11-21 (line top-1121-hooknew): the event name is not checked (a declaration is only a reference), and neither is a
+        condition on a point that does not compare it or fn.block where nothing can be blocked; the shape still is."""
+        for event in ("before_tol", "after_start", "after_tool"):
+            with self.subTest(event=event):
+                out = self.dry(body(HOOK.replace('"before_tool"', '"%s"' % event), tools="", hooks="no_secrets"), name=event)
+                self.assertEqual(out["hookeds.json"]["no_secrets"]["event"], event)
+                self.assertIn("fn/no_secrets.py", out)
         self.bad(body(HOOK.replace('@fn.hook("before_tool", condition="write", timeout_ms=5000)', "@fn.hook"), tools="", hooks="no_secrets"),
                  'hooks: hook no_secrets needs the event name, like @fn.hook("before_tool")')
         self.bad(body(HOOK.replace("(event)", "(event, more)"), tools="", hooks="no_secrets"),
@@ -50,18 +52,19 @@ class Hooks(FnCase):
         self.bad(body(HOOK.replace("timeout_ms=5000", "handler='x.py'"), tools="", hooks="no_secrets"),
                  "@fn.hook sets handler itself")
 
-    def test_async_and_name(self):
-        out = self.dry(body(HOOK.replace("timeout_ms=5000", 'async_=True, name="guard"'), tools="", hooks="no_secrets"))
-        self.assertEqual(out["hooks.json"]["hooks"]["guard"]["async"], True)
-        self.assertEqual(out["hooks.json"]["hooks"]["guard"]["handler"], "fn/guard.py")
+    def test_name_and_own_keys(self):
+        """name= names the hook (and its program); the other keyword arguments go into the entry as written."""
+        out = self.dry(body(HOOK.replace("timeout_ms=5000", 'timeout_ms=0, name="guard"'), tools="", hooks="no_secrets"))
+        self.assertEqual(out["hookeds.json"]["guard"]["timeout_ms"], 0)
+        self.assertEqual(out["hookeds.json"]["guard"]["handler"], "fn/guard.py")
         self.assertIn("fn/guard.py", out)
 
     def test_same_names(self):
         entry = '{"no_secrets": {"event": "after_start", "handler": "hand.sh"}}'
         out = self.dry(body(HOOK, tools="", hooks=entry + ", no_secrets"))
-        self.assertEqual(out["hooks.json"]["hooks"]["no_secrets"]["handler"], "fn/no_secrets.py")    # later wins (07d opinion 10)
+        self.assertEqual(out["hookeds.json"]["no_secrets"]["handler"], "fn/no_secrets.py")    # later wins (07d opinion 10)
         out = self.dry(body(HOOK, tools="", hooks="no_secrets, " + entry), name="b")
-        self.assertEqual(out["hooks.json"]["hooks"]["no_secrets"]["handler"], "hand.sh")
+        self.assertEqual(out["hookeds.json"]["no_secrets"]["handler"], "hand.sh")
         self.assertNotIn("fn/no_secrets.py", out)
         two = HOOK + HOOK.replace("timeout_ms=5000", 'name="no_secrets"').replace("def no_secrets", "def other")
         self.bad(body(two, tools="", hooks="no_secrets, other"), "hooks: two functions are both hook no_secrets (no_secrets and other)",
@@ -94,7 +97,7 @@ class Links(FnCase):
         self.assertEqual(tools, {"base_check": {"path": "fn/base_check.py"}, "check": {"path": "fn/check.py"}})
         self.assertIn('"""base_check - Check two numbers.', (d / "fn" / "base_check.py").read_text())
         self.assertIn('"""check - Check again two numbers.', (d / "fn" / "check.py").read_text())
-        self.assertEqual(json.loads((d / "hooks.json").read_text())["hooks"]["no_secrets"]["handler"], "fn/no_secrets.py")
+        self.assertEqual(json.loads((d / "hookeds.json").read_text())["no_secrets"]["handler"], "fn/no_secrets.py")
         self.assertTrue((d / "fn" / "no_secrets.py").is_file())                                  # pulled out again here, not pointing back
         self.assertFalse((base / "fn").exists())
         self.assertEqual(self.call(d / "fn" / "base_check.py", '{"a": 1, "b": 2}').stdout, "3\n")

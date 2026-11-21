@@ -30,7 +30,7 @@ agent = defs.Agent(
 defs.main(agent)
 '''
 GENERATED = ["_entry", "_metainfo.json", "body.json", "fsm.json", "interfaces.json", "llm.json", "loop.json", "system.txt", "tools.json"]
-SKEL_GENERATED = sorted(GENERATED + ["hooks.json"])   # the skeleton declares hooks={} (user 11-19 "骨架帶一行空的 HOOKS")
+SKEL_GENERATED = sorted(GENERATED + ["hookeds.json"])   # the skeleton declares hooks={} (user 11-19 "骨架帶一行空的 HOOKS")
 TEMPLATES = PROTO / "templates"
 # an eca definition copied from its template: agent.py has no fsm and fills only the content files
 ECA = '''\

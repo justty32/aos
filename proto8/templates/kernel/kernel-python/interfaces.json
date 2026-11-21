@@ -1,0 +1,12 @@
+{
+  "description": "Pass every request on to the daemon, managing nothing yet.",
+  "hooks": [
+    "kernel_hooks.json",
+    {
+      "$env": "AOS_HOME",
+      "$path": "/lib/aos/apps/hook/loop_hooks.json"
+    }
+  ],
+  "hookeds": "kernel_hookeds.json",
+  "kernel": {}
+}

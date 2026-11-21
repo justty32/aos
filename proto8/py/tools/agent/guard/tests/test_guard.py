@@ -480,7 +480,7 @@ class OldRules(Base):
         self.allowed("agents_ctl", {"op": "stop", "name": "w-01", "timeout_s": 60, "no_wait": True})
 
     def test_agents_ctl_from_hook_cell(self):
-        cell = os.path.join(self.stack, "hooks", "guard")
+        cell = os.path.join(self.stack, "hookeds", "guard")
         os.makedirs(cell)
         self.allowed("agents_ctl", {"op": "stop", "name": "w-01", "timeout_s": 60, "no_wait": True}, stack=cell)
 
@@ -536,11 +536,11 @@ class DenyRoots(Base):
         self.allowed("write", {"path": os.path.join(self.tmp.name, "procs", "other.txt")})
 
     def test_auto_stack_from_hook_cell(self):
-        # a hook runs with AOS_STACK = <stack>/hooks/<hook>; the whole agent stack is denied, not only the cell
+        # a hook runs with AOS_STACK = <stack>/hookeds/<hook>; the whole agent stack is denied, not only the cell
         self.allow = [self.tmp.name]
-        cell = os.path.join(self.stack, "hooks", "guard")
+        cell = os.path.join(self.stack, "hookeds", "guard")
         os.makedirs(cell)
-        self.blocked("write", {"path": os.path.join(self.stack, "hooks.json")}, stack=cell)
+        self.blocked("write", {"path": os.path.join(self.stack, "hookeds.json")}, stack=cell)
         self.blocked("write", {"path": os.path.join(cell, "x")}, stack=cell)
         self.allowed("write", {"path": os.path.join(self.root, "x")}, stack=cell)
 
@@ -654,7 +654,7 @@ class Mail(Base):
         self.agent_box = os.path.join(self.daemon, "procs", "bob", "mailbox")
         self.station = os.path.join(self.daemon, "procs", "station")
         for d in (os.path.join(self.daemon, "ctlbox", "new"), self.agent_box, os.path.join(self.station, "requests", "new"),
-                  os.path.join(self.daemon, "procs", "owner", "hooks", "kernel_gate", "requests"),
+                  os.path.join(self.daemon, "procs", "owner", "hookeds", "kernel_gate", "requests"),
                   os.path.join(t, "llm", "requests"), os.path.join(t, "noisy", "box")):
             os.makedirs(d)
         with open(os.path.join(self.daemon, "procs_state.json"), "w", encoding="utf-8") as f:
@@ -670,7 +670,7 @@ class Mail(Base):
 
     def test_kernel_mailbox_blocked(self):
         self.blocked("mailbox_send", {"box": os.path.join(self.station, "requests")})
-        self.blocked("mailbox_send", {"box": os.path.join(self.daemon, "procs", "owner", "hooks", "kernel_gate", "requests")})
+        self.blocked("mailbox_send", {"box": os.path.join(self.daemon, "procs", "owner", "hookeds", "kernel_gate", "requests")})
         self.blocked("mailbox_send", {"box": os.path.join(self.tmp.name, "llm", "requests")})
 
     def test_kernel_env_blocked(self):
@@ -836,7 +836,7 @@ class DefinitionDeny(Base):
         self.allowed("write", {"path": os.path.join(self.root, "defs", "x")}, env_extra=self.env)
 
     def test_from_hook_cell(self):
-        cell = os.path.join(self.stack, "hooks", "guard")
+        cell = os.path.join(self.stack, "hookeds", "guard")
         os.makedirs(cell)
         self.blocked("edit", {"path": os.path.join(self.mydef, "tools.json")}, stack=cell, env_extra=self.env)
 
@@ -902,7 +902,7 @@ class QueueMail(Base):
 
     def test_own_queue_allowed(self):
         self.allowed("mailbox_send", {"box": os.path.join(self.stack, "queue")})
-        cell = os.path.join(self.stack, "hooks", "guard")
+        cell = os.path.join(self.stack, "hookeds", "guard")
         os.makedirs(cell)
         self.allowed("mailbox_send", {"box": os.path.join(self.stack, "queue")}, stack=cell)
 
@@ -1113,7 +1113,7 @@ class ProcStackRule(Base):
 class ScopeCli(Base):
     def test_entry_scope(self):
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        env.update(AOS_GUARD_CFG=self.cfg_path, AOS_WS=self.ws, AOS_STACK=os.path.join(self.stack, "hooks", "guard"),
+        env.update(AOS_GUARD_CFG=self.cfg_path, AOS_WS=self.ws, AOS_STACK=os.path.join(self.stack, "hookeds", "guard"),
                    AOS_WRITE_ALLOW=self.root)
         p = subprocess.run([sys.executable, GUARD, "--scope"], capture_output=True, text=True, env=env, timeout=30)
         self.assertEqual(p.returncode, 0, p.stderr)
@@ -1221,7 +1221,7 @@ class KeepFiles(Base):
     def test_mailbox_read_keep(self):
         out = self.blocked("mailbox_read", {"keep": os.path.join(self.tmp.name, "elsewhere.jsonl")})
         self.assertIn("outside the folders you may write", out)
-        out = self.blocked("mailbox_read", {"keep": os.path.join(self.stack, "hooks.json")})
+        out = self.blocked("mailbox_read", {"keep": os.path.join(self.stack, "hookeds.json")})
         self.assertIn("from AOS_STACK", out)
         self.assertIn(NO_HASH, self.blocked("mailbox_read", {"keep": "#/../../x"}))
         self.blocked("mailbox_read", {"keep": "../x.jsonl"})
@@ -1502,7 +1502,7 @@ class BoxOwnTree(Base):
 
     def test_own_mailbox_and_workspace(self):
         self.allowed("mailbox_send", self.to_box(self.own_box))
-        self.allowed("mailbox_send", self.to_box(self.own_box), stack=os.path.join(self.stack, "hooks", "guard"))
+        self.allowed("mailbox_send", self.to_box(self.own_box), stack=os.path.join(self.stack, "hookeds", "guard"))
         mailbox(os.path.join(self.ws, "outbox"))
         self.allowed("mailbox_send", self.to_box("outbox"))
 
@@ -1644,7 +1644,7 @@ class EventStack(Base):
         self.allowed("write", {"path": os.path.join(ev, "x")})
         out = self.blocked("write", {"path": os.path.join(ev, "x")}, event={"stack": ev})
         self.assertIn("no agent may write (%s, from event)" % ev, out)
-        out = self.blocked("write", {"path": os.path.join(ev, "x")}, event={"stack": os.path.join(ev, "hooks", "guard")})
+        out = self.blocked("write", {"path": os.path.join(ev, "x")}, event={"stack": os.path.join(ev, "hookeds", "guard")})
         self.assertIn("from event", out)                       # a cell is cut as for AOS_STACK
         self.allowed("write", {"path": os.path.join(self.root, "y")}, event={"stack": ev})
         for bad in (3, ["x"], "a\u0000b"):

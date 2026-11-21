@@ -7,10 +7,11 @@
 
 宣告用的（寫錯在 .dry_run()／.compile()／defs.main 才報 SpecBad）：
   Kernel(說明, knobs=None, hooks=None, program="kernel", body=None)
-      program  "kernel"＝框架站（掛 proc 那一站：白名單、同時幾個…）、"kernel_llm"＝llm kernel（問腦那一站；多一份 interfaces.json 的 aos-ledger）
+      program  "kernel"＝框架站（掛 proc 那一站：白名單、同時幾個…）、"kernel_llm"＝llm kernel（問腦那一站；interfaces.json 多 aos-ledger）
       knobs    kernel.json 的其餘鍵，原樣寫進去（鍵的意思看 templates/kernel/README.md；不認得的鍵程式不管，這裡也不驗）
-      hooks    一張表 {名字: 一格}、@fn.hook 的函數、或它們的串列（後面的同名蓋前面、None 拿掉）；
-               判前、判後、代回之前三個點寫進 kernel.json 的 hooks；身體是 loop 時 aos-loop 的四個點寫進 loop_hooks.json
+      hooks    一張表 {名字: 一格}、@fn.hook 的函數、或它們的串列（後面的同名蓋前面、None 拿掉）；全部寫進被勾清單 kernel_hookeds.json
+               （11-21 kernel 甲案：interfaces.json 最外層 hookeds 指它；kernel.json 不再有 hooks）。事件名不驗（宣告只是參考）；
+               身體是 loop 時掛了 before_run／after_run 才在 loop.json 接那兩條線（編譯時決定，沒有旗標檔）
       body     defs.loop()＝掛成 daemon 底下的一列（aos-loop loop.json，同 procs-kernel）、
                defs.daemon()＝自己一台 daemon（aos-daemon daemon.json，帶清道夫列，同 daemon-kernel、llm-kernel）；
                兩個都收任意鍵，原樣寫進那份 json、不檢查、同名蓋過編譯寫的（例 interval_ms＝每輪間隔，不給＝300；
@@ -23,7 +24,7 @@ main(物件)：kernel.py 最後一行；--compile [資料夾]、--dry-run、--he
 import json, os, sys
 
 from aos import flags
-from aos import fn_spec, hook_point, hook_run
+from aos import fn_spec, hook_lists
 from aos import spec_base, spec_unit
 from aos.spec_base import SpecBad, DefBad  # noqa: F401（對外的名字：defs.SpecBad、defs.DefBad）
 from aos.agent_spec import home, env  # noqa: F401（對外的名字：defs.home、defs.env，同 agent 那邊）
@@ -34,12 +35,12 @@ FIELDS = ("description", "knobs", "hooks", "program", "body")
 PROGRAMS = ("kernel", "kernel_llm")
 DEFAULT_BODY = {"kernel": "loop", "kernel_llm": "daemon"}      # 照 templates/start-api：perm 是 loop、llm 是 daemon
 _LIB = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))   # py/ 或裝好的 lib/
-KERNEL_POINTS = os.path.join(_LIB, "tools", "aos", "kernel", "hook_points.json")   # kernel、kernel_llm 共用這三個點
-LOOP_POINTS_ENV = {"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_points.json"}
-LOOP_HOOKS = "loop_hooks.json"
+KERNEL_POINTS = os.path.join(_LIB, "tools", "aos", "kernel", "kernel_hooks.json")   # kernel、kernel_llm 共用這三個點的宣告（正本；編譯抄一份進定義夾）
+LOOP_POINTS_ENV = {"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}   # aos-loop 四個點的宣告（loop 身體的 interfaces.json 用指示詞指）
+HOOKS_FILE, HOOKEDS_FILE = "kernel_hooks.json", "kernel_hookeds.json"
 SWEEPER = {"exec": {"argv": ["aos-sweeper", "--retention-days", "7", "--report", {"$env": "AOS_STACK", "$path": "sweeper_report.json"}]},
            "interval_ms": 600000, "auto_restart": True, "stuck_after_ms": 600000}   # 同 templates/kernel/daemon-kernel 的 _sweeper 列
-LEDGER = {"description": "Declare the stack ledger interface", "aos-ledger": {"file": "ledger.jsonl"}}   # 同 templates/kernel/llm-kernel
+LEDGER = {"aos-ledger": {"file": "ledger.jsonl"}}   # llm kernel 的帳（同 templates/kernel/llm-kernel 的 interfaces.json）
 RENAME_LAST = {"daemon.json": 1, "loop.json": 1, "interfaces.json": 2, "_entry": 3}   # 被指的檔先換、_entry 最後（其他＝0）
 HELP = """\
 usage: python3 kernel.py --compile [FOLDER] | --dry-run | --help
@@ -59,9 +60,10 @@ makes it a daemon of its own, with a sweeper row. Default: loop for kernel, daem
 Any other keyword of defs.loop / defs.daemon goes into loop.json / daemon.json as it is, unchecked, and
 replaces a key of the same name that compiling writes (like defs.daemon(procs={...}): no sweeper row then).
 hooks= takes a dict {name: entry}, functions marked @fn.hook("before_verdict") (from aos.py import fn),
-or a list of those; a function is pulled out into a program fn/<name>.py of the folder. Hooks of
-before_verdict, after_verdict and before_reply go into kernel.json; with body=defs.loop(...), hooks of
-after_start, after_stop, before_run and after_run go into loop_hooks.json.
+or a list of those; a function is pulled out into a program fn/<name>.py of the folder. All of them go
+into kernel_hookeds.json, which interfaces.json names ("hookeds"); kernel_hooks.json is a copy of the
+declaration of the kernel's three points. With body=defs.loop(...), after_start / after_stop are always
+wired in loop.json, before_run / after_run only when a hook listens to them when compiling.
 Without defs.main (a build script, the REPL): k.dry_run() gives the files, k.compile(FOLDER) writes them.
 Then mount it: aos-daemon-ctl add FOLDER (or copy it under the tree first).
 On a wrong declaration: one line "NAME: error: SpecBad ..." on stderr, exit 1, nothing written.
@@ -86,15 +88,17 @@ def daemon(**keys):
     return _keys("daemon", keys)
 
 
-def _points(body):
-    """{事件: 宣告} 這個 kernel 收的 hook 點、哪些寫進 loop_hooks.json。"""
-    points = hook_point.read([KERNEL_POINTS])
-    loop_points = hook_point.read([hook_point.provider_path("aos-loop")]) if body == "loop" else {}
-    return points, loop_points
+def _declaration():
+    """kernel 三個點的宣告正本（抄進定義夾的 kernel_hooks.json）；讀不到＝SpecBad。"""
+    try:
+        with open(KERNEL_POINTS, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError) as e:
+        raise SpecBad("cannot read the kernel's hook point declaration %s: %s" % (KERNEL_POINTS, e))
 
 
-def _stack_hooks(hooks, events):
-    """hooks 疊起來 → {名字: 格}：一張表、@fn.hook 的函數、或它們的串列；後面的同名蓋前面、None 拿掉；每格照 hook 引擎驗（事件照 events）。"""
+def _stack_hooks(hooks):
+    """hooks 疊起來 → {名字: 格}：一張表、@fn.hook 的函數、或它們的串列；後面的同名蓋前面、None 拿掉；每格照讀清單的一方驗（kernel 的 condition 也驗）。"""
     layers = list(hooks) if isinstance(hooks, (list, tuple)) else [hooks]
     table, by_fn = {}, {}
     for layer in layers:
@@ -114,12 +118,16 @@ def _stack_hooks(hooks, events):
             if entry is None:
                 continue
             try:
-                hook_run.validate_name(name)
-            except hook_run.HooksBad as e:
-                raise SpecBad("hooks: hook name %r %s" % (name, e))
+                hook_lists.check_name(name)
+            except hook_lists.HooksBad as e:
+                raise SpecBad("hooks: %s" % e)
             try:
-                hook_run.validate_entry({k: v for k, v in entry.items() if k != fn_spec.KEY} if isinstance(entry, dict) else entry, events)
-            except hook_run.HooksBad as e:
+                plain = {k: v for k, v in entry.items() if k != fn_spec.KEY} if isinstance(entry, dict) else entry
+                hook_lists.check_entry(plain)
+                m = plain.get("condition")
+                if "condition" in plain and not ((isinstance(m, str) and m) or (isinstance(m, list) and all(isinstance(x, str) and x for x in m))):
+                    raise hook_lists.HooksBad("condition must be a non-empty string or an array of them")
+            except hook_lists.HooksBad as e:
                 raise SpecBad("hooks: hook %s: %s" % (name, e))
             table[name] = entry
     return table
@@ -158,11 +166,6 @@ class Kernel(spec_unit.Unit):
         given = keys.get("interval_ms")                 # 照傳、不驗；說明裡的毫秒數跟著它，是整數才跟（不然寫預設的 300）
         return body["kind"], given if isinstance(given, int) and not isinstance(given, bool) else 300, keys
 
-    def events(self):
-        """這個 kernel 收的 hook 事件表（引擎的形狀）：kernel 的三個點，身體是 loop 時再加 aos-loop 的四個。"""
-        points, loop_points = _points(self._body()[0])
-        return hook_point.engine_table(dict(points, **loop_points))
-
     def _files(self, folder, warn):
         """→ {檔名: 內容}；全部驗完才回，錯丟 SpecBad。"""
         description = self.description
@@ -176,22 +179,18 @@ class Kernel(spec_unit.Unit):
         for k, use in (("description", "the first argument of defs.Kernel"), ("hooks", "hooks=")):
             if k in knobs:
                 raise SpecBad("knobs must not set %s: use %s" % (k, use))
-        points, loop_points = _points(body)
-        events = self.events()
         kernel_json = dict({"description": description}, **knobs)
-        loop_hooks = None
-        if self.hooks is not None:
-            table = _stack_hooks(self.hooks, events)
-            kernel_json["hooks"] = {n: e for n, e in table.items() if e["event"] in points}
-            if body == "loop":
-                loop_hooks = {"description": "Hooks on the four aos-loop points of this kernel (after_start, after_stop, before_run, after_run).",
-                              "hooks": {n: e for n, e in table.items() if e["event"] in loop_points}}
+        table = _stack_hooks(self.hooks) if self.hooks is not None else {}
+        hookeds = dict({"description": "What is hooked on this kernel: before_verdict, after_verdict, before_reply%s; "
+                                       "each entry {event, handler, timeout_ms?, condition? (after_verdict: verdict)}."
+                                       % (" and the aos-loop points" if body == "loop" else "")}, **table)
+        events = {e.get("event") for e in table.values()}
         exec_ = {"argv": ["aos-exec", home("/lib/tools/aos/%s" % self.program), {"$env": "AOS_CD", "$path": "kernel.json"}]}
         out = {}
         if body == "loop":
             out["_entry"] = {"description": "Mount this kernel as one row of the current daemon: aos-loop with loop.json.",
                              "argv": ["aos-loop", "loop.json"]}
-            out["loop.json"] = {**_loop_json(exec_, interval_ms), **body_keys}       # 任意鍵照傳、你給的蓋過去（11-21）
+            out["loop.json"] = {**_loop_json(exec_, interval_ms, events), **body_keys}       # 任意鍵照傳、你給的蓋過去（11-21）
         else:
             out["_entry"] = {"description": "Start this kernel as a daemon of its own, with stdout logs.",
                              "argv": ["aos-daemon", "--enable-logs", "daemon.json"]}
@@ -199,21 +198,17 @@ class Kernel(spec_unit.Unit):
                                                  % (self.program, interval_ms),
                                   "exec": exec_, "interval_ms": interval_ms, "procs": {"_sweeper": SWEEPER}, **body_keys}
         out["kernel.json"] = kernel_json
-        if loop_hooks is not None:
-            out[LOOP_HOOKS] = loop_hooks
+        out[HOOKS_FILE] = _declaration()
+        out[HOOKEDS_FILE] = hookeds
+        face = {"description": description,
+                "hooks": [HOOKS_FILE, dict(LOOP_POINTS_ENV)] if body == "loop" else HOOKS_FILE,
+                "hookeds": HOOKEDS_FILE, "kernel": {}}
         if self.program == "kernel_llm":
-            out["interfaces.json"] = LEDGER
+            face.update(LEDGER)
+        out["interfaces.json"] = face
         out["README.md"] = description + "\n"
         out = _plain(out)
-        programs = {}
-        for doc, file in (("kernel.json", "kernel.json"), (LOOP_HOOKS, LOOP_HOOKS)):
-            if doc in out and out[doc].get("hooks"):
-                more = fn_spec.programs(None, None, out[doc], file, events)
-                for name in more:
-                    if name in programs:
-                        raise SpecBad("%s is the program of two hooks: give one another name (name=)" % name)
-                programs.update(more)
-        out.update(programs)                    # fn/<名>.py：程式檔（755），不經 _plain
+        out.update(fn_spec.programs(None, None, out[HOOKEDS_FILE], HOOKEDS_FILE))   # fn/<名>.py：程式檔（755），不經 _plain
         return out
 
     def _write(self, folder, files):
@@ -226,19 +221,24 @@ class Kernel(spec_unit.Unit):
         return done
 
 
-def _loop_json(exec_, interval_ms):
-    """同 templates/kernel/procs-kernel/loop.json：aos-loop 的四個點經 aos-hook fire 接到同夾的 loop_hooks.json（檔不在＝沒有 hook）。"""
-    def fire(point):
-        return {"argv": ["aos-hook", "fire", "-q", "--points", dict(LOOP_POINTS_ENV), "--list",
-                         {"$env": "AOS_CD", "$path": "/" + LOOP_HOOKS}, point]}
-    return {"description": "Run the kernel once every %d ms over kernel.json. The four aos-loop hook points (after_start, after_stop, "
-                           "before_run = before each round, after_run = after it) fire through aos-hook with the hooks of loop_hooks.json "
-                           "next to this file (no such file = no hooks); before_run / after_run only while their flag file is in the stack "
-                           "(hook_before_run.flag, hook_after_run.flag, set at start and by aos-hook check)." % interval_ms,
-            "exec": exec_, "interval_ms": interval_ms,
-            "on_start": fire("after_start"), "on_stop": fire("after_stop"),
-            "on_before_run": fire("before_run"), "on_before_run_if": {"$env": "AOS_STACK", "$path": "/hook_before_run.flag"},
-            "on_after_run": fire("after_run"), "on_after_run_if": {"$env": "AOS_STACK", "$path": "/hook_after_run.flag"}}
+def fire(point):
+    """loop.json 裡發一個 aos-loop 點：aos-hook fire -q --stop-on-nonzero --def $AOS_CD EVENT（被勾清單照 interfaces.json 的 hookeds）。"""
+    return {"argv": ["aos-hook", "fire", "-q", "--stop-on-nonzero", "--def", {"$env": "AOS_CD"}, point]}
+
+
+def _loop_json(exec_, interval_ms, events=()):
+    """同 templates/kernel/procs-kernel/loop.json：起停兩點一律接；before_run／after_run 只在編譯時有 hook 掛才接（11-21「編譯時決定」）。"""
+    run = sorted({"before_run", "after_run"} & set(events))
+    loop = {"description": "Run the kernel once every %d ms over kernel.json. on_start / on_stop fire the aos-loop points after_start / after_stop "
+                           "through aos-hook with the hookeds of interfaces.json (a failing hook stops the loop); %s"
+                           % (interval_ms, "on_before_run / on_after_run fire before_run / after_run (before / after each round) the same way."
+                              if run else "nothing listened to before_run / after_run when this was compiled, so they are not wired "
+                              "(a hook added for them needs a recompile and a restart)."),
+            "exec": exec_, "interval_ms": interval_ms, "on_start": fire("after_start"), "on_stop": fire("after_stop")}
+    for point in ("before_run", "after_run"):
+        if point in run:
+            loop["on_" + point] = fire(point)
+    return loop
 
 
 def main(*args, **kw):

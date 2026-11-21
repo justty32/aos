@@ -50,11 +50,11 @@ class SelfHook(unittest.TestCase):
 
     def test_add_with_every_key(self):
         r = self.run_tool({"op": "add", "event": "before_tool", "path": "hooks/guard", "name": "g", "condition": ["a", "b"],
-                           "intercept": False, "async": False, "on_error": "continue", "timeout_ms": 500, "replace": True})
+                           "timeout_ms": 500, "replace": True})
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("(takes effect from the next event)", r.stdout)
         self.assertEqual(self.calls()[-1], [str(self.ws), "hook", "--target", "bob", "add", "--event", "before_tool", "--name", "g",
-                                            "--condition", "a", "--condition", "b", "--no-intercept", "--on-error", "continue",
+                                            "--condition", "a", "--condition", "b",
                                             "--timeout-ms", "500", "--replace", "--", "hooks/guard"])
 
     def test_add_on_clock(self):   # 11-11 clock-hook：every_cycles／every_ms／clock 一對一傳成旗標
@@ -88,7 +88,7 @@ class SelfHook(unittest.TestCase):
                            ({"op": "ls", "long": True}, ["ls", "-l"]),
                            ({"op": "get", "name": "guard"}, ["get", "--", "guard"]),
                            ({"op": "rm", "name": "-h"}, ["rm", "--", "-h"]),          # - 開頭的值放 -- 後（線 histrange-1121）
-                           ({"op": "add", "event": "after_queue", "path": "/abs/h", "async": True}, ["add", "--event", "after_queue", "--async", "--", "/abs/h"]),
+                           ({"op": "add", "event": "after_queue", "path": "/abs/h"}, ["add", "--event", "after_queue", "--", "/abs/h"]),
                            ({"op": "add", "event": "brain_failed", "condition": "ReplyBad", "name": "p", "path_json": d},
                             ["add", "--event", "brain_failed", "--name", "p", "--condition", "ReplyBad", "--path-json", json.dumps(d)]),
                            ({"op": "rm", "name": "guard"}, ["rm", "--", "guard"]),
@@ -100,6 +100,9 @@ class SelfHook(unittest.TestCase):
 
     def test_bad_arguments(self):
         for args, word in (({"op": "add", "event": "after_tool", "path": "h", "envs": {}}, "ArgumentsBad unknown key envs"),
+                           ({"op": "add", "event": "after_tool", "path": "h", "async": True}, "ArgumentsBad unknown key async"),
+                           ({"op": "add", "event": "after_tool", "path": "h", "intercept": False}, "ArgumentsBad unknown key intercept"),
+                           ({"op": "add", "event": "after_tool", "path": "h", "on_error": "continue"}, "ArgumentsBad unknown key on_error"),
                            ({"op": "add", "path": "h"}, "event needs"),
                            ({"op": "add", "event": "after_tool"}, "path"),
                            ({"op": "add", "event": "after_tool", "path": "h", "path_json": "x"}, "not both"),

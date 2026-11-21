@@ -22,7 +22,7 @@
 | [aos-sandbox](../aos/apps/sandbox/README.md) | 照一份設定把 prog 關進沙箱再跑 |
 | [aos-grow](../aos/apps/grow/README.md) | 把一個函數往上長一級或縮回一級（原型） |
 | [aos-json-view](../aos/apps/json_view/README.md) | 只讀：把 json（或 `#/指標` 那段）印成人好讀的樣子：`鍵: 值`、短的擠一行、`\n` 真的換行、字串陣列接成段落、`--depth N` 摺深層 |
-| [aos-hook](../aos/apps/hook/README.md) | 讓任何子程式（C++、shell…）提供 hook 點：`fire` 發一個事件（資料走 stdin JSON 或 `--field`，一行 JSON 出、退 0／10 被攔／1 錯）、`points` 列宣告的點、`check` 驗宣告與清單；跑 hook 的是共用引擎 `aos.hook_run`。`--agent` 還沒有（第 2 刀） |
+| [aos-hook](../aos/apps/hook/README.md) | 讓任何子程式（C++、shell…）提供 hook 點：只有 `fire` 一個子指令——照名字跑掛在那個事件上的 handler（清單 `--list` 或 `--def` 的 interfaces.json `hookeds`；資料走 stdin JSON），一行 JSON 交回各自的退出碼與 stdout、退 0；`--stop-on-nonzero`＝第一個非 0 就停、用它的碼退出。攔不攔、改不改由發事件的程式自己決定；跑 hook 的是共用引擎 `aos.hook_run` |
 
 > **C++（[proto8/cpp](../../cpp/README.md)）是唯一實作**（使用者 10-23：「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 和時鐘，使用者選「fsm 也改用 C++、tick 先留 Python」）：
 > `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 的說明在各自的 README：[aos-exec](../../cpp/aos-exec/README.md)、[aos-loop](../../cpp/aos-loop/README.md)、[aos-fsm](../../cpp/aos-fsm/README.md)、[aos-daemon](../../cpp/aos-daemon/README.md)；inst 是 C lib [inst](../../cpp/aos-inst/README.md)。

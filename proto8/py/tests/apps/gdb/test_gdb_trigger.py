@@ -131,7 +131,7 @@ class Handler(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="gdb-trigger-"))
         self.stack = self.tmp / "stack"
-        self.cell = self.stack / "hooks" / "gdb_x"
+        self.cell = self.stack / "hookeds" / "gdb_x"
         self.cell.mkdir(parents=True)
         bin_ = self.tmp / "bin"
         bin_.mkdir()
@@ -272,10 +272,18 @@ class Handler(unittest.TestCase):
         self.assertIn("gdb_trigger: warning:", r.stderr)
         self.assertEqual(self.calls(), [])
 
-    def test_missing_spec_is_an_error_line(self):
+    def test_broken_trigger_warns_and_exits_0(self):
+        # 11-21 起 hook 沒有 on_error：這支自己壞了（沒有／壞的 trigger.json）一行 warning、退 0，不擋 agent
         r = subprocess.run([str(ENTRY)], input="{}", capture_output=True, text=True, env=self.env, timeout=30)
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("gdb_trigger: error: SpecMissing", r.stderr)
+        self.assertEqual((r.returncode, r.stdout), (0, ""))
+        self.assertIn("gdb_trigger: warning: SpecMissing", r.stderr)
+        self.assertNotIn("error:", r.stderr)
+        self.cell.mkdir(parents=True, exist_ok=True)
+        (self.cell / trigger.SPEC).write_text("{")
+        r = subprocess.run([str(ENTRY)], input="{}", capture_output=True, text=True, env=self.env, timeout=30)
+        self.assertEqual((r.returncode, r.stdout), (0, ""))
+        self.assertIn("gdb_trigger: warning: SpecBad", r.stderr)
+        self.assertEqual(self.calls(), [])
 
     def test_pause_failure_is_noted(self):
         (self.tmp / "bin" / "aos-agent").write_text("#!/bin/sh\necho 'aos-agent: error: PhaseBad ann is stopped' >&2\nexit 1\n")
@@ -354,7 +362,9 @@ class Shape(unittest.TestCase):
         import aos.gdb as g
         from aos.agentlib import hooks
         add = self.bp().add
-        self.assertEqual(set(dir(add)), set(e for e in hooks.EVENTS if e != hooks.CLOCK_EVENT) | {"tool_error", "watch"})
+        self.assertEqual(set(dir(add)), set(e for e in hooks.POINTS if e != hooks.CLOCK_EVENT)
+                         | {"before_compact", "after_compact", "after_start", "after_stop", "before_run", "after_run"}
+                         | {"tool_error", "watch"})
         for kind in dir(add):
             ps = inspect.signature(getattr(add, kind)).parameters
             with self.subTest(kind=kind):
@@ -428,8 +438,8 @@ if args[:2] == ["ctl", "state"]:
     print(json.dumps({"who": {"stack": os.path.join(T, "stack")}}))
     sys.exit(0)
 if args[0] == "hook" and mode == "missing":
-    sys.stderr.write("aos-agent: error: HooksMissing ann does not declare hooks (write {\"aos-agent\": {\"hooks\": \"hooks.json\"}} "
-                     "in the definition's interfaces.json)\n")
+    sys.stderr.write("aos-agent: error: HooksMissing ann names no hookeds file it can keep a copy of (write \"hookeds\": \"hookeds.json\" "
+                     "at the top of the definition's interfaces.json)\n")
     sys.exit(1)
 if args[:2] == ["hook", "ls"]:
     print(json.dumps([{"name": n} for n in have]))
@@ -438,6 +448,7 @@ elif args[:2] == ["hook", "add"]:
         sys.stderr.write("aos-agent: error: HooksBad the list is broken\n")
         sys.exit(1)
     n = args[args.index("--name") + 1]
+    json.dump(args, open(os.path.join(T, "add_args.json"), "w"))
     json.dump(sorted(set(have) | {n}), open(table, "w"))
     print("added " + n)
 elif args[:2] == ["hook", "rm"]:
@@ -497,8 +508,8 @@ class AddFails(unittest.TestCase):
             self.assertEqual(e.exception.code, "HooksMissing")
             self.assertIn("give hooks={} to defs.Agent(...) in agent.py", str(e.exception))
             self.assertIn("recompile", str(e.exception))
-            self.assertTrue(str(e.exception).startswith("aos-agent: error: HooksMissing ann does not declare hooks"))   # 原本那行原樣在前
-            self.assertFalse((self.tmp / "stack" / "hooks").exists())             # 小格（連 hooks/ 夾）都沒留
+            self.assertTrue(str(e.exception).startswith("aos-agent: error: HooksMissing ann names no hookeds file"))   # 原本那行原樣在前
+            self.assertFalse((self.tmp / "stack" / "hookeds").exists())             # 小格（連 hookeds/ 夾）都沒留
             self.assertEqual(self.bp._trigger_ids(), set())
         with self.assertRaises(self.g.Failed) as e:
             self.bp.ls()                                                          # 列也是同一句
@@ -510,7 +521,7 @@ class AddFails(unittest.TestCase):
     def test_failing_add_next_to_others_and_replace_puts_back(self):
         self.mode("ok")
         self.assertEqual(self.bp.add.after_tool("write", times=2).id, 1)
-        cell = self.tmp / "stack" / "hooks" / "gdb_0001"
+        cell = self.tmp / "stack" / "hookeds" / "gdb_0001"
         trigger.write_json(str(cell / trigger.COUNT), {"seen": 5, "streak": 1, "fired": 2})
         before = {n: (cell / n).read_bytes() for n in (trigger.SPEC, trigger.COUNT)}
         self.mode("fail")
@@ -519,7 +530,7 @@ class AddFails(unittest.TestCase):
         with self.assertRaises(self.g.Failed):
             self.bp.add.after_tool("read", id=1, replace=True)                   # 重下失敗：原本的設定與計數放回去
         self.assertEqual({n: (cell / n).read_bytes() for n in before}, before)
-        self.assertEqual(sorted(p.name for p in (self.tmp / "stack" / "hooks").iterdir()), ["gdb_0001"])
+        self.assertEqual(sorted(p.name for p in (self.tmp / "stack" / "hookeds").iterdir()), ["gdb_0001"])
         with self.assertRaises(self.g.Failed):
             self.bp.set(1, times=5)                                              # 改也一樣：裝不上＝設定不變
         self.assertEqual((cell / trigger.SPEC).read_bytes(), before[trigger.SPEC])
@@ -573,7 +584,10 @@ class Ids(unittest.TestCase):
         self.assertEqual((b.id, b.kind, b.how, b.times, b.enabled, b.fired), (1, "after_tool", "pause", 2, True, 0))
         self.assertEqual(self.bp.add.tool_error().kind, "tool_error")
         self.assertEqual(self.bp.add.before_queue().kind, "before_queue")
-        trigger.write_json(str(self.tmp / "stack" / "hooks" / "gdb_0001" / trigger.COUNT), {"seen": 4, "fired": 2})
+        added = json.loads((self.tmp / "add_args.json").read_text())             # 11-21：不再帶 --on-error／--no-intercept
+        self.assertEqual(added[added.index("--timeout-ms") + 1], "0")                # before_queue 扣住：不限時
+        self.assertFalse({"--on-error", "--no-intercept", "--async"} & set(added))
+        trigger.write_json(str(self.tmp / "stack" / "hookeds" / "gdb_0001" / trigger.COUNT), {"seen": 4, "fired": 2})
         self.assertEqual((b.fired, b.seen), (2, 4))                              # 每次讀都重新查
         self.assertEqual(self.bp.set(b, times=3).times, 3)                       # set 收物件（也回物件）
         self.assertEqual(b.times, 3)

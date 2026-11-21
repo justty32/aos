@@ -1,4 +1,6 @@
-"""Test the 11-11 hook events: on_clock (hook_clock.clock_tick, through H.clock_tick() in the cells), after_start / after_stop (aos-hook fire --agent, as the templates' loop.json on_start / on_stop)."""
+"""Test the 11-11 hook events: on_clock (hook_clock.clock_tick, through H.clock_tick() in the cells), after_start / after_stop (aos-hook fire --def, as the templates' loop.json on_start / on_stop).
+11-21 top-1121-hooknew: on_clock's "first check after a start" compares STACK/state.json's boot_id / pid / started_at_ticks (aos-hook fire after_start clears nothing);
+the after_stop event has only event / hook / stack, the handler reads AOS_LOOP_CODE / AOS_LOOP_SIGNAL / AOS_LOOP_CAUSE itself."""
 import json
 import os
 from pathlib import Path
@@ -12,13 +14,13 @@ from test_hooks import CELLS, PROTO, Hooks, hooks  # noqa: E402
 from aos.agentlib import hook_clock  # noqa: E402  （on_clock 的看時鐘 11-20 從 hooks.py 搬到這裡）
 
 HOOK = PROTO / "bin" / "aos-hook"   # 裝好的指令（install.py 之後才有）
-CAUSE_KEY, CAUSE_ENV = "cause", "AOS_LOOP_CAUSE"   # 11-14 B7：after_stop 的欄位名與環境變數名（宣告在 py/aos/apps/hook/loop_points.json）
+LOOP_ENV = ("AOS_LOOP_CODE", "AOS_LOOP_SIGNAL", "AOS_LOOP_CAUSE")   # what aos-loop sets for on_stop (11-14 B7 the cause; declared in py/aos/apps/hook/loop_hooks.json)
 
 
 def fire(event, defn, env):
-    """範本 loop.json 的 on_start／on_stop 那一行：aos-hook fire -q --agent DEF EVENT（stdin 接 /dev/null，同 daemon 底下）。"""
-    return subprocess.run([str(HOOK), "fire", "-q", "--agent", str(defn), event], env=env, stdin=subprocess.DEVNULL,
-                          capture_output=True, text=True, timeout=20)
+    """範本 loop.json 的 on_start／on_stop 那一行：aos-hook fire -q --stop-on-nonzero --def DEF EVENT（stdin 接 /dev/null，同 daemon 底下）。"""
+    return subprocess.run([str(HOOK), "fire", "-q", "--stop-on-nonzero", "--def", str(defn), event], env=env,
+                          stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=20)
 
 
 class ClockHook(Hooks):
@@ -49,7 +51,7 @@ class ClockHook(Hooks):
                     os.environ[k] = v
 
     def due(self, name="t", **keys):
-        entry = {"event": "on_clock", "handler": self.hook(name), "on_error": "continue"}
+        entry = {"event": "on_clock", "handler": self.hook(name)}
         if "every_ms" not in keys and "every_cycles" not in keys:
             entry["every_cycles"] = 10
         entry.update(keys)
@@ -61,25 +63,25 @@ class ClockHook(Hooks):
                          ({"event": "on_clock", "handler": "x", "every_cycles": 1, "every_ms": 1}, "exactly one"),
                          ({"event": "on_clock", "handler": "x", "every_ms": 0}, "positive"),
                          ({"event": "on_clock", "handler": "x", "every_ms": 5, "clock": ""}, "clock"),
-                         ({"event": "after_stop", "handler": "x", "every_ms": 5}, "only for event on_clock"),
-                         ({"event": "after_start", "handler": "x", "condition": "a"}, "takes no condition")):
+                         ({"event": "after_stop", "handler": "x", "every_ms": 5}, "only for event on_clock")):
             with self.subTest(bad=bad):
                 with self.assertRaises(hooks.HooksBad) as cm:
-                    hooks.validate_entry(bad)
+                    hooks.check_entry(bad)
                 self.assertIn(why, str(cm.exception))
-        hooks.validate_entry({"event": "on_clock", "handler": "x", "every_ms": 300000, "clock": "_clock"})
+        hooks.check_entry({"event": "on_clock", "handler": "x", "every_ms": 300000, "clock": "_clock"})
+        hooks.check_entry({"event": "after_start", "handler": "x", "condition": "a"})   # 11-21: kept, never compared there
 
     # ---- clock_tick
     def test_no_clock_hook_costs_nothing(self):
         self.declare({"q": {"event": "after_queue", "handler": self.hook("q")}})
         self.assertEqual(self.tick(AOS_CLOCK=str(self.clock)), [])
-        self.assertFalse((self.stack / "hooks").exists())
+        self.assertFalse((self.stack / "hookeds").exists())
 
     def test_baseline_then_due_then_missed(self):
         self.declare({"t": self.due()})
         env = {"AOS_CLOCK": str(self.clock)}
         self.assertEqual(self.tick(**env), ["t"])                 # 第一次＝立刻跑一次並記基準（11-11 使用者「起來就先觸發一次」）
-        self.assertEqual(json.loads((self.stack / "hooks" / "t" / "on_clock.json").read_text())["cycle"], 100)
+        self.assertEqual(json.loads((self.stack / "hookeds" / "t" / "on_clock.json").read_text())["cycle"], 100)
         self.set_cycle(109)
         self.assertEqual(self.tick(**env), [])                    # 沒到：不起行程
         self.assertEqual(len(self.events()), 1)
@@ -95,17 +97,36 @@ class ClockHook(Hooks):
         self.assertEqual((b["cycle"], b["last_cycle"], b["missed"]), (165, 110, 4))
         self.assertEqual(b["stack"], str(self.stack))
 
-    def test_restart_fires_again(self):   # 每次睡醒、重起：aos-hook fire --agent … after_start 清掉狀態檔＝下一次檢查又是第一次
+    def loop_run(self, pid, ticks=1000, boot="boot-a"):
+        """STACK/state.json as aos-loop writes it (only the keys hook_clock reads, plus one more)."""
+        (self.stack / "state.json").write_text(json.dumps({"pid": pid, "started_at_ticks": ticks, "boot_id": boot, "runs": 3}))
+
+    def test_restart_fires_again(self):   # 每次睡醒、重起：state.json 換了一次 loop（pid／started_at_ticks／boot_id）＝下一次檢查又是第一次
         self.declare({"t": self.due()})
         env = {"AOS_CLOCK": str(self.clock)}
+        self.loop_run(4000)
         self.tick(**env)
         self.set_cycle(103)
         self.assertEqual(self.tick(**env), [])
-        r = fire("after_start", self.defn, self.env)
+        r = fire("after_start", self.defn, self.env)                      # 11-21: after_start clears nothing
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertFalse((self.stack / "hooks" / "t" / "on_clock.json").exists())
+        self.assertTrue((self.stack / "hookeds" / "t" / "on_clock.json").exists())
+        self.assertEqual(self.tick(**env), [])
+        self.loop_run(4000, boot="boot-a")                                  # same run written again (other keys may change)
+        self.assertEqual(self.tick(**env), [])
+        self.loop_run(4001)                                                 # restarted: another pid
         self.assertEqual(self.tick(**env), ["t"])
-        self.assertEqual([(e["first"], e["cycle"]) for e in self.events()], [(True, 100), (True, 103)])
+        self.set_cycle(104)
+        self.assertEqual(self.tick(**env), [])
+        self.loop_run(4001, ticks=2000)                                     # pid reused, another start
+        self.assertEqual(self.tick(**env), ["t"])
+        self.loop_run(4001, ticks=2000, boot="boot-b")                      # machine rebooted
+        self.assertEqual(self.tick(**env), ["t"])
+        (self.stack / "state.json").unlink()                                # no loop window at all: another "run" too
+        self.assertEqual(self.tick(**env), ["t"])
+        self.assertEqual(self.tick(**env), [])
+        self.assertEqual([(e["first"], e["cycle"]) for e in self.events()],
+                         [(True, 100), (True, 103), (True, 104), (True, 104), (True, 104)])
 
     def test_every_ms_counts_cycles(self):
         self.declare({"t": self.due(every_ms=3000)})
@@ -131,7 +152,7 @@ class ClockHook(Hooks):
         self.assertEqual(runs["slow"], [100, 105, 110, 115, 120])
         self.assertEqual(runs["ms"], [100, 103, 106, 109, 112, 115, 118])
         for name, last in (("fast", 120), ("slow", 120), ("ms", 118)):
-            self.assertEqual(json.loads((self.stack / "hooks" / name / "on_clock.json").read_text())["cycle"], last)
+            self.assertEqual(json.loads((self.stack / "hookeds" / name / "on_clock.json").read_text())["cycle"], last)
 
     def test_backwards_counts_as_first(self):
         self.declare({"t": self.due()})
@@ -191,64 +212,59 @@ class ClockHook(Hooks):
         self.assertEqual(len(self.events()), 3)
         self.assertEqual(self.history(), [{"role": "user", "content": "hi"}])
 
-    def test_failing_handler_stop_stops_cell(self):
+    def test_failing_handler_is_a_warning(self):   # 11-21: on_clock cannot be blocked: a failure is one warning, the cell goes on
         entry = self.due(every_cycles=1)
-        entry.update(on_error="stop", handler=self.hook("bad", "sys.exit(3)"))
+        entry.update(handler=self.hook("bad", "sys.exit(3)"))
         self.declare({"t": entry})
-        r = self.run_cell("idle", code=1)                        # 第一次就跑、失敗＝那格停
-        self.assertIn("HookFailed", r.stderr)
-        self.run_cell("idle", code=10)                           # 記過了：不每拍重跑
+        r = self.run_cell("idle", code=10)                       # 第一次就跑、失敗＝一行 warning
+        self.assertIn("agent-fsm: warning: hook t (event on_clock) failed: exited 3", r.stderr)
+        self.assertNotIn("HookFailed", r.stderr)
+        r = self.run_cell("idle", code=10)                       # 記過了：不每拍重跑
+        self.assertNotIn("warning", r.stderr)
+        self.assertEqual(len(self.events()), 1)
 
-    # ---- after_start／after_stop（aos-hook fire --agent）
+    # ---- after_start／after_stop（aos-hook fire --def）
     def test_fire_start_stop(self):
         self.declare({"s": {"event": "after_start", "handler": self.hook("s")},
                       "e": {"event": "after_stop", "handler": self.hook("e")}})
         run = lambda event, **env: fire(event, self.defn, dict(self.env, **env))
         self.assertEqual(run("after_start").returncode, 0)
-        self.assertEqual(run("after_stop", AOS_LOOP_CODE="143", AOS_LOOP_SIGNAL="15").returncode, 0)
-        r = run("after_stop", AOS_LOOP_CODE="0", AOS_LOOP_SIGNAL="")
+        r = run("after_stop", AOS_LOOP_CODE="143", AOS_LOOP_SIGNAL="15")
         self.assertEqual((r.returncode, r.stdout), (0, ""))                  # -q：stdout 什麼都沒有
-        a, b, c = self.events()
-        self.assertEqual(a["event"], "after_start")
-        self.assertNotIn("code", a)
-        self.assertEqual((b["event"], b["code"], b["signal"]), ("after_stop", 143, 15))
-        self.assertEqual((c["code"], c["signal"]), (0, None))
-        r = run("no_such_point")
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("aos-hook: error: EventUnknown", r.stderr)
-        r = run("after_stop", AOS_LOOP_CODE="x")                             # 宣告說 int：不是整數＝錯（不是當 null）
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("aos-hook: error: ArgumentsBad", r.stderr)
+        a, b = self.events()
+        self.assertEqual((a["event"], a["hook"], a["stack"]), ("after_start", "s", str(self.stack)))
+        self.assertEqual(set(b), {"event", "hook", "stack"})                 # 11-21: no code / signal / cause in the event
+        self.assertEqual(b["event"], "after_stop")
+        r = run("no_such_point")                                             # 11-21: no event names checked; nobody listens = 0
+        self.assertEqual((r.returncode, r.stdout, r.stderr), (0, "", ""))
         r = run("after_start", AOS_STACK="")
         self.assertEqual(r.returncode, 1)
         self.assertIn("aos-hook: error: StackMissing", r.stderr)
         self.declare({"e": {"event": "after_stop", "handler": self.hook("bad", "sys.exit(2)")}})
         r = run("after_stop")
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("aos-hook: error: HookFailed", r.stderr)
+        self.assertEqual(r.returncode, 2)                                    # --stop-on-nonzero: the handler's own code
+        self.assertIn("aos-hook: error: HookFailed hook e (event after_stop) exited 2", r.stderr)
+        self.declare({"e": {"event": "after_stop", "handler": self.hook("no", "sys.exit(10)")}})
+        r = run("after_stop")
+        self.assertEqual((r.returncode, r.stderr), (10, ""))                 # 10 = "no": no error line
 
-    def test_fire_flags_on_start(self):   # 定義那份一開始就掛 before_run：after_start 一起來就把旗標建好；拿掉、再起來＝刪
-        self.declare({"b": {"event": "before_run", "handler": self.hook("b")}})
-        self.assertEqual(fire("after_start", self.defn, self.env).returncode, 0)
-        self.assertTrue((self.stack / "hook_before_run.flag").exists())
-        self.assertFalse((self.stack / "hook_after_run.flag").exists())
-        self.declare({})
-        self.assertEqual(fire("after_start", self.defn, self.env).returncode, 0)
-        self.assertFalse((self.stack / "hook_before_run.flag").exists())
-
-    def test_fire_cause(self):   # 11-14 B7：after_stop 多 cause（$AOS_LOOP_CAUSE 去頭尾空白；空的、沒設＝null；值照抄）
-        self.declare({"e": {"event": "after_stop", "handler": self.hook("e")}})
-        env = {k: v for k, v in self.env.items() if k != CAUSE_ENV}
-        cases = [("sleep", "sleep"), (" sleep\n", "sleep"), ("future_x", "future_x"), ("", None), ("  \t\n", None), (None, None)]
-        for value, _ in cases:
+    def test_fire_cause(self):   # 11-14 B7 the cause; 11-21: the handler reads AOS_LOOP_CODE / AOS_LOOP_SIGNAL / AOS_LOOP_CAUSE as aos-loop set them
+        seen = self.root / "env.jsonl"
+        body = "open(%r, 'a').write(json.dumps({k: os.environ.get(k) for k in %r}) + '\\n')\n" % (str(seen), LOOP_ENV)
+        self.declare({"e": {"event": "after_stop", "handler": self.hook("e", body)}})
+        env = {k: v for k, v in self.env.items() if k not in LOOP_ENV}
+        cases = ["sleep", " sleep\n", "future_x", "", None]
+        for value in cases:
             e = dict(env, AOS_LOOP_CODE="143", AOS_LOOP_SIGNAL="15")
             if value is not None:
-                e[CAUSE_ENV] = value
+                e["AOS_LOOP_CAUSE"] = value
             r = fire("after_stop", self.defn, e)
             self.assertEqual((r.returncode, r.stderr), (0, ""))
-        got = [ev[CAUSE_KEY] for ev in self.events()]
-        self.assertEqual(got, [want for _, want in cases])
-        r = fire("after_start", self.defn, dict(env, **{CAUSE_ENV: "sleep"}))
+        got = [json.loads(line) for line in seen.read_text().splitlines()]
+        self.assertEqual([g["AOS_LOOP_CAUSE"] for g in got], cases)           # as it is: no trimming, no null for empty
+        self.assertEqual({(g["AOS_LOOP_CODE"], g["AOS_LOOP_SIGNAL"]) for g in got}, {("143", "15")})
+        self.assertTrue(all("cause" not in ev for ev in self.events()))
+        r = fire("after_start", self.defn, dict(env, AOS_LOOP_CAUSE="sleep"))
         self.assertEqual(r.returncode, 0)
         self.assertEqual(len(self.events()), len(cases))   # after_start 沒有 hook：不多事件
 

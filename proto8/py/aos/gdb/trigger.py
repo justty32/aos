@@ -2,18 +2,18 @@
 
 圖紙：proto8/thinking/2026-11/19/aos-gdb-1119（乙案）、08-Argon審與採納、aos-gdb-lib-第一版.md、aos-gdb-lib-第二版.md。使用者 11-19：斷點＝「特定條件發生時，
 暫停loop或fsm，停下來等待檢閱」，條件主要由 hook 承載、「hook不用動」；第二版：「stop_before_tool不就是在工具開始前停下嗎？」。
-所以這裡不改 hook 機制：觸發器就是一個普通 hook，handler 是同一支 gdb_trigger，它讀自己小格（$AOS_STACK＝<agent stack>/hooks/<名>/）裡的
+所以這裡不改 hook 機制：觸發器就是一個普通 hook，handler 是同一支 gdb_trigger，它讀自己小格（$AOS_STACK＝<agent stack>/hookeds/<名>/）裡的
 trigger.json 判條件，成立時照事件分兩種停法（how）：
     hold   before_tool、before_queue（事件還沒發生、hook 是同步跑的）：handler 自己不回、等人放行——工具還沒跑、信還沒進 history；
            放行＝那次照原樣跑（「放行但那次工具不跑」使用者 11-19 說「不該有這個方法」，線 aosgdb-verbs-1119 拿掉）。agent 這段時間卡在那一格裡，表上照寫 running。
     pause  其他事件（事件已經發生）：叫 `aos-agent ctl pause --no-wait`，loop 在這一格做完、下一格開頭停住。
 
 檔：
-    <agent stack>/hooks/<hook 名>/trigger.json   設定（REPL 寫、handler 讀）：
+    <agent stack>/hookeds/<hook 名>/trigger.json   設定（REPL 寫、handler 讀）：
         {"kind": "always" | "tool_error" | "sh" | "py", "event": 事件, "how": "hold" | "pause"（由事件定）, "tools": [工具名] 或 null,
          "times": N, "once": bool, "agent": 表上的名字, "daemon": daemon stack 的絕對路徑或 null, "sh": 字串,
          "py": {"code": base64 marshal, "defaults": [..], "source": 字串或 null, "python": "3.12"} 或 {"expr": 字串}, "about": 一句英文}
-    <agent stack>/hooks/<hook 名>/count.json     handler 記的數：{"seen", "streak", "fired", "last_error", "pending"}；
+    <agent stack>/hookeds/<hook 名>/count.json   handler 記的數：{"seen", "streak", "fired", "last_error", "pending"}；
                                                  pending＝正在扣住、還沒放行的那一次（工具呼叫 id 或信名）：扣住時 agent 被重起（sleep、
                                                  daemon 重起）＝那次沒跑，重跑同一個 id 時直接再扣住（不再判條件、不算新的一次、once 也照扣）。
     <agent stack>/gdb/log.jsonl                  字條（只往後加）：{"kind": "stop" | "pause_failed" | "hold_ended" | "resume", "at", "by", "trigger", ...}；

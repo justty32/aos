@@ -62,7 +62,8 @@ class Templates(unittest.TestCase):
     def test_llm_kernel(self):
         knobs = bare(read(KT / "llm-kernel/kernel.json"))
         out = defs.Kernel("x", program="kernel_llm", knobs=knobs).dry_run()
-        self.assertEqual(sorted(out), ["README.md", "_entry", "daemon.json", "interfaces.json", "kernel.json"])
+        self.assertEqual(sorted(out), ["README.md", "_entry", "daemon.json", "interfaces.json", "kernel.json", "kernel_hookeds.json",
+                                       "kernel_hooks.json"])
         self.check("llm-kernel", defs.Kernel("x", program="kernel_llm", knobs=knobs))
 
     def test_interval_ms(self):
@@ -94,7 +95,11 @@ class Hooks(unittest.TestCase):
         script.write_text(HEAD + body)
         return run(script, *argv)
 
-    def test_function_hooks_go_to_kernel_json_and_loop_hooks_json(self):
+    def entries(self, path):
+        return {k: v for k, v in read(path).items() if k != "description"}
+
+    def test_function_hooks_go_to_kernel_hookeds_json(self):
+        """kernel points and loop points: one list, kernel_hookeds.json, named by hookeds in interfaces.json (kernel.json has no hooks)."""
         r = self.compile(NIGHT + '''
 @fn.hook("after_start")
 def hello(event):
@@ -103,35 +108,52 @@ defs.main(defs.Kernel("No night jobs.", hooks=[no_night_jobs, hello, {"log": {"e
 ''', "--compile")
         self.assertEqual(r.returncode, 0, r.stderr)
         k = self.tmp / "k"
-        self.assertEqual(read(k / "kernel.json")["hooks"], {"no_night_jobs": {"event": "before_verdict", "handler": "fn/no_night_jobs.py"},
-                                                            "log": {"event": "after_verdict", "handler": "log.py"}})
-        self.assertEqual(read(k / "loop_hooks.json")["hooks"], {"hello": {"event": "after_start", "handler": "fn/hello.py"}})
+        self.assertEqual(self.entries(k / "kernel_hookeds.json"),
+                         {"no_night_jobs": {"event": "before_verdict", "handler": "fn/no_night_jobs.py"},
+                          "hello": {"event": "after_start", "handler": "fn/hello.py"},
+                          "log": {"event": "after_verdict", "handler": "log.py"}})
+        self.assertNotIn("hooks", read(k / "kernel.json"))
+        self.assertFalse((k / "loop_hooks.json").exists())
+        face = read(k / "interfaces.json")
+        self.assertEqual((face["hooks"], face["hookeds"]),
+                         (["kernel_hooks.json", {"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}], "kernel_hookeds.json"))
+        self.assertEqual(read(k / "kernel_hooks.json"), read(LIB / "tools" / "aos" / "kernel" / "kernel_hooks.json"))   # copied as it is
         for name in ("no_night_jobs", "hello"):
             self.assertEqual(os.stat(k / "fn" / (name + ".py")).st_mode & 0o777, 0o755)
         self.assertIn("fn.main(no_night_jobs)", (k / "fn/no_night_jobs.py").read_text())
 
-    def test_daemon_body_has_no_loop_points(self):
-        r = self.compile('''
-defs.main(defs.Kernel("x", body=defs.daemon(), hooks={"h": {"event": "before_run", "handler": "h.py"}}))
-''', "--dry-run")
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("SpecBad hooks: hook h: event must be one of before_verdict, after_verdict, before_reply", r.stderr)
+    def test_daemon_body_declares_no_loop_points(self):
+        """a daemon body: interfaces.json declares only kernel_hooks.json; the event name of a hook is not checked (11-21)."""
+        out = defs.Kernel("x", body=defs.daemon(), hooks={"h": {"event": "before_run", "handler": "h.py"}}).dry_run()
+        self.assertEqual(out["interfaces.json"]["hooks"], "kernel_hooks.json")
+        self.assertEqual(out["kernel_hookeds.json"]["h"], {"event": "before_run", "handler": "h.py"})
 
     def test_later_wins_and_none_drops(self):
         h = {"event": "before_verdict", "handler": "a.py"}
         out = defs.Kernel("x", hooks=[{"a": h, "b": h}, {"a": dict(h, handler="z.py"), "b": None}]).dry_run()
-        self.assertEqual(out["kernel.json"]["hooks"], {"a": dict(h, handler="z.py")})
-        self.assertEqual(out["loop_hooks.json"]["hooks"], {})
+        self.assertEqual({k: v for k, v in out["kernel_hookeds.json"].items() if k != "description"}, {"a": dict(h, handler="z.py")})
+        self.assertNotIn("hooks", out["kernel.json"])
 
-    def test_block_where_it_cannot_block(self):
+    def test_loop_points_wired_only_when_hooked(self):
+        fire = ["aos-hook", "fire", "-q", "--stop-on-nonzero", "--def", {"$env": "AOS_CD"}]
+        loop = defs.Kernel("x").dry_run()["loop.json"]
+        self.assertEqual((loop["on_start"]["argv"], loop["on_stop"]["argv"]), (fire + ["after_start"], fire + ["after_stop"]))
+        self.assertNotIn("on_before_run", loop)
+        self.assertNotIn("on_after_run", loop)
+        loop = defs.Kernel("x", hooks={"h": {"event": "before_run", "handler": "h.py"}}).dry_run()["loop.json"]
+        self.assertEqual(loop["on_before_run"]["argv"], fire + ["before_run"])
+        self.assertNotIn("on_after_run", loop)
+
+    def test_block_is_not_checked_at_compile_time(self):
+        """fn.block on any point compiles (11-21: the compile no longer asks whether a point can be blocked)."""
         r = self.compile('''
 @fn.hook("after_start")
 def stop(event):
     return fn.block("no")
 defs.main(defs.Kernel("x", hooks=[stop]))
 ''', "--dry-run")
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("after_start cannot be blocked", r.stderr)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("fn/stop.py", json.loads(r.stdout))
 
     def test_function_cannot_use_defs(self):
         r = self.compile('''
@@ -176,7 +198,7 @@ class CommandLine(unittest.TestCase):
             shutil.copy(SKEL / "kernel.py", dest)
             r = run(dest / "kernel.py", "--compile", home=home)
             self.assertEqual(r.returncode, 0, r.stderr)
-            for name in ("_entry", "loop.json", "kernel.json"):
+            for name in ("_entry", "loop.json", "kernel.json", "interfaces.json", "kernel_hooks.json", "kernel_hookeds.json"):
                 with self.subTest(name=name):
                     self.assertEqual((dest / name).read_bytes(), (SKEL / name).read_bytes(),
                                      "run python3 kernel.py --compile in templates/kernel/kernel-python")
@@ -188,7 +210,8 @@ class CommandLine(unittest.TestCase):
             dest.mkdir()
             shutil.copy(SKEL / "kernel.py", dest)
             r = run(dest / "kernel.py", "--dry-run", home=home)
-            self.assertEqual((r.returncode, sorted(json.loads(r.stdout))), (0, ["README.md", "_entry", "kernel.json", "loop.json"]))
+            self.assertEqual((r.returncode, sorted(json.loads(r.stdout))), (0, ["README.md", "_entry", "interfaces.json", "kernel.json",
+                                                                         "kernel_hookeds.json", "kernel_hooks.json", "loop.json"]))
             self.assertEqual(sorted(p.name for p in dest.iterdir()), ["kernel.py"])
             r = run(dest / "kernel.py", "--help", home=home)
             self.assertTrue(r.stdout.startswith("usage: python3 kernel.py --compile [FOLDER] | --dry-run | --help"))

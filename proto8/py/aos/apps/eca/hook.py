@@ -17,7 +17,7 @@ def _fail(code, sentence):
 
 
 def open_hooks(template, stack):
-    """這一輪的 hook 遙控器：hook 停下（HookFailed／HooksBad）＝丟 Fail；on_error continue 的失敗＝一行 warning。"""
+    """這一輪的 hook 遙控器：hook 停下（HookFailed／HooksBad）＝丟 Fail；不能攔的點的 hook 失敗＝一行 warning。"""
     return agent_hooks.open(template, stack, fail=_fail, warn=lambda line: aos_flags.warn(NAME, line))
 
 

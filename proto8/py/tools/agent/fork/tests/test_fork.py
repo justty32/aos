@@ -15,6 +15,7 @@ HERE = Path(__file__).resolve().parents[1]
 LIB = HERE.parents[2]
 ENTRY = HERE / '_entry'
 sys.path.insert(0, str(HERE))
+sys.path.insert(1, str(LIB))                              # fork_copy reads the hookeds with aos.hook_point, as _entry
 import fork_copy  # noqa: E402
 
 
@@ -153,7 +154,8 @@ class Copy(unittest.TestCase):
         for p in (self.defn, self.src, self.dst):
             p.mkdir(parents=True)
         (self.defn / 'interfaces.json').write_text(json.dumps({'aos-agent': {
-            'history': 'history.jsonl', 'tools': 'tools.json', 'llm': 'llm.json', 'hooks': 'hooks.json', 'system': 'system.txt'}}))
+            'history': 'history.jsonl', 'tools': 'tools.json', 'llm': 'llm.json', 'system': 'system.txt'},
+            'hookeds': 'hookeds.json'}))
 
     def test_pending_tool_calls_get_answers(self):
         calls = [{'id': 'a', 'function': {'name': 'peek'}}, {'id': 'b', 'function': {'name': 'fork'}},
@@ -173,7 +175,10 @@ class Copy(unittest.TestCase):
         (self.src / 'tools.json').write_text(json.dumps({'$override': '../../def/tools.json', 'tools': {
             'mine': {'path': '../tools/mine', 'env_file': 'my.env'}, 'abs': {'path': '/opt/t'},
             'dir': {'path': {'$env': 'AOS_HOME', '$path': '/lib/x'}}, 'off': None}}))
-        (self.src / 'hooks.json').write_text(json.dumps({'hooks': {'h': {'event': 'after_tool', 'handler': 'hooks/h'}, 'off': None}}))
+        (self.src / 'hookeds.json').write_text(json.dumps({'description': 'mine', 'h': {'event': 'after_tool', 'handler': 'hookeds/h'},
+                                                           'off': None}))
+        (self.src / 'hookeds' / 'h').mkdir(parents=True)                          # the handler's own folder: not copied
+        (self.src / 'hookeds' / 'h' / 'event.json').write_text('{}')
         (self.src / 'llm.json').write_text('{"model": "luna"}\n')
         (self.src / 'system.txt').write_text('You are Pat.\n')
         for name in ('goal.json', 'stage.txt', 'history_removed.jsonl', 'observed.jsonl'):
@@ -181,7 +186,7 @@ class Copy(unittest.TestCase):
         (self.src / 'tools' / 'todo').mkdir(parents=True)
         (self.src / 'tools' / 'todo' / 'todo.json').write_text('{}')
         got = fork_copy.copy_stack(str(self.defn), str(self.src), str(self.dst))
-        self.assertEqual(got, {'messages': 2, 'filled': 1, 'files': ['tools.json', 'llm.json', 'hooks.json', 'system.txt']})
+        self.assertEqual(got, {'messages': 2, 'filled': 1, 'files': ['tools.json', 'llm.json', 'system.txt', 'hookeds.json']})
         hist = [json.loads(l) for l in (self.dst / 'history.jsonl').read_text().splitlines()]
         self.assertEqual(hist[0]['content'], 'secret')
         self.assertEqual(hist[-1], {'role': 'tool', 'tool_call_id': 'x', 'content': fork_copy.OWN_CALL})
@@ -192,12 +197,29 @@ class Copy(unittest.TestCase):
         self.assertEqual(tools['tools']['abs'], {'path': '/opt/t'})
         self.assertEqual(tools['tools']['dir'], {'path': {'$env': 'AOS_HOME', '$path': '/lib/x'}})
         self.assertIsNone(tools['tools']['off'])
-        hooks = json.loads((self.dst / 'hooks.json').read_text())
-        self.assertEqual(os.path.normpath(self.dst / hooks['hooks']['h']['handler']), os.path.normpath(self.src / 'hooks/h'))
+        hooks = json.loads((self.dst / 'hookeds.json').read_text())
+        self.assertEqual(os.path.normpath(self.dst / hooks['h']['handler']), os.path.normpath(self.src / 'hookeds/h'))
+        self.assertEqual((hooks['description'], hooks['off']), ('mine', None))
         self.assertEqual((self.dst / 'llm.json').read_text(), '{"model": "luna"}\n')
         self.assertEqual((self.dst / 'system.txt').read_text(), 'You are Pat.\n')
         left = sorted(str(p.relative_to(self.dst)) for p in self.dst.rglob('*'))
-        self.assertEqual(left, sorted(['history.jsonl', 'tools.json', 'llm.json', 'hooks.json', 'system.txt']))
+        self.assertEqual(left, sorted(['history.jsonl', 'tools.json', 'llm.json', 'hookeds.json', 'system.txt']))
+
+    def test_hookeds_the_first_relative_file_of_the_top_level_key(self):
+        (self.src / 'history.jsonl').write_text(json.dumps({'role': 'assistant', 'tool_calls': [{'id': 'x'}]}) + '\n')
+        for name in ('base.json', 'hookeds.json', 'hooks.json'):
+            (self.src / name).write_text(json.dumps({'h': {'event': 'after_tool', 'handler': '/abs/h'}}))
+        (self.defn / 'interfaces.json').write_text(json.dumps({'aos-agent': {'history': 'history.jsonl'},
+            'hookeds': [{'$env': 'AOS_HOME', '$path': '/no/such.json'}, 'base.json', 'hookeds.json']}))
+        got = fork_copy.copy_stack(str(self.defn), str(self.src), str(self.dst))
+        self.assertEqual(got['files'], ['base.json'])                             # a directive item has no stack copy
+        (self.defn / 'interfaces.json').write_text(json.dumps({'aos-agent': {'history': 'history.jsonl', 'hooks': 'hooks.json'}}))
+        got = fork_copy.copy_stack(str(self.defn), str(self.src), str(self.dst))
+        self.assertEqual(got['files'], [])                                        # aos-agent.hooks is not read any more
+        (self.defn / 'interfaces.json').write_text(json.dumps({'aos-agent': {'history': 'history.jsonl'}, 'hookeds': 7}))
+        with self.assertRaises(fork_copy.ForkCopyBad) as e:
+            fork_copy.copy_stack(str(self.defn), str(self.src), str(self.dst))
+        self.assertEqual(e.exception.code, 'InterfaceBad')
 
     def test_no_history_declared_or_no_declaration(self):
         (self.defn / 'interfaces.json').write_text(json.dumps({'aos-agent': {'tools': 'tools.json'}}))

@@ -63,8 +63,11 @@ from aos.gdb.look import Look, Text, Why, bp_id, bp_name, run, Failed  # noqa: F
 from aos.py._shell import Timeout, call, show
 
 HANDLER = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/gdb_trigger"}
-NAMED = tuple(e for e, d in _hooks.EVENTS.items() if d["condition"] == "name")   # 能篩名字的事件（brain_failed 的 name＝錯誤代號）
-EVENTS = tuple(e for e in _hooks.EVENTS if e != _hooks.CLOCK_EVENT)               # on_clock 要給間隔，不是「事件發生」，不收
+NAMED = tuple(e for e, d in _hooks.POINTS.items() if d["field"] == "name")   # 能篩名字的事件（agent 一家自己的規矩；brain_failed 的 name＝錯誤代號）
+# 斷點的種類＝agent 身上會發的事件：agent 一家自己發的（on_clock 要給間隔，不是「事件發生」，不收），加上經 aos-hook fire 發的 eca 壓縮兩點與 loop 四點
+# （11-21 線 top-1121-hooknew：以前由 aos 自帶的四份宣告合起來算，宣告改成只是參考之後寫在這裡）
+EVENTS = (tuple(e for e in _hooks.POINTS if e != _hooks.CLOCK_EVENT)
+          + ("before_compact", "after_compact", "after_start", "after_stop", "before_run", "after_run"))
 TOOL_ERROR, WATCH = "tool_error", "watch"         # a.bp.add 的種類除了 EVENTS 之外還有這兩個
 KINDS = EVENTS + (TOOL_ERROR, WATCH)
 SUBJECT = {e: ("code" if e == "brain_failed" else "tool") for e in NAMED + (TOOL_ERROR,)}   # 有主詞的種類 → 主詞的參數名
@@ -560,12 +563,12 @@ class Breakpoints:
         raise Failed("bp", "%s has no breakpoint %s (a.bp.ls() lists them)" % (self._a.name, id), code="BreakpointMissing")
 
     def _install(self, id, spec, replace):
-        # hold：不限時（等人放行）；pause：有上限。兩種都不讀回話（handler 印了什麼都不會變成 hook 失敗、也擋不下工具，Argon A1；
-        # 「放行但那次工具不跑」使用者 11-19 說「不該有這個方法」，線 aosgdb-verbs-1119 拿掉，hold 也就不必讀回話）、都 on_error continue。
+        # hold：不限時（等人放行）；pause：有上限。handler（gdb_trigger）stdout 什麼都不印、自己的錯只 warning 退 0（11-21 起 hook 沒有
+        # intercept／on_error 這兩個選項，「不讀回話」「失敗不擋 agent」改由 handler 自己保證；「放行但那次工具不跑」使用者 11-19 說「不該有這個方法」）。
         how, tools = spec["how"], spec.get("tools")
         limit = 0 if how == "hold" else 40000 if spec["kind"] in ("sh", "py") else 15000
         args = ["hook", "add", "--event", spec["event"], "--name", _hook(id), "--path-json", json.dumps(HANDLER),
-                "--on-error", "continue", "--timeout-ms", limit, "--no-intercept"]
+                "--timeout-ms", limit]
         if tools and spec.get("times", 1) == 1:   # 只篩工具名、不數連續時才交給 hook 的 condition 省行程（Argon A6）
             for t in tools:
                 args += ["--condition", t]
@@ -834,7 +837,7 @@ class Breakpoints:
 
 
 class _Undo:
-    """下斷點之前記下小格的原狀，裝不上時 undo() 放回去：小格（或它上面那層 hooks/）原本不在＝整夾拿掉；原本在＝names 這幾個檔放回原本的內容
+    """下斷點之前記下小格的原狀，裝不上時 undo() 放回去：小格（或它上面那層 hookeds/）原本不在＝整夾拿掉；原本在＝names 這幾個檔放回原本的內容
     （原本沒有的刪掉）。只動這次會寫的那一夾，不碰別的。"""
 
     def __init__(self, stack, cell, names):

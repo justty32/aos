@@ -64,7 +64,7 @@ class Scope(unittest.TestCase):
         self.assertEqual(scope.write_scope(self.env)["allow"][1]["path"], os.path.join(self.t, "extra"))
 
     def test_deny_sources_in_order(self):
-        self.env.update(AOS_STACK=os.path.join(self.stack, "hooks", "guard") + "/", AOS_CD=os.path.join(self.t, "cd"),
+        self.env.update(AOS_STACK=os.path.join(self.stack, "hookeds", "guard") + "/", AOS_CD=os.path.join(self.t, "cd"),
                         AOS_DAEMON=self.daemon, AOS_WRITE_DENY=os.pathsep.join(["secret", "~/s"]))
         with open(os.path.join(self.daemon, "procs_state.json"), "w", encoding="utf-8") as f:
             json.dump({"procs": {"w-01": {"stack": "procs/w-01", "def": self.defdir}}}, f)

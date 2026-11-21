@@ -133,12 +133,11 @@ with open(os.environ['EVENT_LOG'], 'a') as f:
         self.env['EVENT_LOG'] = str(self.event_log)
         path = self.definition / 'interfaces.json'
         files = json.loads(path.read_text())
-        files['aos-agent']['hooks'] = 'hooks.json'
-        files['aos-agent']['hook_points'] = [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]
+        files['hookeds'] = 'hookeds.json'
         path.write_text(json.dumps(files))
-        (self.definition / 'hooks.json').write_text(json.dumps({'hooks': {
+        (self.definition / 'hookeds.json').write_text(json.dumps({
             'capture': {'event': 'brain_failed', 'handler': str(self.root / 'capture')}
-        }}))
+        }))
 
     def events(self):
         return [json.loads(line) for line in self.event_log.read_text().splitlines()]

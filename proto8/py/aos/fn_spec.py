@@ -77,12 +77,12 @@ def hook_entry(func):
     return name, entry
 
 
-def programs(tools_out, tools_file, hooks_out, hooks_file, events):
-    """Replace each entry with KEY in tools_out["tools"] / hooks_out["hooks"] (new dicts; the old entries are not touched) and give
-    {"fn/<name>.py": Program}. Paths are relative to the folder of tools.json / hooks.json. events = the hook event table."""
+def programs(tools_out, tools_file, hooks_out, hooks_file):
+    """Replace each entry with KEY in tools_out["tools"] / the hookeds list hooks_out ({name: entry}, 11-21) (new dicts; the old
+    entries are not touched) and give {"fn/<name>.py": Program}. Paths are relative to the folder of tools.json / the hookeds file."""
     out, who = {}, {}
-    for doc, key, list_file, kind in ((tools_out, "tools", tools_file, "tool"), (hooks_out, "hooks", hooks_file, "hook")):
-        table = (doc or {}).get(key) or {}
+    for doc, list_file, kind in (((tools_out or {}).get("tools"), tools_file, "tool"), (hooks_out, hooks_file, "hook")):
+        table = doc or {}
         for name, entry in list(table.items()):
             if not isinstance(entry, dict) or KEY not in entry:
                 continue
@@ -91,14 +91,14 @@ def programs(tools_out, tools_file, hooks_out, hooks_file, events):
             file, what = "%s/%s.py" % (FOLDER, name), "%s %s" % (kind, name)
             if file in out:
                 raise SpecBad("%s and %s both compile to %s: give one of them another name (name=)" % (who[file], what, file))
-            out[file], who[file] = Program(_program(_FUNCS[entry[KEY]], name, kind, entry.get("event"), events)), what
+            out[file], who[file] = Program(_program(_FUNCS[entry[KEY]], name, kind, entry.get("event"))), what
             new = {k: v for k, v in entry.items() if k != KEY}
             new["path" if kind == "tool" else "handler"] = os.path.relpath(file, os.path.dirname(list_file or "") or ".")
             table[name] = new
     return out
 
 
-def _program(func, name, kind, event, events):
+def _program(func, name, kind, event):
     what = "%s %s" % (kind, name)
     seen = _read(func, what, kind)
     if kind == "tool":
@@ -111,8 +111,6 @@ def _program(func, name, kind, event, events):
         names, _ = fn_mark.signature(func, what)
         if len(names) != 1:
             raise SpecBad("%s takes one parameter, the event: def %s(event)" % (what, func.__name__))
-        if seen["blocks"] and not (events or {}).get(event, {}).get("block"):
-            raise SpecBad("%s: %s cannot be blocked; fn.block has no effect there" % (what, event))
         doc = fn_mark.cleandoc(func.__doc__) or "a hook handler for %s events" % event
     first = "%s - %s" % (name, doc.strip().split("\n", 1)[0].strip())
     head = '"""%s"""' % first if '"""' not in first and "\\" not in first and not first.endswith('"') else repr(first)

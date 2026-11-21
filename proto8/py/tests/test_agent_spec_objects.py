@@ -79,10 +79,10 @@ class Objects(WithHome):
         self.assertEqual(r.stderr, "")
         one, two = snapshot(out / "one"), snapshot(out / "two")
         for made in (one, two):
-            self.assertEqual(sorted(made), sorted(GENERATED + ["hooks.json", "README.md"]))
+            self.assertEqual(sorted(made), sorted(GENERATED + ["hookeds.json", "README.md"]))
         self.assertEqual(json.loads(one["_metainfo.json"]), {"summary": "Answer the first kind of question."})
         self.assertEqual(json.loads(two["_metainfo.json"]), {"summary": "Answer the second kind of question."})
-        for name in ("fsm.json", "tools.json", "hooks.json", "loop.json", "system.txt", "llm.json"):
+        for name in ("fsm.json", "tools.json", "hookeds.json", "loop.json", "system.txt", "llm.json"):
             self.assertEqual(one[name], two[name], name)
         self.assertEqual(os.listdir(root), ["build.py"])
 

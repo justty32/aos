@@ -2,6 +2,7 @@
 import json, os, sys
 
 from aos.declared_files import declared_files
+from aos import hook_point
 from aos.agentlib import cli_base
 from aos.agentlib.cli_base import RESEED_BYTES, tool_io
 from aos.agentlib.cli_mcp import external_servers
@@ -59,7 +60,10 @@ def load_cfg(tool_dir):
         cli_base.die("CfgBad", str(e))
     cfg["registry"] = registry(cfg, tool_dir, path, files)
     cfg["sub_registry"] = sub_registry(cfg, tool_dir, path)        # 11-12 eca-task-subagent：cli.json 的 tools_sub
-    cfg["hooks_def"] = os.path.abspath(tool_dir) if files.get("hooks") else None   # 11-10 hook：宣告了 hooks＝aos-mcp 帶 --hooks
+    try:                                                          # 11-10 hook：有 hookeds（11-21 起在 interfaces.json 最外層）＝aos-mcp 帶 --hooks
+        cfg["hooks_def"] = os.path.abspath(tool_dir) if hook_point.items(tool_dir, "hookeds") else None
+    except hook_point.InterfaceBad as e:
+        cli_base.die("CfgBad", str(e))
     cfg["external"] = external_servers(cfg, tool_dir, path)        # 11-12 external-mcp 步 1：cli.json 的 mcp_servers
     cfg["cli_settings"] = cli_settings(cfg, tool_dir, path)        # 11-13 第 1 題乙：cli.json 的 settings（定義自帶的 CLI 設定）
     cfg["cli_def"] = os.path.abspath(tool_dir)

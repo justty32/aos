@@ -8,6 +8,7 @@ import json, os, re
 
 from aos import fn_spec
 from aos.declared_files import declared_files
+from aos import hook_point
 from aos.spec_base import SpecBad, DefBad  # noqa: F401（兩個例外在 spec_base，跟 tool_spec 共用；parts.SpecBad 照舊叫得到）
 
 LLM_KEYS = ["model", "reasoning_effort", "temperature", "top_p", "max_tokens", "seed", "presence_penalty", "frequency_penalty",
@@ -16,19 +17,22 @@ PACK_RE = re.compile(r"[a-z0-9][a-z0-9_-]*\Z")
 TOOL_RE = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")                        # aos-tools 的 NAME_RE
 ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")                  # aos-tools 的 ENV_KEY_RE
 RUNTIME_FILES = ("ctl.json", "state.json", "state_flux.json", "history.jsonl")   # loop／腦跑起來寫的檔名，FILES 不能用
-OWN_FILES = {"tools": "tools.json", "llm": "llm.json", "system": "system.txt", "fsm": "fsm.json", "hooks": "hooks.json"}
+OWN_FILES = {"tools": "tools.json", "llm": "llm.json", "system": "system.txt", "fsm": "fsm.json", "hooks": "hookeds.json"}   # hooks＝掛上去的 hook（11-21 起檔名 hookeds.json）
 SKELETON = ("_entry", "body.json", "loop.json", "interfaces.json")
-HOOK_POINTS = ({"provider": "aos-loop"}, {"provider": "agent-fsm"})   # 有 fsm 又有 hooks 時寫進 interfaces.json 的 hook_points
+HOOK_POINTS = ({"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"},   # 有 fsm 又有 hooks 時寫進 interfaces.json 最外層的 hooks（宣告，只是參考）
+               {"$env": "AOS_HOME", "$path": "/templates/agent-fsm/hooks.json"})
 CONTENT = ("system", "tools", "llm", "hooks")                          # 不宣告 FSM 時 agent.py 寫的內容檔（檔名照 interfaces.json）
 RESERVED = set(SKELETON) | set(RUNTIME_FILES) | set(OWN_FILES.values()) | {"_metainfo.json", "README.md", "agent.py"}
 WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl add).",
         "body.json": "Run this agent's loop: aos-loop with loop.json.",
         "loop.json": "Run the state machine in %s every tick and expose public control, state and state flux files.",
-        "loop_hooks": " on_start / on_stop fire the after_start / after_stop hooks and on_before_run / on_after_run fire before_run / after_run around each state, all through aos-hook; the last two only while their flag file is in the stack (hook_before_run.flag, hook_after_run.flag), which after_start sets from the hooks lists.",
+        "loop_hooks": " on_start / on_stop fire the after_start / after_stop hooks through aos-hook (a failing hook stops the loop).",
+        "loop_run": " on_before_run / on_after_run fire before_run / after_run around each state the same way: they are here because a hook listened to them when this was compiled; one added later needs a recompile and a restart.",
+        "loop_norun": " Nothing listened to before_run / after_run when this was compiled, so they are not wired: a hook added for them needs a recompile and a restart.",
         "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
         "tools.json": "Tools this agent can call.",
         "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",
-        "hooks.json": "Hooks of this agent: aos functions run when an event happens; the stack copy of this file overrides it by name, null turns one off."}
+        "hookeds.json": "What is hooked on this agent: aos functions run when an event happens; the stack copy of this file overrides it by name, null turns one off."}
 
 
 def kind(value):
@@ -196,14 +200,14 @@ def llm_json(llm, keys):
 
 
 def interfaces_json(over, files, description):
-    """預設的 interfaces.json 疊上 INTERFACES。files＝{種類: 檔名}；有 hooks 才寫 hooks 鍵（位置照 agent-fsm 範本）。"""
+    """預設的 interfaces.json 疊上 INTERFACES。files＝{種類: 檔名}；有 hooks 才寫最外層的 hooks（點的宣告）與 hookeds（被勾清單）兩鍵（位置照 agent-fsm 範本，11-21）。"""
     agent = {"entry": "body.json", "tools": files["tools"], "llm": files["llm"], "llm_keys": list(LLM_KEYS),
              "history": "history.jsonl"}
-    if "hooks" in files:
-        agent["hooks"] = files["hooks"]
-        agent["hook_points"] = [dict(p) for p in HOOK_POINTS]   # 11-20 hook 第 3 刀：掛得上的點（格程式是 agent-fsm 那幾支）；要別的用 interfaces= 蓋
     agent["system"] = files["system"]
     out = {"description": description, "aos-agent": agent}
+    if "hooks" in files:                                         # 格程式是 agent-fsm 那幾支：點＝loop 的四個＋agent-fsm 的；要別的用 interfaces= 蓋
+        out["hooks"] = [dict(p) for p in HOOK_POINTS]
+        out["hookeds"] = files["hooks"]
     if over is None:
         return out
     if not isinstance(over, dict):
@@ -217,12 +221,14 @@ def interfaces_json(over, files, description):
             for k, v in value.items():
                 if k == "entry":
                     raise SpecBad("interfaces aos-agent entry is body.json, the skeleton agent.py writes; it cannot be changed")
-                if k in ("tools", "llm", "system", "hooks"):
+                if k in ("tools", "llm", "system"):
                     raise SpecBad("interfaces aos-agent %s is set by agent.py; to point it at a file you write yourself use defs.extern(...)" % k)
                 if v is None:
                     agent.pop(k, None)
                 else:
                     agent[k] = v
+        elif key == "hookeds":
+            raise SpecBad("interfaces hookeds is set by agent.py (the hooks= field); to point it at a file you write yourself use defs.extern(...)")
         elif value is None:
             out.pop(key, None)
         else:
@@ -254,6 +260,9 @@ def existing_names(folder):
                      "or give fsm" % folder)
     try:
         names = declared_files(folder)
+        own = [item for item, _ in hook_point.items(folder, "hookeds") if isinstance(item, str) and not os.path.isabs(item)]
+        if own:                                                  # 掛上去的 hook：最外層 hookeds 的第一個相對檔名（11-21）
+            names["hooks"] = own[0]
         with open(path, encoding="utf-8") as f:
             agent = json.load(f).get("aos-agent")
     except (OSError, ValueError, AttributeError) as e:

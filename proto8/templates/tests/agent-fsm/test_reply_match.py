@@ -120,9 +120,8 @@ class ReplyMatch(unittest.TestCase):
         hook.write_text("#!" + sys.executable + "\nimport sys\nsys.stdin.read()\nsys.exit(10)\n")
         hook.chmod(0o755)
         (self.defn / "interfaces.json").write_text(json.dumps(
-            {"aos-agent": {"tools": "tools.json", "llm": "llm.json", "hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "agent-fsm"}]}}))
-        (self.defn / "hooks.json").write_text(json.dumps({"hooks": {"d": {"event": "before_queue", "intercept": True,
-                                                                           "handler": "drop.py"}}}))
+            {"aos-agent": {"tools": "tools.json", "llm": "llm.json"}, "hookeds": "hookeds.json"}))
+        (self.defn / "hookeds.json").write_text(json.dumps({"d": {"event": "before_queue", "handler": "drop.py"}}))
         spam = self.letter("spam")
         self.run_cell("idle", 10)
         d = self.letters()

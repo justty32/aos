@@ -12,14 +12,15 @@ from aos.agentlib import hooks
 
 class ScreenLinger(unittest.TestCase):
     def test_default_hooks(self):
-        table = json.loads((PROTO / "templates/eca-claude/hooks.json").read_text())["hooks"]
+        table = json.loads((PROTO / "templates/eca-claude/hookeds.json").read_text())
+        self.assertIsInstance(table.pop("description"), str)
         # the first after_start hook in table order (brain_notify, a brain_failed hook, may sit before it)
         self.assertEqual(next(n for n, e in table.items() if e["event"] == "after_start"), "screen_linger_start")
         self.assertEqual(sorted(n for n, e in table.items() if e["event"] == "after_start")[0], "screen_linger_start")
         for name, event in (("screen_linger_start", "after_start"), ("screen_linger_stop", "after_stop")):
-            hooks.validate_entry(table[name])
+            hooks.check_entry(table[name])
             self.assertEqual(table[name]["event"], event)
-            self.assertEqual(table[name]["on_error"], "continue")
+            self.assertNotIn("on_error", table[name])             # 11-21: gone (after_start / after_stop failing is a warning)
             self.assertEqual(table[name]["timeout_ms"], 4000)
             self.assertEqual(table[name]["handler"]["$path"], "/lib/tools/agent/screen_linger")
 

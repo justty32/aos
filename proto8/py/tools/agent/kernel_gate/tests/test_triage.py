@@ -22,7 +22,7 @@ class TriageTest(unittest.TestCase):
         self.home, self.repo, self.code = r / "aos-home", r / "repo", r / "code"
         self.daemon = self.home / "ws" / ".stack"
         self.stack = self.daemon / "procs" / "boss"
-        self.cell = self.stack / "hooks" / "kernel_gate"
+        self.cell = self.stack / "hookeds" / "kernel_gate"
         self.agents = self.home / "agents"
         for d in (self.cell, self.agents / "opus-kernel", self.home / "lib" / "x", self.repo / "wf" / "temp" / "ok-a" / "defs" / "sol",
                   self.code / "kf-1114" / "defs" / "w", self.code / "other" / "d", r / "tmp" / "evil"):
@@ -160,12 +160,14 @@ class TriageTest(unittest.TestCase):
             self.assertEqual(self.judge({"procs_state_path": value})[0], "hold")
 
     def test_06_through_the_station(self):
-        # 真站：kernel.json 只掛 triage；三封信各走放行、拒、留，留的那封通知 agent 的 queue。
+        # 真站：kernel_hookeds.json 只掛 triage；三封信各走放行、拒、留，留的那封通知 agent 的 queue。
         ctl, sender, queue = self.root / "ctl", self.root / "sender", self.stack / "queue"
         for box in (ctl, sender, queue, self.cell / "requests"):
             subprocess.run(["aos-post", "init", str(box)], check=True, env=self.env, capture_output=True)
-        (self.cell / "kernel.json").write_text(json.dumps(
-            {"next": str(ctl), "hooks": {"triage": {"event": "after_verdict", "condition": "pass", "handler": str(GATE / "triage")}}}))
+        (self.cell / "kernel.json").write_text(json.dumps({"next": str(ctl)}))
+        (self.cell / "interfaces.json").write_text(json.dumps({"hookeds": "kernel_hookeds.json", "kernel": {}}))
+        (self.cell / "kernel_hookeds.json").write_text(json.dumps(
+            {"triage": {"event": "after_verdict", "condition": "pass", "handler": str(GATE / "triage")}}))
         t = self.repo / "wf" / "temp"
         for name, body in (("a", self.add("ok-b", self.agents / "opus-kernel", t / "ok-b")),
                            ("b", self.add("x", self.home / "lib" / "x", t / "x")),

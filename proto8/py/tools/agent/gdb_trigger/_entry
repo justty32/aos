@@ -2,16 +2,17 @@
 # gdb_trigger - aos-gdb 條件觸發器的 hook handler：讀自己小格的 trigger.json 判條件，成立（連續 times 次）時，事件還沒發生的（before_tool、before_queue）就自己不回、扣住等人放行，已經發生的就叫 aos-agent ctl pause --no-wait；兩種都留字條。
 # 使用者 11-19：斷點＝「特定條件發生時，暫停loop或fsm，停下來等待檢閱」，條件主要由 hook 承載、「hook不用動」；第二版：「stop_before_tool不就是在工具開始前停下嗎？」。
 #   所以這支就是一個普通 hook handler，由 aos.gdb（REPL 那邊）用 aos-agent hook add 掛上；判法、字條、計數、扣住檔都在 py/aos/gdb/trigger.py（共用）。
-# 介面：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、事件自己的欄）；$AOS_STACK＝這個 hook 的小格（<agent stack>/hooks/<名>/），
+# 介面：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、事件自己的欄）；$AOS_STACK＝這個 hook 的小格（<agent stack>/hookeds/<名>/），
 #   設定 trigger.json、計數 count.json 都在那裡；字條往 <agent stack>/gdb/log.jsonl 加一行。
 # hold（trigger.json 的 how）：寫 <agent stack>/gdb/hold.json（帶 token、自己的 pid），每 0.2 秒看一次放行單 gdb/release.json（token 對得上＝放行：
 #   退 0、工具照原樣跑），或 ctl.json 出現比扣住時新的 resume（在 shell 下 aos-agent ctl resume）＝放行。
 #   「放行但那次工具不跑」使用者 11-19 說「不該有這個方法」（線 aosgdb-verbs-1119 拿掉）：這支只退 0、什麼都不印。
-#   掛的時候 timeout_ms 0（不限時）、--no-intercept。被 TERM（agent 被 sleep、daemon 收工、rm）或 act 那一格死了（父行程換人）
+#   掛的時候 timeout_ms 0（不限時）。被 TERM（agent 被 sleep、daemon 收工、rm）或 act 那一格死了（父行程換人）
 #   ＝不放行、留一張 hold_ended，count.json 的 pending 留著：重跑同一個工具呼叫 id 時直接再扣住（工具始終沒跑）。
 # pause：先記數、再發停、再留字條（帶 ctl.json 的 seq）。
 # 條件自己壞了（sh 退 0／10 以外、py 函式丟例外）＝不算、stderr 一行 warning、記進 count.json 的 last_error；
-#   這支自己壞了（讀不到設定、寫不了檔）＝stderr 一行 error、退 1；掛的時候是 on_error continue，所以 agent 只多一行 warning，不會掛掉、不會連環重起。
+#   這支自己壞了（讀不到設定、寫不了檔）＝stderr 一行 warning、退 0（11-21 線 top-1121-hooknew：hook 沒有 on_error 了，能攔的點與 loop 的點
+#   hook 一失敗 agent 就停，所以「斷點壞了也不擋 agent」改由這支自己保證）；只有命令列用錯（給了參數、沒有 AOS_STACK）才是錯誤行、退 1。
 import json, os, signal, subprocess, sys, time
 
 sys.dont_write_bytecode = True
@@ -30,7 +31,9 @@ When it holds (times in a row):
     Stopped by a signal, or its parent step died = no release; the same call is held again when it comes back.
   how "pause" (other events): append the note, then run aos-agent -d DAEMON ctl pause --no-wait AGENT.
 A broken condition counts as no hit and prints one warning line.
-exit codes: 0 done (no hit, paused, or released); 1 error ("gdb_trigger: error: CODE reason").
+A broken trigger (no trigger.json, a bad one, a file it cannot write) is one warning line and exit 0:
+a broken breakpoint never stops the agent.
+exit codes: 0 done (no hit, paused, released, or a broken trigger); 1 wrong use ("gdb_trigger: error: CODE reason").
 """
 PAUSE_S = 10
 POLL_S = 0.2
@@ -42,6 +45,12 @@ class Cut(Exception):
 
 def die(code, why):
     tool_io.die(code, why, prog=NAME, echo=False)
+
+
+def trigger_broken(code, why):
+    """這支自己壞了（設定、寫檔）：一行 warning、退 0，不讓斷點擋住 agent。"""
+    warn("%s %s (the breakpoint did nothing this time)" % (code, why))
+    sys.exit(0)
 
 
 def warn(text):
@@ -119,11 +128,11 @@ def main():
     try:
         spec = trigger.read_json(spec_path)
         if spec is None:
-            die("SpecMissing", "no %s (put the trigger in place with aos.gdb, or remove this hook)" % spec_path)
+            trigger_broken("SpecMissing", "no %s (put the trigger in place with aos.gdb, or remove this hook)" % spec_path)
         trigger.validate(spec)
         count = trigger.read_json(count_path, {})
     except (OSError, ValueError) as e:
-        die("SpecBad", "%s: %s" % (spec_path, e))
+        trigger_broken("SpecBad", "%s: %s" % (spec_path, e))
     count = count if isinstance(count, dict) else {}
     agent_stack = event.get("stack") or os.path.dirname(os.path.dirname(os.path.abspath(cell)))
     held = spec["how"] == "hold" and event.get("event") in trigger.HOLD_EVENTS
@@ -154,13 +163,13 @@ def main():
                 warn("trigger %s: cannot pause %s: %s" % (event.get("hook"), spec.get("agent"), result))
             trigger.append_log(agent_stack, note)
         except OSError as e:
-            die("WriteFailed", str(e))
+            trigger_broken("WriteFailed", str(e))
         return
     if not hit:
         try:
             trigger.write_json(count_path, count)
         except OSError as e:
-            die("WriteFailed", str(e))
+            trigger_broken("WriteFailed", str(e))
         return
     if parent == 1 or os.getppid() != parent:
         return                                   # 那一格已經不在了：不扣（扣了也沒人等）
@@ -185,7 +194,7 @@ def main():
                                            "ctl_seq": trigger.ctl_seq(agent_stack),
                                            "detail": trigger.brief(event)})
         except OSError as e:
-            die("WriteFailed", str(e))
+            trigger_broken("WriteFailed", str(e))
         go, via = hold(event, agent_stack, token, parent, start_ns)
     except Cut as e:
         via = "the step was stopped (%s: the agent was put to sleep, removed, or its daemon stopped)" % e

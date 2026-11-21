@@ -179,41 +179,34 @@ class KernelRouteTest(unittest.TestCase):
         self.assertEqual(self.names(self.requests, "cur") + self.names(self.ctl), [])
 
     def test_07_bad_next_is_the_hooks_own_failure(self):
+        # 11-21 起沒有 on_error：壞的 next＝hook 失敗＝這一輪停。
         for label, value in (("self", None), ("relative", "side/requests"), ("empty", ""), ("number", 7)):
-            for mode in ("stop", "continue"):
-                with self.subTest(value=label, mode=mode):
-                    self.start()
-                    if label == "self":
-                        shortcut = self.root / "own_box"
-                        shortcut.symlink_to(self.requests, target_is_directory=True)
-                        value = str(shortcut)
-                    self.configure(hooks=self.route_hook(table={"bad": value}, on_error=mode))
-                    name = self.send("request", lane="bad")
-                    result = self.kernel()
-                    self.assertEqual(self.names(self.side), [])
-                    if mode == "stop":
-                        self.assertEqual(result.returncode, 1, result.stderr)
-                        self.assertIn("kernel: error: HookFailed hook route (event after_verdict) failed: "
-                                      "next in stdout must ", result.stderr)
-                        self.assertEqual(self.names(self.requests, "cur"), [name])
-                        self.assertEqual(self.names(self.ctl), [])
-                    else:
-                        self.assertEqual(result.returncode, 0, result.stderr)
-                        self.assertIn("on_error: continue", result.stderr)
-                        self.assertEqual(self.names(self.ctl), [name])
-
-    def test_08_broken_route_hook_follows_on_error(self):
-        for mode in ("stop", "continue"):
-            with self.subTest(mode=mode):
+            with self.subTest(value=label):
                 self.start()
-                hooks = self.hook("route", "after_verdict", "time.sleep(30)", on_error=mode, timeout_ms=200)
-                self.configure(hooks=hooks)
-                name = self.send("request", lane="side")
+                if label == "self":
+                    shortcut = self.root / "own_box"
+                    shortcut.symlink_to(self.requests, target_is_directory=True)
+                    value = str(shortcut)
+                self.configure(hooks=self.route_hook(table={"bad": value}))
+                name = self.send("request", lane="bad")
                 result = self.kernel()
-                self.assertEqual(result.returncode, 1 if mode == "stop" else 0, result.stderr)
                 self.assertEqual(self.names(self.side), [])
-                self.assertEqual(self.names(self.ctl), [] if mode == "stop" else [name])
-                self.assertEqual(self.names(self.requests, "cur"), [name] if mode == "stop" else [])
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn("kernel: error: HookFailed hook route (event after_verdict) failed: "
+                              "next in stdout must ", result.stderr)
+                self.assertEqual(self.names(self.requests, "cur"), [name])
+                self.assertEqual(self.names(self.ctl), [])
+
+    def test_08_broken_route_hook_stops_the_round(self):
+        self.start()
+        hooks = self.hook("route", "after_verdict", "time.sleep(30)", timeout_ms=200)
+        self.configure(hooks=hooks)
+        name = self.send("request", lane="side")
+        result = self.kernel()
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("kernel: error: HookFailed", result.stderr)
+        self.assertEqual(self.names(self.side) + self.names(self.ctl), [])
+        self.assertEqual(self.names(self.requests, "cur"), [name])
 
     def test_09_queued_letter_is_routed_when_it_leaves_the_queue(self):
         policy = dict(queue=True, count_daemon=str(self.daemon), hooks=self.route_hook())

@@ -45,7 +45,7 @@
   "description": "Check the procs_state_path query letter (11-13, K-F27): the reply carries the absolute path of procs_state.json, null without that window, BodyBad wh…"
  },
  "test_stop_cause.py": {
-  "description": "Verify the after_stop cause (B7) end to end: a real daemon writes stop_cause.json, its child aos-loop reads it, aos-hook fire reports it."
+  "description": "Verify the after_stop cause (B7) end to end: a real daemon writes stop_cause.json, its child aos-loop reads it, the after_stop handler run by aos-hoo…"
  },
  "test_subuid.py": {
   "description": "驗證 daemon 認 limits.user 的 sub:N（免 root 換成 subuid，線 subuid-1119）：設定驗證、helper 找不到與失敗、小格 ACL、與 fake helper 的握手；有真的 newuidmap 才跑真換身分。"
