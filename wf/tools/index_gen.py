@@ -13,7 +13,8 @@
 門檻：夾裡直接的東西（進版控的檔與子夾，`_index.json` 自己不算）超過設定檔的 more_than 個才放；不到的夾不放，上一層那一項也不帶 `index`
 （使用者 11-13「index範圍按照11-12的門檻。」；11-12 的門檻＝超過 15 個，出處 proto8/knowledge/README.md、thinking/2026-11/12/knowledge-removal.md）。
 列哪些：`git ls-files` 有的檔，與裡面有這種檔的夾；`_index.json` 自己不列。夾的那一項，在範圍內就帶 `index` 連到它自己的 `_index.json`。
-一句話怎麼認：md 取第一個標題（分檔取導航行的「涵蓋：…」）；夾取它的 README.md／INDEX.md（工具夾取 _tooldef.json／_metainfo.json），都沒有就取 `_entry` 檔頭（跳過 shebang 的第一個註解行），再沒有就取同名 `夾.md` 的（分檔夾）；
+一句話怎麼認：md 有 `# _description`（優先）或 `# description` 那一節就取它自己內文的第一個非空行，沒有才取第一個標題（跳過叫 `_index`、`index` 的標題；分檔取導航行的「涵蓋：…」；
+11-21 晚 thinking 2026-11/21/知識庫-骨架加md-規劃-1121/01，節照 proto8/py/aos/mdpath.py 的尋法）；夾取它的 README.md／INDEX.md（工具夾取 _tooldef.json／_metainfo.json），都沒有就取 `_entry` 檔頭（跳過 shebang 的第一個註解行），再沒有就取同名 `夾.md` 的（分檔夾）；
 都沒有時用設定檔的通用句（usual_dirs／usual_files：tests、src、.gitignore 這類名字就說明用途的）；json 取 description／summary／$comment／title（knowledge 節點取 `_description` 那段的標題；`_description.json` 整份是一段正文、同樣取標題），
 一段文字寫成字串或字串陣列（一行一個元素）都認（使用者 11-13，proto8/thinking/2026-11/13/text-as-string-array.md）：description 那幾個鍵是陣列時取第一行有字的；
 夾沒有 README.md／INDEX.md 時取它的 `_description.json`；
@@ -37,6 +38,8 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, HERE)
 import codemap_deps  # noqa: E402  依賴表（Makefile、import 行、entries.json）的認法
 import codemap_lib  # noqa: E402  共用檔頭一句話的認法
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "proto8", "py"))
+from aos import mdpath  # noqa: E402  md 的節怎麼尋（`# description`）
 
 PROG = "index_gen"
 NAME = "_index.json"
@@ -66,7 +69,21 @@ def cut(s):
     return s if len(s) <= LIMIT else s[:LIMIT - 1] + "…"
 
 
-def md_desc(text):
+def md_file_desc(text):
+    """一份 .md 的一句話：`_description`（優先）或 `description` 那一節自己內文的第一個非空行；沒有就照 md_desc（跳過 `_index`、`index` 標題）。"""
+    for name in ("_description", "description"):
+        try:
+            if mdpath._walk(text, [name])[0] != "scope":    # 只認標題（不認清單裡叫 description 的鍵）
+                continue
+            body = mdpath.get(text, [name, "_"])
+        except mdpath.Missing:
+            continue
+        first = next((ln for ln in body.splitlines() if ln.strip()), "")
+        return plain(first.lstrip(">").strip())
+    return md_desc(text, skip=("_index", "index"))
+
+
+def md_desc(text, skip=()):
     lines = text.splitlines()[:40]
     for ln in lines[:6]:
         m = re.search(r"涵蓋(?:的段落?)?：(.+?)(?:｜|$)", ln)
@@ -76,7 +93,7 @@ def md_desc(text):
     for ln in lines:
         if ln.startswith("```"):
             fence = not fence
-        if not fence and re.match(r"#{1,6}\s+\S", ln):
+        if not fence and re.match(r"#{1,6}\s+\S", ln) and ln.lstrip("#").strip().lower() not in skip:
             return plain(ln.lstrip("#"))
     for ln in lines:                                    # 沒有標題：第一行有字的（封存註記、導航行、註解跳過）
         s = plain(ln.lstrip(">").strip())
@@ -126,7 +143,7 @@ def file_desc(root, path):
     except (OSError, UnicodeDecodeError):
         return ""
     if name.endswith(".md"):
-        return md_desc(text)
+        return md_file_desc(text)
     if name.endswith(".json"):
         return json_desc(text, name) or codemap_lib.clean(codemap_lib.json_desc(text, name == "_entry"), [name])
     if name.endswith((".html", ".htm")):

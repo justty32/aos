@@ -7,6 +7,7 @@
 // 摘要：字串超過 80 位元組截到 60 加「…（共 N 位元組）」；數字、true／false／null 照寫；
 //   物件 `{N} 前六個 key…`；陣列 `[N]`（全是短的純值就整個印出來）；指示詞 `$ref "…"`／`$env 名字 $path …`。
 // 指到的是純值＝整個印出來（不截）。--follow＝路上與指到的 $ref 都穿過去（$ref 陣列照 aos-directive 合成一份給你看）。
+// .md（11-21 晚）：整份 md（沒 #/）看的是它倒成的樹（md_tree）；帶 #/ 看 md_get 取到的那一格。
 #include "cmd/cmd.hpp"
 
 #include "follow/follow.hpp"
@@ -117,12 +118,14 @@ int cmd_peek(const Args& args) {
     mode.follow = cli.opts.count("follow") > 0;
     Located at = locate(docs, parse_spec(s), mode);
     if (!at.rest.empty()) {
-        throw Error{code::PointerMissing, "no such pointer: " + s + " (" + shown(at.at.file, at.at.toks) + " has no " +
-                                              at.rest[0] + ")"};
+        throw Error{code::PointerMissing, "no such pointer: " + s + " (" + missing_note(at) + ")"};
     }
     Json v = *at.at.node;
+    if (at.at.md && at.at.toks.empty()) {   // 整份 md＝看它倒成的樹（md_tree）
+        v = aos::md_tree(docs.files.at(at.at.file).text);
+    }
     std::string note;
-    if (mode.follow && kind_of(v) == Kind::Ref) {
+    if (!at.at.md && mode.follow && kind_of(v) == Kind::Ref) {
         v = aos::resolve_shallow(v, aos::RefBase{at.at.base, at.at.file, aos::pointer_tokens(pointer_of(at.at.toks))}).value;
         note = " ($ref expanded)";
     }

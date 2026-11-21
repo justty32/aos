@@ -1,5 +1,5 @@
 {
- "description": "Show a node through its index (KEY TAB description per entry). The node is a folder, FILE or FILE#/POINTER; what an index says about X is in the index of X's parent. A view, not the facts; to change an index use the json tools. More: aos/tools/index_view.json.",
+ "description": "Show a node through its index (KEY TAB description per entry). The node is a folder, FILE or FILE#/POINTER; what an index says about X is in the index of X's parent. A view, not the facts; to change an index use the json tools. An entry may be a plain string (the description) or {\"$ref\": PATH}; a folder without _index.json may have _index.md (a list of key: value items); a FILE.md node uses its _index or index heading. More: aos/tools/index_view.json.",
  "parameters": {
   "type": "object",
   "properties": {

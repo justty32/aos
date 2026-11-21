@@ -1,0 +1,663 @@
+{
+ "description": "Shared table for reading markdown as JSON (aos/mdpath.py and aos-directive src/md.cpp; rules: thinking 2026-11/21/知識庫-骨架加md-規劃-1121/07-尋址規則.md). docs: name -> markdown text. cases: get = value at ptr (\"\" = whole text), missing = nothing there, ls = names under ptr. trees: the whole document as one JSON value.",
+ "docs": {
+  "page": "Intro line before any heading.\n\n# Who am I\n\nYou are one proc.\n\n```sh\n# not a heading\n- not a list\n```\n\n# What is in your stack\n\nStack text.\n\n## Files\n\n- body.json: your body\n- `loop.json`: the loop\n- plain item\n- **status:** open\n- **mode**: fast\n- see http://x.y/z for more\n- 鍵：全形值\n\n## Time\n\nTime text.\n\n# The [y/N] question\n\nAsk.\n",
+  "lists": "# Steps\n\nBefore.\n\n1. first\n   more of first\n2. second\n   - sub a\n   - sub b: bee\n3. third\nlazy line\n\nAfter the list.\n\n- second list\n\n## Steps\n\ninner same name\n\n# deps:\n\n- tools:\n  - read\n  - write\n- note: short\n  continued\n- 0: zero key\n",
+  "tables": "# T\n\n| name | kind |\n|---|:-:|\n| a \\| b | x |\n|  |  y  |\n\ntext after\n\n# Both\n\n- item\n\n| h |\n|---|\n| v |\n\n# Bare\n\nh1 | h2\n--- | ---\n1 | 2\n",
+  "jsonsec": "# cfg\n\n```json\n{\"a\": {\"b\": [1, true, null]}, \"n\": 3}\n```\n\n# notjson\n\nA word.\n\n```json\n{\"a\": 1}\n```\n\n# bad\n\n```json\n{oops\n```\n\n# arr\n\n```JSON\n[\"x\", {\"k\": \"v\"}]\n```\n\n# parent\n\n## kid\n\n```json\n{\"z\": 0}\n```\n",
+  "edge": "# A\n\n## _\n\nunderscore heading\n\n## Dup\n\none\n\n## Dup\n\ntwo\n\n# 0\n\nzero heading\n\n# a\n\nlower a\n\n#notheading\n\n####### seven\n\n# Closed ##\n\nc\n\n# 規劃 A\n\n## 兩個 字\n\n中文\n\n# Empty\n# Next\n",
+  "crlf": "# H\r\n\r\ntext\r\n\r\n- k: v\r\n",
+  "nohead": "just text\n\n- a\n- b: c\n",
+  "index": "# index\n\n- Who am I: finding your own name\n- me.md: the page\n"
+ },
+ "cases": [
+  {
+   "rule": "no pointer = the whole text",
+   "doc": "page",
+   "ptr": "",
+   "get": "Intro line before any heading.\n\n# Who am I\n\nYou are one proc.\n\n```sh\n# not a heading\n- not a list\n```\n\n# What is in your stack\n\nStack text.\n\n## Files\n\n- body.json: your body\n- `loop.json`: the loop\n- plain item\n- **status:** open\n- **mode**: fast\n- see http://x.y/z for more\n- 鍵：全形值\n\n## Time\n\nTime text.\n\n# The [y/N] question\n\nAsk.\n"
+  },
+  {
+   "rule": "a heading = its section with the heading line, ends before the next heading of the same level; # inside a fence is not a heading",
+   "doc": "page",
+   "ptr": "/Who am I",
+   "get": "# Who am I\n\nYou are one proc.\n\n```sh\n# not a heading\n- not a list\n```\n"
+  },
+  {
+   "rule": "a section includes its sub-sections",
+   "doc": "page",
+   "ptr": "/What is in your stack",
+   "get": "# What is in your stack\n\nStack text.\n\n## Files\n\n- body.json: your body\n- `loop.json`: the loop\n- plain item\n- **status:** open\n- **mode**: fast\n- see http://x.y/z for more\n- 鍵：全形值\n\n## Time\n\nTime text.\n"
+  },
+  {
+   "rule": "first heading with that text at any depth",
+   "doc": "page",
+   "ptr": "/Time",
+   "get": "## Time\n\nTime text.\n"
+  },
+  {
+   "rule": "more tokens narrow it down",
+   "doc": "page",
+   "ptr": "/What is in your stack/Time",
+   "get": "## Time\n\nTime text.\n"
+  },
+  {
+   "rule": "a sub-heading is only found inside its parent",
+   "doc": "page",
+   "ptr": "/Who am I/Time",
+   "missing": true
+  },
+  {
+   "rule": "exact match first, then ASCII case-insensitive",
+   "doc": "page",
+   "ptr": "/who am i",
+   "get": "# Who am I\n\nYou are one proc.\n\n```sh\n# not a heading\n- not a list\n```\n"
+  },
+  {
+   "rule": "~1 is /",
+   "doc": "page",
+   "ptr": "/The [y~1N] question",
+   "get": "# The [y/N] question\n\nAsk.\n"
+  },
+  {
+   "rule": "no such heading = missing",
+   "doc": "page",
+   "ptr": "/Nope",
+   "missing": true
+  },
+  {
+   "rule": "_ at the root = text before the first heading",
+   "doc": "page",
+   "ptr": "/_",
+   "get": "Intro line before any heading.\n"
+  },
+  {
+   "rule": "_ = own text of a heading, without the heading line and without sub-sections",
+   "doc": "page",
+   "ptr": "/What is in your stack/_",
+   "get": "Stack text.\n"
+  },
+  {
+   "rule": "_ of a leaf heading",
+   "doc": "page",
+   "ptr": "/Time/_",
+   "get": "Time text.\n"
+  },
+  {
+   "rule": "a fenced block holds no list",
+   "doc": "page",
+   "ptr": "/Who am I/0",
+   "missing": true
+  },
+  {
+   "rule": "number = item of the first list in the heading's own text; whole item text",
+   "doc": "page",
+   "ptr": "/Files/0",
+   "get": "body.json: your body"
+  },
+  {
+   "rule": "list item KEY: VALUE can be found by key",
+   "doc": "page",
+   "ptr": "/Files/body.json",
+   "get": "your body"
+  },
+  {
+   "rule": "backticks around a key are dropped",
+   "doc": "page",
+   "ptr": "/Files/loop.json",
+   "get": "the loop"
+  },
+  {
+   "rule": "an item without a colon",
+   "doc": "page",
+   "ptr": "/Files/2",
+   "get": "plain item"
+  },
+  {
+   "rule": "an item without a colon has no key",
+   "doc": "page",
+   "ptr": "/Files/plain item",
+   "missing": true
+  },
+  {
+   "rule": "**key:** value",
+   "doc": "page",
+   "ptr": "/Files/status",
+   "get": "open"
+  },
+  {
+   "rule": "**key**: value",
+   "doc": "page",
+   "ptr": "/Files/mode",
+   "get": "fast"
+  },
+  {
+   "rule": "a colon inside a URL is not a key separator",
+   "doc": "page",
+   "ptr": "/Files/see http",
+   "missing": true
+  },
+  {
+   "rule": "full-width colon",
+   "doc": "page",
+   "ptr": "/Files/鍵",
+   "get": "全形值"
+  },
+  {
+   "rule": "lists of sub-sections are not seen from the parent",
+   "doc": "page",
+   "ptr": "/What is in your stack/0",
+   "missing": true
+  },
+  {
+   "rule": "index out of range = missing",
+   "doc": "page",
+   "ptr": "/Files/9",
+   "missing": true
+  },
+  {
+   "rule": "ls root: _ then direct headings",
+   "doc": "page",
+   "ptr": "",
+   "ls": [
+    "_",
+    "Who am I",
+    "What is in your stack",
+    "The [y/N] question"
+   ]
+  },
+  {
+   "rule": "ls a heading: _, sub-headings",
+   "doc": "page",
+   "ptr": "/What is in your stack",
+   "ls": [
+    "_",
+    "Files",
+    "Time"
+   ]
+  },
+  {
+   "rule": "ls a heading with a list: keys, or the index for items without a key",
+   "doc": "page",
+   "ptr": "/Files",
+   "ls": [
+    "_",
+    "body.json",
+    "loop.json",
+    "2",
+    "status",
+    "mode",
+    "5",
+    "鍵"
+   ]
+  },
+  {
+   "rule": "an item keeps its indented continuation lines",
+   "doc": "lists",
+   "ptr": "/Steps/0",
+   "get": "first\nmore of first"
+  },
+  {
+   "rule": "an item includes its sub-list",
+   "doc": "lists",
+   "ptr": "/Steps/1",
+   "get": "second\n- sub a\n- sub b: bee"
+  },
+  {
+   "rule": "a second number goes into the sub-list of the item",
+   "doc": "lists",
+   "ptr": "/Steps/1/0",
+   "get": "sub a"
+  },
+  {
+   "rule": "a key in a sub-list",
+   "doc": "lists",
+   "ptr": "/Steps/1/sub b",
+   "get": "bee"
+  },
+  {
+   "rule": "a lazy continuation line belongs to the item",
+   "doc": "lists",
+   "ptr": "/Steps/2",
+   "get": "third\nlazy line"
+  },
+  {
+   "rule": "only the first list counts",
+   "doc": "lists",
+   "ptr": "/Steps/3",
+   "missing": true
+  },
+  {
+   "rule": "_ then a number is the same item",
+   "doc": "lists",
+   "ptr": "/Steps/_/0",
+   "get": "first\nmore of first"
+  },
+  {
+   "rule": "a sub-heading with the same name as its parent",
+   "doc": "lists",
+   "ptr": "/Steps/Steps",
+   "get": "## Steps\n\ninner same name\n"
+  },
+  {
+   "rule": "own text of that sub-heading",
+   "doc": "lists",
+   "ptr": "/Steps/Steps/_",
+   "get": "inner same name\n"
+  },
+  {
+   "rule": "a key with nothing after the colon = the indented block below",
+   "doc": "lists",
+   "ptr": "/deps:/tools",
+   "get": "- read\n- write"
+  },
+  {
+   "rule": "and that block can be entered",
+   "doc": "lists",
+   "ptr": "/deps:/tools/1",
+   "get": "write"
+  },
+  {
+   "rule": "a value with a continuation line",
+   "doc": "lists",
+   "ptr": "/deps:/note",
+   "get": "short\ncontinued"
+  },
+  {
+   "rule": "a number is an index before it is a key",
+   "doc": "lists",
+   "ptr": "/deps:/0",
+   "get": "tools:\n- read\n- write"
+  },
+  {
+   "rule": "the item whose key is 0, by index",
+   "doc": "lists",
+   "ptr": "/deps:/2",
+   "get": "0: zero key"
+  },
+  {
+   "rule": "ls a keyed list",
+   "doc": "lists",
+   "ptr": "/deps:",
+   "ls": [
+    "_",
+    "tools",
+    "note",
+    "0"
+   ]
+  },
+  {
+   "rule": "ls the block of a key",
+   "doc": "lists",
+   "ptr": "/deps:/tools",
+   "ls": [
+    "0",
+    "1"
+   ]
+  },
+  {
+   "rule": "table: the header is row 0, a row is an array of strings",
+   "doc": "tables",
+   "ptr": "/T/0",
+   "get": [
+    "name",
+    "kind"
+   ]
+  },
+  {
+   "rule": "the separator line is not a row; \\| is |",
+   "doc": "tables",
+   "ptr": "/T/1",
+   "get": [
+    "a | b",
+    "x"
+   ]
+  },
+  {
+   "rule": "an empty cell is an empty string",
+   "doc": "tables",
+   "ptr": "/T/2",
+   "get": [
+    "",
+    "y"
+   ]
+  },
+  {
+   "rule": "row then column",
+   "doc": "tables",
+   "ptr": "/T/1/1",
+   "get": "x"
+  },
+  {
+   "rule": "empty cell",
+   "doc": "tables",
+   "ptr": "/T/2/0",
+   "get": ""
+  },
+  {
+   "rule": "row out of range = missing",
+   "doc": "tables",
+   "ptr": "/T/3",
+   "missing": true
+  },
+  {
+   "rule": "column out of range = missing",
+   "doc": "tables",
+   "ptr": "/T/1/5",
+   "missing": true
+  },
+  {
+   "rule": "list and table in the same text: numbers mean the list",
+   "doc": "tables",
+   "ptr": "/Both/0",
+   "get": "item"
+  },
+  {
+   "rule": "so the table there cannot be reached",
+   "doc": "tables",
+   "ptr": "/Both/0/0",
+   "missing": true
+  },
+  {
+   "rule": "a table without outer pipes",
+   "doc": "tables",
+   "ptr": "/Bare/1",
+   "get": [
+    "1",
+    "2"
+   ]
+  },
+  {
+   "rule": "ls a heading with a table: _ and the row numbers",
+   "doc": "tables",
+   "ptr": "/T",
+   "ls": [
+    "_",
+    "0",
+    "1",
+    "2"
+   ]
+  },
+  {
+   "rule": "a heading with only one json fence = that JSON value",
+   "doc": "jsonsec",
+   "ptr": "/cfg",
+   "get": {
+    "a": {
+     "b": [
+      1,
+      true,
+      null
+     ]
+    },
+    "n": 3
+   }
+  },
+  {
+   "rule": "and JSON paths go on below it",
+   "doc": "jsonsec",
+   "ptr": "/cfg/a/b/1",
+   "get": true
+  },
+  {
+   "rule": "null is a value",
+   "doc": "jsonsec",
+   "ptr": "/cfg/a/b/2",
+   "get": null
+  },
+  {
+   "rule": "number stays a number",
+   "doc": "jsonsec",
+   "ptr": "/cfg/n",
+   "get": 3
+  },
+  {
+   "rule": "missing JSON key",
+   "doc": "jsonsec",
+   "ptr": "/cfg/x",
+   "missing": true
+  },
+  {
+   "rule": "_ gives the raw text with the fence",
+   "doc": "jsonsec",
+   "ptr": "/cfg/_",
+   "get": "```json\n{\"a\": {\"b\": [1, true, null]}, \"n\": 3}\n```\n"
+  },
+  {
+   "rule": "other text next to the fence = plain text section",
+   "doc": "jsonsec",
+   "ptr": "/notjson",
+   "get": "# notjson\n\nA word.\n\n```json\n{\"a\": 1}\n```\n"
+  },
+  {
+   "rule": "so no JSON path",
+   "doc": "jsonsec",
+   "ptr": "/notjson/a",
+   "missing": true
+  },
+  {
+   "rule": "invalid JSON = plain text section",
+   "doc": "jsonsec",
+   "ptr": "/bad",
+   "get": "# bad\n\n```json\n{oops\n```\n"
+  },
+  {
+   "rule": "the info string is case-insensitive; arrays by index",
+   "doc": "jsonsec",
+   "ptr": "/arr/1/k",
+   "get": "v"
+  },
+  {
+   "rule": "a heading with sub-sections is never JSON",
+   "doc": "jsonsec",
+   "ptr": "/parent",
+   "get": "# parent\n\n## kid\n\n```json\n{\"z\": 0}\n```\n"
+  },
+  {
+   "rule": "the leaf is",
+   "doc": "jsonsec",
+   "ptr": "/parent/kid/z",
+   "get": 0
+  },
+  {
+   "rule": "ls a JSON section: its keys",
+   "doc": "jsonsec",
+   "ptr": "/cfg",
+   "ls": [
+    "a",
+    "n"
+   ]
+  },
+  {
+   "rule": "ls a JSON array",
+   "doc": "jsonsec",
+   "ptr": "/cfg/a/b",
+   "ls": [
+    "0",
+    "1",
+    "2"
+   ]
+  },
+  {
+   "rule": "_ is reserved: own text (empty here), never the heading named _",
+   "doc": "edge",
+   "ptr": "/A/_",
+   "get": ""
+  },
+  {
+   "rule": "two headings with the same text: the first",
+   "doc": "edge",
+   "ptr": "/Dup",
+   "get": "## Dup\n\none\n"
+  },
+  {
+   "rule": "a heading named 0 wins over the list index",
+   "doc": "edge",
+   "ptr": "/0",
+   "get": "# 0\n\nzero heading\n"
+  },
+  {
+   "rule": "exact match wins over case-insensitive (A comes first)",
+   "doc": "edge",
+   "ptr": "/a",
+   "get": "# a\n\nlower a\n\n#notheading\n\n####### seven\n"
+  },
+  {
+   "rule": "# without a space is not a heading",
+   "doc": "edge",
+   "ptr": "/notheading",
+   "missing": true
+  },
+  {
+   "rule": "seven # is not a heading",
+   "doc": "edge",
+   "ptr": "/seven",
+   "missing": true
+  },
+  {
+   "rule": "closing # are dropped",
+   "doc": "edge",
+   "ptr": "/Closed",
+   "get": "# Closed ##\n\nc\n"
+  },
+  {
+   "rule": "non-ASCII and spaces as written",
+   "doc": "edge",
+   "ptr": "/規劃 A/兩個 字",
+   "get": "## 兩個 字\n\n中文\n"
+  },
+  {
+   "rule": "a heading with nothing under it",
+   "doc": "edge",
+   "ptr": "/Empty",
+   "get": "# Empty\n"
+  },
+  {
+   "rule": "its own text is empty",
+   "doc": "edge",
+   "ptr": "/Empty/_",
+   "get": ""
+  },
+  {
+   "rule": "ls: duplicate names are both listed",
+   "doc": "edge",
+   "ptr": "/A",
+   "ls": [
+    "_",
+    "Dup",
+    "Dup"
+   ]
+  },
+  {
+   "rule": "CRLF line ends",
+   "doc": "crlf",
+   "ptr": "/H/k",
+   "get": "v"
+  },
+  {
+   "rule": "CRLF is dropped from the text of a part",
+   "doc": "crlf",
+   "ptr": "/H/_",
+   "get": "text\n\n- k: v\n"
+  },
+  {
+   "rule": "no heading at all: _ is everything",
+   "doc": "nohead",
+   "ptr": "/_",
+   "get": "just text\n\n- a\n- b: c\n"
+  },
+  {
+   "rule": "root number = list in the text before the first heading",
+   "doc": "nohead",
+   "ptr": "/1",
+   "get": "b: c"
+  },
+  {
+   "rule": "root key",
+   "doc": "nohead",
+   "ptr": "/b",
+   "get": "c"
+  },
+  {
+   "rule": "an index list: name -> one sentence",
+   "doc": "index",
+   "ptr": "/index/Who am I",
+   "get": "finding your own name"
+  },
+  {
+   "rule": "a key with a dot",
+   "doc": "index",
+   "ptr": "/index/me.md",
+   "get": "the page"
+  }
+ ],
+ "trees": [
+  {
+   "rule": "tree: heading = key; leaf = own text; with sub-sections = object with _",
+   "doc": "page",
+   "tree": {
+    "_": "Intro line before any heading.\n",
+    "Who am I": "You are one proc.\n\n```sh\n# not a heading\n- not a list\n```\n",
+    "What is in your stack": {
+     "_": "Stack text.\n",
+     "Files": "- body.json: your body\n- `loop.json`: the loop\n- plain item\n- **status:** open\n- **mode**: fast\n- see http://x.y/z for more\n- 鍵：全形值\n",
+     "Time": "Time text.\n"
+    },
+    "The [y/N] question": "Ask.\n"
+   }
+  },
+  {
+   "rule": "tree: JSON sections become their value",
+   "doc": "jsonsec",
+   "tree": {
+    "cfg": {
+     "a": {
+      "b": [
+       1,
+       true,
+       null
+      ]
+     },
+     "n": 3
+    },
+    "notjson": "A word.\n\n```json\n{\"a\": 1}\n```\n",
+    "bad": "```json\n{oops\n```\n",
+    "arr": [
+     "x",
+     {
+      "k": "v"
+     }
+    ],
+    "parent": {
+     "kid": {
+      "z": 0
+     }
+    }
+   }
+  },
+  {
+   "rule": "tree: duplicate headings keep the first; empty own text has no _",
+   "doc": "edge",
+   "tree": {
+    "A": {
+     "Dup": "one\n"
+    },
+    "0": "zero heading\n",
+    "a": "lower a\n\n#notheading\n\n####### seven\n",
+    "Closed": "c\n",
+    "規劃 A": {
+     "兩個 字": "中文\n"
+    },
+    "Empty": "",
+    "Next": ""
+   }
+  },
+  {
+   "rule": "tree: no heading",
+   "doc": "nohead",
+   "tree": {
+    "_": "just text\n\n- a\n- b: c\n"
+   }
+  }
+ ]
+}

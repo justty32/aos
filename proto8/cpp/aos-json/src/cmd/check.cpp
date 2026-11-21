@@ -6,6 +6,7 @@
 //   3. exec 的形狀（只看 aos 設定檔裡的那幾格：最上層的 exec、states/<名>/exec、procs/<名>/exec（11-03 原 loops，統稱 procs）——位置照 $ref 合好之後算）：
 //      非空字串、非空陣列（元素是字串或指示詞）、或單子物件（argv 是非空陣列、元素是字串或指示詞；argv 本身是指示詞也算）
 // $env 現在沒設不算問題（AOS_* 是跑的時候才有）；加 --env 才報。
+// 指到 .md 的 $ref：照 md 的規則指得到就算對（md 裡面不往下驗）、指不到照舊 DirectiveBad。
 // 每行：`位置: 代號 原因`（位置＝檔#/指標，檔在 cwd 底下印相對路徑）。代號：DirectiveBad（同 aos 跑的時候的錯）、DirectiveFormBad、ExecBad。
 #include "cmd/cmd.hpp"
 
@@ -83,6 +84,9 @@ struct Checker {
 
     // c＝這個值在哪；at＝合好之後的邏輯位置（判斷是不是 exec 那幾格用）。
     void visit(const Cursor& c, const std::vector<std::string>& at, Chain chain) {
+        if (c.md) {
+            return;   // md 裡取到的值不解指示詞（同 aos-directive），不往裡驗；指得到就算對
+        }
         const Json& v = *c.node;
         Kind k = kind_of(v);
         if (k == Kind::FormBad) {

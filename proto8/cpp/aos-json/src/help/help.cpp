@@ -26,15 +26,21 @@ const std::map<std::string, std::string> SUB_HELP = {
     {"get", R"(aos-json get - Read a JSON value.
 
 usage: aos-json get [--follow] [--resolve] [--str] FILE#/POINTER
+       aos-json get --tree FILE.md
        aos-json get --help
 
 flags:
   --follow     follow $ref on the path to the value
   --resolve    resolve directives inside the result
   --str        print a string without JSON quotes
+  --tree       print a whole .md file as one JSON tree (heading = key)
   -h, --help   show this help
 
 Print the selected value as one JSON line, or as text with --str.
+A .md FILE is read, never written: FILE.md alone is its whole text;
+#/HEADING is that section, #/HEADING/_ its own text, #/HEADING/0 an item
+of its first list (or a row of its first table), #/HEADING/KEY the value
+of a "KEY: value" item; a section holding only a ```json fence is that JSON.
 
 exit codes: 0 read; 1 error.
 more: aos-json/README.md
@@ -50,6 +56,7 @@ flags:
   -h, --help   show this help
 
 Print the location and a text summary; expand children up to the chosen depth.
+A whole .md file is shown as its JSON tree (see get --tree).
 
 exit codes: 0 shown; 1 error.
 more: aos-json/README.md
@@ -63,7 +70,7 @@ flags:
   -h, --help   show this help
 
 Print one FILE#/POINTER per $ref hop; the final line is the source.
-An environment value ends with $env NAME.
+An environment value ends with $env NAME. A $ref into a .md file ends there.
 
 exit codes: 0 located; 1 error.
 more: aos-json/README.md
@@ -233,7 +240,8 @@ flags:
 
 The first line is the value's type and length; then one child per line,
 escaped so it can be appended to the pointer. A partial list ends with
-a [more] line giving the next --offset.
+a [more] line giving the next --offset. In a .md file the children of a
+text are its _, sub-headings and list keys (or numbers), listed as keys.
 
 exit codes: 0 listed; 1 error.
 more: aos-json/README.md
@@ -256,7 +264,8 @@ flags:
 Give --key, --value, or both. Without --up, search every member below
 in file order. One match per line: FILE#/POINTER, type, size (TAB
 separated); [no match] when nothing matches. --up cannot be combined
-with --follow or --resolve.
+with --follow or --resolve. A whole .md file is searched as its JSON
+tree (see get --tree); --up does not work on a .md file.
 
 exit codes: 0 searched (also on no match); 1 error.
 more: aos-json/README.md

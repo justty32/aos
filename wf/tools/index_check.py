@@ -1,110 +1,99 @@
 #!/usr/bin/env python3
-"""index_check — 查 aos 的 index（`_index.json`）跟實際的樹對不對得上：列了但不在、在但沒列、連結指不到、形狀不對。
+"""index_check — 查 aos 的夾 index（`_index.json`，沒有才看 `_index.md`）寫得對不對：形狀、列的東西在不在、`index` 欄指不指得到、子夾的 index 有沒有連過去。
 
-  index_check.py [--root DIR] [--fs] [--view] [--quiet] [PATH…]
-    PATH    要查的夾（相對 --root；預設整個 root），底下每一份 `_index.json` 都查；被 `index` 連到的檔內 `_index` 也查。
+  index_check.py [--root DIR] [--quiet] [PATH…]
+    PATH    要查的夾（相對 --root；預設整個 root），底下每一夾的 index 都查。
     --root  樹的根（預設這份腳本所在的 repo）。
-    --fs    「在但沒列」照磁碟上有什麼算（給不在 git 裡的樹用，例如裝好的 knowledge）；預設照 `git ls-files`（root 不是 git 的樹時自動照磁碟算）。
-    --view  不查「在但沒列」（index 是視角、本來就可以只列一部分；只想查列的東西與連結對不對時用）。
+    --quiet 不印最後一行總數。
+  夾的 index 是哪一份：有 `_index.json` 用它；沒有才用 `_index.md`（整份當字典式清單：一項 `鍵: 一句話`）。
   每個問題一行 `index_check: error: 代號 哪一份: 說明`，最後一行總數；有問題退 1，沒有退 0。只讀、不改任何檔。
-  不靜默跳過（11-13 假綠實測，proto8/thinking/2026-11/13/index-check-false-green.md）：PATH 在 root 外＝PathBad；某夾沒有任何檔在 git 裡＝印 warning、照磁碟算；
-  照名字不走的夾（SKIP）裡有 `_index.json`、`archive/` 底下任何一層的 `_index.json`（封存不維護內部連結；上一層那一項也不必帶 `index`）＝印 warning、總數行加「N skipped」；PATH 底下一份 `_index.json` 都沒有＝印 warning。warning 不改退出碼。
-  不查（範圍外）：節點內容裡的引用（md 連結、json 字串裡的路徑、`$ref`）、`index` 指到的那份不往下跟（檔內 `_index` 除外）。
-  代號：IndexBad（整份或某項形狀不對：要 `{名: {"description": "…", "index": "路徑"}}`，description 非空字串，
-        或字串陣列——一行一個元素、接起來不是空的；空陣列、含非字串元素都算形狀不對）、
-        EntryGone（列了但不在）、EntryMissing（在但沒列）、
-        LinkBad（`index` 指不到另一份 index：指到的要是 `_index.json` 整份（物件）、檔內 `_index` 鍵、或 `_metainfo` 的 index；巢太深讀不了的 json 也算讀不了）、
-        LinkMissing（子夾自己有 `_index.json`，上一層那一項卻沒帶 `index`）。
-  路徑算法跟 `$ref`、index_view 同一支 proto8/py/aos/refpath.py（# 左邊檔案系統、從所在夾算；右邊 json 內部：`#/`＝本檔根、`#./`＝這一項、`#../`＝上一層）。
-  規格：proto8/thinking/2026-11/13/index-build.md。生成用 index_gen.py。純標準庫。
+  只查四種（使用者 11-21「index_check感覺是毒瘤，實作的時候拜託整個重寫」，規劃 proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/10-index_check.md）：
+    IndexBad     那份 index 讀不出來、或最上層不是物件（`_index.md`＝沒有任何 `鍵: 值` 的項）；某一項不是「非空字串」（＝description）、
+                 不是「帶非空 description（字串或字串陣列）的物件」、也不是 `{"$ref": …}`（description 寫成 `{"$ref": …}` 也算）；`index` 欄有寫但不是非空字串。
+    EntryGone    鍵 `#` 左邊的檔或夾不在；鍵帶 `#/位置` 時那個位置讀不到（json 照 RFC 6901，`.md` 照 proto8/py/aos/mdpath.py）。
+    LinkBad      `index` 欄不是合法路徑、指到的東西不在或讀不出來、或讀出來不符合 index 格式（json：一個物件；md：json 區塊是物件，或字典式清單）。
+    LinkMissing  子夾自己有 `_index.json`，上一層那一項卻沒帶 `index`（`archive` 例外；`$ref` 的項不查，它的欄位在別處）。
+  不查：夾裡在但沒列的東西（index 是視角，可以只列一部分）、`index` 指到的那份表裡每一項、`$ref` 指到的東西、節點內容裡的引用。
+  不靜默跳過：PATH 在 root 外＝PathBad；照名字不走的夾（SKIP）裡有 index、`archive/` 底下任何一層的 index＝印 warning、總數行加「N skipped」；
+  PATH 底下一份 index 都沒有＝印 warning。warning 不改退出碼。
+  路徑算法跟 `$ref`、index_view 同一支 proto8/py/aos/refpath.py；md 一律經 proto8/py/aos/mdpath.py 讀。生成用 index_gen.py。純標準庫。
 """
 import json
 import os
-import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "proto8", "py"))
-from aos import refpath as aos_refpath  # noqa: E402  路徑字串怎麼算：$ref 與 index 共用一支（proto8/thinking/2026-11/13/ref-path-rules）
+from aos import mdpath  # noqa: E402  md 照標題／清單／表格／json 區塊尋
+from aos import refpath  # noqa: E402  路徑字串怎麼算：$ref 與 index 共用一支
 
 PROG = "index_check"
-NAME = "_index.json"
+NAMES = ("_index.json", "_index.md")    # 夾的 index：前面那份在就不看後面那份
 SKIP = {".git", "__pycache__", "build", "install", "vcpkg_installed", "node_modules", ".cache"}
-ARCHIVE = "archive"     # 封存夾：不維護內部連結（wf/STRUCTURE「archive 規則」），裡面的 index 不查、只計數（使用者 11-13 15:18「都按照推薦」）
-USAGE ="(usage: index_check.py [--root DIR] [--fs] [--view] [--quiet] [PATH…])"
+ARCHIVE = "archive"     # 封存夾：不維護內部連結，裡面的 index 不查、只計數
+USAGE = "(usage: index_check.py [--root DIR] [--quiet] [PATH…])"
 
 
-class JsonTooDeep(ValueError):
-    pass
-
-
-def load(path):
-    with open(path, encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except RecursionError:                          # 巢得太深的 json：當成讀不了，不讓整支崩
-            raise JsonTooDeep(path) from None
+class Unreadable(Exception):
+    """讀不出來（檔不在、不是 UTF-8、不是 json、巢太深、位置尋不到）；訊息是英文一句。"""
 
 
 def warn(msg):
     print(f"{PROG}: warning: {msg}", file=sys.stderr)
 
 
-def is_index_spot(lpath, lptr):
-    """index 欄指到的地方是不是一份 index：`_index.json` 整份、檔內 `_index` 鍵、`_metainfo.json#/index`、`…/_metainfo/index`（docs/01）。"""
-    if not lptr:
-        return os.path.basename(lpath) == NAME
-    return (lptr.endswith("/_index") or lptr.endswith("/_metainfo/index")
-            or (os.path.basename(lpath) == "_metainfo.json" and lptr == "/index"))
+def read_text(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    except (OSError, UnicodeDecodeError) as e:
+        raise Unreadable(getattr(e, "strerror", None) or type(e).__name__) from None
 
 
-def pointer(doc, ptr):
-    """JSON Pointer（/a/b）→ (找到沒, 值)。"""
-    cur = doc
-    for tok in ptr.split("/")[1:] if ptr else []:
-        tok = tok.replace("~1", "/").replace("~0", "~")
+def at(path, toks):
+    """一個檔的一格（toks＝已還原的 token 串，[]＝整份）：json 照 RFC 6901、.md 照 mdpath。讀不到丟 Unreadable。"""
+    text = read_text(path)
+    if path.endswith(".md"):
+        try:
+            return mdpath.get(text, toks)
+        except mdpath.Missing as e:
+            raise Unreadable(e.reason) from None
+    try:
+        cur = json.loads(text)
+    except (ValueError, RecursionError) as e:
+        raise Unreadable("not JSON (%s)" % type(e).__name__) from None
+    for tok in toks:
         if isinstance(cur, dict) and tok in cur:
             cur = cur[tok]
-        elif isinstance(cur, list) and tok.isdigit() and int(tok) < len(cur):
+        elif isinstance(cur, list) and tok.isdigit() and str(int(tok)) == tok and int(tok) < len(cur):
             cur = cur[int(tok)]
         else:
-            return False, None
-    return True, cur
+            raise Unreadable("there is no %s" % tok)
+    return cur
 
 
-def children(root, d, fs, cache):
-    """夾 d（相對 root）底下實際有的名字。"""
-    if fs or cache.get("fs"):
+def md_table(text, toks):
+    """md 的一格當 index 表：json 區塊是物件＝表；字典式清單（有 `鍵: 值` 的項）＝{鍵: 值}；都不是＝None（同 proto8/py/aos/index.py）。"""
+    v = mdpath.get(text, toks)
+    if isinstance(v, dict) or not isinstance(v, str):
+        return v if isinstance(v, dict) else None
+    base = list(toks) + (["_"] if mdpath._walk(text, list(toks))[0] == "scope" else [])
+    out = {}
+    for n in mdpath.ls(text, base):
+        if not mdpath.INT.match(n) and n not in out:
+            out[n] = mdpath.get(text, base + [n])
+    return out or None
+
+
+def index_at(path, toks):
+    """一格讀成 index 表：json 要是物件；md 要是 json 區塊的物件或字典式清單。回 (表或 None, 不是表時的一句)；讀不到丟 Unreadable。"""
+    if path.endswith(".md"):
         try:
-            return {n for n in os.listdir(os.path.join(root, d)) if n not in SKIP and n != NAME}
-        except OSError:
-            return set()
-    if "kids" not in cache:
-        got = subprocess.run(["git", "-C", root, "ls-files", "-z"], capture_output=True)
-        if got.returncode:                              # 不是 git 的樹：照磁碟算
-            print(f"{PROG}: warning: {root} is not in git, counting what is on disk (same as --fs)", file=sys.stderr)
-            cache["fs"] = True
-            return children(root, d, True, cache)
-        out = got.stdout.decode()
-        kids = {}
-        for p in out.split("\0"):
-            if not p or not os.path.lexists(os.path.join(root, p)):
-                continue
-            parts = p.split("/")
-            for i in range(len(parts)):
-                kids.setdefault("/".join(parts[:i]) or ".", set()).add(parts[i])
-        cache["kids"] = kids
-    if d not in cache["kids"]:                          # 這夾沒有任何檔在 git 裡（解開的快照、還沒 add 的夾）：照磁碟算並說出來，不靜默當成空的
-        warn(f"{d} has no files in git, counting what is on disk (same as --fs)")
-        return children(root, d, True, cache)
-    here = set(cache["kids"][d])
-    try:                                                # 還沒進 git 的 `_index.json` 所在的夾也算在（剛生成、還沒 commit）
-        for n in os.listdir(os.path.join(root, d)):
-            if os.path.isfile(os.path.join(root, d, n, NAME)):
-                here.add(n)
-    except OSError:
-        pass
-    here.discard(NAME)
-    return here
+            tab = md_table(read_text(path), toks)
+        except mdpath.Missing as e:
+            raise Unreadable(e.reason) from None
+        return tab, "it is neither a ```json block holding an object nor a list of `key: value` items"
+    v = at(path, toks)
+    return (v, None) if isinstance(v, dict) else (None, "it is not a JSON object")
 
 
 def text(v):
@@ -116,97 +105,81 @@ def text(v):
     return None
 
 
-def check_table(table, where, problems):
-    """形狀：回 True＝是物件、可以往下查各項。"""
-    if not isinstance(table, dict):
-        problems.append(("IndexBad", where, "is not a JSON object"))
-        return False
-    for k, e in table.items():
-        if not isinstance(e, dict):
-            problems.append(("IndexBad", where, "entry %s is not an object {\"description\": ...}" % k))
-        elif not (text(e.get("description")) or "").strip():
-            problems.append(("IndexBad", where, "entry %s has no description" % k))
-        elif "index" in e and (not isinstance(e["index"], str) or not e["index"]):
-            problems.append(("IndexBad", where, "entry %s: index is not a path string" % k))
-    return True
+def is_ref(v):
+    return isinstance(v, dict) and "$ref" in v
 
 
-def check_dir(root, d, fs, view, cache, problems, seen_inner):
-    where = NAME if d == "." else d + "/" + NAME
+def shape_ok(e):
+    if isinstance(e, str):
+        return bool(e.strip())
+    if is_ref(e):
+        return True
+    return isinstance(e, dict) and (is_ref(e.get("description")) or bool((text(e.get("description")) or "").strip()))
+
+
+def check_dir(root, d, name, problems):
+    """一夾的 index（name＝_index.json 或 _index.md）；回列了幾項。"""
     base = os.path.join(root, d)
+    where = name if d == "." else d + "/" + name
+    file = os.path.join(base, name)
     try:
-        table = load(os.path.join(base, NAME))
-    except (OSError, ValueError) as e:
-        problems.append(("IndexBad", where, "cannot be read as JSON (%s)" % type(e).__name__))
+        table, why = index_at(file, [])
+    except Unreadable as e:
+        problems.append(("IndexBad", where, "cannot be read (%s)" % e))
         return 0
-    if not check_table(table, where, problems):
+    if table is None:
+        problems.append(("IndexBad", where, "has no `key: value` list items" if name.endswith(".md") else "is not a JSON object"))
         return 0
-    have = children(root, d, fs, cache)
     for k, e in table.items():
-        f, _, ptr = k.partition("#")
+        if not shape_ok(e):
+            problems.append(("IndexBad", where, "entry %s is not a non-empty string, an object with a non-empty description, or {\"$ref\": ...}" % k))
+        elif isinstance(e, dict) and not is_ref(e) and "index" in e and (not isinstance(e["index"], str) or not e["index"]):
+            problems.append(("IndexBad", where, "entry %s: index is not a non-empty string" % k))
+        f, hash_, _ = k.partition("#")
         target = os.path.join(base, f)
         if not os.path.lexists(target):
             problems.append(("EntryGone", where, "%s is listed but not there" % k))
-            continue
-        if ptr:
+        elif hash_:
             try:
-                ok, _v = pointer(load(target), ptr)
-            except (OSError, ValueError):
-                ok = False
-            if not ok:
-                problems.append(("EntryGone", where, "%s is listed but that place is not in the file" % k))
-        if not isinstance(e, dict):
-            continue
-        link = e.get("index")
+                at(target, mdpath.split(k)[1])
+            except (Unreadable, ValueError) as err:
+                problems.append(("EntryGone", where, "%s is listed but that place cannot be read (%s)" % (k, err)))
+        link = e.get("index") if isinstance(e, dict) and not is_ref(e) else None
         if isinstance(link, str) and link:
-            try:                                        # 同 $ref 一支（aos_refpath）：這一項的 index 欄寫在 _index.json 的 /KEY 物件裡
-                lpath, ltoks = aos_refpath.spot(link, os.path.join(base, NAME), [k.replace("~", "~0").replace("/", "~1")])
-                lptr = "".join("/" + t for t in ltoks or [])
-            except ValueError as e:
-                lpath = None
-                problems.append(("LinkBad", where, "%s: index %s is not a path (%s)" % (k, link, e)))
-            if lpath is None:
-                pass
-            elif not os.path.isfile(lpath):
-                problems.append(("LinkBad", where, "%s: index %s points to nothing" % (k, link)))
-            else:
-                try:
-                    ok, v = pointer(load(lpath), lptr)
-                except (OSError, ValueError):
-                    ok, v = False, None
-                if not ok or not is_index_spot(lpath, lptr) or not isinstance(v, dict if not lptr else (dict, str)):
-                    problems.append(("LinkBad", where, "%s: index %s does not hold an index "
-                                     "(an index is a %s table, a _index key, or a _metainfo index)" % (k, link, NAME)))
-                elif lptr and isinstance(v, dict) and (lpath, lptr) not in seen_inner:
-                    seen_inner.add((lpath, lptr))       # 檔內的 _index：它列的鍵要在裝著它的那個物件裡
-                    inner_where = os.path.relpath(lpath, root) + "#" + lptr
-                    if check_table(v, inner_where, problems):
-                        if os.path.basename(lpath) == "_metainfo.json" and lptr == "/index":   # 資料夾的 _metainfo index：列的是那個夾
-                            gone = [ik for ik in v if not os.path.lexists(os.path.join(os.path.dirname(lpath), ik.partition("#")[0]))]
-                        else:                           # FILE#/P/_index、FILE#/P/_metainfo/index：列的是物件 P
-                            up = lptr.rsplit("/", 2)[0] if lptr.endswith("/_metainfo/index") else lptr.rsplit("/", 1)[0]
-                            _ok, holder = pointer(load(lpath), up)
-                            gone = [ik for ik in v if not isinstance(holder, dict) or ik not in holder]
-                        for ik in gone:
-                            problems.append(("EntryGone", inner_where, "%s is listed but not in that object" % ik))
-        elif os.path.isfile(os.path.join(target, NAME)) and "#" not in k and k != ARCHIVE:   # archive 裡的 index 不查，上一層不必連過去
-            problems.append(("LinkMissing", where, "%s has its own %s but the entry has no index" % (k, NAME)))
-    if not view:
-        listed = {k.partition("#")[0].split("/")[0] for k in table}
-        for n in sorted(have - listed):
-            problems.append(("EntryMissing", where, "%s is there but not listed" % n))
+            bad = check_link(link, file, k)
+            if bad:
+                problems.append(("LinkBad", where, "%s: index %s %s" % (k, link, bad)))
+        elif (not is_ref(e) and not hash_ and k != ARCHIVE and os.path.isfile(os.path.join(target, NAMES[0]))):
+            problems.append(("LinkMissing", where, "%s has its own %s but the entry has no index" % (k, NAMES[0])))
     return len(table)
 
 
+def check_link(link, file, key):
+    """index 欄 → 問題的一句或 None。路徑同 $ref（寫在 _index 的 /KEY 那一項裡）；最後要讀得出 index 格式。"""
+    try:
+        path, toks = refpath.spot(link, file, [key.replace("~", "~0").replace("/", "~1")])
+    except ValueError as e:
+        return "is not a path (%s)" % e
+    if not os.path.lexists(path):
+        return "points to nothing"
+    if os.path.isdir(path):
+        return "points to a folder, not to an index"
+    try:
+        table, why = index_at(path, [t.replace("~1", "/").replace("~0", "~") for t in toks or []])
+    except Unreadable as e:
+        return "cannot be read (%s)" % e
+    return None if table is not None else "does not hold an index (%s)" % why
+
+
+def index_name(names):
+    return next((n for n in NAMES if n in names), None)
+
+
 def main(argv):
-    root, fs, view, quiet, paths = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), False, False, False, []
+    root, quiet, paths = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), False, []
     it = iter(argv)
     for a in it:
-        if a == "--fs":
-            fs = True
-        elif a == "--view":
-            view = True
-        elif a == "--quiet":
+        if a == "--quiet":
             quiet = True
         elif a == "--root":
             root = next(it, None)
@@ -222,7 +195,7 @@ def main(argv):
         else:
             paths.append(a)
     root = os.path.realpath(os.path.expanduser(root))
-    problems, cache, seen_inner, files, entries, skipped = [], {}, set(), 0, 0, []
+    problems, files, entries, skipped = [], 0, 0, []
     for p in paths or ["."]:
         top = os.path.realpath(os.path.join(root, p))
         if not os.path.isdir(top) or os.path.relpath(top, root).split(os.sep)[0] == "..":
@@ -231,21 +204,22 @@ def main(argv):
         before = files
         for cur, dirs, names in os.walk(top):
             for x in dirs:                              # 照名字不走的夾（build、node_modules…）裡有 index：說出來，不靜默跳過
-                if x in SKIP and os.path.isfile(os.path.join(cur, x, NAME)):
+                if x in SKIP and index_name(os.listdir(os.path.join(cur, x))):
                     skipped.append(os.path.relpath(os.path.join(cur, x), root))
-                    warn(f"{skipped[-1]}/{NAME} is not checked (folders named {x} are not walked)")
+                    warn(f"{skipped[-1]}/{index_name(os.listdir(os.path.join(cur, x)))} is not checked (folders named {x} are not walked)")
                 elif x == ARCHIVE:                      # archive 底下每一層的 index 都數
                     for acur, adirs, anames in os.walk(os.path.join(cur, x)):
                         adirs[:] = sorted(a for a in adirs if a not in SKIP)
-                        if NAME in anames:
+                        if index_name(anames):
                             skipped.append(os.path.relpath(acur, root))
-                            warn(f"{skipped[-1]}/{NAME} is not checked (archive keeps no inner links)")
+                            warn(f"{skipped[-1]}/{index_name(anames)} is not checked (archive keeps no inner links)")
             dirs[:] = sorted(x for x in dirs if x not in SKIP and x != ARCHIVE)
-            if NAME in names:
+            name = index_name(names)
+            if name:
                 files += 1
-                entries += check_dir(root, os.path.relpath(cur, root), fs, view, cache, problems, seen_inner)
+                entries += check_dir(root, os.path.relpath(cur, root), name, problems)
         if files == before:
-            warn(f"no {NAME} under {p}, nothing was checked there")
+            warn(f"no _index.json or _index.md under {p}, nothing was checked there")
     for code, where, msg in problems:
         print(f"{PROG}: error: {code} {where}: {msg}", file=sys.stderr)
     if not quiet:

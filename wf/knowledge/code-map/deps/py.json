@@ -330,7 +330,7 @@
    "module": "aos.index",
    "unit": "proto8/py/aos/index.py",
    "used_by": "proto8/py/tools/base/index_view",
-   "uses": "aos.json aos.refpath aos.tool_io"
+   "uses": "aos.json aos.mdpath aos.refpath aos.tool_io"
   },
   {
    "kind": "lib",
@@ -373,6 +373,13 @@
    "unit": "proto8/py/aos/mcp_server_file.py",
    "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/mcp_import proto8/py/aos/apps/mcp_launch proto8/py/aos/mcp_client.py proto8/py/aos/mcp_freeze.py proto8/py/tools/base/mcp_tool",
    "uses": "aos.directive_value aos.env_file aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.mdpath",
+   "unit": "proto8/py/aos/mdpath.py",
+   "used_by": "proto8/py/aos/index.py",
+   "uses": ""
   },
   {
    "kind": "lib",

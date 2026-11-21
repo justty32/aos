@@ -1,7 +1,8 @@
 // internal.hpp：resolve.cpp、ref.cpp、env.cpp 之間共用的內部宣告（不公開；放在 aos::directive，公開的只有 aos::resolve）。
 //
 //   resolve.cpp  走遍整份 JSON、認出指示詞（有 $ref 看 $ref、否則有 $env 看 $env）、換完再接 $path／$prefix
-//   ref.cpp      {"$ref": "路徑"}（# 左邊檔案系統、右邊 json 內部）
+//   ref.cpp      {"$ref": "路徑"}（# 左邊檔案系統、右邊 json 內部）；檔是 .md 時交給 md.cpp
+//   md.cpp       把 markdown 讀成 json 值（md_get／md_ls／md_tree，公開在 aos/directive.hpp）
 //   env.cpp      {"$env": "NAME"}
 #pragma once
 
@@ -25,9 +26,11 @@ RefBase base_of(const std::string& file, const std::string& ptr);
 // {"$ref": …}（整個物件 d）→ 每一份的原文（還沒往下解）＋位置（檔＋指標，推上鏈用）：$ref 是字串＝一份；
 // 是陣列（10-23 使用者）＝照順序每個元素一份。寫法不合（含空陣列、有一個元素不合）回 nullopt。
 // 讀不到、指不到、繞圈（here 已在 chain 上）丟 DirectiveBad。
+// md＝那份檔是 .md（值照 md 的規則取來，不再往下解指示詞）。
 struct Fetched {
     Json value;
     std::pair<std::string, std::string> here;
+    bool md = false;
 };
 std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const RefBase& base, const Chain& chain);
 

@@ -128,6 +128,9 @@ int cmd_ref(const Args& args) {
                root, root);
         if (ptr.empty()) {
             File& f = ed.docs.open(dest, true);
+            if (f.md) {
+                throw markdown_write(f.real);   // json 工具只讀 md
+            }
             if (f.exists) {
                 throw Error{code::TargetBad, "target " + target + " already exists (--move does not overwrite a file)"};
             }

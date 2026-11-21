@@ -6,6 +6,7 @@
 aos-exec 連這個 lib 解單子、argv 陣列入口與 JSON `.env` key 裡的指示詞（loop／fsm／daemon 的每一次都經 aos-exec）；
 aos-loop、aos-daemon、aos-fsm 讀設定檔與 ctl 時也用它（使用者「aos 讀的 JSON 全部支援」，N-45；每支程式只解自己讀的格，用 `resolve_shallow` 一層層往下）。全家慣例見 [cpp/README.md](../README.md)。
 規範在 [N-45](../../docs/NORMS/06-基礎設施-命令列與指示詞.md)（`$ref` 的細則以本檔為準）。
+**也讀 `.md`**（11-21 晚）：`$ref` 的檔以 `.md` 結尾＝照標題、清單、表格、json 區塊讀成 json 值（`{"$ref": "me.md#/Who am I"}`＝那一節的文字；本體 `src/md.cpp` 的 `md_get`／`md_ls`／`md_tree`，aos-json 也用），見 [01「指示詞」](docs/01-用法等.md#指示詞)。
 
 ```sh
 echo '{"argv": {"$ref": "cfg.json#/tools/stamp"}, "out": {"$env": "AOS_STACK", "$path": "out", "$prefix": "--o="}}' | aos-directive

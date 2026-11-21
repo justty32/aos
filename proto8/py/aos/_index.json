@@ -100,6 +100,9 @@
  "mcp_server_file.py": {
   "description": "外部 MCP 的 server 檔：讀一份、驗形狀、讀金鑰檔；給 cli_session 翻成 codex 的 -c 與只給 CLI 行程的環境（11-12 external-mcp 02／03 步 1）"
  },
+ "mdpath.py": {
+  "description": "aos_mdpath - 把一份 markdown 照它本來就有的結構讀成 json 值：給路徑拿一格（get）、列一層（ls）、整份倒成一棵樹（tree）。"
+ },
  "metainfo.py": {
   "description": "Read optional definition metadata and evaluate numeric cost declarations safely."
  },

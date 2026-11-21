@@ -92,7 +92,8 @@ static Resolved shallow(const Json& v, const RefBase& base, const Chain& chain) 
         for (const Fetched& f : *fs) {
             Chain c = chain;
             c.push_back(f.here);
-            parts.push_back(shallow(f.value, base_of(f.here.first, f.here.second), c));
+            RefBase in = base_of(f.here.first, f.here.second);
+            parts.push_back(f.md ? Resolved{f.value, in, {}, {}} : shallow(f.value, in, c));   // md 取到的值不再解指示詞
         }
         Resolved in = merge(parts, aos::dumps(v["$ref"]));
         in.value = decorate(v, in.value);

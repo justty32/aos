@@ -7,6 +7,7 @@
 // 2. 被 $ref 進來的檔＝它解開捷徑後所在的資料夾、位置＝取的那個指標
 // 3. 同一個（檔＋指標）已經在鏈上＝繞圈
 // 4. 讀檔（第一行 #! 跳過）、解 JSON（讀不到、不是 JSON＝錯）、照指標取值（指不到＝錯），推上鏈、接著往下解
+// 5. 檔（解開捷徑後）以 .md 結尾＝不當 JSON 讀：照 md 的規則取值（md_get，src/md.cpp），整份＝原文（#! 不跳過）；取到的值不再往下解
 // 錯一律 DirectiveBad。
 #include "internal.hpp"
 
@@ -52,6 +53,35 @@ static Json load(const std::string& path) {
         throw Error{code::DirectiveBad, "$ref " + path + " is not JSON"};
     }
     return doc;
+}
+
+// 讀一份 md、照 md 的規則取 ptr 那一格（11-21 晚）：讀不到同 load、指不到同 pointer（後面括號接 md 那邊說的原因）。
+static Json load_md(const std::string& path, const std::string& ptr) {
+    struct stat st;
+    bool is_dir = ::stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
+    std::ifstream f(path, std::ios::binary);
+    if (!f || is_dir) {
+        throw Error{code::DirectiveBad, "$ref cannot read " + path};
+    }
+    std::string text(std::istreambuf_iterator<char>(f), {});
+    std::vector<std::string> toks;
+    for (const std::string& raw : pointer_tokens(ptr)) {
+        std::string tok;
+        for (size_t k = 0; k < raw.size(); ++k) {
+            if (raw[k] == '~' && k + 1 < raw.size() && (raw[k + 1] == '1' || raw[k + 1] == '0')) {
+                tok += raw[k + 1] == '1' ? '/' : '~';
+                ++k;
+            } else {
+                tok += raw[k];
+            }
+        }
+        toks.push_back(tok);
+    }
+    try {
+        return md_get(text, toks);
+    } catch (const Error& e) {
+        throw Error{code::DirectiveBad, "$ref pointer not found: " + path + "#" + ptr + " (" + e.msg + ")"};
+    }
 }
 
 static bool all_digits(const std::string& s) {
@@ -265,7 +295,8 @@ std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const RefBase& base
         }
         // 4. 讀、取值（原文，還沒往下解）
         Fetched f;
-        f.value = pointer(load(file), ptr, file);
+        f.md = md_path(file);
+        f.value = f.md ? load_md(file, ptr) : pointer(load(file), ptr, file);
         f.here = here;
         out.push_back(std::move(f));
     }
@@ -282,7 +313,7 @@ std::optional<Json> resolve_ref(const Json& d, const RefBase& base, Chain& chain
     for (Fetched& f : *fs) {
         chain.push_back(f.here);
         RefBase in = base_of(f.here.first, f.here.second);
-        parts.push_back({walk(f.value, in, chain), in, {}, {}});
+        parts.push_back({f.md ? f.value : walk(f.value, in, chain), in, {}, {}});   // md 取到的值不再解指示詞
         chain.pop_back();
     }
     return merge(parts, aos::dumps(d["$ref"])).value;

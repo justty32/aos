@@ -62,6 +62,7 @@ File load_file(const std::string& path, bool allow_missing) {
     File f;
     f.given = aos::abspath(path);
     f.real = real_path(f.given);
+    f.md = aos::md_path(f.real);
     struct stat st;
     if (::stat(f.real.c_str(), &st) != 0) {
         if (errno == ENOENT && allow_missing) {
@@ -79,6 +80,13 @@ File load_file(const std::string& path, bool allow_missing) {
     std::optional<std::string> text = aos::read_file(f.real, err);
     if (!text) {
         throw Error{code::FileBad, "cannot read " + path + ": " + std::strerror(err)};
+    }
+    if (aos::md_path(f.real)) {   // md：只記原文（#! 不跳過），取值交給 md_get
+        f.md = true;
+        f.text = *text;
+        f.exists = true;
+        f.mode = st.st_mode & 07777;
+        return f;
     }
     std::string body = *text;
     if (body.starts_with("#!")) {
@@ -141,6 +149,19 @@ void save_file(const File& f) {
         why = "chmod: " + why;
     }
     throw Error{code::WriteFailed, "cannot write " + f.real + ": " + why};
+}
+
+std::string real_file(const std::string& path) {
+    return real_path(aos::abspath(path));
+}
+
+Json* md_node(File& f, const std::vector<std::string>& toks) {
+    f.md_vals.push_back(aos::md_get(f.text, toks));
+    return &f.md_vals.back();
+}
+
+Error markdown_write(const std::string& real) {
+    return Error{code::TargetBad, shown(real, {}) + " is markdown: the json tools only read it; change it with a file tool (edit, write)"};
 }
 
 File& Docs::open(const std::string& path, bool allow_missing) {

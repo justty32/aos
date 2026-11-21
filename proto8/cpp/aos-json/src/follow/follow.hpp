@@ -1,7 +1,7 @@
 // follow.hpp：【follow】順著指標往下走，遇到指示詞要不要穿過去（--follow）；追 $ref 鏈記下走過哪些檔的哪些位置。
 //
 //   kind.cpp    認指示詞（寬容規則同 aos-directive：寫法不合＝不是指示詞、原封不動）、拆 $ref 的每一份
-//   locate.cpp  locate：從 `檔#/指標` 往下走到底，回停在哪份檔的哪個位置、走過的每一站
+//   locate.cpp  locate：從 `檔#/指標` 往下走到底，回停在哪份檔的哪個位置、走過的每一站；走到 .md 檔時剩下的路全交給 md_get
 //
 // `#/指標`（沒檔名，11-12 晚 ref-hash）＝寫著這個 $ref 的那份檔（Cursor::file；被換進來的檔裡＝那份被換進來的檔），同 aos-directive 的 RefBase。
 // 為什麼不直接叫 aos-directive：它的公開介面只回「解好的值」（resolve）或「換一層的值＋起點」（resolve_shallow），
@@ -26,11 +26,13 @@ std::vector<std::string> ref_parts(const Json& v);
 
 // 走到哪了：哪份檔（real）、檔裡的哪個位置、那個值；base＝這一層相對 $ref 的起點
 // （最外層＝給的檔所在的資料夾，沒解開捷徑，同 aos-loop 讀設定檔；被 $ref 進來的＝那份檔解開捷徑後的資料夾，同 aos-directive）。
+// md＝停在 .md 檔裡（toks 是 md 的路徑，node 指進 File::md_vals）：那個值不再穿指示詞、不往裡寫。
 struct Cursor {
     std::string file;
     std::string base;
     std::vector<std::string> toks;
     Json* node = nullptr;
+    bool md = false;
 };
 
 // 正在走的 $ref 鏈（檔 real, 指標）：同一個又出現＝繞圈。
@@ -48,6 +50,7 @@ struct Mode {
     bool follow_final = false;  // 走到的那個值本身是 $ref 也穿過去（set／append／merge --follow）
     bool strict = false;        // 寫：沒 --follow 時路上經過指示詞＝FollowMissing（往指示詞物件裡加 key，aos 不會看）
     bool raw = false;           // 寫（--raw）：指示詞物件當普通物件，路上照字面往裡走（11-12 json-tools 簡單組）
+    bool write = false;         // 寫：走到 .md 檔（給的就是、或穿 $ref 穿到）＝markdown_write（TargetBad）
 };
 
 struct Located {
@@ -55,7 +58,11 @@ struct Located {
     std::vector<std::string> rest;   // 沒走完的指標（第一格就不在）；空＝走到了
     std::vector<Cursor> hops;        // 走過的每一站（每穿過一個 $ref 記一站，最後一站＝at）
     bool merged = false;             // 最後穿過的是 $ref 陣列（at 是合起來的其中一份：最後一份）
+    std::string md_why;              // 停在 md 檔、沒走完：md 那邊說的原因（rest 是 md 裡沒走完的那幾格）
 };
+
+// PointerMissing 括號裡那句：md＝md 那邊說的原因；json＝`停在哪 has no 下一格`。rest 要非空。
+std::string missing_note(const Located& at);
 
 Located locate(Docs& docs, const Spec& spec, Mode mode);
 

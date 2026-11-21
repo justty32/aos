@@ -1,6 +1,7 @@
 // write.cpp：【cmd】寫入值——set、batch、del、append、merge、add。
 //
 // 共用流程：找位置（locate；沒 --follow 時路上經過指示詞＝FollowMissing）→ 在記憶體裡改 → 有變的檔才寫回（save_file，原子）。
+// 不寫 .md：直接給、或 --follow 穿到 md＝TargetBad（place 的 Mode::write；add 先看一次，免得已在的 md 報 KeyExists）。
 #include "cmd/edit.hpp"
 
 #include "help/help.hpp"
@@ -166,6 +167,9 @@ int cmd_add(const Args& args) {
         ed.check_file = spec.file;
     }
     std::string out = s;
+    if (std::string real = real_file(spec.file); aos::md_path(real)) {
+        throw markdown_write(real);   // json 工具只讀 md（建新的 md 也不收）
+    }
     if (spec.toks.empty()) {
         if (std::filesystem::exists(spec.file)) {
             throw Error{code::KeyExists, spec.file + " already exists; use set to replace the whole file"};

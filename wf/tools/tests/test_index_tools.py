@@ -1,5 +1,4 @@
-# Verify index_gen (build folder indexes from file headers) and index_check (listed-but-gone, there-but-unlisted, bad links) on a throwaway git tree.
-import importlib.util
+# Verify index_gen (build folder indexes from file headers; a .md's own description section) and the four checks of index_check (IndexBad, EntryGone, LinkBad, LinkMissing) on a throwaway git tree.
 import json
 import subprocess
 import sys
@@ -73,6 +72,22 @@ class IndexToolsTests(unittest.TestCase):
         _tables, missing, _scopes, _in = self.build()
         self.assertEqual(missing, ['code/', 'docs/archive/'])
 
+    def test_md_description_section(self):
+        # 11-21: a .md's `# _description` (wins) or `# description` gives its first non-empty line; else the first heading, skipping _index / index
+        md = index_gen.md_file_desc
+        self.assertEqual(md('# Title\n\n# description\n\n\n  The **real** one.\nsecond\n'), 'The real one.')
+        self.assertEqual(md('# description\n\nloses\n\n# _description\n\nwins\n'), 'wins')
+        self.assertEqual(md('## Description\n\ncase does not matter\n'), 'case does not matter')
+        self.assertEqual(md('# _index\n\n- a: b\n\n# index\n\n- c: d\n\n# Who am I\n\ntext\n'), 'Who am I')
+        self.assertEqual(md('# Who am I\n\ntext\n'), 'Who am I')                             # no section: the first heading, as before
+        self.assertEqual(md('- description: a list key is not a heading\n\n# Head\n'), 'Head')
+        self.assertEqual(md('← [入口](x.md)｜涵蓋：甲｜下\n\n# description\n\nfrom the section\n'), 'from the section')
+        self.assertEqual(md('```\n# description\n```\n# Real\n'), 'Real')                  # a heading in a code block does not count
+        (self.root / 'docs/page.md').write_text('# _index\n\n- x: y\n\n# description\n\nOne line about the page.\n', encoding='utf-8')
+        subprocess.run(['git', '-C', str(self.root), 'add', '-A'], check=True)
+        tables, _m, _s, _i = self.build({'code': 'the programs', 'docs/archive': 'old things'})
+        self.assertEqual(tables['docs/_index.json']['page.md']['description'], 'One line about the page.')
+
     def test_check_finds_each_kind(self):
         tables, _m, _s, _i = self.build({'code': 'the programs', 'docs/archive': 'old things'})
         for rel, table in tables.items():
@@ -83,18 +98,22 @@ class IndexToolsTests(unittest.TestCase):
         docs = json.loads((self.root / 'docs/_index.json').read_text(encoding='utf-8'))
         docs['gone.md'] = {'description': 'not there'}
         docs['a']['index'] = 'a/nowhere.json'
-        del docs['data.json']
-        docs['a.md'] = 'a bare string'
+        del docs['data.json']                                       # there but not listed: not a problem any more (11-21 第 18 句)
+        docs['a.md'] = 'a bare string'                              # a plain string is the description (11-21 第 18 句)
+        docs['README.md'] = {'note': 'no description'}
         (self.root / 'docs/_index.json').write_text(json.dumps(docs), encoding='utf-8')
         top = json.loads((self.root / '_index.json').read_text(encoding='utf-8'))
         del top['docs']['index']
         (self.root / '_index.json').write_text(json.dumps(top), encoding='utf-8')
         bad = check(self.root)
         self.assertEqual(bad.returncode, 1)
-        for code in ('EntryGone docs/_index.json: gone.md', 'LinkBad docs/_index.json: a:', 'EntryMissing docs/_index.json: data.json',
-                     'IndexBad docs/_index.json: entry a.md', 'LinkMissing _index.json: docs'):
+        for code in ('EntryGone docs/_index.json: gone.md', 'LinkBad docs/_index.json: a:', 'IndexBad docs/_index.json: entry README.md',
+                     'LinkMissing _index.json: docs'):
             self.assertIn(code, bad.stderr)
-        self.assertNotIn('EntryMissing', check(self.root, '--view').stderr)
+        for gone in ('EntryMissing', 'data.json', 'entry a.md'):
+            self.assertNotIn(gone, bad.stderr)
+        self.assertIn('FlagUnknown', check(self.root, '--view').stderr)          # --fs / --view are gone with EntryMissing
+        self.assertIn('FlagUnknown', check(self.root, '--fs').stderr)
 
     def test_text_as_lines(self):
         # user 11-13: a piece of text may be one string or an array of strings (one line each); both read the same
@@ -150,7 +169,7 @@ class IndexToolsTests(unittest.TestCase):
             (self.root / 'code/_index.json').write_text(json.dumps({'x.py': {'description': bad}}), encoding='utf-8')
             r = check(self.root, 'code')
             self.assertEqual(r.returncode, 1, repr(bad))
-            self.assertIn('IndexBad code/_index.json: entry x.py has no description', r.stderr, repr(bad))
+            self.assertIn('IndexBad code/_index.json: entry x.py is not', r.stderr, repr(bad))
 
 
 if __name__ == '__main__':

@@ -23,6 +23,11 @@
 //
 // 被 $ref 進來的檔裡的 $ref，從那個檔（解開捷徑後）所在的資料夾算、所在物件照它在那份檔裡的位置。
 // 指標取的是檔的原文（不穿過裡面的 $ref），取到的值再接著解。
+//
+// 也讀 .md（11-21 晚，thinking 2026-11/21/知識庫-骨架加md-規劃-1121，規則全文在 07-尋址規則.md）：$ref 的檔（解開捷徑後）以 .md 結尾＝不當 JSON 讀，
+// 照標題／`_`（自己的內文）／清單（號碼或 `鍵: 值`）／表格／整節只有一個 ```json 區塊 讀成 json 值（md_get，src/md.cpp）：
+//   {"$ref": "x.md"}＝整份文字（第一行 #! 不跳過）；{"$ref": "x.md#/標題"}＝那一格的值。指不到、讀不到照舊 DirectiveBad。
+//   md 拿到的值不再解指示詞（json 區塊的值原樣回）。Python 那份是 py/aos/mdpath.py，兩邊跑同一張 py/tests/md_path_cases.json。
 #pragma once
 
 #include "aos/util/error.hpp"
@@ -92,5 +97,16 @@ Resolved resolve_shallow(const Json& v, const RefBase& base);
 
 // 整份先換一層，再完整解開指定的 key；保留每個 key 原本的相對路徑起點。
 Resolved resolve_keys(const Json& doc, const RefBase& base, const std::vector<std::string>& keys);
+
+// 把 markdown 讀成 json 值（src/md.cpp；逐條照 py/aos/mdpath.py）。toks＝RFC 6901 token（~0 ~1 已還原）。
+// md_path：檔名以 .md 結尾。
+// md_get：toks 那一格的值——文字（字串）、表格的一列（字串陣列）或 json 區塊的值；toks 空＝整份文字。
+//         指不到丟 Error{DirectiveBad, 原因}，原因同 mdpath 的 Missing.reason（`/A has no C (it has: B, …)`），呼叫者可換成自己的代號。
+// md_ls：那一格底下的名字（`_`、直接的小節、清單的鍵或號碼、表格的列號；json 區塊＝它的鍵）；指不到同 md_get。
+// md_tree：整份倒成一棵 json（標題＝鍵；沒有小節＝自己的內文或那份 json；有小節＝物件，`_` 放自己的內文）。
+bool md_path(const std::string& file);
+Json md_get(const std::string& text, const std::vector<std::string>& toks);
+std::vector<std::string> md_ls(const std::string& text, const std::vector<std::string>& toks);
+Json md_tree(const std::string& text);
 
 }  // namespace aos

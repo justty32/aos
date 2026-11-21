@@ -18,7 +18,11 @@ aos-json add cfg.json#/tags/1 '"x"'                      # 插在第 1 項前面
 echo '{"/max": 5, "/interval_ms": 100}' | aos-json batch loop.json   # 一次改很多個（全部成功才寫）
 aos-json ref --move daemon.json#/procs daemon_procs.json # 把一塊拆成另一份檔，原地換成 $ref
 aos-json check fsm.json                                  # $ref 指得到、寫法對、exec 形狀對
+aos-json get --str me.md#/Files/body.json                # 也讀 .md（標題、_、清單、表格、json 區塊）；只讀不寫
+aos-json get --tree me.md                                # 整份 md 倒成一棵 json
 ```
+
+**也讀 `.md`**（11-21 晚）：檔以 `.md` 結尾＝照 md 的結構讀成 json 值（規則交給 aos-directive 的 `md_get`），寫入指令一律 `TargetBad`。細節見 [02「也讀 .md」](docs/02-給腦用的兩個工具等.md#也讀-md)。
 
 寫入值與寫入指示詞的程式位置，見[元素](docs/02-給腦用的兩個工具等.md#元素)。
 
@@ -29,12 +33,13 @@ aos-json check fsm.json                                  # $ref 指得到、寫�
 | 分檔 | 涵蓋的段 |
 |---|---|
 | [01-用法與寫回去-原子-只改變的那一塊](docs/01-用法與寫回去-原子-只改變的那一塊.md) | 用法；寫回去：原子、只改變的那一塊 |
-| [02-給腦用的兩個工具等](docs/02-給腦用的兩個工具等.md) | 給腦用的工具（在 lib）；跟 aos-directive 的分工；元素；建置與測試 |
+| [02-給腦用的兩個工具等](docs/02-給腦用的兩個工具等.md) | 給腦用的工具（在 lib）；跟 aos-directive 的分工；也讀 .md；元素；建置與測試 |
 
 <a id="用法"></a>
 <a id="寫回去原子只改變的那一塊"></a>
 <a id="給腦用的兩個工具tools"></a>
 <a id="給腦用的工具在-lib"></a>
 <a id="跟-aos-directive-的分工"></a>
+<a id="也讀-md"></a>
 <a id="元素"></a>
 <a id="建置與測試"></a>

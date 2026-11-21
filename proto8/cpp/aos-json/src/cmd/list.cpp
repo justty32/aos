@@ -4,7 +4,11 @@
 //   型別名同 JSON（object、array、string、number、boolean、null）；大小＝物件 N keys、陣列 N items、字串 N chars（code point 數），
 //   單數不加 s，純值直接是緊湊 JSON；--long／search 的容器與字串再多一欄 `N bytes`（緊湊 JSON 的 UTF-8 bytes）。
 //   沒列完最後一行 `[more] A to B of N shown; …`；search 沒中＝`[no match]`（都退 0：是結果不是錯）。
+// .md（11-21 晚）：ls 一格 md 文字＝把 md_ls 的名字當 key、各自的值用 md_get 取來算型別與大小（第一行當物件印 `object, N keys`；
+//   底下沒有名字的文字照字串印一行）；json 區塊的值與表格的一列照 json 列。search 對整份 md（沒 #/）找的是它倒成的樹（md_tree），不配 --up。
 #include "cmd/cmd.hpp"
+
+#include "follow/follow.hpp"
 
 #include "help/help.hpp"
 
@@ -171,6 +175,41 @@ void walk(const Json& node, const std::string& ptr, size_t depth, bool lng, std:
     });
 }
 
+// md 的 ls 行：toks 那一格底下的名字（md_ls），每個名字的值用 md_get 取；depth 層內往下（文字照 md 再列、json 值照 json 列）。
+// 列得出名字卻取不到值（例：鍵是數字的項，數字先當號碼）＝只印名字。
+void md_walk(const std::string& text, const std::vector<std::string>& toks, const std::string& ptr, size_t depth, bool lng,
+             std::vector<std::string>& rows) {
+    for (const std::string& name : aos::md_ls(text, toks)) {
+        std::vector<std::string> sub = toks;
+        sub.push_back(name);
+        std::string p = ptr + "/" + esc(name);
+        std::optional<Json> x;
+        try {
+            x = aos::md_get(text, sub);
+        } catch (const Error&) {
+        }
+        rows.push_back(p.substr(1) + (lng && x ? "\t" + columns(*x) : ""));
+        if (depth > 1 && x) {
+            if (x->is_object() || x->is_array()) {
+                walk(*x, p, depth - 1, lng, rows);
+            } else if (x->is_string()) {
+                md_walk(text, sub, p, depth - 1, lng, rows);
+            }
+        }
+    }
+}
+
+// 同 get_value，但回停在哪（ls 要知道是不是 md、md 裡的位置）。
+Located reach(Docs& docs, const std::string& spec, bool follow) {
+    Mode mode;
+    mode.follow = follow;
+    Located at = locate(docs, parse_spec(spec), mode);
+    if (!at.rest.empty()) {
+        throw Error{code::PointerMissing, "no such pointer: " + spec + " (" + missing_note(at) + ")"};
+    }
+    return at;
+}
+
 }  // namespace
 
 // ls [--follow] [--resolve] [--long] [--depth N] [--offset N] [--limit N] 檔#/指標：第一行這一格的型別與長度，之後一行一個孩子（可直接接在指標後面的寫法）；
@@ -180,6 +219,23 @@ int cmd_ls(const Args& args) {
                          {{"--follow", "follow"}, {"--resolve", "resolve"}, {"--long", "long"}}, "ls");
     std::string s = one_spec(cli, "ls");
     size_t depth = count_opt(cli, "depth", 1, true);
+    {
+        Docs docs;
+        Located at = reach(docs, s, cli.opts.count("follow") > 0);
+        if (at.at.md && at.at.node->is_string()) {
+            const std::string& text = docs.files.at(at.at.file).text;
+            std::vector<std::string> names = aos::md_ls(text, at.at.toks);
+            if (!names.empty()) {   // md 文字底下有名字：當成一個物件列
+                size_t offset = count_opt(cli, "offset", 0, false);
+                size_t cap = count_opt(cli, "limit", std::numeric_limits<size_t>::max() / 2, true);
+                std::cout << "object, " << names.size() << (names.size() == 1 ? " key" : " keys") << "\n";
+                std::vector<std::string> rows;
+                md_walk(text, at.at.toks, "", depth, cli.opts.count("long") > 0, rows);
+                page(rows, offset, cap, "");
+                return 0;
+            }
+        }
+    }
     Json v = get_value(s, cli.opts.count("follow") > 0, cli.opts.count("resolve") > 0);
     std::string head = std::string(v.type_name()) + (sized(v) ? ", " : " ") + size_of(v);
     if (v.is_array() && !v.empty()) {
@@ -235,6 +291,16 @@ int cmd_search(const Args& args) {
     Json node = get_value(s, follow, resolve);   // 指不到照 get 報錯
     std::vector<std::pair<std::string, const Json*>> found;
     Json doc;   // --up：整份原文（found 指進這裡，要活到印完）
+    {
+        Docs docs;
+        Located at = reach(docs, s, follow);
+        if (at.at.md && up) {
+            throw Error{code::ArgumentsBad, "--up does not work on a .md file"};
+        }
+        if (at.at.md && at.at.toks.empty()) {   // 整份 md＝找它倒成的樹
+            node = aos::md_tree(docs.files.at(at.at.file).text);
+        }
+    }
     if (up) {
         doc = get_value(spec.file, false, false);   // 原文照走（同 get 不加 --follow）
         std::vector<std::pair<const Json*, std::string>> chain{{&doc, ""}};

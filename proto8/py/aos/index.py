@@ -10,11 +10,17 @@
 指到另一份 index 的路徑（11-12 晚，使用者「除了description之外，還可以放index，值必須是字串，必須是路徑，指向另一個_index或_index.json。」
 「json object內的_index這個key……我希望能支援字串，同樣也是路徑」「不跟着往下走。路徑相對...以_index, _index.json的位置爲準。」）：
 每項的 index 欄、檔內 _index 是字串，都只顯示路徑、不往下讀；路徑規則跟 $ref 同一支 aos_refpath.spot，只在 link() 接（thinking 2026-11/13/ref-path-rules）。
-description 可以是字串、也可以是字串陣列（一行一個元素；使用者 11-13「AI可以隨便寫，也可以按照推薦用字串陣列」，thinking 2026-11/13/text-as-string-array）：只寫在 text()。"""
+description 可以是字串、也可以是字串陣列（一行一個元素；使用者 11-13「AI可以隨便寫，也可以按照推薦用字串陣列」，thinking 2026-11/13/text-as-string-array）：只寫在 text()。
+md（11-21 晚，thinking 2026-11/21/知識庫-骨架加md-規劃-1121 的 01、10）：一項可以是純字串（＝description）或 {"$ref": 路徑}（解開再印，只在 resolve()）；
+夾沒有 _index.json 時才讀 _index.md（整份當字典式清單）；節點是 .md 或 x.md#/標題：天然那份＝範圍裡叫 _index（沒有才 index）的標題底下的字典式清單；
+index 參數也可指到 md 的一格（json 區塊是物件、或字典式清單）。md 一律經 aos_mdpath 讀（不經 aos-json），只在 md_*() 幾支。"""
+import io
 import json
 import os
+import sys
 
 from aos import json as aos_json
+from aos import mdpath as aos_mdpath
 from aos import refpath as aos_refpath
 from aos import tool_io
 
@@ -60,9 +66,103 @@ def link(where, value, key=None):
 
 
 def table(t, shown):
-    """明講的那一份：物件＝表；合法路徑字串＝一條連結（不往下讀）；其他＝IndexBad。"""
+    """明講的那一份：物件＝表；合法路徑字串＝一條連結（不往下讀）；其他＝IndexBad。md 的一格：json 區塊是物件、或字典式清單＝表。"""
+    if is_md(t.file):
+        return md_index(md_text(t), t.toks, shown)
     v = read(t)
     return checked(v, shown)
+
+
+class Bad(Exception):
+    """讀不到（md 或 $ref）：code 是錯誤代號、reason 英文一句。"""
+    def __init__(self, code, reason):
+        super().__init__(code, reason)
+        self.code, self.reason = code, reason
+
+
+def is_md(f):
+    return f.endswith(".md")
+
+
+def md_load(real, shown):
+    """一份 md 的全文；不在＝Bad(FileMissing)，讀不了＝Bad(FileBad)。"""
+    try:
+        with open(real, encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        raise Bad("FileMissing", "%s does not exist" % shown) from None
+    except IsADirectoryError:
+        raise Bad("FileBad", "%s is a folder, not a markdown file" % shown) from None
+    except (OSError, UnicodeDecodeError) as e:
+        raise Bad("FileBad", "%s cannot be read (%s)" % (shown, getattr(e, "strerror", None) or type(e).__name__)) from None
+
+
+def md_text(t):
+    try:
+        return md_load(t.real, t.file)
+    except Bad as e:
+        tool_io.die(e.code, e.reason)
+
+
+def md_kind(text, toks):
+    """md 的一格是哪一種（scope＝標題的範圍；body／item／value／row／json）；尋不到丟 aos_mdpath.Missing。"""
+    return aos_mdpath._walk(text, list(toks))[0]
+
+
+def md_table(text, toks):
+    """md 的一格當 index 表：json 區塊是物件＝表；字典式清單（有 `鍵: 值` 的項）＝{鍵: 值}，標題的範圍看它自己的內文（`_`）；都不是＝None。尋不到丟 Missing。"""
+    v = aos_mdpath.get(text, toks)
+    if isinstance(v, dict):
+        return v
+    if not isinstance(v, str):
+        return None
+    base = list(toks) + (["_"] if md_kind(text, toks) == "scope" else [])
+    names = [n for n in aos_mdpath.ls(text, base) if not aos_mdpath.INT.match(n)]   # 沒有鍵的項只有號碼，不算
+    if not names:
+        return None
+    out = {}
+    for n in names:
+        if n not in out:                                # 鍵重複拿第一個（同 mdpath）
+            out[n] = md_one(aos_mdpath.get(text, base + [n]))
+    return out
+
+
+def md_one(v):
+    """md 讀出來的文字結尾那個換行不算一句話的一部分（印成一行時不留尾巴空白）。"""
+    return v.rstrip("\n") if isinstance(v, str) else v
+
+
+MD_SHAPE = "in markdown an index is a ```json block holding an object, or a list of `key: value` items"
+
+
+def md_index(text, toks, where):
+    """md 的一格當明講的 index：尋不到＝PointerMissing、不是表＝IndexBad。"""
+    try:
+        tab = md_table(text, toks)
+    except aos_mdpath.Missing as e:
+        tool_io.die("PointerMissing", "%s: %s" % (where, e.reason))
+    if tab is None:
+        tool_io.die("IndexBad", "%s is not an index; %s" % (where, MD_SHAPE))
+    return tab
+
+
+def md_natural(t):
+    """節點是 .md 或 x.md#/標題：天然那份＝那個範圍裡叫 _index 的標題（沒有才看 index）。回同 natural()。"""
+    text = md_text(t)
+    try:
+        here = md_kind(text, t.toks)
+    except aos_mdpath.Missing as e:
+        tool_io.die("PointerMissing", "%s: %s" % (t.shown(), e.reason))
+    if here == "scope":
+        for name in ("_index", "index"):
+            try:
+                if md_kind(text, t.toks + [name]) != "scope":
+                    continue
+            except aos_mdpath.Missing:
+                continue
+            where = t.shown(t.ptr + "/" + name)
+            return [(where, md_index(text, t.toks + [name], where))], None, None, None
+    return [], ("%s has no heading _index or index (to see its headings: json_ls %s)" % (t.shown(), t.shown())), None, None
 
 
 def checked(v, where):
@@ -125,6 +225,8 @@ def natural(path):
     沒有時的句子帶一句「上一層的 index 怎麼看這個節點」（只是提示，工具不自己往上找，I10）；只講獨立那份（11-12 M21）。
     裡面那份（_metainfo）壞了只略過、在標頭說一句；獨立那份壞了照舊報錯。"""
     t = aos_json.Target(path)
+    if is_md(t.file) and not os.path.isdir(t.real):
+        return md_natural(t)
     inside, outside = spot(t)
     if t.ptr:
         up, item = t.shown(t.parent_ptr()), t.toks[-1]
@@ -137,6 +239,9 @@ def natural(path):
         mine, skipped = (None, "_metainfo.json could not be read, skipped") if m is NO else soft(m, "_metainfo.json")
         o = whole(outside)
         found = [(inside, mine), (outside, None if o is None else dig(o, [], outside))]
+        alt = os.path.join(t.file, "_index.md")         # 沒有 _index.json 才看 _index.md（11-21 第 18 句）；有 json 就完全不看 md
+        if o is None and os.path.isfile(tool_io.ws_path(alt)):
+            found[1] = (alt, md_index(md_text(aos_json.Target(alt)), [], alt))
     else:
         node = read(aos_json.Target(t.shown()))
         if not isinstance(node, dict):
@@ -165,13 +270,69 @@ def text(v):
     return None
 
 
+def is_ref(v):
+    return isinstance(v, dict) and "$ref" in v
+
+
+def deref(where, here, ref):
+    """{"$ref": 路徑} → (它指到的值, 那一格的 (檔, token 串))；路徑規則同 aos_refpath.spot、從那份 index 檔所在的夾算；
+    指到 json 經 aos-json 讀、指到 .md 經 aos_mdpath 讀。解不開丟 Bad。"""
+    try:
+        path, toks = aos_refpath.spot(ref["$ref"], where.partition("#")[0], here)
+    except ValueError as e:
+        raise Bad("DirectiveBad", str(e)) from None
+    toks = toks or []
+    if is_md(path):
+        text = md_load(tool_io.ws_path(path), path)
+        try:
+            return md_one(aos_mdpath.get(text, [x.replace("~1", "/").replace("~0", "~") for x in toks])), (path, toks)
+        except aos_mdpath.Missing as e:
+            raise Bad("PointerMissing", e.reason) from None
+    aos_json.MULTI, err = True, sys.stderr
+    sys.stderr = io.StringIO()                          # 解不開只標在那一行（退 0），aos-json 的錯誤行不透出
+    try:
+        return aos_json.read(aos_json.Target(aos_refpath.shown(path, toks))), (path, toks)
+    except aos_json.Failed as e:
+        raise Bad(e.code, e.reason) from None
+    finally:
+        aos_json.MULTI, sys.stderr = False, err
+
+
+def resolve(key, entry, where):
+    """一項 → (那一項, index 欄的 (where, key))：純字串＝description（11-21 第 18 句）；一項或它的 description 是 {"$ref": …}＝解開，
+    拿到字串＝description、拿到物件＝那一項（index 欄從它所在的位置算）。解不開丟 Bad。"""
+    toks = where.partition("#")[2]
+    toks = toks[1:].split("/") if toks.startswith("/") and toks != "/" else []
+    me = toks + [key.replace("~", "~0").replace("/", "~1")]
+    at = (where, key)
+    for field in (None, "description"):
+        ref = entry if field is None else (entry.get("description") if isinstance(entry, dict) else None)
+        if not is_ref(ref):
+            continue
+        got, (path, rt) = deref(where, me + ([field] if field else []), ref)
+        if isinstance(got, str) or (isinstance(got, list) and text(got) is not None and field):
+            entry = dict(entry, description=got) if field else {"description": got}
+        elif isinstance(got, dict):
+            entry, at = got, (aos_refpath.shown(path, list(rt) + ["index"]), None)
+        else:
+            raise Bad("TargetBad", "it points to %s, not a description or an entry" % aos_json.kind(got))
+    if isinstance(entry, str):
+        entry = {"description": entry}
+    return entry, at
+
+
 def line(key, entry, where):
-    """一項一行：鍵 TAB description，有 index 欄再接 TAB index: 路徑（只顯示、不往下讀）；index 欄壞了只在這一行標出來，其他項照常。"""
+    """一項一行：鍵 TAB description，有 index 欄再接 TAB index: 路徑（只顯示、不往下讀）；index 欄壞了只在這一行標出來，其他項照常。
+    $ref 解不開也只標這一行：鍵 TAB bad $ref (原因)。"""
+    try:
+        entry, (where, at_key) = resolve(key, entry, where)
+    except Bad as e:
+        return "%s\tbad $ref (%s)" % (key, e.reason.replace("\n", " "))
     desc = text(entry.get("description")) if isinstance(entry, dict) else None
     out = key if not isinstance(desc, str) else "%s\t%s" % (key, desc.replace("\r", " ").replace("\n", " ").replace("\t", " "))
     if not isinstance(entry, dict) or "index" not in entry:
         return out                                      # 項目壞掉或沒有 description：只印鍵（C-48，I14）
-    to = link(where, entry["index"], key)
+    to = link(where, entry["index"], at_key)
     if to is None:
         to = "bad (%s; must be a path string to another index: left of # is the file system, from the folder of this JSON file (sub/_index.json, ../a.json#/_index); right of # is inside JSON: #/a/_index from the root of this file, #./a/_index from the object holding this string, #../ one level up)" % (
             "not a path" if isinstance(entry["index"], str) else aos_json.kind(entry["index"]))

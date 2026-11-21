@@ -6,6 +6,8 @@
 //     （同名後蓋前，生效的就是它），都沒有＝最後一份（新 key 寫進最後一份才會生效）；都是陣列＝照索引算是第幾份的；
 //     種類混在一起＝DirectiveBad（同 aos-directive「合不起來」）。份裡又是 $ref 陣列＝TargetBad（先不支援）
 // $env 走不下去（換出來是字串）。
+// .md 檔（11-21 晚）：給的檔就是 md、或穿 $ref 穿到 md＝剩下的路（連同 $ref 指到 md 裡的那段）全交給 md_get；
+// 取到的值不再穿指示詞（同 aos-directive）。寫（Mode::write）走到 md＝markdown_write。
 #include "follow/follow.hpp"
 
 #include "aos/util/files.hpp"
@@ -32,6 +34,16 @@ Cursor fetch(Docs& docs, const Cursor& at, const std::string& spec, Chain& chain
             throw Error{code::DirectiveBad, "$ref cycle: " + shown(f->real, split_pointer(spot.pointer))};
         }
     }
+    if (f->md) {
+        Cursor m{f->real, aos::dirname(f->real), split_pointer(spot.pointer), nullptr, true};
+        try {
+            m.node = md_node(*f, m.toks);
+        } catch (const Error& e) {
+            throw Error{code::DirectiveBad, "$ref points nowhere: " + shown(f->real, m.toks) + " (" + e.msg + ")"};
+        }
+        chain.push_back(here);
+        return m;
+    }
     Cursor c{f->real, aos::dirname(f->real), split_pointer(spot.pointer), &f->doc};
     for (const std::string& t : c.toks) {
         c.node = child(*c.node, t);
@@ -45,7 +57,7 @@ Cursor fetch(Docs& docs, const Cursor& at, const std::string& spec, Chain& chain
 
 // 一路穿過單份的 $ref，直到不是 $ref。
 Cursor settle(Docs& docs, Cursor c, Chain& chain) {
-    while (kind_of(*c.node) == Kind::Ref) {
+    while (!c.md && kind_of(*c.node) == Kind::Ref) {
         auto parts = ref_parts(*c.node);
         if (parts.size() != 1) {
             throw Error{code::TargetBad, shown(c.file, c.toks) + ": $ref array inside a $ref array, not supported by --follow yet"};
@@ -101,11 +113,11 @@ static Cursor jump(Docs& docs, const Cursor& c, std::string* want, Chain& chain,
 Located locate(Docs& docs, const Spec& spec, Mode mode) {
     File& f = docs.open(spec.file, false);
     Located out;
-    Cursor c{f.real, aos::dirname(f.given), {}, &f.doc};
+    Cursor c{f.real, aos::dirname(f.given), {}, &f.doc, f.md};
     Chain chain;
     std::vector<std::string> toks = spec.toks;   // 穿過 $ref 陣列（接陣列）時索引會換算成那一份裡的
     size_t i = 0;
-    while (i < toks.size()) {
+    while (i < toks.size() && !c.md) {
         Kind k = kind_of(*c.node);
         if ((k == Kind::Ref || k == Kind::Env) && !mode.raw) {
             if (!mode.follow) {
@@ -140,15 +152,39 @@ Located locate(Docs& docs, const Spec& spec, Mode mode) {
         out.merged = false;
         i += 1;
     }
+    if (c.md) {   // 停在 md 檔：剩下的路接在 md 裡的位置後面，一次交給 md_get
+        if (mode.write) {
+            throw markdown_write(c.file);
+        }
+        std::vector<std::string> mt = c.toks;
+        mt.insert(mt.end(), toks.begin() + (long)i, toks.end());
+        try {
+            c.node = md_node(docs.files.at(c.file), mt);
+            c.toks = mt;
+        } catch (const Error& e) {
+            out.rest.assign(toks.begin() + (long)i, toks.end());
+            out.md_why = e.msg;
+        }
+    }
     if (out.rest.empty() && mode.follow_final) {
-        while (kind_of(*c.node) == Kind::Ref) {
+        while (!c.md && kind_of(*c.node) == Kind::Ref) {
             out.hops.push_back(c);
             c = jump(docs, c, nullptr, chain, out.merged);
+        }
+        if (c.md && mode.write) {
+            throw markdown_write(c.file);   // 穿到最後才到 md（set --follow 換整個值）
         }
     }
     out.at = c;
     out.hops.push_back(c);
     return out;
+}
+
+std::string missing_note(const Located& at) {
+    if (!at.md_why.empty()) {
+        return at.md_why;
+    }
+    return shown(at.at.file, at.at.toks) + " has no " + at.rest[0];
 }
 
 }  // namespace aos::json

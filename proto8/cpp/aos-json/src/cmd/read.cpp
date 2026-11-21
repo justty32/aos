@@ -19,7 +19,7 @@ static std::string one_spec(const Args& args, const Cli& cli, const std::string&
     return cli.rest[0];
 }
 
-// get [--follow] [--resolve] [--str] 檔#/指標
+// get [--follow] [--resolve] [--str] [--tree] 檔#/指標（檔可以是 .md：照 md 的規則取值，見 doc.hpp）
 //   沒旗標＝原文（指示詞原樣印出來）；--follow＝路上遇到 $ref 穿過去（aos 自己的程式不會這樣讀，給人看拆檔後的值）；
 //   --resolve＝把拿到的值裡的指示詞解開（交給 aos-directive，跟 aos-loop、aos-fsm 讀設定檔同一套）；--str＝值是字串就印字面（不帶引號）。
 Json get_value(const std::string& spec, bool follow, bool resolve) {
@@ -28,20 +28,36 @@ Json get_value(const std::string& spec, bool follow, bool resolve) {
     mode.follow = follow;
     Located at = locate(docs, parse_spec(spec), mode);
     if (!at.rest.empty()) {
-        throw Error{code::PointerMissing, "no such pointer: " + spec + " (" + shown(at.at.file, at.at.toks) + " has no " +
-                                              at.rest[0] + ")"};
+        throw Error{code::PointerMissing, "no such pointer: " + spec + " (" + missing_note(at) + ")"};
     }
     Json v = *at.at.node;
-    if (resolve) {
+    if (resolve && !at.at.md) {   // md 取到的值不再解指示詞（同 aos-directive）
         v = aos::resolve(v, aos::RefBase{at.at.base, at.at.file, aos::pointer_tokens(pointer_of(at.at.toks))});
     }
     return v;
 }
 
+// --tree＝整份 .md 倒成一棵 json（md_tree）；只收整份 md（不帶 #/），不配 --follow、--resolve。
+static Json md_tree_of(const std::string& s, const Cli& cli) {
+    if (cli.opts.count("follow") || cli.opts.count("resolve")) {
+        throw Error{code::ArgumentsBad, "--tree does not work with --follow or --resolve"};
+    }
+    Spec spec = parse_spec(s);
+    if (!spec.toks.empty()) {
+        throw Error{code::ArgumentsBad, "--tree takes a whole .md file, without #/POINTER"};
+    }
+    Docs docs;
+    File& f = docs.open(spec.file, false);
+    if (!f.md) {
+        throw Error{code::ArgumentsBad, "--tree only reads a .md file: " + s};
+    }
+    return aos::md_tree(f.text);
+}
+
 int cmd_get(const Args& args) {
-    Cli cli = parse_args(args, {}, {{"--follow", "follow"}, {"--resolve", "resolve"}, {"--str", "str"}}, "get");
+    Cli cli = parse_args(args, {}, {{"--follow", "follow"}, {"--resolve", "resolve"}, {"--str", "str"}, {"--tree", "tree"}}, "get");
     std::string s = one_spec(args, cli, cli_usage("get"));
-    Json v = get_value(s, cli.opts.count("follow") > 0, cli.opts.count("resolve") > 0);
+    Json v = cli.opts.count("tree") ? md_tree_of(s, cli) : get_value(s, cli.opts.count("follow") > 0, cli.opts.count("resolve") > 0);
     if (cli.opts.count("str")) {
         if (!v.is_string()) {
             throw Error{code::TargetBad, s + " is not a string (it is " + std::string(v.type_name()) + ")"};
@@ -63,14 +79,13 @@ int cmd_where(const Args& args) {
     mode.follow_final = true;
     Located at = locate(docs, parse_spec(s), mode);
     if (!at.rest.empty()) {
-        throw Error{code::PointerMissing, "no such pointer: " + s + " (" + shown(at.at.file, at.at.toks) + " has no " +
-                                              at.rest[0] + ")"};
+        throw Error{code::PointerMissing, "no such pointer: " + s + " (" + missing_note(at) + ")"};
     }
     std::string out;
     for (const Cursor& c : at.hops) {
         out += shown(c.file, c.toks) + "\n";
     }
-    if (kind_of(*at.at.node) == Kind::Env) {
+    if (!at.at.md && kind_of(*at.at.node) == Kind::Env) {
         out += "$env " + (*at.at.node)["$env"].get<std::string>() + "\n";
     }
     std::cout << out << std::flush;

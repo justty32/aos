@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import sys
+import tempfile
 import unittest
 
 sys.dont_write_bytecode = True
@@ -152,6 +153,24 @@ def rows(path, name):
     return "\n".join(out)
 
 
+def knowledge_lines(me):
+    """The knowledge page about self_hook: me/self_hook.json (its events and clock parts) while it is there; else the whole me/self_hook.md (11-21 kbmd)."""
+    page = me / "self_hook.json"
+    if page.exists():
+        know = json.loads(page.read_text(encoding="utf-8"))
+        return "knowledge me/self_hook.json", (know["events"] + "\n" + know["clock"]).splitlines()
+    return "knowledge me/self_hook.md", (me / "self_hook.md").read_text(encoding="utf-8").splitlines()
+
+
+def knowledge_gaps(me):
+    where, lines = knowledge_lines(me)
+    out = []
+    for n, p in POINTS:
+        text = "\n".join(l for l in lines if "`%s`" % n in l)
+        out += ["%s: %s" % (where, n)] if not text else ["%s: %s.%s" % (where, n, f) for f in sorted(fields(p)) if "`%s`" % f not in text]
+    return out
+
+
 def gaps():
     """Every hand copy that misses a point or a field: ["where: point", "where: point.field"]."""
     out = []
@@ -167,11 +186,7 @@ def gaps():
     for n, p in POINTS:
         text = "\n".join(l for l in desc.splitlines() if l.startswith("- ") and re.search(r"\b%s\b" % n, l))
         out += ["self_hook/_tooldef.json: %s" % n] if not text else ["self_hook/_tooldef.json: %s.%s" % (n, f) for f in sorted(fields(p)) if not re.search(r"\b%s\b" % f, text)]
-    know = json.loads((ROOT / "knowledge" / "aos" / "me" / "self_hook.json").read_text(encoding="utf-8"))
-    lines = (know["events"] + "\n" + know["clock"]).splitlines()
-    for n, p in POINTS:
-        text = "\n".join(l for l in lines if "`%s`" % n in l)
-        out += ["knowledge me/self_hook.json: %s" % n] if not text else ["knowledge me/self_hook.json: %s.%s" % (n, f) for f in sorted(fields(p)) if "`%s`" % f not in text]
+    out += knowledge_gaps(ROOT / "knowledge" / "aos" / "me")
     help_text = (PY / "aos" / "apps" / "agent" / "hook.py").read_text(encoding="utf-8")
     out += ["aos-agent hook --help: %s" % n for n in list(AGENT) + list(LOOP) if not re.search(r"\b%s\b" % n, help_text)]
     return out
@@ -180,6 +195,18 @@ def gaps():
 class HandCopies(unittest.TestCase):
     def test_hand_copies_match_fully(self):
         self.assertEqual(gaps(), [])
+
+    def test_knowledge_page_as_md(self):
+        """After the knowledge turns into md (11-21 kbmd) the page is me/self_hook.md: the whole file's lines are read instead."""
+        me = ROOT / "knowledge" / "aos" / "me"
+        _where, lines = knowledge_lines(me)
+        with tempfile.TemporaryDirectory() as tmp:
+            md = Path(tmp) / "self_hook.md"
+            md.write_text("# Events\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
+            self.assertEqual(knowledge_gaps(Path(tmp)), [])
+            first = next(n for n, _p in POINTS)
+            md.write_text("\n".join(l for l in lines if "`%s`" % first not in l), encoding="utf-8")
+            self.assertEqual(knowledge_gaps(Path(tmp))[:1], ["knowledge me/self_hook.md: %s" % first])
 
 
 if __name__ == "__main__":

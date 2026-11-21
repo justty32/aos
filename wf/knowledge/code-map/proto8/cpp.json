@@ -76,11 +76,13 @@
     "env.cpp": "{\"$env\": \"NAME\"}——換成環境變數 NAME 的值（字串）。",
     "internal.hpp": "resolve.cpp、ref.cpp、env.cpp 之間共用的內部宣告（不公開；放在 aos::directive，公開的只有 aos::resolve）。",
     "main.cpp": "aos-directive 命令列——讀一份 JSON、解開所有指示詞、印出來。",
+    "md.cpp": "把一份 markdown 照它本來就有的結構讀成 json 值——給路徑拿一格（md_get）、列一層（md_ls）、整份倒成一棵樹（md_tree）。",
     "ref.cpp": "{\"$ref\": \"路徑\"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。",
     "resolve.cpp": "解析整份、單層或指定欄位的指示詞，保留相對路徑起點，並套用字串修飾詞。"
    },
    "tests": {
     "test_ref_hash.py": "Check {\"$ref\": \"#/...\"} takes the file that holds the $ref (11-12), and that ./ and ../ work in the file part of $ref.",
+    "test_ref_md.py": "Check aos-directive reads a $ref to a .md file by the markdown rules (whole text, a heading, a json fence) and that a miss is DirectiveBad.",
     "test_ref_spot.py": "Check the $ref path rule (11-13 ref-path-rules): left of # is the file system (from the folder of the file), right of # is"
    }
   },
@@ -196,6 +198,8 @@
    },
    "tests": {
     "test_add_ls_search.py": "Check aos-json add / ls / search (the json tools' Python logic moved into C++, 11-12): output formats and error codes.",
+    "test_md_cases.py": "Run the shared table py/tests/md_path_cases.json (markdown read as JSON) through the built aos-json: get, ls, get --tree on x.md files.",
+    "test_md_tools.py": "Check aos-json reads .md files and never writes them: --follow/--resolve through a $ref to md, where, check, get --str, ls --long, peek, search, and …",
     "test_ref_hash.py": "Check aos-json's own $ref walk takes \"#/...\" (no file name) = the file that holds the $ref (ref-hash, 11-12 night), same as aos-directive.",
     "test_ref_rel.py": "Check aos-json's own $ref walk follows the same path rule as aos-directive (11-13 ref-path-rules): \"#./\" counts from the"
    }

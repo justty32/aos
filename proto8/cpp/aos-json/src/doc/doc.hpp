@@ -3,10 +3,14 @@
 //   splice.cpp   splice：寫回去時只重寫有變的那一塊，其他原文不動
 //   file.cpp     load_file（記下 #! 行、縮排、結尾換行、權限）／save_file（原子寫入：先寫 `.名字.<pid>.tmp` 再改名，N-05）
 //   pointer.cpp  parse_spec（`檔#/指標` 拆開）、指標的拆／接（RFC 6901）、往下一格 child、印給人看的位置 shown
+//
+// 也讀 .md（11-21 晚）：實際的檔以 .md 結尾＝不當 JSON 讀，File 記原文（md）；取值交給 aos-directive 的 md_get，
+// 取到的值放在 File 自己擁有的 md_vals 裡（Cursor::node 指過去）。md 不寫：寫入一律 markdown_write（TargetBad）。
 #pragma once
 
 #include "common/common.hpp"
 
+#include <deque>
 #include <map>
 #include <optional>
 #include <string>
@@ -29,10 +33,22 @@ struct File {
     char indent_char = ' ';
     bool final_newline = true;   // 原本結尾有沒有換行
     mode_t mode = 0;             // 原本的權限（寫回去照設；新檔＝0666 扣 umask）
+    bool md = false;             // 實際的檔以 .md 結尾：不當 JSON 讀（doc 留 null），text＝原文，只讀不寫
+    std::string text;
+    std::deque<Json> md_vals;    // 照 md 規則取來的值（deque：往後加不會讓先前的位置失效）
 };
 
+// md 檔 toks 那一格的值（md_get），存進 f.md_vals、回它的位置。指不到丟 Error{DirectiveBad, md 那邊說的原因}。
+Json* md_node(File& f, const std::vector<std::string>& toks);
+
+// path（相對 cwd）→ 實際的檔（realpath；不在＝整理成絕對路徑），跟 File::real 同一種算法。
+std::string real_file(const std::string& path);
+
+// 要寫到 md 檔＝這個錯（TargetBad；real＝那份檔）。
+Error markdown_write(const std::string& real);
+
 // 讀一份檔。allow_missing＝不在也行（回 exists＝false、doc＝null、排版用預設）。
-// 不在 FileMissing；讀不了（含資料夾）、不是 JSON FileBad。
+// 不在 FileMissing；讀不了（含資料夾）、不是 JSON FileBad。.md 不解 JSON（只記原文，見 File::md）。
 File load_file(const std::string& path, bool allow_missing);
 
 // body 照 doc 重寫：先試 splice（比 before 只重寫有變的那一塊，其他原文不動），不行（或還沒有 body＝新檔）才照記下的排版整份重排。

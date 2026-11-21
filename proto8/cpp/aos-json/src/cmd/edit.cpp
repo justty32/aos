@@ -47,6 +47,7 @@ Place place(Edit& ed, const std::string& spec, bool follow, bool follow_final, b
     mode.follow_final = follow_final;
     mode.strict = true;
     mode.raw = raw;
+    mode.write = true;   // 走到 .md 檔＝TargetBad（json 工具只讀 md）
     Located at = locate(ed.docs, parse_spec(spec), mode);
     Place p{&ed.touch(at.at.file), at.at.toks, at};
     p.toks.insert(p.toks.end(), at.rest.begin(), at.rest.end());

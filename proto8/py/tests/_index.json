@@ -12,6 +12,9 @@
  "fake_mcp_stdio.py": {
   "description": "Provide a standard-library MCP stdio server with tools and failure modes for client tests."
  },
+ "md_path_cases.json": {
+  "description": "Shared table for reading markdown as JSON (aos/mdpath.py and aos-directive src/md.cpp; rules: thinking 2026-11/21/知識庫-骨架加md-規劃-1121/07-尋址規則.md). docs: name -> markdown text. cases: get = value at ptr…"
+ },
  "ref_path_cases.json": {
   "description": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per rule, run by py/tests/test_ref_path.py."
  },
@@ -168,6 +171,9 @@
  "test_index_view.py": {
   "description": "index_view（py/aos/index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。"
  },
+ "test_index_view_md.py": {
+  "description": "index_view 讀 md 與 $ref 的定向測試（11-21 晚，thinking 2026-11/21/知識庫-骨架加md-規劃-1121 的 01、10）：純字串一項、$ref 一項、夾的 _index.md、md 頁自己的 _index／index 標題、index 參數指進 md。"
+ },
  "test_install.py": {
   "description": "proto8/install.py in a throwaway home with a fake make: fills bin/ (C++ + the Python entries of py/entries.json), lib/ (py/ copy + C++ libraries) and…"
  },
@@ -180,6 +186,9 @@
  "test_kill_group.py": {
   "description": "Test shared child-group shutdown, escalation, reaping, and signal-handler delegation."
  },
+ "test_knowledge_paths.py": {
+  "description": "Every knowledge path written in the knowledge itself, the tool descriptions and the templates' system texts points to something real: the file under …"
+ },
  "test_mail_notify.py": {
   "description": "mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json 也沒有非空 history）只把等著的記成已知；跑過的 stack（有非空 hist…"
  },
@@ -188,6 +197,9 @@
  },
  "test_mcp_freeze.py": {
   "description": "Test py/aos/mcp_freeze.py: registry names, $ref expansion and $-key removal, description truncation, _metainfo hints, and diff lines."
+ },
+ "test_md_path.py": {
+  "description": "Run the shared table py/tests/md_path_cases.json against aos.mdpath (reading markdown as JSON: headings, _, lists, tables, json fences). The C++ side…"
  },
  "test_metainfo.py": {
   "description": "Verify optional metadata reading, timeout declarations, and safe cost formulas; bad metadata is skipped with a note."

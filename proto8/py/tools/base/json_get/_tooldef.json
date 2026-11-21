@@ -1,5 +1,5 @@
 {
- "description": "The value at FILE#/POINTER as one line of JSON (\"[too big] ...\" past max_bytes: look deeper or full: true); $ref/$env are not resolved. More: aos/tools/json_get.json.",
+ "description": "The value at FILE#/POINTER as one line of JSON (\"[too big] ...\" past max_bytes: look deeper or full: true); $ref/$env are not resolved. Also reads markdown (read only): FILE.md#/Heading is a section, #/Heading/_ its own text, #/Heading/0 a list item or table row, a list item key: value by its key, a section holding only a json block as JSON. More: aos/tools/json_get.json.",
  "parameters": {
   "type": "object",
   "properties": {

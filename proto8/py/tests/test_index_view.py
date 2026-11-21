@@ -60,7 +60,7 @@ class IndexViewTest(unittest.TestCase):
             "[index] kb/_index.json, 5 entries",
             "cli\tCommand-line programs", "tools\tTools the brain can call",
             "data.json#/items/0\tFirst job; the scheduler reads only this",     # 換行、TAB 印成空白；鍵照字面
-            "notes.json", "odd"])                                                # 沒有 description、項目壞掉：只印鍵
+            "notes.json", "odd\tnot an object"])                                # 沒有 description：只印鍵；純字串＝description（11-21 第 18 句）
         self.assertEqual(self.ok(path="kb/")[0], "[index] kb/_index.json, 5 entries")
 
     def test_json_nodes(self):
@@ -81,7 +81,7 @@ class IndexViewTest(unittest.TestCase):
         self.assertEqual(self.ok(path="kb", index="me.json#/views"), [
             "[index] kb/_index.json + me.json#/views (on the same key me.json#/views wins), 6 entries",
             "cli\tCommand-line programs", "tools\tThe only part I use",                  # 同名：整項以指定那份為準
-            "data.json#/items/0\tFirst job; the scheduler reads only this", "notes.json", "odd",
+            "data.json#/items/0\tFirst job; the scheduler reads only this", "notes.json", "odd\tnot an object",
             "mine\tOnly in my view"])                                                     # 只在指定那份的接在後面
         self.assertEqual(self.ok(path="kb", index="me.json#/views", key="cli")[1], "cli\tCommand-line programs")
         out = self.ok(path="empty", index="me.json#/views")                              # 天然那份不在＝只看指定那份
@@ -112,7 +112,7 @@ class IndexViewTest(unittest.TestCase):
         lines = self.ok(path="kb", limit=2)
         self.assertEqual(lines, ["[index] kb/_index.json, 5 entries", "cli\tCommand-line programs",
                                  "tools\tTools the brain can call", '[more] 0 to 1 of 5 shown; next: "offset": 2'])
-        self.assertEqual(self.ok(path="kb", offset=4), ["[index] kb/_index.json, 5 entries", "odd"])
+        self.assertEqual(self.ok(path="kb", offset=4), ["[index] kb/_index.json, 5 entries", "odd\tnot an object"])
         self.assertEqual(len(self.ok({"AOS_JSON_MAX_ITEMS": "1"}, path="kb")), 3)
 
     def test_errors(self):

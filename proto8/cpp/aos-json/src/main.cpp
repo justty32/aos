@@ -44,6 +44,8 @@ flags:
   -h, --help   show this help
 
 Address values with FILE#/POINTER; follow $ref when requested.
+A .md FILE is read by its headings, lists, tables and json fences
+(see get --help); the write subcommands refuse it.
 
 exit codes: 0 success; 10 check found problems; 1 error.
 more: aos-json/README.md
