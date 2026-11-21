@@ -566,11 +566,11 @@
       "since": "2026-11-21"
     },
     "eca-plugins-trim": {
-      "title": "eca agent 身上帶了用不到的外掛和 skills，固定佔 context",
+      "title": "eca agent 固定佔 context：用不到的外掛、skills，與 aos 工具包",
       "status": "open",
       "flow": "",
-      "what": "11-21 夜 eca-aos（eca-claude、opus）/context：開場固定開銷約 40k，其中工具說明 26.5k 混了 claude-in-chrome（瀏覽器十幾支）、easel（畫圖），skills 6.7k 有 pptx、docx、google-workspace 等，aos agent 都用不到。cli.json 已有 --strict-mcp-config 仍出現，推測（沒查證）是 Claude Code 外掛或 claude.ai 帳號同步帶進來的。使用者「兩個都記下來」。",
-      "next": "查這些從哪來、eca-claude 範本怎麼關掉（cli.json 旗標或 agent 自己的設定），改之前先問使用者",
+      "what": "11-21 夜 eca-aos（eca-claude、opus）/context：開場固定開銷約 40k，其中工具說明 26.5k 混了 claude-in-chrome（瀏覽器十幾支）、easel（畫圖），skills 6.7k 有 pptx、docx、google-workspace 等，aos agent 都用不到。cli.json 已有 --strict-mcp-config 仍出現，推測（沒查證）是 Claude Code 外掛或 claude.ai 帳號同步帶進來的。使用者「兩個都記下來」。另：eca-claude 的 aos 工具 30 支約 14.5k，其中 events（self_hook、clock_register）、def（agent_def、tools_def）、jsonx（8 支）共 12 支約 11k，平常用不到；agent-fsm 範本根本不掛這三包、self 只開兩支、要用再 self_tools add。eca-claude 已照做 self（11-21），三包還掛著。照 agent-fsm 做法拿掉三包＋拿掉 chrome，固定開銷約 25k → 5k 內（估算）。使用者 11-22「好，先記着」。",
+      "next": "查外掛與 skills 從哪來、怎麼關；eca-claude tools.json 拿掉 events／def／jsonx 三包（存檔即生效、影響所有 eca）；改之前先問使用者",
       "see": [
         "[知識庫-使用感想-1121](../proto8/thinking/2026-11/21/知識庫-使用感想-1121.md)"
       ],
