@@ -71,6 +71,9 @@
  "llm-effort-1121.md": {
   "description": "使用者原話"
  },
+ "md與json尋址-1121": {
+  "description": "md 與 json 尋址（11-21 發想）：做得到，最短的路看他在哪裡看檔；知識庫本來就是 md 包在 json 裡"
+ },
  "self-history-range-1121.json": {
   "description": "資料表（wf-table/1）：抽自 self-history-range-1121.md，14 列，欄位 tool、param、argv、before、after、status"
  },
