@@ -1,0 +1,24 @@
+{
+ "description": "Sample for candidate C of the files in a kernel station's stack that others read or write, id = a short name; would live at $AOS_HOME/lib/tools/aos/kernel/files.json. Paths count from the station's stack, not from the definition folder.",
+ "requests": {
+  "description": "the mailbox request letters go to (AOS_KERNEL names this folder)",
+  "path": "requests", "access": "mailbox"
+ },
+ "queue": {
+  "description": "letters waiting for a free slot",
+  "path": "queue.json", "access": "read",
+  "schema": {"type": "object", "properties": {"queued": {"type": "array", "items": {"type": "object", "required": ["letter"]}}}}
+ },
+ "hold": {
+  "description": "letters kept until someone decides",
+  "path": "hold.json", "access": "read",
+  "schema": {"type": "object", "properties": {"held": {"type": "array", "items": {"type": "object", "required": ["letter"]}}}}
+ },
+ "decisions": {
+  "description": "write one file per held letter to pass or refuse it; the station acts on it in its next round and deletes it",
+  "path": "decisions/<letter name>.json", "access": "write",
+  "schema": {"type": "object", "required": ["verdict"], "properties": {
+   "verdict": {"enum": ["pass", "refuse"]},
+   "error": {"type": "object", "required": ["code", "msg"]}}}
+ }
+}

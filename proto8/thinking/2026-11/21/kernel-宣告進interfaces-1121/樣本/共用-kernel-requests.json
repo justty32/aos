@@ -1,0 +1,22 @@
+{
+ "description": "Sample of 'what the generic kernel station takes', in the hooks style (id = key, input schema required); would live at $AOS_HOME/lib/tools/aos/kernel/requests.json. One id per body key the station judges; every other key of a letter body is forwarded untouched to the next station.",
+ "procs_added": {
+  "description": "start new procs; judged by allowed, max_running and limits of kernel.json",
+  "input": {"type": "object", "required": ["procs_added"], "properties": {
+   "procs_added": {"type": "object", "description": "{name: proc}, the daemon's own body"},
+   "queue_wait_ms": {"type": "integer", "minimum": 0, "description": "how long the sender is willing to wait in the queue"}}},
+  "output": {"description": "refused here: {applied: false, error: {code, msg}}; let through: the answer is the next station's",
+             "type": "object", "properties": {"applied": {"type": "boolean"}, "error": {"type": "object", "required": ["code", "msg"]}}},
+  "errors": ["BodyBad", "NameUnknown", "SlotMissing", "HoldRefused", "ForwardFailed", "HookRejected"]
+ },
+ "procs_started": {
+  "description": "start procs that are on the table; counted against max_running",
+  "input": {"type": "object", "required": ["procs_started"], "properties": {"procs_started": {"type": "array", "items": {"type": "string"}}}},
+  "errors": ["BodyBad", "SlotMissing", "HoldRefused", "ForwardFailed", "HookRejected"]
+ },
+ "procs_woken": {
+  "description": "wake sleeping procs; counted against max_running",
+  "input": {"type": "object", "required": ["procs_woken"], "properties": {"procs_woken": {"type": "array", "items": {"type": "string"}}}},
+  "errors": ["BodyBad", "SlotMissing", "HoldRefused", "ForwardFailed", "HookRejected"]
+ }
+}

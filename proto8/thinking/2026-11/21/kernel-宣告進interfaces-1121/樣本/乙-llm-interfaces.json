@@ -1,0 +1,8 @@
+{
+ "description": "Candidate B (middle), llm kernel folder (start-api/llm): hook keys plus what it takes (requests) and what can be picked (endpoints), each a file name in the hooks style. Sample only, no program reads it.",
+ "hooks": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel/hooks.json"},
+ "hookeds": "hookeds.json",
+ "requests": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel_llm/requests.json"},
+ "endpoints": "endpoints.json",
+ "aos-ledger": {"file": "ledger.jsonl"}
+}

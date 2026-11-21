@@ -1,0 +1,14 @@
+{
+ "description": "Candidate C (fine), generic kernel folder run by aos-loop (start-api/perm): one aos-kernel cell, one key per thing offered. Sample only, no program reads it.",
+ "aos-kernel": {
+  "config": "kernel.json",
+  "hooks": [
+   {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel/hooks.json"},
+   {"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}
+  ],
+  "hookeds": ["hookeds.json", "loop_hookeds.json"],
+  "requests": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel/requests.json"},
+  "errors": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel/errors.json"},
+  "files": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel/files.json"}
+ }
+}

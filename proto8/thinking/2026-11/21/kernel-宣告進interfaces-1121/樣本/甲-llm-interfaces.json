@@ -1,0 +1,6 @@
+{
+ "description": "Candidate A (thinnest), llm kernel folder (start-api/llm): only the two hook keys are added; everything else stays in the docs. Sample only, no program reads it.",
+ "hooks": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel/hooks.json"},
+ "hookeds": "hookeds.json",
+ "aos-ledger": {"file": "ledger.jsonl"}
+}

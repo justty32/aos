@@ -1,0 +1,9 @@
+{
+ "description": "Sample of the list of what is hooked on this kernel, split out of kernel.json's hooks key. The user did not say what hookeds.json looks like inside; this follows hooks.json (an object, hook name = key).",
+ "dept_quota": {
+  "event": "before_verdict",
+  "handler": "fn/dept_quota",
+  "on_error": "stop",
+  "timeout_ms": 10000
+ }
+}

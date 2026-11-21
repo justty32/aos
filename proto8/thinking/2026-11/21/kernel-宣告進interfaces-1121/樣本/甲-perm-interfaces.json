@@ -1,0 +1,8 @@
+{
+ "description": "Candidate A (thinnest), generic kernel folder run by aos-loop (start-api/perm): the kernel's three points plus the four aos-loop points, and the two lists of what is hooked. Sample only, no program reads it.",
+ "hooks": [
+  {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel/hooks.json"},
+  {"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}
+ ],
+ "hookeds": ["hookeds.json", "loop_hookeds.json"]
+}

@@ -1,0 +1,16 @@
+{
+ "description": "Candidate C (fine), llm kernel folder (start-api/llm): one cell per interface like aos-agent, one key per thing offered. Sample only, no program reads it.",
+ "aos-kernel": {
+  "config": "kernel.json",
+  "hooks": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel/hooks.json"},
+  "hookeds": "hookeds.json",
+  "requests": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel_llm/requests.json"},
+  "errors": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel_llm/errors.json"},
+  "files": [
+   {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel/files.json"},
+   {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel_llm/files.json"}
+  ]
+ },
+ "aos-llm-kernel": {"endpoints": "endpoints.json"},
+ "aos-ledger": {"file": "ledger.jsonl"}
+}

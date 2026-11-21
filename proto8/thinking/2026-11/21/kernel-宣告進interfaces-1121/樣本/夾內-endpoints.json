@@ -1,0 +1,15 @@
+{
+ "description": "Sample of the packs an llm kernel folder offers, id = pack name, other keys free; kernel.json would read the same file with {\"$ref\": \"endpoints.json\"}, so it is both the list people look at and the setting. Two packs only.",
+ "sol": {
+  "summary": "LiteLLM gpt-6.1 sol",
+  "speed": "normal", "cost": "high", "context": 272000,
+  "reasoning_efforts": ["low", "medium", "high", "xhigh", "max"],
+  "exec": "endpoints/litellm", "url": "http://localhost:4000/v1", "model": "chatgpt-gpt-6.1-sol",
+  "api": "responses", "fixed": {"temperature": 0.2}, "session_key": "litellm_session_id"
+ },
+ "fake": {
+  "summary": "fake brain: calls peek_now_time (or the first tool), then answers FAKE ANSWER to ...",
+  "speed": "fast", "cost": "free",
+  "exec": {"$env": "AOS_HOME", "$path": "/lib/tools/base/llm_fake"}, "tool": "peek_now_time"
+ }
+}

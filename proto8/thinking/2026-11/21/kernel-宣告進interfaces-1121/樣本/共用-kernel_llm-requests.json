@@ -1,0 +1,16 @@
+{
+ "description": "Sample of 'what the llm kernel takes', in the hooks style (id = key, input schema required); would live at $AOS_HOME/lib/tools/aos/kernel_llm/requests.json. The letter body has no kind field, so the id 'think' is a made-up name.",
+ "think": {
+  "description": "ask the brain once; the letter goes to <kernel stack>/requests",
+  "input": {"type": "object", "required": ["request"], "properties": {
+   "endpoint": {"type": "string", "description": "pack name (see the endpoints of this kernel); left out = the kernel's default"},
+   "reasoning_effort": {"type": "string", "minLength": 1, "description": "a level the picked pack offers"},
+   "request": {"type": "object", "required": ["messages"], "description": "an OpenAI chat completions body without the endpoint; stream is not done",
+               "properties": {"messages": {"type": "array"}, "stream": {"const": false}}},
+   "priority": {"description": "low, normal or high; a number; or {level, deadline}"}}},
+  "output": {"oneOf": [
+   {"type": "object", "required": ["message"], "properties": {"message": {"type": "object"}, "usage": {}, "model": {}}},
+   {"type": "object", "required": ["error"], "properties": {"error": {"type": "object", "required": ["code", "msg"]}}}]},
+  "errors": ["LetterBad", "RequestBad", "EndpointMissing", "EndpointUnknown", "DirectiveBad", "CfgBad", "DeadlineBad", "BudgetMissing", "LaunchFailed", "EndpointFailed", "ReplyBad", "HookRejected"]
+ }
+}

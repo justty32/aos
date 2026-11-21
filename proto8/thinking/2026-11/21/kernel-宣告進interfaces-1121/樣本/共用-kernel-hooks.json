@@ -1,0 +1,34 @@
+{
+ "description": "Sample of the kernel's three hook points in the new format (an object, id = key, input schema required, other keys free); would live at $AOS_HOME/lib/tools/aos/kernel/hooks.json. Written from the README, types not checked line by line against the code.",
+ "before_verdict": {
+  "description": "a new request letter is about to be judged by the built-in rules (letters already in the queue do not pass here again)",
+  "input": {"type": "object", "properties": {
+   "letter": {"type": "string", "description": "letter name"},
+   "sender": {"description": "who sent it"},
+   "sent_at": {"description": "when it was sent"},
+   "reply_to": {"description": "where the answer goes"},
+   "body": {"description": "the request; its shape is the station's own (see the station's requests file)"}}},
+  "output": {"type": "object", "properties": {"body": {}}, "additionalProperties": false},
+  "block": true
+ },
+ "after_verdict": {
+  "description": "the station judged a new letter, or a queued letter leaves the queue",
+  "input": {"type": "object", "properties": {
+   "letter": {"type": "string"}, "sender": {}, "sent_at": {}, "reply_to": {}, "body": {},
+   "verdict": {"type": "string", "description": "pass, refuse or queue from the rules; an earlier hook may have changed it"},
+   "error": {"description": "the refusal {code, msg}, or null"},
+   "decision": {"description": "stations that can hold only: pass when someone already said so, else null"},
+   "next": {"description": "stations that forward only: null (the hook may give the next mailbox)"}}},
+  "output": {"type": "object", "properties": {"verdict": {"type": "string"}, "error": {}, "next": {}}, "additionalProperties": false},
+  "block": true,
+  "condition": "verdict"
+ },
+ "before_reply": {
+  "description": "a reply passes this station on its way back",
+  "input": {"type": "object", "properties": {
+   "letter": {"type": "string", "description": "the original letter name"},
+   "sender": {}, "reply_to": {}, "reply_sender": {}, "body": {"description": "the reply"}}},
+  "output": {"type": "object", "properties": {"body": {}}, "additionalProperties": false},
+  "block": true
+ }
+}

@@ -1,0 +1,21 @@
+{
+ "description": "Sample for candidate C of the codes an llm kernel puts in a reply, id = code; would live at $AOS_HOME/lib/tools/aos/kernel_llm/errors.json. Three codes only. An error has no input, so the schema key is called 'schema' here (an open point).",
+ "EndpointUnknown": {
+  "description": "the letter names a pack this kernel does not have",
+  "schema": {"type": "object", "required": ["code", "msg"]}
+ },
+ "BudgetMissing": {
+  "description": "the budget of this window is used up; try again after resets_at",
+  "schema": {"type": "object", "required": ["code", "msg"], "properties": {
+   "scope": {"enum": ["total", "endpoint", "sender", "hook"]},
+   "window": {"enum": ["hour", "day", "all"]},
+   "since": {"type": ["string", "null"]}, "resets_at": {"type": ["string", "null"]},
+   "limit": {"enum": ["max_calls", "max_tokens"]}, "max": {"type": "integer"},
+   "endpoint": {"type": "string"}, "key": {"type": "string"}, "hook": {"type": "string"}}},
+  "retry": "after resets_at"
+ },
+ "EndpointFailed": {
+  "description": "the endpoint function failed or timed out",
+  "schema": {"type": "object", "required": ["code", "msg"], "properties": {"retry": {"type": "boolean"}}}
+ }
+}
