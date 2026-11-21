@@ -28,11 +28,11 @@
     "grow.json": "Function growth",
     "history.json": "Conversation history of an agent",
     "hook.json": "Hooks on one agent",
-    "hook_points.json": "aos-hook: offer hook points from your own program",
     "json_view.json": "aos-json-view: print JSON in a layout a person can read",
     "mailbox.json": "Mailbox for humans",
     "mcp.json": "aos tools for an external agent",
     "mcp_import.json": "External MCP tools frozen into aos",
+    "offer_hooks.json": "aos-hook: offer hook points from your own program",
     "parts": {
      "_description.json": "Low-level parts",
      "daemon.json": "aos-daemon: the daemon itself",

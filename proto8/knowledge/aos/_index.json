@@ -18,7 +18,7 @@
   "description": "What each file in a definition folder does (interfaces.json, loop.json, tools.json, hooks.json and hookeds.json, cli.json ...), and which ones you have your own copy of."
  },
  "body.json": {
-  "description": "Two kinds of body, agent-fsm and eca (claude, codex): brain, tools, hooks, system text, history; how to tell which you are."
+  "description": "Two kinds of body, agent-fsm and eca (claude, codex, pi): brain, tools, hooks, system text, history; how to tell which you are."
  },
  "status.json": {
   "description": "The daemon table, the phases an agent can be in, and what each phase means for you."
@@ -56,7 +56,7 @@
   "index": "tools/_index.json"
  },
  "packs.json": {
-  "description": "Your tools come in packs (look, change, delete, shell, gadgets, events, todo, self, subagent, def, mailbox, goal, json, jsonx, index; kernel_gate is in no stock definition): one sentence per tool, and how a pack is turned off.",
+  "description": "Your tools come in packs (look, change, delete, shell, gadgets, events, todo, self, subagent, def, mailbox, goal, json, jsonx, index; comm is used by the kits, kernel_gate is in no stock definition): one sentence per tool, and how a pack is turned off.",
   "index": "packs.json#/_index"
  },
  "_description.json": {
