@@ -1,4 +1,4 @@
-家機 `~/aos-home` 更新六次：早上到 repo `88ea321f4`（install.py、kernel.json 補思考程度、ann 照 start-api 範本換、保留 model=sol、sol 驗四題，線 top-1121-homeup）；上午再到 `5a99e1320`（ann 改動態連結 agent-fsm 的格程式、刪夾裡 9 個舊抄本、sol 驗九次含 /compact 先清工具輸出，線 top-1121-homeup2）；中午到 `97d4abc16`（hook 換新格式：ann 的 hooks.json→hookeds.json、kernel 加 interfaces.json／kernel_hooks.json／kernel_hookeds.json、stack 的 hooks/→hookeds/，4 個 hook 一個不少，sol 驗五次，線 top-1121-homeup3）；下午到 `2060ee9d5`（只跑 install.py、樹裡不改檔，sol 答一句、`aos-gdb --def-hooks` 在活樹列得出 13 點，線 top-1121-home4）；傍晚到 `83e6fa5e3`（只改三支指令的 `--help` 說明、只跑 install.py，沒起樹，線 top-1121-helpfix）；第六次到 `6c769595d`（md 工具進活樹，沒起樹，線 top-1121-install6）；前四次都關回原狀，第五、六次沒起樹。
+家機 `~/aos-home` 更新七次：早上到 repo `88ea321f4`（install.py、kernel.json 補思考程度、ann 照 start-api 範本換、保留 model=sol、sol 驗四題，線 top-1121-homeup）；上午再到 `5a99e1320`（ann 改動態連結 agent-fsm 的格程式、刪夾裡 9 個舊抄本、sol 驗九次含 /compact 先清工具輸出，線 top-1121-homeup2）；中午到 `97d4abc16`（hook 換新格式：ann 的 hooks.json→hookeds.json、kernel 加 interfaces.json／kernel_hooks.json／kernel_hookeds.json、stack 的 hooks/→hookeds/，4 個 hook 一個不少，sol 驗五次，線 top-1121-homeup3）；下午到 `2060ee9d5`（只跑 install.py、樹裡不改檔，sol 答一句、`aos-gdb --def-hooks` 在活樹列得出 13 點，線 top-1121-home4）；傍晚到 `83e6fa5e3`（只改三支指令的 `--help` 說明、只跑 install.py，沒起樹，線 top-1121-helpfix）；第六次到 `6c769595d`（md 工具進活樹，沒起樹，線 top-1121-install6）；第七次到 `fe053b828`（知識庫換成 md、ann 系統文字改指新入口，沒起樹，線 top-1121-install7）；前四次都關回原狀，第五、六、七次沒起樹。
 
 ← [2026-11-21](README.md)｜前情：[aos-hook-fire換-1121](aos-hook-fire換-1121.md)、[llm-effort-1121](llm-effort-1121.md)、[tool-desc-瘦身-1121](tool-desc-瘦身-1121/)、[aos-agent-預設目標-1121](aos-agent-預設目標-1121.md)｜給使用者看的過程頁：`~/Desktop/aos-home更新過程-1121.html`
 
@@ -236,3 +236,15 @@
    - 暫存 md（`# A`＋一行字）`aos-json get <檔>#/A`：讀到 `"# A\n\nhello md\n"`，新工具會讀 md。
 
 沒起樹、沒叫模型、樹裡沒改檔、沒有新備份。
+
+## 第七次更新（到 `fe053b828`，知識庫換成 md，線 top-1121-install7）
+
+為什麼裝：`fe053b828` 把知識庫 109 頁長文章從 .json 換成 .md、入口改成 `knowledge/aos/_description.md`、42 支工具說明的 `More:` 也改成 .md 路徑；lib 裡的工具說明要重裝才更新，ann 的系統文字還寫舊入口。授權：使用者當面「我還沒開始玩aos，可以動樹。」這次只准 install、換樹裡抄自範本的系統文字、唯讀驗證，不起樹、不叫模型。
+
+1. 開工核對：`pgrep -af` 除了自己的 shell 沒有 aos-daemon／aos-exec／aos-frontend，也沒有從 `~/aos-home` 起的行程；`git status --short proto8/py proto8/cpp proto8/templates` 乾淨；HEAD `fe053b828`。
+2. proto8 跑 `python3 install.py`（先清掉繼承的 `AOS_*`，輸出導到暫存檔、直接取退出碼）：退出碼 0；30 支指令（9 C++、21 Python）、`py/` 598 檔與 12 個 C++ 函式庫進 `lib/`、15 個標頭；有重新編譯；清掉 0 個舊檔。
+3. 找樹裡的舊入口（排除 `lib/`、`bin/`、`.stack`）：只有 `agents/ann/system.txt` 與它的舊備份 `agents/ann/system.txt.bak-1121b`（備份不動）。`.stack/procs/ann/` 裡的 `history.jsonl`、`history_removed.jsonl`、`handoff.md`、`think/request.json`、兩份 history 備份也有舊路徑字，都是執行紀錄，不動。
+4. `agents/ann/system.txt` 與 `fe053b828~1` 的範本逐字相同（`cmp` 無差）→ 用現在範本整份換掉（入口改 `_description.md`，多一句說 .md／.json 都能用 json_get、json_ls 讀）。備份：`/tmp/claude-1000/-home-lorkhan-repo-aos/61aa87fa-bcb9-45eb-9e77-e38be803154a/scratchpad/system.txt.orig-ann`。
+5. 驗證（`cd ~/aos-home && source env.sh`）：`aos-json get "$AOS_HOME/knowledge/aos/me.md#/What is in your stack"` 讀到 `"# What is in your stack\n\nYour stack is ...`；`aos-json get "$AOS_HOME/knowledge/aos/_description.md"` 讀到 `"# aos in one page\n\nWhat aos is, ...`；`lib/tools/base/glob/_tooldef.json` 的說明結尾是 `More: aos/tools/glob.md.`。
+
+沒起樹、沒叫模型、樹裡只改了 `agents/ann/system.txt` 一份。
