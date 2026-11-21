@@ -42,7 +42,7 @@
   },
   "eca-claude": {
    "cli.json": "設定（鍵：kind、flags、print_flags、tools_sub、timeout_ms、settings）",
-   "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼；SessionStart（matcher compact）壓完後提醒讀回交接，有 $AOS_STACK/handoff.md 就附上。",
+   "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
    "hooks.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
    "interfaces.json": "設定（鍵：aos-agent）",
    "llm.json": "設定（鍵：model）",
@@ -197,7 +197,7 @@
    "agents": {
     "ann": {
      "cli.json": "設定（鍵：kind、flags、print_flags、tools_sub、timeout_ms、settings）",
-     "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼；SessionStart（matcher compact）壓完後提醒讀回交接，有 $AOS_STACK/handoff.md 就附上。",
+     "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
      "hooks.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
      "interfaces.json": "設定（鍵：aos-agent）",
      "llm.json": "設定（鍵：model）",
@@ -261,6 +261,7 @@
     "test_reviewer.py": "Verify real reviewer, review scripts and shared FSM cells through local fake endpoints."
    },
    "test_daily.py": "Acceptance (/tmp, fake brain, fake claude): the user's daily routine across two machines - git clone/pull, one aos-exec line, work, aos-daemon-ctl sh…",
+   "test_eca_compact_hook.py": "Test the eca-claude template's compact_hook as Claude Code runs it (11-21 top-1121-ecaeffort): pre fires before_compact (change the instructions, giv…",
    "test_eca_pi.py": "驗 eca-pi 範本（11-18）：cli.json 讀得過、kind pi、畫面子介面同 eca-claude、工具登記檔跟 eca-claude 同一份、hook 格都驗得過。",
    "test_fake_slow.py": "the demo endpoint function fake_slow (templates/kernel/llm-kernel) finds lib/tools/base/llm_fake and passes its answer back.",
    "test_paths_move.py": "Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to anothe…",

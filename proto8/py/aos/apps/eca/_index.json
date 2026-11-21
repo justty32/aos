@@ -21,7 +21,7 @@
   "description": "aos/apps/eca/hook.py - 這支的 hook 遙控器（open：hook 停下換成 Fail）與 before_queue、tool_added 兩個點的這支這邊。"
  },
  "hook_points.json": {
-  "description": "Hook points fired by aos-eca-turn (the eca body); tool hooks are in ../mcp/hook_points.json, the loop points in ../hook/loop_points.json."
+  "description": "Hook points fired by aos-eca-turn (the eca body), and before_compact / after_compact fired by the eca-claude template's compact_hook from Claude Code's own compaction hooks; tool hooks are in ../mcp/…"
  },
  "main_screen.py": {
   "description": "aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。"

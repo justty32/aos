@@ -51,6 +51,8 @@ absolute). Written to this agent's own list in its stack; the definition stays a
 it is. Flags may go before or after XXX.
 
 events: before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added,
+        before_compact, after_compact (eca with claude only: around Claude Code's own
+        compaction; exit 10 of a before_compact hook blocks it),
         after_start, after_stop (the agent's loop starts / is about to exit),
         before_run, after_run (before / after each run of the loop body: each state of an
         fsm agent, each turn of an eca; exit 10 of a before_run hook skips that run),

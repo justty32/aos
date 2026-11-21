@@ -160,4 +160,5 @@ eca 的腦是外面的 CLI，aos 只看得到經過自己手的東西（圖紙 �
 | `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop`（`aos-hook fire --agent`） | 同 |
 | `before_run`／`after_run` | 有：每一輪的前後 | loop.json 的 `on_before_run`／`on_after_run`（aos-hook） | 一圈＝一輪；沒有 `stage`／`next_stage`（不帶） |
 | `on_clock` | 有（冷卻中、退讓的那輪也判） | aos-eca-turn 每輪最開頭 | 每輪看一次（agent-fsm 每格看一次） |
+| `before_compact`／`after_compact` | 只有 claude 身、定義的 `cli.json` 掛了範本的 `compact_hook`（Claude Code 自己的 `PreCompact`／`PostCompact` hook）才有；pi、codex 沒有。`before_compact`：`trigger`（`manual`＝/compact、`auto`＝CLI 自己壓）、`asked`（/compact 後面的字）、`instructions`（compact_hook 給 CLI 的摘要指示，可改，空字串＝不給）、`restore`（null，可交一段字，壓完經 SessionStart 接進對話）；退 10＝攔下不壓（/compact 那封的回答是 CLI 說被誰攔下）。`after_compact`：`trigger`、`summary`（CLI 寫好的摘要），只告知 | `compact_hook`（經 `aos-hook fire --agent $AOS_CLI_DEF`，11-21） | agent-fsm 還沒有這兩個點（規劃在 thinking/2026-11/21/compact-改進規劃-1121/03）；壓縮本身是 CLI 的，摘要內容改不了 |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos | |

@@ -3,5 +3,6 @@
  "print_flags": ["--max-budget-usd", "0.5"],
  "tools_sub": "tools_sub.json",
  "timeout_ms": 0,
- "settings": {"hooks": {"PreCompact": [{"hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" pre", "timeout": 10}]}],
-                        "SessionStart": [{"matcher": "compact", "hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" start", "timeout": 10}]}]}}}
+ "settings": {"hooks": {"PreCompact": [{"hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" pre", "timeout": 60}]}],
+                        "PostCompact": [{"hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" post", "timeout": 60}]}],
+                        "SessionStart": [{"matcher": "compact", "hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" start", "timeout": 60}]}]}}}

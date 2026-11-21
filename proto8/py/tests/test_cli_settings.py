@@ -140,7 +140,7 @@ class Settings(unittest.TestCase):
 
     def test_shipped_templates_carry_only_compact_hooks(self):
         # 範本預設全面開放（使用者 11-13）：不帶權限之類的設定。唯一例外是 compact 前後的 hook
-        # （使用者 11-15 對「eca 範本要不要預設開 Claude 那兩個 hook」答「1.開。」）。
+        # （使用者 11-15 對「eca 範本要不要預設開 Claude 那兩個 hook」答「1.開。」；11-21 多 PostCompact，發 aos 的 after_compact）。
         proto = LIB.parent
         for path in sorted(list(proto.glob("templates/*/cli.json")) + list(proto.glob("py/tools/agent/*/cli.json"))):
             with self.subTest(path=str(path)):
@@ -148,7 +148,7 @@ class Settings(unittest.TestCase):
                 if "settings" not in cfg:
                     continue
                 self.assertEqual(list(cfg["settings"]), ["hooks"])
-                self.assertLessEqual(set(cfg["settings"]["hooks"]), {"PreCompact", "SessionStart"})
+                self.assertLessEqual(set(cfg["settings"]["hooks"]), {"PreCompact", "PostCompact", "SessionStart"})
                 for event, groups in cfg["settings"]["hooks"].items():
                     for g in groups:
                         if event == "SessionStart":

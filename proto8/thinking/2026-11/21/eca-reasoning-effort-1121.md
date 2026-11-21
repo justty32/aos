@@ -73,3 +73,80 @@ aos-json set --str <定義>/llm.json#/reasoning_effort medium   # 改定義那�
 ### 測試（第 2 筆）
 
 同一份 `mine` 複本疊上第 2 筆：`py/tests` 754 兩邊一樣（第一次跑 `test_agent_spec_script.NoFsm.test_eca_templates` 兩支紅，是測試裡的 eca agent.py 例子還沒關那四支；改 `agent_spec_helpers.py` 後過），`apps/eca` 229（同樣 4 支 TtySocket 紅）、`apps/agent` 226、`apps/hook` 20、`templates/tests` 30（含 `test_start`：start-eca 的 ann 跟 eca-claude 逐字相同）、`defs` 28、`agent_def` 32、`self_hook` 6 都過。
+
+## 第 3 筆：壓縮前後的 hook 點（eca-claude）
+
+使用者：「compact的機制不管，但可以試試看提供相應的hook點」。壓縮是 Claude Code 自己的；這筆只把它給的 hook 時刻接成 aos 的點，名字跟 agent-fsm 規劃的（[compact-改進規劃 03](compact-改進規劃-1121/03-壓完補回走hook.md)）一樣，欄位照 CLI 給得出來的。
+
+### Claude Code 給什麼（[hooks 文件](https://code.claude.com/docs/en/hooks) 的 PreCompact、PostCompact、SessionStart 三節）
+
+- `PreCompact`：輸入 `trigger`（`manual`／`auto`）、`custom_instructions`（/compact 後面的字，沒有＝null）；退 2 或 `"decision": "block"`＝不壓；退 0 時 stdout 當摘要的指示。
+- `PostCompact`：輸入 `trigger`、`compact_summary`；「no decision control. They can't affect the compaction result」。
+- `SessionStart`（matcher `compact`）：stdout 進壓縮後的 context。
+- 沒有讓 hook 直接給摘要的口子。
+
+### 做成什麼樣
+
+| Claude Code 的 hook | aos 的點 | 欄位 | hook 能做什麼 |
+|---|---|---|---|
+| `PreCompact` | `before_compact` | `trigger`、`asked`、`instructions`（起始＝範本那段「要留什麼」）、`restore`（null） | 改 `instructions`、交 `restore`、退 10 攔下 |
+| `PostCompact` | `after_compact` | `trigger`、`summary` | 只告知 |
+| `SessionStart` compact | （不發） | | 印提醒、`handoff.md`、`restore`（印一次就刪） |
+
+- 宣告加在 `py/aos/apps/eca/hook_points.json`（provider `eca`，照現行格式；使用者今天定了新格式，換格式時一起換）。eca 三種身體都宣告了這兩個點，但只有 claude 身、`cli.json` 掛了 `compact_hook` 的才發，pi、codex 不發（`when` 寫明）。
+- `templates/eca-claude/compact_hook`（start-eca 的 ann 同一份）經 `$AOS_HOME/bin/aos-hook fire --agent $AOS_CLI_DEF --stack $AOS_STACK` 發；`cli.json` 多掛 `PostCompact`，三個 hook 的 `timeout` 10 → 60 秒。少環境變數、`aos-hook` 起不來或報錯＝一行 warning、照沒有 hook 的樣子做。
+- 手抄的清單跟著補：`self_hook` 的說明與 enum、知識庫 `aos/me/self_hook.json`、`aos/cli/eca.json`、`aos-agent hook --help`、`apps/agent/docs/06-hook.md` 的 eca 表、三份範本 `hooks.json` 的 description、`templates/docs/01`（新一節「壓縮前後的 hook 點」）、兩份 README、`apps/eca/README`。
+- `test_hook_points_match`：原本「兩種身體的點一模一樣」改成「eca 多這兩個、agent-fsm 少這兩個」；gdb 的「before 點都要能扣住」排除 `before_compact`（它在 Claude Code 的 hook 裡跑、有 60 秒上限，gdb 對它用暫停，不扣住）。`test_cli_settings` 允許範本多 `PostCompact`。新測試 `templates/tests/test_eca_compact_hook.py` 4 支。
+
+### 實跑（暫存，真的叫 Claude Code，haiku）
+
+`~/.aos/scratch/top-1121-ecaeffort/trees/t1`：定義＝改後的 eca-claude（`llm.json` 寫 `{"model": "haiku", "reasoning_effort": "low"}`），掛一支測試 handler：`before_compact` 在指示後面加「keep the word PINEAPPLE-7」、交 `restore`「RESTORE-MARK-42…」，有 `block` 檔就退 10。直接跑 `aos-eca-turn --on-empty idle`（沒起 daemon）。
+
+| 輪 | 送的 | 結果 |
+|---|---|---|
+| 1 | Reply with exactly: OK-1 | 答 OK-1；Claude Code 的對話檔記 `"effort":"low"`、`"perTurnEffort":"low"`（`--effort` 有送到） |
+| 2 | /compact keep the reply OK-1 | `before_compact`、`after_compact` 都發了（`asked`＝keep the reply OK-1、`summary` 是摘要全文）；摘要開頭就是 PINEAPPLE-7（改過的指示有效）；history 換成摘要 |
+| 3、4 | OK-2，再 /compact | 第一版把 `restore` 放在 `after_compact`，結果補回的字沒進對話：對話檔裡 `SessionStart` compact 03:11:15.057 先跑、`PostCompact` 那次的檔 15.111 才寫。改成 `before_compact` 交之後，第 4 輪 `SessionStart` 的輸出帶了 RESTORE-MARK-42、小格的檔印完刪掉 |
+| 5 | 不用工具，context 裡有沒有 RESTORE-MARK 的數字 | 答 42（補回的字腦看得到） |
+| 6 | /compact（`block` 在） | 答「Compaction blocked by PreCompact hook: … compact blocked by hook t_before_compact: not now, test block」；退 0、沒冷卻、沒 CliFailed，history 沒被換 |
+
+真模型這輪 5 次（1、2、3、4 的壓縮、5；第 6 輪被攔、沒叫模型），都是 haiku、`low`。沒實跑：畫面開著時在畫面裡壓、自動壓縮、`/compact` 以外的 `manual`。
+
+### 能做到多深、卡在哪
+
+- 使用者對 agent-fsm 的 hook 深度答「都開」（調、補、換）。eca 這邊：**調**＝改 `instructions`（做到）；**補**＝`restore`（做到，但只能在壓之前交，見上）；**攔**（做到）；**換**＝hook 直接給摘要，Claude Code 沒有這個口子，做不到（要做得自己攔下再用 `aos-agent history` 改，那就不是 Claude Code 的壓縮了，沒做）。
+- **pi**：有對應的外掛事件——`session_before_compact`（可 `cancel`、可直接給一份摘要 `compaction.summary`）、`session_compact`（帶摘要）、`session_compact_failed`（pi 套件 `docs/extensions.md`）。接法會是在 aos 每輪生成的那支一行外掛 `pi-aos-mcp.mjs`（與畫面的 `pi_aos_screen.mjs`）裡掛這兩個事件、用 `spawnSync` 叫 `aos-hook`。這次沒做：pi 的事件沒有「改指示」的口子（`customInstructions` 是讀的），能做的是攔與給摘要，欄位跟 claude 這邊不一樣；假 pi（`fake_pi`）不跑外掛，要測得叫真模型；而且 hook 點格式馬上要換。要做的話是下一刀。
+
+### 替使用者做的選擇（第 3 筆）
+
+9. **兩個點宣告在 eca 共用的 `hook_points.json`**，不另開一份只給 eca-claude 的：`self_hook` 的事件清單從 aos 自帶的提供者算，另開一份腦就掛不上去。代價：eca-pi 的定義也「宣告」了這兩個點但永遠不發（`when` 與 eca-pi 的 hooks.json 說明都寫了）。
+10. **`restore` 放在 `before_compact`**，`after_compact` 只告知：照實測的先後（上面第 3、4 輪）。跟 agent-fsm 規劃稿（`restore` 在 `after_compact`）不一樣，之後要共用時得對齊。
+11. **欄位名**：`instructions`、`restore`、`summary` 跟規劃稿同名；`trigger`、`asked` 是 eca 才有的（規劃稿的 `instructions` 是 /compact 後面的字，這裡那個叫 `asked`，因為使用者打的字 Claude Code 自己會用、aos 拿不掉，hook 能改的只有 compact_hook 加給它的那段）。`letters`、`mid_turn`、`foldable`、`clear`、`mode`、`by`、`replaced`、`cleared` 這些 Claude Code 給不出來，沒有。
+12. **三個 hook 的 timeout 10 → 60 秒**：要給 handler 跑的時間；Claude Code 等的就是這麼久。
+13. **攔下 `/compact` 那封信照一般回答收**：沒在 aos-eca-turn 加特別處理（沒改它的行為），回答是 Claude Code 自己那句。
+
+### 測試（第 3 筆與全套）
+
+`mine3`＝`git archive` 9aab22baf 疊上第 2、3 筆，各自 `install.py`、清掉 `AOS_*`：相關夾 `py/tests` 754、`apps/eca` 229（同樣 4 支 TtySocket 紅）、`apps/agent` 226、`apps/hook` 20、`apps/mcp` 17、`templates/tests` 30 → 34（新 `test_eca_compact_hook` 4 支）、`defs` 28、`agent_def` 32、`self_hook` 6 都過。
+
+**交件前全套一輪**（unittest 逐夾，基準 `base`＝87ad225a5 原樣，對 `mine3`）：全部 3,140 → 3,154 支（+14：第 1 筆 10、第 3 筆 4），沒有新的紅。兩邊一樣紅的：`apps/eca` 4 支（TtySocket）、`apps/feedback` 1 支，`templates/tests/image-move-check`、`templates/kernel/tests` 不是 unittest（0 支、退 5），都是原本就這樣、複本環境的關係。
+
+## 今天其他改動 eca 吃到了沒（查實；第 2、3 筆之外只查、沒動手）
+
+| 今天的改動 | eca | 說明 |
+|---|---|---|
+| 思考程度 `reasoning_effort` | 本線接上（第 1 筆） | claude `--effort`、pi `--thinking` |
+| `aos-hook fire` 與 loop 的四個點（after_start、after_stop、before_run、after_run） | 有 | 三份 eca 範本的 `loop.json` 四個都經 `aos-hook fire -q --agent`（`test_hook_points_match` 的 `test_templates_wire_*` 守著）；eca 的 before_run／after_run 沒有 `stage`／`next_stage` |
+| `aos-agent` 省略 `-t`／`-d` | 有（同一支 `aos-agent`） | 沒 eca 特有的差別。CLI 的 Bash 在工作區跑：stack 是 `<工作區>/.stack` 時 `./.stack` 認得；掛 daemon 的 eca 的 stack 在 daemon 的 `procs/` 底下，CLI 裡打 `aos-agent` 仍要 `-t` 或 `AOS_AGENT`（沒有程式會自動設它）。沒實跑 |
+| `aos-agent history -n K` | 有（通用） | 照 `interfaces.json` 的 `history` 找檔。腦用的 `self_history` 第 2 筆起預設關，要用先 `self_tools add` |
+| 工具說明瘦身 | 大半有 | 說明是共用的 `_tooldef.json`，eca 已吃到短說明；self 四支第 2 筆比照關掉。**eca 才掛的三包沒瘦**：aos-mcp 給 CLI 的 30 支 40,778 bytes 裡，`self_hook` 約 6.9 KB、`clock_register` 2.8 KB、`agent_def` 3.1 KB、`tools_def` 3.4 KB、jsonx 八支合計約 11.7 KB，約佔七成。claude 有自己的前綴快取，第二輪起便宜，但每段新對話、每次壓縮後照付。要不要瘦、要不要比照 agent-fsm 把 events／def／jsonx 改成選掛，是你的決定 |
+| compact 先清工具輸出（第 1 刀） | 不適用 | eca 的壓縮是 CLI 自己做的（Claude Code 文件說它自己也會先清舊的工具結果），aos 不碰；第 3 筆只加 hook 點 |
+| `session_key`（llm kernel 的快取鍵） | 不適用 | eca 的腦不經 llm kernel；`AOS_LLM_KERNEL` 只轉給 aos 工具（aos-mcp 底下要問腦的工具）用。快取是 CLI 自己的 |
+
+## 收尾
+
+- 三筆 commit：第 1 筆 `9aab22baf`（思考程度）、第 2 筆 `661801492`（工具包與 system.txt）、第 3 筆見 git log（壓縮 hook 點）。
+- 進度條 `llm-effort` 還開著（等使用者點頭更新 `~/aos-home`），沒劃掉；第 3 筆交件時在它的 `what`、`next`、`see` 補上 eca 這條線與 eca 定義夾要換的檔。
+- 暫存：`~/.aos/scratch/top-1121-ecaeffort/`（`base`、`mine`、`mine3` 三份複本、`trees/t1` 實跑那隻、`rel-*.txt`、`suite-*.txt` 測試結果）；沒起 daemon，實跑的 `aos-eca-turn` 與 claude 都是跑完就退，收尾 `pgrep` 沒有殘留。
+- 沒在 repo 跑 `install.py`、沒碰 `~/aos-home`、沒改 `~/.claude*`（Claude Code 照常把實跑的對話記在使用者帳號的 projects 夾）。
+- **要吃到**：repo 跑 `python3 install.py`（`cli_cfg.py`、`hook_points.json`、self_hook 說明在 `lib/`）；`~/aos-home` 裡的 eca 定義夾是範本的抄本，要另外換上新的 `interfaces.json`（`llm_keys`）、`tools.json`、`system.txt`、`cli.json`（PostCompact）、`compact_hook`。

@@ -26,7 +26,8 @@ def fired(points):
     return {n: p for n, p in points.items() if "not_fired_yet" not in p}
 
 
-AGENT = dict(fired(ECA), **fired(FSM))   # same eleven names on both bodies; fields of both for the doc checks
+AGENT = dict(fired(ECA), **fired(FSM))   # the eleven shared names plus eca's two compact points; fields of both for the doc checks
+ECA_ONLY = {"before_compact", "after_compact"}   # 11-21 top-1121-ecaeffort: eca-claude's compact_hook fires them; agent-fsm has none yet
 LOOP = hook_point.read([P["aos-loop"]])     # the four points aos-loop fires through loop.json
 FIELDS = {n: set(fired(FSM).get(n, {}).get("fields", {})) | set(fired(ECA).get(n, {}).get("fields", {})) for n in AGENT}
 
@@ -87,16 +88,18 @@ class Tables(unittest.TestCase):
     """What the programs use at run time today."""
 
     def test_agent_events_per_body(self):
-        for body, points in (("agent-fsm", FSM), ("eca", ECA)):
-            with self.subTest(body=body):
-                self.assertEqual(hook_point.engine_table(fired(points)), hooks.EVENTS)
+        """EVENTS = every shipped agent point; eca has them all, agent-fsm all but eca's two compact points."""
+        self.assertEqual(hook_point.engine_table(fired(ECA)), hooks.EVENTS)
+        self.assertEqual(set(hooks.EVENTS) - set(fired(FSM)), ECA_ONLY)
+        self.assertEqual(hook_point.engine_table(fired(FSM)), {n: e for n, e in hooks.EVENTS.items() if n not in ECA_ONLY})
 
     def test_definitions_declare_their_points(self):
         """Cut 3: every shipped definition with hooks lists its hook_points; what they fire = the nine agent events."""
         for tpl in ("agent-fsm", "agent-python", "start-api/agents/ann", "eca-claude", "eca-pi", "start-eca/agents/ann"):
             with self.subTest(tpl=tpl):
                 points = hook_point.for_definition(str(ROOT / "templates" / tpl))
-                self.assertEqual(hook_point.engine_table(fired(points)), hooks.EVENTS)
+                want = hooks.EVENTS if tpl.startswith(("eca-", "start-eca")) else {n: e for n, e in hooks.EVENTS.items() if n not in ECA_ONLY}
+                self.assertEqual(hook_point.engine_table(fired(points)), want)
                 self.assertEqual(hooks.table(str(ROOT / "templates" / tpl)), hook_point.engine_table(points))
 
     def test_kernel_events(self):
@@ -130,8 +133,9 @@ class Tables(unittest.TestCase):
 
     def test_gdb(self):
         trigger = PY / "aos" / "gdb" / "trigger.py"
-        # gdb's hold list covers the body points; the loop's before_run is a pause breakpoint until cut 6 reads the declarations
-        before = {n for n, p in AGENT.items() if p["phase"] == "before" and n not in LOOP}
+        # gdb's hold list covers the body points; the loop's before_run is a pause breakpoint until cut 6 reads the declarations;
+        # eca's before_compact runs inside Claude Code's PreCompact hook (60 s timeout), so gdb pauses on it instead of holding it
+        before = {n for n, p in AGENT.items() if p["phase"] == "before" and n not in LOOP and n not in ECA_ONLY}
         self.assertEqual(set(assigned(trigger, "HOLD_EVENTS")), before)
         for n in before:   # key_of: before_tool looks at id, the rest at letter
             self.assertEqual(AGENT[n].get("key"), "id" if n == "before_tool" else "letter", n)

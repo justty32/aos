@@ -1,5 +1,5 @@
 {
- "description": "Hook points fired by aos-eca-turn (the eca body); tool hooks are in ../mcp/hook_points.json, the loop points in ../hook/loop_points.json.",
+ "description": "Hook points fired by aos-eca-turn (the eca body), and before_compact / after_compact fired by the eca-claude template's compact_hook from Claude Code's own compaction hooks; tool hooks are in ../mcp/hook_points.json, the loop points in ../hook/loop_points.json.",
  "provider": "eca",
  "points": {
   "before_queue": {
@@ -49,6 +49,23 @@
               "last_cycle": "cycle of the last run, or null", "missed": "runs skipped", "config": "the entry's config, when it has one"},
    "entry_keys": ["clock", "every_cycles", "every_ms"],
    "fired_in": ["turn.py"]
+  },
+  "before_compact": {
+   "when": "claude kind only, from the definition's compact_hook, which the eca-claude template wires as Claude Code's own PreCompact hook (cli.json settings): Claude Code is about to compact the conversation, for a /compact or on its own; pi and codex do not fire it",
+   "phase": "before",
+   "fields": {"trigger": "manual (a /compact) or auto (Claude Code compacts on its own)",
+              "asked": "the words after /compact, or an empty string",
+              "instructions": "the summary instructions compact_hook gives Claude Code on top of asked (the template's list of what to keep); a hook may change them, an empty string gives none",
+              "restore": "null; a hook may set text that compact_hook adds to the compacted conversation (through Claude Code's SessionStart compact hook, after the handoff notes), for this compaction only"},
+   "change": {"instructions": "string", "restore": "string"},
+   "block": true,
+   "if_blocked": "compact_hook exits 2 and Claude Code does not compact; for a /compact the CLI says the hook's name and stdout, an automatic compaction is skipped (or the request that needed the room fails); the summary and history stay as they were"
+  },
+  "after_compact": {
+   "when": "claude kind only, from compact_hook as Claude Code's own PostCompact hook: the conversation was compacted; it only tells (nothing can be changed any more; text to add after the compaction is before_compact's restore, since Claude Code runs its SessionStart compact hook before PostCompact)",
+   "phase": "after",
+   "fields": {"trigger": "manual or auto, as for before_compact",
+              "summary": "the summary Claude Code wrote, or null"}
   }
  }
 }

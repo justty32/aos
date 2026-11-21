@@ -89,7 +89,22 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 | `tool_added` | 有（看這隻生效的 aos 登記檔，交出去之前比一次） | aos-eca-turn |
 | `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop` → `aos-hook fire --agent` |
 | `on_clock`（[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)） | 有（每輪最開頭判，冷卻中、退讓的那輪也判；到了才起 handler） | aos-eca-turn |
+| `before_compact`（可改摘要指示、可交壓完補回的字、可攔）／`after_compact`（只告知） | 只有 claude 身、`cli.json` 掛了範本的 `compact_hook` 時（見下「壓縮前後的 hook 點」） | `compact_hook`（Claude Code 自己的 PreCompact／PostCompact hook）→ `aos-hook fire --agent $AOS_CLI_DEF` |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos |
+
+**壓縮前後的 hook 點**（11-21 線 top-1121-ecaeffort；使用者「compact的機制不管，但可以試試看提供相應的hook點」）：壓縮是 Claude Code 自己做的（`/compact` 或它自己快滿時），aos 不改它怎麼壓；範本的 `compact_hook` 掛在 Claude Code 給的三個時刻，其中兩個接成 aos 的點（宣告在 [py/aos/apps/eca/hook_points.json](../../py/aos/apps/eca/hook_points.json)，照現行格式；hook 點宣告的新格式定了之後跟著換）：
+
+| Claude Code 的 hook | aos 的點 | 欄位 | hook 能做什麼 |
+|---|---|---|---|
+| `PreCompact` | `before_compact` | `trigger`（`manual`＝/compact、`auto`＝CLI 自己壓）、`asked`（/compact 後面的字）、`instructions`（compact_hook 給 CLI 的摘要指示，起始是範本那段「要留什麼」）、`restore`（null） | 改 `instructions`（空字串＝不給）；交 `restore`（一段字，壓完接進對話）；退 10＝攔下，compact_hook 退 2，Claude Code 不壓 |
+| `PostCompact` | `after_compact` | `trigger`、`summary`（Claude Code 寫好的摘要） | 只告知（Claude Code 的 PostCompact 沒有決定權） |
+| `SessionStart`（matcher `compact`） | （不發） | | compact_hook 印提醒、`handoff.md`、`restore`（印一次就刪） |
+
+- **補回的字為什麼在 `before_compact`**：11-21 實測 claude 2.1.330 的 `-p` `/compact`，`SessionStart`（compact）比 `PostCompact` 早跑，`PostCompact` 才交的字要等下一次壓縮才印得出來；所以 `restore` 在壓之前交、存在 `$AOS_STACK/claude/compact_restore.txt`，壓完由 `SessionStart` 印進壓縮後的對話（沒交或被攔＝刪掉上次留下的）。
+- **摘要內容 hook 寫不了**：Claude Code 不讓 hook 給摘要（agent-fsm 規劃裡「換」那層在這裡做不到）；能調的是指示、能補的是 `restore`、能攔。
+- **攔下 `/compact` 那封信**：實測 aos-eca-turn 照一般回答收（history 多 `/compact` 與一句「Compaction blocked by PreCompact hook: … compact blocked by hook 名: 那個 hook 的 stdout」），不算 `CliFailed`、不冷卻，history 沒被換成摘要。自動壓縮被攔：Claude Code 照它的規則跳過，或那次需要空間的請求失敗。
+- **出錯不擋 Claude**：`AOS_HOME`、`AOS_CLI_DEF`、`AOS_STACK` 少一個就不發；`aos-hook` 起不來或報錯＝stderr 一行 warning、照沒有 hook 的樣子做。`cli.json` 裡這三個 hook 的 `timeout` 是 60 秒（以前 10 秒），hook 的 handler 各自的 `timeout_ms` 要在這之內。
+- 畫面開著時在畫面裡壓、自動壓縮兩條路沒實測；pi、codex 不發這兩個點（pi 有自己的 `session_before_compact`／`session_compact` 外掛事件，這次沒接，見紀錄）。
 
 hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停的，信留在 `queue/cur/`、history 不動，修好照問；aos-mcp 裡停的＝那次工具呼叫回錯（isError）給 CLI，不整支死。
 

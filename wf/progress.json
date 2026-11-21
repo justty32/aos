@@ -486,10 +486,11 @@
       "title": "llm kernel 思考程度（reasoning_effort）的收尾",
       "status": "等使用者",
       "flow": "",
-      "what": "11-21 線 top-1121-effort 兩輪已交：信的 body 帶 reasoning_effort，kernel 照包的 reasoning_efforts 查；llm_http 的 api responses 把程度接成 configuration_update，換程度快取照中；隊 kernel 轉送也補了。（agent_spec_parts 的 LLM_KEYS 加 reasoning_effort 已由線 top-1121-hookfire 補上，agent-python、reviewer 範本的 interfaces.json 跟著多一鍵）",
-      "next": "~/aos-home 跟著改要使用者點頭：repo 跑 install.py、llm/kernel.json 加 reasoning_effort_levels 與四包的 api、reasoning_efforts（完整內容在紀錄與回報）、agent 定義夾換新的 brain.py／llm_settings.py／interfaces.json",
+      "what": "11-21 線 top-1121-effort 兩輪已交：信的 body 帶 reasoning_effort，kernel 照包的 reasoning_efforts 查；llm_http 的 api responses 把程度接成 configuration_update，換程度快取照中；隊 kernel 轉送也補了。（agent_spec_parts 的 LLM_KEYS 加 reasoning_effort 已由線 top-1121-hookfire 補上，agent-python、reviewer 範本的 interfaces.json 跟著多一鍵）。eca 也跟上（線 top-1121-ecaeffort）：llm.json 的 reasoning_effort 補成 claude --effort、pi --thinking；另比照縮預設工具包、加 system.txt、eca-claude 接上 before_compact／after_compact",
+      "next": "~/aos-home 跟著改要使用者點頭：repo 跑 install.py、llm/kernel.json 加 reasoning_effort_levels 與四包的 api、reasoning_efforts（完整內容在紀錄與回報）、agent 定義夾換新的 brain.py／llm_settings.py／interfaces.json；eca 定義夾換新的 interfaces.json、tools.json、system.txt、cli.json、compact_hook",
       "see": [
-        "[llm-effort-1121](../proto8/thinking/2026-11/21/llm-effort-1121.md)"
+        "[llm-effort-1121](../proto8/thinking/2026-11/21/llm-effort-1121.md)",
+        "[eca-reasoning-effort-1121](../proto8/thinking/2026-11/21/eca-reasoning-effort-1121.md)"
       ],
       "since": "2026-11-21"
     },
