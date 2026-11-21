@@ -12,32 +12,33 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-21 14:30（家機，使用者在場，session 進行中）——hook 整套換新已交並裝進 `~/aos-home`；兩條線在跑；今天的 commit 都沒 push
+## 2026-11-21 15:10（家機，使用者在場、要 compact）——hook 整套換新已交並裝進 `~/aos-home`；兩條線在跑（gdb、fsm-guard）；今天的 commit 都沒 push
 
-**使用者今天開場的指示（逐字）**：「事情盡量交給agent做，你就負責跟我交流。普通工作交給opus，簡單工作與雜活交給sonnet。agent做事前也要讀過wf/規矩，簡單工作與雜活除外。agent可以再派agent，模型隨意。用繁體中文跟我說話。」/goal「我要去睡回籠覺。一件一件持續做。litellm proxy我開了，你隨意」還掛著（他醒著、在場）。
+**使用者今天開場的指示（逐字）**：「事情盡量交給agent做，你就負責跟我交流。普通工作交給opus，簡單工作與雜活交給sonnet。agent做事前也要讀過wf/規矩，簡單工作與雜活除外。agent可以再派agent，模型隨意。用繁體中文跟我說話。」早上的 /goal 他下午已 `/goal clear`，**現在沒有 goal**。他說想玩 aos：頂層已告訴他樹可以起、起法與可試的東西，他答「那個我晚上再說。你這邊我想先compact」。
 
 **授權（11-21 當場；只限這個 session）**：
 - push：開場問了沒答 → **不推**。本地領先 origin 約 80 筆（`git log origin/main..HEAD`）。
 - `~/aos-home`：「可以開始改，改好後去幫我把~/aos-home更新一下，把更新過程寫成html放到桌面」「好，install.py你跑就行」。已更新三次（`e8d87d7cd`、`dff53b667`、`62129fe49`；現在裝的是 `97d4abc16`）。備份 `.bak-1121`／`b`／`c`／`d` 都留著。**再裝之前先跟他說一聲。**
-- 刪檔：同意過的三批都做完了，不延伸（`hook_fire`；範本 ann 的 9 個檔；`~/aos-home/agents/ann` 同名 9 個）。**等他點頭**：`proto8/py/aos/hook_handle.py`、`py/aos/hook_flags.py`（hook 換新後沒人用）。
+- 刪檔：同意過的四批都做完了，不延伸（`hook_fire`；範本 ann 的 9 個檔；`~/aos-home/agents/ann` 同名 9 個；`py/aos/hook_handle.py`＋`hook_flags.py`，他「2.刪掉。」，`ae6838e60`）。
+- **他會擋下看不懂的長指令**：下午頂層代 compact4 線交件，把交件、查結果、grep 串成一個指令，被他擋兩次；解釋後他「噢噢，沒事了，跑吧」。→ 指令一次做一件事、說明寫清楚。子 agent 的 `commit-request submit` 也可能被權限擋（compact4 那次），任務書寫明「被擋不要繞，備好檔案清單與訊息檔回報頂層代交」。
 - LiteLLM 代理是他起的（localhost:4000），不停不改。
 - 「活樹跟repo共用這塊先不管」：他的 `AOS_HOME` 就是 repo 的 `proto8/`，ann 動態連結 `templates/agent-fsm/` 的格程式——**派線時寫明：往工作樹寫檔一次寫完整；動到 `py/` 又動格程式的改動交了之後，活樹要先 `install.py` 才能起，要馬上告訴他別起樹。**
 
 **還在跑的線（Claude 子 agent，背景；顯示 completed 可能只是在等自己的測試；等別線放 claim 的線可能要叫一聲才醒）**：
 | 線名 | agent id | 做什麼 |
 |---|---|---|
-| `top-1121-compact4` | `a9d485d9bc10d9bdd` | agent-fsm 的 `/compact` 加 `before_compact`／`after_compact`（他對 hook 深度答「都開」），用新格式與極簡引擎；回報最前面會寫活樹要不要重裝 |
-| `top-1121-hookdoc` | `ac520839c57d96c5d` | hook 總文件＋對齊散落的說明，只動文件與知識庫 |
+| `top-1121-gdbdecl` | `a27f95e0ab50c4107` | aos-gdb 啟動時可帶選項參考 hook 宣告（他：「4.要做，我覺得可以在gdb啓動時給他選項，跟他說可以參考這份宣告，然後再去做一些事情。」）；改 `py/`，交了要再裝才吃到——**裝之前先跟他說，他在玩的時候不要自己去裝** |
+| `top-1121-fsmguard` | `ae392f437a9afdc0e` | 修 `wf/public/tools/fsm-guard/` 跟上 hook 新格式（他「3.派。」），順便列 `wf/` 底下其他還是舊寫法的地方 |
 
 **hook 的定案（他 11-21 定的；逐字在 `proto8/thinking/2026-11/21/`）**：`hook-points-格式-使用者審-1121.md`（8 則）、`aos-hook-簡化-1121/07-使用者已答.md`、`kernel-宣告進interfaces-1121/09-使用者已答.md`。摘要：宣告檔＝物件、鍵是 id、硬性只要 input schema、其餘鍵自由；`hooks.json`＝有哪些鉤子、`hookeds.json`＝有哪些被勾著；`interfaces.json` 最外層 `"hooks"`／`"hookeds"`（檔名或檔名陣列、支援指示詞、不收直接寫內容）；宣告只是參考、沒宣告照樣跑；引擎簡化到第四層（`aos-hook fire` 與 Python 庫只叫 handler；逾時留著；退出碼用旗標 `--stop-on-nonzero` 選；沒有旗標檔、編譯時決定接不接 `before_run`／`after_run`）；「發事件的程式自己決定」；kernel 做甲案（`kernel_hooks.json`、`kernel_hookeds.json`、最外層 `"kernel": {}`），模型清單 `llm_kernel: {"models": "llm_models.json"}`「另外做」、對外另一份 json「之後再來串」。施工 `97d4abc16`（247 檔；紀錄 `hook-新格式施工-1121/`，34 條替他做的選擇在 02，**只念了最要緊的五條**，他沒要求念完）。
 
-**今天已交的（紀錄都在 `proto8/thinking/2026-11/21/`，日索引有列）**：早上那批（`session_key`、hook 第 5 刀後半、`reasoning_effort`、工具說明瘦身、AOS_DAEMON 調查、shell 比喻）；`aos-agent` 省略 `-t`／`-d`；`hook_fire` 換掉並刪；`self_history` 減號值與 `history -n K`；kernel 入口 `aos.py.kernel.defs`；起手範本 ann 動態連結＋刪 9 檔；compact 規劃與第 1 刀（他：「compact這塊，反正各agent有需要的，可以自訂自己的compact程式和流程」）；eca 思考程度／工具包／壓縮兩點（`9aab22baf`、`661801492`、`1c4e39074`）；小事八題（`小事八題-使用者已答-1121.md`：補 +x 測試、daemon on_start 也停、`agent_def new` 不寫 lineage、`defs.loop` 任意鍵；後續「every_ms感覺可以拿掉，反正有interval_ms？lineage都拿掉吧。」→ `ecedfa41c`、`e781ef00e`）；遙控器類別改名 `Attached`（`ca4ac9242`）；hook 整套換新＋kernel 甲案（`97d4abc16`）；桌面頁四份：`aos-AOS_DAEMON調查-1121.html`、`aos-shell指令的比喻-1121.html`、`aos-hook點宣告-1121.html`（內容是定案前的四題，已過時）、`aos-kernel的宣告-1121.html`、`aos-home更新過程-1121.html`。
+**今天已交的（紀錄都在 `proto8/thinking/2026-11/21/`，日索引有列）**：早上那批（`session_key`、hook 第 5 刀後半、`reasoning_effort`、工具說明瘦身、AOS_DAEMON 調查、shell 比喻）；`aos-agent` 省略 `-t`／`-d`；`hook_fire` 換掉並刪；`self_history` 減號值與 `history -n K`；kernel 入口 `aos.py.kernel.defs`；起手範本 ann 動態連結＋刪 9 檔；compact 規劃與第 1 刀（他：「compact這塊，反正各agent有需要的，可以自訂自己的compact程式和流程」）；eca 思考程度／工具包／壓縮兩點（`9aab22baf`、`661801492`、`1c4e39074`）；小事八題（`小事八題-使用者已答-1121.md`：補 +x 測試、daemon on_start 也停、`agent_def new` 不寫 lineage、`defs.loop` 任意鍵；後續「every_ms感覺可以拿掉，反正有interval_ms？lineage都拿掉吧。」→ `ecedfa41c`、`e781ef00e`）；遙控器類別改名 `Attached`（`ca4ac9242`）；hook 整套換新＋kernel 甲案（`97d4abc16`）；hook 總文件（`693512c85`，在 `proto8/py/aos/apps/hook/docs/`）；compact 第 4 刀 agent-fsm 的 `before_compact`／`after_compact`（`14c2de1de`，他「1.允許commit。」；9 條替他做的選擇已念；規矩在範本 `compact.py`、handler 壞掉只 warning；因為 ann 動態連結，已在他的樹上生效、不用重裝）；桌面頁四份：`aos-AOS_DAEMON調查-1121.html`、`aos-shell指令的比喻-1121.html`、`aos-hook點宣告-1121.html`（內容是定案前的四題，已過時）、`aos-kernel的宣告-1121.html`、`aos-home更新過程-1121.html`。
 
 **等他的（不催）**：
-- 刪 `hook_handle.py`、`hook_flags.py`。
 - gpt 包預設走 `/v1/responses` 要不要改成「設了程度才走」；`history set` 要不要收 `-n`（線評估三個坑，沒做）；N-63 加註；stack 要不要記定義夾與工作區；eca 才有的三包（events、def、jsonx，佔工具清單七成）要不要瘦；條文要補的字（各刀紀錄末節都有，他說條文會整體大修）。
 - AOS_DAEMON 調查、shell 比喻兩份：他「我慢慢看，就先放着」。kernel 編譯：「我之後再來玩」。
-- 沒排的：gdb 從宣告讀（原第 6 刀；新做法下「宣告只是參考」，要不要做沒問）、compact 第 3 刀 `history clear-tools`、pi 的壓縮 hook 點、llm 模型清單、對外另一份 json、「問特定的東西、直接回」、改名大工程、教學重寫。
+- 他問過「假如我想要替換compact，有不透過hook的方法嗎？」頂層答了兩種（把 `compact.py` 與用到它的格抄進自己夾並改 `fsm.json`；不走 `/compact`、直接用 `aos-agent history summarize/rm`），他沒再接話。
+- 沒排的：compact 第 3 刀 `history clear-tools`、pi 的壓縮 hook 點、llm 模型清單、對外另一份 json、「問特定的東西、直接回」、改名大工程、教學重寫。
 
 **記給公司機的**：小事第 8 題他選「都清掉」——下次在公司機刪 `~/code/rv`（刪前照規矩再確認）；GitHub 上的 `rv` 他自己刪。公司 WSL 要重裝才吃到今天的東西（hook 換新後舊定義夾與 stack 要照 `hook-新格式施工-1121/03` 搬）。
 
