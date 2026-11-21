@@ -36,7 +36,7 @@ aos-daemon-ctl -d .stack ls
 你會看到（做過 03～05 的話，表上還有 `llm`、`ann`）：
 
 ```
-{"model": "sonnet"}
+{"model": "opus"}
 ~/code/aos-tut/.stack/procs/eca_main
 _clock	running	3584360	-	-	-
 _sweeper	running	3584361	-	-	-
@@ -45,9 +45,9 @@ eca_main	running	3586691	-	~/code/aos-tut	-
 # root daemon (no supervisor)
 ```
 
-- 這夾直接就是定義（json 手寫好的），不用編譯。`llm.json` 的 `sonnet`＝叫 `claude --model sonnet`。
+- 這夾直接就是定義（json 手寫好的），不用編譯。`llm.json` 的 `opus`＝叫 `claude --model opus`。
 - `ctl add` 印的是 eca_main 的 stack（跑起來的樣子）在哪；`-w .`＝工作區是整個教學夾，`claude` 就在這裡開。
-- **範本給它的 Write、Edit、Bash 不問就准**：它改得到工作區裡的任何東西，也碰得到 `.stack/`。要它去別的專案做事，把 `-w .` 換成那個專案夾（例 `-w ~/code/myproj`）。
+- **範本給它的 Write、Edit、Bash 不問就准**：它改得到工作區裡的任何東西，也碰得到 `.stack/`；Read、Glob、Grep 也不問就准，工作區外的檔一樣讀得到。要它去別的專案做事，把 `-w .` 換成那個專案夾（例 `-w ~/code/myproj`）。
 
 ## 說一句話
 
@@ -83,7 +83,7 @@ aos-agent -d .stack ctl state --target eca_main
 who       eca_main (def ~/code/aos-tut/agents/eca_main, ws ~/code/aos-tut, stack ~/code/aos-tut/.stack/procs/eca_main)
 state     running (daemon phase running); 0 queued; last answer "pong"
 tools     30 tools (agent_def, clock_register, index_view, json_add, json_del, json_get, …)
-llm       model=sonnet
+llm       model=opus
 system    484 bytes from definition; first line "You run as an aos agent: aos hands you the letters in your queue, and your conve…"
 hooks     6 hooks (brain_notify on brain_failed, context_wrap on on_clock, mail_notify on on_clock, screen_linger_start on after_start, screen_linger_stop on after_stop, timer on on_clock)
 history   2 messages, 255 bytes (assistant 1, user 1)
@@ -107,7 +107,7 @@ aos-agent -d .stack --target eca_main open
 ## 換模型、停了再跑
 
 ```sh
-aos-agent -d .stack llm --target eca_main set model=opus
+aos-agent -d .stack llm --target eca_main set model=sonnet
 aos-agent -d .stack llm --target eca_main reset
 aos-agent -d .stack ctl stop eca_main
 aos-agent -d .stack ctl start eca_main
@@ -115,14 +115,14 @@ aos-agent -d .stack ctl start eca_main
 
 ```
 aos-agent: warning: created ~/code/aos-tut/.stack/procs/eca_main/llm.json (only the changed keys, the rest follows the definition; llm rm KEY or llm reset undoes)
-model=opus
-aos-agent: warning: deleted ~/code/aos-tut/.stack/procs/eca_main/llm.json (the changed keys); back to the definition's ~/code/aos-tut/agents/eca_main/llm.json
 model=sonnet
+aos-agent: warning: deleted ~/code/aos-tut/.stack/procs/eca_main/llm.json (the changed keys); back to the definition's ~/code/aos-tut/agents/eca_main/llm.json
+model=opus
 stopped, stack kept (~/code/aos-tut/.stack/procs/eca_main); say still queues letters meanwhile, aos-agent ctl start --target eca_main to carry on
 started (same stack); 0 queued letter(s) will be answered next
 ```
 
-- `llm set` 只改這一隻跑起來的那份，下一輪起生效；`reset` 回定義的 `sonnet`。要整份定義換，改 `agents/eca_main/llm.json`。
+- `llm set` 只改這一隻跑起來的那份，下一輪起生效；`reset` 回定義的 `opus`。要整份定義換，改 `agents/eca_main/llm.json`。
 - 停、睡、拿掉的四種方式跟第 05 章那張表一樣；全部關掉照第 08 章，`aos-daemon-ctl -d .stack shutdown` 一句連 eca_main 一起睡下，再開板子它自己醒、對話接著。
 
 更多（換 codex、擋它的 Bash、接外部 MCP、子 agent）在 [eca-claude 範本說明](../../templates/eca-claude/README.md)，或直接問 eca_main。

@@ -27,10 +27,10 @@ eca-claude/
   _entry      ["aos-loop", "loop.json"]（JSON 入口）
   loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 0},
                "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json", "on_start": …, "on_stop": …}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；三扇窗落在 $AOS_STACK；on_start／on_stop＝aos-hook fire -q --stop-on-nonzero --def $AOS_CD 發 after_start／after_stop，before_run／after_run 預設不接）
-  cli.json    怎麼叫 CLI（kind、flags、print_flags、tools_sub、timeout_ms〔0＝不限時〕）：--tools Read,Write,Edit,Glob,Grep,Bash,Agent,Skill、--permission-mode dontAsk、--allowedTools Write,Edit,Bash、--strict-mcp-config；
+  cli.json    怎麼叫 CLI（kind、flags、print_flags、tools_sub、timeout_ms〔0＝不限時〕）：--tools Read,Write,Edit,Glob,Grep,Bash,Agent,Skill、--permission-mode dontAsk、--allowedTools Read,Glob,Grep,Write,Edit,Bash、--strict-mcp-config；
               tools_sub＝子 agent 那台的登記檔（見下「子 agent 與 skill」）
               （claude 內建的寫檔、改檔、指令都開，aos 不給檔案與 shell 工具；--model 不寫在這，見 llm.json；不加全繞過權限的旗標）
-  llm.json    腦設定：{"model": "sonnet"}（cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；認 model 與 reasoning_effort（思考程度，補成 --effort，見下「思考程度」）；claude CLI 沒有 temperature 等取樣旗標，那些鍵這邊沒有對應
+  llm.json    腦設定：{"model": "opus"}（cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；認 model 與 reasoning_effort（思考程度，補成 --effort，見下「思考程度」）；claude CLI 沒有 temperature 等取樣旗標，那些鍵這邊沒有對應
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
   tools.json  aos-tools 的登記檔：`"$override"` 一串 [py/packs](../../py/packs/README.md) 八包（gadgets、events、self、def、mailbox、json〔json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set〕、jsonx〔jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del、jsonx_multi_get、jsonx_multi_set〕、index〔index_view〕），self 包比照 agent-fsm 關掉 self_llm、self_system、self_history、self_ctl（11-21 線 top-1121-ecaeffort，照使用者對 agent-fsm 選的「self 只留兩支」，[tool-desc-瘦身 04](../../thinking/2026-11/21/tool-desc-瘦身-1121/04-使用者已答.md)；要用 `self_tools add` 加回），共 30 支；不掛通用四包 look、change、delete（含 trash）、shell（11-11 晚使用者「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」）與 subagent、goal、todo（原話與代定見範本 README）；do_task 只給 agent-fsm，寫 `"do_task": null`；
