@@ -508,6 +508,30 @@
         "[shell-指令的比喻-1121](../proto8/thinking/2026-11/21/shell-指令的比喻-1121/README.md)"
       ],
       "since": "2026-11-21"
+    },
+    "kb-md-leftovers": {
+      "title": "知識庫換 md 後沒跟上的條文",
+      "status": "open",
+      "flow": "",
+      "what": "待改（使用者 11-21 夜「先記下來，之後改」）：N-62、N-69、C-42 續、wf/workflows/tidy/README.md 第 4 條、wf/public/整理與拆檔.md、proto8/docs/ 裡 2 處舊知識庫路徑；都是拿不準沒動的，改之前先對照規劃夾 18、19",
+      "next": "",
+      "see": [
+        "[規劃夾 18](../proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/18-第五段-aos五頁與repo規矩.md)",
+        "[規劃夾 19](../proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/19-repo規矩六處-改前改後.md)",
+        "[使用者原話 15](../proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/15-使用者原話-續四.md)"
+      ],
+      "since": "2026-11-21"
+    },
+    "kb-zh-md-redo": {
+      "title": "中文映照版 knowledge-zh-md 內文重做",
+      "status": "open",
+      "flow": "",
+      "what": "待做（使用者 11-21 夜「記下來，之後改」）：proto8/knowledge-zh-md/ 目前只重寫了 4 份 _index.md，內文仍是舊路徑、舊 #/鍵 標籤、README「正本是旁邊的 json」，要整份照新的 md 知識庫重做",
+      "next": "",
+      "see": [
+        "[使用者原話 15](../proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/15-使用者原話-續四.md)"
+      ],
+      "since": "2026-11-21"
     }
   }
 }

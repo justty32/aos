@@ -36,11 +36,9 @@
 
 **API agent 的 `/clear`**（`ef774a4a3`，線 `top-1121-apiclear`，紀錄 `api-agent-clear-1121.md`）：agent-fsm 收到剛好是 `/clear` 的信不叫模型、history 搬進 `history_removed.jsonl`、只留這一問一答。改的是 `templates/agent-fsm/`，不用重裝。API 這邊 `/compact` 11-20 起就有；`/status`、`/usage`、`/exit` 沒有。只用假模型驗過，沒在活樹跑過。
 
-**等他說的（已念給他、沒答，不催）**：
-- 4 份 `_index.json` 要不要也換成 `_index.md`（頂層讀法：留 json，照他「index json 做骨架」；`index`／`kind`／`source` 欄放不進清單）。
-- repo 自己 `wf/` 的 json 資料檔要不要轉（`progress.json`、code-map、wf-table 三類換了會壞，要連工具改）。
-- 拿不準沒動的條文：N-62、N-69、C-42 續、`tidy/README` 第 4 條、`wf/public/整理與拆檔.md`、`proto8/docs/` 2 處舊路徑。
-- 中文映照版要不要整份重做。
+**等他說的（已念給他、沒答，不催；前四題 11-21 夜已答，見下）**：
+- 已答（11-21 夜，原話在規劃夾 `15` 第 26 句）：4 份 `_index.json` 留 json、做骨架；description 太長時可在 `_index.md` 補充、用 `$ref` 指過去（已寫進知識庫 `docs/03`）。repo 自己 `wf/` 的 json 資料檔先不轉。
+- 已答、已記待辦、之後改：拿不準沒動的條文（N-62、N-69、C-42 續、`tidy/README` 第 4 條、`wf/public/整理與拆檔.md`、`proto8/docs/` 2 處舊路徑）；中文映照版 `knowledge-zh-md` 內文整份重做。兩條都在 `wf/progress.json`。
 - API agent 要不要 `/status`、`/usage`、`/exit`。
 - 新 `index_check` 他說過「之後要看看」。
 - 換形狀比較醜的頁：`wf/source/block-3.md`、`block-4.md`。
