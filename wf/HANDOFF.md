@@ -14,6 +14,12 @@
 
 ## 2026-11-21 15:20（家機，使用者 15:00 出門、約 18:00 回來，晚上要自己玩 aos）——活樹已裝到 `2060ee9d5`；四條線在跑（知識庫、md 映照、教學、前端）；今天的 commit 都沒 push
 
+**16:30 補：下面表裡的四條線全部交了，現在沒有線在跑。**本地領先 origin 95 筆。他回來要聽的（各線「替使用者做的選擇」頂層已在對話裡寫過一輪，他出門沒看到，回來先問他要不要重念）：
+- `top-1121-kbsync` → `fad6bef74`：知識庫 31 頁對齊程式、`cli/hook_points.json` 改名 `cli/offer_hooks.json`；程式旁三處連結已跟著改（`80a465de3`）。三處 `--help` 文字與程式對不上沒改（要動 `py/`、要重裝）。
+- `top-1121-tutorial` → `a0318f73f`：新章 `proto8/docs/tutorial/05b-起eca_main.md`，最短路 01、02→05b，真的 `claude` 實測回話。他開始前要確認 `claude` 登入過；`open` 第一次要自己選信任資料夾（線按了 No、沒實測畫面）。**副作用：線開 tmux 測畫面，tmux-continuum 自動復原了 9 個舊 session（aos-rc、arcagi、cx-zm2-a/b/c、guigu、longyin、talk-decide、world-talk），沒人動，等他決定。**
+- `top-1121-frontend` → `5d9f87043`：前端今晚可用，起法 `cd ~/aos-home` 後 `AOS_DAEMON=~/aos-home/.stack aos-frontend serve`，新版頁 http://127.0.0.1:8768/ 。代修一處（頁上寄信給沒信箱的 agent 會失敗，5 行，不是今天弄壞的）。「要決定」欄會是空的（活樹沒有 `ws/`、找不到 aos-user）。大修盤點 14 項在 `frontend-備妥-1121.md`。
+- `top-1121-mdjson` → 調查 `103b137e8`、映照版 `189053ca2`：知識庫 156 份 json 各對一份中文 md，**放在 `proto8/thinking/2026-11/21/md與json尋址-1121/知識庫映照-zh/`**（沒放知識庫旁邊：範本系統文字叫 agent 讀整個 `knowledge/`、code map 也會收，會被撈到）。等他審；拿不準的譯詞 80 條在 `~/.aos/scratch/top-1121-mdjson/mirror/doubts/`；映照版只給人看、不能回寫 json。調查留四題想請他先說（`md與json尋址-1121/` 末檔）。
+
 **使用者今天開場的指示（逐字）**：「事情盡量交給agent做，你就負責跟我交流。普通工作交給opus，簡單工作與雜活交給sonnet。agent做事前也要讀過wf/規矩，簡單工作與雜活除外。agent可以再派agent，模型隨意。用繁體中文跟我說話。」**現在沒有 goal**（他下午 `/goal clear`）。15:00 他說：「好了，我要出門走走。現在時間下午三點，大概六點回來。」「幫我把該準備的準備好」「你說OK，我就出門」——頂層答 OK。**他回來前要備好：教學走到第一個 eca_main、知識庫更新、知識庫中文映照版 md、前端能用。**
 
 **授權（11-21 當場；只限這個 session）**：
