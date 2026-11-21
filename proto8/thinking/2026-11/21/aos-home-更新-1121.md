@@ -1,4 +1,4 @@
-家機 `~/aos-home` 更新五次：早上到 repo `88ea321f4`（install.py、kernel.json 補思考程度、ann 照 start-api 範本換、保留 model=sol、sol 驗四題，線 top-1121-homeup）；上午再到 `5a99e1320`（ann 改動態連結 agent-fsm 的格程式、刪夾裡 9 個舊抄本、sol 驗九次含 /compact 先清工具輸出，線 top-1121-homeup2）；中午到 `97d4abc16`（hook 換新格式：ann 的 hooks.json→hookeds.json、kernel 加 interfaces.json／kernel_hooks.json／kernel_hookeds.json、stack 的 hooks/→hookeds/，4 個 hook 一個不少，sol 驗五次，線 top-1121-homeup3）；下午到 `2060ee9d5`（只跑 install.py、樹裡不改檔，sol 答一句、`aos-gdb --def-hooks` 在活樹列得出 13 點，線 top-1121-home4）；傍晚到 `83e6fa5e3`（只改三支指令的 `--help` 說明、只跑 install.py，沒起樹，線 top-1121-helpfix）；前四次都關回原狀，第五次沒起樹。
+家機 `~/aos-home` 更新六次：早上到 repo `88ea321f4`（install.py、kernel.json 補思考程度、ann 照 start-api 範本換、保留 model=sol、sol 驗四題，線 top-1121-homeup）；上午再到 `5a99e1320`（ann 改動態連結 agent-fsm 的格程式、刪夾裡 9 個舊抄本、sol 驗九次含 /compact 先清工具輸出，線 top-1121-homeup2）；中午到 `97d4abc16`（hook 換新格式：ann 的 hooks.json→hookeds.json、kernel 加 interfaces.json／kernel_hooks.json／kernel_hookeds.json、stack 的 hooks/→hookeds/，4 個 hook 一個不少，sol 驗五次，線 top-1121-homeup3）；下午到 `2060ee9d5`（只跑 install.py、樹裡不改檔，sol 答一句、`aos-gdb --def-hooks` 在活樹列得出 13 點，線 top-1121-home4）；傍晚到 `83e6fa5e3`（只改三支指令的 `--help` 說明、只跑 install.py，沒起樹，線 top-1121-helpfix）；第六次到 `6c769595d`（md 工具進活樹，沒起樹，線 top-1121-install6）；前四次都關回原狀，第五、六次沒起樹。
 
 ← [2026-11-21](README.md)｜前情：[aos-hook-fire換-1121](aos-hook-fire換-1121.md)、[llm-effort-1121](llm-effort-1121.md)、[tool-desc-瘦身-1121](tool-desc-瘦身-1121/)、[aos-agent-預設目標-1121](aos-agent-預設目標-1121.md)｜給使用者看的過程頁：`~/Desktop/aos-home更新過程-1121.html`
 
@@ -224,3 +224,15 @@
 4. 桌面過程頁最上面加「第五次更新」一小段。
 
 替使用者做的選擇：沒起樹、沒叫模型（install 輸出沒異狀）；樹裡沒改檔、沒有新備份。
+
+## 第六次更新（到 `6c769595d`，md 工具進活樹，線 top-1121-install6）
+
+為什麼裝：線 top-1121-kbmd 第二段交了「工具會讀 md」（aos-json 的 get／ls／where／peek／search 吃 x.md、index_check 整支重寫等），要 install.py 才進活樹。授權：使用者當面「可以開跑」，他當時沒在跑 aos。這次只准 install＋唯讀驗證，不改樹裡的檔、不起樹、不叫模型。
+
+1. 開工核對：`pgrep -af` 沒有任何從 `~/aos-home` 起的行程，也沒有 aos-daemon／aos-exec／aos-frontend；`git status --short proto8/py proto8/cpp proto8/templates` 乾淨；HEAD `6c769595d`。
+2. proto8 跑 `python3 install.py`（先清掉繼承的 `AOS_*`）：成功跑完，30 支指令（9 C++、21 Python）、`py/` 598 檔與 12 個 C++ 函式庫進 `lib/`、15 個標頭；有重新編譯（make -j16）；清掉 0 個舊檔。（退出碼因我用管線 tail 沒直接取到，以最後的 `installed 30 commands` 行為準。）
+3. 驗證（`cd ~/aos-home && source env.sh` 後）：
+   - `aos-json get $AOS_HOME/knowledge/aos/me.json#/stack`：照樣讀到純 json 知識庫，開頭為 `"# What is in your stack\n\nYour stack is ...`，退 0。
+   - 暫存 md（`# A`＋一行字）`aos-json get <檔>#/A`：讀到 `"# A\n\nhello md\n"`，新工具會讀 md。
+
+沒起樹、沒叫模型、樹裡沒改檔、沒有新備份。
