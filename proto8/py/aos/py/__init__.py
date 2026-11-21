@@ -5,6 +5,7 @@
 
     from aos.py import agent, daemon_ctl, std     # agent＝aos-agent 的薄殼與遙控器、daemon_ctl＝aos-daemon-ctl 的薄殼、std＝隨 aos 發的庫
     from aos.py.agent import defs                 # 寫定義（＝aos.agent_spec，檔不搬）
+    from aos.py.kernel import defs                # 寫 kernel 的定義（＝aos.kernel_spec；11-20 使用者待裁第 9 題「from aos.py.kernel import defs」）
     from aos.py import fn                         # 函數當工具／hook：@fn.tool、@fn.hook("事件")、fn.main(函數)（11-20 使用者選「新名字 fn」）
     from aos.py import breakpoint as bp           # 斷點（bp.attach("ann") 回的跟 a.bp 同一種；不要用原名 breakpoint，會蓋掉內建的）
     from aos.py import Failed, Timeout, Text, sh  # 唯一的例外、等太久、REPL 裡印得像 shell 的字串、順手打 shell
@@ -19,7 +20,7 @@ echo = False
 
 # 轉匯出：名字 → (模組, 屬性或 None)；要搬位置改這幾行
 REEXPORT = {"std": ("aos.agent_spec_lib", "std")}
-SUBMODULES = ("agent", "daemon_ctl", "breakpoint", "fn")
+SUBMODULES = ("agent", "kernel", "daemon_ctl", "breakpoint", "fn")
 
 
 def __getattr__(name):

@@ -1,4 +1,4 @@
-"""fn_spec - compile @fn.tool / @fn.hook functions of an agent.py into programs fn/<name>.py of the definition folder ("pulled out").
+"""fn_spec - compile @fn.tool / @fn.hook functions of an agent.py (or a kernel.py) into programs fn/<name>.py of the definition folder ("pulled out").
 
 Cut 3 of the compile library (line aos-pylib-k3-1120; design thinking/2026-11/20/aos-pylib-plan-1120/03, 04, 07c). The user (11-20):
 "抽出來" (pull them out), "兩種都收，明寫的贏", "一起，同一套寫法" (tools and hooks the same way). Used only while compiling.
@@ -22,7 +22,7 @@ from aos.spec_base import SpecBad, Program
 KEY = "$fn"                     # in an entry: which function it came from (taken out before anything is written)
 FOLDER = "fn"
 TOOL_RE = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")      # = agent_spec_parts.TOOL_RE (aos-tools' NAME_RE)
-LIBRARY = ("aos.py.agent.defs", "aos.agent_spec", "aos.spec_unit", "aos.spec_base")
+LIBRARY = ("aos.py.agent.defs", "aos.agent_spec", "aos.py.kernel.defs", "aos.kernel_spec", "aos.spec_unit", "aos.spec_base")
 ALLOWED = ("fn", "__file__", "__name__")
 _FUNCS = {}                     # KEY value -> the function (alive while agent.py compiles; defs.load runs the base in this process)
 _SEEN = {}                      # KEY value -> what its source told (a function is read once)

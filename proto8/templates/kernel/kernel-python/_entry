@@ -1,0 +1,7 @@
+{
+  "description": "Mount this kernel as one row of the current daemon: aos-loop with loop.json.",
+  "argv": [
+    "aos-loop",
+    "loop.json"
+  ]
+}

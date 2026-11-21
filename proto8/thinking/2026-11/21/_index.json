@@ -23,6 +23,9 @@
  "aos-hook-k5b-1121.md": {
   "description": "「提供 hook 點」的介面：施工第 5 刀的後半（範本接上 before_run／after_run、編譯寫四鍵、旗標維護、procs-kernel 接 loop 層的點）"
  },
+ "aos-pylib-kernel入口-1121.md": {
+  "description": "依據（使用者原話）"
+ },
  "compact-改進規劃-1121": {
   "description": "使用者原話（11-20 晚，逐字，出處見前情）"
  },

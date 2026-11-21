@@ -10,6 +10,7 @@
 | `procs-kernel/` | 同一支框架站，改成掛在一台普通 daemon 底下的一個 loop proc |
 | `llm-kernel/` | 問腦的那台：agent 寄請求信、它挑能力包（`smart-high`、`stupid-fast`…）問模型、寄回信；自己一台 daemon，主線是掛成板子上的一列（見下面「初始 kernel」） |
 | [`llm-team/`](llm-team/) | 隊 kernel：能力包寫下一層 stack 與代號，經 llm_forward 轉交；自己一台 daemon |
+| [`kernel-python/`](kernel-python/README.md) | 用一支 `kernel.py` 寫的 kernel 定義（`from aos.py.kernel import defs`；使用者 11-20 待裁第 9 題、11-21「編譯的kernel入口那塊可以派」，線 top-1121-kdefs）：`defs.Kernel("說明", knobs={…}, hooks=[…], program="kernel"／"kernel_llm", body=defs.loop()／defs.daemon())`，`python3 kernel.py --compile` 編譯出上面幾種的樣子（`_entry`、`loop.json` 或 `daemon.json`、`kernel.json`、有 hook 時 `loop_hooks.json`、llm kernel 多 `interfaces.json`）；`@fn.hook` 的函數抽成 `fn/<名>.py`，跟 `agent.py` 同一套 |
 
 ## 初始 kernel：買了板子之後灌什麼
 

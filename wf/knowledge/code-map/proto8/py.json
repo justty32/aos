@@ -211,7 +211,7 @@
    "flags.py": "aos_flags：命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 …",
    "fn_mark.py": "the marks behind @fn.tool / @fn.hook / fn.param, and the tool description they compile to (name, _tooldef, _metainfo).",
    "fn_run.py": "fn.main(function): the compile flags and running a marked function as a tool or as a hook handler; fn.fail and fn.block.",
-   "fn_spec.py": "compile @fn.tool / @fn.hook functions of an agent.py into programs fn/<name>.py of the definition folder (\"pulled out\").",
+   "fn_spec.py": "compile @fn.tool / @fn.hook functions of an agent.py (or a kernel.py) into programs fn/<name>.py of the definition folder (\"pulled out\").",
    "gdb": {
     "__init__.py": "aos.gdb - aos-gdb 的 Python 庫（在 python REPL 裡用）：接上一隻已在跑的 agent（a.xxx＝aos-agent xxx 的薄殼），斷點全在 a.bp 底下（增刪改查、停、續、為什麼停）。",
     "handles.py": "aos.gdb.handles - a.bp 交回去給人拿著的兩種物件：Breakpoint（a.bp.add.<種類>(...) 與 a.bp.set 回的斷點，屬性每次讀都重新查）與 Pending（resume／step／pause 給 wait=False 時回的，is_done() 問好…",
@@ -227,6 +227,7 @@
    "index.py": "aos_index - index_view：透過 index（視角）看節點，一行一項「鍵 TAB description」；index 放哪只寫在 spot() 一處。",
    "json.py": "aos_json - 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／len／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set、jsonx_mu…",
    "json_multi.py": "aos_json_multi - json_multi_get／set、jsonx_multi_get／set：一次多格，逐格照 json_get／json_set（jsonx 那兩支照 jsonx_get／jsonx_set）做、照順序、一格一行「路徑 TAB 結果」，不回滾。",
+   "kernel_spec.py": "給人寫 kernel 定義的輔助（寫 kernel.py 的人叫它 defs：from aos.py.kernel import defs）：defs.Kernel(...) 宣告一個 kernel，.compile(夾) 編出一份定義夾、.dry_run() 只算；kernel.py 最後一行是…",
    "mcp_client.py": "MCP client 的 stdio／HTTP 傳輸：握手、列工具、呼叫工具與關閉 session。",
    "mcp_freeze.py": "把一支外部 MCP 工具凍結成包檔 mcp_tools 的一格（登記名、$ref 展開、說明前綴與截斷、_metainfo）與兩份 mcp_tools 的差異；純函式（external-mcp 07 步 4）",
    "mcp_server_file.py": "外部 MCP 的 server 檔：讀一份、驗形狀、讀金鑰檔；給 cli_session 翻成 codex 的 -c 與只給 CLI 行程的環境（11-12 external-mcp 02／03 步 1）",
@@ -242,7 +243,10 @@
     },
     "breakpoint.py": "aos.py.breakpoint - 斷點（延伸）：bp.attach(\"ann\") 回的跟 a.bp 同一種（aos.gdb.Breakpoints，檔不搬）。",
     "daemon_ctl.py": "aos.py.daemon_ctl - aos-daemon-ctl 的薄殼：daemon_ctl.X(ARG, flag=v)＝aos-daemon-ctl X --flag v ARG；daemon_ctl.attach(D) 回綁好 --daemon D 的遙控器。",
-    "fn.py": "Python functions as tools and hooks: @fn.tool, @fn.hook(\"event\"), fn.param, fn.fail, fn.block, fn.main(function)."
+    "fn.py": "Python functions as tools and hooks: @fn.tool, @fn.hook(\"event\"), fn.param, fn.fail, fn.block, fn.main(function).",
+    "kernel": {
+     "__init__.py": "aos.py.kernel - 「kernel」這個東西的 Python 那一面：寫定義的 defs（轉匯出 aos.kernel_spec，檔不搬）。"
+    }
    },
    "refpath.py": "aos_refpath - `$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。",
    "shell_observed.py": "Reserve a writable shell ledger before execution and record the completed command.",
@@ -497,6 +501,7 @@
    "test_index_view.py": "index_view（py/aos/index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。",
    "test_install.py": "proto8/install.py in a throwaway home with a fake make: fills bin/ (C++ + the Python entries of py/entries.json), lib/ (py/ copy + C++ libraries) and…",
    "test_json_tools.py": "json 工具一族（py/aos/json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。",
+   "test_kernel_spec.py": "Tests of the kernel compile entry (from aos.py.kernel import defs; aos/kernel_spec): what it writes, the templates it matches, hooks, errors, the com…",
    "test_kill_group.py": "Test shared child-group shutdown, escalation, reaping, and signal-handler delegation.",
    "test_mail_notify.py": "mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json 也沒有非空 history）只把等著的記成已知；跑過的 stack（有非空 hist…",
    "test_mcp_client.py": "Verify MCP stdio and HTTP sessions, authentication, wire failures, deadlines, and cleanup.",

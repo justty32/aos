@@ -80,6 +80,12 @@
     "daemon.json": "設定（鍵：exec、interval_ms、procs）",
     "kernel.json": "設定（鍵：allowed、max_running、queue、keep_ordered）"
    },
+   "kernel-python": {
+    "_entry": "Mount this kernel as one row of the current daemon: aos-loop with loop.json.",
+    "kernel.json": "Pass every request on to the daemon, managing nothing yet.",
+    "kernel.py": "一支 kernel.py 宣告一個 kernel（說明、kernel.json 的鍵、hook、身體），python3 kernel.py --compile 編譯成這夾的定義檔（說明看 README.md）。",
+    "loop.json": "Run the kernel once every 300 ms over kernel.json. The four aos-loop hook points (after_start, after_stop, before_run = before each round, after_run …"
+   },
    "llm-kernel": {
     ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
     "_entry": "入口：`aos-daemon --enable-logs daemon.json`",

@@ -171,6 +171,9 @@
  "test_json_tools.py": {
   "description": "json 工具一族（py/aos/json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。"
  },
+ "test_kernel_spec.py": {
+  "description": "Tests of the kernel compile entry (from aos.py.kernel import defs; aos/kernel_spec): what it writes, the templates it matches, hooks, errors, the com…"
+ },
  "test_kill_group.py": {
   "description": "Test shared child-group shutdown, escalation, reaping, and signal-handler delegation."
  },

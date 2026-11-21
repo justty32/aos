@@ -65,7 +65,7 @@
   "description": "fn.main(function): the compile flags and running a marked function as a tool or as a hook handler; fn.fail and fn.block."
  },
  "fn_spec.py": {
-  "description": "compile @fn.tool / @fn.hook functions of an agent.py into programs fn/<name>.py of the definition folder (\"pulled out\")."
+  "description": "compile @fn.tool / @fn.hook functions of an agent.py (or a kernel.py) into programs fn/<name>.py of the definition folder (\"pulled out\")."
  },
  "gdb": {
   "description": "aos-gdb 的 Python 庫（aos.gdb）：對已在跑的 agent 下條件觸發器（一個 hook：工具要跑之前扣住，或事件後暫停）或起觀察者（另一支 proc 輪詢、成立就暫停目標）、列出／拿掉、看為什麼停、檢閱 stack、續"
@@ -93,6 +93,9 @@
  },
  "json_multi.py": {
   "description": "aos_json_multi - json_multi_get／set、jsonx_multi_get／set：一次多格，逐格照 json_get／json_set（jsonx 那兩支照 jsonx_get／jsonx_set）做、照順序、一格一行「路徑 TAB 結果」，不回滾。"
+ },
+ "kernel_spec.py": {
+  "description": "給人寫 kernel 定義的輔助（寫 kernel.py 的人叫它 defs：from aos.py.kernel import defs）：defs.Kernel(...) 宣告一個 kernel，.compile(夾) 編出一份定義夾、.dry_run() 只算；kernel.py 最後一行是…"
  },
  "mcp_client.py": {
   "description": "MCP client 的 stdio／HTTP 傳輸：握手、列工具、呼叫工具與關閉 session。"
