@@ -23,7 +23,6 @@ from aos.spec_base import SpecBad, DefBad
 from aos.agent_spec_parts import WHAT, LLM_KEYS, OWN_FILES, SKELETON, RUNTIME_FILES
 
 FIELDS = ("description", "system", "tools", "llm", "fsm", "hooks", "meta", "interfaces", "files", "loop")
-HOOK_FIRE = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}   # loop.json 的 on_start／on_stop（照 agent-fsm 範本）
 FLAG_IF = {"before_run": {"$env": "AOS_STACK", "$path": "/hook_before_run.flag"},   # loop.json 的 on_before_run_if／on_after_run_if（檔名同 aos.hook_flags.FLAGS）
            "after_run": {"$env": "AOS_STACK", "$path": "/hook_after_run.flag"}}
 RENAME_LAST = {"loop.json": 1, "body.json": 2, "interfaces.json": 3, "_entry": 4, "_metainfo.json": 5}   # 改名時被指的檔先換、索引檔最後（其他＝0）
@@ -56,11 +55,15 @@ class Fsm(dict, Unit):
         return _plain({name: _fsm_json(self)})
 
 
+def fire(event, fields=()):
+    """loop.json 裡發一個 hook 點的單子：aos-hook fire -q --agent $AOS_CD [欄位旗標…] EVENT（照 agent-fsm 範本；
+    on_start／on_stop 也走這裡，線 top-1121-hookfire）。"""
+    return {"argv": ["aos-hook", "fire", "-q", "--agent", {"$env": "AOS_CD"}] + list(fields) + [event]}
+
+
 def run_points(fsm_file):
     """有 hooks 的 fsm agent 的 loop.json 多的四鍵：身體（一格）前後經 aos-hook fire --agent 發 before_run／after_run，旗標檔在才跑
     （hook 第 5 刀後半，線 top-1121-hook5；寫法照設計 aos-hook-plan-1120/06：stage 從 stack 的 stage.txt 讀，第一圈還沒有那個檔時用 fsm 的起始格）。"""
-    def fire(event, fields):
-        return {"argv": ["aos-hook", "fire", "-q", "--agent", {"$env": "AOS_CD"}] + fields + [event]}
     return {"on_before_run": fire("before_run", ["--field-file", {"$env": "AOS_STACK", "$path": "/stage.txt", "$prefix": "stage="},
                                                  "--field-default", {"$ref": fsm_file + "#/start", "$prefix": "stage="}]),
             "on_before_run_if": dict(FLAG_IF["before_run"]),
@@ -82,8 +85,8 @@ class _Loop:
                 "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}
         if self.hooks:
             loop["description"] += WHAT["loop_hooks"]
-            loop["on_start"] = {"argv": [HOOK_FIRE, "after_start", {"$env": "AOS_CD"}]}
-            loop["on_stop"] = {"argv": [HOOK_FIRE, "after_stop", {"$env": "AOS_CD"}]}
+            loop["on_start"] = fire("after_start")
+            loop["on_stop"] = fire("after_stop")
             loop.update(run_points(self.fsm_file))
         return loop
 

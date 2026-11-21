@@ -1,4 +1,4 @@
-"""Test the 11-11 hook events: on_clock (hook_clock.clock_tick, through H.clock_tick() in the cells), after_start / after_stop (py/tools/agent/hook_fire)."""
+"""Test the 11-11 hook events: on_clock (hook_clock.clock_tick, through H.clock_tick() in the cells), after_start / after_stop (aos-hook fire --agent, as the templates' loop.json on_start / on_stop)."""
 import json
 import os
 from pathlib import Path
@@ -11,8 +11,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_hooks import CELLS, PROTO, Hooks, hooks  # noqa: E402
 from aos.agentlib import hook_clock  # noqa: E402  （on_clock 的看時鐘 11-20 從 hooks.py 搬到這裡）
 
-FIRE = PROTO / "py" / "tools" / "agent" / "hook_fire" / "_entry"
-CAUSE_KEY, CAUSE_ENV = "cause", "AOS_LOOP_CAUSE"   # 11-14 B7：after_stop 的欄位名與環境變數名（同 hook_fire 的模組常數）
+HOOK = PROTO / "bin" / "aos-hook"   # 裝好的指令（install.py 之後才有）
+CAUSE_KEY, CAUSE_ENV = "cause", "AOS_LOOP_CAUSE"   # 11-14 B7：after_stop 的欄位名與環境變數名（宣告在 py/aos/apps/hook/loop_points.json）
+
+
+def fire(event, defn, env):
+    """範本 loop.json 的 on_start／on_stop 那一行：aos-hook fire -q --agent DEF EVENT（stdin 接 /dev/null，同 daemon 底下）。"""
+    return subprocess.run([str(HOOK), "fire", "-q", "--agent", str(defn), event], env=env, stdin=subprocess.DEVNULL,
+                          capture_output=True, text=True, timeout=20)
 
 
 class ClockHook(Hooks):
@@ -89,13 +95,13 @@ class ClockHook(Hooks):
         self.assertEqual((b["cycle"], b["last_cycle"], b["missed"]), (165, 110, 4))
         self.assertEqual(b["stack"], str(self.stack))
 
-    def test_restart_fires_again(self):   # 每次睡醒、重起：hook_fire after_start 清掉狀態檔＝下一次檢查又是第一次
+    def test_restart_fires_again(self):   # 每次睡醒、重起：aos-hook fire --agent … after_start 清掉狀態檔＝下一次檢查又是第一次
         self.declare({"t": self.due()})
         env = {"AOS_CLOCK": str(self.clock)}
         self.tick(**env)
         self.set_cycle(103)
         self.assertEqual(self.tick(**env), [])
-        r = subprocess.run([str(FIRE), "after_start", str(self.defn)], env=self.env, capture_output=True, text=True, timeout=20)
+        r = fire("after_start", self.defn, self.env)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse((self.stack / "hooks" / "t" / "on_clock.json").exists())
         self.assertEqual(self.tick(**env), ["t"])
@@ -193,29 +199,44 @@ class ClockHook(Hooks):
         self.assertIn("HookFailed", r.stderr)
         self.run_cell("idle", code=10)                           # 記過了：不每拍重跑
 
-    # ---- after_start／after_stop（hook_fire）
-    def test_hook_fire(self):
+    # ---- after_start／after_stop（aos-hook fire --agent）
+    def test_fire_start_stop(self):
         self.declare({"s": {"event": "after_start", "handler": self.hook("s")},
                       "e": {"event": "after_stop", "handler": self.hook("e")}})
-        run = lambda *a, **env: subprocess.run([str(FIRE), *a], env=dict(self.env, **env), capture_output=True,
-                                               text=True, timeout=20)
-        self.assertEqual(run("after_start", str(self.defn)).returncode, 0)
-        self.assertEqual(run("after_stop", str(self.defn), AOS_LOOP_CODE="143", AOS_LOOP_SIGNAL="15").returncode, 0)
-        self.assertEqual(run("after_stop", str(self.defn), AOS_LOOP_CODE="0", AOS_LOOP_SIGNAL="").returncode, 0)
+        run = lambda event, **env: fire(event, self.defn, dict(self.env, **env))
+        self.assertEqual(run("after_start").returncode, 0)
+        self.assertEqual(run("after_stop", AOS_LOOP_CODE="143", AOS_LOOP_SIGNAL="15").returncode, 0)
+        r = run("after_stop", AOS_LOOP_CODE="0", AOS_LOOP_SIGNAL="")
+        self.assertEqual((r.returncode, r.stdout), (0, ""))                  # -q：stdout 什麼都沒有
         a, b, c = self.events()
         self.assertEqual(a["event"], "after_start")
         self.assertNotIn("code", a)
         self.assertEqual((b["event"], b["code"], b["signal"]), ("after_stop", 143, 15))
         self.assertEqual((c["code"], c["signal"]), (0, None))
-        r = run("before_queue", str(self.defn))
+        r = run("no_such_point")
         self.assertEqual(r.returncode, 1)
-        self.assertIn("hook_fire: error: ArgumentsBad", r.stderr)
+        self.assertIn("aos-hook: error: EventUnknown", r.stderr)
+        r = run("after_stop", AOS_LOOP_CODE="x")                             # 宣告說 int：不是整數＝錯（不是當 null）
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("aos-hook: error: ArgumentsBad", r.stderr)
+        r = run("after_start", AOS_STACK="")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("aos-hook: error: StackMissing", r.stderr)
         self.declare({"e": {"event": "after_stop", "handler": self.hook("bad", "sys.exit(2)")}})
-        r = run("after_stop", str(self.defn))
+        r = run("after_stop")
         self.assertEqual(r.returncode, 1)
-        self.assertIn("hook_fire: error: HookFailed", r.stderr)
+        self.assertIn("aos-hook: error: HookFailed", r.stderr)
 
-    def test_hook_fire_cause(self):   # 11-14 B7：after_stop 多 cause（$AOS_LOOP_CAUSE 去頭尾空白；空的、沒設＝null；值照抄）
+    def test_fire_flags_on_start(self):   # 定義那份一開始就掛 before_run：after_start 一起來就把旗標建好；拿掉、再起來＝刪
+        self.declare({"b": {"event": "before_run", "handler": self.hook("b")}})
+        self.assertEqual(fire("after_start", self.defn, self.env).returncode, 0)
+        self.assertTrue((self.stack / "hook_before_run.flag").exists())
+        self.assertFalse((self.stack / "hook_after_run.flag").exists())
+        self.declare({})
+        self.assertEqual(fire("after_start", self.defn, self.env).returncode, 0)
+        self.assertFalse((self.stack / "hook_before_run.flag").exists())
+
+    def test_fire_cause(self):   # 11-14 B7：after_stop 多 cause（$AOS_LOOP_CAUSE 去頭尾空白；空的、沒設＝null；值照抄）
         self.declare({"e": {"event": "after_stop", "handler": self.hook("e")}})
         env = {k: v for k, v in self.env.items() if k != CAUSE_ENV}
         cases = [("sleep", "sleep"), (" sleep\n", "sleep"), ("future_x", "future_x"), ("", None), ("  \t\n", None), (None, None)]
@@ -223,12 +244,11 @@ class ClockHook(Hooks):
             e = dict(env, AOS_LOOP_CODE="143", AOS_LOOP_SIGNAL="15")
             if value is not None:
                 e[CAUSE_ENV] = value
-            r = subprocess.run([str(FIRE), "after_stop", str(self.defn)], env=e, capture_output=True, text=True, timeout=20)
+            r = fire("after_stop", self.defn, e)
             self.assertEqual((r.returncode, r.stderr), (0, ""))
         got = [ev[CAUSE_KEY] for ev in self.events()]
         self.assertEqual(got, [want for _, want in cases])
-        r = subprocess.run([str(FIRE), "after_start", str(self.defn)], env=dict(env, **{CAUSE_ENV: "sleep"}),
-                           capture_output=True, text=True, timeout=20)
+        r = fire("after_start", self.defn, dict(env, **{CAUSE_ENV: "sleep"}))
         self.assertEqual(r.returncode, 0)
         self.assertEqual(len(self.events()), len(cases))   # after_start 沒有 hook：不多事件
 

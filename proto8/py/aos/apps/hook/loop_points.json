@@ -1,5 +1,5 @@
 {
- "description": "Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop; the agent templates through py/tools/agent/hook_fire), and before_run / after_run (on_before_run / on_after_run through aos-hook fire, each only while its _if flag file exists: STACK/hook_before_run.flag, hook_after_run.flag, kept by aos-agent hook and aos-hook).",
+ "description": "Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop), and before_run / after_run (on_before_run / on_after_run, each only while its _if flag file exists: STACK/hook_before_run.flag, hook_after_run.flag, kept by aos-agent hook and aos-hook); the templates wire all four through aos-hook fire.",
  "provider": "aos-loop",
  "points": {
   "after_start": {

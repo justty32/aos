@@ -2,7 +2,7 @@
 
 圖紙：proto8/thinking/2026-11/11/clock-hook（使用者 11-11「hook就可以添加一個類型……去看指定的clock proc……每隔十個cycle就幹嘛，
 或是透過cycle換算，若超過十秒就幹嘛」；判斷在行程內做，到了才起 handler）。11-20 hook 介面第 2 刀後半從 hooks.py 搬出來（只因檔案大小）；
-格的鍵（CLOCK_KEYS）與驗法（check_clock）留在 hooks.py。呼叫的人：agent_hooks 的遙控器（clock_tick）、hook_fire 與 aos-hook --agent 的
+格的鍵（CLOCK_KEYS）與驗法（check_clock）留在 hooks.py。呼叫的人：agent_hooks 的遙控器（clock_tick）、aos-hook --agent 的
 after_start（clock_restart）。純標準庫，不印東西、不 sys.exit。
 
 對外：
@@ -91,7 +91,7 @@ def clock_tick(def_folder, stack, warn=None):
     到了＝cycle − 上次 ≥ 條件格數（every_cycles；every_ms＝ceil(every_ms ÷ AOS_CLOCK_INTERVAL)）；跑了就把上次記成這次的 cycle（不補跑：
     錯過的只寫進 missed）。第一次（沒有狀態檔、時鐘換了、cycle 倒退〔根重起、換台〕）＝立刻跑一次並記基準，事件 first: true、
     last_cycle: null、missed: 0（11-11 使用者選「起來就先觸發一次」：「一起來立刻跑一次，之後照間隔。每次睡醒、重起也都會先跑一次。」）；
-    每次 loop 起來（hook_fire after_start）先 clock_restart 清掉狀態檔，所以睡醒、重起、auto_restart 後的第一次檢查也算第一次。
+    每次 loop 起來（aos-hook fire --agent … after_start）先 clock_restart 清掉狀態檔，所以睡醒、重起、auto_restart 後的第一次檢查也算第一次。
     找不到時鐘＝不跑、warning 只在原因變了時說一次（記在狀態檔）。回跑了的 hook 名。hook 停下＝HookFailed（同 fire）。
     寫不了狀態檔＝warning、這次不跑（免得每拍都跑）。"""
     entries = hooks.load(def_folder, stack)
@@ -141,7 +141,7 @@ def clock_tick(def_folder, stack, warn=None):
 
 
 def clock_restart(stack):
-    """loop 起來的那一刻（hook_fire after_start）：刪掉各 hook 小格的 on_clock.json，下一次 clock_tick 就當第一次、立刻跑
+    """loop 起來的那一刻（aos-hook fire --agent … after_start）：刪掉各 hook 小格的 on_clock.json，下一次 clock_tick 就當第一次、立刻跑
     （使用者 11-11「每次睡醒、重起也都會先跑一次」）。刪不掉＝OSError 往上丟；沒有小格＝什麼都不做。"""
     cells = os.path.join(os.path.abspath(stack), hooks.CELLS)
     try:

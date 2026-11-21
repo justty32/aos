@@ -53,9 +53,6 @@
  "guard": {
   "description": "guard: before_tool guard for file, shell, mail and control tools"
  },
- "hook_fire": {
-  "description": "hook_fire（不是給腦的工具）：範本 loop.json 的 on_start／on_stop 叫它，發 after_start／after_stop 事件給 agent 的 hook"
- },
  "hook_noop": {
   "description": "hook_noop（不是給腦的工具）：什麼都不做的 hook handler，讀掉事件 JSON 退 0，範本 hooks.json 預設掛點"
  },

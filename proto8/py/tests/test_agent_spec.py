@@ -159,9 +159,9 @@ class Declaration(WithHome):
         self.assertEqual(files["interfaces.json"]["aos-agent"]["hooks"], "hooks.json")
         self.assertEqual(files["interfaces.json"]["aos-agent"]["hook_points"],
                          [{"provider": "aos-loop"}, {"provider": "agent-fsm"}])   # hook cut 3: written with hooks
-        fire = {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire/_entry"}
-        self.assertEqual(files["loop.json"]["on_start"], {"argv": [fire, "after_start", {"$env": "AOS_CD"}]})
-        self.assertEqual(files["loop.json"]["on_stop"], {"argv": [fire, "after_stop", {"$env": "AOS_CD"}]})
+        fire = ["aos-hook", "fire", "-q", "--agent", {"$env": "AOS_CD"}]   # line top-1121-hookfire: start / stop through aos-hook too
+        self.assertEqual(files["loop.json"]["on_start"], {"argv": fire + ["after_start"]})
+        self.assertEqual(files["loop.json"]["on_stop"], {"argv": fire + ["after_stop"]})
         before = files["loop.json"]["on_before_run"]["argv"]   # hook cut 5, second half: the loop points through aos-hook
         self.assertEqual(before[:5] + before[-1:], ["aos-hook", "fire", "-q", "--agent", {"$env": "AOS_CD"}, "before_run"])
         self.assertIn({"$ref": "fsm.json#/start", "$prefix": "stage="}, before)
@@ -177,6 +177,14 @@ class Declaration(WithHome):
         loop = json.loads((TEMPLATES / "agent-fsm" / "loop.json").read_text())
         self.assertEqual(plain(files["loop.json"]), plain(loop))
         self.assertEqual(files["hooks.json"]["hooks"], {})
+
+    def test_llm_keys_take_reasoning_effort(self):
+        """reasoning_effort (11-21, the brain's thinking level; the agent-fsm cells read it from llm.json) is one of the llm_keys
+        the compiler writes, so llm={"reasoning_effort": "high"} compiles and goes into llm.json as given."""
+        files = agent(llm={"model": "sol", "reasoning_effort": "high"}).dry_run()
+        self.assertEqual(files["interfaces.json"]["aos-agent"]["llm_keys"][:2], ["model", "reasoning_effort"])
+        self.assertEqual(files["llm.json"]["reasoning_effort"], "high")
+        self.assertRaises(defs.SpecBad, agent(llm={"effort": "high"}).dry_run)   # the old name is gone
 
     def test_no_hooks_no_hooks_key(self):
         files = agent().dry_run()
@@ -232,7 +240,7 @@ class Skeleton(unittest.TestCase):
         made from it takes breakpoints (aos-gdb) and aos-agent hook without changing anything; still no hook group of a template."""
         self.assertEqual(json.loads((SKEL / "hooks.json").read_text())["hooks"], {})
         self.assertEqual(json.loads((SKEL / "interfaces.json").read_text())["aos-agent"]["hooks"], "hooks.json")
-        self.assertIn("hook_fire", (SKEL / "loop.json").read_text())
+        self.assertEqual(json.loads((SKEL / "loop.json").read_text())["on_start"]["argv"][:2], ["aos-hook", "fire"])
 
     def test_built_on_the_skeleton(self):
         """defs.load of the skeleton: its hooks are an empty group; a derived agent.py that gives no hooks gets no hooks.json, one that gives
@@ -242,7 +250,7 @@ class Skeleton(unittest.TestCase):
             base = Path(tmp) / "base"
             base.mkdir()
             shutil.copy(SKEL / "agent.py", base)
-            mine = {"event": "after_start", "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_fire"}}
+            mine = {"event": "after_start", "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_noop"}}
             args = "base.description, system=base.system, tools=[base.tools], llm=base.llm, fsm=base.fsm"
             tails = {"none": "defs.main(defs.Agent(%s))\n" % args,
                      "same": "defs.main(defs.Agent(%s, hooks=base.hooks))\n" % args,

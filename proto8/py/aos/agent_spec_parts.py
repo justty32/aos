@@ -10,7 +10,8 @@ from aos import fn_spec
 from aos.declared_files import declared_files
 from aos.spec_base import SpecBad, DefBad  # noqa: F401（兩個例外在 spec_base，跟 tool_spec 共用；parts.SpecBad 照舊叫得到）
 
-LLM_KEYS = ["model", "temperature", "top_p", "max_tokens", "seed", "presence_penalty", "frequency_penalty", "stop"]
+LLM_KEYS = ["model", "reasoning_effort", "temperature", "top_p", "max_tokens", "seed", "presence_penalty", "frequency_penalty",
+            "stop"]   # 同 templates/agent-fsm/llm_settings.KEYS（reasoning_effort：11-21 使用者「effort...改叫reasoning_effort吧」）
 PACK_RE = re.compile(r"[a-z0-9][a-z0-9_-]*\Z")
 TOOL_RE = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")                        # aos-tools 的 NAME_RE
 ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")                  # aos-tools 的 ENV_KEY_RE
@@ -23,7 +24,7 @@ RESERVED = set(SKELETON) | set(RUNTIME_FILES) | set(OWN_FILES.values()) | {"_met
 WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl add).",
         "body.json": "Run this agent's loop: aos-loop with loop.json.",
         "loop.json": "Run the state machine in %s every tick and expose public control, state and state flux files.",
-        "loop_hooks": " on_start / on_stop fire the after_start / after_stop hooks (lib/tools/agent/hook_fire); on_before_run / on_after_run fire before_run / after_run around each state (aos-hook), only while the flag file is in the stack (hook_before_run.flag, hook_after_run.flag).",
+        "loop_hooks": " on_start / on_stop fire the after_start / after_stop hooks and on_before_run / on_after_run fire before_run / after_run around each state, all through aos-hook; the last two only while their flag file is in the stack (hook_before_run.flag, hook_after_run.flag), which after_start sets from the hooks lists.",
         "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
         "tools.json": "Tools this agent can call.",
         "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",

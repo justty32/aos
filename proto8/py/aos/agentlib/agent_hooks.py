@@ -3,7 +3,7 @@
 圖紙：proto8/thinking/2026-11/20/aos-hook-plan-1120/04「agent 一家」（11-20 使用者「宣告式＋小函式都做」）；第 2 刀。
 點讀這隻定義夾 interfaces.json 的 hook_points（第 3 刀；沒寫＝沒有人能掛）、清單經 hooks.load 讀；跑的那段是 aos.hook_point 的遙控器（再交引擎 hook_run）。
 錯一律交給 open 時給的 fail(代號, 一句英文)：fail 自己丟的例外原樣往外走；fail 竟然回來＝丟 hook_point.FailReturned。
-發事件的都叫這裡：格程式（templates/agent-fsm 與抄本）、aos-eca-turn、aos-mcp、hook_fire（第 2 刀後半）；aos-hook --agent 用 source。
+發事件的都叫這裡：格程式（templates/agent-fsm 與抄本）、aos-eca-turn、aos-mcp；aos-hook --agent 用 source（loop.json 的起停與每格前後都經它）。
 從 hooks.py 拆出來只為檔案大小（F10）。
 
 對外：

@@ -1,7 +1,7 @@
 """hooks - agent 的 hook 共用模組：事件表、讀 hooks 清單（定義那份疊 stack 那份、驗形狀，含 on_clock 格的鍵）、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 py/aos/hook_run.py。
 
 圖紙：proto8/thinking/2026-11/10/self-family/hook/01-圖紙.md（使用者 11-10 晚「self_hook……事件發生時，執行指定aos函數」）。
-發事件的程式（agent-fsm 的四格、aos-eca-turn、aos-mcp、hook_fire）經 agent_hooks.open 的遙控器叫這裡；aos-agent hook、編譯（agent_spec_hooks）
+發事件的程式（agent-fsm 的四格、aos-eca-turn、aos-mcp）經 agent_hooks.open 的遙控器叫這裡；aos-agent hook、編譯（agent_spec_hooks）
 直接用讀清單、驗格那幾個。on_clock 的看時鐘在 hook_clock.py（11-20 從這裡搬出，只因檔案大小）。純標準庫，lib 不 import py；
 不印東西、不 sys.exit：錯丟 HooksBad（清單壞）／HookFailed（on_error stop 的 hook 自己失敗），由呼叫方說自己那一行。
 引擎是 py/aos/hook_run.py（11-13 kernel-framework 批 1b；通用 kernel 框架也用它）：驗格的共通鍵、補預設值、比 condition、寫 event.json、
@@ -34,7 +34,7 @@ on_clock 專用的鍵與檢查、content 的回話要求、tool_added 的名單�
                     發事件的程式都改叫它了（第 2 刀後半）；第 3 刀起遙控器的點讀這隻的 hook_points。fire、has 這兩個模組函式
                     還留著（hook_clock 與幾支測試在用），表也照 table(def_folder)。
 
-11-11（thinking/2026-11/11/clock-hook）：事件多 after_start、after_stop（aos-loop 的 on_start／on_stop 叫 py/tools/agent/hook_fire 發，
+11-11（thinking/2026-11/11/clock-hook）：事件多 after_start、after_stop（aos-loop 的 on_start／on_stop 發；11-21 起經 aos-hook fire --agent，
 使用者「hook 要加的事件：起來與停下」）與 on_clock（看時鐘在 hook_clock.py）。on_clock 才收的鍵＝CLOCK_KEYS。
 11-15（compact-1115）：on_clock 的格可以多寫一個 config（任意 JSON，hooks.py 不驗），原樣放進事件的 config 給 handler 自己讀
 （context_wrap 的門檻就寫在這裡；stack 那份同名蓋過＝這隻自己改）。

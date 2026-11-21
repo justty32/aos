@@ -28,7 +28,7 @@ class Engine(unittest.TestCase):
                 self.assertNotIn(word, source)
 
     def test_import_with_only_py_on_the_path(self):
-        """只把 py/ 放上 sys.path（hook_fire、範本格的寫法）也找得到引擎，而且 import 不動 sys.path。"""
+        """只把 py/ 放上 sys.path（範本格的寫法）也找得到引擎，而且 import 不動 sys.path。"""
         code = ("import sys; sys.dont_write_bytecode = True; sys.path[:0] = [%r]; before = list(sys.path); "
                 "from aos.agentlib import hooks; from aos import hook_run; "
                 "assert sys.path == before, sys.path; assert hooks.HooksBad is hook_run.HooksBad; "

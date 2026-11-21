@@ -6,6 +6,7 @@
     "llm": "llm.json",
     "llm_keys": [
       "model",
+      "reasoning_effort",
       "temperature",
       "top_p",
       "max_tokens",

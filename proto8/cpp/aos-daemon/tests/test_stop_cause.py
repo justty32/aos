@@ -1,4 +1,4 @@
-# Verify the after_stop cause (B7) end to end: a real daemon writes stop_cause.json, its child aos-loop reads it, hook_fire reports it.
+# Verify the after_stop cause (B7) end to end: a real daemon writes stop_cause.json, its child aos-loop reads it, aos-hook fire reports it.
 import json
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ import unittest
 from support import ENV, PROTO, Fixture, dc, read, until, write
 
 CAUSE_FILE = 'stop_cause.json'   # 同 aos/loop.hpp 的 StopCauseWindow::default_name（測試另寫一份，不 import C++）
-FIRE = PROTO / 'py' / 'tools' / 'agent' / 'hook_fire' / '_entry'
+HOOK = PROTO / 'bin' / 'aos-hook'   # the templates' on_stop: aos-hook fire -q --agent DEF after_stop
 BODY = '''#!/usr/bin/env python3
 # Test body: write ready, sleep; on SIGTERM wait SLOW seconds before exiting 0 (so the daemon is still "stopping").
 import os, pathlib, signal, sys, time
@@ -57,7 +57,7 @@ class StopCause(unittest.TestCase):
 
     def add_loop(self, f, seconds=30, slow=0):
         spec = {'exec': [str(self.body), str(seconds), str(slow)], 'interval_ms': 30,
-                'on_stop': [str(FIRE), 'after_stop', str(self.defn)]}
+                'on_stop': [str(HOOK), 'fire', '-q', '--agent', str(self.defn), 'after_stop']}
         reply = dc.ask(str(f.stack), {'procs_added': {'job': spec}})
         self.assertTrue(reply['applied'], reply)
         f.phase('running')

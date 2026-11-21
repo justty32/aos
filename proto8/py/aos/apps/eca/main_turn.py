@@ -68,7 +68,7 @@
      hook 停下＝HookFailed／HooksBad 退 1：交出去之前＝信留 cur/、history 不動；after_queue 停下＝回答照樣接進 history 才報；brain_failed 停下＝冷卻不記。
   ⑫ on_clock（11-11 thinking/2026-11/11/clock-hook，使用者「hook就可以添加一個類型……去看指定的clock proc」）：每輪開頭、queue 建好之後（冷卻中、退讓的那輪也是）
      hook 遙控器的 clock_tick（agentlib/hook_clock.py）看時鐘，條件到了的 on_clock hook 才跑；handler 預設什麼都不做、history 不多任何一則；要叫腦＝handler 自己往 <stack>/queue 寄信。
-     hook 停下＝HookFailed 退 1（還沒碰信）。after_start／after_stop 不在這支：在 loop.json 的 on_start／on_stop（py/tools/agent/hook_fire）。
+     hook 停下＝HookFailed 退 1（還沒碰信）。after_start／after_stop 不在這支：在 loop.json 的 on_start／on_stop（aos-hook fire --agent）。
   ⑬ goal（11-11 thinking/2026-11/11/goal/02，使用者「當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他」，裁「fsm 和 eca 都做」）：
      認領之後一封好信都沒有（queue 空；信優先）、history 最後一則是 assistant（上一輪 CLI 答完了）或 history 還空（還沒答過；外面先 set 的 goal
      當開場題目，11-11 稍後使用者「也丟，當開場題目」；開場白 --prompt 先投、先答）、$AOS_STACK/goal.json 是 active＝這輪的題目換成一則

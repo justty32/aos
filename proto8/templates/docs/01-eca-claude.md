@@ -73,7 +73,7 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 | `before_tool`（可改 arguments、可攔）／`after_tool`（可改結果） | 只有經 aos-mcp 叫的 aos 工具 | aos-mcp 的 tools/call（cli_session 起它時帶 `--hooks <定義>`） |
 | `brain_failed` | 有（`name`＝`CliFailed`／`ReplyMissing`，交出去之後才算） | aos-eca-turn |
 | `tool_added` | 有（看這隻生效的 aos 登記檔，交出去之前比一次） | aos-eca-turn |
-| `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop` → `py/tools/agent/hook_fire` |
+| `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop` → `aos-hook fire --agent` |
 | `on_clock`（[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)） | 有（每輪最開頭判，冷卻中、退讓的那輪也判；到了才起 handler） | aos-eca-turn |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos |
 

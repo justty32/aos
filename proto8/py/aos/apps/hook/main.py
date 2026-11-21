@@ -1,7 +1,8 @@
 """aos-hook - fire a hook event from any program (C++, shell, ...), list the points of hook_points.json declarations, check declarations and hooks lists.
 
 Design: proto8/thinking/2026-11/20/aos-hook-plan-1120/05 (the command) with 12 (what holds after the review); the user
-11-20: "任何子程式，含非 Python", then "先開第 4 刀". Cut 4 only adds this command: nothing calls it yet, hook_fire stays.
+11-20: "任何子程式，含非 Python", then "先開第 4 刀". Cut 4 added it; the
+templates' loop.json fire their four loop points through it (on_start / on_stop since line top-1121-hookfire).
 The hooks run in aos.hook_run (the engine the agents and the kernel use) through an aos.hook_point handle: order, exit
 10, on_error, timeout_ms and which keys a hook may change are the engine's rules; the handle reads the lists and checks
 the changed values' declared types. The source: --points / --list, or --agent DEF_DIR (aos.agentlib.agent_hooks.source:
@@ -236,7 +237,7 @@ def fire(argv):
     hooks = handle(src, stack)
     entries = hooks.load()
     data = event_data(points, event, opts)
-    if src["agent"] and event == "after_start":   # as hook_fire did: the first clock check after a start runs at once
+    if src["agent"] and event == "after_start":   # the first clock check after a start runs at once
         try:
             from aos.agentlib import hook_clock
             hook_clock.clock_restart(stack)

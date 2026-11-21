@@ -112,16 +112,21 @@ class Tables(unittest.TestCase):
         others = {n for points in (FSM, ECA, KERNEL) for n, p in points.items() if "entry_keys" in p}
         self.assertEqual(others, {hooks.CLOCK_EVENT})
 
-    def test_hook_fire(self):
-        """hook_fire fires the two points of on_start / on_stop (before_run / after_run go through aos-hook)."""
-        entry = PY / "tools" / "agent" / "hook_fire" / "_entry"
+    def test_templates_wire_start_stop(self):
+        """on_start / on_stop of the templates fire after_start / after_stop through aos-hook fire (the agents with --agent);
+        after_stop's fields come from the declaration's env (the variables aos-loop sets for on_stop)."""
         loop = hook_point.read_file(P["aos-loop"])[1]
-        self.assertEqual(set(assigned(entry, "EVENTS")), set(fired(loop)) - {"before_run", "after_run"})
-        self.assertIn(assigned(entry, "CAUSE_KEY"), loop["after_stop"]["fields"])
-        self.assertEqual(loop["after_stop"]["fields"]["cause"]["env"], assigned(entry, "CAUSE_ENV"))
-        src = entry.read_text(encoding="utf-8")
-        for f in ("code", "signal"):
-            self.assertIn('"%s": number("%s")' % (f, loop["after_stop"]["fields"][f]["env"]), src)
+        self.assertEqual({f: about["env"] for f, about in loop["after_stop"]["fields"].items()},
+                         {"code": "AOS_LOOP_CODE", "signal": "AOS_LOOP_SIGNAL", "cause": "AOS_LOOP_CAUSE"})
+        agents = ("agent-fsm", "agent-python", "start-api/agents/ann", "eca-claude", "eca-pi", "start-eca/agents/ann")
+        for tpl in agents + ("kernel/procs-kernel", "start-api/perm"):
+            wired = json.loads((ROOT / "templates" / tpl / "loop.json").read_text(encoding="utf-8"))
+            for key, event in (("on_start", "after_start"), ("on_stop", "after_stop")):
+                with self.subTest(tpl=tpl, key=key):
+                    argv = wired[key]["argv"]
+                    self.assertEqual((argv[:3], argv[-1]), (["aos-hook", "fire", "-q"], event))
+                    if tpl in agents:
+                        self.assertEqual(argv[3:-1], ["--agent", {"$env": "AOS_CD"}])
 
     def test_gdb(self):
         trigger = PY / "aos" / "gdb" / "trigger.py"
