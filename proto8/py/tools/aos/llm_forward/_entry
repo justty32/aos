@@ -36,7 +36,8 @@ def forward_env(kernel):
 def main():
     tool_io.start('llm_forward', echo=False, help_text='''llm_forward - Forward one request to another llm kernel.
 usage: llm_forward [FLAGS] < REQUEST.json   (run with aos-exec)
-Input: {"endpoint":{"to":"PACK","kernel":"STACK"},"request":{...},"priority"?:...}
+Input: {"endpoint":{"to":"PACK","kernel":"STACK"},"request":{...},"priority"?:...,"reasoning_effort"?:NAME}
+reasoning_effort (set by this kernel when the pack accepts it) is forwarded as is.
 Success: replace letter with child {kernel, letter}; keep all other fields.
 Downstream failure: preserve stdout, stderr, and exit status.
 Own failure: one error line on stderr, exit 1.
@@ -64,6 +65,8 @@ Own failure: one error line on stderr, exit 1.
     body = {'endpoint': pack['to'], 'request': args['request']}
     if 'priority' in args:
         body['priority'] = args['priority']
+    if 'reasoning_effort' in args:          # 思考程度（11-21）：這台的包收了才有，原樣交給下一層 kernel 查與用
+        body['reasoning_effort'] = args['reasoning_effort']
     try:
         result = subprocess.run(['aos-llm', 'ask', '--full'], input=json.dumps(body).encode(),
                                 capture_output=True,

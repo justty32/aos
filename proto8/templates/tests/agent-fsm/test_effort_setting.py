@@ -1,4 +1,4 @@
-"""agent-fsm 的腦設定 effort（思考程度，11-21）：llm_settings.effort_of 給 brain.py 填進請求信 body 的 effort；壞值 body_fields 也擋（defs check 走那支）。"""
+"""agent-fsm 的腦設定 reasoning_effort（思考程度，11-21）：llm_settings.reasoning_effort_of 給 brain.py 填進請求信 body；不進 request；壞值 body_fields 也擋（defs check 走那支）。"""
 import importlib.util
 from pathlib import Path
 import unittest
@@ -9,27 +9,27 @@ llm_settings = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(llm_settings)
 
 
-class Effort(unittest.TestCase):
-    def test_effort_is_given_back_and_not_put_into_the_request(self):
-        cfg = {"model": "sol", "effort": "high", "temperature": "0.5"}
-        self.assertEqual(llm_settings.effort_of(cfg), "high")
+class ReasoningEffort(unittest.TestCase):
+    def test_given_back_and_not_put_into_the_request(self):
+        cfg = {"model": "sol", "reasoning_effort": "high", "temperature": "0.5"}
+        self.assertEqual(llm_settings.reasoning_effort_of(cfg), "high")
         self.assertEqual(llm_settings.body_fields(cfg), ("sol", {"temperature": 0.5}))
-        self.assertEqual(llm_settings.effort_of({" effort": "x"}), None)
-        self.assertEqual(llm_settings.effort_of({"effort": " max "}), "max")
+        self.assertEqual(llm_settings.reasoning_effort_of({"reasoning_effort": " max "}), "max")
 
-    def test_not_set_is_none(self):
-        self.assertIsNone(llm_settings.effort_of({"model": "sol"}))
+    def test_not_set_is_none_and_the_old_name_is_not_read(self):
+        self.assertIsNone(llm_settings.reasoning_effort_of({"model": "sol"}))
+        self.assertIsNone(llm_settings.reasoning_effort_of({"effort": "high"}))
 
     def test_bad_value_is_refused_by_both(self):
         for bad in ("", "  ", 3, None, ["high"]):
             with self.subTest(bad=bad):
-                self.assertRaises(ValueError, llm_settings.effort_of, {"effort": bad})
-                self.assertRaises(ValueError, llm_settings.body_fields, {"effort": bad})
+                self.assertRaises(ValueError, llm_settings.reasoning_effort_of, {"reasoning_effort": bad})
+                self.assertRaises(ValueError, llm_settings.body_fields, {"reasoning_effort": bad})
 
-    def test_effort_is_a_known_key(self):
-        self.assertIn("effort", llm_settings.KEYS)
-        iface = (CELLS / "interfaces.json").read_text()
-        self.assertIn('"effort"', iface)
+    def test_is_a_known_key(self):
+        self.assertIn("reasoning_effort", llm_settings.KEYS)
+        self.assertNotIn("effort", llm_settings.KEYS)
+        self.assertIn('"reasoning_effort"', (CELLS / "interfaces.json").read_text())
 
 
 if __name__ == "__main__":

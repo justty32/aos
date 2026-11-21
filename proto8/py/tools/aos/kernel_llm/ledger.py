@@ -20,6 +20,8 @@ def append(stack, name, proc, reply):
              "finished_at": finished, "elapsed_ms": elapsed, "usage": reply.get("usage"),
              "code": reply["error"]["code"] if "error" in reply else None,
              "child": reply.get("child"), "switched": proc.get("switched", False)}
+    if proc.get("reasoning_effort") is not None:                 # 這封帶了思考程度、包也收了（11-21）
+        entry["reasoning_effort"] = proc["reasoning_effort"]
     try:
         line = json.dumps(entry, ensure_ascii=False) + "\n"
         with open(path, "a", encoding="utf-8") as stream:

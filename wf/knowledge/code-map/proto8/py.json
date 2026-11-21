@@ -762,14 +762,14 @@
      "ledger.py": "問腦的逐封帳 ledger.jsonl：只留成本與時間，不存請求內容；used.json 壞了時從它重算。",
      "llm_rules.py": "問腦那一包的五個口：收成品、收拾與看信、排序、放不放、掛去跑；回信、撤回與記帳也在這裡。",
      "order.py": "問腦的排隊：priority 與期限、aging、排序與後端黏著，窗 queue.json 的讀寫。",
-     "packs.py": "問腦的設定與能力包：讀 kernel.json（指示詞用到才解）、查代號、釘死的參數、思考程度（efforts）、窗 endpoints.json。",
+     "packs.py": "問腦的設定與能力包：讀 kernel.json（指示詞用到才解）、查代號、釘死的參數、思考程度（reasoning_efforts）、窗 endpoints.json。",
      "session.py": "問腦請求的固定 session id：包寫了 session_key 時，同一個寄件人的每封請求都帶同一個值，上游才接得回同一份提示快取。",
      "slots.py": "問腦的格數：總格、high 保留格、包格、後端格與同時幾種包，在飛與這輪新掛的一起算。",
      "tests": {
       "test_backends.py": "Verify backend limits, durable switch records, and priority-safe sticky ordering with prepared mailboxes.",
       "test_batch8_live.py": "Verify copied kernel templates nest through two real daemons and batch local packs without blocking urgent mail.",
       "test_budget_fields.py": "Check BudgetMissing refusals carry scope/window/since/resets_at/limit/max, and window_next on fixed times.",
-      "test_effort.py": "Check the letter key effort and the pack table efforts: suffix or overlay, unknown effort refused, no table = untouched.",
+      "test_effort.py": "Check the letter key reasoning_effort and the pack list reasoning_efforts: accepted ones go to request.json, others refused or ignored.",
       "test_hook_retry_later.py": "驗證問腦站將判決 hook 的晚點重試拒因送回 agent 的 think/reply 信箱。",
       "test_hooks.py": "Check the three hook moments on the llm kernel and that add letters go to AOS_KERNEL when it is set.",
       "test_ledger.py": "Verify kernel finish records fake-brain costs and tolerates ledger write failures.",
@@ -874,8 +874,10 @@
     "json_set/": "把一格換成給的值（照字面；缺 key 就新增、/- 接陣列尾、parents 建中間層、整份可建新檔）",
     "llm_fake/": "假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4）",
     "llm_http": {
+     "responses_api.py": "llm_http 的 Responses API 寫法（endpoint.api＝\"responses\"）：chat completions 的請求換成 /responses 的 body、回覆換回 chat 的樣子。",
      "tests": {
-      "test_llm_http.py": "Test llm_http key handling, structured failures, HTTP classification, one local retry and timeouts."
+      "test_llm_http.py": "Test llm_http key handling, structured failures, HTTP classification, one local retry and timeouts.",
+      "test_responses.py": "Test llm_http endpoint.api \"responses\" and reasoning_effort: request conversion, the configuration_update item, reply and usage converted back."
      }
     },
     "llm_http/": "endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆",

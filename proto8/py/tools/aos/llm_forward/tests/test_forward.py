@@ -49,6 +49,16 @@ class ForwardTests(unittest.TestCase):
         self.run_entry()
         self.assertNotIn('priority', json.loads((self.root/'captured').read_text())['body'])
 
+    def test_reasoning_effort_is_forwarded(self):
+        self.install()
+        self.body['reasoning_effort'] = 'high'
+        result = self.run_entry()
+        self.assertEqual((result.returncode, result.stderr), (0, ''))
+        self.assertEqual(json.loads((self.root/'captured').read_text())['body']['reasoning_effort'], 'high')
+        del self.body['reasoning_effort']
+        self.run_entry()
+        self.assertNotIn('reasoning_effort', json.loads((self.root/'captured').read_text())['body'])
+
     def test_downstream_failures_preserve_bytes_and_status(self):
         for code in (1,3,10,143):
             with self.subTest(code=code):

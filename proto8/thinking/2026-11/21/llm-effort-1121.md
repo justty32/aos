@@ -1,4 +1,4 @@
-llm kernel 加「思考程度」：信的 body 多一個 `effort` 鍵，llm kernel 照每包的 `efforts` 表換成 LiteLLM 的分身模型名；範本的 sol、luna、terra、astra 都宣告好，agent-fsm 在 `llm.json` 寫 `effort` 就會帶上。
+llm kernel 加「思考程度」：信的 body 多一個 `reasoning_effort` 鍵，llm kernel 照每包的 `reasoning_efforts` 清單查收不收，`llm_http` 走 Responses API 把程度接成 input 最後一個 `configuration_update`，換程度後前綴快取照中；隊 kernel 也會轉。
 
 ← [2026-11-21](README.md)｜前情：[session_key 實測](session-key-實測-1121.md)｜程式說明：[kernel_llm docs/01](../../../py/tools/aos/kernel_llm/docs/01-用法.md)、[範本 kernel docs/01](../../../templates/kernel/docs/01-llm-kernel.md)
 
@@ -58,7 +58,7 @@ llm kernel 加「思考程度」：信的 body 多一個 `effort` 鍵，llm kern
 - **哪幾檔收**：sol（6.1）、astra 收 low、medium、high、xhigh、max；luna、terra 再多收 none。
 - **換程度會讓那一輪沒中快取**：上游看起來每個程度各有一份快取，第一次用某個程度沒中，之後同程度照中，換回用過的程度多半也中（第 7 輪 sol-high 第二次仍沒中，第 10 輪才中，所以不保證）。帶尾碼或帶參數都一樣。
 
-## 做法（乙）
+## 做法（乙，第一版；已被下面「第二輪」取代）
 
 - **信**：`{"endpoint": "sol", "effort": "high", "request": {...}}`。`effort` 跟 `endpoint` 並排、不放進 `request`：它是給 llm kernel 看的，跟 `endpoint` 一樣由 kernel 換成上游要的樣子。
 - **包**：`"efforts": {程度名: 字串或物件}`。字串＝接在 `model` 後面（`"high": "-high"` 讓 `chatgpt-gpt-6.1-sol` 變成 `chatgpt-gpt-6.1-sol-high`），物件＝疊到那包上再交給 endpoint 函數（`fixed` 一個鍵一個鍵合併，例如 `{"fixed": {"reasoning_effort": "low"}}`，給不走 LiteLLM 分身的上游用）。kernel 自己看的鍵（`exec`、`slots`、`budget`、`speed`、`backend`、`session_key`、`efforts`、`effort`）物件裡不能改。包可另寫 `"effort": "low"`＝信沒寫程度時用哪一檔。
@@ -113,3 +113,74 @@ llm kernel 加「思考程度」：信的 body 多一個 `effort` 鍵，llm kern
 - **順手發現（沒改）**：文件說一包可以整包寫成 `{"$ref": "packs/x.json"}`，但這樣寫時窗 `endpoints.json` 只剩 `speed`（`cost`、`summary`、`slots`、`efforts` 都不見），因為 `_read_packs` 先挑鍵再解指示詞。暫存複本實測 `{'a': {'speed': 'normal'}}`。請求本身照常。
 - **跟 11-10 那條的關係**：11-10 使用者「model所指向的東西，他就是可以得到快取優勢的東西，然後agent能調的，就是一些與快取無關的」，當時代定「reasoning 類不開」（[self-tools/05](../10/self-tools/05-llm設定改名與ls.md)）。這次使用者自己要請求帶程度；實測換程度只讓第一次用那檔時沒中，之後照中，不是整份快取失效。`proto8/docs` 沒改，建議加註的地方：CONCEPTS／NORMS 講問腦的信的格式處，加「body 另有選填的 `effort`（11-21），由 llm kernel 照包的 `efforts` 換；換程度那一輪多半不中快取」。
 - **`~/aos-home` 沒碰**。要吃到：repo 跑 `python3 install.py`（換 `lib/` 的 packs.py 與範本），`~/aos-home/llm/kernel.json` 照上面那段加 `effort_suffixes` 與四包的 `efforts`（luna 那包的 `model` 改成 `chatgpt-gpt-6-luna`、加 `"effort": "low"`），ann 等 agent 的定義夾是 agent-fsm 的抄本，要另外換上新的 `brain.py`、`llm_settings.py`、`interfaces.json` 才認 `effort`；之後 `aos-agent -d .stack --target ann llm set effort=high`。
+
+## 第二輪：換程度要接上快取、改名、隊 kernel 轉送（11-21 稍晚）
+
+使用者原話：「換了思考程度就沒了快取，不對吧，理論上應該是要可以的，去想辦法。effort...改叫reasoning_effort吧，說清楚。kernel轉送不帶effort...要補。」
+
+### 快取斷在哪一層（真模型，同一個 `litellm_session_id`、約 9,500 token 的長提示、每組換一個新開頭）
+
+| 組 | 依序送的 | cached |
+|---|---|---|
+| A：不帶尾碼＋`reasoning_effort` 參數 | low、low、high、low、high | 0、0、0、9,344、9,344 |
+| B：同上，每次隔 8 秒 | low、low、low、high、high、low | 1,408、0、9,344、1,408、9,344、9,344 |
+| C：接著 B，換成帶尾碼的名字 | sol-low、sol-high、sol-xhigh、sol-xhigh | 9,344、9,344、0、9,344 |
+| D：LiteLLM 的 `/v1/responses`，頂層 `reasoning.effort` 固定 low | 不接／不接／接 `configuration_update` high／接 max／頂層改 high | 0、9,344、9,344、9,344、1,408 |
+
+另外兩次確認 `configuration_update` 真的有作用：sol 接 `none` 被上游擋（400，跟頂層寫 none 同一句）；terra 頂層 `none`（推理歸 0）再接 `xhigh`，推理 1,034 token、答對。
+
+- **不是 LiteLLM 的分身名**：C 組 sol-low、sol-high 直接吃到 B 組用參數暖好的快取；LiteLLM 送上游的請求只有 `model`（分身名換回本名）、`input`、`instructions`、`reasoning` 這幾個鍵（`llms/chatgpt/responses/transformation.py` 的 `allowed_keys`），session id 放在標頭，同一個寄件人不變。
+- **不是我們的 `session_key`**：值只由寄件人的 stack 路徑決定（`session.py`），換程度不變；暫存樹裡 ann 換程度前後是同一個值。
+- **是上游**：頂層的 `reasoning.effort` 換了，快取就從頭算；每個程度第一次沒中、之後中，就是上游一個程度一份快取。OpenAI 文件說換頂層程度會改寫藏起來的系統指示，要保住前綴就把程度寫成 input 最後一個 `{"type": "configuration_update", "reasoning": {"effort": "high"}}`（[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，支援的是 GPT-6 以後的模型）。D 組實測：接這個項目快取照中，改頂層就只剩 1,408。
+- 另外看到：就算程度不換，同一個開頭剛開始的頭兩次偶爾也會沒中（A、B 組第 2 次），之後才穩。是上游的事，跟程度無關。
+
+### 修法
+
+chat completions 帶不了 `configuration_update`（LiteLLM 1.87.5 把 chat 轉成 Responses 時只轉訊息，見 `completion_extras/litellm_responses_transformation`），所以：
+
+- `llm_http` 加 `endpoint.api`：沒寫或 `"chat"` 照舊；`"responses"` 改送 `{url}/responses`，請求從 chat 的樣子換過去（system→instructions、工具呼叫與結果、圖片），回覆與 usage 換回 chat 的樣子（新檔 `responses_api.py`）。llm kernel 給的思考程度：`responses` 時接成 input 最後一個 `configuration_update`、頂層不動；`chat` 時填成請求的 `reasoning_effort` 參數（那樣換程度就會斷快取，給只有 chat 的端點用）。
+- 範本 sol、luna、terra、astra 四包加 `"api": "responses"`。不帶程度時送給上游的東西跟以前一樣（同一個模型名、同樣沒有程度）。
+- 帶尾碼的模型名不用了：程度一律走 `configuration_update`，max、none 也走得到。luna 的模型名維持 `chatgpt-gpt-6-luna-low`（low 由 LiteLLM 那一條帶在頂層、一直不變），所以拿掉第一版的「包的預設程度」。
+
+### 改名對照（不留舊名）
+
+| 第一版 | 現在 |
+|---|---|
+| 信的 body `effort` | `reasoning_effort`（給 kernel 看，跟 `endpoint` 並排；不是 `request` 裡送上游的同名參數） |
+| 包的 `efforts`（程度→尾碼或物件） | `reasoning_efforts`：收哪些程度的名字陣列，或 `"forward"`（不查、交給下一層 kernel） |
+| 包的 `effort`（預設程度） | 拿掉 |
+| 頂層 `effort_suffixes` | `reasoning_effort_levels`：`{"gpt": ["low", "medium", "high", "xhigh", "max"], "gpt_none": ["none"]}` |
+| agent `llm.json` 的 `effort`、`aos-agent llm set effort=high` | `reasoning_effort`、`aos-agent llm set reasoning_effort=high` |
+| `llm_settings.effort_of` | `reasoning_effort_of` |
+
+kernel 收了的程度寫進交給端點函數的 `request.json` 頂層 `reasoning_effort`，也記進帳本 `ledger.jsonl` 那一列。
+
+### 隊 kernel
+
+`llm_forward` 把 stdin 的 `reasoning_effort` 原樣放進轉寄信；`templates/kernel/llm-team/kernel.json` 的 sol、terra、luna 三包寫 `"reasoning_efforts": "forward"`，由主 kernel 查。
+
+### 暫存樹實測（`tree3`：`git archive HEAD` 19020832c 疊上這一輪的檔；ann 用 sol；另掛一台隊 kernel `team`）
+
+| 輪 | ann 的設定 | cached |
+|---|---|---|
+| 1 | 沒設 | 0（第一次） |
+| 2 | 沒設 | 12,416 |
+| 3 | `reasoning_effort=high` | 12,416（換了照中） |
+| 4 | high | 0（上游偶爾沒中，同上面 A、B 組） |
+| 5 | `reasoning_effort=low` | 10,496 |
+| 6 | 拿掉 | 10,496 |
+| 7 | high | 12,544 |
+| 8 | high | 12,544 |
+| 9 | `reasoning_effort=medium` | 12,416（換了照中） |
+| 10、11 | medium，叫一次工具再回答 | 12,544、12,544 |
+
+工具呼叫走 Responses 一來一回正常（`peek_now_time` 叫了、回了時間）。帳本每列記了 `reasoning_effort`。隊 kernel：寄 `team` 的 sol 帶 `xhigh`，主 kernel 帳本記 `sol xhigh`、寄件人是隊 kernel；帶 `none` 由主 kernel 回 `RequestBad reasoning_effort "none" is not offered by endpoint sol (...)`，隊 kernel 原樣轉回。
+
+真模型這一輪約 37 次（直接打 25、暫存樹 12）。
+
+測試（`git archive HEAD` 19020832c 兩份乾淨複本，一份原樣、一份疊這一輪的檔，各自 `install.py`，unittest，兩份同時跑）：`py/tests` 728／728 兩邊都過；`kernel_llm` 91 → 89（`test_effort.py` 重寫成 9 支，原本 11 支）；`llm_http` 39 → 47（新 `test_responses.py` 8 支）；`llm_forward` 6 → 7；`templates/tests/agent-fsm` 219 兩邊都過；`templates/tests` 頂層 29 兩邊都過（含 `test_start`：兩份 kernel.json 逐字相同）；`kernel-chain-check` 兩邊都過。`apps/gdb` 的 live 測試兩邊都有 ctrl-c 那兩支沒過，疊檔那份多一支 `test_04`，單獨重跑會過，是兩份同時跑太擠；`apps/feedback`、`image-move-check` 跟第一輪一樣是複本環境的關係。
+
+### 還沒做
+
+- `py/aos/agent_spec_parts.py` 的 `LLM_KEYS`：線 `top-1121-hookfire` 改那個檔時順手加 `reasoning_effort`，這條線沒碰。
+- `~/aos-home` 沒碰；要吃到見回報。

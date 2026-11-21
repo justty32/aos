@@ -1,4 +1,4 @@
-# 問腦的設定與能力包：讀 kernel.json（指示詞用到才解）、查代號、釘死的參數、思考程度（efforts）、窗 endpoints.json。
+# 問腦的設定與能力包：讀 kernel.json（指示詞用到才解）、查代號、釘死的參數、思考程度（reasoning_efforts）、窗 endpoints.json。
 import json
 import os
 import subprocess
@@ -10,13 +10,13 @@ from budget import MAX, dumps, is_count
 from aos.tool_io import Error
 
 TOP_KEYS = ("slots", "reserved", "aging_cycles", "budget", "exec", "endpoint", "timeout_ms", "backends", "hooks")
-PACK_KEYS = ("exec", "slots", "budget", "speed", "backend", "session_key", "efforts", "effort")   # kernel 看的，不交給端點函數
-WINDOW_KEYS = ("slots", "budget", "speed", "cost", "context", "summary", "fixed", "backend", "efforts", "effort")
-# 思考程度（11-21 使用者「或是llm kernel要接受的請求中，允許添加思考程度這個key，然後具體的則由llm kernel處理」「走乙吧」）：
-# 信的 body 寫 "effort": 程度名；包的 efforts 表說它有哪些程度、各自怎麼改那組——字串＝接在 model 後面（LiteLLM 分身名），
-# 物件＝蓋上那組（fixed 逐鍵合）。包沒寫 efforts＝不認這個鍵、照原樣送（C-48）；寫了但沒有那個程度＝RequestBad。
-# 包的 effort＝信沒寫時用的程度（要在 efforts 裡）；沒寫＝信沒寫就照包原樣。
-EFFORT_LOCKED = PACK_KEYS   # 程度的物件寫法不能改 kernel 自己看的鍵
+PACK_KEYS = ("exec", "slots", "budget", "speed", "backend", "session_key", "reasoning_efforts")   # kernel 看的，不交給端點函數
+WINDOW_KEYS = ("slots", "budget", "speed", "cost", "context", "summary", "fixed", "backend", "reasoning_efforts")
+# 思考程度（11-21 使用者「或是llm kernel要接受的請求中，允許添加思考程度這個key，然後具體的則由llm kernel處理」「走乙吧」
+# 「effort...改叫reasoning_effort吧，說清楚」）：信的 body 寫 "reasoning_effort": 程度名（跟 endpoint 並排，給 kernel 看；
+# 不是 request 裡送上游的同名參數）。包的 reasoning_efforts＝它收哪些程度（名字陣列；"forward"＝不在這層查、交給下一層 kernel）。
+# 收了＝request.json 頂層多 reasoning_effort，怎麼送上游是端點函數的事（llm_http：api responses 接 configuration_update、chat 填參數）。
+# 包沒寫 reasoning_efforts＝不認這個鍵、照原樣送（C-48）；寫了但不收那個程度＝RequestBad。
 SPEEDS = ("fast", "normal", "slow")
 
 
@@ -158,69 +158,40 @@ def parse_pack(group, name, backends):
     if fixed is not None and not isinstance(fixed, dict):
         raise Error("CfgBad", "%s.fixed must be an object (sampling parameters pinned by this endpoint), got %s"
                     % (at, dumps(fixed)))
-    efforts = group.get("efforts")
-    if efforts is not None:
-        check_efforts(efforts, at)
-        pack["efforts"] = pack["attrs"]["efforts"] = list(efforts)
-    if "effort" in group:
-        if efforts is None or not isinstance(group["effort"], str) or group["effort"] not in efforts:
-            raise Error("CfgBad", "%s.effort (the effort used when a letter names none) must be one of %s.efforts, "
-                                  "got %s" % (at, at, dumps(group["effort"])))
-        pack["attrs"]["effort"] = group["effort"]
+    if "reasoning_efforts" in group:
+        pack["reasoning_efforts"] = pack["attrs"]["reasoning_efforts"] = check_efforts(group["reasoning_efforts"], at)
     return pack
 
 
 def check_efforts(efforts, at):
-    """efforts＝{程度名: 字串（接在 model 後面）或物件（蓋上那組）}；形狀不對丟 CfgBad。"""
-    shape = ('%s.efforts must be a non-empty object {effort name: model suffix string, or object laid over this '
-             'endpoint}, got %s' % (at, dumps(efforts)))
-    if not isinstance(efforts, dict) or not efforts:
-        raise Error("CfgBad", shape)
-    for level, how in efforts.items():
-        if not level:
-            raise Error("CfgBad", shape)
-        if isinstance(how, str):
-            if not how:
-                raise Error("CfgBad", "%s.efforts.%s must not be an empty string (the suffix added to model)"
-                            % (at, level))
-            continue
-        if not isinstance(how, dict) or not how:
-            raise Error("CfgBad", "%s.efforts.%s must be a model suffix string or a non-empty object laid over this "
-                                  "endpoint, got %s" % (at, level, dumps(how)))
-        locked = [key for key in how if key in EFFORT_LOCKED]
-        if locked:
-            raise Error("CfgBad", "%s.efforts.%s cannot change %s (the kernel's own keys; use another endpoint name)"
-                        % (at, level, ", ".join(locked)))
-        if "fixed" in how and not isinstance(how["fixed"], dict):
-            raise Error("CfgBad", "%s.efforts.%s.fixed must be an object, got %s" % (at, level, dumps(how["fixed"])))
+    """reasoning_efforts＝程度名的非空陣列（不重複）或 "forward"；回原值，形狀不對丟 CfgBad。"""
+    if efforts == "forward":
+        return efforts
+    if (not isinstance(efforts, list) or not efforts or len(set(map(str, efforts))) != len(efforts)
+            or not all(isinstance(level, str) and level for level in efforts)):
+        raise Error("CfgBad", '%s.reasoning_efforts must be a non-empty array of distinct effort names, or "forward" '
+                              '(hand the letter\'s reasoning_effort to the next kernel unchecked), got %s'
+                    % (at, dumps(efforts)))
+    return list(efforts)
 
 
-def with_effort(group, body, name):
-    """信的 body.effort（沒寫＝包的 effort）照那包的 efforts 改那組，回改過的複本；都沒寫或包沒寫 efforts＝回原來那組。
-    不行丟 RequestBad／CfgBad。"""
-    if "efforts" not in group:
-        return group
-    level = body["effort"] if "effort" in body else group.get("effort")
-    if level is None:
-        return group
-    efforts = group["efforts"]
-    if not isinstance(level, str) or level not in efforts:
-        raise Error("RequestBad", "effort %s is not offered by endpoint %s (it offers: %s)"
+def accepted_effort(pack, body, name):
+    """信的 body.reasoning_effort 這包收不收：收＝回程度名（寫進 request.json 頂層）；信沒寫或包沒寫 reasoning_efforts＝None。
+    寫壞或這包不收＝丟 RequestBad。"""
+    if "reasoning_effort" not in body:
+        return None
+    level = body["reasoning_effort"]
+    if not isinstance(level, str) or not level:
+        raise Error("RequestBad", "body.reasoning_effort must be a non-empty string (an effort name the endpoint offers, "
+                                  "see aos-llm ls --json; not the request's own reasoning_effort parameter), got "
+                    + dumps(level))
+    efforts = pack.get("reasoning_efforts")
+    if efforts is None:
+        return None
+    if efforts != "forward" and level not in efforts:
+        raise Error("RequestBad", "reasoning_effort %s is not offered by endpoint %s (it offers: %s)"
                     % (dumps(level), name, ", ".join(efforts)))
-    how = efforts[level]
-    out = dict(group)
-    if isinstance(how, str):
-        if not isinstance(group.get("model"), str) or not group["model"]:
-            raise Error("CfgBad", "kernel.json endpoints.%s.efforts.%s is a model suffix but the endpoint has no model"
-                        % (name, level))
-        out["model"] = group["model"] + how
-        return out
-    for key, value in how.items():
-        if key == "fixed":
-            out["fixed"] = dict(group.get("fixed") if isinstance(group.get("fixed"), dict) else {}, **value)
-        else:
-            out[key] = value
-    return out
+    return level
 
 
 def _read_packs(endpoints, base, backends):
@@ -384,10 +355,7 @@ def pick(cfg, body):
                         % (name, dumps(group["exec"])))
         target = target_abs(group["exec"], cfg["base"])
     pack = parse_pack(group, name, cfg["backends"])
-    if "effort" in body and (not isinstance(body["effort"], str) or not body["effort"]):
-        raise Error("RequestBad", "body.effort must be a non-empty string (an effort name the endpoint offers, "
-                                  "see aos-llm ls --json), got " + dumps(body["effort"]))
-    group = with_effort(group, body, name)
+    pack["reasoning_effort"] = accepted_effort(pack, body, name)
     clash = fixed_clash(group, body["request"], name)
     if clash:
         raise Error("RequestBad", clash)

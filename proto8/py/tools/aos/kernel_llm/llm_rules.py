@@ -536,12 +536,16 @@ def dispatch(ctx, name, letter, detail):
     proc.update(seen_at=waiting["seen_ms"] / 1000.0, mounted_at=mounted_at, endpoint=endpoint)
     if waiting["sender"]:
         proc["sender"] = waiting["sender"]
+    if waiting["pack"].get("reasoning_effort") is not None:
+        proc["reasoning_effort"] = waiting["pack"]["reasoning_effort"]
     try:
-        runner.write_json(os.path.join(folder, "request.json"),
-                          {"endpoint": waiting["group"],
-                           "request": session.tag(waiting["pack"].get("session_key"), waiting["sender"],
-                                                  waiting["body"]["request"]),
-                           "priority": priority})
+        handed = {"endpoint": waiting["group"],
+                  "request": session.tag(waiting["pack"].get("session_key"), waiting["sender"],
+                                         waiting["body"]["request"]),
+                  "priority": priority}
+        if waiting["pack"].get("reasoning_effort") is not None:   # 這包收了信的思考程度（packs.accepted_effort）
+            handed["reasoning_effort"] = waiting["pack"]["reasoning_effort"]
+        runner.write_json(os.path.join(folder, "request.json"), handed)
         runner.mount(folder, "llm_" + name, waiting["exec"], proc, ctx.box, ctx.daemon, timeout_ms=cfg["timeout_ms"])
     except runner.Failed as error:
         try:

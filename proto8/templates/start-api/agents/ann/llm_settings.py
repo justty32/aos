@@ -6,13 +6,14 @@ TUNING 只收不動到前綴（不讓快取失效）的取樣參數；system、t
 11-11 註：system 改由 aos-agent system／self_system 開放（使用者 11-11 選項框裁單獨一支工具，thinking/2026-11/11/self-system），仍不是這裡的鍵。
 值可以是字串（aos-agent llm set 一律存字串）或 JSON 數字；轉不了＝ValueError（呼叫端報 CfgBad）。其他鍵不看（C-48）。
 kernel 端 endpoint 包的 fixed 欄位照舊蓋過這裡（llm_http：request 先、fixed 蓋上）。
-11-21 加 effort（思考程度；使用者「或是llm kernel要接受的請求中，允許添加思考程度這個key，然後具體的則由llm kernel處理」「走乙吧」）：
-不進 request，放請求信 body 的 effort，由 kernel 照那包的 efforts 表換成上游要的樣子；那包沒宣告＝kernel 不理它。"""
+11-21 加 reasoning_effort（思考程度；使用者「或是llm kernel要接受的請求中，允許添加思考程度這個key，然後具體的則由llm kernel處理」「走乙吧」
+「effort...改叫reasoning_effort吧，說清楚」）：不進 request，放請求信 body 的 reasoning_effort（跟 endpoint 並排，給 kernel 看），
+kernel 照那包的 reasoning_efforts 查收不收、由端點函數換成上游要的樣子；那包沒宣告＝kernel 不理它。"""
 import json
 
 TUNING = {"temperature": float, "top_p": float, "max_tokens": int, "seed": int,
           "presence_penalty": float, "frequency_penalty": float, "stop": "stop"}
-KEYS = ("model", "effort") + tuple(TUNING)       # interfaces.json 的 llm_keys 照這張抄（aos-agent llm set 對著提醒）
+KEYS = ("model", "reasoning_effort") + tuple(TUNING)       # interfaces.json 的 llm_keys 照這張抄（aos-agent llm set 對著提醒）
 
 
 def _value(key, kind, v):
@@ -43,15 +44,15 @@ def body_fields(cfg):
     model = cfg.get("model")
     if "model" in cfg and (not isinstance(model, str) or not model):
         raise ValueError("model in llm.json must be a non-empty string (a brain pack name of the llm kernel)")
-    effort_of(cfg)                      # 只驗（defs check 也走這支）；值由 effort_of 給 body
+    reasoning_effort_of(cfg)            # 只驗（defs check 也走這支）；值由 reasoning_effort_of 給 body
     params = {k: _value(k, kind, cfg[k]) for k, kind in TUNING.items() if k in cfg}
     return model, params
 
 
-def effort_of(cfg):
-    """回 effort（思考程度名，非空字串）或 None（沒寫）。kernel 認不認得這個名字由那包的 efforts 決定，這裡不查。"""
-    effort = cfg.get("effort")
-    if "effort" in cfg and (not isinstance(effort, str) or not effort.strip()):
-        raise ValueError("effort in llm.json must be a non-empty string (an effort name the brain pack offers, "
+def reasoning_effort_of(cfg):
+    """回 reasoning_effort（思考程度名，非空字串）或 None（沒寫）。kernel 收不收這個名字由那包的 reasoning_efforts 決定，這裡不查。"""
+    effort = cfg.get("reasoning_effort")
+    if "reasoning_effort" in cfg and (not isinstance(effort, str) or not effort.strip()):
+        raise ValueError("reasoning_effort in llm.json must be a non-empty string (an effort name the brain pack offers, "
                          "see aos-llm ls --json), not %s" % json.dumps(effort))
     return effort.strip() if effort is not None else None

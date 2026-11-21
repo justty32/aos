@@ -1,4 +1,4 @@
-# Check the letter key effort and the pack table efforts: suffix or overlay, unknown effort refused, no table = untouched.
+# Check the letter key reasoning_effort and the pack list reasoning_efforts: accepted ones go to request.json, others refused or ignored.
 import json
 import os
 import shutil
@@ -13,7 +13,7 @@ for folder in ('py', 'py/tools/aos/kernel', 'py/tools/aos/kernel_llm'):
 import packs  # noqa: E402
 from aos.tool_io import Error  # noqa: E402
 
-LEVELS = {'low': '-low', 'high': '-high', 'max': '-max'}
+LEVELS = ['low', 'high', 'max']
 
 
 def cfg(group):
@@ -26,98 +26,80 @@ def ask(group, **body):
 
 
 class Effort(unittest.TestCase):
-    def test_suffix_goes_after_the_model_and_the_table_is_not_handed_on(self):
-        group = {'url': 'u', 'model': 'm', 'fixed': {'temperature': 0.2}, 'session_key': 'k', 'efforts': LEVELS}
-        name, pack, handed, target = ask(group, effort='high')
-        self.assertEqual(handed, {'url': 'u', 'model': 'm-high', 'fixed': {'temperature': 0.2}})
-        self.assertEqual(pack['efforts'], ['low', 'high', 'max'])
-        self.assertEqual(pack['session_key'], 'k')
-        self.assertEqual(group['model'], 'm')   # the table itself is not changed
+    def test_offered_effort_is_kept_for_the_request_and_the_list_is_not_handed_on(self):
+        group = {'url': 'u', 'model': 'm', 'api': 'responses', 'session_key': 'k', 'reasoning_efforts': LEVELS}
+        name, pack, handed, target = ask(group, reasoning_effort='high')
+        self.assertEqual(pack['reasoning_effort'], 'high')
+        self.assertEqual(handed, {'url': 'u', 'model': 'm', 'api': 'responses'})
+        self.assertEqual(pack['reasoning_efforts'], LEVELS)
+        self.assertEqual(pack['attrs']['reasoning_efforts'], LEVELS)
 
-    def test_no_effort_in_the_letter_keeps_the_pack_as_it_is(self):
-        name, pack, handed, target = ask({'url': 'u', 'model': 'm', 'efforts': LEVELS})
+    def test_no_effort_in_the_letter(self):
+        name, pack, handed, target = ask({'model': 'm', 'reasoning_efforts': LEVELS})
+        self.assertIsNone(pack['reasoning_effort'])
+        self.assertEqual(handed, {'model': 'm'})
+
+    def test_pack_without_the_list_ignores_the_key(self):
+        name, pack, handed, target = ask({'url': 'u', 'model': 'm'}, reasoning_effort='high')
+        self.assertIsNone(pack['reasoning_effort'])
         self.assertEqual(handed, {'url': 'u', 'model': 'm'})
+        self.assertNotIn('reasoning_efforts', pack['attrs'])
 
-    def test_pack_without_efforts_ignores_the_key(self):
-        name, pack, handed, target = ask({'url': 'u', 'model': 'm'}, effort='high')
-        self.assertEqual(handed, {'url': 'u', 'model': 'm'})
-        self.assertNotIn('efforts', pack['attrs'])
-
-    def test_object_is_laid_over_and_fixed_is_merged_key_by_key(self):
-        group = {'url': 'u', 'model': 'm', 'fixed': {'temperature': 0.2},
-                 'efforts': {'low': {'fixed': {'reasoning_effort': 'low'}}, 'big': {'model': 'm2', 'context': 9}}}
-        self.assertEqual(ask(group, effort='low')[2],
-                         {'url': 'u', 'model': 'm', 'fixed': {'temperature': 0.2, 'reasoning_effort': 'low'}})
-        self.assertEqual(ask(group, effort='big')[2], {'url': 'u', 'model': 'm2', 'fixed': {'temperature': 0.2},
-                                                       'context': 9})
-
-    def test_fixed_from_an_effort_is_fixed_for_the_request_too(self):
-        group = {'model': 'm', 'efforts': {'low': {'fixed': {'reasoning_effort': 'low'}}}}
-        with self.assertRaises(Error) as caught:
-            packs.pick(cfg(group), {'request': {'messages': [], 'reasoning_effort': 'high'}, 'effort': 'low'})
-        self.assertEqual(caught.exception.code, 'RequestBad')
+    def test_forward_hands_any_name_on_unchecked(self):
+        name, pack, handed, target = ask({'to': 'sol', 'kernel': '/k', 'reasoning_efforts': 'forward'},
+                                         reasoning_effort='whatever')
+        self.assertEqual(pack['reasoning_effort'], 'whatever')
+        self.assertEqual(pack['attrs']['reasoning_efforts'], 'forward')
 
     def test_effort_the_pack_does_not_offer_is_refused_with_the_list(self):
         with self.assertRaises(Error) as caught:
-            ask({'model': 'm', 'efforts': LEVELS}, effort='none')
+            ask({'model': 'm', 'reasoning_efforts': LEVELS}, reasoning_effort='none')
         self.assertEqual(caught.exception.code, 'RequestBad')
-        self.assertEqual(str(caught.exception), 'effort "none" is not offered by endpoint p (it offers: low, high, max)')
+        self.assertEqual(str(caught.exception),
+                         'reasoning_effort "none" is not offered by endpoint p (it offers: low, high, max)')
 
-    def test_effort_that_is_not_a_name_is_refused(self):
+    def test_effort_that_is_not_a_name_is_refused_even_without_the_list(self):
         for bad in ('', 3, None, ['high']):
             with self.subTest(bad=bad), self.assertRaises(Error) as caught:
-                ask({'model': 'm'}, effort=bad)
+                ask({'model': 'm'}, reasoning_effort=bad)
             self.assertEqual(caught.exception.code, 'RequestBad')
 
-    def test_pack_default_effort_is_used_when_the_letter_names_none(self):
-        group = {'url': 'u', 'model': 'm', 'efforts': LEVELS, 'effort': 'low'}
-        name, pack, handed, target = ask(group)
-        self.assertEqual(handed, {'url': 'u', 'model': 'm-low'})
-        self.assertEqual(pack['attrs']['effort'], 'low')
-        self.assertEqual(ask(group, effort='max')[2], {'url': 'u', 'model': 'm-max'})
+    def test_request_parameter_of_the_same_name_is_not_this_key(self):
+        name, pack, handed, target = packs.pick(cfg({'model': 'm', 'reasoning_efforts': LEVELS}),
+                                                {'request': {'messages': [], 'reasoning_effort': 'none'}})
+        self.assertIsNone(pack['reasoning_effort'])
 
-    def test_pack_default_must_be_one_of_its_efforts(self):
-        for group in ({'model': 'm', 'effort': 'low'}, {'model': 'm', 'efforts': LEVELS, 'effort': 'none'},
-                      {'model': 'm', 'efforts': LEVELS, 'effort': 3}):
-            with self.subTest(group=group), self.assertRaises(Error) as caught:
-                ask(group)
-            self.assertEqual(caught.exception.code, 'CfgBad')
-
-    def test_bad_tables_are_cfgbad(self):
-        for bad in ([], {}, 'high', {'': '-x'}, {'high': ''}, {'high': 3}, {'high': {}},
-                    {'high': {'slots': 2}}, {'high': {'session_key': 'x'}}, {'high': {'fixed': 1}}):
+    def test_bad_lists_are_cfgbad(self):
+        for bad in ([], {}, 'high', 'any', ['low', 'low'], ['low', ''], ['low', 3], {'low': '-low'}):
             with self.subTest(bad=bad), self.assertRaises(Error) as caught:
-                ask({'model': 'm', 'efforts': bad}, effort='high')
+                ask({'model': 'm', 'reasoning_efforts': bad}, reasoning_effort='low')
             self.assertEqual(caught.exception.code, 'CfgBad')
-        with self.assertRaises(Error) as caught:
-            ask({'url': 'u', 'efforts': LEVELS}, effort='high')
-        self.assertEqual(caught.exception.code, 'CfgBad')
-        self.assertIn('has no model', str(caught.exception))
 
 
 @unittest.skipUnless(shutil.which('aos-directive'), 'needs aos-directive on PATH (an installed tree)')
-class SharedTable(unittest.TestCase):
-    """One table at the top of kernel.json, each pack points at it with $ref: the window and the request both see it."""
+class SharedList(unittest.TestCase):
+    """Lists at the top of kernel.json, packs point at them with $ref (an array of $ref joins arrays)."""
 
-    def test_ref_to_a_shared_table(self):
+    def test_ref_to_shared_lists(self):
         folder = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, folder)
-        doc = {'exec': 'f', 'efforts': {'chatgpt': {'low': '-low', 'high': '-high'}},
-               'endpoints': {'sol': {'model': 'sol', 'efforts': {'$ref': '#/efforts/chatgpt'}, 'cost': 'high'},
-                             'luna': {'model': 'luna', 'efforts': {'$ref': ['#/efforts/chatgpt', '#/efforts/none']}},
+        doc = {'exec': 'f', 'reasoning_effort_levels': {'gpt': ['low', 'high'], 'none': ['none']},
+               'endpoints': {'sol': {'model': 'sol', 'reasoning_efforts': {'$ref': '#/reasoning_effort_levels/gpt'},
+                                     'cost': 'high'},
+                             'luna': {'model': 'luna', 'reasoning_efforts': {
+                                 '$ref': ['#/reasoning_effort_levels/gpt', '#/reasoning_effort_levels/none']}},
                              'fake': {'exec': 'g'}}}
-        doc['efforts']['none'] = {'none': '-nothink'}
         path = os.path.join(folder, 'kernel.json')
         with open(path, 'w') as stream:
             json.dump(doc, stream)
         read = packs.read_cfg(path, folder)
         window = packs.window(read['packs'])
-        self.assertEqual(window['sol'], {'speed': 'normal', 'cost': 'high', 'efforts': ['low', 'high']})
-        self.assertEqual(window['luna']['efforts'], ['low', 'high', 'none'])
-        self.assertNotIn('efforts', window['fake'])
+        self.assertEqual(window['sol'], {'speed': 'normal', 'cost': 'high', 'reasoning_efforts': ['low', 'high']})
+        self.assertEqual(window['luna']['reasoning_efforts'], ['low', 'high', 'none'])
+        self.assertNotIn('reasoning_efforts', window['fake'])
         name, pack, handed, target = packs.pick(read, {'endpoint': 'luna', 'request': {'messages': []},
-                                                      'effort': 'none'})
-        self.assertEqual(handed, {'model': 'luna-nothink'})
+                                                      'reasoning_effort': 'none'})
+        self.assertEqual((pack['reasoning_effort'], handed), ('none', {'model': 'luna'}))
 
 
 if __name__ == '__main__':

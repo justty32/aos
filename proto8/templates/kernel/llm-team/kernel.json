@@ -23,6 +23,7 @@
         "$env": "AOS_STACK",
         "$path": "../llm-kernel"
       },
+      "reasoning_efforts": "forward",
       "summary": "Forward to the main kernel sol"
     },
     "terra": {
@@ -31,6 +32,7 @@
         "$env": "AOS_STACK",
         "$path": "../llm-kernel"
       },
+      "reasoning_efforts": "forward",
       "summary": "Forward to the main kernel terra"
     },
     "luna": {
@@ -39,6 +41,7 @@
         "$env": "AOS_STACK",
         "$path": "../llm-kernel"
       },
+      "reasoning_efforts": "forward",
       "summary": "Forward to the main kernel luna"
     },
     "local": {
