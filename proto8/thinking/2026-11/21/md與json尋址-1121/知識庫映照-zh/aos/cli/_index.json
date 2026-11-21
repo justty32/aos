@@ -1,0 +1,89 @@
+{
+ "README.md": {
+  "description": "`knowledge/aos/cli/` 這一夾的中文映照版，給人審用；正本是 json"
+ },
+ "_description.md": {
+  "description": "`knowledge/aos/cli/_description.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "_index.md": {
+  "description": "`knowledge/aos/cli/_index.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "agent.md": {
+  "description": "`knowledge/aos/cli/agent.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "clock.md": {
+  "description": "`knowledge/aos/cli/clock.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "daemon.md": {
+  "description": "`knowledge/aos/cli/daemon.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "eca.md": {
+  "description": "`knowledge/aos/cli/eca.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "errors.md": {
+  "description": "`knowledge/aos/cli/errors.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "feedback.md": {
+  "description": "`knowledge/aos/cli/feedback.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "flags.md": {
+  "description": "`knowledge/aos/cli/flags.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "gdb.md": {
+  "description": "`knowledge/aos/cli/gdb.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "goal.md": {
+  "description": "`knowledge/aos/cli/goal.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "grow.md": {
+  "description": "`knowledge/aos/cli/grow.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "history.md": {
+  "description": "`knowledge/aos/cli/history.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "hook.md": {
+  "description": "`knowledge/aos/cli/hook.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "json_view.md": {
+  "description": "`knowledge/aos/cli/json_view.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "mailbox.md": {
+  "description": "`knowledge/aos/cli/mailbox.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "mcp.md": {
+  "description": "`knowledge/aos/cli/mcp.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "mcp_import.md": {
+  "description": "`knowledge/aos/cli/mcp_import.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "offer_hooks.md": {
+  "description": "`knowledge/aos/cli/offer_hooks.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "parts": {
+  "description": "`knowledge/aos/cli/parts/` 這一夾的中文映照版，給人審用；正本是 json"
+ },
+ "safety.md": {
+  "description": "`knowledge/aos/cli/safety.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "sandbox.md": {
+  "description": "`knowledge/aos/cli/sandbox.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "share.md": {
+  "description": "`knowledge/aos/cli/share.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "sweeper.md": {
+  "description": "`knowledge/aos/cli/sweeper.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "talk_settings.md": {
+  "description": "`knowledge/aos/cli/talk_settings.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "tool_env.md": {
+  "description": "`knowledge/aos/cli/tool_env.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "tool_flags.md": {
+  "description": "`knowledge/aos/cli/tool_flags.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "tools.md": {
+  "description": "`knowledge/aos/cli/tools.json` 的中文映照版，給人審用；正本是 json"
+ }
+}

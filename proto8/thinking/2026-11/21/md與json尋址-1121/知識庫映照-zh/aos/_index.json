@@ -1,0 +1,76 @@
+{
+ "README.md": {
+  "description": "`knowledge/aos/` 這一夾的中文映照版，給人審用；正本是 json"
+ },
+ "_description.md": {
+  "description": "`knowledge/aos/_description.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "_index.md": {
+  "description": "`knowledge/aos/_index.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "agents": {
+  "description": "`knowledge/aos/agents/` 這一夾的中文映照版，給人審用；正本是 json"
+ },
+ "agents.md": {
+  "description": "`knowledge/aos/agents.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "body.md": {
+  "description": "`knowledge/aos/body.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "brain.md": {
+  "description": "`knowledge/aos/brain.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "cli": {
+  "description": "`knowledge/aos/cli/` 這一夾的中文映照版，給人審用；正本是 json",
+  "index": "cli/_index.json"
+ },
+ "clock.md": {
+  "description": "`knowledge/aos/clock.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "definition.md": {
+  "description": "`knowledge/aos/definition.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "errors": {
+  "description": "`knowledge/aos/errors/` 這一夾的中文映照版，給人審用；正本是 json"
+ },
+ "errors.md": {
+  "description": "`knowledge/aos/errors.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "kernel.md": {
+  "description": "`knowledge/aos/kernel.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "kits.md": {
+  "description": "`knowledge/aos/kits.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "mailbox.md": {
+  "description": "`knowledge/aos/mailbox.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "me": {
+  "description": "`knowledge/aos/me/` 這一夾的中文映照版，給人審用；正本是 json"
+ },
+ "me.md": {
+  "description": "`knowledge/aos/me.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "packs.md": {
+  "description": "`knowledge/aos/packs.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "rules.md": {
+  "description": "`knowledge/aos/rules.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "status.md": {
+  "description": "`knowledge/aos/status.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "tools": {
+  "description": "`knowledge/aos/tools/` 這一夾的中文映照版，給人審用；正本是 json",
+  "index": "tools/_index.json"
+ },
+ "tools_def.md": {
+  "description": "`knowledge/aos/tools_def.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "user_zone.md": {
+  "description": "`knowledge/aos/user_zone.json` 的中文映照版，給人審用；正本是 json"
+ },
+ "world.md": {
+  "description": "`knowledge/aos/world.json` 的中文映照版，給人審用；正本是 json"
+ }
+}
