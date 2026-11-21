@@ -18,7 +18,7 @@ code map 的記憶骨架：程式碼導航 index（哪個領域在哪些檔、�
 - 表大到難讀就按領域拆成工作區的 `wf/knowledge/code-map/` 夾，上層留入口（拆法見 `wf/tidying.md#/拆法（兩種觸發都照做）`）。
 - 優先序可以改，但必須明確寫在 `truth_order`。
 - 原始碼裡**不加**「對應 code map」的註釋；反向查找直接搜這份。
-- 記錄是物件陣列，用 json 工具讀寫（`aos/packs.json#/json`）。
+- 記錄是物件陣列，用 json 工具讀寫（`aos/packs.md#/json`）。
 
 # skeleton
 

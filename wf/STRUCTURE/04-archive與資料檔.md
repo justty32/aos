@@ -11,4 +11,4 @@
 
 ## 資料檔慣例
 
-抽成 `.json`／`.csv` 的門檻與格式契約 `wf-table/1` 在 [workflows/common/data-files.md](../workflows/common/data-files.md)；讀寫走 `tabledb.py`；整理流程走 [workflows/tidy/README.md](../workflows/tidy/README.md)；json 內跨層路徑可用 `$fmt` 代號（見 [data-files-fmt](../workflows/common/data-files-fmt.md)）。
+新寫的預設寫 `.md`、用 index json 當骨架，要用 `.md` 還是 `.json` 都可以（使用者 11-21；門檻是建議、不做檢查）。抽成 `.json`／`.csv` 的門檻與格式契約 `wf-table/1` 在 [workflows/common/data-files.md](../workflows/common/data-files.md)；讀寫走 `tabledb.py`；整理流程走 [workflows/tidy/README.md](../workflows/tidy/README.md)；json 內跨層路徑可用 `$fmt` 代號（見 [data-files-fmt](../workflows/common/data-files-fmt.md)）。

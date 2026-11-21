@@ -11,7 +11,7 @@
 3. **新檔第一行（腳本跳過 shebang）寫一句話；交件走 `wf/tools/commit-request`，生成器由排隊跑**：各線不自己跑 `index_gen`、不 `git add`、不手改生成物；某檔職責變了改檔頭那句。沒有 commit-request 的機器才自己在 commit 前跑 `python3 wf/tools/index_gen.py --apply`。
 4. 各工作流的具體流程在它自己的入口檔，不在頂層。
 5. **大方向是使用者的，我不代替他思考**：在他定好的路上只做兩件事——挖邊緣狀況、快速做原型讓他試；發現攤給他、由他判斷，不拿另一套大方向取代他的。
-6. **條列走資料檔、導航留 md**：給 AI 的同質記錄表 >1 KB 存 `.json`／`.csv`（[data-files](data-files.md)），用 `wf/tools/tabledb.py` 讀寫、不整份讀進 context。
+6. **條列走資料檔、導航留 md**：給 AI 的同質記錄表 >1 KB 存 `.json`／`.csv`（[data-files](data-files.md)），用 `wf/tools/tabledb.py` 讀寫、不整份讀進 context。新寫的預設寫 `.md`、用 index json 當骨架；要用 `.md` 還是 `.json` 都可以，門檻是建議、不做檢查（使用者 11-21）。
 
 ## 使用者偏好（[user.md](user.md)）
 

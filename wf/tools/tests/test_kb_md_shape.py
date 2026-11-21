@@ -43,6 +43,17 @@ class Shape(unittest.TestCase):
         self.assertEqual(get("skeleton", "a", "b"), 1)
         self.assertFalse(any(l.startswith("<!--") for l in page.lines))
 
+    def test_article_with_its_own_heading_and_an_index(self):
+        doc = {"_description": "Packs.", "_index": {"about": {"description": "how packs work"}, "look": {"description": "pack look"}},
+               "about": "# Tool packs\n\nText.\n", "look": "Pack look: read, ls."}
+        page, forced = kb_md_shape.convert_page(doc, "lib")
+        self.assertEqual(forced, set())
+        text = "\n".join(page.lines) + "\n"
+        self.assertEqual(mdpath.get(text, ["Tool packs"]), "# Tool packs\n\nText.\n")
+        self.assertEqual(mdpath.get(text, ["_index", "look"]), "pack look")
+        self.assertEqual(mdpath.get(text, ["look", "_"]), "Pack look: read, ls.\n")
+        self.assertIn(("about", ["Tool packs"]), [(o[0], n) for o, n, _v, _h in page.leaves if o])
+
     def test_a_key_that_cannot_be_read_back_stays_a_json_block(self):
         doc = {"outer": [{"n": 1, "inner": [{"k": "a"}, {"k": "b"}]}, {"n": 2, "inner": []}]}
         page, forced = kb_md_shape.convert_page(doc, "lib")

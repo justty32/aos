@@ -39,7 +39,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md → 各工作流入口 → 工
   3. **新檔第一行（腳本跳過 shebang 的第一行）寫一句話；交件走 `wf/tools/commit-request`，生成器由排隊跑**（11-05 使用者裁「code map 逐檔表改生成」；11-13 晚「code map這塊，就按照推薦。」兩支生成器合一；11-14 專區「q1:fix」，[kb-1114](proto8/thinking/2026-11/14/kb-1114.md)）：`wf/tools/index_gen.py` 一次重生程式區的 `_index.json` 與 [`wf/knowledge/code-map/`](wf/knowledge/code-map.json) 逐檔表，排隊在 repo 外的乾淨副本上跑它，生成物跟程式同一個 commit；各線不自己跑、不 `git add`、不手改生成物（用法見 [aos-teams/07](wf/workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)）。新增／刪除檔或某檔職責變了，改檔頭那一句就好。**沒有 commit-request 的機器**才自己在 commit 前跑 `python3 wf/tools/index_gen.py --apply`。
   4. 各工作流的**具體流程在它自己的入口檔**，不在頂層。
   5. **大方向是使用者的，我不代替他思考**：產品構想與路線由使用者自己打磨。我在他已定好的路上做兩件事——**挖邊緣狀況**（執行失敗、各種失敗、延遲…他沒想到的狀態）與**快速做原型讓他試**。發現攤給他、由他判斷，不拿另一套大方向去取代他的。
-  6. **條列走資料檔、導航留 md**：給 AI 消化的同質記錄表 >1 KB 存 `.json`／`.csv`（契約 `wf-table/1`，見 [data-files](wf/workflows/common/data-files.md)），用 `wf/tools/tabledb.py` 讀寫、不整份讀進 context；給人點的導航連結表留 md。
+  6. **條列走資料檔、導航留 md**：給 AI 消化的同質記錄表 >1 KB 存 `.json`／`.csv`（契約 `wf-table/1`，見 [data-files](wf/workflows/common/data-files.md)），用 `wf/tools/tabledb.py` 讀寫、不整份讀進 context；給人點的導航連結表留 md。**新寫的文件預設寫 `.md`、用 index json（`_index.json`）當骨架；具體要用 `.md` 還是 `.json` 都可以，這條的門檻是建議、不做檢查**（使用者 11-21 晚「以後我覺得可以是新寫的就預設寫.md，然後再去用index json做骨架，當然，具體要用.md還是.json都可以」）。
 - **[wf/STRUCTURE.md](wf/STRUCTURE.md) 是被動參考**（分層原則、膨脹即拆、四級成長、archive 規則）——**只在你要重構／整理結構時才取用**，不貫穿日常每個動作。只在**碰原始碼**時適用的**程式碼慣例 + code map 維護鏈**在 [wf/workflows/common/conventions.md](wf/workflows/common/conventions.md)。
 
 ## 開發環境

@@ -2,7 +2,7 @@
 
 - A helper you can talk to, change and remove later: `subagent` (see `aos/agents/subagent.md`).
 - Start, stop or list any agent on the daemon, without making it yours: `agents_ctl` (see `aos/agents.md#/Any agent on the table: agents_ctl`).
-- A side task that needs what you already know, only the conclusion back: `fork` (agent-fsm only; see `aos/agents/fork.md`). These three come in the `subagent` pack, which no stock template has (agent-fsm or eca); an eca uses the helpers built into its own CLI. A definition may add the pack (see `aos/packs.json`); on an eca you then have subagent and agents_ctl (fork still refuses an eca body with `BodyUnsupported`). `self_state` with part `tools` shows what you have.
+- A side task that needs what you already know, only the conclusion back: `fork` (agent-fsm only; see `aos/agents/fork.md`). These three come in the `subagent` pack, which no stock template has (agent-fsm or eca); an eca uses the helpers built into its own CLI. A definition may add the pack (see `aos/packs.md`); on an eca you then have subagent and agents_ctl (fork still refuses an eca body with `BodyUnsupported`). `self_state` with part `tools` shows what you have.
 - A new kind of agent: copy a template with `agent_def` (pack def: eca has it, agent-fsm only when its definition adds it), edit the copy with your file tools, then start it with `subagent` (see `aos/agents.md#/New definitions: agent_def`).
 
 A subagent runs on the same daemon as you. It does not inherit your brain or your tools: they come from its own definition.

@@ -170,7 +170,7 @@
  "../cli/mcp_import.md#/Codes from external MCP tools": {
   "description": "Pointer. mcp_tool: the program that runs every imported external MCP tool (you never call it by name); its error codes. Explained in `aos/cli/mcp_import.md#/Codes from external MCP tools`."
  },
- "_description.json": {
-  "description": "One node per stock tool that has a page here: what it does, when to use it, its arguments, examples with real output and errors; how to read the pointer rows (keys starting with ../); packs are in aos/packs.json."
+ "_description.md": {
+  "description": "One node per stock tool that has a page here: what it does, when to use it, its arguments, examples with real output and errors; how to read the pointer rows (keys starting with ../); packs are in aos/packs.md."
  }
 }

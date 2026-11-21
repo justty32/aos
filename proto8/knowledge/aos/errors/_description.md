@@ -1,0 +1,1 @@
+Long sections of aos/errors.md, kept here so that file stays small. Read them through aos/errors.md: aos/errors/common.md.

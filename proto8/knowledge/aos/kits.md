@@ -34,7 +34,7 @@ general.A.txt has placeholders: `<KNOWLEDGE>` (path of the knowledge folder), `<
 
 Every tool's definition is sent on every brain call, so the tool list is the biggest fixed cost, larger than the system text. Measured 2026-11-14 as sent: agent-fsm as shipped has 40 tools, about 50,500 characters; the gather kit had 24 tools, about 30,100 characters; board_read and board_wait were added after that (26 tools). On 2026-11-21 the tool descriptions were cut to a sentence or two with a pointer to their knowledge page and agent-fsm turned off four self tools: as shipped it is now 36 tools, about 22,500 characters.
 
-The gather tool set keeps look, change (only write, edit, mkdir), gadgets (without do_task), todo, mailbox, comm (only board_read and board_wait; board_set, board_clear and board_ls are turned off), goal, json (read only), index and self_state. It leaves out shell, delete, events, subagent, def, jsonx and kernel_gate. self_tools, self_system, self_llm, self_history and self_ctl are turned off, so the agent cannot give itself back a tool or rewrite its own rules. How a single tool is turned off: aos/packs.json.
+The gather tool set keeps look, change (only write, edit, mkdir), gadgets (without do_task), todo, mailbox, comm (only board_read and board_wait; board_set, board_clear and board_ls are turned off), goal, json (read only), index and self_state. It leaves out shell, delete, events, subagent, def, jsonx and kernel_gate. self_tools, self_system, self_llm, self_history and self_ctl are turned off, so the agent cannot give itself back a tool or rewrite its own rules. How a single tool is turned off: aos/packs.md.
 
 # What a kit does not enforce yet
 

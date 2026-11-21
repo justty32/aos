@@ -15,6 +15,8 @@ kb_md_shape.py convert DIR [--write] [--map FILE] [--keep PATH]…
   `{"$ref": 路徑}`                   一行 `→ \\`路徑\\``（路徑寫成從庫根算的完整路徑）。
   `skeleton`、數字、布林、null、空的物件或陣列、其他形狀   一個 ```json 區塊（`#/鍵` 拿到原值，可以照 json 往下尋）。
   整頁就是一段文字                  整份 md 就是那段字。
+  頂層的值本來就是有 `# 標題` 的文章   原樣放、用它自己的標題（`#/那個標題`）。
+  `_index`（每項只有 description）    `# _index` 底下一個 `名字: 一句話` 清單（md 頁自己的 index）。
 每頁換完用 proto8/py/aos/mdpath.py 把舊 json 的每個葉值從新 md 讀回來比（文字比到結尾換行之前）；哪個鍵底下有葉值讀不回來，那個鍵整個退回 json 區塊再比一次。
 跟 kb_md.py 的分工：kb_md.py 搬「有標題的文章」（內容逐字不動）；這支換「沒有標題的資料」的形狀（字不少，但排法變了）。
 出處：使用者 11-21 晚「wf/剩下的也換一換」；規劃 proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/15。純標準庫＋aos.mdpath。"""
@@ -48,9 +50,10 @@ def block(v):
 
 
 class Page:
-    """一頁的轉換：lines＝md 的行；leaves＝[(舊 token 串, 新 token 串, 值, 比法)]，比法 exact／text／ref。"""
+    """一頁的轉換：lines＝md 的行；leaves＝[(舊 token 串, 新 token 串, 值, 比法)]，比法 exact／text（標題底下的字，讀 `/_`）／article（自帶標題的文章，讀它的標題）／ref／whole。"""
     def __init__(self, lib_dir, forced):
         self.lines, self.leaves, self.lib_dir, self.forced = [], [], lib_dir, forced
+        self.titles = {}                                # 頂層鍵 → 它那篇文章自己的標題（有的才記）
 
     def leaf(self, old, new, value, how="exact"):
         self.leaves.append((list(old), list(new), value, how))
@@ -104,7 +107,23 @@ class Page:
         return self.json_block(v, toks)
 
     def key(self, name, v, lvl, toks, top):
+        text = v if isinstance(v, str) else "\n".join(v) if strarr(v) else None
+        if lvl == 1 and top not in self.forced and text is not None and text.startswith("# "):
+            heads = mdpath._heads(text.split("\n"))     # 自己有標題的文章：原樣放，用它自己的標題（同 kb_md.py）
+            if heads and heads[0][0] == 0 and heads[0][2] not in ("_", name) and sum(1 for h in heads if h[1] == 1) == 1:
+                self.lines += text.rstrip("\n").split("\n") + [""]
+                return self.leaf(toks, [heads[0][2]], text, "article")
         self.lines += ["#" * lvl + " " + name, ""]
+        if name == "_index" and top not in self.forced and isinstance(v, dict) and v and all(
+                isinstance(e, dict) and set(e) == {"description"} and isinstance(e["description"], str) and "\n" not in e["description"]
+                and e["description"] == e["description"].strip() and e["description"] and not mdpath.INT.match(k) and k == k.strip() and ":" not in k
+                for k, e in v.items()):
+            for k, e in v.items():                      # 檔內的 index：md 的寫法就是「名字: 一句話」清單；名字＝這份 md 裡的標題字
+                n = self.titles.get(k, k)
+                self.lines.append("- %s: %s" % (n, e["description"]))
+                self.leaf(toks + [k, "description"], toks + [n], e["description"])
+            self.lines.append("")
+            return None
         self.body(v, lvl, toks, top)
 
 
@@ -117,6 +136,11 @@ def render(doc, lib_dir, forced=()):
         return p
     if not isinstance(doc, dict):
         return None
+    for k, v in doc.items():                            # 先記哪些鍵是自帶標題的文章（_index 要用它們的標題當名字）
+        text = v if isinstance(v, str) else "\n".join(v) if strarr(v) else ""
+        heads = mdpath._heads(text.split("\n")) if text.startswith("# ") and k not in p.forced else []
+        if heads and heads[0][0] == 0 and heads[0][2] not in ("_", k) and sum(1 for h in heads if h[1] == 1) == 1 and ":" not in heads[0][2]:
+            p.titles[k] = heads[0][2]
     for k, v in doc.items():
         if k == "_description" and (isinstance(v, str) or strarr(v)) and not has_heading(v.split("\n") if isinstance(v, str) else v):
             text = v if isinstance(v, str) else "\n".join(v)
@@ -141,7 +165,7 @@ def failed(p):
             got = mdpath
         if how == "whole":
             ok = got.rstrip("\n") == value.rstrip("\n")
-        elif how == "text":
+        elif how in ("text", "article"):
             ok = isinstance(got, str) and got.rstrip("\n") == value.rstrip("\n")
         elif how == "ref":
             ok = isinstance(got, str) and got.strip() == "→ `%s`" % value

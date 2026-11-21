@@ -12,7 +12,7 @@ A definition is a folder that says what an agent is (its source code). Its `inte
 - `interfaces.json`: where the other files are (keys `tools`, `llm`, `llm_keys`, `history`, `system`, and `entry` or `screen` under `aos-agent`; `hookeds` and `hooks` at the top level). aos-agent reads only this to find them.
 - `_entry`: what runs when the folder itself is run.
 - `loop.json`: the loop: what runs each beat, the pause between beats (`interval_ms`), and `on_start` / `on_stop` (they fire the `after_start` / `after_stop` hooks).
-- `tools.json`: the tools: the packs listed in `"$override"` plus a few cells (`aos/packs.json`).
+- `tools.json`: the tools: the packs listed in `"$override"` plus a few cells (`aos/packs.md`).
 - `llm.json`: brain settings, like `{"model": "sonnet"}`; `llm_keys` in interfaces.json says which keys count.
 - `system.txt`: the system text. In eca-claude and eca-pi it is two short paragraphs (what aos is, where the knowledge base is), added after the CLI's own system prompt.
 - `hookeds.json`: what is hooked (the list `"hookeds"` at the top of `interfaces.json` names; `"hooks"` there names the hook point declarations, only for reading). Both have `timer` (on_clock every 5 minutes, does nothing), `mail_notify` (on_clock every minute: one message when new letters came; `aos/mailbox.md#/Hearing about new letters`), `brain_notify` (brain_failed: BLOCKED letters to `AOS_NOTIFY_BOX`) and `context_wrap` (on_clock: /compact when the context is full enough; `aos/me/compact.md`); eca also has `screen_linger_start` / `screen_linger_stop` (`aos/cli/eca.md#/Delayed screen closure`).

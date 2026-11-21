@@ -19,7 +19,7 @@
 - 只有單一開發環境、沒有離線／CI 差異 → `machines` 留空陣列；這時工作區 `wf/knowledge/verification.json` 的「誰跑」欄全部是 agent，並清掉工作區 `wf/progress.json` 裡因環境而卡的「等使用者」條目。
 - 驗證與測試指令不列這裡。
 - 要帳號、付費、授權才能取得的工具：`how` 寫清楚，並在工作區的 `wf/progress.json` 記一條、status 寫「等使用者」。
-- 記錄是物件陣列，用 json 工具讀寫（`aos/packs.json#/json`）。
+- 記錄是物件陣列，用 json 工具讀寫（`aos/packs.md#/json`）。
 
 # skeleton
 

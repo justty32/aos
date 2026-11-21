@@ -7,7 +7,7 @@
   "aos": {
    "_description.md": "aos in one page",
    "agents": {
-    "_description.json": "Long sections of aos/agents.md, kept here so that file stays small. Read them through aos/agents.md: aos/agents/subagent.md.",
+    "_description.md": "Long sections of aos/agents.md, kept here so that file stays small. Read them through aos/agents.md: aos/agents/subagent.md.",
     "fork.md": "a copy of you, one goal, just the conclusion",
     "subagent.md": "Your own subagents: subagent"
    },
@@ -58,7 +58,7 @@
    "clock.md": "Wake me every N cycles",
    "definition.md": "What is in a definition folder",
    "errors": {
-    "_description.json": "Long sections of aos/errors.md, kept here so that file stays small. Read them through aos/errors.md: aos/errors/common.md.",
+    "_description.md": "Long sections of aos/errors.md, kept here so that file stays small. Read them through aos/errors.md: aos/errors/common.md.",
     "common.md": "Common error codes"
    },
    "errors.md": "Reading an error",
@@ -66,7 +66,7 @@
    "kits.md": "Kits: ready-made system text and tools for one agent role",
    "mailbox.md": "Mailbox: letters between agents",
    "me": {
-    "_description.json": "Long sections of aos/me.md, kept here so that file stays small. Read them through aos/me.md: aos/me/self_tools.md and so on.",
+    "_description.md": "Long sections of aos/me.md, kept here so that file stays small. Read them through aos/me.md: aos/me/self_tools.md and so on.",
     "compact.md": "keep what you need to go on after agent-fsm history is folded",
     "do_task.md": "one task inside your own conversation, only its summary kept",
     "self_history.md": "Changing your own conversation history",
@@ -76,11 +76,11 @@
     "self_tools.md": "Changing your own toolbox"
    },
    "me.md": "Who am I",
-   "packs.json": "Your tools come in packs. Which packs you have, what each tool does in one sentence, and how a pack is turned off.",
+   "packs.md": "_index",
    "rules.md": "Boundaries",
    "status.md": "Reading state",
    "tools": {
-    "_description.json": "One node per stock tool that has a page in this folder: what it does, when to use it (and which tool instead), its arguments, examples with real outp…",
+    "_description.md": "One node per stock tool that has a page in this folder: what it does, when to use it (and which tool instead), its arguments, examples with real outp…",
     "copy.md": "Tool copy",
     "edit.md": "Tool edit",
     "glob.md": "Tool glob",

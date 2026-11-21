@@ -32,7 +32,7 @@
 - 一列一道驗證；指令寫得出來才列，「目視」這類寫成步驟、`who` 填使用者。
 - 至少一列標「改完必跑」——`wf/workflows/feature-dev.md`、`wf/workflows/testing.md` 的 done_when 看的就是它。
 - 部分測試需要特殊環境時：在 `checks` 補列、寫 `offline_subset`，並同時在工作區 `wf/knowledge/dev-env.json#/machines` 記哪台機器跑不了。
-- 記錄是物件陣列，用 json 工具讀寫（`aos/packs.json#/json`）。
+- 記錄是物件陣列，用 json 工具讀寫（`aos/packs.md#/json`）。
 
 # skeleton
 

@@ -55,9 +55,9 @@
   "description": "One node per stock tool (read, ls, write, edit, trash, shell ...): when to use it and which tool instead, examples with real output, errors. Tools explained on other pages (mailbox_send, self_tools, subagent ...) are pointer rows in its index.",
   "index": "tools/_index.json"
  },
- "packs.json": {
+ "packs.md": {
   "description": "Your tools come in packs (look, change, delete, shell, gadgets, events, todo, self, subagent, def, mailbox, goal, json, jsonx, index; comm is used by the kits, kernel_gate is in no stock definition): one sentence per tool, and how a pack is turned off.",
-  "index": "packs.json#/_index"
+  "index": "packs.md#/_index"
  },
  "_description.md": {
   "description": "aos in one page: what aos is, the eight words, five rules, and where to read more."

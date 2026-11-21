@@ -1,0 +1,1 @@
+Long sections of aos/me.md, kept here so that file stays small. Read them through aos/me.md: aos/me/self_tools.md and so on.
