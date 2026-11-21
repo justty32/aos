@@ -120,10 +120,13 @@ COMMENT = re.compile(r'^\s*(//+|/\*+|\*+(?!/)|#+|--+|;+|"""|\'\'\')\s?(.*)$')
 def text_desc(text, path):
     lines = text.splitlines()[:15]
     if path.endswith(".md"):
+        first = next((ln.strip() for ln in lines if ln.strip()), "")
+        if first and not first.startswith(("#", "←", ">", "[", "|", "<", "```")):
+            return first                                # 開頭是一段話的 md（知識庫的頁：最上面那段就是它的簡介；鍵名當標題的頁標題只是 when、steps）
         for ln in lines:
             if ln.startswith("#"):
                 return ln.lstrip("#").strip()
-        return next((ln.strip() for ln in lines if ln.strip()), "")     # 沒有標題的 md（知識庫的一句話頁）：取第一行有字的
+        return first if not first.startswith(("←", ">", "[", "|", "<", "```")) else ""
     for i, ln in enumerate(lines):
         s = ln.strip()
         if i == 0 and s.startswith("#!"):

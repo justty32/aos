@@ -17,6 +17,8 @@
 - **4 份 `_index.json` 沒換**（頂層的讀法，等他確認）：`index` 欄（二次導航）與 `wf/workflows/_index.json` 的 `kind`、`source` 欄放不進「名字: 一句話」。
 - 驗（乾淨複本 `s6/`，裝過）：`index_check` 對 `knowledge` 與 `knowledge-zh-md` 8 份 245 項 0 問題（`aos/_index.json` 那一項的 `index` 現在指進 md 的 `# _index`，新規則認得）；`test_knowledge_paths`、`test_hook_points_match`、index_view 兩份過；`wf/tools/tests` 75 過；工具入口實查 `aos/packs.md#/look/_`、`aos/packs.md#/_index/Tool packs`、`aos/me/_description.md` 正確，`index_view aos/packs.md` 印出 18 項。
 
+- 交件後 `index_gen` 還說有 1 個檔沒有一句話：`wf/workflows/tidy/principles.md`（換形狀後唯一的標題叫 `principles`，跟檔名一樣，被當成沒說什麼）。補 `wf/tools/codemap_lib.py`：開頭是一段話的 md，一句話取那一段（換形狀的頁最上面那段就是它的簡介，比取 `when` 這種鍵名標題有用）；開頭是標題或導航行的照舊取標題。補完 0 個缺。
+
 ## 2. repo 自己 `wf/` 的規矩
 
 要求：改得最小，只動講「寫 json 還是 md」的那幾句。六處都是**原字不動、加一句**（四處接在句尾、兩處插在句中），沒有刪字。逐處改前改後在 [19](19-repo規矩六處-改前改後.md)。

@@ -15,7 +15,9 @@ class Fallbacks(unittest.TestCase):
 
     def test_markdown_without_a_heading_takes_its_first_line(self):
         self.assertEqual(codemap_lib.text_desc("\nOne sentence page.\n\nmore\n", "a/_description.md"), "One sentence page.")
-        self.assertEqual(codemap_lib.text_desc("intro\n\n# Title\n", "a/x.md"), "Title")
+        self.assertEqual(codemap_lib.text_desc("What this page is.\n\n# when\n", "a/x.md"), "What this page is.")
+        self.assertEqual(codemap_lib.text_desc("# Title\n\ntext\n", "a/x.md"), "Title")
+        self.assertEqual(codemap_lib.text_desc("← [up](../README.md)\n\n## Part\n", "a/x.md"), "Part")
         self.assertEqual(codemap_lib.text_desc("", "a/x.md"), "")
 
 
