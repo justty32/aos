@@ -37,7 +37,7 @@
   "description": "Test defs.loop (line aos-pylib-k4-1120, second commit; open question 8 of thinking/2026-11/20/aos-pylib-plan-1120/08, the user chose \"加一個宣告\"): defs.A…"
  },
  "test_agent_spec_loop_live.py": {
-  "description": "defs.loop for real: two agents compiled with the installed aos, one with loop=defs.loop(every_ms=1000) and one without, each with a one-state machine…"
+  "description": "defs.loop for real: two agents compiled with the installed aos, one with loop=defs.loop(interval_ms=1000) and one without, each with a one-state mach…"
  },
  "test_agent_spec_objects.py": {
   "description": "Test the objects of defs: Fsm compiled alone, build scripts with .compile(folder), .dry_run() equal to what .compile() writes, one object in two agen…"

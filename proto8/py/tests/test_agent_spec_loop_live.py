@@ -1,4 +1,4 @@
-"""test_agent_spec_loop_live - defs.loop for real: two agents compiled with the installed aos, one with loop=defs.loop(every_ms=1000) and one without, each with a one-state machine that writes the time of every tick; mounted on a copy of start-api's root daemon (no brain), the measured pause between ticks is about 1000 ms and about 300 ms."""
+"""test_agent_spec_loop_live - defs.loop for real: two agents compiled with the installed aos, one with loop=defs.loop(interval_ms=1000) and one without, each with a one-state machine that writes the time of every tick; mounted on a copy of start-api's root daemon (no brain), the measured pause between ticks is about 1000 ms and about 300 ms."""
 import json
 import os
 from pathlib import Path
@@ -48,7 +48,7 @@ class Live(unittest.TestCase):
         shutil.copytree(PROTO / "templates" / "start-api", cls.tree, symlinks=True)
         head = (PROTO / "templates" / "agent-python" / "agent.py").read_text().split("# ---- your agent")[0]
         cls.compiled = {}
-        for name, loop in (("slow", "\n    loop=defs.loop(every_ms=1000),"), ("plain", "")):
+        for name, loop in (("slow", "\n    loop=defs.loop(interval_ms=1000),"), ("plain", "")):
             d = cls.tree / "agents" / name
             d.mkdir(parents=True)
             (d / "agent.py").write_text(head + BODY % (cls.tmp / ("%s.ticks" % name), loop))

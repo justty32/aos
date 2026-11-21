@@ -223,7 +223,7 @@ def _based(shown, file, root, given):
         setattr(out, field, None if value is None else _copy(value))
     loop = values["loop"]                                       # defs.loop(...)（第 4 刀第二筆）：跟別的欄一樣，寫 loop=base.loop 才帶過來
     if loop is not None and parts.kind(loop) != "loop":
-        raise SpecBad("loop must come from defs.loop(every_ms=...)")
+        raise SpecBad("loop must come from defs.loop(interval_ms=...)")
     out.loop = None if loop is None else _copy(loop)
     if "hooks" not in skip:
         hooks = hook_parts.no_hooks(values["hooks"])

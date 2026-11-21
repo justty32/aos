@@ -65,21 +65,22 @@ class Templates(unittest.TestCase):
         self.assertEqual(sorted(out), ["README.md", "_entry", "daemon.json", "interfaces.json", "kernel.json"])
         self.check("llm-kernel", defs.Kernel("x", program="kernel_llm", knobs=knobs))
 
-    def test_every_ms(self):
-        self.assertEqual(defs.Kernel("x", body=defs.loop(every_ms=1000)).dry_run()["loop.json"]["interval_ms"], 1000)
-        self.assertEqual(defs.Kernel("x", body=defs.daemon(every_ms=0)).dry_run()["daemon.json"]["interval_ms"], 0)
+    def test_interval_ms(self):
+        self.assertEqual(defs.Kernel("x", body=defs.loop(interval_ms=1000)).dry_run()["loop.json"]["interval_ms"], 1000)
+        self.assertEqual(defs.Kernel("x", body=defs.daemon(interval_ms=0)).dry_run()["daemon.json"]["interval_ms"], 0)
+        self.assertEqual(defs.Kernel("x", body=defs.daemon()).dry_run()["daemon.json"]["interval_ms"], 300)
 
     def test_any_key_goes_through(self):
         """11-21「任意鍵照傳」(same as the agent's defs.loop): any key, as it is, unchecked; same name as a compiled key = yours wins."""
         plain = defs.Kernel("x", body=defs.loop()).dry_run()["loop.json"]
-        loop = defs.Kernel("x", body=defs.loop(every_ms=1000, max=3, on_start=["true"], x_y=None)).dry_run()["loop.json"]
+        loop = defs.Kernel("x", body=defs.loop(interval_ms=1000, max=3, on_start=["true"], x_y=None)).dry_run()["loop.json"]
         self.assertEqual(loop, dict(plain, interval_ms=1000, max=3, on_start=["true"], x_y=None,
                                     description=plain["description"].replace("every 300 ms", "every 1000 ms")))
         daemon = defs.Kernel("x", body=defs.daemon(interval_ms=50, procs={})).dry_run()["daemon.json"]
         self.assertEqual((daemon["interval_ms"], daemon["procs"]), (50, {}))     # procs given = no sweeper row
         self.assertIn("every 50 ms", daemon["description"])
         self.assertEqual(defs.Kernel("x", body=defs.daemon(interval_ms="x")).dry_run()["daemon.json"]["interval_ms"], "x")   # unchecked
-        self.assertRaisesRegex(defs.SpecBad, "every_ms or interval_ms, not both", defs.Kernel("x", body=defs.daemon(every_ms=1, interval_ms=1)).dry_run)
+        self.assertIn("every 300 ms", defs.Kernel("x", body=defs.daemon(interval_ms="x")).dry_run()["daemon.json"]["description"])
 
 
 class Hooks(unittest.TestCase):
@@ -156,7 +157,6 @@ class Errors(unittest.TestCase):
         self.bad(defs.Kernel("x", knobs={"hooks": {}}), "knobs must not set hooks: use hooks=")
         self.bad(defs.Kernel("x", knobs={"description": "y"}), "knobs must not set description")
         self.bad(defs.Kernel("x", body="loop"), "body must come from defs.loop")
-        self.bad(defs.Kernel("x", body=defs.loop(every_ms=-1)), "every_ms must be a whole number")
         self.bad(defs.Kernel("x", hooks="h"), "hooks must be a dict")
         self.bad(defs.Kernel("x", knobs={"x": float("nan")}), "cannot be written as JSON")
 

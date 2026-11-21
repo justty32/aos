@@ -10,8 +10,8 @@
 
 宣告用的小函式（寫錯不在當下丟，記成 bad，.dry_run()／.compile()／defs.main 再報 SpecBad）：
   Agent(說明, system=, tools=, llm=, fsm=None, hooks=None, meta=None, interfaces=None, files=None, loop=None)  一隻 agent；不給 fsm＝只填現成定義夾的內容檔（eca 版）
-  loop(every_ms=, **鍵) loop.json 的間隔（兩格之間停多久；不給 loop＝300 毫秒）與任意鍵（原樣寫進 loop.json、蓋過編譯寫的同名鍵、不檢查）；要有 fsm
-                      （第 4 刀第二筆，線 aos-pylib-k4-1120；待裁第 8 題「加一個宣告」；任意鍵：11-21 使用者「任意鍵照傳」）
+  loop(**鍵)           loop.json 的鍵，原樣寫進去、蓋過編譯寫的同名鍵、不檢查（例 interval_ms＝兩格之間停多久，不給＝300 毫秒）；要有 fsm
+                      （第 4 刀第二筆，線 aos-pylib-k4-1120；待裁第 8 題「加一個宣告」；11-21 使用者「任意鍵照傳」「every_ms感覺可以拿掉，反正有interval_ms？」）
   std                 隨 aos 發的庫（aos/agent_spec_lib.py）：std.pack(名, prefix=, rename=, exclude=, link=)、std.tool("base/read", name=None, **其他)、
                       std.fsm()＝agent-fsm 範本的四格、std.hooks(範本="agent-fsm")＝那個範本 hooks.json 的那組 hook
   lib(庫名, 根)        別的庫：my = defs.lib("my", defs.env("AOS_WS", "/lib/my"))；my.pack／my.tool 同上，工具名自動帶「庫名_」
@@ -59,9 +59,9 @@ defs.main(it): agent = defs.Agent("what it does", system=..., tools=[...], llm={
                       get a prefix or rename= (a library other than std, by default), and the
                       tools of defs.load, are still linked statically, with a warning.
                       One pack: std.pack("look", link="dynamic") / link="static".
-loop=defs.loop(every_ms=1000) sets the pause between two ticks of the loop (loop.json; default 300 ms).
-Any other keyword goes into loop.json as it is, unchecked: defs.loop(every_ms=1000, max=50, on_timeout_ms=0).
-It replaces a key of the same name that compiling writes (exec, on_start, ...): you take that key over.
+loop=defs.loop(interval_ms=1000, max=50) writes those keys into loop.json as they are, unchecked
+(interval_ms = the pause between two ticks; default 300 ms). A key of the same name that compiling
+writes (interval_ms, exec, on_start, ...) is replaced: you take that key over.
 With fsm given, agent.py writes the whole definition (skeleton included). Without fsm
 (defs.Agent(..., system=, tools=, llm=) only), it fills only the content files (system, tools, llm,
 hooks) of a definition that already has its skeleton, under the names its interfaces.json gives.
@@ -166,21 +166,18 @@ def extern(target):
     return {"kind": "extern", "target": target}
 
 
-def loop(*, every_ms=None, **keys):
-    """loop.json 的宣告：defs.Agent(..., loop=defs.loop(every_ms=1000))＝兩格之間停 every_ms 毫秒（loop.json 的 interval_ms；不給 loop＝300）。
-    待裁第 8 題（設計稿 aos-pylib-plan-1120/08），使用者 11-20 選「加一個宣告」（線 aos-pylib-k4-1120 第二筆）；every_ms 的規矩照讀它的 aos-loop：非負整數（0＝不停）。
-    其他鍵（11-21 使用者「任意鍵照傳」：收任何鍵、原樣寫進 loop.json，不檢查）：跟編譯自己寫的鍵（exec、ctl、on_start…）同名＝你給的蓋過去；
-    every_ms 與 interval_ms 同時給＝SpecBad（同一件事兩種寫法）。值要寫得成 JSON（編譯時才驗）。回記號（不是能單獨編譯的東西：loop.json 要知道 fsm 與 hooks）。"""
-    return _every("loop", every_ms, keys)
+def loop(**keys):
+    """loop.json 的宣告：defs.Agent(..., loop=defs.loop(interval_ms=1000))＝兩格之間停 1000 毫秒（不給＝300）。
+    待裁第 8 題（設計稿 aos-pylib-plan-1120/08），使用者 11-20 選「加一個宣告」（線 aos-pylib-k4-1120 第二筆）；
+    11-21 使用者「任意鍵照傳」（收任何鍵、原樣寫進 loop.json，不檢查）、「every_ms感覺可以拿掉，反正有interval_ms？」（間隔就寫 loop.json 本來的鍵）。
+    跟編譯自己寫的鍵（interval_ms、exec、ctl、on_start…）同名＝你給的蓋過去；值要寫得成 JSON（編譯時才驗）。
+    回記號（不是能單獨編譯的東西：loop.json 要知道 fsm 與 hooks）。"""
+    return _keys("loop", keys)
 
 
-def _every(what, every_ms, keys):
-    """defs.loop（agent 與 kernel 共用）、defs.daemon（kernel）：{"kind", "every_ms"（None＝沒給＝300）, "keys"}；寫錯回 bad 記號。"""
-    if every_ms is not None and (not isinstance(every_ms, int) or isinstance(every_ms, bool) or every_ms < 0):
-        return _bad("defs.%s: every_ms must be a whole number of milliseconds >= 0 (0 = no pause), got %r" % (what, every_ms))
-    if every_ms is not None and "interval_ms" in keys:
-        return _bad("defs.%s: give every_ms or interval_ms, not both (every_ms is written as interval_ms)" % what)
-    return {"kind": what, "every_ms": every_ms, "keys": dict(keys)}
+def _keys(what, keys):
+    """defs.loop（agent 與 kernel 共用）、defs.daemon（kernel）：{"kind", "keys"}。"""
+    return {"kind": what, "keys": dict(keys)}
 
 
 def _state_name_bad(name):

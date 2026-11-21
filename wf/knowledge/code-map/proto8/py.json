@@ -457,7 +457,7 @@
    "test_agent_spec_lib.py": "Test the libraries of py/aos/agent_spec.py (std, defs.lib: packs copied in, other libraries prefixed, clashes SpecBad) and how tool packs are linked,…",
    "test_agent_spec_load.py": "Test defs.load of py/aos/agent_spec.py (one agent.py built on another: the loaded agent's fields, worked out when agent.py runs, nothing of the base …",
    "test_agent_spec_loop.py": "Test defs.loop (line aos-pylib-k4-1120, second commit; open question 8 of thinking/2026-11/20/aos-pylib-plan-1120/08, the user chose \"加一個宣告\"): defs.A…",
-   "test_agent_spec_loop_live.py": "defs.loop for real: two agents compiled with the installed aos, one with loop=defs.loop(every_ms=1000) and one without, each with a one-state machine…",
+   "test_agent_spec_loop_live.py": "defs.loop for real: two agents compiled with the installed aos, one with loop=defs.loop(interval_ms=1000) and one without, each with a one-state mach…",
    "test_agent_spec_objects.py": "Test the objects of defs: Fsm compiled alone, build scripts with .compile(folder), .dry_run() equal to what .compile() writes, one object in two agen…",
    "test_agent_spec_script.py": "Test agent.py run as a script (defs.main(object): --compile / --dry-run, one-line SpecBad, overwrite rules) and the no-fsm (eca) mode.",
    "test_aos_lib_missing.py": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。",
