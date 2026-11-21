@@ -532,6 +532,26 @@
         "[使用者原話 15](../proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/15-使用者原話-續四.md)"
       ],
       "since": "2026-11-21"
+    },
+    "waiting-1121": {
+      "title": "11-21 已念給使用者、還沒答的幾題（從 HANDOFF 搬來，session 關前收工整理）",
+      "status": "等使用者",
+      "flow": "",
+      "what": "HANDOFF 11-21 深夜那條「等他說的」「他還在想的」裡，progress 原本沒有的：1. API agent（agent-fsm）要不要也認 /status、/usage、/exit；2. 新 index_check 他說過「之後要看看」；3. 知識庫換形狀比較醜的頁 wf/source/block-3.md、block-4.md；4. kernel 攔截 daemon 存取（他給了原則「只防走規矩的存取…真的要硬防，那就要多依賴linux的權限體系」，還在想）；5. 驗寄件人規劃：他答 1D、2C、3C、4A，要自己開沙箱試，頂層沒派施工，另五題沒念；6. 權限零件說明頁（桌面 aos-權限零件-1121/）給他看；7. 前端大修盤點 14 項沒念；8. 更早等他的：gpt 包預設走 /v1/responses、self history set 收不收 -n、eca 三包要不要瘦。不催",
+      "next": "等使用者開口；~/.aos/scratch/top-1121-ownerplan/exp/owner/ 要 aos-asuser --fix 才清得掉（清 scratch 時記得）",
+      "see": [
+        "[HANDOFF](HANDOFF.md)",
+        "[api-agent-clear-1121](../proto8/thinking/2026-11/21/api-agent-clear-1121.md)",
+        "[10-index_check](../proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/10-index_check.md)",
+        "[16-wf庫換形狀](../proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/16-第四段-wf庫換形狀.md)",
+        "[kernel-攔截daemon存取-1121](../proto8/thinking/2026-11/21/kernel-攔截daemon存取-1121/README.md)",
+        "[驗寄件人-規劃-1121](../proto8/thinking/2026-11/21/驗寄件人-規劃-1121/README.md)",
+        "[權限零件說明頁-1121](../proto8/thinking/2026-11/21/權限零件說明頁-1121.md)",
+        "[frontend-備妥-1121](../proto8/thinking/2026-11/21/frontend-備妥-1121.md)",
+        "[self-history-range-1121](../proto8/thinking/2026-11/21/self-history-range-1121.md)",
+        "[eca-reasoning-effort-1121](../proto8/thinking/2026-11/21/eca-reasoning-effort-1121.md)"
+      ],
+      "since": "2026-11-21"
     }
   }
 }

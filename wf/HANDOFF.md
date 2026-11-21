@@ -14,17 +14,19 @@
 
 ## 2026-11-21 深夜（家機，使用者在場、準備玩 aos）——知識庫整庫換成「md 為主體、index json 做骨架」做完；API agent 認 `/clear`；沒有線在跑；活樹裝到 `fe053b828`；今天的 commit 都沒 push
 
+> **session 已關，使用者改用 `~/aos-home` 的 eca_main**（11-21 深夜收工整理，線 `top-1121-wrapup`；使用者原話「所以應該沒事要做了吧，那你按照wf/規矩整理收尾。之後我把這個session關掉，開aos home，用eca main了」）。下一個接手的是冷啟動：下面「只限這個 session」的授權已失效，要用得重新問；這個 session 派過的子 agent 都叫不回來了。下面「等他說的」幾題已另記進 `wf/progress.json` 的 `waiting-1121`。
+
 **使用者今天開場的指示（逐字）**：「事情盡量交給agent做，你就負責跟我交流。普通工作交給opus，簡單工作與雜活交給sonnet。agent做事前也要讀過wf/規矩，簡單工作與雜活除外。agent可以再派agent，模型隨意。用繁體中文跟我說話。」**現在沒有 goal。**他今晚自己玩 aos，有問題會來問。
 
 **授權（11-21 當場；只限這個 session）**：
-- push：沒給 → **不推**。本地領先 origin 約 125 筆。
+- push：沒給 → **不推**。本地領先 origin 約 128 筆（含收工整理那筆）。
 - `~/aos-home`：已更新七次（紀錄 `aos-home-更新-1121.md`，最後 `198719adc`，裝的是 `fe053b828`；ann 的 `system.txt` 換成新範本、入口 `_description.md`）。他說過「我還沒開始玩aos，可以動樹」是當下那一次；**再裝之前仍先問他、確認樹停著**。
 - 刪檔：只限已做完的那幾批（知識庫被 md 取代的舊 json）。不延伸。
 - 他會擋看不懂的長指令 → 指令一次一件事。子 agent 的 `commit-request submit` 被擋不要繞。
 - LiteLLM（localhost:4000）是他起的，不停不改。
 - 活樹的 `AOS_HOME` 就是 repo 的 `proto8/`：`knowledge/`、`frontend/`、`templates/`（含 agent-fsm 的格程式）**存檔即生效**；動 `py/`、`cpp/` 要 `install.py`。
 
-**還在跑的線**：沒有。fable 隊長線 `top-1121-kbmd`（agent id `adf161e2ec180c38c`）五段都交了，要續派用 SendMessage。
+**還在跑的線**：沒有。fable 隊長線 `top-1121-kbmd` 五段都交了；session 關了，它的 agent id 叫不回來，要續做就照規劃夾重開一條線。
 
 **今晚做完的大事：知識庫換樣子**（規劃與紀錄全在 `proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/`，他的 25 句原話逐字在 `00`、`08`、`09`、`11`、`15`）：
 - 現況：`proto8/knowledge/` 的 `aos/`、`wf/` 兩庫所有頁都是 `.md`，只剩 4 份夾的 `_index.json` 是 json。入口 `knowledge/aos/_description.md`。commit：工具 `6c769595d`、aos 庫 `fe053b828`、wf 庫 `33835099a`、最後 5 頁與 repo 規矩 `578a7c762`、code map 補洞 `00d156173`／`084fa0306`。
