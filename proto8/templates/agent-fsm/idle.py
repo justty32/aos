@@ -23,6 +23,9 @@
 #   回答寫在這批普通信之前（批開頭先看 cur/ 有沒有 /compact），這批的普通信才不會被它擋在後面沒人答。
 # before_compact（11-21 線 top-1121-compact4，規矩在 compact.py）：夠摺時、清工具輸出與加要求之前發；攔下（退 10）＝照「compact not needed」的樣子
 #   回一則「compact blocked by hook H: …」（多 aos.blocked）、信記成答完；hook 給了 summary＝加要求列後當場摺（compact.fold，那裡發 after_compact），不叫腦。
+# /clear（線 top-1121-apiclear，使用者 11-21「做」；照 eca 的 /clear）：內容去頭尾空白剛好是 /clear 的信一定自己一批——前面有好信或 /compact 就先處理它們、
+#   它跟後面的留在 cur/；輪到它＝不叫腦、不跑 before_queue／after_queue，history 全部搬到 history_removed.jsonl（op clear），換成這一問一答
+#   （user「/clear」＋ assistant「[aos] slash: /clear: N messages moved …」，aos.clear），信記成答完；後面的信下一次 idle 從乾淨的對話收（compact.clear）。
 import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
@@ -67,6 +70,10 @@ letters get one answer "compact not needed: ..." (before the ordinary letters of
 Otherwise before_compact runs first: exit 10 = the letters get one answer "compact blocked by
 hook H: ..." and nothing is folded; a hook that gives a summary = folded at once, no brain call.
 While a summary is already requested, take no mail and return to think.
+/clear (the whole letter, stripped) is always a batch of its own: letters before it are taken
+first and it waits in cur/. Its turn: no brain call, no queue hooks; every message in history
+moves to history_removed.jsonl (op clear) and history becomes the /clear letter plus one answer
+"[aos] slash: /clear: N messages moved ..."; letters after it start from that clean history.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -182,6 +189,10 @@ def take():
             write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")), die)
             continue
         content = body["content"]
+        if compact.is_clear(content):            # /clear 一定自己一批（同 eca）：前面有好信或 /compact＝這次先處理它們，它跟後面的留在 cur/
+            if not (good or compact_letters):
+                clear_letter(compact, sig, content)
+            break                                # 做完也停：後面的信留在 cur/，下一次 idle（退 10 回 idle）從乾淨的對話收
         is_c, extra = compact.is_compact(content)
         if is_c:
             compact_letters.append(sig)
@@ -241,6 +252,21 @@ def answer_short(compact, sigs, count, write=None):
         post(["done", box, sig])
     try:
         aos_ws.letters_answered(stack, sigs)
+    except OSError as e:
+        aos_flags.warn("agent-fsm", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
+
+
+def clear_letter(compact, sig, content):
+    """/clear：不叫腦、不跑 before_queue／after_queue（同 /compact）；history 全部搬到 history_removed.jsonl（op clear），換成這一問一答
+    （compact.clear）。回答配對同 answer_short：pending → history → done → 清 pending。goal.json、todo、handoff.md、compact.json 不動。"""
+    try:
+        aos_ws.letters_take(stack, [sig])
+    except OSError as e:
+        die("WriteFailed", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
+    compact.clear(stack, history_path, sig, content, aos_ws, die)
+    post(["done", box, sig])
+    try:
+        aos_ws.letters_answered(stack, [sig])
     except OSError as e:
         aos_flags.warn("agent-fsm", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
 

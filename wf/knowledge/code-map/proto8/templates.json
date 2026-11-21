@@ -8,7 +8,7 @@
    "body.json": "argv：`aos-loop loop.json`",
    "brain.py": "think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。",
    "cell_common.py": "agent-fsm 的格共用的開頭幾步：brain、act 的讀 history.jsonl 與決定用哪份工具登記檔（四格的 on_clock 看時鐘改在 hook 遙控器 H.clock_tick()，11-20）。",
-   "compact.py": "Compact agent-fsm conversations while preserving unanswered letters and original messages.",
+   "compact.py": "Compact (/compact) or clear (/clear) agent-fsm conversations, keeping the original messages in history_removed.jsonl.",
    "fsm.json": "入口 `aos-fsm $AOS_CF`；鍵：start、states",
    "hookeds.json": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_sta…",
    "hooks.json": "Hook points fired by the agent-fsm cells (idle, think, wait, act); before_compact / after_compact keep their own rules in compact.py (said in their d…",
@@ -263,7 +263,8 @@
     "test_own_tools.py": "Test that brain and act use the agent's own tools registry in its stack (\"$override\" of the definition's; 11-10 aos-tools-cli step 4), and fall back …",
     "test_reply_match.py": "回答配對（thinking/2026-11/14/reply-match-1114/03）的 agent-fsm 寫的一方：idle 記 aos.letter／pending／dropped，wait 記 aos.answer_to、清 pending，brain／stale_request 剝 …",
     "test_same_turn_tools.py": "Pin when a tool added in the middle of a turn works in agent-fsm (11-10 tools-def, user \"3.同一輪就生效\"): brain and act re-read the registry on every step…",
-    "test_selfheal.py": "Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools."
+    "test_selfheal.py": "Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools.",
+    "test_slash_clear.py": "Verify an agent-fsm /clear letter (line top-1121-apiclear) empties history into history_removed.jsonl without a brain call, with fake commands."
    },
    "image-move-check": {
     "check.py": "Verify a sleeping fake-brain daemon tree survives copying and a local git clone."

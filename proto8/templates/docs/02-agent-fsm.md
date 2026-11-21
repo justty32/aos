@@ -103,6 +103,15 @@ aos-agent ctl resume         # ctl 下也有 stop／start、sleep／wake（同�
 
 **長跑**：長時間接不同任務的 fsm，在 `fsm.json` 的 think 格、`brain.py` 的 argv 加 `"--history", "task"`，每次只把最後一封 user 起的任務帶給腦（壓縮後也帶適用的摘要），避免舊任務一直累積進請求；這個旗標不裁切磁碟 history。
 
+## 寄 /clear：清空對話重來
+
+11-21 線 top-1121-apiclear（使用者問「ann有支援/clear這個指令嗎」，答「做」；[紀錄](../../thinking/2026-11/21/api-agent-clear-1121.md)），照 eca 的 `/clear` 做（[eca-slash](../../thinking/2026-11/12/eca-slash.md)）。對 agent 寄一封內容（去頭尾空白）**剛好是 `/clear`** 的信：
+
+- **一定自己一批**：同一批前面有一般信或 `/compact`，這次先處理它們，`/clear` 跟後面的信留在 `queue/cur/`，等那一輪答完回 idle 再做；輪中寄來的也一樣等 idle（不像 `/compact` 會在輪中做）。後面還帶字（例 `/clear the cache`）＝普通的信，照常交給腦。
+- **輪到它**：不叫腦、不跑 `before_queue`／`after_queue`（同 `/compact`）；`history.jsonl` 的每一則搬進 `<stack>/history_removed.jsonl`（`{removed_at, op: "clear", line, message}`，讀不懂的行記 `raw`；行號照 `aos-agent history` 數），history 換成這一問一答兩則：user `/clear`（帶 `aos.letter`）、assistant `[aos] slash: /clear: N messages moved to history_removed.jsonl; the next message starts a new conversation`（帶 `aos.answer_to` 與 `aos.clear: true`），信記成答完，`aos-agent ask`／`listen` 拿到這句；寫法同摺（寫暫存、history 沒變才改名，一直在變三次＝`WriteFailed`）。
+- **之後**：下一封信接在這兩則後面交給腦，前面的對話腦看不到了。`goal.json`、todo、`handoff.md`、`compact.json` 都不動——goal 還是 active 的話，這則回答之後 idle 照常接 goal 提醒；做到一半的 `do_task` 開頭標記被搬走，之後 `do_task end` 報 `MarkerMissing`（同 compact）。壓縮進行中（`compact.json` 是 asked）idle 不收信，`/clear` 等壓完。
+- 程式在 `compact.py` 的 `clear()`（跟摺共用改 history 的那段）與 `idle.py`。
+
 ## context 快滿與 /compact
 
 **預設 35%，收尾與壓縮一起做**。新範本掛 `context_wrap`：`on_clock`、每 5000 ms 檢查一次、`config {"percent": 35, "wrap": false}`；到門檻直接往 agent 的 queue 寄 `/compact`，不另寄收尾信、不等 queue 空。腦用當時的完整對話寫交接摘要，body 同時存進 history 與 `<stack>/handoff.md`，不是先要求它結束手上任務。
@@ -131,7 +140,7 @@ hook 格如下（pack 沒有 `context` 時可在 config 補 `"window": 272000`�
 
 ### 寄 /compact 會怎樣
 
-對 agent 寄 `/compact`（或 `/compact` 後接空白與摘要重點）即可手動要求壓縮；不必等過門檻。這是 body 指令，不跑 `before_queue`／`after_queue`。`/clear` 不在這個功能裡，仍是普通文字。
+對 agent 寄 `/compact`（或 `/compact` 後接空白與摘要重點）即可手動要求壓縮；不必等過門檻。這是 body 指令，不跑 `before_queue`／`after_queue`。清空對話重來是另一個指令 `/clear`，見「寄 /clear：清空對話重來」。
 
 1. idle 把同一批一般信照常收完，批內的 `/compact` 合成一次壓縮要求；做到一半則由 brain 在下一步組請求前認信，僅在 history 尾端是 user，或最後一組工具結果已齊時插入要求，不切斷工具配對。一般信不因而在輪中交給腦。
    夠摺時先發 **`before_compact`**（11-21 compact 第 4 刀，見下面「壓縮前後的 hook」）：hook 可攔下、改指示、不清工具輸出、或直接交一份摘要（那就不叫腦，跳到第 4 步）。

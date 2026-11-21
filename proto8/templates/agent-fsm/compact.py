@@ -1,16 +1,18 @@
-# Compact agent-fsm conversations while preserving unanswered letters and original messages.
+# Compact (/compact) or clear (/clear) agent-fsm conversations, keeping the original messages in history_removed.jsonl.
 # Hooks before_compact / after_compact (declared in hooks.json, line top-1121-compact4; the user 11-21 "2.都開":
 # adjust, add back, replace): this file keeps their rules itself (the engine aos.hook_run only runs handlers, the user's
 # fourth layer). Hooks run in name order and each sees what the earlier ones changed; exit 10 blocks before_compact;
 # exit 0 (or 10 on after_compact) with a JSON object on stdout changes the keys in HOOK_POINTS; a failing hook (other exit
 # code, timed out, cannot start, bad stdout) is one warning line and the next hook runs, on both points.
 # Too-short /compact letters (compact not needed) fire neither point.
+# /clear (line top-1121-apiclear) lives here too because it rewrites history the same way (replace): see clear().
 import copy
 import datetime
 import json
 import os
 
 from atomic_file import write_atomic
+from aos import flags as aos_flags
 from aos import hook_run
 from aos.agentlib import agent_hooks, tool_clear
 
@@ -33,6 +35,8 @@ CLEARED = (" Before this request, %d old tool outputs were replaced by a one-lin
 SKIP = "compact not needed: only %d messages to fold (it takes at least %d); nothing was folded"
 BLOCKED = "compact blocked by hook %s%s; nothing was folded"
 RESTORED = "[aos] restored after compact: "
+CLEAR = "/clear"
+CLEARED_NOTE = "/clear: %d messages moved to history_removed.jsonl; the next message starts a new conversation"   # eca's words
 # The rules of the two points (py/tests/test_hook_points_match.py compares them with hooks.json): block = exit 10 blocks;
 # change = the keys a hook's stdout may set.
 HOOK_POINTS = {
@@ -328,11 +332,48 @@ def replace(stack, path, before, text, removed, op):
         return False
     at = utc()
     with open(os.path.join(stack, "history_removed.jsonl"), "a", encoding="utf-8") as f:
-        for number, message in removed:
+        for number, message in removed:                  # a str = a line that is not a JSON object (kept as raw, like aos-agent history)
             f.write(json.dumps({"removed_at": at, "op": op, "line": number,
-                                "message": message}, ensure_ascii=False) + "\n")
+                                "raw" if isinstance(message, str) else "message": message}, ensure_ascii=False) + "\n")
     os.replace(tmp, path)
     return True
+
+
+def is_clear(content):
+    """A /clear letter: the content, stripped, is exactly /clear (nothing after it, unlike /compact)."""
+    return isinstance(content, str) and content.strip() == CLEAR
+
+
+def clear(stack, history_path, letter, content, aos_ws, die):
+    """/clear (line top-1121-apiclear, as eca does it): every message in history moves to history_removed.jsonl
+    (op clear, one row per message, numbered like aos-agent history), and history becomes this exchange only:
+    the /clear letter (aos.letter) and one answer CLEARED (aos.answer_to, aos.clear). No brain call, no hooks.
+    Written like fold: a temp file renamed only if history did not change, three tries. Returns how many moved.
+    The caller records the letter as taken before and closes it (aos-post done, letters_answered) after."""
+    rows = [aos_ws.mark_letter({"role": "user", "content": content}, letter)]
+    for attempt in range(3):
+        try:
+            try:
+                before, lines = read_lines(history_path)
+            except FileNotFoundError:
+                before, lines = None, []
+            removed = []
+            for number, line in enumerate((l for l in lines if l.strip()), 1):
+                try:
+                    removed.append((number, parse(line)))
+                except (ValueError, UnicodeError):
+                    removed.append((number, line.rstrip("\n")))
+            done = aos_ws.mark_answer({"role": "assistant", "content": aos_flags.aos_note("slash", CLEARED_NOTE % len(removed))}, [letter])
+            done.setdefault("aos", {})["clear"] = True
+            text = "".join(json.dumps(m, ensure_ascii=False) + "\n" for m in rows + [done])
+            if before is None:
+                write_atomic(history_path, text, die)
+                return 0
+            if replace(stack, history_path, before, text, removed, "clear"):
+                return len(removed)
+        except OSError as e:
+            die("WriteFailed", "cannot clear history: %s" % e)
+    die("WriteFailed", "history kept changing while clearing it")
 
 
 def give_up(stack, history_path, reason, aos_ws, warn, die):

@@ -25,7 +25,7 @@ Only agent-fsm:
 
 - `body.json`: the body, `aos-loop loop.json`.
 - `fsm.json`: the four cells `idle` (take letters from the queue), `think` (ask the brain), `wait` (wait for its answer), `act` (run the tool calls).
-- `idle.py`, `brain.py`, `wait.py`, `act.py`, `llm_settings.py`: the programs of those cells; `atomic_file.py`: the atomic file write that idle and wait share; `cell_common.py`: the first steps brain and act share (reading the history, choosing the tool registry); `compact.py`: how a `/compact` letter is done, with the rules of the `before_compact` / `after_compact` hooks (`aos/me/compact.md`).
+- `idle.py`, `brain.py`, `wait.py`, `act.py`, `llm_settings.py`: the programs of those cells; `atomic_file.py`: the atomic file write that idle and wait share; `cell_common.py`: the first steps brain and act share (reading the history, choosing the tool registry); `compact.py`: how a `/compact` letter is done, with the rules of the `before_compact` / `after_compact` hooks, and how a `/clear` letter empties history (`aos/me/compact.md`).
 - `subagents.json`: `max_subagents`, how many subagents you may have at once (tool `subagent`).
 - A definition may carry none of these programs: when its `fsm.json` names them as `{"$env": "AOS_HOME", "$path": "/templates/agent-fsm/idle.py"}` (the `ann` of the start-api starter does, and so does `fsm=std.fsm()` in an agent.py), the cells run the agent-fsm template's copies under `$AOS_HOME`, and the `hooks` of its `interfaces.json` points at the agent-fsm template's `hooks.json` declaration instead of carrying its own.
 

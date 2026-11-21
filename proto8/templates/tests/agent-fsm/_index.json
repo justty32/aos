@@ -73,5 +73,8 @@
  },
  "test_selfheal.py": {
   "description": "Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools."
+ },
+ "test_slash_clear.py": {
+  "description": "Verify an agent-fsm /clear letter (line top-1121-apiclear) empties history into history_removed.jsonl without a brain call, with fake commands."
  }
 }
