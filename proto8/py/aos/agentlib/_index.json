@@ -24,7 +24,7 @@
   "description": "cli_session 的小格：Cell（檔、鎖、畫面 tmux）、畫面 socket 位置、session.txt 與記號檔、認是不是這台的對話、transcripts symlink"
  },
  "cli_cfg.py": {
-  "description": "cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model、system 附加旗標、tools／tools_sub 登記檔"
+  "description": "cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model 與 reasoning_effort、system 附加旗標、tools／tools_sub 登記檔"
  },
  "cli_fault.py": {
   "description": "claude -p 失敗時從 result 行與 stream 判斷暫時或永久，並計算這輪工具呼叫數。"

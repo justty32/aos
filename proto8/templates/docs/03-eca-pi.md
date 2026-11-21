@@ -63,7 +63,7 @@ pi --mode rpc --no-approve --session-dir $AOS_STACK/pi/pi-sessions --session-id 
 - `flags`／`print_flags`：照原樣接在後面（`print_flags` 只給非互動那條）。aos 自己加、你不能再寫的（寫了＝`CfgBad`）：`--mode`、`-p`／`--print`、`--session`、`--session-id`、`--session-dir`、`--no-session`、`--fork`、`-c`／`--continue`、`-r`／`--resume`、`-a`／`--approve`、`-na`／`--no-approve`。
 - `live_mail`（預設開）、`live_mail_cap`：同 claude，管回答途中收信。
 - `screen_close_after_s`：同 eca-claude。
-- 模型：`llm.json` 的 `model` 補成 `--model`（pi 的寫法是 `供應商/id`，`pi --list-models` 列得出來；ChatGPT 訂閱的供應商叫 `openai-codex`，例 `openai-codex/gpt-6.1-sol`）；範本的 `llm.json` 是 `{}`＝用 pi 自己的預設（見上面「登入」那條的坑）。
+- 模型：`llm.json` 的 `model` 補成 `--model`（pi 的寫法是 `供應商/id`，`pi --list-models` 列得出來；ChatGPT 訂閱的供應商叫 `openai-codex`，例 `openai-codex/gpt-6.1-sol`）；範本的 `llm.json` 是 `{}`＝用 pi 自己的預設（見上面「登入」那條的坑）。`reasoning_effort` 補成 `--thinking`（`off`、`minimal`、`low`、`medium`、`high`、`xhigh`、`max`，其他＝`CfgBad`；pi 的對話會記程度，拿掉之後同一段對話照用上次的；見 [01「思考程度」](01-eca-claude.md)）。
 - **改指 OpenAI 相容端點**（例：litellm proxy `http://localhost:4000/v1`）：pi 的 provider 設定在帳號資料夾的 `models.json`。不想動 `~/.pi/agent`，就另開一個帳號資料夾、在起樹的環境設 `PI_CODING_AGENT_DIR`：
 
   ```json

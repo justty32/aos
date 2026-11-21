@@ -30,17 +30,30 @@ eca-claude/
   cli.json    怎麼叫 CLI（kind、flags、print_flags、tools_sub、timeout_ms〔0＝不限時〕）：--tools Read,Write,Edit,Glob,Grep,Bash,Agent,Skill、--permission-mode dontAsk、--allowedTools Write,Edit,Bash、--strict-mcp-config；
               tools_sub＝子 agent 那台的登記檔（見下「子 agent 與 skill」）
               （claude 內建的寫檔、改檔、指令都開，aos 不給檔案與 shell 工具；--model 不寫在這，見 llm.json；不加全繞過權限的旗標）
-  llm.json    腦設定：{"model": "sonnet"}（cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；只認 model（claude CLI 沒有 temperature 等取樣旗標，與快取無關的調整鍵這邊沒有對應）
+  llm.json    腦設定：{"model": "sonnet"}（cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；認 model 與 reasoning_effort（思考程度，補成 --effort，見下「思考程度」）；claude CLI 沒有 temperature 等取樣旗標，那些鍵這邊沒有對應
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
   tools.json  aos-tools 的登記檔：`"$override"` 一串 [py/packs](../../py/packs/README.md) 八包（gadgets、events、self、def、mailbox、json〔json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set〕、jsonx〔jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del、jsonx_multi_get、jsonx_multi_set〕、index〔index_view〕），共 34 支；不掛通用四包 look、change、delete（含 trash）、shell（11-11 晚使用者「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」）與 subagent、goal、todo（原話與代定見範本 README）；do_task 只給 agent-fsm，寫 `"do_task": null`；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__peek_now_time…；帶 `--own <stack>/tools.json`，self_tools 加減工具後 aos-mcp 送 list_changed，同一輪就叫得到，使用者「3.同一輪就生效」）；不要工具就刪掉它
   tools_sub.json  子 agent 那台的登記檔：gadgets、json、index 三包裡不改東西的九支（peek_clock、peek_now_time、math、json_get、json_ls、json_search、json_len、json_multi_get、index_view）
-  interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json", "system": "system.txt"}}（history 鍵給 aos-agent history 找檔；llm_keys：aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
+  interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model", "reasoning_effort"], "history": "history.jsonl", "hooks": "hooks.json", "system": "system.txt"}}（history 鍵給 aos-agent history 找檔；llm_keys：aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
   hooks.json  hook 清單（預設一格 timer：on_clock 每 300000 ms、handler py/tools/agent/hook_noop 什麼都不做；另一格 mail_notify：on_clock 每 60000 ms（使用者「每 1 分鐘」）、handler py/tools/agent/mail_notify，有新信才往 queue 寄一則 `[aos] new_mail: …`；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
   screen/     子介面：_entry＝["aos-eca-screen", "--eca", ".."]（aos-agent open／close／watch 叫它；動作接在最後）
   README.md、_metainfo.json  首行一句話與 summary 一致；估時 cost.time_ms 60000、resource ["llm"]，沒有頂層 timeout_ms（讓 agent_def check 過）
 ```
+
+**思考程度**（11-21 線 top-1121-ecaeffort；使用者「eca也都有跟上嗎？reasoning eff那些」）：`llm.json` 的 `reasoning_effort`＝claude 的 `--effort`，pi 身（[03](03-eca-pi.md)）＝`--thinking`。`aos-agent llm --target myproj set reasoning_effort=high`、`llm rm reasoning_effort` 回定義的值（範本沒寫＝CLI 自己的預設）。
+
+| 身體 | 旗標 | 收的級別（出處） |
+|---|---|---|
+| claude | `--effort` | `low`、`medium`、`high`、`xhigh`、`max`（`claude --help`，2.1.330；[model-config](https://code.claude.com/docs/en/model-config)：模型不支援的級別往下退到它有的最高一級） |
+| pi | `--thinking` | `off`、`minimal`、`low`、`medium`、`high`、`xhigh`、`max`（`pi --help`，1.5.2；pi 的 `docs/cli.md`：超過模型能力的級別會被壓到模型有的） |
+| codex | — | 沒接，寫了＝`CfgBad` |
+
+- **只收那支 CLI 認得的名字**，其他（例 llm kernel 那邊才有的 `none`、claude 身寫 `off`）＝`CfgBad`：在認領信之前就停、信留在 queue，`aos-agent llm set` 改對或 `llm rm` 後下一輪照跑。兩支 CLI 遇到不認得的值都只印一行 warning、改用預設照跑（11-21 實測），aos 不讓它靜靜變回預設；也不替你換名字（`none` 不會變成 pi 的 `off`）。
+- **什麼時候生效**：沒開畫面＝下一輪（每輪重讀 `llm.json`、重起 CLI）。畫面開著＝畫面是開的那一刻帶的旗標，改了要 `aos-agent close` 再 `open` 才換；不想關就在畫面裡打 CLI 自己的指令（claude `/effort high`、pi `/thinking`），那只算那個畫面，aos 不知道。
+- **pi 的對話會記程度**：pi 把程度記在對話檔裡，`--thinking` 有給就蓋過；`llm rm reasoning_effort` 之後同一段對話照用上次記的程度（不是回 pi 的預設），開新對話（`/clear`）才回預設。claude 每輪是新行程、程度不跟著對話走，拿掉就回 CLI 的預設。
+- `/status` 會多寫 `reasoning_effort X`（有設時）。
 
 **實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`（掛 daemon 的在 daemon 給的 proc 的 stack），裡面長 `queue/`、`history.jsonl`、`ctl.json`、`state.json` 與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）。這隻自己改過的還有 tools 與 llm 覆蓋層（只存差異；路徑依 `interfaces.json` 的同名欄位，此範本是 `tools.json`、`llm.json`，K-6）（`aos-agent tools`／`llm`；`aos-agent llm --target myproj set model=haiku`＝下一題起 `--model haiku`，`reset` 回定義的 sonnet）。換定義的模型＝`aos-json set --str proto8/templates/eca-claude/llm.json#/model opus`。eca 的腦是 CLI 自己，不經 llm kernel（think-as-function 03 § 2）。
 

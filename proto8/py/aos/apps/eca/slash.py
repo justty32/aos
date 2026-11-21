@@ -136,8 +136,9 @@ def slash_status(cfg, cell, stack):
     sid = cell.read("session.txt")
     found = cli_cell.transcripts(cfg["kind"], sid, cell.path)
     goal = cli_goal(cfg["kind"], found[0]) if found else None
-    return note("/status: %s, model %s; conversation %s; screen %s; history %d messages; transcript %s%s" % (
-        cfg["kind"], model_of(cfg), sid or "(none yet: the next message starts one)",
+    effort = ", reasoning_effort %s" % cfg["reasoning_effort"] if cfg.get("reasoning_effort") else ""
+    return note("/status: %s, model %s%s; conversation %s; screen %s; history %d messages; transcript %s%s" % (
+        cfg["kind"], model_of(cfg), effort, sid or "(none yet: the next message starts one)",
         "open" if cell.alive() else "closed", len(history_rows(stack)), found[0] if found else "(none)",
         "; last goal the CLI recorded: %s" % goal if goal else ""))
 

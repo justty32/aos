@@ -33,6 +33,22 @@ class ClaudeSlash(Base):
     def answer(self):
         return self.history()[-1]["content"]
 
+    def test_reasoning_effort_reaches_claude_and_status(self):
+        """11-21 top-1121-ecaeffort: llm.json reasoning_effort = --effort on every turn; the stack copy (aos-agent llm set) wins from the next turn; /status says it."""
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"llm": "llm.json", "llm_keys": ["model", "reasoning_effort"]}}))
+        (self.defn / "llm.json").write_text(json.dumps({"reasoning_effort": "low"}))
+        self.first_turn()
+        argv = self.calls()[-1]["argv"]
+        self.assertEqual(argv[argv.index("--effort") + 1], "low")
+        (self.stack / "llm.json").write_text(json.dumps({"reasoning_effort": "xhigh"}))
+        self.say("again")
+        self.ok_turn()
+        argv = self.calls()[-1]["argv"]
+        self.assertEqual(argv[argv.index("--effort") + 1], "xhigh")
+        self.say("/status")
+        self.ok_turn()
+        self.assertIn("reasoning_effort xhigh;", self.answer())
+
     def test_clear_moves_history_and_starts_new(self):
         old = self.first_turn()
         self.say("/clear")

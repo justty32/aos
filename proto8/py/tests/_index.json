@@ -78,6 +78,9 @@
  "test_cli_print_mid.py": {
   "description": "驗 print_claude 的開關（wake-1114 主案 S）：cli.json 寫 \"live_mail\": true 又給了 more＝走 cli_stream（argv 多 MID_FLAGS、"
  },
+ "test_cli_reasoning_effort.py": {
+  "description": "Test that reasoning_effort in an eca definition's llm.json (11-21 line top-1121-ecaeffort) becomes claude's --effort or pi's --thinking, read again e…"
+ },
  "test_cli_reserved_flags.py": {
   "description": "驗 cli.json 的 flags／print_flags 不准再寫 aos 自己會加的旗標（11-13 eca_main 第 6 項：codex 的 --skip-git-repo-check 寫第二次＝codex 退 2、信被丟）：讀設定時就 CfgBad。"
  },

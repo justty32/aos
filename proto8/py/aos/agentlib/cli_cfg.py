@@ -1,4 +1,4 @@
-# cli_cfg.py - cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model、system 附加旗標、tools／tools_sub 登記檔
+# cli_cfg.py - cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model 與 reasoning_effort、system 附加旗標、tools／tools_sub 登記檔
 import json, os, sys
 
 from aos.declared_files import declared_files
@@ -110,7 +110,8 @@ def stack_copies(cfg, tool_dir, files):
     """子介面 tools／llm 依 interfaces.json 宣告的相對檔名讀 stack 覆蓋；沒有宣告就不讀 stack。
     cli.json 明寫 tools 時照它、不看 stack 那份；未宣告時定義的預設登記檔仍是同層 tools.json。
     腦設定：定義宣告的 llm（沒宣告時仍可用同層 llm.json）疊 stack 宣告那份；
-    有 model＝flags 的 --model 換成它（沒有就加在尾）。每次 load_cfg（每題）重讀＝下一題生效。"""
+    有 model＝flags 的 --model 換成它（沒有就加在尾）；有 reasoning_effort＝換成 CLI 的程度旗標（reasoning_effort()）。
+    每次 load_cfg（每題）重讀＝下一題生效。"""
     stack = os.environ.get("AOS_STACK")
     llm = read_llm(os.path.join(tool_dir, files.get("llm", "llm.json")))
     if stack:
@@ -126,13 +127,50 @@ def stack_copies(cfg, tool_dir, files):
     if "model" in llm and (not isinstance(model, str) or not model):
         cli_base.die("CfgBad", "model in llm.json must be a non-empty string (same as agent-fsm's brain.py), not %s" % json.dumps(model))
     if model:
-        flags = list(cfg.get("flags", []))
-        if "--model" in flags[:-1]:
-            flags[flags.index("--model") + 1] = model
-        else:
-            flags += ["--model", model]
-        cfg["flags"] = flags
+        cfg["flags"] = put_flag(cfg.get("flags", []), "--model", model)
+    cfg["reasoning_effort"] = reasoning_effort(cfg, llm)
     cfg["system"] = system_file(tool_dir, files, stack)
+
+
+def put_flag(flags, flag, value):
+    """flags 的 FLAG 值換成 value（寫成 FLAG=值 的也換）；沒有就加在尾。回新的串列。"""
+    flags = [a for a in flags]
+    for i, a in enumerate(flags):
+        if a == flag and i + 1 < len(flags):
+            flags[i + 1] = value
+            return flags
+        if a.startswith(flag + "="):
+            flags[i] = "%s=%s" % (flag, value)
+            return flags
+    return flags + [flag, value]
+
+
+# llm.json 的 reasoning_effort（思考程度，11-21 線 top-1121-ecaeffort；使用者「eca也都有跟上嗎？reasoning eff那些」）→ 那支 CLI 自己的旗標。
+# 級別以各 CLI 自己的說明為準（claude 2.1.330 --help「--effort <level> … (low, medium, high, xhigh, max)」；
+# pi 1.5.2 --help「--thinking <level> … off, minimal, low, medium, high, xhigh, max」）。兩支遇到不認得的值都只印一行 warning、
+# 改用預設程度照跑（11-21 實測），所以這裡只收 CLI 認得的名字，其他＝CfgBad，不讓它靜靜變回預設。不做名字對照（例 none→off）。
+# codex 沒查、沒接：寫了＝CfgBad。
+EFFORT_FLAGS = {"claude": ("--effort", ("low", "medium", "high", "xhigh", "max")),
+                "pi": ("--thinking", ("off", "minimal", "low", "medium", "high", "xhigh", "max"))}
+
+
+def reasoning_effort(cfg, llm):
+    """llm.json 有 reasoning_effort＝驗過、補成 CLI 的旗標（flags 裡已寫同一個旗標就換掉它的值），回那個值；沒寫＝None、flags 原樣。
+    每次 load_cfg（每題）重讀＝下一題生效；畫面是開畫面那一刻的旗標，開著時改了要關掉重開（或在畫面裡打 CLI 自己的指令）。"""
+    if "reasoning_effort" not in llm:
+        return None
+    level = llm["reasoning_effort"]
+    if not isinstance(level, str) or not level:
+        cli_base.die("CfgBad", "reasoning_effort in llm.json must be a non-empty string, not %s" % json.dumps(level))
+    if cfg["kind"] not in EFFORT_FLAGS:
+        cli_base.die("CfgBad", "reasoning_effort in llm.json is not supported for kind %s (only claude and pi); remove it "
+                     "(aos-agent llm rm reasoning_effort)" % cfg["kind"])
+    flag, levels = EFFORT_FLAGS[cfg["kind"]]
+    if level not in levels:
+        cli_base.die("CfgBad", "reasoning_effort %s in llm.json is not a level %s takes (%s takes: %s); change it with "
+                     "aos-agent llm set reasoning_effort=LEVEL" % (json.dumps(level), cfg["kind"], flag, ", ".join(levels)))
+    cfg["flags"] = put_flag(cfg.get("flags", []), flag, level)
+    return level
 
 
 def system_file(tool_dir, files, stack):

@@ -1,1 +1,1 @@
-{"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "eca"}, {"provider": "mcp"}], "system": "system.txt"}}
+{"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model", "reasoning_effort"], "history": "history.jsonl", "hooks": "hooks.json", "hook_points": [{"provider": "aos-loop"}, {"provider": "eca"}, {"provider": "mcp"}], "system": "system.txt"}}

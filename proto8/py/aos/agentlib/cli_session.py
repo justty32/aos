@@ -86,6 +86,7 @@
 #   mcp__aos__*，由 PreToolUse hook（--settings，matcher mcp__aos__.*，本檔 guard）擋：hook 的輸入有 agent_id＝子 agent 叫的＝deny。
 #   沒寫 tools_sub＝什麼都不加（子 agent 照 CLI 預設繼承全部）。flags 裡自己寫了 --agents 又寫 tools_sub＝CfgBad（兩個 --agents 只會留一個）。
 #   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
+#   思考程度（11-21 線 top-1121-ecaeffort）：同一份的 reasoning_effort＝claude 的 --effort、pi 的 --thinking（只收那支 CLI 認得的級別，其他＝CfgBad；codex＝CfgBad；cli_cfg.reasoning_effort）。
 # 換台（11-10 two-machines 05）：要接舊對話前先認「是不是這台的」（session_here：記號檔的 session、home 一樣，claude 再比 ws；
 #   不讀 CLI 的任何檔內容、不靠它的錯誤訊息）。不是＝在交出去之前改開新對話：呼叫者給了 reseed（aos-eca-turn）＝把 reseed(上限)
 #   整理過的紀錄接在題目前面（上限＝cli.json 選填 reseed_bytes，預設 48000；畫面那條路取 min(它, 8000)）；沒給（工具形）＝stderr

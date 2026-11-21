@@ -148,6 +148,21 @@ class PiTurn(PiBase):
         self.assertEqual(self.flag(call, "--append-system-prompt"), str(self.defn / "system.txt"))
         self.assertEqual(self.flag(call, "--model"), "openai-codex/gpt-5.5")
 
+    def test_5b_reasoning_effort_is_thinking(self):
+        """11-21 top-1121-ecaeffort: llm.json reasoning_effort = pi's --thinking; a level pi does not take is CfgBad before any letter is claimed."""
+        (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"llm": "llm.json", "llm_keys": ["model", "reasoning_effort"]}}))
+        (self.defn / "llm.json").write_text(json.dumps({"reasoning_effort": "minimal"}))
+        self.say("hello")
+        self.ok_turn()
+        self.assertEqual(self.flag(self.calls()[0], "--thinking"), "minimal")
+        (self.stack / "llm.json").write_text(json.dumps({"reasoning_effort": "none"}))
+        self.say("again")
+        r = self.turn()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("CfgBad", r.stderr)
+        self.assertIn("--thinking takes: off, minimal", r.stderr)
+        self.assertEqual(len(self.calls()), 1)
+
     def test_6_compact_replaces_history(self):
         self.say("hello")
         self.ok_turn()

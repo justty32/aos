@@ -34,6 +34,9 @@ flags:
   -h, --help   show this help
 
 Store only changed keys in this agent's stack, then print effective settings.
+Example: aos-agent llm set reasoning_effort=high (how hard the brain thinks; agent-fsm
+sends it to the llm kernel, eca turns it into its CLI's own flag: claude --effort,
+pi --thinking; the levels it takes depend on the body; aos-agent llm rm reasoning_effort undoes).
 Values are strings. A key the body does not read (llm_keys in the definition's
 interfaces.json) is stored anyway, with a warning. The system text is not a key here:
 system=... is an error and nothing is stored; use aos-agent system set.
