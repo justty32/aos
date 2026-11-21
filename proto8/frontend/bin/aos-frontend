@@ -15,7 +15,7 @@ usage: aos-frontend [--port 8767] [--home DIR] serve     run the page on 127.0.0
        aos-frontend aide-def [--template DIR] PATH        make the team's aide definition PATH: copy the agent-fsm template
                                                       (--template, else $AOS_HOME/templates/agent-fsm), then lay every
                                                       file of aide-def/ over it (not _index.json); a relative PATH starts
-                                                      at $AOS_WS when set, else here; lineage {from, overlay}
+                                                      at $AOS_WS when set, else here
   the aide (an on_clock hook of agent <team>-aide-1; event JSON on stdin):
        aos-frontend aide-tick [--team T]                  pass outbox files, a report when facts changed, a beat each 15 min
   team default: --team, else the basename of $AOS_STACK if it is a name on the daemon table
@@ -3024,13 +3024,6 @@ def cmd_aide_def(home, args):
                 os.remove(os.path.join(tmp, name))
             shutil.copy2(src, os.path.join(tmp, name))
             laid.append(name)
-        meta_path = os.path.join(tmp, "_metainfo.json")
-        meta = load_json(meta_path, {}) if os.path.exists(meta_path) else {}
-        if not isinstance(meta, dict):
-            raise Fail("DefBad", "%s/_metainfo.json is not a JSON object" % AIDE_DEF)
-        meta["lineage"] = {"from": tpl, "overlay": AIDE_DEF}
-        with open(meta_path, "w", encoding="utf-8") as f:
-            f.write(json.dumps(meta, ensure_ascii=False, indent=2) + "\n")
         os.rename(tmp, dest)
     except OSError as e:
         shutil.rmtree(tmp, ignore_errors=True)

@@ -2,8 +2,8 @@
 # agent_def - 定義的創造修改：new＝把範本資料夾整份照抄成新定義（跟 cp -r 一樣，一個字都不改），check＝轉叫 py/tools/aos/defs 的 check，tools／llm／system＝直接改某份定義的工具／腦／system
 # 使用者 11-10 晚（thinking 2026-11/10/agents-split）：「掌管agent定義的創造修改」「先做粗的，細的之後慢慢添加」「血統記錄...可以先不做」；
 #   名字「agent_def」（B：只有定義這支叫 agent_def）。粗的＝只複製與檢查；跑起來用 subagent／agents_ctl。
-#   11-12 使用者「Q09:b-都做，除了移除子(兩者不要耦合)」：加細的（tools／llm／system 寫進定義，def_edit.py）與血統（new 記 lineage），
-#   thinking 2026-11/12/agent-def-fine-lineage.md。11-21 使用者選「不寫」：new 不再寫 lineage，變成純粹的照抄（thinking 2026-11/21/小事八題-使用者已答-1121.md 第 6 題）。
+#   11-12 使用者「Q09:b-都做，除了移除子(兩者不要耦合)」：加細的（tools／llm／system 寫進定義，def_edit.py），thinking 2026-11/12/agent-def-fine-lineage.md。
+#   11-21 使用者選「不寫」：new 是純粹的照抄（thinking 2026-11/21/小事八題-使用者已答-1121.md 第 6 題）。
 # 介面（py/docs/01 的契約）：stdin 收 {"op": "new"|"check"|"tools"|"llm"|"system", …}；別的鍵＝ArgumentsBad：
 #   new {template | from, path}  template＝內建範本的名字（$AOS_HOME/templates/<名>，例 agent-fsm；不在＝DefMissing 並列出有哪些）；
 #       from（範本資料夾；字串路徑，或指示詞 {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}）整份複製到 path：
@@ -15,7 +15,7 @@
 #       純粹 cp：夾裡的檔一律照抄、任何路徑都不改寫、不警告（使用者 11-20「好比C語言的include，並且是#include "..."，
 #       我是希望夾內的路徑都不改。也就是說它的功能會很單純，就是純粹的cp過去，各種相對路徑就這樣」；指到夾外的相對路徑
 #       抄到不同深度會指錯，他選「也不管，跟 #include 一樣」，thinking 2026-11/20/aos-pylib-plan-1120/12 第 10 題）。
-#       跟來源唯一的不同：略過的 __pycache__。_metainfo.json 也照抄（11-21 起不寫 lineage，使用者「不寫」）；不掛。
+#       跟來源唯一的不同：略過的 __pycache__；_metainfo.json 也照抄。不掛。
 #       成功印一行 wrote definition <path> (copied from <from>)。
 #   check {path}  轉叫 ../../aos/defs/_entry（相對本資料夾）{"op": "check", "root": <path 的絕對路徑>}；它的 JSON stdout 原樣印、stderr 原樣透出；
 #       它退非 0＝把它 stderr 最後一行錯誤行的代號與原因接成自己的（有問題＝DefBad，stdout 的 JSON 仍在）；path 不是資料夾＝DefMissing。

@@ -26,7 +26,7 @@ class DefinitionsTest(unittest.TestCase):
     def definition(self, name, endpoint='terra', tool=None):
         path = self.root / name
         self.write(path / 'interfaces.json', {'aos-agent': {'tools': 'tools.json', 'llm': 'llm.json'}})
-        self.write(path / '_metainfo.json', {'summary': 'Example worker', 'lineage': {'from': 'retired/missing'}})
+        self.write(path / '_metainfo.json', {'summary': 'Example worker'})
         self.write(path / 'README.md', 'Example worker\n')
         self.write(path / 'system.txt', 'A prompt')
         self.write(path / 'tools.json', {'tools': tool or {}})
@@ -153,7 +153,7 @@ class DefinitionsTest(unittest.TestCase):
         _, data = self.call('refs', **{'def': 'target'})
         self.assertEqual(data['refs'], ['caller'])
 
-    def test_check_good_does_not_require_existing_lineage(self):
+    def test_check_good(self):
         self.definition('good')
         result, data = self.call('check')
         self.assertEqual(result.returncode, 0, result.stderr)

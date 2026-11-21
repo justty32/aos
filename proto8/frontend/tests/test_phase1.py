@@ -357,14 +357,9 @@ class AideDef(unittest.TestCase):
         self.assertIn("wrote aide definition %s" % dest, r.stdout)
         overlay = [f for f in os.listdir(self.AIDE) if f != "_index.json"]
         self.assertEqual(self.files(dest), sorted(set(self.files(self.TEMPLATE)) | set(overlay)))
-        for f in self.files(dest):
-            if f == "_metainfo.json":
-                continue
+        for f in self.files(dest):                                  # every file as it is, _metainfo.json too (user 11-21)
             src = os.path.join(self.AIDE if f in overlay else self.TEMPLATE, f)
             self.assertEqual(self.read(os.path.join(dest, f)), self.read(src), f)
-        meta = json.loads(self.read(os.path.join(dest, "_metainfo.json")))
-        self.assertEqual(meta.pop("lineage"), {"from": os.path.abspath(self.TEMPLATE), "overlay": os.path.realpath(self.AIDE)})
-        self.assertEqual(meta, json.loads(self.read(os.path.join(self.AIDE, "_metainfo.json"))))
         self.assertEqual(json.loads(self.read(os.path.join(dest, "hooks.json")))["hooks"].keys(), {"aide_tick"})
         self.assertFalse([f for f in os.listdir(os.path.join(ws, "defs")) if f.startswith(".")])   # no temp folder left
         again = self.run_view(["defs/t-aide"], AOS_WS=ws, AOS_HOME=os.path.dirname(os.path.dirname(self.TEMPLATE)))

@@ -233,7 +233,7 @@
   "proto8/py": "agent 的工具函式庫（腦可以叫的外部函數，一份標準版、掛捷徑引用）：base 底層原語、aos 動 aos 的、agent 整隻 agent 的，另有 json、mcp、metainfo 等共用模組；要加改工具時進去",
   "proto8/py/tools": "「資料夾＝程式」的工具（S3 起從共用模組分出來）：base 底層原語、aos 動 aos 的、agent 整隻 agent 的；裝到 lib/tools/，定義的指示詞寫 /lib/tools/…",
   "proto8/py/tools/agent": "高層工具：動 agent 自己與子 agent 的工具（self_*、subagent、fork、mailbox_*、goal、todo、hook 處理器、claude／codex）加 CLI 對話共用模組 cli_*.py",
-  "proto8/py/tools/agent/agent_def": "agent_def 工具（定義包）：從範本複製出新 agent 定義、檢查定義夾，或改定義的工具、腦設定與 system 文字並記血統",
+  "proto8/py/tools/agent/agent_def": "agent_def 工具（定義包）：從範本複製出新 agent 定義、檢查定義夾，或改定義的工具、腦設定與 system 文字",
   "proto8/py/tools/agent/agents_ctl": "agents_ctl 工具（子 agent 包）：aos-agent ctl 的完整包裝，管 daemon 表上任何一隻 agent，不記帳、不算配額",
   "proto8/py/tools/agent/claude": "claude 工具（tools/agent 層，不在分包裡）：把一件事交給工作區裡只能讀檔的 Claude Code CLI，同一段對話接著講，回它的答案",
   "proto8/py/tools/agent/claude/cli.json": "claude 工具起 Claude Code CLI 的預設設定：唯讀工具、dontAsk 權限、sonnet 模型、print 模式額度上限 0.5 美元、逾時 10 分鐘；要改 claude 子 agent 的旗標時來看",

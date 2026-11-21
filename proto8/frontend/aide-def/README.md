@@ -20,7 +20,7 @@ history 不會多任何一則，也不叫腦。範本刻意拿掉了 `timer` 和
    $AOS_HOME/frontend/bin/aos-frontend aide-def defs/<隊>-aide
    ```
 
-   印 `wrote aide definition ...` 就成了；路徑已經在＝`DefExists`，沒設 `AOS_HOME`＝`TemplateMissing`（加 `--template <agent-fsm 範本夾>`）。`_metainfo.json` 的 lineage 記 `{"from": 範本夾, "overlay": 本夾}`。然後 aos 工具 `agent_def` `{"op": "check", "path": "defs/<隊>-aide"}`，`problems` 是空的才往下。定義裡的檔都不用改。
+   印 `wrote aide definition ...` 就成了；路徑已經在＝`DefExists`，沒設 `AOS_HOME`＝`TemplateMissing`（加 `--template <agent-fsm 範本夾>`）。`_metainfo.json` 跟其他檔一樣照抄本夾那份（不記出處）。然後 aos 工具 `agent_def` `{"op": "check", "path": "defs/<隊>-aide"}`，`problems` 是空的才往下。定義裡的檔都不用改。
 
 2. **寫 aide.json**：建 `~/.aos/view/teams/<隊>/aide.json`（資料夾沒有就 `mkdir -p`），內容：
 

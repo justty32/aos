@@ -1,6 +1,6 @@
 {
  "agent_def": {
-  "description": "agent_def 工具（定義包）：從範本複製出新 agent 定義、檢查定義夾，或改定義的工具、腦設定與 system 文字並記血統"
+  "description": "agent_def 工具（定義包）：從範本複製出新 agent 定義、檢查定義夾，或改定義的工具、腦設定與 system 文字"
  },
  "agents_ctl": {
   "description": "agents_ctl 工具（子 agent 包）：aos-agent ctl 的完整包裝，管 daemon 表上任何一隻 agent，不記帳、不算配額"

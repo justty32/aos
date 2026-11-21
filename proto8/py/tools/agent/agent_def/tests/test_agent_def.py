@@ -1,4 +1,4 @@
-"""Test agent_def new (a plain copy like cp -r: byte for byte, _metainfo.json included, no path rewritten, no lineage; directive from, DefExists, outside the workspace) and check (wraps py/tools/aos/defs) in a temp folder."""
+"""Test agent_def new (a plain copy like cp -r: byte for byte, _metainfo.json included, no path rewritten; directive from, DefExists, outside the workspace) and check (wraps py/tools/aos/defs) in a temp folder."""
 import json
 import os
 from pathlib import Path
@@ -64,7 +64,7 @@ class AgentDef(unittest.TestCase):
         return json.loads((self.ws / path / "tools.json").read_text())
 
     def assert_same_copy(self, src, born):
-        """born＝src 逐 byte 照抄（跟 cp -r 一樣）；唯一的不同是 __pycache__ 不抄（11-21 起 _metainfo.json 也不寫 lineage，使用者「不寫」）。"""
+        """born＝src 逐 byte 照抄（跟 cp -r 一樣）；唯一的不同是 __pycache__ 不抄（_metainfo.json 也照抄，使用者 11-21「不寫」）。"""
         want = {k: v for k, v in tree(src).items() if "__pycache__" not in Path(k).parts}
         self.assertEqual(tree(born), want)
 
@@ -128,7 +128,7 @@ class AgentDef(unittest.TestCase):
                 self.assertEqual(r.stdout, "wrote definition %s (copied from %s)\n" % (born, tpl))
                 self.assertEqual((born / "tools.json").read_text(), (tpl / "tools.json").read_text())   # 全是指示詞：一字不改
                 self.assertFalse(any(p.name == "__pycache__" for p in born.rglob("*")))
-                self.assertEqual((born / "_metainfo.json").read_bytes(), (tpl / "_metainfo.json").read_bytes())   # 照抄，不記 lineage
+                self.assertEqual((born / "_metainfo.json").read_bytes(), (tpl / "_metainfo.json").read_bytes())   # 照抄
                 self.assertEqual([p.name for p in self.ws.iterdir()], ["born"])          # 沒留暫存夾
                 shutil.rmtree(born)
 
@@ -207,11 +207,11 @@ class AgentDef(unittest.TestCase):
         (self.ws / "plain" / "a.txt").write_text("a")
         self.assertEqual(self.new("plain").returncode, 0)
         self.assertEqual((self.ws / "born" / "a.txt").read_text(), "a")
-        # 沒有 _metainfo.json＝新的也沒有（11-21 起不寫 lineage）；兩邊都不多檔
+        # 沒有 _metainfo.json＝新的也沒有；兩邊都不多檔
         self.assertEqual(sorted(p.name for p in (self.ws / "born").iterdir()), ["a.txt"])
         self.assertEqual(sorted(p.name for p in (self.ws / "plain").iterdir()), ["a.txt"])
 
-    # ---- _metainfo.json 照抄（11-21 使用者「不寫」：不再記 lineage）----
+    # ---- _metainfo.json 照抄（11-21 使用者「不寫」）----
     def test_metainfo_copied_as_it_is(self):
         """每個鍵、排版、捷徑都照抄；new 不讀它，所以不是物件的也照抄。"""
         tpl = good_def(self.ws / "tpl")

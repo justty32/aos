@@ -16,11 +16,11 @@ flowchart LR
 
 stdin：`{"op":"ls|dup|refs|check","root":"/absolute/defs","match":"optional substring","def":"optional target"}`。旗標與英文說明見 `_entry --help`。
 
-- `ls` 回 `{"defs":[...]}`，列含 `path`、`summary`、`brain`；有腦再帶 `tools`、`endpoint`，有出身則帶 `lineage`。`match` 只比路徑與 summary，不分大小寫。
+- `ls` 回 `{"defs":[...]}`，列含 `path`、`summary`、`brain`；有腦再帶 `tools`、`endpoint`。`match` 只比路徑與 summary，不分大小寫。
 - 遞迴遇 `interfaces.json` 或 `_metainfo.json` 就當作定義並停止往下（例外：沒有 `_entry`／`_entry.json`、`_metainfo.json` 非空而且只有 `index`／`tooldef` 這兩格的，是放了註記的普通夾，不算定義、繼續往下找；`{}` 或有其他鍵的仍算定義，使用者「只有{}的_metainfo.json也算agent定義。」，[N-69](../../../../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)、[thinking 11-12 metainfo](../../../../thinking/2026-11/12/metainfo/README.md) M11）；不走隱藏夾或目錄捷徑；退休樹應放 defs 根旁同層。
 - `dup` 回 `{"groups":[{"key":"canonical JSON signature","members":["category/a","category/b"]}]}`。只算 `aos-agent`；工具解析真實路徑、去重排序，不比登記名與 env；端點未提供時為 `default`，明給空字串照空字串。輸出路徑相對 root。
 - `refs` 必須給 `def`，回 `{"refs":["category/caller"]}`；讀各 agent 公開工具宣告的 `path`，相對工具表所在夾；env 裡寫的路徑不算引用。回引用者路徑，排序去重，不包含自己。
-- `check` 回 `{"problems":[{"path":"category/a","reason":"English reason"}]}`。README 第一行非空、meta 有非空 summary、interfaces 是物件；agent 宣告的 tools／llm 必須存在且可讀。tools.json 有 `"$override"`（範本疊 `py/packs`）時交給 `aos-tools ls -l` 合併再看，只帶 `env` 的格沿用底檔的 `path`；`aos-tools` 從 PATH 找（不假設 `bin/` 在哪），找不到＝那份定義一條 problem `cannot merge …: aos-tools is not on PATH (source $AOS_HOME/env.sh)`；沒設 `AOS_HOME` 用放這份 lib 的資料夾（tool-packs）。定義路徑各段符合 `[a-z0-9_-]+`。不要求 lineage 親代還在。
+- `check` 回 `{"problems":[{"path":"category/a","reason":"English reason"}]}`。README 第一行非空、meta 有非空 summary、interfaces 是物件；agent 宣告的 tools／llm 必須存在且可讀。tools.json 有 `"$override"`（範本疊 `py/packs`）時交給 `aos-tools ls -l` 合併再看，只帶 `env` 的格沿用底檔的 `path`；`aos-tools` 從 PATH 找（不假設 `bin/` 在哪），找不到＝那份定義一條 problem `cannot merge …: aos-tools is not on PATH (source $AOS_HOME/env.sh)`；沒設 `AOS_HOME` 用放這份 lib 的資料夾（tool-packs）。定義路徑各段符合 `[a-z0-9_-]+`。
 - `check` 也查**叫的東西在不在**（11-19 線 aos-check-refs，使用者對照 C 第 1 題選「只放進檢查指令」：「編譯不管，跑 agent_def check 才查。要記得跑。」；`agent.py --compile` 不查這些；缺口出處 [aos-vs-c-1119 G1](../../../../thinking/2026-11/19/aos-vs-c-1119/02-缺口清單.md)；細則在 `refs_check.py` 檔頭）。規則照執行時：
   - 工具：tools 檔交給 `aos-tools ls -l`（agent 跑時拿清單的同一支，`$override` 照疊、指示詞照解），它標 broken 的那支＝problem（執行時那支被略過、腦看不到）。
   - 會被執行的程式：`aos-agent.entry` 的 argv；入口是 `aos-loop`／`aos-fsm` 時跟著讀 loop 的 `exec`、`on_start`、`on_stop` 與狀態表每格的 `exec`；`aos-agent.hooks` 每格的 `handler`。argv 只查分得出是檔的位置：argv[0]、`python3`／`bash` 等直譯器後第一個不是旗標的字（`-m`、`-c` 之後不查）、`aos-loop`／`aos-fsm` 的設定檔、任何位置寫成 `{"$env": "AOS_HOME", "$path": …}` 的。相對路徑照執行時的基準（單子從 `cwd` 欄、沒寫從寫它的檔的資料夾；字串目標與 handler 從寫它的檔的資料夾），「補找 `.json`」「`檔#/指標`」照 aos-exec 認。
@@ -50,7 +50,7 @@ flowchart LR
 
 1. 讀 review 的 `suggest.specialize`，核對 `proposal` 與 `evidence`。`context_too_big` 的 proposal 為 null 時，先由隊長決定要拆的職責或記憶。
 2. 用 `defs --op ls --root "$DEFS"` 對照三軸與 `existing`。有同三軸現成定義就沿用它，不另生一隻。
-3. 無現成定義時，用 `agent_def` 的 `new` 把來源整份複製成新定義（只複製；不帶 `reason`／`review`，血統先不記（使用者 11-10「血統記錄...可以先不做」））；再用一般檔案工具照 proposal 改新定義的 `tools.json`、`llm.json` 與記憶那格；要跑起來用 `subagent`（記帳、算配額）或 `agents_ctl`（不記帳）掛：
+3. 無現成定義時，用 `agent_def` 的 `new` 把來源整份複製成新定義（只複製；不帶 `reason`／`review`）；再用一般檔案工具照 proposal 改新定義的 `tools.json`、`llm.json` 與記憶那格；要跑起來用 `subagent`（記帳、算配額）或 `agents_ctl`（不記帳）掛：
    `jq -n --arg from "$SOURCE" --arg path "$TARGET" '{op:"new",from:$from,path:$path}' | aos-exec --ws "$PWD" "$AGENT_DEF_TOOL"`
 4. 更新目標類別 README，再以 `defs --op check --root "$DEFS"` 檢查。
 

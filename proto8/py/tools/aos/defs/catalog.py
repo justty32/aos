@@ -161,8 +161,6 @@ def describe(path, root):
     meta = read(path / '_metainfo.json') if (path / '_metainfo.json').exists() else {}
     agent = declared(path)
     row = {'path': relative(path, root), 'summary': meta.get('summary', ''), 'brain': agent is not None}
-    if 'lineage' in meta:
-        row['lineage'] = meta['lineage']
     if agent is None:
         return row
     entries = tools(path, agent)

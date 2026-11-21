@@ -530,7 +530,7 @@
     "agent_def": {
      "def_edit.py": "agent_def 的細的定義動作：tools（ls／get／add／rm，轉 aos-tools --file 定義那份）、llm（ls／set／rm，轉 aos-json）、system（get／set）；改的是定義本身，不碰任何 stack。",
      "tests": {
-      "test_agent_def.py": "Test agent_def new (a plain copy like cp -r: byte for byte, _metainfo.json included, no path rewritten, no lineage; directive from, DefExists, outsid…",
+      "test_agent_def.py": "Test agent_def new (a plain copy like cp -r: byte for byte, _metainfo.json included, no path rewritten; directive from, DefExists, outside the worksp…",
       "test_def_edit.py": "Test agent_def tools / llm / system (change a definition directly; args shaped like self_*) in a temp folder, with this repo's aos-tools and aos-json."
      }
     },

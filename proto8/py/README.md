@@ -28,7 +28,7 @@
 | [02-索引-base與索引-aos](docs/02-索引-base與索引-aos.md) | 索引：base；索引：aos（量測、換版、審視、shell 帳與關箱比對、定義樹） |
 | [04-共用模組](docs/04-共用模組.md) | aos 套件裡給 cmd 用的共用模組：`aos.flags`、`aos.ws`、`aos.daemon_ctl`、`aos.clock_register`、`aos.sweep*` |
 | [05-commands](docs/05-commands.md) | 人在終端打的 Python 指令（本體在 [`aos/apps/`](aos/apps/)，入口照 [`entries.json`](entries.json) 由 `install.py` 生進 `bin/`；原 proto8/cmd，11-18 S5） |
-| [03-索引-agent等](docs/03-索引-agent等.md) | 索引：agent（self_tools：agent 改自己的工具；subagent 生、叫、調、收自己的子 agent，agents_ctl 管表上任何一隻，agent_def 造新定義與檢查、也直接改定義的工具／腦／system 並在新定義記血統）；外部 agent 的一輪（eca）；等回覆的期限（fork、subagent） |
+| [03-索引-agent等](docs/03-索引-agent等.md) | 索引：agent（self_tools：agent 改自己的工具；subagent 生、叫、調、收自己的子 agent，agents_ctl 管表上任何一隻，agent_def 造新定義與檢查、也直接改定義的工具／腦／system）；外部 agent 的一輪（eca）；等回覆的期限（fork、subagent） |
 
 <a id="分層每層只依賴下層"></a>
 <a id="一個工具長什麼樣契約"></a>
