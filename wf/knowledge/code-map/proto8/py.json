@@ -220,8 +220,6 @@
     "trigger.py": "aos.gdb.trigger - 條件觸發器的共用零件：觸發器檔（trigger.json）長什麼樣、條件怎麼判、連續幾次才算、停的時候留的字條（gdb/log.jsonl）與停在事件前的「扣住」檔（gdb/hold.json）、斷點號碼的計數器（gdb/next_id.json）；REPL 那…",
     "watcher.py": "aos.gdb.watcher - 觀察者（丙）：另一支掛在 daemon 表上的普通 proc（名字 gdbw_ 開頭），每隔 every_ms 看一次目標 agent 的檔，條件成立（連續 times 次）就 ctl pause 目標並在它的 gdb/log.jsonl 留字條（by \"wat…"
    },
-   "hook_flags.py": "keep the two flag files of the aos-loop points (STACK/hook_before_run.flag, hook_after_run.flag) in step with a hooks list: there while a hook listen…",
-   "hook_handle.py": "the handle aos.hook_point.open returns: fire a program's hook points through the engine, with errors going to the program's own fail().",
    "hook_lists.py": "read hookeds lists (what is hooked: a JSON object {hook name: entry or null}) in order, a later file overriding an earlier one by name.",
    "hook_point.py": "where a definition's hook files are (the \"hooks\" and \"hookeds\" keys at the top of its interfaces.json, directives allowed) and how to read hook point…",
    "hook_run.py": "the hook engine, kept minimal: run the handlers hooked on one event (name order), hand each the event JSON, give back each one's exit code and stdout.",

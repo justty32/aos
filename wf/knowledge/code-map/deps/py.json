@@ -306,23 +306,9 @@
   },
   {
    "kind": "lib",
-   "module": "aos.hook_flags",
-   "unit": "proto8/py/aos/hook_flags.py",
-   "used_by": "",
-   "uses": ""
-  },
-  {
-   "kind": "lib",
-   "module": "aos.hook_handle",
-   "unit": "proto8/py/aos/hook_handle.py",
-   "used_by": "",
-   "uses": "aos.hook_lists aos.hook_run"
-  },
-  {
-   "kind": "lib",
    "module": "aos.hook_lists",
    "unit": "proto8/py/aos/hook_lists.py",
-   "used_by": "proto8/py/aos/agent_spec_hooks.py proto8/py/aos/agentlib proto8/py/aos/apps/hook proto8/py/aos/hook_handle.py proto8/py/aos/hook_run.py proto8/py/aos/kernel_spec.py proto8/py/tools/aos/kernel",
+   "used_by": "proto8/py/aos/agent_spec_hooks.py proto8/py/aos/agentlib proto8/py/aos/apps/hook proto8/py/aos/hook_run.py proto8/py/aos/kernel_spec.py proto8/py/tools/aos/kernel",
    "uses": ""
   },
   {
@@ -336,7 +322,7 @@
    "kind": "lib",
    "module": "aos.hook_run",
    "unit": "proto8/py/aos/hook_run.py",
-   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/hook proto8/py/aos/hook_handle.py proto8/py/tools/aos/kernel proto8/templates/agent-fsm",
+   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/hook proto8/py/tools/aos/kernel proto8/templates/agent-fsm",
    "uses": "aos.directive_value aos.hook_lists"
   },
   {

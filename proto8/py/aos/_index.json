@@ -70,12 +70,6 @@
  "gdb": {
   "description": "aos-gdb 的 Python 庫（aos.gdb）：對已在跑的 agent 下條件觸發器（一個 hook：工具要跑之前扣住，或事件後暫停）或起觀察者（另一支 proc 輪詢、成立就暫停目標）、列出／拿掉、看為什麼停、檢閱 stack、續"
  },
- "hook_flags.py": {
-  "description": "keep the two flag files of the aos-loop points (STACK/hook_before_run.flag, hook_after_run.flag) in step with a hooks list: there while a hook listen…"
- },
- "hook_handle.py": {
-  "description": "the handle aos.hook_point.open returns: fire a program's hook points through the engine, with errors going to the program's own fail()."
- },
  "hook_lists.py": {
   "description": "read hookeds lists (what is hooked: a JSON object {hook name: entry or null}) in order, a later file overriding an earlier one by name."
  },
