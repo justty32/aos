@@ -151,24 +151,15 @@
    "agents": {
     "ann": {
      ".env": "ann's own defaults (a value already set wins). The permission part is optional and off: to switch it on, mount perm on the root (aos-daemon-ctl -d .s…",
-     "act.py": "act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。",
-     "atomic_file.py": "agent-fsm 的格（idle、wait）共用的寫檔：先寫同資料夾的 .<名>.tmp 再改名（N-05），寫不成交給呼叫端的 die（WriteFailed）。",
      "body.json": "argv：`aos-loop loop.json`",
-     "brain.py": "think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。",
-     "cell_common.py": "agent-fsm 的格共用的開頭幾步：brain、act 的讀 history.jsonl 與決定用哪份工具登記檔（四格的 on_clock 看時鐘改在 hook 遙控器 H.clock_tick()，11-20）。",
-     "compact.py": "Compact agent-fsm conversations while preserving unanswered letters and original messages.",
      "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
-     "hook_points.json": "Hook points fired by the agent-fsm cells (idle, think, wait, act); the loop points after_start / after_stop are in py/aos/apps/hook/loop_points.json.",
      "hooks.json": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_sta…",
-     "idle.py": "idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。",
      "interfaces.json": "設定（鍵：aos-agent、aos-observed）",
      "llm.json": "設定（鍵：model）",
-     "llm_settings.py": "agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。",
      "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks and …",
      "subagents.json": "設定（鍵：max_subagents）",
      "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-     "tools.json": "設定（鍵：$override、tools）",
-     "wait.py": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
+     "tools.json": "設定（鍵：$override、tools）"
     },
     "ann/": "Run an aos agent with loop and FSM cells."
    },
