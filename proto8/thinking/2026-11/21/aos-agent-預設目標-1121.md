@@ -1,4 +1,4 @@
-# aos-agent 不給 -t 時從 cwd 找目標、-d 不再從 cwd 猜（線 top-1121-deft，11-21）
+# aos-agent 不給 -t 時從 cwd 找目標；不給 -d 時從那個 stack 往上兩層找 daemon（線 top-1121-deft，11-21）
 
 ← [2026-11-21](README.md)｜前情：[default-stack-1118](../18/default-stack-1118/README.md)（11-18 暫定丁、[05 11-20 補充](../18/default-stack-1118/05-使用者補充-1120.md)）｜同天的盤點：[aos-daemon-env-1121](aos-daemon-env-1121.md)
 
@@ -61,11 +61,11 @@ cd <樹> && aos-agent say hi                           # TargetMissing：樹根�
 
 ## 丁的去留
 
-不做丁。stack 和定義夾裡都不寫「屬於哪個 daemon」，找目標時也不讀這種檔；daemon 只從 `-d`／`AOS_DAEMON` 來，執行時拿 stack 路徑去那台的表上對。程式裡沒找到丁的殘留：沒有任何地方把 daemon 寫進 agent 的檔（daemonenv 那份盤點也是這個結論）。
+不做丁。stack 和定義夾裡都不寫「屬於哪個 daemon」，找目標時也不讀這種檔；daemon 只從 `-d`／`AOS_DAEMON` 來（第二輪起也可從 stack 所在的位置往上兩層找，見文末；照樣不讀 stack 裡的檔），執行時拿 stack 路徑去那台的表上對。程式裡沒找到丁的殘留：沒有任何地方把 daemon 寫進 agent 的檔（daemonenv 那份盤點也是這個結論）。
 
 ## 要給條文加註的字（`proto8/docs/` 沒改）
 
-- N-63（`docs/NORMS/10-…/07-…/02-N-63-實例-AOS_DAEMON與沒有AOS_HUB.md`）寫「`./.stack` 是 `AOS_DAEMON` 唯一一條退路」：建議加註「11-21 起 aos-agent 不走這條退路（-d 不能省），`./.stack` 在 aos-agent 改成找目標 agent；aos-daemon-ctl 等照舊」。
+- N-63（`docs/NORMS/10-…/07-…/02-N-63-實例-AOS_DAEMON與沒有AOS_HUB.md`）寫「`./.stack` 是 `AOS_DAEMON` 唯一一條退路」：建議加註「11-21 起 aos-agent 不走這條退路：`./.stack` 在 aos-agent 改成找目標 agent，daemon 改從那個 agent stack 往上兩層找（第二輪）；aos-daemon-ctl 等照舊」。
 
 ## 沒做的
 
@@ -78,3 +78,35 @@ cd <樹> && aos-agent say hi                           # TargetMissing：樹根�
 頂層轉述「特徵檔用 `stderr.txt`，不是 `interfaces.json`」後，他說：「特徵檔竟然是用stderr.txt嗎？好，沒關係，反正這本來就是一種tricky式的非正規用法，本來就要求使用者自己要把握好，至少自己稍微看過，確定這是agent stack」
 
 結論：`stderr.txt` 照用。從所在資料夾找目標是非正規的便利用法，認對 stack 的責任在下指令的人。
+
+## 第二輪：-d 也能省，往上兩層找（11-21，頂層轉逐字）
+
+「啊，既然是tricky用法...那也幫我把-d省略也做一下吧，弄成往上兩層去找，因爲默認是.stack/procs/ann這樣。」
+
+這句取代了上面「-d 不再從 cwd 猜」的一部分：daemon 現在也能從 cwd 找，但只認「agent stack 往上兩層」，樹根的 `./.stack` 本身照樣不當 daemon。
+
+| 要知道的 | 依序看 | 都沒有 |
+|---|---|---|
+| 哪台 daemon | `-d` → `$AOS_DAEMON` → cwd 認出的 agent stack 往上兩層 | `DaemonMissing`，訊息寫試過哪裡 |
+| 哪一隻 | `-t` → `$AOS_AGENT` → `./.stack` → `./` | `TargetMissing` |
+
+「cwd 認出的 agent stack」跟找目標用同一套：`./.stack` 先、再 `./`，第一個有 `stderr.txt` 的夾說了算。往上兩層那個夾要有 `procs_state.json`（是 daemon 的 stack），而且表上有一列的 stack 就是它；不成就 `DaemonMissing`，不再試別處。只看路徑的位置，stack 裡照樣不記、也不讀「屬於哪個 daemon」，整夾搬到別台的 `procs/` 底下照樣認得。
+
+例子（都不設 `AOS_DAEMON`）：
+
+```sh
+cd <樹>/.stack/procs/ann && aos-agent ask hello        # daemon＝<樹>/.stack，目標＝ann
+cd <樹>/.stack/procs/ann && aos-agent -t bob say hi    # 同一台的 bob
+cd <樹>/work2 && aos-agent ctl where                    # cal 用 -s work2/.stack 掛的：往上兩層是 <樹>，DaemonMissing
+cd <樹> && aos-agent ctl ls                             # 樹根：DaemonMissing（./.stack 本身不當 daemon）
+```
+
+家機暫存樹實跑四條都照上面；新增的測試 3 項（共 9 項）都過。
+
+替使用者做的選擇：
+
+- 給了 `-t` 或 `AOS_AGENT`、沒給 `-d`／`AOS_DAEMON` 時：照樣用 cwd 的 agent stack 往上兩層當 daemon，再到那台的表上找 `-t` 那個名字。理由：daemon 跟目標各自照自己的順序找，規則簡單；站在 ann 的 stack 裡對同一台的 bob 下指令也不用多打 `-d`。
+- 不需要目標的動作（`ctl ls`、`ctl add`、`ctl who`…）也照這條找 daemon：找 daemon 的地方只有一個，沒有分開處理。
+- `-s` 掛在別處的 stack（例如 `ws/.stack`）往上兩層不是 daemon，就是 `DaemonMissing`，不往更上層找。原話只說「往上兩層」。
+- 設了 `AOS_KERNEL` 照舊問 kernel，不往上找。
+- 照使用者說的「本來就要求使用者自己要把握好」，不加防呆提示，找到時也不在 stderr 印東西。

@@ -1,4 +1,4 @@
-# aos/apps/agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon（-d ＞ AOS_DAEMON，不看 cwd）與表上的一隻（-t ＞ AOS_AGENT ＞ cwd 的 ./.stack ＞ ./；設了 AOS_KERNEL 先問表在哪再讀；ctl 動作才用的寄信等回信在 ctl/shared.py）。
+# aos/apps/agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon（-d ＞ AOS_DAEMON ＞ cwd 認出的 agent stack 往上兩層）與表上的一隻（-t ＞ AOS_AGENT ＞ cwd 的 ./.stack ＞ ./；設了 AOS_KERNEL 先問表在哪再讀；ctl 動作才用的寄信等回信在 ctl/shared.py）。
 import json
 import os
 import textwrap
@@ -98,12 +98,14 @@ def table_ref():
     """這次讀的那份表：沒走 kernel＝daemon 的資料夾（照舊）；走 kernel＝寄查詢信問來的表檔（TableFile，一次執行只問一次；
     問不到＝KernelFailed，不退回去讀 AOS_DAEMON）。daemon_ctl 的 rows／row_of／cell_of／names_of／write_ctl 兩種都吃。"""
     if not via_kernel():
-        return call_dc(dc.find_daemon, TOP.get("daemon"), cwd=False)
+        if TOP.get("daemon") or os.environ.get("AOS_DAEMON", ""):
+            return call_dc(dc.find_daemon, TOP.get("daemon"), cwd=False)
+        return cwd_daemon()
     return call_dc(dc.state_path, TOP.get("daemon"), QUERY_S)
 
 
 def daemon_path():
-    """沒走 kernel＝那台 daemon 的 stack（--daemon ＞ $AOS_DAEMON；都沒有＝DaemonMissing，不看 cwd）；走 kernel＝問來那份表所在的資料夾
+    """沒走 kernel＝那台 daemon 的 stack（--daemon ＞ $AOS_DAEMON ＞ cwd_daemon）；走 kernel＝問來那份表所在的資料夾
     （ctl who --json 的 daemon 欄照字面＝這次讀的表在哪個資料夾；daemon 自己答時就是它的 stack）。"""
     ref = table_ref()
     return os.path.dirname(ref) if isinstance(ref, dc.TableFile) else ref
@@ -237,6 +239,41 @@ def find(name):
 
 MARK = "stderr.txt"      # 認得出「這是表上某隻 proc 的 stack」的檔：daemon 每次起 proc 都在它的 stack（小格）建這份，loop 型、exec 型都有
 CWD_TRIES = (".stack", ".")
+
+
+_CWD_DAEMON = {}         # cwd → cwd_daemon 找到的 daemon（一次執行只找一次）
+
+
+def cwd_daemon():
+    """-d、AOS_DAEMON 都沒有（且沒走 kernel）時的 daemon（使用者 11-21「那也幫我把-d省略也做一下吧，弄成往上兩層去找，因爲默認是.stack/procs/ann這樣」）：
+    cwd 裡認得出的 agent stack（同 cwd_target：./.stack 先、再 ./，要有 MARK）往上兩層；那裡要是 daemon 的 stack（有 procs_state.json），
+    而且表上要有這個 stack。第一個有 MARK 的夾說了算，不成就 DaemonMissing、說試過哪裡。樹根的 ./.stack 本身不當 daemon（11-21 拿掉的那條）。
+    只看路徑的位置，不讀 stack 裡記的任何 daemon（agent 不記自己在哪個 daemon 底下）。"""
+    here = os.getcwd()
+    if here in _CWD_DAEMON:
+        return _CWD_DAEMON[here]
+    why = []
+    for rel in CWD_TRIES:
+        shown = "./" if rel == "." else "./" + rel
+        if not os.path.isdir(rel):
+            why.append("no %s folder" % shown)
+            continue
+        if not os.path.isfile(os.path.join(rel, MARK)):
+            why.append("%s has no %s" % (shown, MARK))
+            continue
+        real = os.path.realpath(rel)
+        up = os.path.dirname(os.path.dirname(real))
+        if not os.path.isfile(os.path.join(up, "procs_state.json")):
+            why.append("%s looks like an agent's stack, but %s two levels up is not a daemon's stack (no procs_state.json)" % (shown, up))
+        elif not any(isinstance(r, dict) and isinstance(r.get("stack"), str) and r["stack"] and os.path.realpath(r["stack"]) == real
+                     for r in call_dc(dc.rows, up).values()):
+            why.append("%s looks like an agent's stack, but the daemon %s two levels up has no agent with that stack" % (shown, up))
+        else:
+            _CWD_DAEMON[here] = up
+            return up
+        break
+    raise Fail("DaemonMissing", "no --daemon, AOS_DAEMON not set, and no daemon two levels up from an agent's stack in the cwd (%s); "
+               "give -d D or export AOS_DAEMON=D, D being the daemon's $AOS_STACK folder" % ", ".join(why))
 
 
 def cwd_target():

@@ -224,11 +224,11 @@
       "since": "2026-11-18"
     },
     "default-stack": {
-      "title": "預設 stack：aos-agent 不給 -t 時從 cwd 找目標（11-21 已做），剩 aos-home 跟上與兩件小事",
+      "title": "預設 stack：aos-agent 不給 -t、-d 時從 cwd 的 agent stack 找目標與 daemon（11-21 已做），剩 aos-home 跟上與兩件小事",
       "status": "等使用者",
       "flow": "",
-      "what": "11-21 使用者裁「-d不能省略…-t xxx沒寫，AOS_AGENT又沒有的時候，會找./.stack內有沒有一個特徵檔…沒有./.stack那就找./」，又說丁（agent 記自己在哪個 daemon 底下）不行、為了可遷移性。線 top-1121-deft 做完：aos-agent 目標 -t ＞ AOS_AGENT ＞ ./.stack ＞ ./（特徵檔 stderr.txt＋表上對得到 stack），daemon 只從 -d／AOS_DAEMON 來；丁不做、程式裡沒有殘留。",
-      "next": "1. ~/aos-home 要吃到得在 repo 跑 install.py（換掉活樹的 lib/），由使用者點頭；之後殼裡要 export AOS_DAEMON（aos-agent 不再從 cwd 的 ./.stack 找 daemon）。2. 條文 N-63 要不要加註（字在紀錄「要給條文加註的字」）。3. 想問使用者：要不要在 stack 裡記定義夾／工作區，讓沒掛在 daemon 上的 stack 也能下指令（沒問、沒做）。",
+      "what": "11-21 使用者裁「-t xxx沒寫，AOS_AGENT又沒有的時候，會找./.stack…沒有./.stack那就找./」，丁不做（agent 不和 daemon 耦合）；同天又說「把-d省略也做一下吧，弄成往上兩層去找」。線 top-1121-deft 兩輪做完：目標 -t ＞ AOS_AGENT ＞ ./.stack ＞ ./（特徵檔 stderr.txt＋表上對得到），daemon -d ＞ AOS_DAEMON ＞ 那個 stack 往上兩層（要是 daemon 的 stack 且表上有它）；樹根的 ./.stack 不當 daemon。",
+      "next": "1. ~/aos-home 要吃到得在 repo 跑 install.py（換掉活樹的 lib/），由使用者點頭；站在 agent stack 以外的地方要 export AOS_DAEMON 或給 -d。2. 條文 N-63 要不要加註（字在紀錄「要給條文加註的字」，第二輪後要改寫成「aos-agent 改從 agent stack 往上兩層找」）。3. 想問使用者：要不要在 stack 裡記定義夾／工作區（沒問、沒做）。",
       "see": [
         "[aos-agent-預設目標-1121](../proto8/thinking/2026-11/21/aos-agent-預設目標-1121.md)",
         "[05-使用者補充-1120](../proto8/thinking/2026-11/18/default-stack-1118/05-使用者補充-1120.md)",

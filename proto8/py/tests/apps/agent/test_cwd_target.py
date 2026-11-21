@@ -1,4 +1,4 @@
-"""aos-agent with no -t and no AOS_AGENT finds the target in the cwd (./.stack, then ./), and never finds the daemon there (user 11-21).
+"""aos-agent with no -t and no AOS_AGENT finds the target in the cwd (./.stack, then ./); with no -d and no AOS_DAEMON the daemon is two folders up from that stack (user 11-21).
 
 A real isolated daemon at <root>/.stack (so the root looks like a tree root) hosts ann (stack <daemon>/procs/ann)
 and bob (stack <root>/ws-bob/.stack, inside its workspace). The marker of an agent's stack is stderr.txt, which the
@@ -119,15 +119,43 @@ class CwdTarget(unittest.TestCase):
         self.assertEqual(p.returncode, 1)
         self.assertIn("error: InstanceMissing ./.stack (%s) looks like an agent's stack" % stray, p.stderr)
 
-    def test_daemon_is_never_taken_from_the_cwd(self):
-        for cwd in (self.root, self.ann):                    # root: ./.stack is the daemon, as the old fallback used it
-            p = self.agent(cwd, "ctl", "ls", daemon=False)
-            self.assertEqual(p.returncode, 1)
-            self.assertIn("error: DaemonMissing no --daemon and AOS_DAEMON not set", p.stderr)
-        p = self.agent(self.ann, "ctl", "where", daemon=False)
-        self.assertIn("error: DaemonMissing", p.stderr)
-        self.assertEqual(self.where(self.ann, "-d", str(self.daemon)), str(self.ann))   # -d alone is enough
+    def where_no_daemon(self, cwd, *args, **env):
+        p = self.agent(cwd, "ctl", "where", *args, daemon=False, **env)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(p.stderr, "")
+        return p.stdout.strip()
 
+    def test_daemon_two_levels_up_from_the_agents_stack(self):
+        self.assertEqual(self.where_no_daemon(self.ann), str(self.ann))         # <daemon>/procs/ann: nothing to give
+        p = self.agent(self.ann, "ctl", "ls", daemon=False)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("bob\t", p.stdout)
+        self.assertEqual(self.where_no_daemon(self.ann, "-t", "bob"), str(self.bob))   # -t names an agent on that daemon
+        self.assertEqual(self.where_no_daemon(self.ann, AOS_AGENT="bob"), str(self.bob))
+
+    def test_daemon_flag_and_env_win_over_the_cwd(self):
+        other = self.root / "other"
+        other.mkdir(exist_ok=True)
+        p = self.agent(self.ann, "ctl", "where", AOS_DAEMON=str(other))         # AOS_DAEMON wins, even if wrong
+        self.assertIn("error: StateMissing", p.stderr)
+        self.assertEqual(self.where_no_daemon(self.ann, "-d", str(self.daemon)), str(self.ann))
+
+    def test_daemon_not_found_from_the_cwd(self):
+        p = self.agent(self.root, "ctl", "ls", daemon=False)                   # tree root: ./.stack itself is not taken
+        self.assertEqual(p.returncode, 1)
+        self.assertIn("error: DaemonMissing no --daemon, AOS_DAEMON not set, and no daemon two levels up", p.stderr)
+        self.assertIn("./.stack has no stderr.txt, ./ has no stderr.txt", p.stderr)
+        p = self.agent(self.root / "ws-bob", "ctl", "where", daemon=False)    # bob's stack is ws-bob/.stack: two up is the root
+        self.assertIn("error: DaemonMissing", p.stderr)
+        self.assertIn("but %s two levels up is not a daemon's stack" % self.root, p.stderr)
+        fake = self.root / "fake"
+        ghost = fake / "procs" / "ghost"
+        ghost.mkdir(parents=True, exist_ok=True)
+        (ghost / "stderr.txt").write_text("")
+        (fake / "procs_state.json").write_text('{"procs": {}}\n')
+        p = self.agent(ghost, "ctl", "where", daemon=False)
+        self.assertIn("error: DaemonMissing", p.stderr)
+        self.assertIn("but the daemon %s two levels up has no agent with that stack" % fake, p.stderr)
 
 if __name__ == "__main__":
     unittest.main()

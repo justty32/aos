@@ -46,7 +46,7 @@
      "__init__.py": "aos/apps/agent/__init__.py - 保留頂層說明、命令派發與主入口。",
      "ask.py": "aos/apps/agent/ask.py - 一問一答：say 一則再等配到這封信名的回答（subagent 工具的 op ask 也叫這支；舊身體退回等最新那則）。",
      "chat.py": "aos/apps/agent/chat.py - 逐行寄訊息並等候回答的互動迴圈（每句配自己的信名，同 ask）。",
-     "common.py": "aos/apps/agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon（-d ＞ AOS_DAEMON，不看 cwd）與表上的一隻（-t ＞ AOS_AGENT ＞ cwd 的 ./.stack ＞ ./；設了 AOS_KERNEL 先問表在哪再讀；ctl 動作…",
+     "common.py": "aos/apps/agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon（-d ＞ AOS_DAEMON ＞ cwd 認出的 agent stack 往上兩層）與表上的一隻（-t ＞ AOS_AGENT ＞ cwd 的 ./.stack ＞ ./；設了 AOS_K…",
      "ctl": {
       "__init__.py": "aos/apps/agent/ctl/__init__.py - 顯式派發 agent 的掛上與管理命令。",
       "add.py": "aos/apps/agent/ctl/add.py - 宣告檢查、掛上 agent 並等待 daemon 上表。",
@@ -314,7 +314,7 @@
      "test_brain_hint.py": "驗證問腦記錄與 llm kernel 停機時 listen／say 的一次提示及安靜失敗。",
      "test_chat_read_line.py": "Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8).",
      "test_ctl_kit.py": "Test aos-agent ctl add / set-def --kit on a real aos-daemon: the kit's system.txt and tools.json become the agent's own copies in its stack (replacin…",
-     "test_cwd_target.py": "aos-agent with no -t and no AOS_AGENT finds the target in the cwd (./.stack, then ./), and never finds the daemon there (user 11-21).",
+     "test_cwd_target.py": "aos-agent with no -t and no AOS_AGENT finds the target in the cwd (./.stack, then ./); with no -d and no AOS_DAEMON the daemon is two folders up from…",
      "test_daemon_down.py": "Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing.",
      "test_goal.py": "Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0…",
      "test_history.py": "Test aos-agent history on a fake daemon table (11-10 self-family): ls, rm, summarize, set, the kept originals (default, --keep, --no-keep), ranges an…",

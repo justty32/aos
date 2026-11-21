@@ -30,7 +30,7 @@ subcommands:
   goal     its goal: get, set, done, pause, resume, clear
 
 flags:
-  -d, --daemon D       the daemon's stack folder (default: $AOS_DAEMON; one is required)
+  -d, --daemon D       the daemon's stack folder (default: $AOS_DAEMON, else found from the cwd)
   -t, --target NAME    which agent, for every subcommand that takes one (same as after it)
   -h, --help           show this help
 
@@ -38,7 +38,9 @@ flag order: a flag belongs to the level it is listed under (aos-agent, the subco
   the action) and may go anywhere after that level's name, also after later names and
   arguments: aos-agent ctl stop ann -d D = aos-agent -d D ctl stop ann. After -- nothing
   is read as a flag.
-daemon: -d D, else $AOS_DAEMON; neither = DaemonMissing (never guessed from the cwd).
+daemon: -d D, else $AOS_DAEMON, else two folders up from the agent's stack found in the
+  cwd (./.stack, else ./; as below), which must be a daemon's stack listing that agent
+  (the default layout <daemon stack>/procs/NAME); none = DaemonMissing.
 target: every subcommand except ctl add / rm / ls / who acts on -t, --target NAME, else
   $AOS_AGENT, else the agent whose stack is ./.stack, else the one whose stack is ./ (a
   folder counts only if it has stderr.txt, which the daemon writes in every proc's stack,
