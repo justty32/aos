@@ -56,6 +56,9 @@
  "tool-desc-瘦身-1121": {
   "description": "一頁結論"
  },
+ "小事八題-使用者已答-1121.md": {
+  "description": "怎麼問的"
+ },
  "起手範本-動態連結-1121.md": {
   "description": "起手範本 start-api 的 ann 不帶格程式：fsm.json 四格與 hook_points 動態連結 $AOS_HOME/templates/agent-fsm（盤點、改法、怎麼改某一格、~/aos-home 怎麼跟上）"
  }

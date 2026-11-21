@@ -516,6 +516,7 @@
    "test_spec_base.py": "Test py/aos/spec_base.py: the shared base of agent_spec and tool_spec - one SpecBad / DefBad, prog_name, the --compile [LOCATION] / --dry-run shell, …",
    "test_state_path.py": "Check daemon_ctl.state_path: ask AOS_KERNEL for the table file with a query letter (a fake kernel answers), KernelFailed when nobody answers, and rea…",
    "test_state_path_fresh.py": "驗證長跑 watch 可略過 state_path 的行程內快取重新向 kernel 問表檔。",
+   "test_tool_entry_exec.py": "Every _entry under py/tools and templates that is a program (starts with #! or is an ELF file, or is not JSON) has its execute bit; a JSON _entry ({\"…",
    "test_tool_io_keys.py": "不認得的 stdin 鍵＝ArgumentsBad（使用者 11-10 晚「那就報錯」）；additionalProperties 與自由物件照舊收。",
    "test_tool_io_metainfo.py": "tool_io.load_tooldef 也讀 _metainfo.json 的 tooldef（11-12 metainfo，N-69）：先裡面、再 _tooldef.json，頂層鍵淺合併、外面贏。",
    "test_tool_io_place.py": "Test tool_io.place and tool_io.os_reason: error lines name program-made paths relative to $AOS_STACK / $AOS_DAEMON / $AOS_WS (counted from the caller…",

@@ -213,6 +213,9 @@
  "test_state_path_fresh.py": {
   "description": "驗證長跑 watch 可略過 state_path 的行程內快取重新向 kernel 問表檔。"
  },
+ "test_tool_entry_exec.py": {
+  "description": "Every _entry under py/tools and templates that is a program (starts with #! or is an ELF file, or is not JSON) has its execute bit; a JSON _entry ({\"…"
+ },
  "test_tool_io_keys.py": {
   "description": "不認得的 stdin 鍵＝ArgumentsBad（使用者 11-10 晚「那就報錯」）；additionalProperties 與自由物件照舊收。"
  },
