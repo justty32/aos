@@ -1,4 +1,4 @@
-家機 `~/aos-home` 更新兩次：早上到 repo `88ea321f4`（install.py、kernel.json 補思考程度、ann 照 start-api 範本換、保留 model=sol、sol 驗四題，線 top-1121-homeup）；上午再到 `5a99e1320`（ann 改動態連結 agent-fsm 的格程式、刪夾裡 9 個舊抄本、sol 驗九次含 /compact 先清工具輸出，線 top-1121-homeup2）；兩次都關回原狀。
+家機 `~/aos-home` 更新三次：早上到 repo `88ea321f4`（install.py、kernel.json 補思考程度、ann 照 start-api 範本換、保留 model=sol、sol 驗四題，線 top-1121-homeup）；上午再到 `5a99e1320`（ann 改動態連結 agent-fsm 的格程式、刪夾裡 9 個舊抄本、sol 驗九次含 /compact 先清工具輸出，線 top-1121-homeup2）；中午到 `97d4abc16`（hook 換新格式：ann 的 hooks.json→hookeds.json、kernel 加 interfaces.json／kernel_hooks.json／kernel_hookeds.json、stack 的 hooks/→hookeds/，4 個 hook 一個不少，sol 驗五次，線 top-1121-homeup3）；三次都關回原狀。
 
 ← [2026-11-21](README.md)｜前情：[aos-hook-fire換-1121](aos-hook-fire換-1121.md)、[llm-effort-1121](llm-effort-1121.md)、[tool-desc-瘦身-1121](tool-desc-瘦身-1121/)、[aos-agent-預設目標-1121](aos-agent-預設目標-1121.md)｜給使用者看的過程頁：`~/Desktop/aos-home更新過程-1121.html`
 
@@ -112,3 +112,66 @@
 - kernel 的 `kernel.py` 只隨 install 裝好，`perm/`、`llm/` 沒改成用它編。
 - sol 的 `ls` `max_items` 寫 1000 被拒（工具上限 500）、第 2、5 筆快取 0：只記。
 - 要注意的（寫進過程頁）：ann 的格程式現在直接讀 `$AOS_HOME/templates/agent-fsm/`，他的 `AOS_HOME` 就是 repo 的 `proto8/`，有人改那幾支還沒交時 ann 會吃到半成品。
+
+## 第三次更新（到 `97d4abc16`，hook 換新格式，線 top-1121-homeup3）
+
+授權（使用者 11-21 當場）：同上兩句；頂層事先說過這一刀交了會裝新版、換 ann 的檔、搬 stack 裡的 hook，他沒反對。刪檔沒有新授權，施工紀錄（[hook-新格式施工 03](hook-新格式施工-1121/03-保不住的行為與活樹更新.md)）寫「刪」的地方一律改名留底 `.bak-1121d`。
+
+### 做了什麼
+
+1. 開工核對：沒有 aos 行程；repo 工作樹乾淨，HEAD `97d4abc16`。舊 lib 跑 `aos-agent -d .stack --target ann hook ls -l` 直接 `PointsBad … templates/agent-fsm/hook_points.json: No such file`（03 預告的那個壞法）。
+2. 盤點：ann 定義的 `hooks.json` 掛 4 個（`context_wrap` on_clock every_ms 5000＋config、`timer` on_clock 300000、`mail_notify` on_clock 60000、`brain_notify` brain_failed condition BudgetMissing/BrainFailed），全寫 `on_error: continue`，沒有關掉的；`.stack/procs/ann/` 沒有 `hooks.json`、沒有 `hook_*.flag`，只有工作夾 `hooks/`（context_wrap、mail_notify、timer）。其他 stack 沒有 hook 相關的檔。全樹逐檔比 `templates/start-api/`（JSON 比內容）：要換的檔都跟 `5a99e1320` 的範本內容一樣，使用者自己的只有 ann `llm.json`（`model=sol`）；`llm/kernel.json` 跟現在的範本內容一樣、本來就沒有 `hooks` 鍵。
+3. proto8 跑 `python3 install.py`：30 支指令（9 C++、21 Python）、`py/` 590 檔與 12 個 C++ 函式庫進 `lib/`，清掉 25 個舊檔。
+4. 換檔（先備份 `<檔>.bak-1121d`；JSON 內容照範本、照他的縮排 2 格寫）：
+
+| 檔 | 做了什麼 |
+|---|---|
+| `agents/ann/interfaces.json` | 最外層 `hooks`（loop_hooks.json＋agent-fsm/hooks.json 兩個指示詞）、`hookeds: "hookeds.json"`；aos-agent 格不再有 hooks／hook_points |
+| `agents/ann/hookeds.json`（新） | 舊 hooks.json 的 4 格拿掉 `on_error`（等於範本） |
+| `agents/ann/hooks.json` | 改名 `hooks.json.bak-1121d`（沒另外再抄一份） |
+| `agents/ann/loop.json` | 起停 `aos-hook fire -q --stop-on-nonzero --def`；before_run／after_run 不接 |
+| `agents/ann/README.md`、樹根 `README.md` | 照範本抄 |
+| `llm/interfaces.json` | 多 `hooks`、`hookeds`、`"kernel": {}` |
+| `llm/`、`perm/` 的 `kernel_hooks.json`（逐字抄）、`kernel_hookeds.json`（新） | 範本那份 |
+| `perm/interfaces.json`（新）、`perm/loop.json` | 照範本 |
+
+5. 搬 stack：沒有 `<stack>/hooks.json` 要轉；`.stack/procs/ann/hooks/` 先抄成 `hooks.bak-1121d/` 再改名 `hookeds/`。`history.jsonl` 備份 `history.jsonl.bak-1121d`（開工前 6 則）。
+6. 起樹（清掉繼承的 `AOS_*`、`source env.sh`、背景 `aos-exec root`，輸出寫 `~/.aos/scratch/top-1121-homeup3/`）：表上四隻 `running`，llm kernel 的 `_sweeper` 也 `running`。perm 不在板子上，改在暫存區另開 stack 起（`AOS_DAEMON` 指一個空夾當下一站；不給的話 kernel 第一輪報 `DaemonMissing no next station`）：`running`、起停兩點過、TERM 後 `stopped`。
+7. `aos-daemon-ctl -d .stack shutdown`，根行程退出、沒有殘留行程，表上四隻 `sleeping`。
+8. 桌面過程頁加「第三次更新」一節，最上面的結論改成涵蓋三次。
+
+### hook 清單對照
+
+起樹前、起樹後 `hook ls -l` 都是 brain_notify、context_wrap、mail_notify、timer 四個，參數同更新前，來源 `agents/ann/hookeds.json`。ann 沒有工具上的 hook（before_tool／after_tool 沒掛），「工具 hook 有被叫」沒得驗；改看 on_clock：起樹那刻 `hookeds/` 下三個工作夾的 `event.json`、`on_clock.json` 都更新（`on_clock.json` 是新格式 `{"loop": [boot_id, pid, ticks], …}`），mail_notify 的 `notified.json` 照用。
+
+行為：4 個都在不能攔的點，舊的 `on_error: continue`＝失敗只 warning，新版這些點失敗也只 warning——對 ann 沒變。
+
+### 驗證數字（sol，共 5 次呼叫）
+
+| # | 題 | prompt_tokens | cached_tokens | reasoning_tokens |
+|---|---|---|---|---|
+| 1 | pong → pong | 7,205 | 0 | 0 |
+| 2 | 2+3 → 5 | 7,229 | 7,040 | 0 |
+| 3 | 用 ls 列 `.stack/procs/ann/hookeds`（叫工具） | 7,274 | 0 | 0 |
+| 4 | 回答「context_wrap, mail_notify, timer」（對） | 7,343 | 7,040 | 0 |
+| 5 | reasoning_effort=high：401（對） | 7,390 | 7,168 | 14 |
+
+- 第 5 筆帳本記 `reasoning_effort: high`；`llm rm reasoning_effort` 後 stack 覆蓋檔被收掉，`llm` 只剩 `model=sol`。
+- 在 `.stack/procs/ann`：`aos-agent history ls -n 3` 列第 14～16 則；`-3` 照舊 `FlagUnknown`。
+- 沒寄 `/compact`。ann 的 stderr 沒多任何一行。
+
+### 替使用者做的選擇
+
+1. 「刪舊清單」改成改名留底；舊旗標檔他的 stack 本來沒有。
+2. JSON 照他的縮排 2 格寫（範本是單行／縮排 1 格）；`kernel_hooks.json` 逐字抄。
+3. perm 不替他掛上板子，在暫存區另開 stack 驗。
+4. 不為了驗工具 hook 臨時替 ann 掛一個；用 on_clock 工作夾證明 hook 在跑、用的是新夾。
+5. 驗證的 5 題留在 ann 歷史（現在 16 則）；起樹輸出寫暫存區；沒設 `LITELLM_KEY`。
+
+### 留著沒刪
+
+`agents/ann/hooks.json.bak-1121d`、`.stack/procs/ann/hooks.bak-1121d/`、前幾次的 `.bak-1121`／`.bak-1121b`／`.bak-1121c`、樹根 `root.log`。新版都不讀（`hooks.json` 改名是因為新版的 `hooks.json` 是宣告，原名留著會誤導人；新程式只照 interfaces.json 指的名字讀，`*.bak-*` 不會被當清單）。
+
+### 沒發現新版程式的問題
+
+照 03 的步驟走完沒有卡住；03 的指令跟實物對得上，差別只有 perm 單獨起要有下一站（03 沒寫，因為 perm 平常掛在板子上、有 `AOS_DAEMON`）。
