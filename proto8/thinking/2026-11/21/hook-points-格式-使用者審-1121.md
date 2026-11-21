@@ -27,3 +27,27 @@
 
 - 「id」是點的名字（現在 `points` 底下的鍵）還是另外一欄；description 算不算硬性。
 - 現在程式會讀 block、change、condition 等鍵來擋 handler 與檢查掛法（頂層的印象，沒逐行查證）；改成「想放啥放啥」後這些檢查留不留。
+
+## 第 3 則：provider 寫 aos-loop，看不出哪來
+
+他看了 ann 的 `interfaces.json` 寫 `"hook_points": [{"provider": "aos-loop"}, "hook_points.json"]` 之後說：
+
+「尷尬，這個宣告我覺得不妥，hook_points:[...]這塊，你provider寫aos-loop，我哪知道這個aos-loop是哪來的。幫我派線去規劃，看看有沒有類似C語言#include那樣的感覺，或是類似指示詞那樣，並且兼容指示詞的」
+
+已派線 top-1121-hpinclude 出規劃稿：[hook-points-引入寫法-1121](hook-points-引入寫法-1121/README.md)。
+
+## 第 4 則：hook_points 寫檔名或直接寫內容
+
+「然後interfaces.json中，應該是hook_points:"hook_points.json"這樣，當然，也可以直接hook_points:[...]，都可以。」
+
+頂層的讀法（他在第 5 則確認了）：`hook_points` 的值是字串＝指到一份宣告檔；也可以直接把宣告內容寫在那裡，`[...]` 是一串 hook 點的宣告，不是現在「provider 名字＋檔名」的清單。別家的點怎麼進來，靠宣告內容裡的引入寫法，不靠 `interfaces.json` 並列。
+
+## 第 5 則：也可以寫 {...}，就是 id 放哪
+
+頂層問「直接寫 `[...]` 時，每個點的 id 是陣列每項自己帶，還是改成物件、用 id 當鍵」，他答：
+
+「對，然後除了[...]之外也可以用{...}，就等於把id放哪。」
+
+### 整理（頂層的理解）
+
+- `hook_points` 的值三種都收：字串（指到宣告檔）、陣列 `[...]`（每項自己帶 id）、物件 `{...}`（id 當鍵）。

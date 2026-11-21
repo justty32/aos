@@ -1,0 +1,108 @@
+{
+ "description": "Sample only (line top-1121-hpinclude, not used by any program): templates/agent-fsm/hook_points.json rewritten in the user's 11-21 format, and pulling in the aos-loop points with $include (candidate A). The points an agent-fsm agent offers: the cells' own (idle, think, wait, act) and the four loop points its loop.json wires.",
+ "provider": "agent-fsm",
+ "$include": {"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_points.json"},
+ "before_queue": {
+   "description": "idle: a good letter is about to enter the conversation (/compact letters do not pass here)",
+   "input": {"type": "object", "properties": {
+     "letter": {"description": "letter name", "type": "string"},
+     "content": {"description": "the text that will enter the conversation", "type": "string"}
+    }},
+   "output": {"type": "object", "properties": {
+     "content": {"type": "string", "minLength": 1, "pattern": "\\S"}
+    }, "additionalProperties": false},
+   "phase": "before",
+   "block": true,
+   "if_blocked": "the letter is closed and dropped; mailbox_warning.txt says which hook dropped it",
+   "key": "letter",
+   "fired_in": ["idle.py"]
+  },
+ "after_queue": {
+   "description": "idle: the letter is in history.jsonl and closed",
+   "input": {"type": "object", "properties": {
+     "letter": {"description": "letter name", "type": "string"},
+     "content": {"description": "the text that entered", "type": "string"}
+    }},
+   "phase": "after",
+   "fired_in": ["idle.py"]
+  },
+ "before_tool": {
+   "description": "act: before each tool call runs (every tool)",
+   "input": {"type": "object", "properties": {
+     "name": {"description": "tool name", "type": "string"},
+     "id": {"description": "tool call id", "type": "string"},
+     "arguments": {"description": "the parsed JSON arguments the tool will get"}
+    }},
+   "output": {"type": "object", "properties": {
+     "arguments": {}
+    }, "additionalProperties": false},
+   "phase": "before",
+   "condition": "name",
+   "subject": "tool",
+   "block": true,
+   "if_blocked": "the tool does not run; the brain gets the hook's stdout (or a default line) as the tool result",
+   "key": "id",
+   "fired_in": ["act.py"]
+  },
+ "after_tool": {
+   "description": "act: a tool finished, before its result enters history (not for a blocked tool)",
+   "input": {"type": "object", "properties": {
+     "name": {"description": "tool name", "type": "string"},
+     "id": {"description": "tool call id", "type": "string"},
+     "arguments": {"description": "what the tool got"},
+     "content": {"description": "the result text", "type": "string"},
+     "code": {"description": "the tool's exit code, null when it timed out", "type": ["integer", "null"]},
+     "timed_out": {"description": "true or false", "type": "boolean"}
+    }},
+   "output": {"type": "object", "properties": {
+     "content": {"type": "string"}
+    }, "additionalProperties": false},
+   "phase": "after",
+   "condition": "name",
+   "subject": "tool",
+   "fired_in": ["act.py"]
+  },
+ "brain_failed": {
+   "description": "wait: asking the brain did not work",
+   "input": {"type": "object", "properties": {
+     "name": {"description": "error code: LlmKernelMissing, SendFailed, BudgetMissing, BrainFailed or ReplyBad", "type": "string"},
+     "reason": {"description": "one sentence", "type": "string"},
+     "error": {"description": "the kernel's error object, when there is one (BudgetMissing, BrainFailed)", "type": "object"},
+     "code": {"description": "BrainFailed only, when the kernel's error has it: the kernel's code", "type": ["integer", "null"]},
+     "status": {"description": "BrainFailed only, when the kernel's error has it: the HTTP status", "type": "integer"},
+     "retry": {"description": "BrainFailed only: true when the same request is sent again after a wait, false when the agent stops", "type": "boolean"},
+     "attempt": {"description": "BrainFailed only: failures in a row", "type": "integer"},
+     "wait_s": {"description": "BrainFailed only, when retry is true: seconds until the next try", "type": "number"}
+    }},
+   "phase": "after",
+   "condition": "name",
+   "subject": "code",
+   "fired_in": ["wait.py"]
+  },
+ "tool_added": {
+   "description": "think: a tool name appeared in the tool box since the last request (the first look only remembers the names)",
+   "input": {"type": "object", "properties": {
+     "name": {"description": "tool name", "type": "string"},
+     "path": {"description": "where it is (absolute), or null", "type": ["string", "null"]}
+    }},
+   "phase": "after",
+   "condition": "name",
+   "subject": "tool",
+   "fired_in": ["brain.py"]
+  },
+ "on_clock": {
+   "description": "start of every cell: the hook's clock moved on by its own every_cycles / every_ms (also once right after a start)",
+   "input": {"type": "object", "properties": {
+     "clock": {"description": "clock file", "type": "string"},
+     "cycle": {"description": "its number now", "type": "integer"},
+     "interval_ms": {"description": "ms per cycle", "type": "integer"},
+     "first": {"description": "true right after a start, a wake or a clock change", "type": "boolean"},
+     "last_cycle": {"description": "cycle of the last run, or null", "type": ["integer", "null"]},
+     "missed": {"description": "runs skipped", "type": "integer"},
+     "config": {"description": "the entry's config, when it has one"}
+    }},
+   "phase": "on",
+   "entry_keys": ["clock", "every_cycles", "every_ms"],
+   "fired_in": ["cell_common.py"]
+  }
+}

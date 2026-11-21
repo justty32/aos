@@ -1,0 +1,45 @@
+{
+ "description": "Sample only (line top-1121-hpinclude, not used by any program): py/aos/apps/hook/loop_points.json rewritten in the user's 11-21 format - id as key, input / output as JSON Schema, every other key free. Hook points of anything run by aos-loop whose loop.json wires them: after_start and after_stop (on_start / on_stop), and before_run / after_run (on_before_run / on_after_run, each only while its _if flag file exists: STACK/hook_before_run.flag, hook_after_run.flag, kept by aos-agent hook and aos-hook); the templates wire all four through aos-hook fire.",
+ "provider": "aos-loop",
+ "after_start": {
+   "description": "the loop started, before the first run of its body (loop.json on_start; also after a wake or an auto_restart, not after a hard kill)",
+   "input": {"type": "object", "properties": {}},
+   "phase": "after",
+   "if_failed": "the loop stops (all four loop points do): the body never runs, after_stop still fires"
+  },
+ "after_stop": {
+   "description": "the loop is about to exit (loop.json on_stop: stop, sleep, remove, shutdown, a failing run; not after a hard kill)",
+   "input": {"type": "object", "properties": {
+     "code": {"description": "the code the loop exits with", "type": ["integer", "null"], "env": "AOS_LOOP_CODE"},
+     "signal": {"description": "the signal it got, or null", "type": ["integer", "null"], "env": "AOS_LOOP_SIGNAL"},
+     "cause": {"description": "stop, sleep, remove, shutdown, stuck, signal, max, body_exit or error (copied as given); null when empty or unset", "type": ["string", "null"], "env": "AOS_LOOP_CAUSE"}
+    }},
+   "phase": "after",
+   "if_failed": "the loop exits with the hook's failure code when it would have exited 0 (all four loop points stop); when it already exits with another code, that code stays and the failure is one warning"
+  },
+ "before_run": {
+   "description": "before each run of the loop body, after the pause check and the wait for interval_ms",
+   "input": {"type": "object", "properties": {
+     "counter_runs": {"description": "which run this will be (from 1)", "type": ["integer", "null"], "env": "AOS_LOOP_RUNS"},
+     "stage": {"description": "fsm bodies only: the state about to run (the table's start state on the first run); null for bodies without states", "type": ["string", "null"]}
+    }},
+   "phase": "before",
+   "condition": "stage",
+   "subject": "stage",
+   "block": true,
+   "if_blocked": "the loop skips this run: the body does not run, the run is not counted, after_run does not fire; the loop asks again after interval_ms",
+   "if_failed": "the loop stops, as after a failing run; the body does not run"
+  },
+ "after_run": {
+   "description": "after each run of the loop body, whatever its exit code (not when the body could not start, not when the loop got a signal)",
+   "input": {"type": "object", "properties": {
+     "counter_runs": {"description": "which run this was (the same number before_run got)", "type": ["integer", "null"], "env": "AOS_LOOP_RUNS"},
+     "code": {"description": "the body's exit code", "type": ["integer", "null"], "env": "AOS_LOOP_RUN_CODE"},
+     "signal": {"description": "the signal that ended the body, or null", "type": ["integer", "null"], "env": "AOS_LOOP_RUN_SIGNAL"},
+     "elapsed_ms": {"description": "how long the body ran", "type": ["integer", "null"], "env": "AOS_LOOP_RUN_MS"},
+     "next_stage": {"description": "fsm bodies only: the state the table is at now (the next one after a taken step, the same one otherwise); null for bodies without states", "type": ["string", "null"]}
+    }},
+   "phase": "after",
+   "if_failed": "the loop stops with the hook's code when the body exited 0; when the body itself ends the loop, the body's result counts and the hook failure is one warning"
+  }
+}
