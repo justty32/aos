@@ -12,54 +12,63 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-21 晚（家機，使用者在場、洗完澡要開始玩 aos、要 compact）——兩條線在跑（映照版搬家＋原型、fable 規劃「json 骨架＋md」知識庫）；活樹裝到 `83e6fa5e3`；今天的 commit 都沒 push
+## 2026-11-21 深夜（家機，使用者在場、準備玩 aos）——知識庫整庫換成「md 為主體、index json 做骨架」做完；API agent 認 `/clear`；沒有線在跑；活樹裝到 `fe053b828`；今天的 commit 都沒 push
 
-**使用者今天開場的指示（逐字）**：「事情盡量交給agent做，你就負責跟我交流。普通工作交給opus，簡單工作與雜活交給sonnet。agent做事前也要讀過wf/規矩，簡單工作與雜活除外。agent可以再派agent，模型隨意。用繁體中文跟我說話。」**現在沒有 goal。**他今晚自己玩 aos（eca_main、前端），有問題會來問。
+**使用者今天開場的指示（逐字）**：「事情盡量交給agent做，你就負責跟我交流。普通工作交給opus，簡單工作與雜活交給sonnet。agent做事前也要讀過wf/規矩，簡單工作與雜活除外。agent可以再派agent，模型隨意。用繁體中文跟我說話。」**現在沒有 goal。**他今晚自己玩 aos，有問題會來問。
 
 **授權（11-21 當場；只限這個 session）**：
-- push：沒給 → **不推**。本地領先 origin 約 100 筆。
-- `~/aos-home`：「好，install.py你跑就行」「幫我把該準備的準備好」。已更新五次（最後 `628982cac`，裝的是 `83e6fa5e3`；樹停著時裝的）。**他今晚在玩：再裝之前一定先問他、等他說樹停了才裝。**
-- 刪檔：先前四批用完。今晚另准的只有：關 9 個 tmux session（已做）、映照版搬家造成的舊路徑移除、`top-1121-kbmd` 第三段換知識庫樣子時被取代的舊檔（他：「實作好了之後趕快更新知識庫」）。其他不延伸。
-- 他會擋看不懂的長指令 → 指令一次一件事、說明寫清楚。子 agent 的 `commit-request submit` 被擋不要繞，回報頂層代交。
+- push：沒給 → **不推**。本地領先 origin 約 125 筆。
+- `~/aos-home`：已更新七次（紀錄 `aos-home-更新-1121.md`，最後 `198719adc`，裝的是 `fe053b828`；ann 的 `system.txt` 換成新範本、入口 `_description.md`）。他說過「我還沒開始玩aos，可以動樹」是當下那一次；**再裝之前仍先問他、確認樹停著**。
+- 刪檔：只限已做完的那幾批（知識庫被 md 取代的舊 json）。不延伸。
+- 他會擋看不懂的長指令 → 指令一次一件事。子 agent 的 `commit-request submit` 被擋不要繞。
 - LiteLLM（localhost:4000）是他起的，不停不改。
-- 活樹的 `AOS_HOME` 就是 repo 的 `proto8/`：`knowledge/`、`frontend/`、範本格程式**存檔即生效**；動 `py/`、`cpp/` 要 `install.py`。
+- 活樹的 `AOS_HOME` 就是 repo 的 `proto8/`：`knowledge/`、`frontend/`、`templates/`（含 agent-fsm 的格程式）**存檔即生效**；動 `py/`、`cpp/` 要 `install.py`。
 
-**還在跑的線（Claude 子 agent；「completed」可能只是在等自己的測試）**：
-| 線名 | agent id | 做什麼、頂層要接什麼 |
-|---|---|---|
-| `top-1121-mdjson` | `a40b7d9ae0e561288` | ①把中文映照版從 `proto8/knowledge/aos-zh-md/` 再搬到 **`proto8/knowledge-zh-md/`**（他：「…用grep找東西的時候量會變多，這就糟糕了，麻煩你幫我搬到proto8/knowledge-zh-md吧」），並回報新位置不會被 agent 撈到的五項確認；②接著做「骨架＋md」小原型（`md與json尋址-1121/原型-骨架加md/`、`10-…`）。交了核對 commit、告訴他「搬好了，可以放心起 agent」 |
-| `top-1121-kbmd` | `adf161e2ec180c38c` | **fable 隊長**（他點名）。三段：規劃 → 實作工具 → 換知識庫樣子。他三句原話：「…是否可以是index中有說"xxx":"xxx.md"這樣，指向某個.md檔案？就是說，仍然以.md爲主體，然後index做導航骨架，這樣git diff也比較舒服…」「尋址這塊，感覺也可以用這套#/xxx的方式去尋markdown」「好，總之讓fable去規劃一下，然後能實作的話就儘快實作，實作好了之後趕快更新知識庫。」**順序鎖**：它交完工具會停下來回報「需要重裝活樹」→ 頂層**先問他、等樹停著**再派線跑 `install.py`（照 `aos-home-更新-1121.md` 第五次的做法）→ 用 SendMessage 回它「已裝」→ 它才把新樣子的知識庫寫進工作樹。**在「已裝」之前知識庫不能換**（他正在跑的 agent 會查壞）。它若列方向題，用選項框問他（最多四題四選項、不標推薦） |
+**還在跑的線**：沒有。fable 隊長線 `top-1121-kbmd`（agent id `adf161e2ec180c38c`）五段都交了，要續派用 SendMessage。
 
-**今晚他用的東西（都備好了）**：
-- eca_main：`proto8/docs/tutorial/05b-起eca_main.md`（最短路 01、02→05b；`a0318f73f`）。先確認 `claude` 登入過；第一次 `open` 要自己選信任資料夾；範本寫檔跑指令不問就准，加在 `~/aos-home` 時 `-w` 指專案夾別用 `.`。
-- 前端：起樹後另開視窗 `cd ~/aos-home`、`AOS_DAEMON=~/aos-home/.stack aos-frontend serve`，新版頁 http://127.0.0.1:8768/ （`5d9f87043`）。「要決定」欄會是空的（活樹沒有 `ws/`）；對 ann 按 `/compact` 會被擋。
-- 知識庫已對齊程式（`fad6bef74`；`cli/hook_points.json` 改名 `cli/offer_hooks.json`）。
-- `aos-gdb --hooks FILE`／`--def-hooks`（`2060ee9d5`）；停法他答「停法按照gdb自己的，之後可以開一個口子，實時修改…但不急」。
-- 三處 `--help` 已改（實際四處，`83e6fa5e3`）。tmux 9 個被自動復原的 session 已關（下次他開 tmux 外掛可能又還原）。
+**今晚做完的大事：知識庫換樣子**（規劃與紀錄全在 `proto8/thinking/2026-11/21/知識庫-骨架加md-規劃-1121/`，他的 25 句原話逐字在 `00`、`08`、`09`、`11`、`15`）：
+- 現況：`proto8/knowledge/` 的 `aos/`、`wf/` 兩庫所有頁都是 `.md`，只剩 4 份夾的 `_index.json` 是 json。入口 `knowledge/aos/_description.md`。commit：工具 `6c769595d`、aos 庫 `fe053b828`、wf 庫 `33835099a`、最後 5 頁與 repo 規矩 `578a7c762`、code map 補洞 `00d156173`／`084fa0306`。
+- 尋址（全文 `07-尋址規則.md`，知識庫 `docs/03-md頁與尋址.md`）：`x.md#/標題字` 拿一節；`#/標題/_` 標題自己的內文（保留名只認 `_`）；`#/標題/0` 第一個清單的項、`鍵: 值` 清單可用鍵尋；表格 `#/標題/列/欄`（表頭是第 0 列、值一律字串）；清單與表格同節只認清單；標題底下只有一個 json 區塊就當 json 往下尋；md 裡不加任何標記。自動跟到 md 只用 `$ref`。json 工具不寫 md。
+- index：`_index.json` 一項可以是純字串（＝description）；`index` 欄可指任何「檔#/路徑」（含指進 md）只要讀出來是 index 格式；沒有 `_index.json` 才看 `_index.md`；md 認 `# index`／`# description`（也認底線版）。`index_check` **整支重寫**成九條（清單在 `10-index_check.md`），「要列出夾裡每一個東西」那條刪了。
+- 轉換腳本 `wf/tools/kb_md.py`（原樣搬文章）、`wf/tools/kb_md_shape.py`（換形狀）；對照表 `kb_md_map*.json` 在規劃夾。
+- 「新寫的預設寫 md、index json 做骨架、兩種都可以、不做檢查」已寫進知識庫說明六處與 repo 規矩六處（鐵律 6、rules-card 6、`data-files.md`、STRUCTURE/02、04、N-45），都是原字不動加一句（`17`、`19` 兩份改前改後）。
+- 中文映照版 `proto8/knowledge-zh-md/`：只重寫了 4 份 `_index.md`；內文的舊路徑、`#/鍵` 標籤、README「正本是旁邊的 json」都還是舊的。
 
-**今天下午聊出來、他還在想的（原話都逐字在對應 thinking 檔，不催）**：
-- shell 比喻：`shell-指令的比喻-1121/04-使用者回應.md`、`05-切點.md`。
-- kernel 攔截 daemon 存取：`kernel-攔截daemon存取-1121/`；桌面 `aos-kernel攔截daemon存取-1121.html`（七種可能的樣子、三題）。原則：「只防走規矩的存取，不守規矩的就是要自己承擔風險。真的要硬防，那就要多依賴linux的權限體系」；想探索「寄一封信給kernel，kernel返回他想要存取的daemon的東西的位置」。
-- 權限零件：桌面 `aos-權限零件-1121/`。daemon 11-19 起已認 `sub:N`，家機卡在家目錄 700。
-- 驗寄件人：`驗寄件人-規劃-1121/`，他按直覺答 1D、2C、3C、4A，「晚一點我開沙箱，裏面開一個新session去嘗試」→ 頂層沒派施工；另五題沒念。
-- md 與 json：`md與json尋址-1121/`；他「平常就是用vscode打開知識庫」；四題只答了這一題。
-- 前端大修盤點 14 項（`frontend-備妥-1121.md`）沒念；程式旁文件對不上幾處（`share/README`、`asuser/README` 等）沒改；`wf/tools/index_gen_desc.json:246` 一句舊說明沒改；知識庫線拿不準沒動的一處（kernel 站「不在一輪中間跑」）。
+**API agent 的 `/clear`**（`ef774a4a3`，線 `top-1121-apiclear`，紀錄 `api-agent-clear-1121.md`）：agent-fsm 收到剛好是 `/clear` 的信不叫模型、history 搬進 `history_removed.jsonl`、只留這一問一答。改的是 `templates/agent-fsm/`，不用重裝。API 這邊 `/compact` 11-20 起就有；`/status`、`/usage`、`/exit` 沒有。只用假模型驗過，沒在活樹跑過。
+
+**等他說的（已念給他、沒答，不催）**：
+- 4 份 `_index.json` 要不要也換成 `_index.md`（頂層讀法：留 json，照他「index json 做骨架」；`index`／`kind`／`source` 欄放不進清單）。
+- repo 自己 `wf/` 的 json 資料檔要不要轉（`progress.json`、code-map、wf-table 三類換了會壞，要連工具改）。
+- 拿不準沒動的條文：N-62、N-69、C-42 續、`tidy/README` 第 4 條、`wf/public/整理與拆檔.md`、`proto8/docs/` 2 處舊路徑。
+- 中文映照版要不要整份重做。
+- API agent 要不要 `/status`、`/usage`、`/exit`。
+- 新 `index_check` 他說過「之後要看看」。
+- 換形狀比較醜的頁：`wf/source/block-3.md`、`block-4.md`。
+
+**今天稍早聊出來、他還在想的（原話都逐字在對應 thinking 檔，不催）**：
+- shell 比喻：`shell-指令的比喻-1121/04`、`05`。
+- kernel 攔截 daemon 存取：`kernel-攔截daemon存取-1121/`；桌面 `aos-kernel攔截daemon存取-1121.html`。原則：「只防走規矩的存取，不守規矩的就是要自己承擔風險。真的要硬防，那就要多依賴linux的權限體系」。
+- 權限零件：桌面 `aos-權限零件-1121/`。
+- 驗寄件人：`驗寄件人-規劃-1121/`，他答 1D、2C、3C、4A，要自己開沙箱試；頂層沒派施工；另五題沒念。
+- 前端大修盤點 14 項（`frontend-備妥-1121.md`）沒念；程式旁文件對不上幾處（`share/README`、`asuser/README`）沒改。
 - 更早等他的：gpt 包預設走 `/v1/responses`；`history set` 收不收 `-n`；N-63 加註；stack 要不要記定義夾與工作區；eca 三包要不要瘦；條文整體大修；kernel 編譯「我之後再來玩」。
 
-**hook 的定案（11-21）**：逐字在 `hook-points-格式-使用者審-1121.md`、`aos-hook-簡化-1121/07-使用者已答.md`、`kernel-宣告進interfaces-1121/09-使用者已答.md`。`hooks.json`＝有哪些鉤子、`hookeds.json`＝有哪些被勾著；宣告只是參考；引擎極簡；kernel 甲案。施工 `97d4abc16`。
+**今晚他用的東西**：
+- eca_main：`proto8/docs/tutorial/05b-起eca_main.md`（最短路 01、02→05b）。
+- 前端：起樹後另開視窗 `cd ~/aos-home`、`AOS_DAEMON=~/aos-home/.stack aos-frontend serve`，頁 http://127.0.0.1:8768/ 。
+- ann 的 history 裡還有舊 `.json` 路徑的對話，它照記憶查會「檔不在」；寄 `/clear` 或跟它說入口換了。
 
-**記給公司機的**：刪 `~/code/rv`（刪前再確認）；GitHub 的 `rv` 他自己刪；公司 WSL 要重裝並照 `hook-新格式施工-1121/03` 搬。
+**記給公司機的**：刪 `~/code/rv`（刪前再確認）；GitHub 的 `rv` 他自己刪；公司 WSL 要重裝並照 `hook-新格式施工-1121/03` 搬；知識庫換成 md 後公司機 pull 完要重裝、樹裡抄進去的系統文字入口要換。
 
-**暫存夾留著的**：`~/.aos/scratch/top-1121-*`；`top-1121-ownerplan/exp/owner/` 有歸子帳號的信夾，要 `aos-asuser --fix` 才清得掉。
+**暫存夾留著的**：`~/.aos/scratch/top-1121-*`（`top-1121-kbmd/` 很多份複本）；`top-1121-ownerplan/exp/owner/` 要 `aos-asuser --fix` 才清得掉。
 
-**派線的做法（家機）**：Agent 工具派 Claude 子 agent（普通 opus、雜活 sonnet、發想他點名才 fable）；任務書寫明：先讀知識庫入口與規矩卡、線名 `top-1121-<名>`、乾淨複本＝`git archive HEAD` 解到 `~/.aos/scratch/<線名>/` 只疊自己的檔、這台沒有 pytest 用 unittest 逐夾跑、不在 repo 跑 `install.py`、不碰 `~/aos-home`、清 `AOS_*`、收行程只准兩種、不刪檔不 push、交件走 `commit-request`（zsh 路徑用陣列；日索引與進度條用 `--op`，寫法在 `wf/tools/commit_queue.py` 檔頭）、別線 claim 的檔等它交、背景等待腳本用完自己收。續派用 SendMessage 給 agent id。回報先 `git log`／`git show --stat` 核對再轉述；它替使用者做的選擇逐條念給他聽。頂層記他的原話時直接追加進對應的 thinking 檔、用線名 `top-1121-home` 交。
+**派線的做法（家機）**：Agent 工具派 Claude 子 agent（普通 opus、雜活 sonnet、他點名才 fable）；任務書寫明：先讀知識庫入口 `proto8/knowledge/aos/_description.md` 與規矩卡、線名 `top-1121-<名>`、乾淨複本＝`git archive HEAD` 解到 `~/.aos/scratch/<線名>/`、這台沒有 pytest 用 unittest、不在 repo 跑 `install.py`、不碰 `~/aos-home`、清 `AOS_*`、收行程只准兩種、不開 tmux、不印環境變數、不刪檔不 push、交件走 `commit-request`（`claim` 的檔是位置參數；`submit --files`）、背景等待腳本用完自己收（別用會認到自己的 `pgrep -f` 迴圈）。回報先 `git show --stat` 核對再轉述；它替使用者做的選擇逐條念給他聽。頂層記他的原話時追加進對應的 thinking 檔、用線名 `top-1121-home` 交。
 
 **坑**：
-- 問句不是指示；一句話兩種讀法先確認；他補一句就可能翻掉讀法，轉給線時原話逐字附上（今天 `-N`、第 7／8 則都發生過）。
+- 問句不是指示；一句話兩種讀法先標出讀法再做；他補一句就可能翻掉前一句（今晚 `_index.md` 合併→有 json 就不看、純字串指向→純字串＝description 都發生過），轉給線時原話逐字附上。
+- 頂層憑舊紀錄答事實會錯（今晚說「`/compact` 只有 eca 認」「做完要重裝」都被線查出不對）→ 沒查過的事講明是推測。
 - 選項框不標推薦；最多四題、每題最多四個選項。
-- 家機沒有使用者專區與全景頁，問他只能當面或選項框。
 - 說話：kernel、daemon、llm kernel 直接叫；handle 說「遙控器」；「編譯／重新編譯」「靜態連結／動態連結」。
-- 乾淨複本本來就紅或看負載的：`apps/feedback`、`apps/eca` 幾支、`apps/gdb` ctrl-c、`cpp/aos-loop` 訊號、`subagent` 一支撞名。
-- 自動記憶夾還有 11-14～11-18 舊條目，規矩是不寫自動記憶，沒動。
-- 子 agent 不要開 tmux：11-21 教學線開 tmux 測畫面，觸發他的自動復原外掛還原了 9 個舊 session。
-- 知識庫、前端、範本格程式存檔即生效：他在玩的時候，往這三處寫檔要一次寫完整，會改變查法的改動要先確認工具已裝進活樹。
+- 這台 `ls` 是 `eza --git`，在背景指令裡會卡住。
+- 子 agent 不要開 tmux（會觸發他的自動復原外掛）。
+- 知識庫、前端、範本存檔即生效：他在玩的時候往這三處寫檔要一次寫完整。
