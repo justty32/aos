@@ -1,6 +1,6 @@
 // points.cpp：【engine】loop 的四個點怎麼跑——on_start／on_stop（run_side、stop_side）與每跑一次身體前後的 on_before_run／on_after_run（說明見 aos/loop.hpp）。
 // 11-11 起停兩格（使用者選「aos-loop 自己加」）；11-20 hook 第 5 刀加身體前後兩格與兩個 _if 旗標檔（使用者「能攔」「用旗標檔」「before_run / after_run」），
-// 四個點失敗都收工（使用者「四個點都跟著停」；aos-daemon 的 Defaults::run_points 是 false，起停照舊只 warning）。loop 不知道這些點是什麼（C-52）。
+// 四個點失敗都收工（使用者「四個點都跟著停」；aos-daemon 只有 on_start／on_stop，11-21「daemon 也停」起失敗一樣收工）。loop 不知道這些點是什麼（C-52）。
 #include "engine/engine.hpp"
 
 #include "run/run.hpp"
@@ -91,7 +91,7 @@ int Loop::stop_side(int code, const char* own) {
     if (p.code == 0) {
         return code;
     }
-    if (d_.run_points && code == 0 && p.received == 0) {   // 11-20「四個點都跟著停」：本來要退 0 才改碼；跑的期間收到訊號不算它失敗
+    if (code == 0 && p.received == 0) {   // 11-20「四個點都跟著停」（11-21 daemon 也是）：本來要退 0 才改碼；跑的期間收到訊號不算它失敗
         fail_line(code::PointFailed, p.why);
         return p.code;
     }

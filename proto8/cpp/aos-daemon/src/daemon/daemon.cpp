@@ -59,7 +59,7 @@ static aos::loop::Defaults daemon_defaults() {
     d.max = std::nullopt;
     d.interval_ms = 200;
     d.need_exec = false;
-    d.run_points = false;   // 11-20 hook 第 5 刀：daemon.json 不收 on_before_run／on_after_run／兩個 _if（CfgBad）；on_start／on_stop 失敗照舊只 warning
+    d.run_points = false;   // 11-20 hook 第 5 刀：daemon.json 不收 on_before_run／on_after_run／兩個 _if（CfgBad）；on_start／on_stop 失敗跟 aos-loop 一樣收工（11-21「daemon 也停」）
     return d;
 }
 

@@ -222,8 +222,8 @@ struct Defaults {
     std::optional<long long> max;           // nullopt＝不限（10-21 plan L8，原 10）
     long long interval_ms = 0;
     bool need_exec = true;                  // exec 必填
-    // 11-20 hook 第 5 刀：true（aos-loop）＝收 on_before_run／on_after_run 與兩個 _if，四個點失敗都收工（使用者「四個點都跟著停」）；
-    // false（aos-daemon）＝那四個鍵寫了就是 CfgBad（不讓任何東西跳過或拖住管理員的一圈），on_start／on_stop 失敗照舊只一行 warning
+    // 11-20 hook 第 5 刀：true（aos-loop）＝收 on_before_run／on_after_run 與兩個 _if（使用者「四個點都跟著停」：失敗都收工）；
+    // false（aos-daemon）＝那四個鍵寫了就是 CfgBad（不讓任何東西跳過或拖住管理員的一圈）。on_start／on_stop 失敗兩邊都收工（11-21 使用者「daemon 也停」）
     bool run_points = true;
 };
 
@@ -238,9 +238,9 @@ struct Defaults {
 //                 finish() 之後、最後一份 state 之前；SIGKILL 跑不到）。on_stop 的環境多 AOS_LOOP_CODE（要退的碼）、AOS_LOOP_SIGNAL（收到的訊號號碼，
 //                 沒有＝空字串）、AOS_LOOP_CAUSE（11-14 B7，為什麼收工，見 StopCauseWindow；判斷順序：收到 SIGTERM 且原因檔可用＝檔裡的值 →
 //                 收到任何訊號＝stopping_ 時 stop、否則 signal → stopping_＝stop → 跑滿＝max → 身體 10＝body_exit → 其他＝error）。loop 不知道它們是什麼（C-52）。
-//                 退非 0、逾時、起不來（11-20 使用者「四個點都跟著停」；Defaults::run_points）：on_start＝錯誤行 PointFailed、身體不跑、以它的碼收工（on_stop 照跑）；
+//                 退非 0、逾時、起不來（11-20 使用者「四個點都跟著停」）：on_start＝錯誤行 PointFailed、身體不跑、以它的碼收工（on_stop 照跑）；
 //                 on_stop＝本來要退 0 就改以它的碼退（錯誤行 PointFailed），本來就非 0＝一行 warning、碼不變。跑的期間收到訊號＝照收到訊號收工，不算失敗。
-//                 run_points 是 false（aos-daemon）＝照 11-11 只一行 warning，不改結束碼、不擋起跑
+//                 aos-daemon 一樣（11-21 使用者「daemon 也停」：壞的起點設定讓 daemon 起不來）
 //   on_before_run, on_after_run  每跑一次身體之前、之後各跑一次的東西（11-20 hook 第 5 刀；寫法同 exec；沒寫＝不跑；不吃 on_timeout_ms，要限時寫單子的 timeout_ms）：
 //                 before 在「沒暫停、到時間了」之後跑（期間 state 仍是 waiting）：0＝再讀一次 ctl（這時下了 stop／pause 就照它，身體不跑），沒事才跑身體；
 //                 10＝跳過這一圈（不跑身體、不算一次、不發 after，下一次＝現在加 interval_ms）；其他＝錯誤行 PointFailed、以它的碼收工。
@@ -369,7 +369,7 @@ private:
     };
     PointRun run_point(const Target& t, const char* key, long long timeout_ms);
     bool point_on(const std::string& flag) const;   // _if 的檔在嗎（沒寫＝在）
-    // 跑 on_start（code<0）／on_stop；回失敗那次（code 0＝沒事或沒寫）。要不要收工由呼叫的人看 d_.run_points 決定
+    // 跑 on_start（code<0）／on_stop；回失敗那次（code 0＝沒事或沒寫）。失敗怎麼收工由呼叫的人定（main_loop、stop_side）
     PointRun run_side(const std::optional<Target>& t, const char* key, int code, const std::string& cause = "");
     // on_stop 只跑一次（end、serve 的錯誤路徑都叫）。own＝loop 自己的原因（max、body_exit、error；訊號、stop 由 stop_cause 另判）。
     // 回最後要退的碼（on_stop 失敗而本來要退 0＝它的碼）

@@ -57,7 +57,7 @@
     "test_poke.py": "Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures.",
     "test_ref_hash.py": "Check {\"$ref\": \"#/...\"} in daemon.json means daemon.json itself, also inside an inline inst moved into its cell (11-12).",
     "test_restart_backoff.py": "Check auto_restart backs off (wait grows on each restart in a row), shows it on the row (reason, counter_restarts), and resets after a long run (11-1…",
-    "test_run_points_refused.py": "aos-daemon takes none of aos-loop's run points (on_before_run, on_after_run, their _if flags), and its own on_start failing stays a warning (11-20 ho…",
+    "test_run_points_refused.py": "aos-daemon takes none of aos-loop's run points (on_before_run, on_after_run, their _if flags; 11-20 hook cut 5), and its own on_start / on_stop faili…",
     "test_stack_make.py": "Check aos-daemon creates a missing $AOS_STACK at start (11-11, make_stack) after the config checks pass.",
     "test_stale_stop.py": "Check stop → sleep → start keeps the restarted loop running instead of replaying the old stop.",
     "test_state_path.py": "Check the procs_state_path query letter (11-13, K-F27): the reply carries the absolute path of procs_state.json, null without that window, BodyBad wh…",

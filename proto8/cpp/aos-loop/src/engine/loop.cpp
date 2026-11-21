@@ -6,7 +6,7 @@
 // 訊號：block_signals 擋著的三個訊號排在 kernel 裡；signal_got 兩次之間取出第一個並記住（之後一直回它）；
 // nap 用 sigtimedwait 睡，收到就醒。跑的期間收到的由 run_once 轉給那次、放在 Run::received。
 // 11-11：on_start 在第一次之前跑一次；on_stop 在 end（finish 之後、最後一份 state 之前）或 serve 的錯誤路徑跑一次（run_side、stop_side，在 points.cpp）。
-// 11-20 hook 第 5 刀：身體每跑一次的前後各一個點（before_point、after_point，在 points.cpp）；四個點失敗都收工（aos-daemon 的起停照舊只 warning）。
+// 11-20 hook 第 5 刀：身體每跑一次的前後各一個點（before_point、after_point，在 points.cpp）；四個點失敗都收工（11-21 起 aos-daemon 的起停失敗也收工）。
 // nap 也等子類別 wake_ 的訊號，交 woke 決定是否提前算一圈；aos-loop 不設，daemon 用來接 poke。
 // 11-14 B7：on_stop 多 AOS_LOOP_CAUSE（stop_cause；原因檔讀法在 window.cpp 的 cause_file）。
 #include "engine/engine.hpp"
@@ -114,11 +114,10 @@ int Loop::main_loop() {
     interval_base_ = interval_ms_;
     read_old_state();              // 先接回 paused 與 ctl_seq；第一輪讀 ctl 前不得覆寫舊 state／state_flux
     served_ = true;
-    // 11-11：起來跑一次（期間收到訊號＝下面頂端照常收工，on_stop 照跑）。11-20「四個點都跟著停」：失敗＝身體不跑、以它的碼收工
+    // 11-11：起來跑一次（期間收到訊號＝下面頂端照常收工，on_stop 照跑）。11-20「四個點都跟著停」：失敗＝身體不跑、以它的碼收工；
+    // 11-21「daemon 也停」：aos-daemon 同一條（起不來，表上的子項一個都還沒起）
     PointRun started = run_side(on_start_, "on_start", -1);
-    if (started.code != 0 && !d_.run_points) {
-        warn(started.why);
-    } else if (started.code != 0 && started.received == 0) {
+    if (started.code != 0 && started.received == 0) {
         fail_line(code::PointFailed, started.why);
         return end(started.code, StateWindow::done, StopCauseWindow::error);
     }

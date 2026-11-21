@@ -33,7 +33,7 @@
   "description": "Check auto_restart backs off (wait grows on each restart in a row), shows it on the row (reason, counter_restarts), and resets after a long run (11-1…"
  },
  "test_run_points_refused.py": {
-  "description": "aos-daemon takes none of aos-loop's run points (on_before_run, on_after_run, their _if flags), and its own on_start failing stays a warning (11-20 ho…"
+  "description": "aos-daemon takes none of aos-loop's run points (on_before_run, on_after_run, their _if flags; 11-20 hook cut 5), and its own on_start / on_stop faili…"
  },
  "test_stack_make.py": {
   "description": "Check aos-daemon creates a missing $AOS_STACK at start (11-11, make_stack) after the config checks pass."
