@@ -430,11 +430,14 @@
     },
     "compact-improve": {
       "title": "compact 改進：先清工具輸出、壓完補回走 hook",
-      "status": "暫停",
+      "status": "等使用者",
       "flow": "",
-      "what": "使用者 11-20 晚：「清工具輸出這個看起來確實該納入我們的這個朴實compact。至於壓完後補回這塊，我們可以用hook實現，之後可以實現大家各自的compact方式……反正之後再來規劃。」沒派線、沒改程式；今天 /compact 沒有壓前壓後的 hook 點",
-      "next": "等使用者說要規劃",
+      "what": "規劃稿已交（線 top-1121-compactplan，只出稿沒改程式）：真模型 history 工具輸出占 64%～76%，留最後 3 則其餘換佔位 history 少 27%～78%；預設清法已定；hook 開 before_compact／after_compact；施工五刀，第 1 刀（先清再摘要）、第 3 刀（aos-agent history clear-tools）不依賴待裁題",
+      "next": "使用者答三題：Q1 清完夠低省不省摘要、Q2 hook 開到多深（調／補／換）、Q3 新 hook 點現在加還是等 hook_points.json 格式審完；或先放行第 1 刀",
       "see": [
+        "[規劃稿 README](../proto8/thinking/2026-11/21/compact-改進規劃-1121/README.md)",
+        "[待裁三題](../proto8/thinking/2026-11/21/compact-改進規劃-1121/05-待裁題.md)",
+        "[衝突](../proto8/thinking/2026-11/21/compact-改進規劃-1121/06-衝突.md)",
         "[compact-改進想法-1120](../proto8/thinking/2026-11/20/compact-改進想法-1120.md)"
       ],
       "since": "2026-11-20"
