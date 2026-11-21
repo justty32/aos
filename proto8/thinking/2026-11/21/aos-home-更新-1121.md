@@ -1,4 +1,4 @@
-家機 `~/aos-home` 更新四次：早上到 repo `88ea321f4`（install.py、kernel.json 補思考程度、ann 照 start-api 範本換、保留 model=sol、sol 驗四題，線 top-1121-homeup）；上午再到 `5a99e1320`（ann 改動態連結 agent-fsm 的格程式、刪夾裡 9 個舊抄本、sol 驗九次含 /compact 先清工具輸出，線 top-1121-homeup2）；中午到 `97d4abc16`（hook 換新格式：ann 的 hooks.json→hookeds.json、kernel 加 interfaces.json／kernel_hooks.json／kernel_hookeds.json、stack 的 hooks/→hookeds/，4 個 hook 一個不少，sol 驗五次，線 top-1121-homeup3）；下午到 `2060ee9d5`（只跑 install.py、樹裡不改檔，sol 答一句、`aos-gdb --def-hooks` 在活樹列得出 13 點，線 top-1121-home4）；四次都關回原狀。
+家機 `~/aos-home` 更新五次：早上到 repo `88ea321f4`（install.py、kernel.json 補思考程度、ann 照 start-api 範本換、保留 model=sol、sol 驗四題，線 top-1121-homeup）；上午再到 `5a99e1320`（ann 改動態連結 agent-fsm 的格程式、刪夾裡 9 個舊抄本、sol 驗九次含 /compact 先清工具輸出，線 top-1121-homeup2）；中午到 `97d4abc16`（hook 換新格式：ann 的 hooks.json→hookeds.json、kernel 加 interfaces.json／kernel_hooks.json／kernel_hookeds.json、stack 的 hooks/→hookeds/，4 個 hook 一個不少，sol 驗五次，線 top-1121-homeup3）；下午到 `2060ee9d5`（只跑 install.py、樹裡不改檔，sol 答一句、`aos-gdb --def-hooks` 在活樹列得出 13 點，線 top-1121-home4）；傍晚到 `83e6fa5e3`（只改三支指令的 `--help` 說明、只跑 install.py，沒起樹，線 top-1121-helpfix）；前四次都關回原狀，第五次沒起樹。
 
 ← [2026-11-21](README.md)｜前情：[aos-hook-fire換-1121](aos-hook-fire換-1121.md)、[llm-effort-1121](llm-effort-1121.md)、[tool-desc-瘦身-1121](tool-desc-瘦身-1121/)、[aos-agent-預設目標-1121](aos-agent-預設目標-1121.md)｜給使用者看的過程頁：`~/Desktop/aos-home更新過程-1121.html`
 
@@ -213,3 +213,14 @@
 2. 驗收只問 1 句（不重做第三次那套 5 題），gdb 只打 `hooks`、不下斷點。
 3. lib 那兩支由 install 自己清掉，沒另外處理。
 4. 起樹輸出寫暫存區；沒設 `LITELLM_KEY`。
+
+## 第五次更新（到 `83e6fa5e3`，只改 `--help`，線 top-1121-helpfix）
+
+授權：使用者 11-21 傍晚「--help那三處也派線改」「能做的就做」；頂層事先告訴他改完樹要重裝一次，加上先前的「好，install.py你跑就行」。這次只准 install＋看 `--help`，不改樹裡的檔、不起樹、不叫模型（沒有行為改動）。
+
+1. 交件 `83e6fa5e3` 之後核對：`pgrep -a aos` 沒有任何 aos 行程（測試時看到的是乾淨複本測試自己起的暫存樹，測試跑完它們自己收掉了）；全機沒有 cwd 在 `~/aos-home` 的行程，沒有 `aos-frontend serve`。`git status --short -- proto8/py proto8/cpp proto8/templates` 乾淨。
+2. proto8 跑 `python3 install.py`（清掉繼承的 `AOS_*`）：退 0，30 支指令（9 C++、21 Python）、`py/` 597 檔與 12 個 C++ 函式庫進 `lib/`，清掉 20 個舊檔；aos-daemon 跟著重新編譯。輸出多一行 install.py 自己的 `DeprecationWarning`（`re.split` 的 maxsplit，乾淨複本一樣有，跟這次無關）。
+3. 用活樹的環境（`cd ~/aos-home && source env.sh`，`AOS_HOME` 指 repo 的 proto8）看 `aos-agent ctl add --help`、`ctl set-def --help`、`kernel_llm/_entry --help`、`kernel/_entry --help`、`aos-daemon --help`：都是新字。
+4. 桌面過程頁最上面加「第五次更新」一小段。
+
+替使用者做的選擇：沒起樹、沒叫模型（install 輸出沒異狀）；樹裡沒改檔、沒有新備份。
