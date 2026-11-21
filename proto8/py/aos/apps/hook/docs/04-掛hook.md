@@ -31,7 +31,7 @@ aos-agent hook -t bob reset -y              # 刪 stack 那份，回到定義的
 
 - `add` 的旗標：`--event`（必填；**不驗**，掛到不會發的事件＝掛得上、永遠不跑）、`-n/--name`（預設＝檔名或夾名；`--path-json` 時必給）、`--timeout-ms`、`--replace`、`--path-json`；agent 一家自己的 `--condition`（可重複）與 on_clock 的 `--every-cycles`／`--every-ms`、`--clock`、`--config`。
 - `self_hook` 收同一組參數（JSON），相對路徑從 agent 的工作區算；`event` 在它的說明裡是列舉（給腦看的）。
-- 完整用法、錯誤代號：[apps/agent/docs/06-hook「指令」](../../agent/docs/06-hook.md#指令)、知識庫 `aos/me/self_hook.json`、`aos/cli/hook.json`。
+- 完整用法、錯誤代號：[apps/agent/docs/06-hook「指令」](../../agent/docs/06-hook.md#指令)、知識庫 `aos/me/self_hook.md`、`aos/cli/hook.md`。
 
 ## 只攔某支工具（condition）
 
@@ -56,7 +56,7 @@ aos-agent hook -t bob reset -y              # 刪 stack 那份，回到定義的
 
 - 形狀：`{hook 名: 格 或 null}`；格裡引擎只看 `event`、`handler`、`timeout_ms`，其他鍵原樣留給發事件那一家（agent 的 `condition`、on_clock 的 `every_cycles`／`every_ms`／`clock`／`config`）。以前的 `intercept`、`async`、`on_error` 拿掉了，寫了也不讀。
 - 格壞了（沒 `event`、`handler`，名字不合）＝整份讀不了（`HooksBad`），發事件的那一家照它的規矩處理（agent 停下、kernel 這輪 `CfgBad`、`aos-hook` 退 1）。
-- 定義是原始碼：agent 不要手改自己的定義（知識庫 `aos/rules.json`），改自己用 `self_hook`。
+- 定義是原始碼：agent 不要手改自己的定義（知識庫 `aos/rules.md`），改自己用 `self_hook`。
 
 ## 編譯時 hooks=（agent.py）
 

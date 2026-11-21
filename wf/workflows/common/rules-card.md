@@ -2,7 +2,7 @@
 
 ← [AGENTS.md](../../../AGENTS.md)｜[user.md](user.md)
 
-這張卡是 `AGENTS.md`、`user.md`、`aos-teams.md` 等原文的濃縮，**原文為準**，對不上照原文；每條後面的連結是出處。改原文的人順手改卡（使用者 11-17 待裁網頁 wf-6 選 a，[答案](../../../proto8/thinking/2026-11/17/待裁網頁-答案.md)）。派工時讀「知識庫入口 `$AOS_HOME/knowledge/aos/_description.json`＋本卡＋任務書」；簡單工作與雜活可免讀（[aos-teams「讀規矩」](../dispatch/aos-teams.md#誰做什麼)）。
+這張卡是 `AGENTS.md`、`user.md`、`aos-teams.md` 等原文的濃縮，**原文為準**，對不上照原文；每條後面的連結是出處。改原文的人順手改卡（使用者 11-17 待裁網頁 wf-6 選 a，[答案](../../../proto8/thinking/2026-11/17/待裁網頁-答案.md)）。派工時讀「知識庫入口 `$AOS_HOME/knowledge/aos/_description.md`＋本卡＋任務書」；簡單工作與雜活可免讀（[aos-teams「讀規矩」](../dispatch/aos-teams.md#誰做什麼)）。
 
 ## 鐵律（[AGENTS.md](../../../AGENTS.md#分層思想本專案的組織原則)）
 

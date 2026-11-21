@@ -85,4 +85,4 @@ if len(ev["content"]) > 4000:
     print(json.dumps({"content": ev["content"][:4000] + "\n[cut by hook %s]" % ev["hook"]}))
 ```
 
-更多例子：[06-hook「最小 hook 範例」](../../agent/docs/06-hook.md#最小-hook-範例)、知識庫 `aos/me/self_hook.json#/examples`、`#/daily`。
+更多例子：[06-hook「最小 hook 範例」](../../agent/docs/06-hook.md#最小-hook-範例)、知識庫 `aos/me/self_hook.md#/Hook examples`、`#/daily`。

@@ -1,0 +1,28 @@
+# Running a program in a sandbox
+
+Use aos-sandbox to run one program with only the paths, network and limits a config allows.
+
+# aos-sandbox: run a program in a sandbox
+
+```sh
+aos-sandbox --dry-run cfg.json cat /work/a.txt     # prints the argv it would exec, one JSON line
+aos-sandbox rw.json sh -c 'echo y > /work/b'       # works: /work is in rw
+aos-sandbox meta.json#/x/sandbox cat /work/a.txt   # a config inside a bigger file
+```
+
+It builds `[s6-softlimit ...] [s6-setuidgid USER] bwrap ... -- prog args` and execs it, so the exit code, stdin and stdout are prog's (signal N = 128+N, e.g. 143). Nonzero with an `aos-sandbox: error:` line = aos-sandbox failed; without it, prog's own code. Paths not listed are invisible; a read-only path refuses writes (`Read-only file system`). Only `rw` paths and `/tmp` (empty, gone when prog ends) are writable: writing anywhere else, even a path that is not visible, fails with `Read-only file system` instead of vanishing. If CONFIG is not found but `CONFIG.json` is, that one is used. `/proc` and `/dev` are always there. Flags may go before or after CONFIG; PROG and its args are handed on as they are. A broken CONFIG (not JSON, not an object, a key of the wrong type such as `ro must be an array of non-empty strings`, a `$ref`, an `$env` variable that is not set, a file it cannot read) counts as not written: PROG runs WITHOUT a sandbox and stderr gets one line `aos-sandbox: warning: sandbox config ignored, running unsandboxed: ...`. Errors: `CfgMissing` (no such file, or the pointer points at nothing), `PathMissing` (a listed path does not exist), `CommandMissing` (one of these is not found: bwrap; s6-softlimit when limits are set; s6-setuidgid, aos-asuser, sudo or `true` for `user`; a name in `commands`; PROG itself when running unsandboxed), `UserBad`, `EnvBad` (AOS_HOME is set but is not an aos home).
+
+# Config keys
+
+One JSON object; all keys optional; unknown keys ignored. Example: `{"rw": ["/work"], "commands": ["aos-exec"], "net": false}`.
+
+- `ro`, `rw`: visible paths (read-only / writable). When they nest, the deeper path wins: `{"rw": ["/repo"], "ro": ["/repo/.git"]}` = /repo writable, /repo/.git read-only. The folder holding CONFIG is always visible (read-only unless an `rw` path covers it), so a tool's `_entry` can name `inner` relative to its folder; keep secrets out of that folder. `base`: the read-only system base (default /usr /bin /sbin /lib /lib64 /etc). `commands`: command names found on PATH; their folders become visible read-only. An aos command (its real file is in an aos home's `bin/`, with `lib/aos` next to it) makes the whole aos home visible read-only instead; keep secrets out of the home. The home is `$AOS_HOME` when it is set (it must hold `install.py` and `bin/`, else `EnvBad`); only when AOS_HOME is unset is it the home the command comes from.
+- `net`: network (default false: only the sandbox's own loopback).
+- `mem_mb`, `cpu_s`, `procs`, `file_mb`, `files`: limits through s6-softlimit (it must be on PATH). `cpu_s` is CPU time, not wall time.
+- `user`: an account name (up to 32 characters, matching ^[a-z_][a-z0-9_-]*[$]?$), numeric uid:gid, or sub:N (1 to 60000, no leading zeroes, through aos-asuser). Root uses s6-setuidgid as before. Not root: an account goes through `sudo -n -k /usr/local/bin/s6-setuidgid USER` before s6-softlimit; requires the NOPASSWD rule and account from root/setup.sh. -k ignores cached credentials. Unknown accounts, uid/gid 0 and numeric uid:gid are UserBad on this path, even in dry-run. Other malformed names count as broken config. Before exec, a system true command checks sudo; refusal/failure is UserBad, never an unsandboxed fallback. Dry-run prints the chain without prechecking.
+- On the sudo path, bwrap, s6-softlimit, prog, commands, ro and rw must be reachable by aos-run (system paths or /srv/aos-run); executables under a 700 home such as ~/.local/bin will not work. ACLs are not added automatically.
+- Values in the env whitelist appear in sudo command-line logs through bwrap's --setenv KEY VALUE arguments; do not put secrets in env.
+- `env`: variable names to pass in. The default is PATH, locale, TZ, PYTHON*, the six AOS_ run variables and AOS_DAEMON, AOS_LLM_KERNEL, AOS_KERNEL, AOS_CLOCK, AOS_HOME; a list replaces it whole. API keys are never passed by default.
+- Values may be `{"$env": NAME, "$path": ..., "$prefix": ...}`.
+
+`aos-agent ctl add --limits` and `aos-daemon-ctl add --limits` take only the limit keys and `user` from this list (`mem_mb`, `cpu_s`, `procs`, `file_mb`, `files`, `user`), plus `mem_total_mb` and `procs_total`; any other key is `ArgumentsBad` (daemon cgroup limits; aos-sandbox does not use them). More flags: run `aos-sandbox --help`.

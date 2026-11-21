@@ -1,5 +1,5 @@
 {
- "description": "See which letters wait in your mailbox (sender, status, title) without taking any; read them with mailbox_read. More: aos/mailbox.json#/tools.",
+ "description": "See which letters wait in your mailbox (sender, status, title) without taking any; read them with mailbox_read. More: `aos/mailbox.md#/Mailbox tools`.",
  "env": [
   "AOS_DAEMON"
  ],

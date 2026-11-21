@@ -1,6 +1,6 @@
 # wf/public/user-zone-mail — 經使用者專區寄信、讀回信、照授權動手
 
-← [wf/public](README.md)｜指令兩行在 [aos-teams 入口第 2 件](../workflows/dispatch/aos-teams.md)；專區本身見知識庫 `aos/user_zone.json`；授權規矩見 AGENTS.md 鐵律 2
+← [wf/public](README.md)｜指令兩行在 [aos-teams 入口第 2 件](../workflows/dispatch/aos-teams.md)；專區本身見知識庫 `aos/user_zone.md`；授權規矩見 AGENTS.md 鐵律 2
 
 ## 寄信、讀回信、照授權刪檔
 

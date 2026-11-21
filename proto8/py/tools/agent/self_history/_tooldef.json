@@ -1,5 +1,5 @@
 {
- "description": "See or change your own conversation history by line number. Ops: ls, rm a range, summarize a range into one message, set one line. The step in progress cannot be changed. ls first. More: aos/me/self_history.json.",
+ "description": "See or change your own conversation history by line number. Ops: ls, rm a range, summarize a range into one message, set one line. The step in progress cannot be changed. ls first. More: aos/me/self_history.md.",
  "env": [
   "AOS_DAEMON"
  ],

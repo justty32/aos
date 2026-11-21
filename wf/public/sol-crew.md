@@ -53,7 +53,7 @@ sol 的 shell 有 guard，擋字面含 `rm`、`kill`、`aos-*` 等的指令。gu
 
 - 建議範圍 mem_mb 1024～2048、files 256～4096（預設 `{"mem_mb":1024,"files":256}`），`procs` 別設。
 - subagent 的父程序是 daemon、不是掛它的 eca：對 eca 下 prlimit 不會傳下去，要在 add 時帶 `limits`。對跑著的 aos-loop 下 prlimit 馬上生效，之後每格新起的子程序都繼承。
-- 腦額度：每隻 sol 一份 llm kernel 的 `budget.senders`，key 是 sol 的 stack 路徑；用光被拒 `BudgetMissing`。窗是 `all`（永不重置）時直接 BLOCKED 停下，要調高額度再叫起來（窗怎麼分見知識庫 `aos/brain.json#/priority`）。
+- 腦額度：每隻 sol 一份 llm kernel 的 `budget.senders`，key 是 sol 的 stack 路徑；用光被拒 `BudgetMissing`。窗是 `all`（永不重置）時直接 BLOCKED 停下，要調高額度再叫起來（窗怎麼分見知識庫 `aos/brain.md#/Priority and budgets`）。
 - **暫存 llm kernel 的日額會讓整隊一起停**：自己暫存樹起的 kernel，sol-high 有每日 `max_calls`（例 600），幾隻 sol 同一天用完就全部 `BudgetMissing … reached in this window (day)`。kernel 每輪重讀 kernel.json，改了數字 `ctl start` 就能繼續，不用重起 kernel；正在答的那則會丟掉，要重新 say 一次。
 
 ## sol 排隊很慢：小題隊長自己讀，大盤點或大施工改派 Claude 子 agent

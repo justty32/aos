@@ -10,7 +10,7 @@
  "suggested_items": [
   {
    "item": "檔案拆分",
-   "example": "按領域拆 module；檔太大照 `wf/tidying.json#/split` 檢視"
+   "example": "按領域拆 module；檔太大照 `wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）` 檢視"
   },
   {
    "item": "命名",

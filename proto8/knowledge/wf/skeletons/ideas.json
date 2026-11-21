@@ -2,7 +2,7 @@
  "_description": "planning 的兩張表的骨架：想法表（要不要做）與 roadmap 表（會做，何時）。落點是工作區的 `wf/knowledge/ideas.json`；怎麼用在 `wf/workflows/planning.json`。",
  "holds": [
   "放：還在想要不要做的想法（`ideas`）、決定會做的事與它的時機和前提（`roadmap`）。",
-  "不放：spec／plan——各一檔放工作區的 `wf/knowledge/specs/`、`wf/knowledge/plans/`（`wf/layers.json#/skills_vs_memory`）。",
+  "不放：spec／plan——各一檔放工作區的 `wf/knowledge/specs/`、`wf/knowledge/plans/`（`wf/layers.md#/skills 與 memory 分家`）。",
   "不放：定下的決定——進工作區的 `wf/knowledge/decisions.json`。"
  ],
  "fields": {

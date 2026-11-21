@@ -1,4 +1,4 @@
-{"description": "Delete for real, like rm; no undo (prefer trash). A folder needs recursive: true. More: aos/tools/remove.json.",
+{"description": "Delete for real, like rm; no undo (prefer trash). A folder needs recursive: true. More: aos/tools/remove.md.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "relative to your workspace, or absolute"},
                                "recursive": {"type": "boolean", "default": false, "description": "true = a folder with everything in it"}},

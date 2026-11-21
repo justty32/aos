@@ -1,5 +1,5 @@
 {
-  "description": "Do one task inside your own conversation and keep only its summary. Op start marks the place, op end (with summary) replaces everything since the mark by one summary message; status lists open tasks. More: aos/me/do_task.json.",
+  "description": "Do one task inside your own conversation and keep only its summary. Op start marks the place, op end (with summary) replaces everything since the mark by one summary message; status lists open tasks. More: aos/me/do_task.md.",
   "env": [
     "AOS_DAEMON"
   ],

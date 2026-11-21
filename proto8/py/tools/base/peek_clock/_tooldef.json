@@ -1,3 +1,3 @@
-{"description": "The daemon clock: {\"cycle\": N, \"interval_ms\": M}. More: aos/tools/peek_clock.json.",
+{"description": "The daemon clock: {\"cycle\": N, \"interval_ms\": M}. More: aos/tools/peek_clock.md.",
  "parameters": {"type": "object", "properties": {}},
  "errors": ["ClockMissing", "ClockBad", "ArgumentsBad"]}

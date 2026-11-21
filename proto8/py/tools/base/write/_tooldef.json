@@ -1,4 +1,4 @@
-{"description": "Write a whole file (new, or fully replaced); parent folders are created. To change a part use edit. More: aos/tools/write.json.",
+{"description": "Write a whole file (new, or fully replaced); parent folders are created. To change a part use edit. More: aos/tools/write.md.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "relative to your workspace, or absolute"},
                                "content": {"type": "string", "description": "the whole file content"}},

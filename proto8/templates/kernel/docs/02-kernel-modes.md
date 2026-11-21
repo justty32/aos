@@ -259,7 +259,7 @@ kernel_gate {"op": "on"}        印出收件信箱 <它的 stack>/hookeds/kernel
 - agent 表態 pass 蓋不過規則與寄件人的期限：站會重判一次，期限過了就拒 `SlotMissing`。`aos-agent ctl add` 預設只等 30 秒，要讓腦來得及判，寄件人加 `--timeout-s`。
 - agent 自己在一輪裡（等模型回答）或睡著時，它身上的 hook 不跑，站也就不跑：信躺在信箱裡沒被認領，帶期限的寄件人到期自己撤信。
 - 請求信裡多帶什麼鍵都可以（使用者 11-13：「反正json，不認得的key，只要沒設限制，就能過」）：站原樣給 agent 看、原樣轉寄，不過濾；寫的內容會進 agent 的對話，風險由當 kernel 的那一站自己承擔（使用者 11-13：「提示注入這塊就是風險自己承擔」）。
-- 不用這支工具也做得到（`self_hook` 掛一支跑框架站的腳本、手寫 `kernel.json`、`interfaces.json` 與 `kernel_hookeds.json`、表態＝寫一個檔 `decisions/<信名>.json`）：步驟在知識庫 `aos/kernel.json#/write_your_own`。
+- 不用這支工具也做得到（`self_hook` 掛一支跑框架站的腳本、手寫 `kernel.json`、`interfaces.json` 與 `kernel_hookeds.json`、表態＝寫一個檔 `decisions/<信名>.json`）：步驟在知識庫 `aos/kernel.md#/Writing your own kernel`。
 
 ### 改成自己的
 

@@ -27,7 +27,7 @@
 
 - **是什麼**：在 aos 體系裡開一隻 agent-fsm 身的 agent（aos 自己的四格迴圈 idle、think、wait、act），腦是寄信給 llm kernel。不叫 codex CLI，也不用 eca 身。
 - **腦**：家機本地的 LiteLLM proxy `http://127.0.0.1:4000`（OpenAI 相容）。配給包 `kits/gather/` 裡的兩個檔決定走哪裡：
-  - `llm.json` 內容是 `{"model": "sol-high"}`。`model` 填的是 **endpoint pack 名**，pack 由 llm kernel 擁有（知識庫 `aos/brain.json`）。
+  - `llm.json` 內容是 `{"model": "sol-high"}`。`model` 填的是 **endpoint pack 名**，pack 由 llm kernel 擁有（知識庫 `aos/brain.md`）。
   - `.env` 內容是 `AOS_LLM_KERNEL=${HOME}/aos-home/ws/.stack/procs/llm-gpt`，把信指到 llm-gpt 這個 kernel。
 - **蒐集和施工不用 terra**，只用 sol；terra 只用在使用者點名的地方（例如全景頁的小幫手）。
 - **怎麼掛、怎麼驗收**：步驟在 [kits/card](../kits/card.md)，包的內容與已知限制在 [kits](../kits/README.md)，帶 sol 的心得在 [sol-crew](../../../public/sol-crew.md)。蒐集員、審稿員用「看」包，不抄別線的 system.txt（使用者 11-14「都按照推薦」，[onboard-1114](../../../../proto8/thinking/2026-11/14/onboard-1114.md)）。
@@ -42,7 +42,7 @@
   - `procs` 算的是整個帳號的程序數，別設小（看包的隊員乾脆不設）。
   - `cpu_s` 只按單一程序計時，管不到整隻 agent 的總 CPU。
   - 實測數字與表在 [sol-crew「rlimit 實測與腦額度」](../../../public/sol-crew.md#rlimit-實測與腦額度)。
-- **腦額度每隻 sol 一份**：用光會被拒 `BudgetMissing`：額度窗是 hour／day 時 agent-fsm 不會停，等到窗重置再重試；窗是 `all` 時不重試，停下。兩種都由 `brain_notify` hook 寄一封 BLOCKED 給掛它的人（額度窗見知識庫 `aos/brain.json` 的 `priority`；實測見 [sol-crew](../../../public/sol-crew.md)）。「看」包目前還沒掛這個 hook（kits「已知限制」），用看包的隊員額度用光時不會來信，隊長要自己看。
+- **腦額度每隻 sol 一份**：用光會被拒 `BudgetMissing`：額度窗是 hour／day 時 agent-fsm 不會停，等到窗重置再重試；窗是 `all` 時不重試，停下。兩種都由 `brain_notify` hook 寄一封 BLOCKED 給掛它的人（額度窗見知識庫 `aos/brain.md` 的 `priority`；實測見 [sol-crew](../../../public/sol-crew.md)）。「看」包目前還沒掛這個 hook（kits「已知限制」），用看包的隊員額度用光時不會來信，隊長要自己看。
 
 還沒確認：公司 WSL 有沒有同樣的 proxy。
 

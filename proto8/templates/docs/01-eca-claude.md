@@ -171,4 +171,4 @@ token 檔一行 `TEAMSITE_TOKEN=<值>`、權限 600，放定義與工作區以�
 - **有狀態的 server**（瀏覽器、要先登入的）走 CLI 自己接：經 aos 每次都是新的一台，上一次的狀態不在。
 - `env_file` 現在與 aos-tools 的 env 檔同讀法：dotenv 子集，支援 `${X}` 展開、行內 `#` 註解與嚴格成對引號；例如 `A=x # note` 讀成 `x`，接著 `B=${A}y` 讀成 `xy`。建議 `chmod 600`、放定義與工作區以外（兩條路都不檢查權限）。
 - 家機有 proxy：http server 在區網或本機卻連不上，先設 `NO_PROXY=<主機>`（經 aos 那條用 Python `urllib`，照環境變數走 proxy）。
-- 經 aos 的錯誤代號（`ServerFailed`、`ServerRejected`、`CallFailed`…）怎麼讀：knowledge `aos/cli/mcp_import.json#/errors`。
+- 經 aos 的錯誤代號（`ServerFailed`、`ServerRejected`、`CallFailed`…）怎麼讀：knowledge `aos/cli/mcp_import.md#/Codes from external MCP tools`。

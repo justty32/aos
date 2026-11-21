@@ -1,6 +1,6 @@
 {
  "_description": [
-  "文件整理（封存過時、分類雜亂、抽資料檔、內容精簡）：把文件層收乾淨——活文件只留現役與 open 的東西，過時的封存、雜亂的分類、指向被封存檔的連結清掉、過大的條列抽成資料檔、檔內的過往記錄刪掉只留結論。結構方法在 `wf/tidying.json`（膨脹即拆／雜亂即分類／archive 規則），內容精簡的判準在 `wf/knowledge/content-trim.json`；本節點記的是**整理這件事怎麼跑一輪**：盤點 → 交接書 → 派工 → 核驗。",
+  "文件整理（封存過時、分類雜亂、抽資料檔、內容精簡）：把文件層收乾淨——活文件只留現役與 open 的東西，過時的封存、雜亂的分類、指向被封存檔的連結清掉、過大的條列抽成資料檔、檔內的過往記錄刪掉只留結論。結構方法在 `wf/tidying.md`（膨脹即拆／雜亂即分類／archive 規則），內容精簡的判準在 `wf/knowledge/content-trim.json`；本節點記的是**整理這件事怎麼跑一輪**：盤點 → 交接書 → 派工 → 核驗。",
   "",
   "範圍可以是 **json 形態**（`_index.json`＋json 節點）或 **md 形態**（還是 md 的地方）；原則兩邊一樣，標「md 形態時」的命令只在 md 形態的範圍跑。"
  ],
@@ -10,11 +10,11 @@
   "$ref": "tidy/principles.json#/principles"
  },
  "done_when": [
-  "目標資料夾根層只剩入口 ＋ 語意子資料夾（或同類檔案集合），每個子資料夾有入口：json 形態是 `_description.json`（東西多再加 `_index.json`，見 `wf/tidying.json#/split_method`），md 形態是 `README.md`。",
+  "目標資料夾根層只剩入口 ＋ 語意子資料夾（或同類檔案集合），每個子資料夾有入口：json 形態是 `_description.json`（東西多再加 `_index.json`，見 `wf/tidying.md#/拆法（兩種觸發都照做）`），md 形態是 `README.md`。",
   "每個被封存檔：`grep -rn '<檔名>' <repo> | grep -v archive/` → 0 行（對**整個 repo** 查，範圍外的活文件還連著也算；md 形態時加 `--include='*.md'`，json 形態時加 `--include='*.json' --include='*.md'`，`wf/progress.json`、`AGENTS.md` 裡的引用也要清）；所屬 `archive/` 的索引有它那一列（json 形態 `archive/_index.json`、md 形態 `<資料夾>/archive/README.md`）。",
   "範圍裡有 `_index.json` 時：每份 index 跟實際的樹對得上（列了的都在、在的都列了）。工作區有 index 檢查工具就跑它、回傳 0；沒有就用 `index_view` 與 `ls` 逐夾對。",
   "md 形態且工作區有連結檢查工具時：對**交接書指定的整理範圍**跑（不對整個 repo：會連帶算進範圍外的東西），沒有壞連結。",
-  "交接書列出要拆的檔都拆了；超過門檻而不拆的，報告裡每個寫理由（門檻見 `wf/tidying.json#/split`：都是觸發檢視的訊號；`.md` 約 8 KB 是推薦值）。",
+  "交接書列出要拆的檔都拆了；超過門檻而不拆的，報告裡每個寫理由（門檻見 `wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）`：都是觸發檢視的訊號；`.md` 約 8 KB 是推薦值）。",
   "精簡過的檔：`#/content_trim` 的原文檢查 → 0 行 `LOST`（被推翻而刪的列進報告）；報告列每檔精簡前後 bytes。",
   "報告附 `moves.tsv`（`舊路徑<TAB>新路徑`）。",
   "`wf/progress.json` 只列 open。"

@@ -1,4 +1,4 @@
-{"description": "Change a text file by exact text replacement. Each old_text must occur exactly once in the original file; if any item does not match, nothing changes. More: aos/tools/edit.json.",
+{"description": "Change a text file by exact text replacement. Each old_text must occur exactly once in the original file; if any item does not match, nothing changes. More: aos/tools/edit.md.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "relative to your workspace, or absolute"},
                                "edits": {"type": "array",

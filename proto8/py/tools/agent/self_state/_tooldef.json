@@ -1,5 +1,5 @@
 {
-  "description": "Facts and numbers about yourself; only reads. {} = one line per part; parts = details (who, state, tools, llm, system, hooks, history, mailbox, subagents, resources, time, all). More: aos/me.json#/self_state.",
+  "description": "Facts and numbers about yourself; only reads. {} = one line per part; parts = details (who, state, tools, llm, system, hooks, history, mailbox, subagents, resources, time, all). More: `aos/me.md#/Looking at yourself: self_state`.",
   "env": [
     "AOS_DAEMON"
   ],

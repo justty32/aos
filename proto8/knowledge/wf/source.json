@@ -19,52 +19,52 @@
    },
    "carried": [
     {
-     "here": "wf/layers.json#/layers",
+     "here": "wf/layers.md#/分層原則",
      "from": "structure/layers.json#/layers",
      "changed": "「怎麼看 index」那句拿掉（docs/01 已有）；指到來源 repo 其他檔的路徑改成文字"
     },
     {
-     "here": "wf/layers.json#/skills_vs_memory",
+     "here": "`wf/layers.md#/skills 與 memory 分家`",
      "from": "structure/layers.json#/skills_vs_memory",
      "changed": "只改路徑寫法"
     },
     {
-     "here": "wf/layers.json#/private_index",
+     "here": "`wf/layers.md#/私有 index`",
      "from": "structure/layers.json#/index_convention",
      "changed": "只留私有 index；公共 index 指到 docs/01；`source`／`title`／`date` 額外鍵那條沒帶"
     },
     {
-     "here": "wf/layers.json#/logs",
+     "here": "wf/layers.md#/日誌寫法",
      "from": "structure/layers.json#/logs",
      "changed": "拿掉講來源 repo 自己現況的那段與指到還沒搬的節點的路徑"
     },
     {
-     "here": "wf/nodes.json#/names",
+     "here": "wf/nodes.md#/檔名與引用",
      "from": "structure/nodes.json#/names",
      "changed": "`_description`／`_index`／名字用字／統一路徑的定義指到 docs/01、02；只留 wf 多出來的約定"
     },
     {
-     "here": "wf/nodes.json#/workflow_form",
+     "here": "wf/nodes.md#/工作流的統一形式",
      "from": "structure/nodes.json#/workflow_form",
      "changed": "固定鍵直接列出，不再指到範本節點"
     },
     {
-     "here": "wf/nodes.json#/growth",
+     "here": "wf/nodes.md#/一個工作流的成長軌跡（四級）",
      "from": "structure/nodes.json#/growth",
      "changed": "只改路徑寫法"
     },
     {
-     "here": "wf/tidying.json#/split",
+     "here": "wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）",
      "from": "structure/tidying.json#/split 與 #/data_files",
      "changed": "json 與資料夾的數字指到 docs/01、02；8 KB 改成使用者 11-13 的說法（推薦、只限 .md、只限拆檔工作流）"
     },
     {
-     "here": "wf/tidying.json#/split_method",
+     "here": "wf/tidying.md#/拆法（兩種觸發都照做）",
      "from": "structure/tidying.json#/split_method",
      "changed": "數字拿掉"
     },
     {
-     "here": "wf/tidying.json#/archive",
+     "here": "`wf/tidying.md#/archive 規則`",
      "from": "structure/tidying.json#/archive",
      "changed": "沒改"
     }
@@ -141,7 +141,7 @@
     {
      "here": "wf/workflows/tidy/principles.json",
      "from": "wf/workflows/tidy/principles.json",
-     "changed": "第 4 條的門檻與工具清單改成指到 `wf/tidying.json#/split`；加編號"
+     "changed": "第 4 條的門檻與工具清單改成指到 `wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）`；加編號"
     },
     {
      "here": "wf/workflows/tidy/content-trim.json",
@@ -156,7 +156,7 @@
     {
      "here": "wf/knowledge/content-trim.json",
      "from": "wf/knowledge/content-trim.json",
-     "changed": "適用範圍裡來源 repo 的檔名改成通稱；日誌指到 `wf/layers.json#/logs`"
+     "changed": "適用範圍裡來源 repo 的檔名改成通稱；日誌指到 `wf/layers.md#/日誌寫法`"
     },
     {
      "here": "wf/knowledge/gotchas.json",

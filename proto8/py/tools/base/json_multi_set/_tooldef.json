@@ -1,5 +1,5 @@
 {
- "description": "json_set for several places in order; one failing does not stop or undo the others. More: aos/tools/json_multi_set.json.",
+ "description": "json_set for several places in order; one failing does not stop or undo the others. More: aos/tools/json_multi_set.md.",
  "parameters": {
   "type": "object",
   "properties": {

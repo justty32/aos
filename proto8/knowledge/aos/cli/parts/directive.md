@@ -1,0 +1,10 @@
+# aos-directive: resolve directives
+
+```sh
+echo '{"p": {"$env": "HOME", "$path": "/x"}, "r": {"$ref": "other.json#/x"}}' | aos-directive
+# {"p": "/home/me/x", "r": {"y": "hi"}}
+```
+
+It reads one JSON document from stdin (empty = `{}`), resolves every directive in it (`$ref`, `$env`, `$path`, ...; relative paths from the current directory; `./` and `../` work) and prints the result as one line. A `$ref` may point at a `.md` file (`x.md` = its whole text, `x.md#/Heading` = one section; rules in `aos/tools/json_get.md#/JSON tools: reading markdown`). A `$ref` path follows one rule: left of `#` is a file path counted from the folder of the file that holds the `$ref` (`./`, `../`, absolute; at the top, from the folder of `--file FILE`, or the current directory without it); right of `#` is inside the JSON. `{"$ref": "x.json#/a/b"}` is `/a/b` of x.json; `#/a/b` (no file name) is `/a/b` from the root of the file that holds the `$ref` (at the top the file given by `--file FILE`; without `--file` it is left as it is); `#./b` counts from the object that holds the `$ref`, `#../c` from one level above that (repeatable; above the root is `DirectiveBad`); `#` or `#/` is the whole file. `#aaa`, `y.json#aaa`, `y.json#./b` and `y.json#../b` are `DirectiveBad`. An unset variable or an unreadable `$ref` = `DirectiveBad`; stdin that is not JSON = `InputBad`. `--at POINTER` says which place of FILE the stdin JSON is (for `#./` and `#../`); it needs `--file` (`ArgumentsBad`). Other aos programs (aos-exec, the clock register, tool registries) resolve the same directives themselves; use this to see what a config will turn into.
+
+More flags: run `aos-directive --help`.

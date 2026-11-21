@@ -1,5 +1,5 @@
 {
-  "description": "Stop, pause, sleep or remove yourself (only you). Ops: stop = after this step; pause = hold after this step; sleep = now; rm = off the daemon table now (purge also deletes your stack, no undo). Someone else must bring you back. More: aos/me.json#/self_ctl.",
+  "description": "Stop, pause, sleep or remove yourself (only you). Ops: stop = after this step; pause = hold after this step; sleep = now; rm = off the daemon table now (purge also deletes your stack, no undo). Someone else must bring you back. More: `aos/me.md#/Stopping yourself: self_ctl`.",
   "env": [
     "AOS_DAEMON"
   ],

@@ -15,7 +15,7 @@
   "記錄寫成物件陣列放在 `records`，用 json 工具讀寫。",
   "新的在上：新的一筆加在陣列最前。",
   "`decision`、`premise` 兩欄非空才算記完。",
-  "條目多到難讀 → 升級成資料夾（工作區的 `wf/knowledge/decisions/`）、一決策一檔，拆法照 `wf/tidying.json#/split_method`。",
+  "條目多到難讀 → 升級成資料夾（工作區的 `wf/knowledge/decisions/`）、一決策一檔，拆法照 `wf/tidying.md#/拆法（兩種觸發都照做）`。",
   "`skeleton` 裡的路徑是工作區裡的路徑。"
  ],
  "skeleton": {

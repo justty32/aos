@@ -5,7 +5,7 @@
 ## agent-fsm 預設掛哪幾包（11-21 起 11 包、36 支；使用者 11-21 選項框「self 只留兩支」，取代 11-14「tools40: a」的 40 支，[tool-desc-瘦身-1121](../../thinking/2026-11/21/tool-desc-瘦身-1121/04-使用者已答.md)；11-14 的 [ok-fsm-1114 設計稿](../../thinking/2026-11/14/ok-fsm-1114/01-預設工具包-設計稿.md)）
 
 - **預設掛的 11 包**（範本 `templates/agent-fsm/tools.json` 的 `$override`）：look、change、delete、shell、gadgets、todo、self、mailbox、goal、json、index。
-- **self 包只留兩支**：同一份 `tools.json` 的 `"tools"` 寫 `"self_llm": null, "self_system": null, "self_history": null, "self_ctl": null`（覆蓋層關一支的現成寫法），預設只剩 self_tools、self_state。agent 要用其他幾支就自己 `self_tools {"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_llm"}}`；self_tools 的說明與知識庫 `aos/me.json` 都寫了這句。
+- **self 包只留兩支**：同一份 `tools.json` 的 `"tools"` 寫 `"self_llm": null, "self_system": null, "self_history": null, "self_ctl": null`（覆蓋層關一支的現成寫法），預設只剩 self_tools、self_state。agent 要用其他幾支就自己 `self_tools {"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_llm"}}`；self_tools 的說明與知識庫 `aos/me.md` 都寫了這句。
 - **改成選掛的 4 包**（範本不掛）：events（clock_register、self_hook）、subagent（subagent、agents_ctl、fork）、def（agent_def、tools_def）、jsonx（jsonx_* 八支）。eca-claude 範本不受影響。
 - **要用怎麼加**：做定義的時候，在那份定義的 `tools.json` 的 `"$override"` 串加一項，例如帶隊的加 `{"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"}` 與 `/lib/packs/def.json`；kits 也可以替定義加。agent 執行中用 `self_tools add` 逐支加仍然可以，但不是主要做法（一次只收一支、工具清單一變對話快取就失效、還要多問腦一兩次）。
 - **成本**：每掛一包，每次問腦都多送那包的工具說明與參數；各包字元數見知識庫 `aos/packs.json`。

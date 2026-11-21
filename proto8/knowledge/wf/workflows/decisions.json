@@ -16,7 +16,7 @@
   "在 `records` 加一筆，新的在上（加在陣列最前），用 json 工具寫。",
   "填四欄：`date`（日期）、`decision`（決定）、`origin`（來源：使用者原文，或誰定的）、`premise`（前提，變了就重看）；欄意見 `wf/skeletons/decisions.json#/fields`。",
   "只寫結論、前提與使用者原文：比較過的方案、AI 寫的理由不寫，要查靠 git 歷史（「只留現行結論」的判準在 `wf/knowledge/content-trim.json`）。",
-  "條目多到難讀 → 升級成資料夾、一決策一檔，照 `wf/nodes.json#/growth` 與 `wf/tidying.json#/split_method`。"
+  "條目多到難讀 → 升級成資料夾、一決策一檔，照 `wf/nodes.md#/一個工作流的成長軌跡（四級）` 與 `wf/tidying.md#/拆法（兩種觸發都照做）`。"
  ],
  "handoff": [
   "記完回到觸發它的工作流繼續。",

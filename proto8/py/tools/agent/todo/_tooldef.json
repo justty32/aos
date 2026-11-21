@@ -1,4 +1,4 @@
-{"description": "Your to-do list for a task of 3+ steps, kept outside your history (call ls after a summary). One op per call; every op prints the whole list. Keep at most one item in_progress. More: aos/tools/todo.json.",
+{"description": "Your to-do list for a task of 3+ steps, kept outside your history (call ls after a summary). One op per call; every op prints the whole list. Keep at most one item in_progress. More: aos/tools/todo.md.",
  "errors": ["ArgumentsBad", "OpUnknown", "ItemMissing", "StatusUnknown", "ListBad", "ReadFailed", "WriteFailed"],
  "parameters": {"type": "object", "properties": {"op": {"type": "string", "enum": ["ls", "set", "add", "mark"], "description": "what to do"},
                                                  "items": {"type": "array", "items": {"type": ["string", "object"], "description": "the item's text, or {\"text\": ..., \"status\": ...}"}, "description": "set: the whole new list ([] clears)"},

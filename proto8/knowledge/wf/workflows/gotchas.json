@@ -15,7 +15,7 @@
  "steps": [
   "查：讀工作區的 `wf/knowledge/gotchas.json`，先看 `routes` 決定去哪份、哪段，再看 `common` 與手上工作流那段。",
   "記錄門檻：第二次撞到、或使用者說「上次也是這樣」才記；一次性的意外不記。",
-  "記哪裡：共通坑 → `common`；工作流專屬、而它已有自己的踩坑記錄 → 記在那裡。工作流的坑長成自己的一份記錄時（照 `wf/nodes.json#/growth` 第 3 級，放在工作區的 `wf/knowledge/`），在 `routes` 加一筆導流。",
+  "記哪裡：共通坑 → `common`；工作流專屬、而它已有自己的踩坑記錄 → 記在那裡。工作流的坑長成自己的一份記錄時（照 `wf/nodes.md#/一個工作流的成長軌跡（四級）` 第 3 級，放在工作區的 `wf/knowledge/`），在 `routes` 加一筆導流。",
   "條目格式：一條一個坑，粗體標題＋一兩句現象與對策（例見 `wf/skeletons/gotchas.json#/rules`）。",
   "工作區還沒有這份檔 → 照 `wf/skeletons/gotchas.json#/skeleton` 建；用 json 工具寫。"
  ],

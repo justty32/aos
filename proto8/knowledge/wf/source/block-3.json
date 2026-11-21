@@ -124,14 +124,14 @@
    "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；「裝了開發包」兩處改成不提包"
   },
   {
-   "here": "wf/workflows/_description.json＋wf/workflows/_index.json",
+   "here": "wf/workflows/_description.md＋wf/workflows/_index.json",
    "from": "aos-prep/kernel/dispatch.json",
    "template_files": [
     "template/WORKFLOWS.md",
     "flavors/dev/WORKFLOWS.dev.md"
    ],
    "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
-   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；不單獨成檔：`route`、`skip`、`fallback`、`live_state` 寫進 `wf/workflows/_description.json` 的「派發」一節，`kernel_triggers` 變成 `wf/workflows/_index.json` 各格的 description；heartbeat／multi-agent 包那句改成「本庫沒有，需要就自建」"
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；不單獨成檔：`route`、`skip`、`fallback`、`live_state` 寫進 `wf/workflows/_description.md` 的「派發」一節，`kernel_triggers` 變成 `wf/workflows/_index.json` 各格的 description；heartbeat／multi-agent 包那句改成「本庫沒有，需要就自建」"
   }
  ],
  "not_carried": [

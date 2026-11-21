@@ -1,5 +1,5 @@
 {
- "_description": "活清單（工作區的 `wf/progress.json` 進度；等使用者做、驗、裁的也記這裡）怎麼寫：誰記哪裡、何時寫、條目欄位、開場怎麼看、骨架。工作區的活狀態只有兩軸：信、進度。「只列 open、完成即刪」已在 `wf/layers.json#/layers`（第 3 條），日誌寫法在 `wf/layers.json#/logs`，這裡不重講。",
+ "_description": "活清單（工作區的 `wf/progress.json` 進度；等使用者做、驗、裁的也記這裡）怎麼寫：誰記哪裡、何時寫、條目欄位、開場怎麼看、骨架。工作區的活狀態只有兩軸：信、進度。「只列 open、完成即刪」已在 `wf/layers.md#/分層原則`（第 3 條），日誌寫法在 `wf/layers.md#/日誌寫法`，這裡不重講。",
  "which": [
   {
    "waiting_for": "使用者做／驗證／決定",
@@ -11,7 +11,7 @@
   },
   {
    "waiting_for": "別資料夾的 agent",
-   "where": "信件（在 aos 裡同一棵樹的 agent 之間是 mailbox，見 `aos/mailbox.json`；不在樹裡的照工作區自己的做法）"
+   "where": "信件（在 aos 裡同一棵樹的 agent 之間是 mailbox，見 `aos/mailbox.md`；不在樹裡的照工作區自己的做法）"
   }
  ],
  "session_start": "每個 session 開場先掃兩軸：先看信（`#/which` 第三列），再數進度條目：`python3 -c \"import json;print(len(json.load(open('wf/progress.json',encoding='utf-8'))['open']))\"`；非 0 才讀；檔不存在就當 0。",
@@ -38,5 +38,5 @@
   },
   "open": {}
  },
- "aos_note": "`aos/mailbox.json#/rules` 有 `NEEDS-USER` 狀態；使用者 2026-11-13 裁（收工待裁頁 W11）當時不改、通用版照舊另開一份等使用者清單；2026-11-18 選項框「跟著改 (Recommended)」，通用版改成兩軸（信、進度），等使用者的記進 `wf/progress.json`。"
+ "aos_note": "`aos/mailbox.md#/Mailbox rules` 有 `NEEDS-USER` 狀態；使用者 2026-11-13 裁（收工待裁頁 W11）當時不改、通用版照舊另開一份等使用者清單；2026-11-18 選項框「跟著改 (Recommended)」，通用版改成兩軸（信、進度），等使用者的記進 `wf/progress.json`。"
 }

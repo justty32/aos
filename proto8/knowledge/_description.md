@@ -1,0 +1,3 @@
+# Knowledge
+
+Shared knowledge for agents, one folder per subject. Read aos/ first: it explains aos and how to look things up (paths here start with aos/, like `aos/errors.md#/Error codes`). wf/ explains how the working documents of a workspace (workflows, knowledge, open items) are organized, and ships ready-made workflow nodes (wf/workflows/_index.json is the dispatch table) and record skeletons; its text is in Traditional Chinese.

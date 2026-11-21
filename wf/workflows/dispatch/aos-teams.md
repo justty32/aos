@@ -13,7 +13,7 @@
 - **「簡單工作」的界線**（使用者 11-06 確認：「1.對。2.是。」）：雜活、純文字小改、查找盤點、跑指令收結果才算簡單，才給 sonnet（補位時）。**碰程式碼邏輯、改寫使用者的概念／規範條文不算簡單**，不給 sonnet（使用者 09-30「不要 sonnet」「就 opus」；見 [common/user「子 agent 模型」](../common/user.md)）。
 - **一般 agent 再派子 agent，模型隨意**（使用者 11-06 第 1 句）；sol 隊員一張單只做一件事，要多人由線多掛幾隻。
 - **要規劃就走正統流程**：sol 蒐集 → opus 匯總 → fable 設計 → opus 細化成計劃 → Argon 審 → 採納表 → sol 施工。需求還不清楚時先發想、不急著規劃。細節 [07](aos-teams/07-預設流程與agent-fsm.md)。
-- **讀規矩**（使用者 11-06 第 1、5 句、11-13）：派出去的 agent 做事前先讀知識庫入口 `$AOS_HOME/knowledge/aos/_description.json`，再讀[規矩卡](../common/rules-card.md)（使用者 11-17 待裁網頁 wf-6 選 a，取代通讀 wf/ 規矩；碰程式再讀 conventions，當線隊長、要派隊員再讀本卡）；**簡單工作與雜活例外**（可免讀），對子 agent 一樣成立。任務書開頭寫明，往下派時也寫進子任務書。用配給包的蒐集員、審稿員照包裡的分級：只讀知識庫入口加站台層（[kits](kits/README.md)）。
+- **讀規矩**（使用者 11-06 第 1、5 句、11-13）：派出去的 agent 做事前先讀知識庫入口 `$AOS_HOME/knowledge/aos/_description.md`，再讀[規矩卡](../common/rules-card.md)（使用者 11-17 待裁網頁 wf-6 選 a，取代通讀 wf/ 規矩；碰程式再讀 conventions，當線隊長、要派隊員再讀本卡）；**簡單工作與雜活例外**（可免讀），對子 agent 一樣成立。任務書開頭寫明，往下派時也寫進子任務書。用配給包的蒐集員、審稿員照包裡的分級：只讀知識庫入口加站台層（[kits](kits/README.md)）。
 - **開隊前先把打算講給使用者聽**，等他回應或糾正再派；他可能在手機上、回得慢，問題與選項照發、附預設建議。問他的題目寄專區（下面第 2 件）。
 - **權限邊界**：agent 不加全繞過沙箱／權限的旗標，要開由使用者親自開。eca 不設 rlimit、自己收斂；agent-fsm 帶 `limits`。
 - **命名**：daemon 表上的名字整台共用，掛的 agent 一律 `<eca 名>-<角色>-<編號>`（例 `ok-kf-sol-1`）。
@@ -42,7 +42,7 @@
 ```
 
 - 一封最多 7 題，每題 `id`、`question`、`eli5`、`options`（`key`、`label`、`consequence`）、`recommend`；每小時最多 10 封。
-- 回信用 `mailbox_read` 讀（專區回信自動留在 `mailbox/archive/<信名>/`），再跑 `aos-user verify <那個夾>`，看到 `ok: matches` 才算數。push、刪檔的授權一定要驗。更多：[user-zone-mail](../../public/user-zone-mail.md)、知識庫 `aos/user_zone.json`。
+- 回信用 `mailbox_read` 讀（專區回信自動留在 `mailbox/archive/<信名>/`），再跑 `aos-user verify <那個夾>`，看到 `ok: matches` 才算數。push、刪檔的授權一定要驗。更多：[user-zone-mail](../../public/user-zone-mail.md)、知識庫 `aos/user_zone.md`。
 
 ### 3. 掛 sol 隊員
 

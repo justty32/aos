@@ -1,4 +1,4 @@
-{"description": "Copy a file or folder; to is the full new path and must not exist. More: aos/tools/copy.json.",
+{"description": "Copy a file or folder; to is the full new path and must not exist. More: aos/tools/copy.md.",
  "parameters": {"type": "object",
                 "properties": {"from": {"type": "string", "description": "source path"},
                                "to": {"type": "string", "description": "full destination path"}},

@@ -1,4 +1,4 @@
-{"description": "Delete by moving into .trash/ in your workspace; move can bring it back. More: aos/tools/trash.json.",
+{"description": "Delete by moving into .trash/ in your workspace; move can bring it back. More: aos/tools/trash.md.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "relative to your workspace, or absolute"}},
                 "required": ["path"]},

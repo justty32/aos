@@ -1,4 +1,4 @@
-{"description": "Create a folder with its parents; an existing folder is fine. More: aos/tools/mkdir.json.",
+{"description": "Create a folder with its parents; an existing folder is fine. More: aos/tools/mkdir.md.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "relative to your workspace, or absolute"}},
                 "required": ["path"]},

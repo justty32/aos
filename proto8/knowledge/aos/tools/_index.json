@@ -1,174 +1,174 @@
 {
- "read.json": {
+ "read.md": {
   "description": "Tool read: read a text file as plain lines, in parts if it is big."
  },
- "ls.json": {
+ "ls.md": {
   "description": "Tool ls: list one folder, one line per item; long and json for details."
  },
- "view.json": {
+ "view.md": {
   "description": "Tool view: look into a file step by step: JSON level by level, big text as an outline first."
  },
- "stat.json": {
+ "stat.md": {
   "description": "Tool stat: facts about one file, folder or link as JSON (type, size, lines, format)."
  },
- "grep.json": {
+ "grep.md": {
   "description": "Tool grep: search inside files with a regular expression, like grep -rn; one line PATH:LINE:TEXT per match."
  },
- "glob.json": {
+ "glob.md": {
   "description": "Tool glob: find files by name pattern (*, **, ?) under a folder; one path per line."
  },
- "write.json": {
+ "write.md": {
   "description": "Tool write: write a whole file (new, or fully replaced)."
  },
- "edit.json": {
+ "edit.md": {
   "description": "Tool edit: change part of a text file by exact text replacement."
  },
- "copy.json": {
+ "copy.md": {
   "description": "Tool copy: copy a file or a whole folder to a new path."
  },
- "move.json": {
+ "move.md": {
   "description": "Tool move: move or rename a file, folder or link; also brings things back from the trash."
  },
- "mkdir.json": {
+ "mkdir.md": {
   "description": "Tool mkdir: create a folder with its parents; an existing folder is fine."
  },
- "json_get.json": {
+ "json_get.md": {
   "description": "Tool json_get: the value at one FILE#/POINTER as one line of JSON; [too big] when over max_bytes."
  },
- "json_ls.json": {
+ "json_ls.md": {
   "description": "Tool json_ls: what is inside one place of a JSON file, one key or index per line; long for type and size."
  },
- "json_search.json": {
+ "json_search.md": {
   "description": "Tool json_search: find a key and/or value below a place (or in the levels above it); one FILE#/POINTER per hit."
  },
- "json_set.json": {
+ "json_set.md": {
   "description": "Tool json_set: set one place in a JSON file to a value, exactly as given; /- appends."
  },
- "json_add.json": {
+ "json_add.md": {
   "description": "Tool json_add: add a new key or array item (inserts); never overwrites (KeyExists)."
  },
- "json_del.json": {
+ "json_del.md": {
   "description": "Tool json_del: delete one key or array item from a JSON file."
  },
- "json_len.json": {
+ "json_len.md": {
   "description": "Tool json_len: the length of one place: keys of an object, items of an array, characters of a string."
  },
- "json_multi_get.json": {
+ "json_multi_get.md": {
   "description": "Tool json_multi_get: several FILE#/POINTER at once, one line per place; failures per place, PlacesFailed at the end."
  },
- "json_multi_set.json": {
+ "json_multi_set.md": {
   "description": "Tool json_multi_set: set several places in order, one line per place; nothing undone if one fails."
  },
- "index_view.json": {
+ "index_view.md": {
   "description": "Tool index_view: see a node through its index (KEY<TAB>description); a view, not the facts."
  },
- "jsonx_get.json": {
+ "jsonx_get.md": {
   "description": "Tool jsonx_get: json_get for aos configuration files: follow $ref, resolve $ref/$env."
  },
- "jsonx_ls.json": {
+ "jsonx_ls.md": {
   "description": "Tool jsonx_ls: json_ls for aos configuration files: follow $ref, list the resolved value."
  },
- "jsonx_search.json": {
+ "jsonx_search.md": {
   "description": "Tool jsonx_search: json_search for aos configuration files: follow $ref, search the resolved value."
  },
- "jsonx_set.json": {
+ "jsonx_set.md": {
   "description": "Tool jsonx_set: json_set for aos configuration files: value, text or from; follow, resolve, check."
  },
- "jsonx_add.json": {
+ "jsonx_add.md": {
   "description": "Tool jsonx_add: json_add for aos configuration files, with the options of jsonx_set."
  },
- "jsonx_del.json": {
+ "jsonx_del.md": {
   "description": "Tool jsonx_del: json_del for aos configuration files: $ref on the way protected unless follow."
  },
- "jsonx_multi_get.json": {
+ "jsonx_multi_get.md": {
   "description": "Tool jsonx_multi_get: json_multi_get read like jsonx_get (follow, resolve for every place)."
  },
- "jsonx_multi_set.json": {
+ "jsonx_multi_set.md": {
   "description": "Tool jsonx_multi_set: json_multi_set done like jsonx_set: value, text or from per item; follow, resolve, check for all."
  },
- "trash.json": {
+ "trash.md": {
   "description": "Tool trash: delete so it can be undone (moved into .trash/ in your workspace)."
  },
- "remove.json": {
+ "remove.md": {
   "description": "Tool remove: delete for real, like rm; no undo (a folder needs recursive)."
  },
- "shell.json": {
+ "shell.md": {
   "description": "Tool shell: run one bash command line in your workspace; output ends with [exit code N]."
  },
- "run_python.json": {
+ "run_python.md": {
   "description": "Tool run_python: run a short Python 3 program; output ends with [exit code N]."
  },
- "peek_clock.json": {
+ "peek_clock.md": {
   "description": "Tool peek_clock: the daemon clock's current cycle and how many ms one cycle is."
  },
- "peek_now_time.json": {
+ "peek_now_time.md": {
   "description": "Tool peek_now_time: the current time, in UTC by default, or local time with {\"local\": true}."
  },
- "math.json": {
+ "math.md": {
   "description": "Tool math: compute one arithmetic expression; what is allowed, examples, ExprBad."
  },
- "todo.json": {
+ "todo.md": {
   "description": "Tool todo: your own to-do list for a long task (ls, set, add, mark); kept outside your history."
  },
- "goal.json": {
+ "goal.md": {
   "description": "Tool goal: your goal, reminded when you stop by yourself; set, done, pause, resume."
  },
- "../mailbox.json#/tools": {
-  "description": "Pointer. Tools mailbox_peek, mailbox_read, mailbox_send: see which letters wait, read the oldest, send one. Explained in aos/mailbox.json#/tools."
+ "../mailbox.md#/Mailbox tools": {
+  "description": "Pointer. Tools mailbox_peek, mailbox_read, mailbox_send: see which letters wait, read the oldest, send one. Explained in `aos/mailbox.md#/Mailbox tools`."
  },
- "../user_zone.json#/send": {
-  "description": "Pointer. Tool user_send: send a decide/verify/trial/chore/fyi letter to the user zone. Explained in aos/user_zone.json#/send."
+ "../user_zone.md#/How to send": {
+  "description": "Pointer. Tool user_send: send a decide/verify/trial/chore/fyi letter to the user zone. Explained in `aos/user_zone.md#/How to send`."
  },
- "../user_zone.json#/answer": {
-  "description": "Pointer. Tool user_verify: check that an answer letter really came from the user zone. Explained in aos/user_zone.json#/answer."
+ "../user_zone.md#/The answer": {
+  "description": "Pointer. Tool user_verify: check that an answer letter really came from the user zone. Explained in `aos/user_zone.md#/The answer`."
  },
- "../clock.json#/wake_me": {
-  "description": "Pointer. Tool clock_register: letters from the clock every N cycles (add, rm, ls); once, at a time or cron: aos/clock.json#/wake_at. Explained in aos/clock.json#/wake_me."
+ "../clock.md#/Wake me every N cycles": {
+  "description": "Pointer. Tool clock_register: letters from the clock every N cycles (add, rm, ls); once, at a time or cron: `aos/clock.md#/Wake me once, at a time, or on a schedule`. Explained in `aos/clock.md#/Wake me every N cycles`."
  },
- "../me/self_hook.json#/_description": {
-  "description": "Pointer. Tool self_hook: run a program of yours when something happens to you (your own hooks, on_clock timers). Explained in aos/me/self_hook.json."
+ "../me/self_hook.md#/Hooks: run a program of yours when something happens to you": {
+  "description": "Pointer. Tool self_hook: run a program of yours when something happens to you (your own hooks, on_clock timers). Explained in aos/me/self_hook.md."
  },
- "../me/do_task.json#/_description": {
-  "description": "Pointer. Tool do_task (agent-fsm only): do one task inside your own conversation and keep only its summary. Explained in aos/me/do_task.json."
+ "../me/do_task.md#/do_task: one task inside your own conversation, only its summary kept": {
+  "description": "Pointer. Tool do_task (agent-fsm only): do one task inside your own conversation and keep only its summary. Explained in aos/me/do_task.md."
  },
- "../me/self_tools.json#/_description": {
-  "description": "Pointer. Tool self_tools: change your own tool list. Explained in aos/me/self_tools.json."
+ "../me/self_tools.md#/Changing your own toolbox": {
+  "description": "Pointer. Tool self_tools: change your own tool list. Explained in aos/me/self_tools.md."
  },
- "../me/self_llm.json": {
-  "description": "Pointer. Tool self_llm: change your own brain settings. Explained in aos/me/self_llm.json (the whole file is one text)."
+ "../me/self_llm.md": {
+  "description": "Pointer. Tool self_llm: change your own brain settings. Explained in aos/me/self_llm.md (the whole file is one text)."
  },
- "../me/self_system.json": {
-  "description": "Pointer. Tool self_system: see or change your own system text. Explained in aos/me/self_system.json (the whole file is one text)."
+ "../me/self_system.md": {
+  "description": "Pointer. Tool self_system: see or change your own system text. Explained in aos/me/self_system.md (the whole file is one text)."
  },
- "../me/self_history.json#/_description": {
-  "description": "Pointer. Tool self_history: list, delete, summarize or replace messages in your own conversation. Explained in aos/me/self_history.json."
+ "../me/self_history.md#/Changing your own conversation history": {
+  "description": "Pointer. Tool self_history: list, delete, summarize or replace messages in your own conversation. Explained in aos/me/self_history.md."
  },
- "../me.json#/self_state": {
-  "description": "Pointer. Tool self_state: facts and numbers about yourself; it only reads. Explained in aos/me.json#/self_state."
+ "../me.md#/Looking at yourself: self_state": {
+  "description": "Pointer. Tool self_state: facts and numbers about yourself; it only reads. Explained in `aos/me.md#/Looking at yourself: self_state`."
  },
- "../me.json#/self_ctl": {
-  "description": "Pointer. Tool self_ctl: stop, pause, put to sleep or remove yourself. Explained in aos/me.json#/self_ctl."
+ "../me.md#/Stopping yourself: self_ctl": {
+  "description": "Pointer. Tool self_ctl: stop, pause, put to sleep or remove yourself. Explained in `aos/me.md#/Stopping yourself: self_ctl`."
  },
- "../agents/subagent.json#/_description": {
-  "description": "Pointer. Tool subagent: start and manage agents that are yours (counted against your quota). Explained in aos/agents/subagent.json."
+ "../agents/subagent.md#/Your own subagents: subagent": {
+  "description": "Pointer. Tool subagent: start and manage agents that are yours (counted against your quota). Explained in aos/agents/subagent.md."
  },
- "../agents.json#/agents_ctl": {
-  "description": "Pointer. Tool agents_ctl: aos-agent ctl for any agent on your daemon table, not only yours. Explained in aos/agents.json#/agents_ctl."
+ "../agents.md#/Any agent on the table: agents_ctl": {
+  "description": "Pointer. Tool agents_ctl: aos-agent ctl for any agent on your daemon table, not only yours. Explained in `aos/agents.md#/Any agent on the table: agents_ctl`."
  },
- "../agents/fork.json#/_description": {
-  "description": "Pointer. Tool fork (agent-fsm only): a copy of yourself for one goal; only its short conclusion comes back. Explained in aos/agents/fork.json."
+ "../agents/fork.md#/fork: a copy of you, one goal, just the conclusion": {
+  "description": "Pointer. Tool fork (agent-fsm only): a copy of yourself for one goal; only its short conclusion comes back. Explained in aos/agents/fork.md."
  },
- "../agents.json#/agent_def": {
-  "description": "Pointer. Tool agent_def: make a new agent definition from a template, or check one. Explained in aos/agents.json#/agent_def."
+ "../agents.md#/New definitions: agent_def": {
+  "description": "Pointer. Tool agent_def: make a new agent definition from a template, or check one. Explained in `aos/agents.md#/New definitions: agent_def`."
  },
- "../tools_def.json#/tools_def": {
-  "description": "Pointer. Tool tools_def: make a new tool from the Python skeleton, or check a tool. Explained in aos/tools_def.json#/tools_def."
+ "../tools_def.md#/tools_def": {
+  "description": "Pointer. Tool tools_def: make a new tool from the Python skeleton, or check a tool. Explained in aos/tools_def.md#/tools_def."
  },
- "../kernel.json#/gate": {
-  "description": "Pointer. Tool kernel_gate: be a kernel gate: requests from other procs are held, you pass or refuse each one. Explained in aos/kernel.json#/gate."
+ "../kernel.md#/Being a kernel yourself: kernel_gate": {
+  "description": "Pointer. Tool kernel_gate: be a kernel gate: requests from other procs are held, you pass or refuse each one. Explained in `aos/kernel.md#/Being a kernel yourself: kernel_gate`."
  },
- "../cli/mcp_import.json#/errors": {
-  "description": "Pointer. mcp_tool: the program that runs every imported external MCP tool (you never call it by name); its error codes. Explained in aos/cli/mcp_import.json#/errors."
+ "../cli/mcp_import.md#/Codes from external MCP tools": {
+  "description": "Pointer. mcp_tool: the program that runs every imported external MCP tool (you never call it by name); its error codes. Explained in `aos/cli/mcp_import.md#/Codes from external MCP tools`."
  },
  "_description.json": {
   "description": "One node per stock tool that has a page here: what it does, when to use it, its arguments, examples with real output and errors; how to read the pointer rows (keys starting with ../); packs are in aos/packs.json."

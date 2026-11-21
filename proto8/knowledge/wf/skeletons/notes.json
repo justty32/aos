@@ -20,7 +20,7 @@
  "rules": [
   "- **不把未驗證的猜測寫成結論**——不確定就寫「缺什麼證據」，不要補完。",
   "- 五段都要非空。",
-  "- 一篇連貫的調查筆記本質不可分，可以超過大小建議保留（`wf/tidying.json#/split`）；過時的照 `wf/tidying.json#/archive` 封存。"
+  "- 一篇連貫的調查筆記本質不可分，可以超過大小建議保留（`wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）`）；過時的照 `wf/tidying.md#/archive 規則` 封存。"
  ],
  "skeleton": {
   "_description": "",

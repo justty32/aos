@@ -1,4 +1,4 @@
-{"description": "Find files by name pattern under a folder (*, **, ?; \"*.py\" matches at any depth); one path per line. To search inside files use grep. More: aos/tools/glob.json.",
+{"description": "Find files by name pattern under a folder (*, **, ?; \"*.py\" matches at any depth); one path per line. To search inside files use grep. More: aos/tools/glob.md.",
  "parameters": {"type": "object",
                 "properties": {"pattern": {"type": "string", "description": "e.g. *.py, src/**/*.json"},
                                "path": {"type": "string", "default": ".", "description": "folder to search under (default .)"},

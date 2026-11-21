@@ -25,7 +25,7 @@
 
 [`reviewer`](reviewer/README.md) 重用 agent-fsm 的格，讓 review_round 試降級並留下專精、差異化與退休建議，agent 讀結果、開處方。
 
-[`kits`](kits/README.md) 不是範本，是**派 agent-fsm 時按角色用的配給包**：每包有拼好的 system 文字和一份 tools.json，蓋到 `agent_def new` 建出的 agent-fsm 定義上就能用（蒐集員 gather、審稿員 review）；人從 shell 掛 agent 時用 `aos-agent ctl add --kit <包夾>`（或 `ctl set-def --kit`），寫成那隻在 stack 裡自己那份、定義夾不動。檔案一律英文、中立；測試在 `tests/kits/`，給 agent 看的說明在知識庫 `aos/kits.json`。
+[`kits`](kits/README.md) 不是範本，是**派 agent-fsm 時按角色用的配給包**：每包有拼好的 system 文字和一份 tools.json，蓋到 `agent_def new` 建出的 agent-fsm 定義上就能用（蒐集員 gather、審稿員 review）；人從 shell 掛 agent 時用 `aos-agent ctl add --kit <包夾>`（或 `ctl set-def --kit`），寫成那隻在 stack 裡自己那份、定義夾不動。檔案一律英文、中立；測試在 `tests/kits/`，給 agent 看的說明在知識庫 `aos/kits.md`。
 
 ## 分檔目錄
 

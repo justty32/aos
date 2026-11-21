@@ -1,4 +1,4 @@
-{"description": "See or replace your own system text: get, set (the whole new text), reset. Works from your next brain call; each change costs one prompt-cache miss; a text that stops you working needs a human to reset it. More: aos/me/self_system.json.",
+{"description": "See or replace your own system text: get, set (the whole new text), reset. Works from your next brain call; each change costs one prompt-cache miss; a text that stops you working needs a human to reset it. More: aos/me/self_system.md.",
  "env": ["AOS_DAEMON"],
  "errors": ["ArgumentsBad", "OpUnknown", "SystemMissing", "SystemBad", "WriteFailed", "CommandMissing", "WsMissing", "LaunchFailed", "CommandFailed", "DaemonMissing", "DaemonFailed", "InstanceMissing"],
  "parameters": {"type": "object", "properties": {"op": {"type": "string", "enum": ["get", "set", "reset"], "description": "what to do"}, "long": {"type": "boolean", "description": "show where each value comes from"}, "text": {"type": "string", "description": "set: the whole new text (\"\" = none)"}}, "required": ["op"]}}

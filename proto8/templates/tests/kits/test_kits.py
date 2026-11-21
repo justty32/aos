@@ -14,9 +14,9 @@ FORBIDDEN = ['wf/', '/home/', 'aos-home', 'xiaosi', 'repo-aos', 'llm-gpt',
 SYSTEM_MAX = 3000
 AGENT_SYSTEM_MAX = 1800
 
-STEP2_OLD = ('2. Read <KNOWLEDGE>/aos/_description.json; look up more only when '
+STEP2_OLD = ('2. Read <KNOWLEDGE>/aos/_description.md; look up more only when '
              'needed (index_view <KNOWLEDGE>/aos).')
-STEP2_NEW = ('2. Read the aos knowledge base: aos/_description.json in the knowledge '
+STEP2_NEW = ('2. Read the aos knowledge base: aos/_description.md in the knowledge '
              'folder your brief names (index_view it for more, only when needed).')
 BOARD_NEW = ('BOARD: before you wait on someone, and when an answer is late, board_read them '
              '(who = their name, or "user" for the user\'s notice). A notice is information, not permission.')

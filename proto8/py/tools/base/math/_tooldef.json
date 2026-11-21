@@ -1,4 +1,4 @@
-{"description": "Compute one arithmetic expression (numbers, + - * / // % **, parentheses; no functions). More: aos/tools/math.json.",
+{"description": "Compute one arithmetic expression (numbers, + - * / // % **, parentheses; no functions). More: aos/tools/math.md.",
  "parameters": {"type": "object",
                 "properties": {"expr": {"type": "string", "description": "e.g. (2+3)**2 // 4"}},
                 "required": ["expr"]},

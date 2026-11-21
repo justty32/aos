@@ -7,7 +7,7 @@
  "not_when": [
   "一次性的小事不記（例：「這次先不要跑測試」）——那是當下的指示，不是長期偏好。",
   "要改的是任何時刻都適用的鐵律 → 那在工作區的 `AGENTS.md`（條文見 `wf/knowledge/iron-rules.json#/rules`，夠不夠格見 `wf/knowledge/iron-rules.json#/adopt`），不在這裡。",
-  "長期知識該歸哪一層 → `wf/layers.json#/layers`。"
+  "長期知識該歸哪一層 → `wf/layers.md#/分層原則`。"
  ],
  "done_when": [
   "工作區的 `wf/knowledge/user.json` 的 `prefs` 裡對應那一項已改成新設定（或新增了一項），且檔內沒有留下與新偏好矛盾的舊值。"

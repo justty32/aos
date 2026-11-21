@@ -1,4 +1,4 @@
-{"description": "Facts about one file, folder or link as JSON: type, size, lines, format, mtime. More: aos/tools/stat.json.",
+{"description": "Facts about one file, folder or link as JSON: type, size, lines, format, mtime. More: aos/tools/stat.md.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "relative to your workspace, or absolute"}},
                 "required": ["path"]},

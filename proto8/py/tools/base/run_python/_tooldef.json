@@ -1,4 +1,4 @@
-{"description": "Run a short Python 3 program (standard library) in your workspace; output ends with [exit code N] (non-zero is your program's result, not a tool error). More: aos/tools/run_python.json.",
+{"description": "Run a short Python 3 program (standard library) in your workspace; output ends with [exit code N] (non-zero is your program's result, not a tool error). More: aos/tools/run_python.md.",
  "parameters": {"type": "object",
                 "properties": {"code": {"type": "string", "description": "the whole program"},
                                "timeout_s": {"type": "number", "default": 60, "description": "seconds (at most 300)"}},

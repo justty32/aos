@@ -1,8 +1,10 @@
-# proto8/knowledge — 出廠內容樹（普通資料夾＋`.json`，太大的節點補 `_index.json`／`_index`，是通用視角（公用視角）的 index）
+# proto8/knowledge — 出廠內容樹（普通資料夾＋`.md` 與 `.json`，太大的節點補 `_index.json`／`_index`，是通用視角（公用視角）的 index）
 
 ← [proto8](../README.md)｜由來：[thinking 11-05 agent-knowledge](../thinking/2026-11/05/agent-knowledge/README.md)、[11-10 json-memory](../thinking/2026-11/10/json-memory/README.md)
 
 使用者 11-05：「頂層可以是簡介、index目錄之類，並且盡量講簡單……這套知識庫還可以給多個agent共享！」「隨意複製，隨意修改，隨意給agent指定、隨意拆卸增添」。11-10：「json本身就是節點樹。然後json跟檔案系統又有同像性，可以用xxx/xxx.json#/xxx/xxx，這個單一路徑取得東西。所以資料夾，配合各.json檔案。其實就是一個好東西了。」
+
+**11-21 起長文章的頁改成 `.md`、短資料的頁留 `.json`**（使用者 11-21「仍然以.md爲主體，然後index做導航骨架」）：一頁只會是其中一種；`檔.md#/標題` 照 md 現有的標題尋，`json_get`／`json_ls` 兩種都讀；index 不必列出夾裡每一個東西。新樣子、尋址規則、index 的新寫法在 [docs/03-md頁與尋址](docs/03-md頁與尋址.md)；下面與 docs/01、02 裡以 json 為例的段落對不上時以 03 為準。
 
 **這是一棵普通的資料夾＋`.json` 樹**，沒有專屬工具、不登記：agent 用一般的讀檔／json 工具（`read`、`ls`、`view`、`json_get`、`json_ls`、`grep`…）讀，人用 `aos-json` 或編輯器改。照 [wf/STRUCTURE 分層原則](../../wf/STRUCTURE.md#分層原則)：上層只放簡介與目錄、不重講下層細節。
 
@@ -10,7 +12,7 @@
 
 **只給太大的補**（使用者 11-12）：「當節點下的某些東西太龐大了，所以用index給他做一個簡介。所以現有aos知識庫中，如果有些東西太大，那就補index.json/_index。如果夠小，那其實也不用做看法了，直接讀就是了。」
 
-- 資料夾的 index＝該夾的 `_index.json`：`{"body.json": {"description": "…"}, "cli": {"description": "…"}}`，鍵是夾裡的檔名或子資料夾名（不帶尾斜線），列出夾裡每一個東西（`_index.json` 自己除外）。這棵樹只有東西多的三夾有：`aos/`、`aos/cli/`、`aos/tools/`（門檻：夾裡超過 15 個東西）。
+- 資料夾的 index＝該夾的 `_index.json`：`{"body.json": {"description": "…"}, "cli": {"description": "…"}}`，鍵是夾裡的檔名或子資料夾名（不帶尾斜線），列夾裡的東西（`_index.json` 自己除外；11-21 起不必列全，[docs/03](docs/03-md頁與尋址.md)）。這棵樹只有東西多的三夾有：`aos/`、`aos/cli/`、`aos/tools/`（門檻：夾裡超過 15 個東西）。
 - JSON 物件的 index＝它的 `_index` 鍵：`{"xxx": {"yyy": true, "_index": {"yyy": {"description": "present the state of switch A"}}}}`，鍵是同一個物件的其他鍵。這棵樹只有 `aos/packs.json` 有（門檻：檔超過 8000 bytes＝`json_get` 預設上限，或頂層內容鍵超過 10 個）。
 - 一格除了 `description` 還可以放 `index`：一條路徑，指到另一份 `_index.json`／`_index`（例：`aos/_index.json` 的 `cli` 一格寫 `"index": "cli/_index.json"`）；檔內 `_index` 本身也可以是這種路徑字串。路徑寫法同 `$ref`（`#` 左邊檔案系統、右邊 json 內部；檔案路徑從裝著它的那份 json 檔的資料夾算），`index_view` 只顯示、不往下讀（使用者 11-12 晚，[docs/01](docs/01-樹長怎樣與多庫.md)）。
 - 兩種 index 也都可以寫在 `_metainfo` 裡（`index` 格；`index_view` 裡外都讀、外面那份贏），這棵樹現有的都放外面、不搬；正文 `_description` 只放外面：見 [N-69](../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)。
@@ -22,11 +24,12 @@
 |---|---|
 | [01-樹長怎樣與多庫](docs/01-樹長怎樣與多庫.md) | 一棵樹長怎樣、統一路徑 `資料夾/檔.json#/指標`、`_index.json` 與 `_index` 兩種 index、`_description`（節點自己的正文）、`$ref` |
 | [02-寫入與節點怎麼寫](docs/02-寫入與節點怎麼寫.md) | 節點怎麼寫：一段一個字串（或字串陣列）、大小建議、名字、記錄表用鍵還是陣列、index 那一格、拆檔留 `$ref`、檔案格式（推薦）、內容語言 |
+| [03-md頁與尋址](docs/03-md頁與尋址.md) | 11-21 起：長文章的頁是 md、`檔.md#/…` 怎麼尋（標題、`_`、清單、表格、json 區塊）、寫 md 頁要知道的、index 的新寫法 |
 
 | 資料夾 | 內容 | 給誰 |
 |---|---|---|
 | [aos/](aos/_index.json) | aos 體系知識（路徑寫 `aos/…`）：`_description.json` 一頁簡介＋八個詞＋五條規則；`world.json` 心智模型、`definition.json` 定義資料夾各檔、`body.json` agent-fsm 與 eca 兩種身體、`me.json` 我是誰與 `self_*` 工具、`agents.json` 子 agent 與定義、`mailbox.json` 信、`clock.json` 定時、`brain.json` 問腦、`status.json` daemon 表與 phase、`errors.json` 錯誤行與結束碼、`rules.json` 禁忌、`kernel.json` kernel 是什麼、範本在哪、怎麼自己寫一個、`packs.json` 工具包、`kits.json` 按角色派 agent 的配給包（system 文字＋工具，蓋在 agent-fsm 上）、`tools/` 每支出廠工具一份、`cli/` 給人與外部 agent 的指令（底層零件在 `cli/parts/`） | 跑在 aos 裡的 agent（小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
-| [wf/](wf/_description.json) | 工作區的工作文檔怎麼組織（路徑寫 `wf/…`）：`layers.json` 分層與歸屬、流程與知識分家、私有 index、日誌寫法；`nodes.json` 檔名、工作流節點的固定形式與成長軌跡；`tidying.json` 什麼時候拆、怎麼拆、封存；`source.json` 來源與沒帶的；`workflows/` 出廠的工作流節點（kernel 的記決定、規劃、記踩坑、記偏好、tidy 文件整理；開發類的功能開發、測試、重構、搬檔、分析、調查、環境、patch；那夾的 `_index.json` 就是派發表）、`knowledge/` 工作流會查的出廠知識（工作流節點骨架、內容精簡判準、整理踩過的坑、活清單寫法、鐵律、開發類派發分辨、code map 規則、綠燈不等於有檢查）——這兩夾照工作區 `wf/` 的佈局放；`skeletons/` 專案自己要填的記錄的空殼（工作流叫你建檔時照它抄進工作區）。內文繁中（從 workflows 模板 repo 併入，11-13 起分塊，[thinking workflows-into-aos](../thinking/2026-11/13/workflows-into-aos.md)）；樹怎麼寫仍以本夾 docs/01、02 為準、那一庫不重講 | 工作區裡帶 `wf/` 的 agent、人 |
+| [wf/](wf/_description.md) | 工作區的工作文檔怎麼組織（路徑寫 `wf/…`）：`layers.json` 分層與歸屬、流程與知識分家、私有 index、日誌寫法；`nodes.json` 檔名、工作流節點的固定形式與成長軌跡；`tidying.json` 什麼時候拆、怎麼拆、封存；`source.json` 來源與沒帶的；`workflows/` 出廠的工作流節點（kernel 的記決定、規劃、記踩坑、記偏好、tidy 文件整理；開發類的功能開發、測試、重構、搬檔、分析、調查、環境、patch；那夾的 `_index.json` 就是派發表）、`knowledge/` 工作流會查的出廠知識（工作流節點骨架、內容精簡判準、整理踩過的坑、活清單寫法、鐵律、開發類派發分辨、code map 規則、綠燈不等於有檢查）——這兩夾照工作區 `wf/` 的佈局放；`skeletons/` 專案自己要填的記錄的空殼（工作流叫你建檔時照它抄進工作區）。內文繁中（從 workflows 模板 repo 併入，11-13 起分塊，[thinking workflows-into-aos](../thinking/2026-11/13/workflows-into-aos.md)）；樹怎麼寫仍以本夾 docs/01、02 為準、那一庫不重講 | 工作區裡帶 `wf/` 的 agent、人 |
 
 試一下（從 `proto8/`）：
 

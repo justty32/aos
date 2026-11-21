@@ -1,4 +1,4 @@
-{"description": "List or change your own tools (only yours): ls, get one in full, add a tool folder, rm, reset. Changes work at once. Self tools not in your default set, add them when needed: self_llm, self_system, self_history, self_ctl, e.g. {\"op\": \"add\", \"path_json\": {\"$env\": \"AOS_HOME\", \"$path\": \"/lib/tools/agent/self_history\"}}. More: aos/me/self_tools.json.",
+{"description": "List or change your own tools (only yours): ls, get one in full, add a tool folder, rm, reset. Changes work at once. Self tools not in your default set, add them when needed: self_llm, self_system, self_history, self_ctl, e.g. {\"op\": \"add\", \"path_json\": {\"$env\": \"AOS_HOME\", \"$path\": \"/lib/tools/agent/self_history\"}}. More: aos/me/self_tools.md.",
  "env": ["AOS_DAEMON"],
  "errors": ["ArgumentsBad", "OpUnknown", "PathMissing", "ToolExists", "ToolMissing", "ToolDefMissing", "ToolDefBad", "NameBad", "WsMissing", "LaunchFailed", "CommandFailed", "DaemonMissing", "DaemonFailed", "InstanceMissing"],
  "parameters": {"type": "object",

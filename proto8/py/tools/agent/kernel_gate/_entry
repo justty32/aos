@@ -114,7 +114,7 @@ try:
               "let through and tells you once: \"[aos] kernel_hold: ...\". Answer each with op pass or op refuse.")
         print("What you pass, the station forwards to: %s." % next_text(cell))
         print("Its settings (%s): %s, and its hooks in %s. Edit them to add rules (allowed, max_running, next ...; hooks): "
-              "aos/kernel.json#/gate." % ("kept as you left them" if kept else "written now", cfg_path,
+              "`aos/kernel.md#/Being a kernel yourself: kernel_gate`." % ("kept as you left them" if kept else "written now", cfg_path,
                                          os.path.join(cell, "kernel_hookeds.json")))
     elif op == "ls":
         rows = g.held(cell)

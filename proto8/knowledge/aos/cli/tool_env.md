@@ -1,0 +1,17 @@
+# Hub variables in tool registrations
+
+Save hub locations at registration time so each tool call uses the intended services.
+
+Register hubs with:
+
+```sh
+aos-tools --file tools.json add --name read --env-file hubs.env --envs LANG=C.UTF-8 ../lib/tools/base/read
+```
+
+`aos-agent tools --target bob add` takes the same flags (`--name`, `--replace`, `--envs`, `--env-file`, `--path-json`, `--no-cache`) and writes them to that agent's own registry in its stack.
+
+Repeat `--envs K=V` as needed. The last value for a key wins. Values are literal strings stored in the registry as typed, so do not put secrets there. `--env-file FILE` stores only where the file is (like a tool path: absolute stays absolute, relative is stored relative to the registry); the file is read on every call and never copied into the registry, so use it for secrets. On a call, later wins: the tool's own `.env` (fills gaps only), the caller's environment, the env file, `--envs`. A missing env file is a warning at add and an error at call.
+
+Editing hubs.env later takes effect on the next call. To change `--envs` values, register again with `--replace`; replacement rewrites the whole entry. Registry values cannot override the tool's scratch `AOS_STACK`.
+
+Missing hubs declared by the tool produce a warning and registration still succeeds. ls/get do not print stored registration env values. Tool input stays in stdin JSON; hub variables are not tool arguments.

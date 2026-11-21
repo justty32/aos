@@ -1,7 +1,7 @@
 {
  "_description": "功能開發／修 bug：改變行為的工作，加一個功能、修一個 bug，從動手到 commit。碰原始碼前先讀工作區的 `wf/knowledge/conventions.json`（寫碼慣例）與 `wf/knowledge/code-map.json`（哪個檔負責什麼）。",
  "when": "使用者說「我想開發／修改某個功能」「這裡壞了，修一下」「修 bug」——**修 bug 也走這條**，產出一樣是「行為改變＋驗證綠燈」。",
- "not_when": "只是要查清楚原因、還不動碼 → `wf/workflows/investigation.json`；行為不變、只重排結構 → `wf/workflows/refactor.json`；還在討論要不要做、方案長怎樣 → `wf/workflows/planning.json`；要交一包給別的 repo／冷啟動 agent 套用 → `wf/workflows/patch.json`。單行或小範圍、低風險、不跨 session 的修正可以跳流程（條件見 `wf/workflows/_description.json` 的「可以跳流程」）。",
+ "not_when": "只是要查清楚原因、還不動碼 → `wf/workflows/investigation.json`；行為不變、只重排結構 → `wf/workflows/refactor.json`；還在討論要不要做、方案長怎樣 → `wf/workflows/planning.json`；要交一包給別的 repo／冷啟動 agent 套用 → `wf/workflows/patch.json`。單行或小範圍、低風險、不跨 session 的修正可以跳流程（條件見 `wf/workflows/_description.md` 的「可以跳流程」）。",
  "done_when": [
   "工作區的 `wf/knowledge/verification.json#/checks` 標「改完必跑」的驗證指令回傳 0。",
   "工作區的 `wf/knowledge/code-map.json#/domains` 中該領域的列已更新（新增／刪除的檔、職責變動、測試位置）。",
@@ -26,12 +26,12 @@
   "- 跨 session 時在工作區的 `wf/progress.json` 補一條（`flow` 填 `feature-dev`，`what` 寫「[功能名] 文檔／code map 待同步」、`next` 寫「commit 前對齊」；欄位見 `wf/knowledge/live-lists.json#/progress`），下個 session 才不會誤判已同步。"
  ],
  "grows": [
-  "下面這些都是**長出來才建**，不要預先建空檔（一個工作流怎麼長大見 `wf/nodes.json#/growth`）：",
+  "下面這些都是**長出來才建**，不要預先建空檔（一個工作流怎麼長大見 `wf/nodes.md#/一個工作流的成長軌跡（四級）`）：",
   "",
   "- 已落地功能目錄（功能在哪、實作細節指標）→ 工作區的 `wf/knowledge/` 底下新開一個節點。",
   "- 本工作流專屬踩坑 → 工作區的 `wf/knowledge/gotchas.json` 的 feature-dev 那段（共通的在共通段；流程見 `wf/workflows/gotchas.json`）。",
   "- 本工作流 open 進度 → 工作區的 `wf/progress.json`，`flow` 填 `feature-dev`（活清單怎麼寫見 `wf/knowledge/live-lists.json`）。",
-  "- 過時節點封存 → `wf/tidying.json#/archive`。"
+  "- 過時節點封存 → `wf/tidying.md#/archive 規則`。"
  ],
  "handoff": [
   "- 驗證怎麼跑 → `wf/workflows/testing.json`；改到一半發現該先整理結構 → `wf/workflows/refactor.json`。",

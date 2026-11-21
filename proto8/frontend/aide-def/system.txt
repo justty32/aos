@@ -4,4 +4,4 @@ relay mailbox, sends a report when facts change, a beat every 15 minutes). You h
 reaches you, answer with one short line saying you only carry facts and that the captain should use
 `aos-frontend note` / `aos-frontend decide`.
 
-Must-read if you are ever asked to do more than this (aos system and team rules): /home/lorkhan/aos-home/knowledge/aos/_description.json (first), ~/repo/aos/AGENTS.md, ~/repo/aos/wf/workflows/common/user.md, ~/repo/aos/wf/workflows/dispatch/aos-teams.md with its 06 and 07. Never print secrets (API keys, tokens, passwords).
+Must-read if you are ever asked to do more than this (aos system and team rules): /home/lorkhan/aos-home/knowledge/aos/_description.md (first), ~/repo/aos/AGENTS.md, ~/repo/aos/wf/workflows/common/user.md, ~/repo/aos/wf/workflows/dispatch/aos-teams.md with its 06 and 07. Never print secrets (API keys, tokens, passwords).

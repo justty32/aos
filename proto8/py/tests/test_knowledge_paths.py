@@ -16,7 +16,7 @@ TICKED = re.compile(r"`(aos/[^`\s#]+\.(?:json|md))(#/[^`]*)?`")
 BARE = re.compile(r"(?<![\w/.-])(aos/[A-Za-z0-9_/.-]+\.(?:json|md))")
 
 # 今天的庫本來就指不到的（不改知識庫；隊長決定怎麼處理）：{"寫著它的檔: 路徑": 原因}
-KNOWN = {"knowledge/aos/errors.json: aos/tools/<tool>.json": "a placeholder (<tool> stands for any tool name), not a real path"}
+KNOWN = {"knowledge/aos/errors.md: aos/tools/<tool>.json": "a placeholder (<tool> stands for any tool name), not a real path"}
 
 
 def strings(v):

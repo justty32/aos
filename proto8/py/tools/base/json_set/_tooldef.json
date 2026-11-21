@@ -1,5 +1,5 @@
 {
- "description": "Set FILE#/POINTER to value, stored exactly as given (replace, or add the key); /- appends; parents creates missing levels. More: aos/tools/json_set.json.",
+ "description": "Set FILE#/POINTER to value, stored exactly as given (replace, or add the key); /- appends; parents creates missing levels. More: aos/tools/json_set.md.",
  "parameters": {
   "type": "object",
   "properties": {

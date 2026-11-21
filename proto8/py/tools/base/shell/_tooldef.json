@@ -1,4 +1,4 @@
-{"description": "Run one bash command line in your workspace; output ends with [exit code N] (non-zero is your command's result, not a tool error). Prefer grep, glob, ls for searching and listing. Not a sandbox. More: aos/tools/shell.json.",
+{"description": "Run one bash command line in your workspace; output ends with [exit code N] (non-zero is your command's result, not a tool error). Prefer grep, glob, ls for searching and listing. Not a sandbox. More: aos/tools/shell.md.",
  "parameters": {"type": "object",
                 "properties": {"command": {"type": "string", "description": "the bash command line"},
                                "timeout_s": {"type": "number", "default": 30, "description": "seconds (at most 300)"}},

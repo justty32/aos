@@ -1,5 +1,5 @@
 {
- "description": "Send one letter to an agent (to = its name) or a mailbox folder (box = a letter's reply_to). To answer a letter: box = its reply_to, in_reply_to = its letter. When you finish or give up on a task someone asked for, send DONE, BLOCKED, NEEDS-USER or FAILED; taking long is not BLOCKED. More: aos/mailbox.json#/tools.",
+ "description": "Send one letter to an agent (to = its name) or a mailbox folder (box = a letter's reply_to). To answer a letter: box = its reply_to, in_reply_to = its letter. When you finish or give up on a task someone asked for, send DONE, BLOCKED, NEEDS-USER or FAILED; taking long is not BLOCKED. More: `aos/mailbox.md#/Mailbox tools`.",
  "env": [
   "AOS_DAEMON"
  ],

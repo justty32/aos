@@ -1,5 +1,5 @@
 {
- "description": "Delete one key or array item at FILE#/POINTER. More: aos/tools/json_del.json.",
+ "description": "Delete one key or array item at FILE#/POINTER. More: aos/tools/json_del.md.",
  "parameters": {
   "type": "object",
   "properties": {

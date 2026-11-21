@@ -149,7 +149,7 @@
     "flavors/dev/AGENTS.dev.md"
    ],
    "prep_commit": "9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2",
-   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件；`suggested_items` 檔案拆分那條的「單檔超過 300 行」拿掉，改成「檔太大照 `wf/tidying.json#/split` 檢視」（第 1 塊牴觸第 3 條）"
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件；`suggested_items` 檔案拆分那條的「單檔超過 300 行」拿掉，改成「檔太大照 `wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）` 檢視」（第 1 塊牴觸第 3 條）"
   },
   {
    "here": "wf/skeletons/notes.json",
@@ -196,7 +196,7 @@
     "flavors/dev/README.md"
    ],
    "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
-   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`_description` 改寫（派發通則改指 `wf/workflows/_description.json`、觸發說法改指 `wf/workflows/_index.json`）；`disambiguation` 的「混合型專案（同時用了 knowledge 包）」一條拿掉（knowledge 包不併，W21）；`menu` 的「本包」改「本庫」"
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`_description` 改寫（派發通則改指 `wf/workflows/_description.md`、觸發說法改指 `wf/workflows/_index.json`）；`disambiguation` 的「混合型專案（同時用了 knowledge 包）」一條拿掉（knowledge 包不併，W21）；`menu` 的「本包」改「本庫」"
   }
  ],
  "not_carried": [

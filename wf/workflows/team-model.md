@@ -79,7 +79,7 @@ Claude 系列消耗與聰明度成正比、GPT 系列整體往下移兩級，所
 - **工人**沒有醒鐘，**每完成一個工作步驟輪詢一次**，延遲上限就是一個工作步驟。
 - **本專案**：線的回報寄任務書指定的對象（11-14 起是各部部長），不直接吵頂層；要使用者拍板的題目寄使用者專區。標題怎麼寫見 [aos-teams](dispatch/aos-teams.md)「回報、經驗、意見」。
 
-（原本的醒鐘細則 `inbox/wake-policy.md` 11-13 隨 inbox 腳本刪掉；同一棵 aos 樹裡的新信由 aos 信箱的 hook 通知，見 aos 知識庫 `aos/mailbox.json` 的 `check`。）
+（原本的醒鐘細則 `inbox/wake-policy.md` 11-13 隨 inbox 腳本刪掉；同一棵 aos 樹裡的新信由 aos 信箱的 hook 通知，見 aos 知識庫 `aos/mailbox.md` 的 `check`。）
 
 ## 內容
 

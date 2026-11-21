@@ -1,4 +1,4 @@
-{"description": "Search file contents with a Python regular expression, like grep -rn: one line PATH:LINE:TEXT per match. To find files by name use glob. More: aos/tools/grep.json.",
+{"description": "Search file contents with a Python regular expression, like grep -rn: one line PATH:LINE:TEXT per match. To find files by name use glob. More: aos/tools/grep.md.",
  "parameters": {"type": "object",
                 "properties": {"pattern": {"type": "string", "description": "the regular expression"},
                                "path": {"type": "string", "default": ".", "description": "folder or file to search (default .)"},

@@ -53,15 +53,15 @@ HOME_PARTS = ("lib", "templates", "knowledge", "cpp", "py", "bin", "include")   
 DEF_MARKER = "interfaces.json"     # a folder holding this file is an agent definition (rule definition-marker)
 
 # Where stacks sit (proto8 knowledge):
-#   aos/world.json#  the daemon is "$AOS_DAEMON (the daemon's own stack folder)"; a proc's stack is its RAM.
-#   aos/cli/agent.json#/add  "--stack DIR chooses its stack (default <daemon stack>/procs/<name>/)";
-#   aos/cli/daemon.json#/add  "aos-daemon-ctl -d /srv/d where --stack tick   # /srv/d/procs/tick";
-#   aos/cli/safety.json#/rm  "deleted stack /.../stacks/root/procs/ann".
-#   aos/cli/mcp.json#/serve  "stack = --stack > $AOS_STACK > WS/.stack/"; aos/cli/parts/exec.json#
-#   "ws=/tmp/w stack=/tmp/w/.stack/"; aos/cli/_description.json#  the daemon defaults to "./.stack".
+#   aos/world.md#  the daemon is "$AOS_DAEMON (the daemon's own stack folder)"; a proc's stack is its RAM.
+#   `aos/cli/agent.md#/ctl add: attach one agent`  "--stack DIR chooses its stack (default <daemon stack>/procs/<name>/)";
+#   `aos/cli/daemon.md#/add: attach a proc`  "aos-daemon-ctl -d /srv/d where --stack tick   # /srv/d/procs/tick";
+#   `aos/cli/safety.md#/Removing an agent`  "deleted stack /.../stacks/root/procs/ann".
+#   `aos/cli/mcp.md#/Serving a registry`  "stack = --stack > $AOS_STACK > WS/.stack/"; aos/cli/parts/exec.md#
+#   "ws=/tmp/w stack=/tmp/w/.stack/"; aos/cli/_description.md#  the daemon defaults to "./.stack".
 # The marker of a daemon stack is procs_state.json (its table; the knowledge pages do not name the file: it is
 # the file read_table below and aos-agent ctl read, py/docs/05-commands/03-aos-daemon-ctl.md; its procs_requests key is the
-# ctl mailbox of aos/cli/parts/daemon.json#).
+# ctl mailbox of aos/cli/parts/daemon.md#).
 STATE_FILE = "procs_state.json"
 STACK_PART = ".stack"
 

@@ -31,7 +31,7 @@ Placeholders in general.A.txt:
 - `<BOARD>` - how to read a notice board (a command such as board_read, or a file to read). Leave the whole BOARD line out if your site has none.
 - `<OWN_BOARD>` - a line saying how the agent posts who it waits for (board_wait), or remove the line.
 
-The shipped `gather/system.txt` and `review/system.txt` are general.A.txt with these defaults, then a blank line, then the role text: step 2 of START says to read `aos/_description.json` in the knowledge folder the brief names; the BOARD line says to board_read someone before waiting on them and when an answer is late (`"user"` for the user's notice); the `<OWN_BOARD>` line becomes an OWN BOARD line: board_wait with who and what when it stops to wait, board_wait with done = true when the answer comes. Each stays at or below 3,000 characters. If you change a layer, assemble again in the same order (tests/kits/test_kits.py checks this).
+The shipped `gather/system.txt` and `review/system.txt` are general.A.txt with these defaults, then a blank line, then the role text: step 2 of START says to read `aos/_description.md` in the knowledge folder the brief names; the BOARD line says to board_read someone before waiting on them and when an answer is late (`"user"` for the user's notice); the `<OWN_BOARD>` line becomes an OWN BOARD line: board_wait with who and what when it stops to wait, board_wait with done = true when the answer comes. Each stays at or below 3,000 characters. If you change a layer, assemble again in the same order (tests/kits/test_kits.py checks this).
 
 ## How to use
 

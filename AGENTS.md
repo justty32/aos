@@ -8,7 +8,7 @@ aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](
 
 **先知道 aos 體系，再讀本 repo 的規矩，兩邊都走 aos index**（使用者 11-13 晚：「寫進AGENT.md，跟他說要先知道aos體系(給他知識庫連結)，然後去讀一些規矩，並引導他看到common/user那塊，並且是走aos index這條，這算是引入了wf這套公共知識庫這樣。」）：
 
-1. **aos 體系**：讀知識庫入口 `$AOS_HOME/knowledge/aos/_description.json`（八個詞、五條規則）；其餘用 aos 工具 `index_view` 看 `$AOS_HOME/knowledge/aos`，一行一項「名 TAB 一句話」，要哪項再 `json_get`。
+1. **aos 體系**：讀知識庫入口 `$AOS_HOME/knowledge/aos/_description.md`（八個詞、五條規則）；其餘用 aos 工具 `index_view` 看 `$AOS_HOME/knowledge/aos`，一行一項「名 TAB 一句話」，要哪項再 `json_get`。
 2. **本 repo 的規矩**：把 `wf/` 當成一套公共知識庫，同樣用 `index_view` 往下走（`wf/…` 是 repo 根相對路徑；在樹裡的 `repo-aos`，aos 工具的相對路徑本來就從 repo 根算，知識庫那邊則寫絕對路徑）——`index_view wf/workflows` 看有哪些工作流與共用區；`common` 那格是使用者偏好與慣例所在（code map 11-13 搬到 `wf/knowledge/code-map.json`），`common/` 沒有自己的 index，直接讀 **`wf/workflows/common/user.md`**（這位使用者的偏好與確認邊界，每個 session 都要先讀）與 `common/conventions.md`（碰原始碼才讀）。沒有 `index_view` 的環境就照下面各條的連結讀。
 
 - 每個 session 先掃兩軸：信（樹內 `mailbox_peek`、樹外 `ls wf/inbox/*.md`；有信先讀，見 [inbox](wf/workflows/inbox.json)）→ [wf/progress.json](wf/progress.json)（open 進度；等使用者的條目 status 寫「等使用者」，有使用者專區的機器新題照舊寄專區 `aos-user send`；使用者 11-18 選項框「併進進度檔後退場 (Recommended)」，`WAIT_USER.md` 退場）。兩份都只列 open，空就跳過。
@@ -51,7 +51,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md → 各工作流入口 → 工
 事情告一段落、因應需求結束、或臨時中止時 → 把**還沒完成**的活狀態記到進度；需要**使用者親自做／驗證**的（實機環境、外部工具實跑、需權限／本機環境）→ 也記到進度、status 寫「等使用者」。都**只列 open**，完成即移除、不留已完成清單。
 
 - **進度**（我自己的 open in-flight）→ [wf/progress.json](wf/progress.json)
-- **等使用者**（等使用者親自做／驗證）→ 記在進度檔、status 寫「等使用者」；有使用者專區的機器，新題照舊寄專區（`aos-user send`／`user_send`，知識庫 `aos/user_zone.json`）
+- **等使用者**（等使用者親自做／驗證）→ 記在進度檔、status 寫「等使用者」；有使用者專區的機器，新題照舊寄專區（`aos-user send`／`user_send`，知識庫 `aos/user_zone.md`）
 - **日誌**：`wf/session_logs/` 11-17 起停寫、整夾凍結；哪天做了什麼看 `proto8/thinking/<月>/<日>/README.md` 的日索引（使用者 11-17 待裁網頁 wf-5i a）
 - **信件**（agent 之間的訊息交換，像 email；同一棵 aos 樹裡走 aos 信箱；樹外專案的信放進 [`wf/inbox/`](wf/inbox/)）→ 使用方式見 [wf/workflows/inbox.json](wf/workflows/inbox.json)
 

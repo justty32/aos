@@ -1,4 +1,4 @@
-{"description": "Move or rename a file or folder (also restores from .trash/); to is the full new path and must not exist (trash it first to replace it). More: aos/tools/move.json.",
+{"description": "Move or rename a file or folder (also restores from .trash/); to is the full new path and must not exist (trash it first to replace it). More: aos/tools/move.md.",
  "parameters": {"type": "object",
                 "properties": {"from": {"type": "string", "description": "current path"},
                                "to": {"type": "string", "description": "full new path"}},

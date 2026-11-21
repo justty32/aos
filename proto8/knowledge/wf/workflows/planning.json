@@ -28,7 +28,7 @@
   {
    "stage": "詳規",
    "question": "怎麼做？",
-   "where": "開發：先 spec（方案）再 plan（動工前詳規），各一檔放工作區的 `wf/knowledge/specs/`、`wf/knowledge/plans/`（記錄進 knowledge、第一份出現時才建資料夾，見 `wf/layers.json#/skills_vs_memory`）。非開發：本庫沒有對應的工作流，需要就自建。"
+   "where": "開發：先 spec（方案）再 plan（動工前詳規），各一檔放工作區的 `wf/knowledge/specs/`、`wf/knowledge/plans/`（記錄進 knowledge、第一份出現時才建資料夾，見 `wf/layers.md#/skills 與 memory 分家`）。非開發：本庫沒有對應的工作流，需要就自建。"
   },
   {
    "stage": "執行",
@@ -41,7 +41,7 @@
   "工作區還沒有 `wf/knowledge/ideas.json` → 照 `wf/skeletons/ideas.json#/skeleton` 建。",
   "idea：在 `ideas` 加一筆（`idea` 想法、`summary` 一句話、`status` 狀態）。狀態只有三種：想想／會做→搬 roadmap／不做＋原因。",
   "roadmap：狀態變「會做」就搬進 `roadmap`，寫 `when`（何時／順序）與 `premise`（前提）。",
-  "詳規：開發先寫 spec 再寫 plan，spec 要有「方案／取捨」段、plan 要有「步驟／驗證」段（位置見本檔 `#/stages`）；動工完成後移各自的 `archive/`（封存規則見 `wf/tidying.json#/archive`）。",
+  "詳規：開發先寫 spec 再寫 plan，spec 要有「方案／取捨」段、plan 要有「步驟／驗證」段（位置見本檔 `#/stages`）；動工完成後移各自的 `archive/`（封存規則見 `wf/tidying.md#/archive 規則`）。",
   "執行：開發接 `wf/workflows/feature-dev.json`；非開發的本庫沒有對應的工作流，需要就自建。"
  ],
  "handoff": [

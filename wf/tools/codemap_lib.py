@@ -8,7 +8,7 @@ codemap 段）。一個 proto8 頂層夾一份 json（照實際夾名），頂�
 一句話怎麼認（使用者 11-05 裁「逐檔表改生成」，thinking 2026-11-05 arch-refactor 03 § 4）：
   C/C++ 第一行註解；腳本（含 _entry）跳過 shebang 後第一行註解或 docstring；Makefile 第一行註解；
   JSON 取 description／summary／$comment／title，再來是 `_description`（knowledge 的節點）或整份就是一段 md（字串或字串陣列：
-  knowledge 的 `_description.json`、aos/rules.json 這類）的第一個標題；`_entry` 形狀（argv）印成「入口：…」；knowledge 的 md 取第一個標題；
+  knowledge 的 `_description.json`、aos/rules.md 這類）的第一個標題；`_entry` 形狀（argv）印成「入口：…」；knowledge 的 md 取第一個標題；
   捷徑印「→ 目標」（看 git 記的 mode 120000，core.symlinks=false 的 Windows 複本也一樣）。
   開頭若是檔名（或夾名）接 ` - `／` — `／`：`，連檔名一起去掉；`【模組】` 去掉；取到第一個句號。
   工具夾（有 _entry 又有 _tooldef.json 或 _metainfo.json）三個契約檔併成一列 `名/`。

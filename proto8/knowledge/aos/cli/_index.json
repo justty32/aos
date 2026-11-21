@@ -1,89 +1,89 @@
 {
- "flags.json": {
+ "flags.md": {
   "description": "Where flags go for every aos-* command (anywhere after their level, or before the first argument), help levels and short names."
  },
- "errors.json": {
+ "errors.md": {
   "description": "Read the program name, error code and reason before choosing whether to retry."
  },
- "safety.json": {
+ "safety.md": {
   "description": "Check the chosen daemon, agent and stack before destructive commands; scripts do not get a confirmation prompt."
  },
- "agent.json": {
+ "agent.md": {
   "description": "Use aos-agent ctl to attach (add), list, inspect, stop, sleep, pause, find and remove agents."
  },
- "talk_settings.json": {
+ "talk_settings.md": {
   "description": "Use aos-agent say, listen, ask, chat, open, close, watch, tools, llm and system to talk to one agent and change its overlays without modifying its definition."
  },
- "history.json": {
+ "history.md": {
   "description": "Use aos-agent history to list, delete, summarize or replace messages in one agent's conversation."
  },
- "hook.json": {
+ "hook.md": {
   "description": "Use aos-agent hook to list, add or remove the hooks of one agent (including on_clock timers)."
  },
- "offer_hooks.json": {
+ "offer_hooks.md": {
   "description": "Use aos-hook to let others hook into a program you write (C++, shell...): a hooks.json declaration (only for reading) plus aos-hook fire at that moment; what an exit code or stdout means is up to your program."
  },
- "goal.json": {
+ "goal.md": {
   "description": "Use aos-agent goal to give one agent a goal it is reminded of when it stops by itself; get, set, done, pause, resume, clear."
  },
- "mailbox.json": {
+ "mailbox.md": {
   "description": "Use aos-mailbox to see your mailbox folder, peek, read and send mailbox letters from a shell."
  },
- "daemon.json": {
+ "daemon.md": {
   "description": "Use aos-daemon-ctl for any proc on one daemon (add, stop, sleep, pause, ls, ping, shutdown, prune, sweep); it bypasses the kernel."
  },
- "tools.json": {
+ "tools.md": {
   "description": "Use aos-tools to edit a registry and call a registered tool with JSON on stdin."
  },
- "tool_env.json": {
+ "tool_env.md": {
   "description": "Save hub locations at registration time so each tool call uses the intended services."
  },
- "tool_flags.json": {
+ "tool_flags.md": {
   "description": "Lib tools accept schema-derived flags as another way to supply their JSON input keys."
  },
- "grow.json": {
+ "grow.md": {
   "description": "Use aos-grow to move a function one level up (inline to file to folder) or down; preview with --dry-run."
  },
- "eca.json": {
+ "eca.md": {
   "description": "aos-eca-turn answers one turn of an external coding agent (claude, codex); aos-eca-screen opens, closes or watches its screen; guarding the CLI's own tools (Bash ...) with the CLI's own hooks."
  },
- "clock.json": {
+ "clock.md": {
   "description": "aos-clock moves a clock file one cycle forward; aos-clock-register adds letters the clock sends every N cycles, once, or at wall-clock times."
  },
- "mcp.json": {
+ "mcp.md": {
   "description": "Use aos-mcp to serve the tools of an aos-tools registry to an external agent (Claude Code, codex) over MCP stdio."
  },
- "mcp_import.json": {
+ "mcp_import.md": {
   "description": "Use aos-mcp-import to freeze the tools of an external MCP server into its server file, stack it in tools.json, and refresh it with sync; what its error codes mean."
  },
- "sandbox.json": {
+ "sandbox.md": {
   "description": "Use aos-sandbox to run a program in a sandbox: which paths it sees, network, limits, user."
  },
- "sweeper.json": {
+ "sweeper.md": {
   "description": "aos-sweeper runs one cleanup round for a daemon: archive big stderr files, expire archives, stop orphaned loops."
  },
- "feedback.json": {
+ "feedback.md": {
   "description": "Use aos-feedback to record what was hard about a command or tool and to score how comfortable it is for AIs."
  },
- "gdb.json": {
+ "gdb.md": {
   "description": "Use aos-gdb / the aos.py Python library to drive one agent (a.X.Y(...) = aos-agent X Y ...), stop it when a condition holds (a.bp.add.before_tool(...), a watcher proc...), read why, look at its stack (a.look), resume."
  },
  "parts": {
   "description": "Low-level programs the other commands are built from: aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-lock, aos-json, aos-directive, aos-llm, and the llm kernel (the tool folder lib/aos/kernel_llm)."
  },
- "json_view.json": {
+ "json_view.md": {
   "description": "aos-json-view prints a JSON file, or one part of it, in a compact layout for a person to read; read only, the output is not JSON."
  },
- "share.json": {
+ "share.md": {
   "description": "Use aos-share to set ACLs on a shared folder or a file for a group or user id (team, read, key, work, drop, stack); preview with --dry-run."
  },
- "sandbox.json#/config": {
-  "description": "Pointer. aos-asuser: runs a program as one of your sub-ids without root; aos-sandbox uses it for `user: sub:N`. No page of its own: the `user` key in aos/cli/sandbox.json#/config, then `aos-asuser --help`."
+ "sandbox.md#/Config keys": {
+  "description": "Pointer. aos-asuser: runs a program as one of your sub-ids without root; aos-sandbox uses it for `user: sub:N`. No page of its own: the `user` key in `aos/cli/sandbox.md#/Config keys`, then `aos-asuser --help`."
  },
- "eca.json#/external_mcp": {
-  "description": "Pointer. aos-mcp-launch SERVER_FILE: starts one external stdio MCP server with its env_file read into the server process only; the eca CLI runs it for you. No page of its own: aos/cli/eca.json#/external_mcp."
+ "eca.md#/External MCP servers (claude and codex)": {
+  "description": "Pointer. aos-mcp-launch SERVER_FILE: starts one external stdio MCP server with its env_file read into the server process only; the eca CLI runs it for you. No page of its own: `aos/cli/eca.md#/External MCP servers (claude and codex)`."
  },
- "_description.json": {
+ "_description.md": {
   "description": "Commands for humans and external agents: prefer registered tools inside aos, how the daemon and the agent are chosen, and which page to read first."
  }
 }

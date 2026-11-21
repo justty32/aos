@@ -1,6 +1,6 @@
 # wf/public/gate與鎖 — 帶 kernel_gate 的樹怎麼少撞逾時，自己有死活的獨佔資源怎麼上鎖
 
-← [wf/public](README.md)｜gate 本身怎麼用見知識庫 `aos/kernel.json#/gate`
+← [wf/public](README.md)｜gate 本身怎麼用見知識庫 `aos/kernel.md#/Being a kernel yourself: kernel_gate`
 
 ## 帶 gate 的樹：主導把每一輪做短，下屬逾時等十幾秒再重試
 

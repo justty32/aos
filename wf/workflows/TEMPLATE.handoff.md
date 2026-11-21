@@ -56,6 +56,6 @@
 - 結束時必發終局 STATUS 之一：`DONE` / `BLOCKED` / `NEEDS-USER` / `FAILED`（`BLOCKED` 與 `FAILED` 怎麼分，見上面「失敗怎麼收」）。
 - **真的卡住（等不到別人、缺權限、要人決定）就先發 `BLOCKED`**（需使用者決定用 `NEEDS-USER`），不可無聲等待；做得久不算卡住，不設時限（11-15 使用者：「AI一輪跑個二三十分鐘都很正常……逾時這東西應該要默認爲0」）。
 - 標題要是自足的一句結論，不可只寫「完成」「報告」。正文照四段格式。把隊員的信往上轉時照[三條規矩](dispatch/aos-teams/07-預設流程與agent-fsm.md)：標題寫你的判斷、標明你要什麼、正文先列已排除的可能。
-- 完整契約：[inbox.json](inbox.json)（樹內的規則在 aos 知識庫 `aos/mailbox.json`）。
+- 完整契約：[inbox.json](inbox.json)（樹內的規則在 aos 知識庫 `aos/mailbox.md`）。
 
 > 送出前對照一次「背景與唯一目標」和「工作」有沒有互相矛盾——衝突處要寫死哪個為準。

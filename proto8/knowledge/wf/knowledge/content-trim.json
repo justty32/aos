@@ -32,7 +32,7 @@
  "not_applies": [
   "不適用（本來就是紀錄，價值在時間順序）：",
   "",
-  "- 日誌與報告：`session_logs/` 的每日檔（月結時收成月摘要，見 `wf/layers.json#/logs`，判準與原文檢查用本節點）、交接檔、整理／派線的 `reports/`、`done/`、`superseded/`、`inbox/` 的信。",
+  "- 日誌與報告：`session_logs/` 的每日檔（月結時收成月摘要，見 `wf/layers.md#/日誌寫法`，判準與原文檢查用本節點）、交接檔、整理／派線的 `reports/`、`done/`、`superseded/`、`inbox/` 的信。",
   "- `archive/`：凍結，不改。",
   "- `wf/progress.json`：本來就只列 open、完成即刪，不另精簡。"
  ]

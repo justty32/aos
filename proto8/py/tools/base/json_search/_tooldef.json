@@ -1,5 +1,5 @@
 {
- "description": "Find a key and/or exact value below FILE#/POINTER (up: true = in the levels above); contains = substring; no regular expressions; 1 is not \"1\". One FILE#/POINTER per hit. Also reads markdown (read only): FILE.md#/Heading is a section, #/Heading/_ its own text, #/Heading/0 a list item or table row, a list item key: value by its key, a section holding only a json block as JSON. More: aos/tools/json_search.json.",
+ "description": "Find a key and/or exact value below FILE#/POINTER (up: true = in the levels above); contains = substring; no regular expressions; 1 is not \"1\". One FILE#/POINTER per hit. Also reads markdown (read only): FILE.md#/Heading is a section, #/Heading/_ its own text, #/Heading/0 a list item or table row, a list item key: value by its key, a section holding only a json block as JSON. More: aos/tools/json_search.md.",
  "parameters": {
   "type": "object",
   "properties": {

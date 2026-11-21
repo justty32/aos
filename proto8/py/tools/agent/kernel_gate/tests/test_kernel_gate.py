@@ -234,7 +234,7 @@ class KernelGateTest(unittest.TestCase):
                 self.assertEqual(result.stdout, expected)
 
     def test_09_by_hand_without_the_tool(self):
-        # 知識庫 aos/kernel.json#/write_your_own 第 3 種：只用 self_hook 掛一支 run、手寫 kernel.json、interfaces.json＋kernel_hookeds.json 與一支 hook、表態＝寫一個檔。
+        # 知識庫 `aos/kernel.md#/Writing your own kernel` 第 3 種：只用 self_hook 掛一支 run、手寫 kernel.json、interfaces.json＋kernel_hookeds.json 與一支 hook、表態＝寫一個檔。
         gate = self.root / "ws" / "gate"
         gate.mkdir()
         (gate / "kernel.json").write_text("{}")

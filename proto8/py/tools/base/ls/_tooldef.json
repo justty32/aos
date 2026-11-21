@@ -1,4 +1,4 @@
-{"description": "List a folder: NAME TAB TYPE per line, folders first; long adds size, mtime and info, json gives JSON. A last line \"... next_offset N\" means more. More: aos/tools/ls.json.",
+{"description": "List a folder: NAME TAB TYPE per line, folders first; long adds size, mtime and info, json gives JSON. A last line \"... next_offset N\" means more. More: aos/tools/ls.md.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "default": ".", "description": "relative to your workspace, or absolute"},
                                "offset": {"type": "integer", "default": 0, "description": "first one to show (paging)"},

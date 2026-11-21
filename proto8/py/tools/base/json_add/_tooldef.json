@@ -1,5 +1,5 @@
 {
- "description": "Add a new key or array item at FILE#/POINTER (/2 inserts before item 2, /- appends); never overwrites (KeyExists: use json_set). More: aos/tools/json_add.json.",
+ "description": "Add a new key or array item at FILE#/POINTER (/2 inserts before item 2, /- appends); never overwrites (KeyExists: use json_set). More: aos/tools/json_add.md.",
  "parameters": {
   "type": "object",
   "properties": {

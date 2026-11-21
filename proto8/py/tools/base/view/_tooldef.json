@@ -1,4 +1,4 @@
-{"description": "Look into a file step by step (JSON). JSON file: one level at pointer, big values shown as type and size. Text file: big ones as an outline first, then start/end for a range. More: aos/tools/view.json.",
+{"description": "Look into a file step by step (JSON). JSON file: one level at pointer, big values shown as type and size. Text file: big ones as an outline first, then start/end for a range. More: aos/tools/view.md.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "relative to your workspace, or absolute"},
                                "pointer": {"type": "string", "description": "JSON pointer, e.g. /states/think (JSON files)"},

@@ -1,0 +1,5 @@
+# Low-level parts
+
+The programs the other commands are built from. You seldom type them: aos-agent, aos-daemon-ctl and the templates call them. Use them by hand to try a function, read or edit aos JSON, or look into a mailbox.
+
+Each has `--help` (with subcommands: `aos-post send --help`). Flags may go before or after the arguments, but after the subcommand (`aos-post send BOX --x`, not `aos-post --x send`); `aos-json set`, `add`, `append` and `merge` want them before FILE. Exit 10 means "nothing there" (no letter, no lock, no reply yet), not an error. Errors and retries: `aos/cli/errors.md`.

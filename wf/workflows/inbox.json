@@ -2,15 +2,15 @@
  "_description": [
   "# inbox：跟別的 agent 收發信（本 repo 的版本；使用者說「看看信箱」「寄信給 X」「回 arcagi 的信」「回報做完了」時讀）",
   "",
-  "兩條路：**同一棵 aos 樹裡**的 agent 一律走 aos 信箱（`base` 指的 aos 知識庫節點 `aos/mailbox.json`，活樹那份在 `~/aos-home/knowledge/aos/mailbox.json`）；**樹外專案**（現在只有 `~/repo/arcagi`）的信照舊落進本 repo 的 `wf/inbox/`，回信手寫 md 放進對方的 `reply-to` 夾。`local` 寫本 repo 的落點與做法；跟 base 衝突時以 `local` 為準。",
+  "兩條路：**同一棵 aos 樹裡**的 agent 一律走 aos 信箱（`base` 指的 aos 知識庫節點 `aos/mailbox.md`，活樹那份在 `~/aos-home/knowledge/aos/mailbox.md`）；**樹外專案**（現在只有 `~/repo/arcagi`）的信照舊落進本 repo 的 `wf/inbox/`，回信手寫 md 放進對方的 `reply-to` 夾。`local` 寫本 repo 的落點與做法；跟 base 衝突時以 `local` 為準。",
   "",
   "11-13 起 `wf/tools/inbox_*.sh` 等收發腳本已刪（使用者：「10.inbox腳本刪掉，走aos這條路就不用這個了。」「2.刪掉」），舊的五通道（mail／teams／orders／topics）、醒鐘策略、ROSTER 身份簿一起退場。"
  ],
- "base": "proto8/knowledge/aos/mailbox.json",
+ "base": "proto8/knowledge/aos/mailbox.md",
  "local": {
   "user_says": "使用者說「看看信箱」＝兩邊都看：樹內呼叫 `mailbox_peek`（有信就 `mailbox_read` 讀、照 base 的 `rules` 辦）；樹外 `ls wf/inbox/*.md`，頂層每一封辦掉、`mv` 進 `wf/inbox/done/`。",
   "in_tree": [
-   "同一棵 aos 樹裡的 agent（`repo-aos`、`eca_main`…）互相找：`mailbox_peek` 看有什麼、`mailbox_read` 讀、`mailbox_send` 寄或回；用法、STATUS、何時一定要回都照 base（`aos/mailbox.json` 的 `tools`、`rules`）。",
+   "同一棵 aos 樹裡的 agent（`repo-aos`、`eca_main`…）互相找：`mailbox_peek` 看有什麼、`mailbox_read` 讀、`mailbox_send` 寄或回；用法、STATUS、何時一定要回都照 base（`aos/mailbox.md` 的 `tools`、`rules`）。",
    "別台 daemon 的 agent：`mailbox_send` 多帶 `daemon`；回信用來信的 `reply_to`（細節同樣在 base `tools`）。",
    "同機同帳號、不在樹裡但看得到對方的 session：直接 a2a（`SendMessage`），見 `wf/workflows/dispatch/aos-teams/05-同機session與Argon.md`。"
   ],
