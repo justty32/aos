@@ -14,7 +14,7 @@ Python 寫的提供者不用起這支：直接叫引擎 `aos.hook_run.fire(event
 
 ## 提供一個點＝在那個時機起一次 `aos-hook fire`
 
-掛 hook 的人寫一份被勾清單（`{hook 名: 格 或 null}`，跟 agent 的 `hookeds.json` 同一種格）；想讓人知道你會發哪些點、handler 收到什麼，另寫一份宣告 `hooks.json`（硬性只要每個點的 `input`，見知識庫 `aos/cli/hook_points`），程式不讀它。
+掛 hook 的人寫一份被勾清單（`{hook 名: 格 或 null}`，跟 agent 的 `hookeds.json` 同一種格）；想讓人知道你會發哪些點、handler 收到什麼，另寫一份宣告 `hooks.json`（硬性只要每個點的 `input`，見知識庫 `aos/cli/offer_hooks`），程式不讀它。
 
 ```json
 {"description": "What is hooked on before_save.",

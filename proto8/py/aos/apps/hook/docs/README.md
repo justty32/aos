@@ -33,5 +33,5 @@ hook 總文件的入口：aos 的 hook 到底怎麼一回事，給人和 agent �
 - `aos-hook` 指令本身（旗標、輸出、結束碼、實跑例子）：[../README.md](../README.md)。
 - agent 這邊的完整說明（每個事件的欄位、時鐘 on_clock、eca 的差別、指令）：[apps/agent/docs/06-hook](../../agent/docs/06-hook.md)。
 - kernel 三點的細節（判決、代回、預算拒絕）：[tools/aos/kernel/README「hooks」](../../../../tools/aos/kernel/README.md#hooks)。
-- 給 agent 看的知識庫：`aos/me/self_hook.json`（自己掛）、`aos/cli/hook.json`（`aos-agent hook`）、`aos/cli/hook_points.json`（自己的程式提供 hook 點）。
+- 給 agent 看的知識庫：`aos/me/self_hook.json`（自己掛）、`aos/cli/hook.json`（`aos-agent hook`）、`aos/cli/offer_hooks.json`（自己的程式提供 hook 點）。
 - 施工紀錄與替使用者做的選擇：[hook-新格式施工-1121](../../../../../thinking/2026-11/21/hook-新格式施工-1121/README.md)。
