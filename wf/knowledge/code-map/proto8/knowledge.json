@@ -172,7 +172,7 @@
     "refactor.md": "when",
     "testing.md": "when",
     "tidy": {
-     "_description.md": "",
+     "_description.md": "tidy 工作流的子檔（大段拆進同名資料夾、原位放 `$ref`）：`principles.json` 六條原則、`content-trim.json` 內容精簡的做法。",
      "content-trim.md": "steps",
      "principles.md": "principles"
     },

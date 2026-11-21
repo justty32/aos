@@ -60,7 +60,7 @@
    "cli.json": "設定（鍵：kind、flags、timeout_ms）",
    "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
    "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
-   "llm.json": "",
+   "llm.json": "設定（空的 {}：全用預設）",
    "loop.json": "Schedule the pi agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks …",
    "screen": {
     "_entry": "入口：`aos-eca-screen --eca ..`",
@@ -200,7 +200,7 @@
     ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
     "_entry": "入口：`aos-loop loop.json`",
     "interfaces.json": "What this kernel offers: its hook points (hooks), what is hooked on it (hookeds).",
-    "kernel.json": "",
+    "kernel.json": "設定（空的 {}：全用預設）",
     "kernel_hookeds.json": "What is hooked on this kernel (none yet): entries {\"NAME\": {\"event\", \"handler\", \"timeout_ms\"?, \"condition\"? (after_verdict: verdict)}} for before_ver…",
     "kernel_hooks.json": "Hook points every kernel station fires (the kernel and kernel_llm programs): before_verdict, after_verdict, before_reply. The canonical copy is in th…",
     "loop.json": "Run the kernel once every 300 ms over kernel.json. on_start / on_stop fire the aos-loop points after_start / after_stop through aos-hook with the hoo…"

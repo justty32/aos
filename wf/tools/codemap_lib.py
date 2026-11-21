@@ -110,6 +110,7 @@ def json_desc(text, entry=False):
             return "入口 `" + argv_text(d["_entry"]) + "`；鍵：" + "、".join(k for k in d if k != "_entry")
         if d:
             return "設定（鍵：" + "、".join(list(d)[:6]) + ("…" if len(d) > 6 else "") + "）"
+        return "設定（空的 {}：全用預設）"               # 內容就是 {} 的設定檔（程式會讀，不能往裡面加說明鍵）
     return ""
 
 
@@ -122,7 +123,7 @@ def text_desc(text, path):
         for ln in lines:
             if ln.startswith("#"):
                 return ln.lstrip("#").strip()
-        return ""
+        return next((ln.strip() for ln in lines if ln.strip()), "")     # 沒有標題的 md（知識庫的一句話頁）：取第一行有字的
     for i, ln in enumerate(lines):
         s = ln.strip()
         if i == 0 and s.startswith("#!"):
