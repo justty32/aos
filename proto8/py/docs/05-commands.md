@@ -9,7 +9,7 @@
 | [aos-agent](../aos/apps/agent/README.md) | 給人用的 agent 介面：add、say／listen／chat、畫面、tools 覆蓋層、搬家範本 |
 | [aos-daemon-ctl](../aos/apps/daemon_ctl/README.md) | 掛上 proc、起停、暫停；prune 自檢與清理舊列；poke 叫 daemon 立刻看檔 |
 | [aos-feedback](../aos/apps/feedback/README.md) | 收集指令／函數意見；從 AI 評分與工具帳計算舒適度 |
-| [aos-gdb](../aos/apps/gdb/README.md) | 開一個放好入口 `aos.py`（`agent`、`daemon_ctl`、`std`、`defs`）的 Python REPL，給了名字再放 `a = agent.attach(名)`：`a.xxx`＝`aos-agent xxx`（通用代理，一個呼叫＝一條指令）、`a.look` 讀 stack 的檔；斷點全在 `a.bp`（`a.bp.add.<種類>(…)` 回 id，以 id 增刪改查、看為什麼停；控制 `resume`／`step`／`pause` 不收參數、都等到停下才回；觸發器＝hook，工具要跑之前扣住、其他事件那一格做完暫停；觀察者＝另一支 proc 輪詢、成立就 ctl pause；都留字條，本體 `aos.gdb`） |
+| [aos-gdb](../aos/apps/gdb/README.md) | 開一個放好入口 `aos.py`（`agent`、`daemon_ctl`、`std`、`defs`）的 Python REPL，給了名字再放 `a = agent.attach(名)`：`a.xxx`＝`aos-agent xxx`（通用代理，一個呼叫＝一條指令）、`a.look` 讀 stack 的檔；斷點全在 `a.bp`（`a.bp.add.<種類>(…)` 回 id，以 id 增刪改查、看為什麼停；控制 `resume`／`step`／`pause` 不收參數、都等到停下才回；觸發器＝hook，工具要跑之前扣住、其他事件那一格做完暫停；觀察者＝另一支 proc 輪詢、成立就 ctl pause；都留字條，本體 `aos.gdb`）；`--hooks FILE`／`--def-hooks` 載入 hook 宣告當參考（REPL 裡 `hooks` 列點與欄位、宣告的點也能下、對不上只提醒、`a.bp.event()` 照宣告排，本體 `aos.gdb.decl`） |
 | [aos-tools](../aos/apps/tools/README.md) | 一個 agent 資料夾一份工具註冊檔（tools.json） |
 | [aos-clock](../aos/apps/clock/README.md) | 把時鐘檔的回合數往前走一格 |
 | [aos-clock-register](../aos/apps/clock_register/README.md) | 時鐘登記表（add／rm／ls）：每 N 個 cycle 往一個 aos-post 箱子寄一句（定時叫醒 agent） |

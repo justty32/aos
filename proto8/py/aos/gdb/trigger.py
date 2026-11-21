@@ -12,7 +12,9 @@ trigger.json 判條件，成立時照事件分兩種停法（how）：
     <agent stack>/hookeds/<hook 名>/trigger.json   設定（REPL 寫、handler 讀）：
         {"kind": "always" | "tool_error" | "sh" | "py", "event": 事件, "how": "hold" | "pause"（由事件定）, "tools": [工具名] 或 null,
          "times": N, "once": bool, "agent": 表上的名字, "daemon": daemon stack 的絕對路徑或 null, "sh": 字串,
+         "field": tools 比事件的哪個欄位（沒有＝"name"；aos-gdb 載入的 hook 宣告給了別的 condition 才寫，線 top-1121-gdbdecl）,
          "py": {"code": base64 marshal, "defaults": [..], "source": 字串或 null, "python": "3.12"} 或 {"expr": 字串}, "about": 一句英文}
+    <agent stack>/hookeds/<hook 名>/hit.json     最近一次成立的那個事件（整份，handler 成立時寫；a.bp.event() 讀）。
     <agent stack>/hookeds/<hook 名>/count.json   handler 記的數：{"seen", "streak", "fired", "last_error", "pending"}；
                                                  pending＝正在扣住、還沒放行的那一次（工具呼叫 id 或信名）：扣住時 agent 被重起（sleep、
                                                  daemon 重起）＝那次沒跑，重跑同一個 id 時直接再扣住（不再判條件、不算新的一次、once 也照扣）。
@@ -26,7 +28,7 @@ trigger.json 判條件，成立時照事件分兩種停法（how）：
 條件：always＝事件來了就算；tool_error＝after_tool 的 code 不是 0 或逾時（看 agent-fsm 交給 hook 的 code／timed_out，不猜內容）；
     sh＝`sh -c 字串`、事件 JSON 在 stdin、stdout 丟掉，退 0＝算、退 10＝不算、其他＝條件壞了；
     py＝函式 f(event)（REPL 的 def／lambda，marshal 帶過去）或運算式字串（變數 ev），回真值＝算；看得到 json、re、os 與內建。
-tools：有給就只算這些工具的事件；其他工具的事件＝條件不成立（連續次數歸零：「連續 N 次」是連著的 N 個同類事件，Argon A6）。
+tools：有給就只算這些工具的事件（比事件的 field 欄，預設 name）；其他工具的事件＝條件不成立（連續次數歸零：「連續 N 次」是連著的 N 個同類事件，Argon A6）。
 不印東西、不 sys.exit；錯丟 Bad（設定不對）。"""
 import base64
 import datetime
@@ -43,6 +45,7 @@ KINDS = ("always", "tool_error", "sh", "py")
 HOLD_EVENTS = ("before_tool", "before_queue")   # 事件還沒發生、hook 同步跑：扣住（hold）
 SPEC = "trigger.json"
 COUNT = "count.json"
+HIT = "hit.json"                                 # 最近一次成立的事件（a.bp.event() 讀）
 LOG_DIR = "gdb"
 LOG = "log.jsonl"
 HOLD = "hold.json"
@@ -174,6 +177,8 @@ def validate(spec):
     tools = spec.get("tools")
     if tools is not None and not (isinstance(tools, list) and tools and all(isinstance(t, str) and t for t in tools)):
         raise Bad("tools must be null or a non-empty list of tool names")
+    if "field" in spec and not (isinstance(spec["field"], str) and spec["field"]):
+        raise Bad("field must be the name of the event field tools are matched against")
     if not (isinstance(spec.get("agent"), str) and spec["agent"]):
         raise Bad("agent must be the agent's name on the daemon table")
     if spec["kind"] == "sh" and not (isinstance(spec.get("sh"), str) and spec["sh"].strip()):
@@ -203,7 +208,7 @@ def run_sh(command, stdin_text, cwd=None, env=None):
 def check(spec, event):
     """條件對這次事件成不成立 → True／False；條件自己壞了丟 Bad（句子說為什麼）。"""
     tools = spec.get("tools")
-    if tools is not None and event.get("name") not in tools:
+    if tools is not None and event.get(spec.get("field") or "name") not in tools:
         return False
     kind = spec["kind"]
     if kind == "always":
@@ -237,9 +242,12 @@ def step(spec, count, event):
     return count, True, None
 
 
-def brief(event, limit=300):
-    """字條裡放的事件摘要：工具名、參數、退出碼、信或工具結果的開頭。"""
+def brief(event, limit=300, field=None):
+    """字條裡放的事件摘要：工具名、參數、退出碼、信或工具結果的開頭；field＝觸發器比主詞的欄位（宣告給的，不是 name 時）也放。"""
     out = {k: event[k] for k in ("name", "id", "code", "timed_out", "letter", "reason") if k in event}
+    if field and field in event and field not in out:
+        text = json.dumps(event[field], ensure_ascii=False)
+        out[field] = event[field] if len(text) <= limit else text[:limit] + "..."
     if "arguments" in event:
         text = json.dumps(event["arguments"], ensure_ascii=False)
         out["arguments"] = event["arguments"] if len(text) <= limit else text[:limit] + "..."

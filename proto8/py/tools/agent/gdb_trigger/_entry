@@ -9,7 +9,7 @@
 #   「放行但那次工具不跑」使用者 11-19 說「不該有這個方法」（線 aosgdb-verbs-1119 拿掉）：這支只退 0、什麼都不印。
 #   掛的時候 timeout_ms 0（不限時）。被 TERM（agent 被 sleep、daemon 收工、rm）或 act 那一格死了（父行程換人）
 #   ＝不放行、留一張 hold_ended，count.json 的 pending 留著：重跑同一個工具呼叫 id 時直接再扣住（工具始終沒跑）。
-# pause：先記數、再發停、再留字條（帶 ctl.json 的 seq）。
+# pause：先記數、再發停、再留字條（帶 ctl.json 的 seq）。兩種成立時都先把整份事件寫進小格的 hit.json（a.bp.event() 讀；寫不了只 warning）。
 # 條件自己壞了（sh 退 0／10 以外、py 函式丟例外）＝不算、stderr 一行 warning、記進 count.json 的 last_error；
 #   這支自己壞了（讀不到設定、寫不了檔）＝stderr 一行 warning、退 0（11-21 線 top-1121-hooknew：hook 沒有 on_error 了，能攔的點與 loop 的點
 #   hook 一失敗 agent 就停，所以「斷點壞了也不擋 agent」改由這支自己保證）；只有命令列用錯（給了參數、沒有 AOS_STACK）才是錯誤行、退 1。
@@ -30,6 +30,7 @@ When it holds (times in a row):
     (or letter) goes on as it was.
     Stopped by a signal, or its parent step died = no release; the same call is held again when it comes back.
   how "pause" (other events): append the note, then run aos-agent -d DAEMON ctl pause --no-wait AGENT.
+Either way the whole event is saved first to $AOS_STACK/hit.json (a.bp.event() reads it).
 A broken condition counts as no hit and prints one warning line.
 A broken trigger (no trigger.json, a bad one, a file it cannot write) is one warning line and exit 0:
 a broken breakpoint never stops the agent.
@@ -74,7 +75,15 @@ def pause(spec):
 def note_of(spec, event, count, agent_stack, kind):
     return {"kind": kind, "at": trigger.now(), "by": "hook", "trigger": event.get("hook"), "event": event.get("event"),
             "how": spec["how"], "about": spec.get("about"), "times": spec.get("times", 1), "fired": count["fired"],
-            "ctl_seq": trigger.ctl_seq(agent_stack), "detail": trigger.brief(event)}
+            "ctl_seq": trigger.ctl_seq(agent_stack), "detail": trigger.brief(event, field=spec.get("field"))}
+
+
+def save_hit(cell, event):
+    """成立的那個事件整份寫進小格的 hit.json（a.bp.event() 讀）；寫不了只 warning，不影響停（線 top-1121-gdbdecl）。"""
+    try:
+        trigger.write_json(os.path.join(cell, trigger.HIT), event)
+    except (OSError, ValueError, TypeError) as e:
+        warn("trigger %s: cannot save the event to %s: %s" % (event.get("hook"), trigger.HIT, e))
 
 
 def ctl_mtime(agent_stack):
@@ -154,6 +163,7 @@ def main():
             trigger.write_json(count_path, count)
             if not hit:
                 return
+            save_hit(cell, event)
             # 先發停、再留字條（帶 pause 實際用的 ctl seq）：hook 是同步跑在格裡的，pause 要等這一格做完 loop 才套用，
             # 所以字條一定比「表上變 paused」早寫好（Argon A4；見 08-Argon審與採納）。
             result = pause(spec)
@@ -173,6 +183,7 @@ def main():
         return
     if parent == 1 or os.getppid() != parent:
         return                                   # 那一格已經不在了：不扣（扣了也沒人等）
+    save_hit(cell, event)
     # ---- 扣住：先接好訊號，再寫任何東西（Argon A4）----
     def cut(signum, frame):
         raise Cut(signal.Signals(signum).name)
@@ -192,7 +203,7 @@ def main():
             trigger.write_json(hold_path, {"token": token, "pid": os.getpid(), "at": trigger.now(), "trigger": event.get("hook"),
                                            "event": event.get("event"), "about": spec.get("about"), "key": key, "again": again,
                                            "ctl_seq": trigger.ctl_seq(agent_stack),
-                                           "detail": trigger.brief(event)})
+                                           "detail": trigger.brief(event, field=spec.get("field"))})
         except OSError as e:
             trigger_broken("WriteFailed", str(e))
         go, via = hold(event, agent_stack, token, parent, start_ns)
@@ -209,7 +220,8 @@ def main():
                 count["fired"] = max(0, count.get("fired", 1) - 1)   # 沒放行＝這次不算（once 沒用掉；同一次回來會再扣住）
             trigger.write_json(count_path, count)
             trigger.append_log(agent_stack, {"kind": "hold_ended", "at": trigger.now(), "by": "hook", "trigger": event.get("hook"),
-                                             "event": event.get("event"), "why": via, "token": token, "detail": trigger.brief(event),
+                                             "event": event.get("event"), "why": via, "token": token,
+                                             "detail": trigger.brief(event, field=spec.get("field")),
                                              "next": "not released: the %s did not go on; it is held again when the agent runs it again"
                                                      % ("tool" if event.get("event") == "before_tool" else "letter")})
         else:

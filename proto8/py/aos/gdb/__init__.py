@@ -46,7 +46,12 @@ id（使用者 11-20：「不能純數字，然後搭配id、屬性(hook點種�
     a.bp.ls(); a.bp.get(b); a.bp.set(b, enabled=False); a.bp.rm(b); a.bp.clear()
     a.bp.pause()        # 不靠斷點：現在停（等到真的停下才回）
 
-觸發器的檔、字條、扣住檔、條件怎麼判在 aos.gdb.trigger；hook handler 是 lib/tools/agent/gdb_trigger；觀察者在 aos.gdb.watcher 與 lib/tools/agent/gdb_watch。"""
+觸發器的檔、字條、扣住檔、條件怎麼判在 aos.gdb.trigger；hook handler 是 lib/tools/agent/gdb_trigger；觀察者在 aos.gdb.watcher 與 lib/tools/agent/gdb_watch。
+
+hook 宣告當參考（使用者 11-21「4.要做，我覺得可以在gdb啓動時給他選項，跟他說可以參考這份宣告，然後再去做一些事情。」；線 top-1121-gdbdecl，
+紀錄 thinking/2026-11/21/gdb-參考宣告-1121.md）：aos-gdb --hooks FILE／--def-hooks 載入（本體 aos.gdb.decl，REPL 裡叫 hooks）之後，
+種類多了宣告裡有、預設沒有的點（kinds()）；主詞照宣告的 condition／subject（subject_of()）；a.bp.add 時點名或 py 條件讀的欄位不在宣告裡＝一行 warning、照下；
+a.bp.event() 照宣告的 input 排停下的那個事件。沒載入任何宣告＝跟以前一樣（種類 KINDS、主詞 SUBJECT）。"""
 import inspect
 import json
 import os
@@ -57,7 +62,7 @@ import sys
 import time
 
 from aos.agentlib import hooks as _hooks
-from aos.gdb import trigger, watcher as _watch
+from aos.gdb import decl, trigger, watcher as _watch
 from aos.gdb.handles import Breakpoint, Pending
 from aos.gdb.look import Look, Text, Why, bp_id, bp_name, run, Failed  # noqa: F401
 from aos.py._shell import Timeout, call, show
@@ -78,6 +83,21 @@ POLL_S = 0.05
 HOOKS_FIX = ("to fix it in an agent.py definition: give hooks={} to defs.Agent(...) in agent.py, "
              "and recompile (python3 agent.py --compile)")
 _SHARED = {}                                      # (daemon, 名字) → 那一隻的等的設定與自己送出的 pause（a.bp 每次取都是新的）
+
+
+def kinds():
+    """現在 a.bp.add 有的種類：預設的事件、載入的宣告多出來的點（aos.gdb.decl；沒載入＝沒有）、tool_error、watch。"""
+    return EVENTS + decl.extra_kinds(EVENTS) + (TOOL_ERROR, WATCH)
+
+
+def subject_of(kind):
+    """種類 → (主詞的參數名, 拿事件的哪個欄位比) 或 None（沒有主詞）。載入的宣告給了 condition 就照它，不然照預設（SUBJECT，欄位 name）。"""
+    if kind == WATCH:
+        return None                               # 觀察者看檔、不看事件：沒有主詞
+    got = decl.subject("after_tool" if kind == TOOL_ERROR else kind)
+    if got:
+        return got
+    return (SUBJECT[kind], "name") if kind in SUBJECT else None
 
 
 def _num(v):
@@ -150,28 +170,36 @@ class Add:
 
     def __init__(self, bp):
         self._bp = bp
-        for kind in KINDS:
+        self._kinds = kinds()                     # 建的那一刻的種類（a.bp 每次取都是新的，所以 hooks.load 之後的下一個 a.bp 就有新的）
+        for kind in self._kinds:
             setattr(self, kind, _maker(bp, kind))
 
     def __getattr__(self, name):
-        raise AttributeError("a.bp.add has no kind %s (kinds: %s)" % (name, ", ".join(KINDS)))
+        raise AttributeError("a.bp.add has no kind %s (kinds: %s)" % (name, ", ".join(self.__dict__.get("_kinds", KINDS))))
 
     def __dir__(self):
-        return list(KINDS)
+        return list(self._kinds)
 
     def __call__(self, *args, **kw):
-        raise Failed("a.bp.add", "say which kind, e.g. a.bp.add.before_tool(\"write\") (kinds: %s)" % ", ".join(KINDS), code="ArgumentsBad")
+        raise Failed("a.bp.add", "say which kind, e.g. a.bp.add.before_tool(\"write\") (kinds: %s)" % ", ".join(self._kinds), code="ArgumentsBad")
 
     def __repr__(self):
-        return "\n".join(["a.bp.add.<kind>(...) returns the new breakpoint (b.id is its number, b.kind its kind); kinds:"]
-                         + ["  %s%s" % (k, inspect.signature(getattr(self, k))) for k in KINDS])
+        def mark(k):
+            if not decl.current or k == WATCH:
+                return ""
+            return "" if ("after_tool" if k == TOOL_ERROR else k) in decl.current.points else "   (not declared)"
+        head = "a.bp.add.<kind>(...) returns the new breakpoint (b.id is its number, b.kind its kind); kinds:"
+        if decl.current:
+            head += " (hook declarations loaded: hooks lists them)"
+        return "\n".join([head] + ["  %s%s%s" % (k, inspect.signature(getattr(self, k)), mark(k)) for k in self._kinds])
 
 
 def _maker(bp, kind):
     """a.bp.add.<kind> 這一支：參數照種類（有主詞的才有位置參數；watch 多 every_ms、also）。"""
     P = inspect.Parameter
     params = []
-    subject = SUBJECT.get(kind)
+    sub = subject_of(kind)
+    subject = sub[0] if sub else None
     if subject:
         params.append(P(subject, P.POSITIONAL_OR_KEYWORD, default=None))
     params += [P("sh", P.KEYWORD_ONLY, default=None), P("py", P.KEYWORD_ONLY, default=None),
@@ -192,7 +220,9 @@ def _maker(bp, kind):
 
     add.__name__ = add.__qualname__ = kind
     add.__signature__ = sig
-    add.__doc__ = _KIND_DOC.get(kind, "觸發器：事件 %s 來了（那一格做完暫停）。" % kind) + _COMMON_DOC
+    said = (decl.current.get(kind) or {}).get("description") if kind not in _KIND_DOC else None
+    add.__doc__ = (_KIND_DOC.get(kind) or ("觸發器：事件 %s 來了（%s）。%s" % (
+        kind, "扣住" if trigger.how(kind) == "hold" else "那一格做完暫停", "宣告說：%s" % said if isinstance(said, str) else ""))) + _COMMON_DOC
     return add
 
 
@@ -252,8 +282,9 @@ class Breakpoints:
     # ---- 增（a.bp.add.<種類> 叫這一支）----
     def _add(self, on, tool=None, sh=None, py=None, times=1, once=False, name=None, replace=False, every_ms=500, also=()):
         a = self._a
-        if on not in KINDS:
-            raise Failed("bp.add", "kind must be one of %s" % ", ".join(KINDS))
+        ks = kinds()
+        if on not in ks:
+            raise Failed("bp.add", "kind must be one of %s" % ", ".join(ks))
         name = None if name is None else _norm(name)
         if isinstance(name, int) and name not in self._ids(watchers_on_daemon=True):
             raise Failed("bp.add", "there is no breakpoint %d to replace; numbers are given out in order and never used again "
@@ -270,13 +301,17 @@ class Breakpoints:
         error = on == TOOL_ERROR
         event = "after_tool" if error else on
         tools = [tool] if isinstance(tool, str) else (list(tool) if tool else None)
-        if tools and event not in NAMED:
-            raise Failed("bp.add", "tool= only works on %s (event %s has no tool name)" % (", ".join(NAMED + (TOOL_ERROR,)), event))
+        sub = subject_of(on)
+        if tools and not sub:
+            raise Failed("bp.add", "a first argument only works on %s (event %s has no name to match)"
+                         % (", ".join(k for k in ks if subject_of(k)), event))
         if sum(bool(x) for x in (sh, py is not None, error)) > 1:
             raise Failed("bp.add", "give one condition: sh or py (tool_error is a condition already)")
         spec = {"kind": "sh" if sh else "py" if py is not None else "tool_error" if error else "always",
                 "event": event, "how": trigger.how(event), "tools": tools, "times": times, "once": bool(once),
                 "agent": a.name, "daemon": a.daemon}
+        if sub and sub[1] != "name":
+            spec["field"] = sub[1]                # 宣告的 condition 不是 name：gdb_trigger 拿這個欄位比主詞
         if sh:
             spec["sh"] = sh
         if py is not None:
@@ -289,6 +324,9 @@ class Breakpoints:
             trigger.validate(spec)
         except trigger.Bad as e:
             raise Failed("bp", str(e)) from None
+        for line in decl.warnings(on, event, py=py):   # 宣告只是參考：對不上只提醒，照下
+            sys.stderr.write("a.bp.add.%s: warning: %s\n" % (on, line))
+            sys.stderr.flush()
         have = self._ids(watchers_on_daemon=True)
         short = name
         if short in have and not replace:
@@ -500,6 +538,20 @@ class Breakpoints:
         """gdb/log.jsonl 全部（字條與 resume 紀錄，舊的在前）。"""
         return trigger.read_log(self._a.stack)
 
+    def event(self):
+        """停在觸發器上時，它成立的那個事件（小格的 hit.json，gdb_trigger 成立時寫的整份事件），照載入的 hook 宣告排好：宣告的欄位照順序、
+        帶說明，沒宣告的另列（aos-gdb --hooks；沒載入＝照事件原本的順序）。不是停在觸發器上（沒停、觀察者、a.bp.pause()、step）＝一句說明。"""
+        w = self.why()
+        id = w.breakpoint
+        if id is None:
+            return Text("%s is not stopped at a breakpoint (a.bp.why() says where it is)\n" % self._a.name)
+        path = os.path.join(self._cell(id), trigger.HIT)
+        ev = trigger.read_json(path, None)
+        if not isinstance(ev, dict):
+            return Text("breakpoint %s has no saved event (a watcher has none; %s is not there)\n" % (id, path))
+        show("# read %s" % path)
+        return Text(decl.layout(ev, ev.get("event") or "?", " at breakpoint %s (%s)" % (id, _hook(id))) + "\n")
+
     # ---- 內部 ----
     def _cell(self, id):
         return os.path.join(self._a.stack, _hooks.CELLS, _hook(id))
@@ -569,7 +621,8 @@ class Breakpoints:
         limit = 0 if how == "hold" else 40000 if spec["kind"] in ("sh", "py") else 15000
         args = ["hook", "add", "--event", spec["event"], "--name", _hook(id), "--path-json", json.dumps(HANDLER),
                 "--timeout-ms", limit]
-        if tools and spec.get("times", 1) == 1:   # 只篩工具名、不數連續時才交給 hook 的 condition 省行程（Argon A6）
+        if tools and spec.get("times", 1) == 1 and spec["event"] in NAMED and spec.get("field", "name") == "name":
+            # 只篩工具名、不數連續時才交給 hook 的 condition 省行程（Argon A6）；只有 agent 一家自己的點會照 condition 篩
             for t in tools:
                 args += ["--condition", t]
         if replace:
@@ -804,14 +857,16 @@ class Breakpoints:
         if w.held:
             d = w.held.get("detail", {})
             return "stopped at breakpoint %s (%s: %s)" % (w.breakpoint, self._label(w.breakpoint, w.held),
-                                                          d.get("name") or d.get("letter") or w.held.get("event"))
+                                                          d.get(self._field(w.breakpoint)) or d.get("name") or d.get("letter")
+                                                          or w.held.get("event"))
         last = w.notes[-1] if w.notes else {}
         stage = self._stage() or "?"
         if w.breakpoint is not None:
             d = last.get("detail", {})
             return "stopped at breakpoint %s (%s: %s), before %s" % (
                 w.breakpoint, self._label(w.breakpoint, last),
-                d.get("name") or d.get("code") or d.get("letter") or d.get("target") or last.get("event"), stage)
+                d.get(self._field(w.breakpoint)) or d.get("name") or d.get("code") or d.get("letter") or d.get("target")
+                or last.get("event"), stage)
         if w.current and last.get("by") == "step":
             return "stopped after one step, before %s" % stage
         if w.current and last.get("by") == "pause":
@@ -824,6 +879,11 @@ class Breakpoints:
             return WATCH
         spec = trigger.read_json(os.path.join(self._cell(id), trigger.SPEC), None)
         return _kind_of(spec) if isinstance(spec, dict) else note.get("event")
+
+    def _field(self, id):
+        """觸發器比主詞用的欄位（宣告給的、不是 name 才記在 trigger.json 的 field）；沒有＝None。"""
+        spec = trigger.read_json(os.path.join(self._cell(id), trigger.SPEC), None)
+        return spec.get("field") if isinstance(spec, dict) else None
 
     def _result(self, outcome, head, w=None):
         """resume／step／pause 回的東西：why() 那份，outcome＝stopped／idle／gone／interrupted，第一行 head。"""
@@ -885,7 +945,8 @@ def _about(spec):
     who = " or ".join(spec["tools"]) if spec.get("tools") else None
     what = {"before_tool": "tool %s is about to run" % (who or "any"), "after_tool": "tool %s finished" % (who or "any"),
             "before_queue": "a letter is about to be taken in", "brain_failed": "the brain failed%s" % (" with %s" % who if who else ""),
-            "tool_added": "tool %s was added" % (who or "any")}.get(spec["event"], "event %s" % spec["event"])
+            "tool_added": "tool %s was added" % (who or "any")}.get(
+        spec["event"], "event %s%s" % (spec["event"], " with %s %s" % (spec.get("field") or "name", who) if who else ""))
     cond = {"always": "", "tool_error": " with an error (exit code not 0, or timed out)",
             "sh": " and sh `%s` exits 0" % spec.get("sh"),
             "py": " and the py condition is true"}[spec["kind"]]
