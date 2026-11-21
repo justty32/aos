@@ -19,8 +19,10 @@ LOOP = hook_point.read([str(PY / "aos" / "apps" / "hook" / "loop_hooks.json")])
 FSM = hook_point.read([str(ROOT / "templates" / "agent-fsm" / "hooks.json")])
 ECA = hook_point.read([str(PY / "aos" / "apps" / "eca" / "hooks.json"), str(PY / "aos" / "apps" / "mcp" / "hooks.json")])
 KERNEL = hook_point.read([str(KERNEL_DIR / "kernel_hooks.json")])
-ECA_ONLY = {"before_compact", "after_compact"}   # eca-claude's compact_hook fires them through aos-hook fire
+COMPACT = {"before_compact", "after_compact"}   # rules not in aos.agentlib.hooks: agent-fsm's compact.py (HOOK_POINTS) and eca-claude's compact_hook keep their own
+FSM_COMPACT = ROOT / "templates" / "agent-fsm" / "compact.py"
 AGENT = dict(ECA, **FSM)
+POINTS = list(AGENT.items()) + [(n, ECA[n]) for n in sorted(COMPACT)]   # hand copies: both bodies' compact fields
 COMMON = {"event", "hook", "stack"}             # every handler gets these
 
 
@@ -59,10 +61,15 @@ class Rules(unittest.TestCase):
                 self.assertEqual(set(p.get("output", {}).get("properties", {})), set(change), n)
 
     def test_agent_family(self):
-        self.assertEqual(set(hooks.POINTS), set(FSM))
-        self.assertEqual(set(hooks.POINTS) | ECA_ONLY, set(ECA))
+        self.assertEqual(set(hooks.POINTS) | COMPACT, set(FSM))
+        self.assertEqual(set(hooks.POINTS) | COMPACT, set(ECA))
         self.check(FSM, hooks.POINTS)
         self.check(ECA, hooks.POINTS)
+
+    def test_agent_fsm_compact(self):
+        rules = assigned(FSM_COMPACT, "HOOK_POINTS")
+        self.assertEqual(set(rules), COMPACT)
+        self.check(FSM, rules)
 
     def test_kernel(self):
         rules = kernel_module().POINTS
@@ -122,7 +129,7 @@ class Wiring(unittest.TestCase):
 
     def test_gdb(self):
         trigger = PY / "aos" / "gdb" / "trigger.py"
-        before = {n for n, p in AGENT.items() if p.get("phase") == "before" and n not in ECA_ONLY}
+        before = {n for n, p in AGENT.items() if p.get("phase") == "before" and n not in COMPACT}
         self.assertEqual(set(assigned(trigger, "HOLD_EVENTS")), before)
         for n in before:   # key_of: before_tool looks at id, the rest at letter
             self.assertEqual(AGENT[n].get("key"), "id" if n == "before_tool" else "letter", n)
@@ -149,7 +156,7 @@ def gaps():
     """Every hand copy that misses a point or a field: ["where: point", "where: point.field"]."""
     out = []
     doc = PY / "aos" / "apps" / "agent" / "docs" / "06-hook.md"
-    for n, p in AGENT.items():
+    for n, p in POINTS:
         text = rows(doc, n)
         out += ["06-hook.md: %s" % n] if not text else ["06-hook.md: %s.%s" % (n, f) for f in sorted(fields(p)) if "`%s`" % f not in text]
     readme = KERNEL_DIR / "README.md"
@@ -157,12 +164,12 @@ def gaps():
         text = rows(readme, n)
         out += ["kernel/README.md: %s" % n] if not text else ["kernel/README.md: %s.%s" % (n, f) for f in sorted(fields(p)) if "`%s`" % f not in text]
     desc = json.loads((PY / "tools" / "agent" / "self_hook" / "_tooldef.json").read_text(encoding="utf-8"))["description"]
-    for n, p in AGENT.items():
+    for n, p in POINTS:
         text = "\n".join(l for l in desc.splitlines() if l.startswith("- ") and re.search(r"\b%s\b" % n, l))
         out += ["self_hook/_tooldef.json: %s" % n] if not text else ["self_hook/_tooldef.json: %s.%s" % (n, f) for f in sorted(fields(p)) if not re.search(r"\b%s\b" % f, text)]
     know = json.loads((ROOT / "knowledge" / "aos" / "me" / "self_hook.json").read_text(encoding="utf-8"))
     lines = (know["events"] + "\n" + know["clock"]).splitlines()
-    for n, p in AGENT.items():
+    for n, p in POINTS:
         text = "\n".join(l for l in lines if "`%s`" % n in l)
         out += ["knowledge me/self_hook.json: %s" % n] if not text else ["knowledge me/self_hook.json: %s.%s" % (n, f) for f in sorted(fields(p)) if "`%s`" % f not in text]
     help_text = (PY / "aos" / "apps" / "agent" / "hook.py").read_text(encoding="utf-8")

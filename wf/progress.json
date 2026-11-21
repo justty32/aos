@@ -435,14 +435,14 @@
     },
     "compact-improve": {
       "title": "compact 改進：先清工具輸出、壓完補回走 hook",
-      "status": "等使用者",
+      "status": "open",
       "flow": "",
-      "what": "使用者 11-21 答「可以派。三題：1.照叫。2.都開。3.我還在審。」第 1 刀（先清舊工具輸出再摘要）已交（線 top-1121-compact1）：摘要那次 prompt 少七成多，sol 評摘要品質小幅變差（少開工讀檔讀到的規矩）；第 2 刀因照叫不做",
-      "next": "第 4 刀（before_compact／after_compact，調補換都開）等使用者審完 hook_points.json 格式；第 3 刀 aos-agent history clear-tools 可另派；要吃到第 1 刀＝樹用的 proto8 跑 install.py、換 compact/idle/brain 三檔（動態連結的 ann 只要 install.py）",
+      "what": "第 1 刀（先清舊工具輸出再摘要）、第 4 刀（before_compact／after_compact，調補換都開，規矩在 templates/agent-fsm/compact.py、範本不掛）已交；第 2 刀因照叫不做",
+      "next": "第 3 刀 aos-agent history clear-tools、第 5 刀範例 handler 要不要做等使用者說；活樹的 ann 動態連結範本，第 4 刀存檔即生效，說明字等下次 install.py",
       "see": [
+        "[第 4 刀紀錄](../proto8/thinking/2026-11/21/compact-第4刀-1121.md)",
         "[第 1 刀紀錄](../proto8/thinking/2026-11/21/compact-第1刀-1121.md)",
-        "[規劃稿 README](../proto8/thinking/2026-11/21/compact-改進規劃-1121/README.md)",
-        "[使用者已答](../proto8/thinking/2026-11/21/compact-改進規劃-1121/07-使用者已答.md)"
+        "[規劃稿 README](../proto8/thinking/2026-11/21/compact-改進規劃-1121/README.md)"
       ],
       "since": "2026-11-20"
     },

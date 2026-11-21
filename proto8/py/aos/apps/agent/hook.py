@@ -56,7 +56,10 @@ events the agent itself fires (exit 10 blocks the ones marked *; exit 0 with a J
 object on stdout changes the keys in brackets):
         before_queue* [content], after_queue, before_tool* [arguments],
         after_tool [content], brain_failed, tool_added,
-        on_clock (a clock moved on: needs --every-cycles or --every-ms)
+        on_clock (a clock moved on: needs --every-cycles or --every-ms),
+        before_compact* [instructions, clear, summary, restore],
+        after_compact [summary, restore] (agent-fsm's /compact; a failing hook on these
+        two is only a warning)
 events fired through aos-hook fire, as the definition wires them:
         after_start, after_stop (loop.json on_start / on_stop),
         before_run, after_run (loop.json on_before_run / on_after_run: before / after each

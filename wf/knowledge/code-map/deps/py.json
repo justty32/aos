@@ -336,7 +336,7 @@
    "kind": "lib",
    "module": "aos.hook_run",
    "unit": "proto8/py/aos/hook_run.py",
-   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/hook proto8/py/aos/hook_handle.py proto8/py/tools/aos/kernel",
+   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/hook proto8/py/aos/hook_handle.py proto8/py/tools/aos/kernel proto8/templates/agent-fsm",
    "uses": "aos.directive_value aos.hook_lists"
   },
   {
@@ -1121,7 +1121,7 @@
    "module": "",
    "unit": "proto8/templates/agent-fsm",
    "used_by": "",
-   "uses": "aos.agentlib.agent_hooks aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.agentlib.tool_clear aos.declared_files aos.flags aos.metainfo aos.observed aos.observed_children aos.ws"
+   "uses": "aos.agentlib.agent_hooks aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.agentlib.tool_clear aos.declared_files aos.flags aos.hook_run aos.metainfo aos.observed aos.observed_children aos.ws"
   },
   {
    "kind": "template",

@@ -1,5 +1,5 @@
 {
- "description": "Hook points fired by the agent-fsm cells (idle, think, wait, act); the loop points are in $AOS_HOME/lib/aos/apps/hook/loop_hooks.json. The agent family's rules (aos.agentlib.hooks, in code; this file only tells): exit 10 blocks a point with block true; on a point with output, exit 0 and a JSON object on stdout replace those keys; condition names the field a hookeds entry's condition is compared with (only for these tool names / error codes); a failing hook stops a point with block true and is one warning elsewhere.",
+ "description": "Hook points fired by the agent-fsm cells (idle, think, wait, act); before_compact / after_compact keep their own rules in compact.py (said in their descriptions); the loop points are in $AOS_HOME/lib/aos/apps/hook/loop_hooks.json. The agent family's rules (aos.agentlib.hooks, in code; this file only tells): exit 10 blocks a point with block true; on a point with output, exit 0 and a JSON object on stdout replace those keys; condition names the field a hookeds entry's condition is compared with (only for these tool names / error codes); a failing hook stops a point with block true and is one warning elsewhere.",
  "before_queue": {
   "description": "idle: a good letter is about to enter the conversation (/compact letters do not pass here)",
   "input": {
@@ -294,6 +294,164 @@
   ],
   "fired_in": [
    "cell_common.py"
+  ]
+ },
+ "before_compact": {
+  "description": "idle, or think in the middle of a turn: a /compact has enough to fold, before old tool outputs are cleared and before the request is added (compact.py's rules: hooks run in name order and each sees what the earlier ones changed; a failing hook (exit code not 0 / 10, timed out, cannot start, bad stdout) is one warning line and the next one runs; a /compact with too little to fold (compact not needed) fires neither point; exit 10 blocks)",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "before_compact"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "letters": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "the /compact letter names, in order"
+    },
+    "asked": {
+     "type": "string",
+     "description": "the words after /compact in the first letter, or an empty string"
+    },
+    "instructions": {
+     "type": "string",
+     "description": "the extra instructions the summary request will carry (starts as asked); a hook may change them, an empty string gives none"
+    },
+    "mid_turn": {
+     "type": "boolean",
+     "description": "true when it came in the middle of a turn (think)"
+    },
+    "foldable": {
+     "type": "integer",
+     "description": "how many messages would be folded"
+    },
+    "clear": {
+     "type": "boolean",
+     "description": "true; a hook may set false to keep old tool outputs as they are"
+    },
+    "summary": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "null; a hook may set a summary: then the brain is not asked, old tool outputs are not cleared, and this summary is folded in at once (after_compact still runs; its by is this hook's name)"
+    },
+    "restore": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "null; a hook may set text to add back after the summary; it becomes after_compact's restore (the same key as on eca-claude, where it must be given here)"
+    }
+   }
+  },
+  "output": {
+   "type": "object",
+   "properties": {
+    "instructions": {
+     "type": "string"
+    },
+    "clear": {
+     "type": "boolean"
+    },
+    "summary": {
+     "type": "string",
+     "minLength": 1
+    },
+    "restore": {
+     "type": [
+      "string",
+      "null"
+     ]
+    }
+   },
+   "description": "exit 0 with a JSON object on stdout: these keys replace the event's"
+  },
+  "phase": "before",
+  "block": true,
+  "if_blocked": "idle: nothing is cleared or folded and the brain is not asked; the /compact letters get one answer 'compact blocked by hook H: its stdout; nothing was folded', shaped like compact not needed (aos.compact, aos.skipped, plus aos.blocked = H). Middle of a turn: the letters stay in the queue (cur/) and the turn goes on; when it ends idle takes them and fires before_compact again (mid_turn false). compact.json records phase blocked",
+  "fired_in": [
+   "idle.py",
+   "brain.py"
+  ]
+ },
+ "after_compact": {
+  "description": "wait (through compact.py), or idle / think when before_compact gave the summary: the summary is ready, just before history.jsonl is rewritten (compact.py's rules: hooks run in name order and each sees what the earlier ones changed; a failing hook (exit code not 0 / 10, timed out, cannot start, bad stdout) is one warning line and the next one runs; a /compact with too little to fold (compact not needed) fires neither point)",
+  "input": {
+   "type": "object",
+   "properties": {
+    "event": {
+     "const": "after_compact"
+    },
+    "hook": {
+     "type": "string",
+     "description": "the hook's name"
+    },
+    "stack": {
+     "type": "string",
+     "description": "the agent's stack (the handler's own AOS_STACK is STACK/hookeds/NAME/)"
+    },
+    "letters": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "the /compact letter names"
+    },
+    "summary": {
+     "type": "string",
+     "description": "the summary text (trimmed); a hook may change it"
+    },
+    "by": {
+     "type": "string",
+     "description": "brain, or the name of the before_compact hook that gave the summary"
+    },
+    "mid_turn": {
+     "type": "boolean",
+     "description": "true when it came in the middle of a turn"
+    },
+    "cleared": {
+     "type": "integer",
+     "description": "old tool outputs cleared before the request"
+    },
+    "restore": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "what before_compact's hooks gave, else null; a hook may set text that goes in as one user message '[aos] restored after compact: TEXT' right after the summary and before compact done (no extra brain call); it replaces what is there, so to add to it, include it; empty or null = none"
+    }
+   }
+  },
+  "output": {
+   "type": "object",
+   "properties": {
+    "summary": {
+     "type": "string",
+     "minLength": 1
+    },
+    "restore": {
+     "type": [
+      "string",
+      "null"
+     ]
+    }
+   },
+   "description": "exit 0 with a JSON object on stdout: these keys replace the event's"
+  },
+  "phase": "after",
+  "fired_in": [
+   "compact.py"
   ]
  }
 }

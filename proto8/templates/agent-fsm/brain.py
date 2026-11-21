@@ -19,6 +19,8 @@
 # 讀 history、決定用哪份工具登記檔跟 act.py 同一套，在 cell_common.py。
 # 回答配對（thinking/2026-11/14/reply-match-1114/03 §4）：messages 每列先過 aos_ws.for_endpoint（拷貝、只拿掉 aos 鍵），history 本身不動。
 # Mid-turn /compact requests use full history without tools; task history retains the latest applicable compact summary.
+# 做到一半的 /compact 也先發 before_compact（11-21 線 top-1121-compact4，規矩在 compact.py）：攔下＝這幾封留在 queue 的 cur/、不認領、不加要求，
+#   這一輪照常做下去，做完回 idle 時 idle 照一般的 /compact 再發一次 before_compact；hook 給了 summary＝加要求列後當場摺、接 continue 那則，不叫腦。
 import json, os, signal, subprocess, sys
 from pathlib import Path
 
@@ -134,9 +136,8 @@ def post(args, ok=(0,)):
 
 
 box = os.path.join(stack, "queue")
-if (not compact.asking(stack, history) and compact.turn_open(history)
-        and compact.foldable(stack, history, aos_ws) >= compact.MIN_ROWS
-        and compact.waiting_letters(box)):
+foldable = 0 if compact.asking(stack, history) or not compact.turn_open(history) else compact.foldable(stack, history, aos_ws)
+if foldable >= compact.MIN_ROWS and compact.waiting_letters(box):
     _, taken = post(["take-all", box], ok=(0, 10))
     letters, extra = [], ""
     for name in taken.splitlines():
@@ -151,15 +152,22 @@ if (not compact.asking(stack, history) and compact.turn_open(history)
                 letters.append(name)
                 if len(letters) == 1:
                     extra = instructions
-    if letters:
+    warn = lambda line: aos_flags.warn("agent-fsm", line)   # noqa: E731
+    plan = compact.before(stack, letters, extra, foldable, die, warn, mid_turn=True) if letters else None   # compact 第 4 刀
+    if plan and plan["blocked"]:                 # 攔下：信留在 cur/，這輪做完 idle 再問一次 before_compact
+        compact.save_state(stack, {"phase": "blocked", "letters": letters, "blocked_at": compact.utc(),
+                                   "hook": plan["blocked"], "mid_turn": True}, die)
+    elif plan:
         try:
             aos_ws.letters_take(stack, letters)
         except OSError as e:
             die("WriteFailed", "cannot take compact letters: %s" % e)
-        compact.ask(stack, history_path, letters, extra, aos_ws, die, mid_turn=True,   # 先清舊的工具輸出再加要求（compact 第 1 刀）
-                    warn=lambda line: aos_flags.warn("agent-fsm", line))
+        given = compact.ask(stack, history_path, letters, extra, aos_ws, die, mid_turn=True,   # 先清舊的工具輸出再加要求（compact 第 1 刀）
+                            warn=warn, plan=plan)
         for name in letters:
             post(["done", box, name])
+        if given is not None:                    # hook 給了摘要：當場摺（接 continue 那則），不叫腦
+            compact.fold(stack, history_path, {"role": "assistant", "content": given}, aos_ws, warn, die)
         history = cell_common.read_history(history_path, die)
 compacting = compact.asking(stack, history)
 if not history or history[-1].get("role") not in ("user", "tool"):

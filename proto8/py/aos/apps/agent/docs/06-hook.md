@@ -29,6 +29,8 @@
 | `before_run` | 每跑一格之前（loop.json 的 `on_before_run` → `aos-hook fire`；讀過 ctl、等過 `interval_ms` 之後；暫停中不發；loop.json 要有接這條線，見下面「每一格前後」） | —（第幾次在 `AOS_LOOP_RUNS`；要跑的那一格在 `<stack>/stage.txt`，第一圈還沒有這個檔＝fsm.json 的起始格） | 不比（寫了照收、不看） | 退 10＝跳過這一圈：這格不跑、不算一次、不發 `after_run`，過 `interval_ms` 再問一次 |
 | `after_run` | 每跑完一格之後（`on_after_run`；身體起不來、loop 收到訊號的那圈不發） | —（環境變數 `AOS_LOOP_RUNS`（跟 before_run 同一個數）、`AOS_LOOP_RUN_CODE`（那格的結束碼）、`AOS_LOOP_RUN_SIGNAL`（結束它的訊號，沒有＝空）、`AOS_LOOP_RUN_MS`（跑了多久）；表現在停在哪一格在 `<stack>/stage.txt`） | 不比（寫了照收、不看） | — |
 | `on_clock` | 每格開頭（idle、think、wait、act）看一次時鐘，條件到了才跑（見下面「時鐘」） | `clock`、`cycle`、`interval_ms`、`first`、`last_cycle`、`missed`；格裡寫了 `config` 才多 `config`（原樣） | 不比（條件寫 `every_cycles`／`every_ms`） | — |
+| `before_compact` | idle 或做到一半的 think：`/compact` 夠摺（不到 4 則的不發）、清工具輸出與加要求之前（11-21 compact 第 4 刀；規矩在範本的 `compact.py`，不在 `agentlib/hooks.py`） | `letters`（/compact 信名）、`asked`（/compact 後面的字）、`instructions`（要求會帶的額外指示，起始＝`asked`）、`mid_turn`、`foldable`（會摺幾則）、`clear`（true）、`summary`（null）、`restore`（null） | 不收 condition | 攔（idle：那幾封得到一則 `compact blocked by hook …`、不清不摺；輪中：信留在 `cur/`，這輪做完 idle 再問一次）；改 `instructions`（字串）、`clear`（false＝不清工具輸出）、`summary`（非空字串＝不叫腦、當場用它摺）、`restore`（字串，交給 `after_compact` 當起始值）；hook 失敗只是一行 warning |
+| `after_compact` | wait（或 hook 交了摘要的 idle／think）：摘要好了、history 改寫之前 | `letters`、`summary`、`by`（`brain` 或交摘要的 hook 名）、`mid_turn`、`cleared`（清掉幾則工具輸出）、`restore`（`before_compact` 交的，沒有＝null） | 不收 condition | 改 `summary`（非空字串）、`restore`（字串或 null；非空＝摘要那則後面接一則 `[aos] restored after compact: …`，不多叫一次腦）；hook 失敗只是一行 warning |
 
 每份事件 JSON 都有 `event`、`hook`（這個 hook 的名字）、`stack`（agent 的 stack 絕對路徑）。同一事件多個 hook＝照名字排序一個一個跑；agent 自己發的點（表上前七個）前一個改過的後一個看得到，被攔下就不往下；經 `aos-hook fire` 發的四個 loop 點每個 handler 拿同一份事件。連鎖（hook 寄信給自己又觸發）不檢測，自行承擔。
 
@@ -79,7 +81,7 @@ agent 自己發的點（表上前七個）照 `agentlib/hooks.py` 的 `POINTS` �
 | 10 | 攔下（`before_queue`＝這封信收掉；`before_tool`＝工具不跑，腦看到的結果＝hook 的 stdout，空就給 `[aos] hook: tool NAME blocked by hook HOOK.`）；別的點的 10＝當 0 |
 | 其他、逾時、起不來、stdout 不合（不是 JSON 物件、改的值型別不對） | hook 失敗：能攔的點（`before_queue`、`before_tool`）＝這個事件停（那格印 `agent-fsm: error: HookFailed …`、格程式退 1、agent 停下等人；aos-mcp 那次工具回 isError）；其他點＝一行 warning、下一個照跑 |
 
-所以掛在能改的點上、只想記一筆的 hook，stdout 不要印東西（印了不是 JSON 物件的東西＝hook 失敗）。四個 loop 點的退出碼規矩見上面兩節（經 `--stop-on-nonzero` 原樣給 aos-loop）；`before_compact`／`after_compact` 見下面「eca」。
+所以掛在能改的點上、只想記一筆的 hook，stdout 不要印東西（印了不是 JSON 物件的東西＝hook 失敗）。四個 loop 點的退出碼規矩見上面兩節（經 `--stop-on-nonzero` 原樣給 aos-loop）；`before_compact`／`after_compact` 在 agent-fsm 上照範本 `compact.py` 的規矩（照名字跑、後一個看得到前一個改的、失敗只是 warning），eca 上見下面「eca」。
 
 ## 選項
 
@@ -166,5 +168,5 @@ eca 的腦是外面的 CLI，aos 只看得到經過自己手的東西（圖紙 �
 | `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop`（`aos-hook fire --def`） | 同 |
 | `before_run`／`after_run` | 有：每一輪的前後（loop.json 接了線才有） | loop.json 的 `on_before_run`／`on_after_run`（aos-hook） | 一圈＝一輪；沒有 stage.txt |
 | `on_clock` | 有（冷卻中、退讓的那輪也判） | aos-eca-turn 每輪最開頭 | 每輪看一次（agent-fsm 每格看一次） |
-| `before_compact`／`after_compact` | 只有 claude 身、定義的 `cli.json` 掛了範本的 `compact_hook`（Claude Code 自己的 `PreCompact`／`PostCompact` hook）才有；pi、codex 沒有。`before_compact`：`trigger`（`manual`＝/compact、`auto`＝CLI 自己壓）、`asked`（/compact 後面的字）、`instructions`（compact_hook 給 CLI 的摘要指示，可改，空字串＝不給）、`restore`（null，可交一段字，壓完經 SessionStart 接進對話）；退 10＝攔下不壓（/compact 那封的回答是 CLI 說被誰攔下）。`after_compact`：`trigger`、`summary`（CLI 寫好的摘要），只告知 | `compact_hook`（經 `aos-hook fire --def $AOS_CLI_DEF`，自己讀結果：第一個退 10 的攔下；退 0 的 stdout 物件依名字順序設 `instructions`／`restore`，每個 handler 拿同一份事件；失敗的一行 warning） | agent-fsm 還沒有這兩個點（規劃在 thinking/2026-11/21/compact-改進規劃-1121/03）；壓縮本身是 CLI 的，摘要內容改不了 |
+| `before_compact`／`after_compact` | 只有 claude 身、定義的 `cli.json` 掛了範本的 `compact_hook`（Claude Code 自己的 `PreCompact`／`PostCompact` hook）才有；pi、codex 沒有。`before_compact`：`trigger`（`manual`＝/compact、`auto`＝CLI 自己壓）、`asked`（/compact 後面的字）、`instructions`（compact_hook 給 CLI 的摘要指示，可改，空字串＝不給）、`restore`（null，可交一段字，壓完經 SessionStart 接進對話）；退 10＝攔下不壓（/compact 那封的回答是 CLI 說被誰攔下）。`after_compact`：`trigger`、`summary`（CLI 寫好的摘要），只告知 | `compact_hook`（經 `aos-hook fire --def $AOS_CLI_DEF`，自己讀結果：第一個退 10 的攔下；退 0 的 stdout 物件依名字順序設 `instructions`／`restore`，每個 handler 拿同一份事件；失敗的一行 warning） | agent-fsm 也有這兩個點（本頁事件表；欄位多、`restore` 在 `after_compact` 交也行，摘要改得了）；eca 這邊壓縮本身是 CLI 的，摘要內容改不了 |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos | |

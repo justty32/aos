@@ -15,7 +15,8 @@ Standard library plus aos.hook_run / hook_lists / hook_point; prints nothing, ne
 API:
     POINTS[event] = {"field": the event field condition compares, or None; "block": exit 10 blocks;
                      "change": {key: check(value) -> bool, plus a sentence}} for the points the agent family fires itself
-                     (the loop points and before_compact / after_compact are fired through aos-hook fire, which has no rules)
+                     (the loop points are fired through aos-hook fire, which has no rules; before_compact / after_compact
+                     keep their rules where they are fired: agent-fsm's compact.py, eca-claude's compact_hook)
     CLOCK_EVENT, CLOCK_KEYS   on_clock and its own entry keys
     HooksBad, HookFailed
     check_entry(entry)        the engine's checks plus the agent's own keys (condition; on_clock's keys only on on_clock)

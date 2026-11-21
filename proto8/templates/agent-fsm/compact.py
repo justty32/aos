@@ -1,10 +1,18 @@
 # Compact agent-fsm conversations while preserving unanswered letters and original messages.
+# Hooks before_compact / after_compact (declared in hooks.json, line top-1121-compact4; the user 11-21 "2.都開":
+# adjust, add back, replace): this file keeps their rules itself (the engine aos.hook_run only runs handlers, the user's
+# fourth layer). Hooks run in name order and each sees what the earlier ones changed; exit 10 blocks before_compact;
+# exit 0 (or 10 on after_compact) with a JSON object on stdout changes the keys in HOOK_POINTS; a failing hook (other exit
+# code, timed out, cannot start, bad stdout) is one warning line and the next hook runs, on both points.
+# Too-short /compact letters (compact not needed) fire neither point.
+import copy
 import datetime
 import json
 import os
 
 from atomic_file import write_atomic
-from aos.agentlib import tool_clear
+from aos import hook_run
+from aos.agentlib import agent_hooks, tool_clear
 
 ASK_PREFIX = "[aos] compact:"
 MIN_ROWS = 4
@@ -23,6 +31,20 @@ CONTINUE = ("[aos] compact: done. Go on with the work in progress described in t
 CLEARED = (" Before this request, %d old tool outputs were replaced by a one-line placeholder to make this request smaller; "
            "what you said and did about them is still above, and the originals are in history_removed.jsonl.")
 SKIP = "compact not needed: only %d messages to fold (it takes at least %d); nothing was folded"
+BLOCKED = "compact blocked by hook %s%s; nothing was folded"
+RESTORED = "[aos] restored after compact: "
+# The rules of the two points (py/tests/test_hook_points_match.py compares them with hooks.json): block = exit 10 blocks;
+# change = the keys a hook's stdout may set.
+HOOK_POINTS = {
+    "before_compact": {"field": None, "block": True, "change": ("instructions", "clear", "summary", "restore")},
+    "after_compact": {"field": None, "block": False, "change": ("summary", "restore")},
+}
+CHANGE_OK = {
+    "instructions": (lambda v: isinstance(v, str), "a string"),
+    "clear": (lambda v: isinstance(v, bool), "true or false"),
+    "summary": (lambda v: isinstance(v, str) and bool(v.strip()), "a non-empty string"),
+    "restore": (lambda v: v is None or isinstance(v, str), "a string or null"),
+}
 
 
 def utc():
@@ -81,14 +103,104 @@ def skip(stack, history_path, letters, count, aos_ws, die):
     """Too little to fold (user 11-20: treat it as done normally): no brain call, no fold; one assistant answer
     shaped like compact done (answer_to, aos.compact) plus aos.skipped. No mailbox warning, nothing dropped.
     The caller closes the letters (aos-post done) and then calls aos_ws.letters_answered."""
-    row = aos_ws.mark_answer({"role": "assistant", "content": SKIP % (count, MIN_ROWS)}, letters)
-    row.setdefault("aos", {}).update(compact=True, skipped=True)
+    _answer(stack, history_path, letters, SKIP % (count, MIN_ROWS), {}, aos_ws, die)
+
+
+def blocked(stack, history_path, letters, plan, aos_ws, die):
+    """before_compact blocked it (idle): nothing cleared or folded, no brain call; one answer shaped like skip with
+    aos.blocked = the hook's name and the hook's stdout in the text. The caller closes the letters as for skip."""
+    text = plan["text"].strip()
+    _answer(stack, history_path, letters, BLOCKED % (plan["blocked"], (": " + text) if text else ""),
+            {"blocked": plan["blocked"]}, aos_ws, die)
+    save_state(stack, {"phase": "blocked", "letters": letters, "blocked_at": utc(), "hook": plan["blocked"],
+                       "mid_turn": False}, die)
+
+
+def _answer(stack, history_path, letters, text, more, aos_ws, die):
+    row = aos_ws.mark_answer({"role": "assistant", "content": text}, letters)
+    row.setdefault("aos", {}).update(dict({"compact": True, "skipped": True}, **more))
     try:
         aos_ws.letters_take(stack, letters)
         with open(history_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
     except OSError as e:
         die("WriteFailed", "cannot answer the compact letters: %s" % e)
+
+
+def _hooked(stack, event, die, warn):
+    """The entries in effect and the names hooked on event (the agent's hookeds lists, stack copy on top)."""
+    H = agent_hooks.open(os.environ.get("AOS_CD") or ".", stack, fail=die, warn=warn)
+    entries = H.load()
+    return entries, hook_run.names(entries, event)
+
+
+def run_hooks(event, data, stack, die, warn, hooked=None):
+    """Run the hooks on event (before_compact / after_compact) with this file's rules (see the top of the file).
+    Returns (data after the hooks, the blocking hook's name or None, its stdout, {key: name of the last hook that set it})."""
+    point = HOOK_POINTS[event]
+    entries, names = hooked or _hooked(stack, event, die, warn)
+    data, setters = copy.deepcopy(data), {}
+    for name in names:
+        r = hook_run.run(name, entries[name], event, data, stack)
+        try:
+            if r["error"]:
+                raise ValueError(r["error"])
+            if r["code"] == hook_run.BLOCK and point["block"]:
+                return data, name, r["stdout"], setters
+            if r["code"] not in (0, hook_run.BLOCK):
+                raise ValueError("exited %d" % r["code"])
+            got = {}
+            if r["stdout"].strip():
+                try:
+                    reply = json.loads(r["stdout"])
+                except ValueError as e:
+                    raise ValueError("stdout is not JSON: %s" % e) from None
+                if not isinstance(reply, dict):
+                    raise ValueError("stdout is not a JSON object")
+                for key in point["change"]:
+                    if key in reply:
+                        ok, what = CHANGE_OK[key]
+                        if not ok(reply[key]):
+                            raise ValueError("%s in stdout must be %s" % (key, what))
+                        got[key] = reply[key]
+        except ValueError as e:
+            warn("hook %s (event %s) failed: %s; going on without it" % (name, event, e))
+            continue
+        for key, v in got.items():
+            data[key] = v.strip() if key == "summary" else v
+            setters[key] = name
+    return data, None, "", setters
+
+
+def before(stack, letters, asked, count, die, warn, mid_turn=False):
+    """Fire before_compact once the letters are enough to fold (idle, or brain in the middle of a turn). Returns the plan:
+    {"blocked": hook name or None, "text": its stdout, "instructions", "clear", "summary": None or the hook's,
+    "restore": None or text, "by": "brain" or the name of the hook that gave the summary}. No hook = the plain plan."""
+    plan = {"blocked": None, "text": "", "instructions": asked, "clear": True, "summary": None, "restore": None, "by": "brain"}
+    hooked = _hooked(stack, "before_compact", die, warn)
+    if not hooked[1]:
+        return plan
+    data = {"letters": list(letters), "asked": asked, "instructions": asked, "mid_turn": mid_turn, "foldable": count,
+            "clear": True, "summary": None, "restore": None}
+    data, hook, text, setters = run_hooks("before_compact", data, stack, die, warn, hooked)
+    if hook:
+        return dict(plan, blocked=hook, text=text)
+    plan.update({k: data[k] for k in ("instructions", "clear", "summary", "restore")})
+    if plan["summary"]:
+        plan["by"] = setters.get("summary", "brain")
+    return plan
+
+
+def after(stack, rec, summary, die, warn):
+    """Fire after_compact before history is rewritten. Returns (summary, restore text or None)."""
+    restore = rec.get("restore") if isinstance(rec.get("restore"), str) else None
+    hooked = _hooked(stack, "after_compact", die, warn)
+    if not hooked[1]:
+        return summary, restore
+    data = {"letters": rec.get("letters", []), "summary": summary, "by": rec.get("by", "brain"),
+            "mid_turn": bool(rec.get("mid_turn")), "cleared": rec.get("cleared", 0), "restore": restore}
+    data, _, _, _ = run_hooks("after_compact", data, stack, die, warn, hooked)
+    return data["summary"], data["restore"]
 
 
 def save_state(stack, row, die):
@@ -129,17 +241,31 @@ def clear_old_tools(stack, history_path, warn):
     return 0, 0
 
 
-def ask(stack, history_path, letters, extra, aos_ws, die, mid_turn=False, warn=None):
-    cleared, chars = clear_old_tools(stack, history_path, warn or (lambda line: None))
+def ask(stack, history_path, letters, extra, aos_ws, die, mid_turn=False, warn=None, plan=None):
+    """Add the request (after clearing old tool outputs, unless the plan from before() says clear false or gives a summary)
+    and record phase asked. Returns the summary a before_compact hook gave (the caller folds it with fold() after closing
+    the letters; the brain is not asked), or None."""
+    plan = plan or {"instructions": extra, "clear": True, "summary": None, "restore": None, "by": "brain"}
+    given = plan["summary"]
+    if plan["clear"] and not given:
+        cleared, chars = clear_old_tools(stack, history_path, warn or (lambda line: None))
+    else:
+        cleared, chars = 0, 0
+    words = plan["instructions"]
+    lead = " Extra instructions from the sender: " if words == extra else " Extra instructions: "
     row = aos_ws.mark_letter({"role": "user", "content": ASK + (CLEARED % cleared if cleared else "") + (
-        " Extra instructions from the sender: " + extra if extra else "")}, letters[0] if letters else None)
+        lead + words if words else "")}, letters[0] if letters else None)
     try:
         with open(history_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
     except OSError as e:
         die("WriteFailed", "cannot append compact request: %s" % e)
-    save_state(stack, {"phase": "asked", "letters": letters, "asked_at": utc(), "mid_turn": mid_turn,
-                       "cleared": cleared, "cleared_chars": chars}, die)
+    rec = {"phase": "asked", "letters": letters, "asked_at": utc(), "mid_turn": mid_turn,
+           "cleared": cleared, "cleared_chars": chars, "by": plan["by"] if given else "brain"}
+    if isinstance(plan["restore"], str):
+        rec["restore"] = plan["restore"]
+    save_state(stack, rec, die)
+    return given
 
 
 def waiting_letters(box, stage="new"):
@@ -251,6 +377,8 @@ def fold(stack, history_path, message, aos_ws, warn, die):
     summary = summary.strip()
     rec = state(stack)
     letters = rec.get("letters", [])
+    summary, restore = after(stack, rec, summary, die, warn)      # after_compact: may change the summary, give restore
+    restored = [{"role": "user", "content": RESTORED + restore.strip()}] if restore and restore.strip() else []
     for attempt in range(3):
         try:
             before, lines = read_lines(history_path)
@@ -273,7 +401,7 @@ def fold(stack, history_path, message, aos_ws, warn, die):
             done = aos_ws.mark_answer({"role": "assistant", "content":
                 "compact done: %d messages replaced by the summary above; the originals are in history_removed.jsonl" % len(removed)}, letters)
             done.setdefault("aos", {})["compact"] = True
-            new = [{"role": "user", "content": text}, done] + [history[i] for i in sorted(keep)] + tail
+            new = [{"role": "user", "content": text}] + restored + [done] + [history[i] for i in sorted(keep)] + tail
             if rec.get("mid_turn"):
                 new.append({"role": "user", "content": CONTINUE})
             content = "".join(json.dumps(m, ensure_ascii=False) + "\n" for m in new)
@@ -296,5 +424,6 @@ def fold(stack, history_path, message, aos_ws, warn, die):
         warn("cannot append compact summary to handoff.md: %s" % e)
     save_state(stack, {"phase": "done", "letters": letters, "done_at": at, "replaced": len(removed), "kept": len(keep),
                        "summary_chars": len(summary), "cleared": rec.get("cleared", 0),
-                       "cleared_chars": rec.get("cleared_chars", 0)}, die)
+                       "cleared_chars": rec.get("cleared_chars", 0), "by": rec.get("by", "brain"),
+                       "restored_chars": len(restored[0]["content"]) - len(RESTORED) if restored else 0}, die)
     return True

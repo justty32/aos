@@ -21,6 +21,8 @@
 # 可摺的不到 compact.MIN_ROWS 則（例：剛壓完又來一封）＝使用者 11-20「當成正常做完」：不問腦、不摺，先回一則 compact.SKIP 的回答
 #   （照 compact done 的形狀，answer_to＋aos.compact＋aos.skipped），信記成答完；不寫 mailbox_warning、不記 dropped。
 #   回答寫在這批普通信之前（批開頭先看 cur/ 有沒有 /compact），這批的普通信才不會被它擋在後面沒人答。
+# before_compact（11-21 線 top-1121-compact4，規矩在 compact.py）：夠摺時、清工具輸出與加要求之前發；攔下（退 10）＝照「compact not needed」的樣子
+#   回一則「compact blocked by hook H: …」（多 aos.blocked）、信記成答完；hook 給了 summary＝加要求列後當場摺（compact.fold，那裡發 after_compact），不叫腦。
 import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
@@ -62,6 +64,8 @@ mailbox_warning.txt); after_queue runs after it went in. A failing hook = HookFa
 /compact bypasses queue hooks and requests a summary after taking the entire batch. With
 fewer than four foldable messages there is no brain call and nothing is folded: the /compact
 letters get one answer "compact not needed: ..." (before the ordinary letters of the batch).
+Otherwise before_compact runs first: exit 10 = the letters get one answer "compact blocked by
+hook H: ..." and nothing is folded; a hook that gives a summary = folded at once, no brain call.
 While a summary is already requested, take no mail and return to think.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
@@ -206,21 +210,33 @@ def take():
         if count < compact.MIN_ROWS:             # 批開頭沒認出來的（照理不會有）：一樣當成做完
             answer_short(compact, compact_letters, count)
             return good
+        warn = lambda line: aos_flags.warn("agent-fsm", line)   # noqa: E731
+        plan = compact.before(stack, compact_letters, compact_extra, count, die, warn)   # before_compact（compact 第 4 刀）
+        if plan["blocked"]:                      # 攔下：回一則 blocked、信記成答完，不清不摺
+            answer_short(compact, compact_letters, count,
+                         lambda: compact.blocked(stack, history_path, compact_letters, plan, aos_ws, die))
+            return good
         try:
             aos_ws.letters_take(stack, compact_letters)
         except OSError as e:
             die("WriteFailed", "cannot take compact letters: %s" % e)
-        compact.ask(stack, history_path, compact_letters, compact_extra, aos_ws, die,   # 先清舊的工具輸出再加要求（compact 第 1 刀）
-                    warn=lambda line: aos_flags.warn("agent-fsm", line))
+        given = compact.ask(stack, history_path, compact_letters, compact_extra, aos_ws, die,   # 先清舊的工具輸出再加要求（compact 第 1 刀）
+                            warn=warn, plan=plan)
         for sig in compact_letters:
             post(["done", box, sig])
+        if given is not None:                    # hook 給了摘要：當場摺，不叫腦（摺不成＝compact.give_up 照舊）
+            compact.fold(stack, history_path, {"role": "assistant", "content": given}, aos_ws, warn, die)
         return good + 1
     return good
 
 
-def answer_short(compact, sigs, count):
-    """可摺的不到門檻：回一則「compact not needed」（compact.skip）、收信、記成答完（回答配對：pending → history → done → 清 pending）。"""
-    compact.skip(stack, history_path, sigs, count, aos_ws, die)
+def answer_short(compact, sigs, count, write=None):
+    """可摺的不到門檻：回一則「compact not needed」（compact.skip）、收信、記成答完（回答配對：pending → history → done → 清 pending）。
+    write＝換成別的回答（before_compact 攔下時的 compact.blocked），其餘一樣。"""
+    if write:
+        write()
+    else:
+        compact.skip(stack, history_path, sigs, count, aos_ws, die)
     for sig in sigs:
         post(["done", box, sig])
     try:
