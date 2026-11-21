@@ -157,6 +157,11 @@ class Proxy(unittest.TestCase):
         self.assertEqual(repr(self.a), "<aos-agent --daemon /d/.stack --target ann>")
         self.assertEqual(repr(self.a.ctl.set_def), "<aos-agent --daemon /d/.stack --target ann ctl set-def>")
 
+    def test_attach_gives_an_attached(self):
+        """遙控器的類別叫 Attached（11-21 從 Agent 改名，跟 defs.Agent 分開；不留舊名）。"""
+        self.assertIs(type(self.a), self.agent.Attached)
+        self.assertFalse(hasattr(self.agent, "Agent"))
+
     def test_daemon_ctl(self):
         from aos.py import daemon_ctl
         self.assertEqual(self.argv(daemon_ctl.ls(j=True)), ["ls", "-j"])

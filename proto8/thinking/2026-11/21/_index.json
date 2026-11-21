@@ -2,6 +2,9 @@
  "README.md": {
   "description": "proto8 討論紀錄：2026-11-21"
  },
+ "agent遙控器改名-Attached-1121.md": {
+  "description": "使用者原話（11-21，逐字）"
+ },
  "aos-agent-預設目標-1121.md": {
   "description": "aos-agent 不給 -t 時從 cwd 找目標；不給 -d 時從那個 stack 往上兩層找 daemon（線 top-1121-deft，11-21）"
  },

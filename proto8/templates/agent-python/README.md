@@ -20,7 +20,7 @@ aos-agent ctl add .              # mount it (add -d DAEMON, -w WORKSPACE as usua
 
 Keep the lines above `# ---- your agent` as they are: they find the `aos` package (`$AOS_HOME/lib` first, then an `aos/` folder next to `agent.py`, so a file named `aos.py` next to it does not get in the way when `AOS_HOME` is set), then import `defs` with `from aos.py.agent import defs` (everything below is `defs.something`). Keep the last line `defs.main(agent)`: it hands the agent to the command line (`--compile`, `--dry-run`, `--help`).
 
-`defs.Agent` (the definition you write here) is not the `Agent` class of `aos.py.agent` (the handle of a running agent that `agent.attach("ann")` gives): same name, different things. Do not name your variable `agent` and also `from aos.py import agent` in the same file: the variable hides the module.
+`defs.Agent` is the definition you write here; the handle of a running agent (what `agent.attach("ann")` gives) is a different class, `aos.py.agent.Attached`. Do not name your variable `agent` and also `from aos.py import agent` in the same file: the variable hides the module.
 
 ## Read this before you run --compile
 

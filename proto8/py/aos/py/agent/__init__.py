@@ -2,6 +2,7 @@
 
 使用者 11-19：「a.xxx這塊，感覺就是aos-agent xxxx」；入口叫 aos.py、遙控器式（thinking/2026-11/19/aos-pylib-1119/07）；
 寫定義的名字「改from aos.py.agent import defs。就是說這個defs不只會在agent，其他地方也會有，所以歸到agent下」「就 aos.py.agent.defs 吧」。
+遙控器的類別 11-21 從 Agent 改名 Attached，跟寫定義的 defs.Agent 分開（使用者選「改遙控器那個」、「那就Attached」；thinking/2026-11/21/agent遙控器改名-Attached-1121.md）。
 
     from aos.py import agent
     agent.ctl.ls()                          # $ aos-agent ctl ls          （ctl add／rm／ls／set-def／who 不吃 --target：在模組層叫）
@@ -12,7 +13,7 @@
     a.tools.add("lib/my/tools/grep")
     a.bp ...、a.look ...                    # 兩個延伸（斷點、讀 stack 的檔），不是 aos-agent 子指令；第一次用到才載入 aos.gdb
     from aos.py.agent import defs           # 寫定義：defs.Agent、defs.tool、defs.state、defs.fsm、defs.main…（＝aos.agent_spec）
-                                            # defs.Agent（定義）跟下面的 Agent（遙控器，活的那隻）同名不同物
+                                            # 遙控器 a 的類別叫 Attached（agent.attach 回的），寫定義的是 defs.Agent
 
 a 底下的名字：aos-agent 的子指令（表從 aos.apps.agent.SUBS 讀，不另抄）就是那條指令；不是的只有 bp、look、name、daemon、stack，其他當場 AttributeError。
 attach 只記名字與 daemon（daemon 轉成絕對路徑），不跑指令；a.stack 每次問都跑一條 aos-agent ctl state --json who（不快取）。
@@ -48,11 +49,11 @@ def attach(name, daemon=None):
     """一隻 agent 的遙控器：記住名字與 daemon，之後 a.X.Y(...)＝aos-agent --daemon D --target 名 X Y ...。不跑指令。"""
     if not isinstance(name, str) or not name:
         raise _shell.Failed("agent.attach", "give the agent's name (a non-empty string)", code="ArgumentsBad")
-    return Agent(name, daemon)
+    return Attached(name, daemon)
 
 
-class Agent:
-    """遙控器 a：a.<aos-agent 子指令>＝那條指令；a.bp＝斷點、a.look＝讀 stack 的檔；a(*args)＝aos-agent ... ARGS 原樣。"""
+class Attached:
+    """遙控器 a（agent.attach 回的；接上＝記住名字與 daemon，不查那隻在不在）：a.<aos-agent 子指令>＝那條指令；a.bp＝斷點、a.look＝讀 stack 的檔；a(*args)＝aos-agent ... ARGS 原樣。"""
 
     def __init__(self, name, daemon=None):
         self.name = name

@@ -7,7 +7,7 @@ defs.load 交回的也是 Agent（本體 aos/agent_spec_load.py）：欄位是�
 連到夾外的照樣是 extern（編譯時換算成從衍生那夾算）。
 defs.extern 的連結版（第 4 刀，線 aos-pylib-k4-1120；使用者 11-20「創建一個symlink…編譯的時候就是只生成symlink」）：那一欄出一個 spec_base.Link，
 放在預設檔名上（eca 版放 interfaces.json 宣告的名字），--dry-run 印成 {"$symlink": 目標}，寫的那行是「wrote 夾/檔 -> 目標」；檢查在 _links。
-跟把手 aos.py.agent.Agent（活的那隻）同名不同物（設計稿 07d 意見 9）。只給 aos/agent_spec 用，寫 agent.py 的人叫 defs.Agent。
+活的那隻的遙控器是另一個類別 aos.py.agent.Attached（11-21 改名分開）。只給 aos/agent_spec 用，寫 agent.py 的人叫 defs.Agent。
 tools=[…]／hooks=[…] 裡的 @fn.tool／@fn.hook 函數（第 3 刀，線 aos-pylib-k3-1120；使用者 11-20「抽出來」「一起，同一套寫法」）：
 _files 最後交給 aos/fn_spec.programs，每個函數多一份 fn/<名>.py（程式檔），tools.json／hooks.json 那格指到它；hook 照 events() 那張表查 fn.block 能不能用。
 """
