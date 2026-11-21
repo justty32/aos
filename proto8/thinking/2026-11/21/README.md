@@ -17,3 +17,4 @@
 | [self-history-range-1121](self-history-range-1121.md) | self_history 的 range "-3" 報 FlagUnknown：根因是只有 ls 沒把值放 -- 後；修好；最後 K 則第二輪照使用者改成旗標 -n K（ls -n 3＝ls -n -3，rm、summarize 也有），工具 JSON 的 "-3" 不變；盤點三十多支包命令列的工具，同病另 5 組一起加 --；set 收不收 -n 只評估、等使用者 |
 | [aos-home 更新（aos-home-更新-1121）](aos-home-更新-1121.md) | 家機 ~/aos-home 更新到 88ea321f4：install.py、kernel.json 補思考程度、ann 照範本換（保留 model=sol、loop.json 改 aos-hook fire），備份 .bak-1121b；sol 驗四題 prompt 12,646→5,962、快取 5,888、high 程度帳本有記；關回原狀；過程頁在桌面 |
 | [compact-改進規劃-1121](compact-改進規劃-1121/README.md) | agent-fsm /compact 改進規劃（只出稿）：真模型 history 工具輸出占 64%～76%，留最後 3 則其餘換佔位 history 少 27%～78%（skyrim prompt 約 68k→30k）；預設清法已定；hook 開 before_compact／after_compact（補回寫在摘要後一則 user）；施工五刀、第 1、3 刀不依賴待裁；待使用者答三題（清完夠低省不省摘要、hook 開到多深、新點現在加還是等格式審完） |
+| [hook_points 格式・使用者審（hook-points-格式-使用者審-1121）](hook-points-格式-使用者審-1121.md) | 使用者審 hook_points.json 宣告格式的原話：硬性只要 id 與 input schema，change 改 output schema，其餘鍵想放啥放啥；一份只有一個 provider 妥不妥未定；還沒派線 |

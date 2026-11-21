@@ -1,0 +1,50 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-11-21"
+ },
+ "aos-agent-預設目標-1121.md": {
+  "description": "aos-agent 不給 -t 時從 cwd 找目標；不給 -d 時從那個 stack 往上兩層找 daemon（線 top-1121-deft，11-21）"
+ },
+ "aos-daemon-env-1121-搬家.json": {
+  "description": "資料表（wf-table/1）：抽自 aos-daemon-env-1121.md，13 列，欄位 id、folder、file、what、after_move、kind、stores_daemon"
+ },
+ "aos-daemon-env-1121.json": {
+  "description": "資料表（wf-table/1）：抽自 aos-daemon-env-1121.md，36 列，欄位 id、class、where、how、purpose、without、if_1120"
+ },
+ "aos-daemon-env-1121.md": {
+  "description": "aos agent 這塊用到 `AOS_DAEMON` 的地方"
+ },
+ "aos-home-更新-1121.md": {
+  "description": "授權"
+ },
+ "aos-hook-fire換-1121.md": {
+  "description": "hook_fire 換成 aos-hook fire、刪掉 hook_fire（範本起停兩點、編譯、文件、測試；行為差別逐項）"
+ },
+ "aos-hook-k5b-1121.md": {
+  "description": "「提供 hook 點」的介面：施工第 5 刀的後半（範本接上 before_run／after_run、編譯寫四鍵、旗標維護、procs-kernel 接 loop 層的點）"
+ },
+ "compact-改進規劃-1121": {
+  "description": "使用者原話（11-20 晚，逐字，出處見前情）"
+ },
+ "hook-points-格式-使用者審-1121.md": {
+  "description": "第 1 則：一份只有一個 provider、預期更簡單"
+ },
+ "llm-effort-1121.md": {
+  "description": "使用者原話"
+ },
+ "self-history-range-1121.json": {
+  "description": "資料表（wf-table/1）：抽自 self-history-range-1121.md，14 列，欄位 tool、param、argv、before、after、status"
+ },
+ "self-history-range-1121.md": {
+  "description": "使用者原話"
+ },
+ "session-key-實測-1121.md": {
+  "description": "做法"
+ },
+ "shell-指令的比喻-1121": {
+  "description": "「在 shell 裡下 aos 指令，可以比喻為啥」發想（11-21）：他的直覺對照實際機制、七個候選比喻、十四個邊緣狀況，不選定"
+ },
+ "tool-desc-瘦身-1121": {
+  "description": "一頁結論"
+ }
+}
