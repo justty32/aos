@@ -1121,7 +1121,7 @@
    "module": "",
    "unit": "proto8/templates/agent-fsm",
    "used_by": "",
-   "uses": "aos.agentlib.agent_hooks aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.declared_files aos.flags aos.metainfo aos.observed aos.observed_children aos.ws"
+   "uses": "aos.agentlib.agent_hooks aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.agentlib.tool_clear aos.declared_files aos.flags aos.metainfo aos.observed aos.observed_children aos.ws"
   },
   {
    "kind": "template",

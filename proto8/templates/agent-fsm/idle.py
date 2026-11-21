@@ -210,7 +210,8 @@ def take():
             aos_ws.letters_take(stack, compact_letters)
         except OSError as e:
             die("WriteFailed", "cannot take compact letters: %s" % e)
-        compact.ask(stack, history_path, compact_letters, compact_extra, aos_ws, die)
+        compact.ask(stack, history_path, compact_letters, compact_extra, aos_ws, die,   # 先清舊的工具輸出再加要求（compact 第 1 刀）
+                    warn=lambda line: aos_flags.warn("agent-fsm", line))
         for sig in compact_letters:
             post(["done", box, sig])
         return good + 1

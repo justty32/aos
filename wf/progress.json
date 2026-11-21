@@ -435,13 +435,12 @@
       "title": "compact 改進：先清工具輸出、壓完補回走 hook",
       "status": "等使用者",
       "flow": "",
-      "what": "規劃稿已交（線 top-1121-compactplan，只出稿沒改程式）：真模型 history 工具輸出占 64%～76%，留最後 3 則其餘換佔位 history 少 27%～78%；預設清法已定；hook 開 before_compact／after_compact；施工五刀，第 1 刀（先清再摘要）、第 3 刀（aos-agent history clear-tools）不依賴待裁題",
-      "next": "使用者答三題：Q1 清完夠低省不省摘要、Q2 hook 開到多深（調／補／換）、Q3 新 hook 點現在加還是等 hook_points.json 格式審完；或先放行第 1 刀",
+      "what": "使用者 11-21 答「可以派。三題：1.照叫。2.都開。3.我還在審。」第 1 刀（先清舊工具輸出再摘要）已交（線 top-1121-compact1）：摘要那次 prompt 少七成多，sol 評摘要品質小幅變差（少開工讀檔讀到的規矩）；第 2 刀因照叫不做",
+      "next": "第 4 刀（before_compact／after_compact，調補換都開）等使用者審完 hook_points.json 格式；第 3 刀 aos-agent history clear-tools 可另派；要吃到第 1 刀＝樹用的 proto8 跑 install.py、換 compact/idle/brain 三檔（動態連結的 ann 只要 install.py）",
       "see": [
+        "[第 1 刀紀錄](../proto8/thinking/2026-11/21/compact-第1刀-1121.md)",
         "[規劃稿 README](../proto8/thinking/2026-11/21/compact-改進規劃-1121/README.md)",
-        "[待裁三題](../proto8/thinking/2026-11/21/compact-改進規劃-1121/05-待裁題.md)",
-        "[衝突](../proto8/thinking/2026-11/21/compact-改進規劃-1121/06-衝突.md)",
-        "[compact-改進想法-1120](../proto8/thinking/2026-11/20/compact-改進想法-1120.md)"
+        "[使用者已答](../proto8/thinking/2026-11/21/compact-改進規劃-1121/07-使用者已答.md)"
       ],
       "since": "2026-11-20"
     },

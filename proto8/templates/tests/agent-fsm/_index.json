@@ -20,6 +20,9 @@
  "test_compact.py": {
   "description": "Verify compact requests, history folding, reply matching, and continued work with fake commands."
  },
+ "test_compact_clear.py": {
+  "description": "Verify that /compact clears old tool outputs into placeholders before asking for the summary (compact cut 1)."
+ },
  "test_compact_short.py": {
   "description": "Verify a /compact with too little to fold is answered like a finished compact (user 11-20 \"當成正常做完\"), with fake commands."
  },

@@ -38,7 +38,8 @@
     "hooks.py": "agent 的 hook 共用模組：事件表、讀 hooks 清單（定義那份疊 stack 那份、驗形狀，含 on_clock 格的鍵）、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 py/aos/hook_run.py。",
     "mailbox_call.py": "mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。",
     "pi_aos_screen.mjs": "aos's extension for pi's interactive screen: reports turns to aos's hook and hands aos's letters to pi (11-18 eca-pi plan C)",
-    "quiet.py": "「很久沒動靜」的共用讀寫：$AOS_STACK/quiet.json（不進 git）；aos-eca-turn（一輪 CLI 在跑）與 agent-fsm 的 wait.py（等腦回信）寫，誰都能讀。"
+    "quiet.py": "「很久沒動靜」的共用讀寫：$AOS_STACK/quiet.json（不進 git）；aos-eca-turn（一輪 CLI 在跑）與 agent-fsm 的 wait.py（等腦回信）寫，誰都能讀。",
+    "tool_clear.py": "把一份 OpenAI 格式 history 裡舊的工具輸出（role: tool 的 content）換成一行英文佔位；純函數，不讀檔、不寫檔、不印東西。"
    },
    "apps": {
     "__init__.py": "aos.apps - the Python commands (one package per command, formerly proto8/cmd/<command>/); bin/<command> runs aos.apps.<name>.main, see py/entries.jso…",

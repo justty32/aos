@@ -4,6 +4,7 @@ import json
 import os
 
 from atomic_file import write_atomic
+from aos.agentlib import tool_clear
 
 ASK_PREFIX = "[aos] compact:"
 MIN_ROWS = 4
@@ -19,6 +20,8 @@ ASK = ("[aos] compact: your conversation history is about to be replaced by one 
        "is also saved to handoff.md in your stack.")
 CONTINUE = ("[aos] compact: done. Go on with the work in progress described in the summary above; "
             "letters you have not answered yet are above.")
+CLEARED = (" Before this request, %d old tool outputs were replaced by a one-line placeholder to make this request smaller; "
+           "what you said and did about them is still above, and the originals are in history_removed.jsonl.")
 SKIP = "compact not needed: only %d messages to fold (it takes at least %d); nothing was folded"
 
 
@@ -92,15 +95,51 @@ def save_state(stack, row, die):
     write_atomic(os.path.join(stack, "compact.json"), json.dumps(row) + "\n", die)
 
 
-def ask(stack, history_path, letters, extra, aos_ws, die, mid_turn=False):
-    row = aos_ws.mark_letter({"role": "user", "content": ASK + (
+def clear_old_tools(stack, history_path, warn):
+    """Before asking for the summary: old tool outputs become one-line placeholders (tool_clear), originals go to
+    history_removed.jsonl (op clear_tools). Read, write a temp file, rename only if history did not change (like fold);
+    three tries, then give up clearing (one warning) and summarize as before. Returns (cleared, chars)."""
+    for attempt in range(3):
+        try:
+            before, lines = read_lines(history_path)
+            numbered = [(n, line) for n, line in enumerate(lines, 1) if line.strip()]
+            history = [parse(line) for _, line in numbered]
+        except (OSError, ValueError, UnicodeError) as e:
+            warn("compact: old tool outputs not cleared: cannot read history: %s" % e)
+            return 0, 0
+        new, removed = tool_clear.clear(history)
+        if not removed:
+            return 0, 0
+        changed = {i for i, _ in removed}
+        out, k = [], 0
+        for n, line in enumerate(lines, 1):
+            if k < len(numbered) and numbered[k][0] == n:
+                out.append(json.dumps(new[k], ensure_ascii=False) + "\n" if k in changed else line)
+                k += 1
+            else:
+                out.append(line)
+        try:
+            if replace(stack, history_path, before, "".join(out),
+                       [(numbered[i][0], row) for i, row in removed], "clear_tools"):
+                return len(removed), sum(len(row["content"]) for _, row in removed)
+        except OSError as e:
+            warn("compact: old tool outputs not cleared: %s" % e)
+            return 0, 0
+    warn("compact: old tool outputs not cleared: history kept changing")
+    return 0, 0
+
+
+def ask(stack, history_path, letters, extra, aos_ws, die, mid_turn=False, warn=None):
+    cleared, chars = clear_old_tools(stack, history_path, warn or (lambda line: None))
+    row = aos_ws.mark_letter({"role": "user", "content": ASK + (CLEARED % cleared if cleared else "") + (
         " Extra instructions from the sender: " + extra if extra else "")}, letters[0] if letters else None)
     try:
         with open(history_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
     except OSError as e:
         die("WriteFailed", "cannot append compact request: %s" % e)
-    save_state(stack, {"phase": "asked", "letters": letters, "asked_at": utc(), "mid_turn": mid_turn}, die)
+    save_state(stack, {"phase": "asked", "letters": letters, "asked_at": utc(), "mid_turn": mid_turn,
+                       "cleared": cleared, "cleared_chars": chars}, die)
 
 
 def waiting_letters(box, stage="new"):
@@ -255,6 +294,7 @@ def fold(stack, history_path, message, aos_ws, warn, die):
             f.write("## compact %s (%d messages)\n\n%s\n" % (at, len(removed), summary))
     except OSError as e:
         warn("cannot append compact summary to handoff.md: %s" % e)
-    save_state(stack, {"phase": "done", "letters": letters, "done_at": at,
-                       "replaced": len(removed), "kept": len(keep), "summary_chars": len(summary)}, die)
+    save_state(stack, {"phase": "done", "letters": letters, "done_at": at, "replaced": len(removed), "kept": len(keep),
+                       "summary_chars": len(summary), "cleared": rec.get("cleared", 0),
+                       "cleared_chars": rec.get("cleared_chars", 0)}, die)
     return True

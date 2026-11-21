@@ -135,9 +135,10 @@ hook 格如下（pack 沒有 `context` 時可在 config 補 `"window": 272000`�
 對 agent 寄 `/compact`（或 `/compact` 後接空白與摘要重點）即可手動要求壓縮；不必等過門檻。這是 body 指令，不跑 `before_queue`／`after_queue`。`/clear` 不在這個功能裡，仍是普通文字。
 
 1. idle 把同一批一般信照常收完，批內的 `/compact` 合成一次壓縮要求；做到一半則由 brain 在下一步組請求前認信，僅在 history 尾端是 user，或最後一組工具結果已齊時插入要求，不切斷工具配對。一般信不因而在輪中交給腦。
-2. body 接一則 `[aos] compact:` user，要求只回摘要；那次送完整 history、**不帶 tools**。摘要要寫全接著做需要的資訊：誰要什麼、信名與回信處、已做與做到哪、下一步、所有未結事項、重要路徑、規則與決定、todo／goal。
-3. 收到有效摘要，之前的對話換成一則 `[aos] summary:` user，接一則 `compact done: …` assistant（只答 `/compact` 那幾封），再接留下的 user 列。**沒答的信原文保留**；緊貼要求前的連續 user 提醒也保留，舊 summary 除外。摺掉的原文先接進 `<stack>/history_removed.jsonl`，摘要再接進 `<stack>/handoff.md`。
-4. 做到一半插的要求帶 `mid_turn: true`，壓完尾端多一則 user：`[aos] compact: done. Go on with the work in progress described in the summary above; letters you have not answered yet are above.`。所以不經 idle，直接接著做；idle 發起的則沒有這列，有沒答的信就接著想，沒有就回 idle。
+2. **先清舊的工具輸出**（11-21 compact 第 1 刀，[紀錄](../../thinking/2026-11/21/compact-第1刀-1121.md)）：`role: tool` 列的內容換成一行 `[aos] tool output cleared (N chars from TOOL); the original is in history_removed.jsonl`，列本身留著（工具配對不斷）；最後 3 則工具輸出、最後一組工具呼叫的結果、短於 300 字的、已經是佔位的不清，工具呼叫與 arguments 不動。原文接進 `history_removed.jsonl`（`op: "clear_tools"`）。改 history 照摺的做法（寫暫存、沒變才改名），一直在變三次或讀不了＝放棄清、記一行 warning、照舊往下。目的只是讓下一步那次請求變小（真模型兩份長對話 prompt 少七成多），壓完的樣子不變。
+3. body 接一則 `[aos] compact:` user，要求只回摘要（有清時多一句清了幾則、原文在哪）；那次送完整 history、**不帶 tools**。摘要要寫全接著做需要的資訊：誰要什麼、信名與回信處、已做與做到哪、下一步、所有未結事項、重要路徑、規則與決定、todo／goal。
+4. 收到有效摘要，之前的對話換成一則 `[aos] summary:` user，接一則 `compact done: …` assistant（只答 `/compact` 那幾封），再接留下的 user 列。**沒答的信原文保留**；緊貼要求前的連續 user 提醒也保留，舊 summary 除外。摺掉的原文先接進 `<stack>/history_removed.jsonl`，摘要再接進 `<stack>/handoff.md`。
+5. 做到一半插的要求帶 `mid_turn: true`，壓完尾端多一則 user：`[aos] compact: done. Go on with the work in progress described in the summary above; letters you have not answered yet are above.`。所以不經 idle，直接接著做；idle 發起的則沒有這列，有沒答的信就接著想，沒有就回 idle。
 
 壓縮進行中 idle 不再收信，來信等壓完再收。同批多封 `/compact` 一起處理；可摺列數是「要求之前的列數扣掉會原文留下的列」，**不到 4 則就不叫腦、不摺**，當成正常做完（使用者 11-20「當成正常做完」）：history 接一則 assistant `compact not needed: only N messages to fold (it takes at least 4); nothing was folded`（形狀同 compact done，`aos` 多 `skipped: true`），那幾封記成答完，ask／listen 拿到這句；不寫 `mailbox_warning.txt`、不記 dropped。這則寫在同一批普通信之前，普通信照常往下答。這種回答不算可摺列，所以剛壓完連寄幾封 `/compact` 都只會各得一句、不會自己湊滿 4 則。
 
@@ -151,9 +152,9 @@ hook 格如下（pack 沒有 `context` 時可在 config 補 `"window": 272000`�
 | `<kernel>/endpoints.json` | kernel | `{pack: {speed, context?, …}}`；公開 pack 視窗 |
 | hook 格 `config` | 人 | `{percent: 1～100, wrap: bool, window: 正整數}`；都選填，預設 percent 35、wrap true；fsm 格明寫 wrap false |
 | `<stack>/hooks/context_wrap/state.json` | handler | `{phase, letter, turn, percent}`；phase 為 idle／wrapping／compacting／compacted |
-| `<stack>/compact.json` | body | asked：`{phase: "asked", letters: [信名…], asked_at, mid_turn: bool}`；done：`{phase: "done", letters, done_at, replaced, kept, summary_chars}`；failed：`{phase: "failed", letters, failed_at, reason}` |
+| `<stack>/compact.json` | body | asked：`{phase: "asked", letters: [信名…], asked_at, mid_turn: bool, cleared, cleared_chars}`；done：`{phase: "done", letters, done_at, replaced, kept, summary_chars, cleared, cleared_chars}`（`cleared`＝清掉幾則工具輸出、`cleared_chars`＝原本幾字）；failed：`{phase: "failed", letters, failed_at, reason}` |
 | history 的 compact done 列 | body | `{role: "assistant", content: "compact done: …", aos: {answer_to: [壓縮信名…], compact: true}}`；`aos.compact` 供 task 模式辨識，送端點前剝掉 aos；太短沒壓的那則是 `compact not needed: …`，aos 多 `skipped: true`（不算可摺列） |
-| `<stack>/history_removed.jsonl` | body | `{removed_at, op: "compact"｜"compact_failed", line, message}`；UTC 毫秒 Z、原行號與原訊息，只接不刪 |
+| `<stack>/history_removed.jsonl` | body | `{removed_at, op: "clear_tools"｜"compact"｜"compact_failed", line, message}`；UTC 毫秒 Z、原行號與原訊息，只接不刪 |
 | `<stack>/handoff.md` | body | 每次接一節 `## compact <UTC> (<n> messages)` 與摘要；不是工作區的 notes.md |
 
 ### goal、do_task 與 task history
@@ -164,7 +165,7 @@ hook 格如下（pack 沒有 `context` 時可在 config 補 `"window": 272000`�
 
 ### 舊 agent 怎麼換上
 
-由管理該 agent 的人操作，不用重掛：先 pause（或確認 idle），把新範本的 `compact.py`、`idle.py`、`brain.py`、`wait.py` **四檔換進定義夾**；若那份定義改過這些檔，先比對。同一定義的其他 agent 也會一起換上。再把上面的 hook 格加到該 agent stack 的 `hooks.json#/hooks/context_wrap`（希望整份定義都有才改定義 hooks.json），pack 尚無 context 時在 config 補 window，最後 resume，用 `context_wrap --reading <stack>` 核對。**先換檔、後掛 hook**：舊 body 會把 `/compact` 當普通文字。
+由管理該 agent 的人操作，不用重掛：先 pause（或確認 idle），在那棵樹用的 proto8 跑過 `install.py`（11-21 起 `compact.py` 要 lib 裡的 `aos/agentlib/tool_clear.py`，沒有它 idle 一收 `/compact` 就停），再把新範本的 `compact.py`、`idle.py`、`brain.py`、`wait.py` **四檔換進定義夾**；若那份定義改過這些檔，先比對。同一定義的其他 agent 也會一起換上。再把上面的 hook 格加到該 agent stack 的 `hooks.json#/hooks/context_wrap`（希望整份定義都有才改定義 hooks.json），pack 尚無 context 時在 config 補 window，最後 resume，用 `context_wrap --reading <stack>` 核對。**先換檔、後掛 hook**：舊 body 會把 `/compact` 當普通文字。
 
 repo 的這些更新不會自行換掉既有樹；共用 `context_use`／`context_wrap`、範本、docs、知識庫要先抄進該樹才生效，kernel 的 pack 也要有 context 或另給 window。活樹換檔須由有權管理的人取得同意後做，不是 agent 自己改別人的 stack。
 
@@ -172,5 +173,6 @@ repo 的這些更新不會自行換掉既有樹；共用 `context_use`／`contex
 
 - act 跑長工具時不檢查（格還沒結束，不跑 on_clock）；下一步才查，一步之內 context 不會再漲。
 - 單次工具結果把用量從 30% 推到 100% 救不了，要另處理工具輸出上限。
+- 清過舊工具輸出再摘要，摘要會少一些只出現在那些輸出裡的細節（例：開工時讀檔讀到的規矩、確切值）；11-21 兩份長對話實測評為小幅變差、接著做要的狀態都在。
 - 摘要品質靠模型；保底是未答信原文、`history_removed.jsonl` 全文與累積摘要的 `handoff.md`。
 - 壓完仍高於門檻會留在 compacted，不重寄；等下一次真正 think 的新讀數低於門檻才回 idle。用 `--reading` 查數字，必要時調 percent。

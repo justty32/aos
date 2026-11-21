@@ -156,7 +156,8 @@ if (not compact.asking(stack, history) and compact.turn_open(history)
             aos_ws.letters_take(stack, letters)
         except OSError as e:
             die("WriteFailed", "cannot take compact letters: %s" % e)
-        compact.ask(stack, history_path, letters, extra, aos_ws, die, mid_turn=True)
+        compact.ask(stack, history_path, letters, extra, aos_ws, die, mid_turn=True,   # 先清舊的工具輸出再加要求（compact 第 1 刀）
+                    warn=lambda line: aos_flags.warn("agent-fsm", line))
         for name in letters:
             post(["done", box, name])
         history = cell_common.read_history(history_path, die)

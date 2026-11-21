@@ -82,5 +82,8 @@
  },
  "quiet.py": {
   "description": "「很久沒動靜」的共用讀寫：$AOS_STACK/quiet.json（不進 git）；aos-eca-turn（一輪 CLI 在跑）與 agent-fsm 的 wait.py（等腦回信）寫，誰都能讀。"
+ },
+ "tool_clear.py": {
+  "description": "把一份 OpenAI 格式 history 裡舊的工具輸出（role: tool 的 content）換成一行英文佔位；純函數，不讀檔、不寫檔、不印東西。"
  }
 }
