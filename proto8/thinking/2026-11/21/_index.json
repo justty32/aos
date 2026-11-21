@@ -62,6 +62,9 @@
  "kernel-宣告進interfaces-1121": {
   "description": "原話（使用者 11-21，逐字）"
  },
+ "kernel-攔截daemon存取-1121": {
+  "description": "先講結論"
+ },
  "llm-effort-1121.md": {
   "description": "使用者原話"
  },

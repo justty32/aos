@@ -1,0 +1,238 @@
+{
+ "contract": "wf-table/1",
+ "source": "README.md",
+ "extracted": "2026-11-21",
+ "columns": [
+  "id",
+  "item",
+  "how",
+  "class",
+  "kernel_sees",
+  "to_intercept",
+  "hard_block_by",
+  "morning_ids",
+  "evidence"
+ ],
+ "rows": [
+  {
+   "id": "1",
+   "item": "起停掛拆：aos-agent ctl add／rm／start／stop／sleep／wake／set-def（含工具 agents_ctl、subagent、fork、self_ctl 的 stop／sleep／rm）",
+   "how": "寄信到 AOS_KERNEL（沒設＝daemon 的 procs_requests）",
+   "class": "a 已經過 kernel",
+   "kernel_sees": "整封 body（procs_added 含 exec、envs、limits；procs_stopped 等名單）＋信封 sender",
+   "to_intercept": "—（已攔得到：放行、拒、改 body、排隊、留著等人表態、分流）",
+   "hard_block_by": "daemon 的 procs_requests 用檔案權限只給站寫（kernel 02「誰能繞過」）",
+   "morning_ids": "1,3,4,5,6",
+   "evidence": "實測：subagent add／stop／rm 時站看到 procs_added／procs_stopped／procs_removed"
+  },
+  {
+   "id": "2",
+   "item": "查表位置：aos-agent ctl ls／who／where／state，以及靠 ctl who 認自己的工具（self_*、goal、do_task、mailbox_*、user_*、clock_register add、kernel_gate、subagent、fork）",
+   "how": "寄 {procs_state_path:true} 問表在哪，再自己讀那個檔",
+   "class": "a 已經過 kernel（只攔到「問位置」這一步）",
+   "kernel_sees": "只有「我要表」這句＋sender；看不到問的人之後要拿表做什麼",
+   "to_intercept": "—（已攔得到：拒＝問的人 KernelFailed；回別的路徑＝問的人讀那份）",
+   "hard_block_by": "讀表本身是讀檔，硬防靠表檔的檔案權限",
+   "morning_ids": "2,7,13-26",
+   "evidence": "實測：self_state 一次寄 10 封、goal 2 封、mailbox_peek 1 封；hook 拒＝goal 報 KernelFailed…HookRejected；before_reply 換成過濾過的抄本＝agents_ctl ls 看不到 llm"
+  },
+  {
+   "id": "3",
+   "item": "問腦",
+   "how": "寄信到 AOS_LLM_KERNEL（llm kernel）",
+   "class": "a 已經過 kernel（另一條線，不是 daemon 存取）",
+   "kernel_sees": "整封 body",
+   "to_intercept": "—",
+   "hard_block_by": "—",
+   "morning_ids": "31",
+   "evidence": "讀程式"
+  },
+  {
+   "id": "4",
+   "item": "aos-daemon-ctl 全部動作（add／rm／stop／start／sleep／wake／ping）",
+   "how": "寄信到 daemon 自己的 procs_requests，永遠不看 AOS_KERNEL",
+   "class": "b 是寄信、今天故意直寄",
+   "kernel_sees": "站看不到",
+   "to_intercept": "改成也認 AOS_KERNEL（11-07 使用者定「aos-daemon-ctl 永遠直寄」，是人直接敲板子）",
+   "hard_block_by": "同 1",
+   "morning_ids": "—",
+   "evidence": "讀程式 apps/daemon_ctl/main.py"
+  },
+  {
+   "id": "5",
+   "item": "aos-agent --daemon D …（明給 -d）",
+   "how": "直寄 D 的 ctl 信箱、直讀 D 的表",
+   "class": "b 是寄信／查表、今天故意直寄",
+   "kernel_sees": "站看不到",
+   "to_intercept": "明給 -d 時也問 kernel（今天文件寫這是「看某一台」的正路）",
+   "hard_block_by": "同 1、2",
+   "morning_ids": "—",
+   "evidence": "讀程式 common.via_kernel"
+  },
+  {
+   "id": "6",
+   "item": "aos-mailbox send --to NAME（工具 mailbox_send 給 to 名字時）",
+   "how": "名字→stack 直接讀 $AOS_DAEMON 的表（find_daemon），不問 kernel",
+   "class": "b 是查表、今天沒走 kernel",
+   "kernel_sees": "只看到寄件人那半的 ctl who",
+   "to_intercept": "名字→stack 改用 aos-agent 那套問表",
+   "hard_block_by": "表檔權限",
+   "morning_ids": "9,23",
+   "evidence": "實測：站把 llm 從抄本拿掉後，mailbox_send to llm 照樣寄出"
+  },
+  {
+   "id": "7",
+   "item": "guard scope、kernel_gate triage、aos.gdb 的 a.bp、aos-llm ls、comm walk、eca 畫面看守（沒設 AOS_KERNEL 時）",
+   "how": "直接讀 AOS_DAEMON（或 --daemon）的表",
+   "class": "b 是查表、今天沒走 kernel",
+   "kernel_sees": "站看不到",
+   "to_intercept": "改走問表那條（guard 的註解明寫「設了 AOS_KERNEL 也直讀」）",
+   "hard_block_by": "表檔權限",
+   "morning_ids": "11,12,31,32,33",
+   "evidence": "讀程式"
+  },
+  {
+   "id": "8",
+   "item": "ctl pause／resume（含 agents_ctl、subagent、self_ctl 的 pause）",
+   "how": "問表（經 kernel）拿那列 stack，再直接寫對方 stack 的 ctl.json",
+   "class": "c 直接寫檔（前面查表那步是 a）",
+   "kernel_sees": "只有查表那句",
+   "to_intercept": "改成一封信（daemon 今天沒有 pause 的信，要 daemon 或站代寫 ctl.json）",
+   "hard_block_by": "對方換 uid（sub:N）後 stack 0700＋ACL",
+   "morning_ids": "1,6",
+   "evidence": "實測：agents_ctl pause llm 時站只看到 procs_state_path"
+  },
+  {
+   "id": "9",
+   "item": "say／ask／chat、subagent say（塞進別隻的 queue）",
+   "how": "查表拿 stack（經 kernel），再 aos-post send 進對方 stack/queue",
+   "class": "c 直接放信進別人的夾",
+   "kernel_sees": "只有查表那句",
+   "to_intercept": "信改寄 kernel 再轉；或 kernel 回的表裡不給那列",
+   "hard_block_by": "同 8",
+   "morning_ids": "13",
+   "evidence": "實測：subagent say 站只看到 3 封 procs_state_path"
+  },
+  {
+   "id": "10",
+   "item": "寄信給別隻的 mailbox（aos-mailbox、mailbox_send）",
+   "how": "直接放進對方 stack/mailbox",
+   "class": "c 直接放信",
+   "kernel_sees": "站看不到（名字解析也不經它，見 6）",
+   "to_intercept": "同 9",
+   "hard_block_by": "同 8",
+   "morning_ids": "9,23",
+   "evidence": "實測"
+  },
+  {
+   "id": "11",
+   "item": "改別隻（或自己）stack 裡的設定：hook／tools／llm／system／history／goal（aos-agent 與 self_* 工具）",
+   "how": "查表拿 stack（經 kernel），再讀改寫檔",
+   "class": "c 直接寫檔",
+   "kernel_sees": "只有查表那句",
+   "to_intercept": "改成寄給 kernel 代改；或抄本裡的 stack 指到別處",
+   "hard_block_by": "同 8；改自己的 stack 本來就該准",
+   "morning_ids": "14,15,19,20,21",
+   "evidence": "實測：self_tools、goal、self_hook、self_history 站只看到 2～3 封查表"
+  },
+  {
+   "id": "12",
+   "item": "ctl rm --purge 刪 stack",
+   "how": "rm 信經 kernel，之後自己 rm -rf 那個 stack",
+   "class": "c 刪檔（rm 信那步是 a）",
+   "kernel_sees": "rm 那封信",
+   "to_intercept": "刪檔改由 daemon 或站做",
+   "hard_block_by": "同 8",
+   "morning_ids": "1",
+   "evidence": "實測：subagent rm purge 站看到 procs_removed，刪檔它看不到"
+  },
+  {
+   "id": "13",
+   "item": "時鐘：clock_register add／rm／ls、hook 的 on_clock",
+   "how": "直接讀寫 $AOS_CLOCK 旁的 clock_register.json（在根的 stack 裡）；add 不給 box 時先 ctl who",
+   "class": "c 直接寫檔",
+   "kernel_sees": "add 時只有 ctl who 那句；rm、ls 什麼都沒有",
+   "to_intercept": "登記改成寄信給鐘或 kernel",
+   "hard_block_by": "根 stack 的檔案權限",
+   "morning_ids": "25,10",
+   "evidence": "實測：站停著時 ls、rm 照通，add（連給了 box）因先 ctl who 而 KernelFailed"
+  },
+  {
+   "id": "14",
+   "item": "讀別隻的東西：listen、history ls、ctl state 的細項、aos-gdb a.look",
+   "how": "查表拿 stack（經 kernel），再直接讀 history.jsonl、state.json 等",
+   "class": "c 直接讀檔",
+   "kernel_sees": "只有查表那句",
+   "to_intercept": "kernel 回抄本或不給那列",
+   "hard_block_by": "對方換 uid 後 stack 0700",
+   "morning_ids": "13,14",
+   "evidence": "讀程式"
+  },
+  {
+   "id": "15",
+   "item": "讀 daemon 的 state：daemon_up 核 daemon 活不活",
+   "how": "直讀 daemon stack 的 state.json、看 /proc",
+   "class": "c 直接讀檔（只在沒走 kernel 時）",
+   "kernel_sees": "—",
+   "to_intercept": "走 kernel 時本來就不讀",
+   "hard_block_by": "—",
+   "morning_ids": "1",
+   "evidence": "讀程式 ctl/shared.py"
+  },
+  {
+   "id": "16",
+   "item": "poke、aos-daemon-ctl shutdown、daemon 的 procs_ctl.json 窗",
+   "how": "送訊號；直寫 daemon 的 ctl.json；直寫 procs_ctl.json（py 裡沒人用，但寫得進去就生效）",
+   "class": "c 訊號／直接寫檔",
+   "kernel_sees": "站看不到",
+   "to_intercept": "改成寄信（daemon 今天沒有 shutdown 的信）",
+   "hard_block_by": "訊號：不同 uid；檔：daemon stack 權限",
+   "morning_ids": "—",
+   "evidence": "讀程式"
+  },
+  {
+   "id": "17",
+   "item": "daemon 起子行程時給的環境（AOS_DAEMON、AOS_STACK、AOS_WS）與 .env",
+   "how": "daemon 自己 setenv、aos-exec 讀 .env",
+   "class": "d 攔了會壞",
+   "kernel_sees": "—",
+   "to_intercept": "—",
+   "hard_block_by": "—",
+   "morning_ids": "34",
+   "evidence": "讀程式 child.cpp"
+  },
+  {
+   "id": "18",
+   "item": "kernel 站自己轉給 daemon、自己數 running",
+   "how": "站 forward 到 next／AOS_KERNEL／AOS_DAEMON 的 procs_requests；直讀 count_daemon 的表",
+   "class": "d 它就是 kernel",
+   "kernel_sees": "—",
+   "to_intercept": "—",
+   "hard_block_by": "—",
+   "morning_ids": "—",
+   "evidence": "實測：perm 的環境沒有 AOS_KERNEL；讀程式 procs_rules.py"
+  },
+  {
+   "id": "19",
+   "item": "llm kernel 把腦的工作掛成自己 daemon 的列",
+   "how": "寄 procs_added 到 AOS_KERNEL（設了）或自己 daemon；直讀表看成品",
+   "class": "d kernel 自己要用的",
+   "kernel_sees": "—",
+   "to_intercept": "根的 .env 註明不要在根設 AOS_KERNEL，免得它也繞去站",
+   "hard_block_by": "—",
+   "morning_ids": "31",
+   "evidence": "讀程式 runner.py、root/.env"
+  },
+  {
+   "id": "20",
+   "item": "路標與顯示：tool_io.place、aos-loop 錯誤行、指示詞 {$env:AOS_DAEMON}、wait.py／aos-llm 的相對路徑基準、claude／沙箱照傳變數",
+   "how": "只是拿路徑當基準或顯示",
+   "class": "d 不是存取",
+   "kernel_sees": "—",
+   "to_intercept": "—",
+   "hard_block_by": "—",
+   "morning_ids": "27-30,35,36",
+   "evidence": "讀程式（早上丙類）"
+  }
+ ]
+}
