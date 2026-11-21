@@ -1,4 +1,4 @@
-"""Test defs.loop (line aos-pylib-k4-1120, second commit; open question 8 of thinking/2026-11/20/aos-pylib-plan-1120/08, the user chose "加一個宣告"): defs.Agent(..., loop=defs.loop(every_ms=N)) sets interval_ms of loop.json; without loop= the files are what they were."""
+"""Test defs.loop (line aos-pylib-k4-1120, second commit; open question 8 of thinking/2026-11/20/aos-pylib-plan-1120/08, the user chose "加一個宣告"): defs.Agent(..., loop=defs.loop(every_ms=N)) sets interval_ms of loop.json; without loop= the files are what they were. Any other key goes into loop.json as it is and wins over the compile's own (user 11-21: "任意鍵照傳")."""
 import json
 import os
 from pathlib import Path
@@ -20,6 +20,18 @@ class Loop(WithHome):
         self.assertEqual(list(timed["loop.json"]), list(plain["loop.json"]))                 # same keys, same order
         self.assertEqual(agent(loop=defs.loop(every_ms=0)).dry_run()["loop.json"]["interval_ms"], 0)
 
+    def test_any_key_goes_through(self):
+        """11-21「任意鍵照傳」：any key, as it is, unchecked; a key the compile writes is replaced in place (yours wins); defs.loop() = no loop=."""
+        plain = agent(hooks={}).dry_run()["loop.json"]
+        made = agent(hooks={}, loop=defs.loop(every_ms=1000, max=50, made_up_key={"a": [1]}, on_start=["true"], exec="mine.json")).dry_run()
+        loop = made["loop.json"]
+        self.assertEqual(loop, dict(plain, interval_ms=1000, max=50, made_up_key={"a": [1]}, on_start=["true"], exec="mine.json"))
+        self.assertEqual(list(loop)[:len(plain)], list(plain))                       # compile's keys keep their place, new ones at the end
+        self.assertEqual(agent(hooks={}, loop=defs.loop(interval_ms=7)).dry_run()["loop.json"], dict(plain, interval_ms=7))
+        self.assertEqual(agent(hooks={}, loop=defs.loop(interval_ms="soon")).dry_run()["loop.json"]["interval_ms"], "soon")   # unchecked
+        self.assertEqual(agent(hooks={}, loop=defs.loop()).dry_run(), agent(hooks={}).dry_run())
+        self.assertEqual(agent(loop=defs.loop(**{"odd-name": 1})).dry_run()["loop.json"]["odd-name"], 1)
+
     def test_without_loop_the_agent_fsm_template_loop(self):
         """no loop=: loop.json is still the agent-fsm template's (apart from its description), 300 ms."""
         loop = json.loads((TEMPLATES / "agent-fsm" / "loop.json").read_text())
@@ -27,18 +39,18 @@ class Loop(WithHome):
         self.assertEqual({k: v for k, v in made.items() if k != "description"}, {k: v for k, v in loop.items() if k != "description"})
 
     def test_spec_bad(self):
-        cases = {"no every_ms": (defs.loop(), "give every_ms"),
-                 "negative": (defs.loop(every_ms=-1), "whole number of milliseconds >= 0"),
+        cases = {"negative": (defs.loop(every_ms=-1), "whole number of milliseconds >= 0"),
                  "a float": (defs.loop(every_ms=1.5), ">= 0"),
                  "a bool": (defs.loop(every_ms=True), ">= 0"),
                  "a string": (defs.loop(every_ms="1000"), ">= 0"),
                  "not from defs.loop": ({"every_ms": 1000}, "must come from defs.loop"),
-                 "a number": (1000, "must come from defs.loop")}
+                 "a number": (1000, "must come from defs.loop"),
+                 "every_ms and interval_ms": (defs.loop(every_ms=5, interval_ms=5), "every_ms or interval_ms, not both"),
+                 "a key not JSON": (defs.loop(max={1, 2}), "cannot be written as JSON")}
         for why, (value, line) in cases.items():
             with self.subTest(why=why):
                 self.assertRaisesRegex(defs.SpecBad, line, agent(loop=value).dry_run)
         self.assertRaises(TypeError, defs.loop, 1000)                  # by name only: defs.loop(every_ms=1000)
-        self.assertRaises(TypeError, defs.loop, every_ms=1000, max=3)  # only every_ms is open
         eca = self.folder("eca")
         (eca / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json", "llm": "llm.json", "system": "system.txt"}}))
         self.assertRaisesRegex(defs.SpecBad, "loop needs fsm", agent(fsm=None, loop=defs.loop(every_ms=1000)).dry_run, str(eca))
@@ -51,7 +63,7 @@ class Loop(WithHome):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads((base / "loop.json").read_text())["interval_ms"], 1500)
         got = defs.load(str(base))
-        self.assertEqual(got.loop, {"kind": "loop", "every_ms": 1500})
+        self.assertEqual(got.loop, {"kind": "loop", "every_ms": 1500, "keys": {}})
         self.assertEqual(agent(loop=got.loop).dry_run()["loop.json"]["interval_ms"], 1500)    # loop=base.loop takes it over
         self.assertEqual(agent().dry_run()["loop.json"]["interval_ms"], 300)                  # like every field: only when written
         (base / "agent.py").write_text(HEAD + "defs.main(defs.Agent('B.', system='', tools=[], llm={}, fsm=defs.std.fsm(), "

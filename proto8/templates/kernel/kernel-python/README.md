@@ -45,7 +45,7 @@ defs.main(kernel)
 | `knobs=` | the keys of `kernel.json` (`allowed`, `max_running`, `queue`, `next`... for `kernel`; `slots`, `endpoints`... for `kernel_llm`), written as given and not checked here: the program ignores keys it does not know | `{}`: manage nothing |
 | `hooks=` | hooks of `before_verdict`, `after_verdict`, `before_reply` go into `kernel.json`; with `body=defs.loop(...)`, hooks of `after_start`, `after_stop`, `before_run`, `after_run` go into `loop_hooks.json`. A function is pulled out into `fn/<name>.py` (same rules as in `agent.py`: it may use builtins, `fn` and modules imported at the top) | no hooks |
 | `program=` | `"kernel"` (the station that admits procs) or `"kernel_llm"` (the llm kernel) | `"kernel"` |
-| `body=` | `defs.loop(every_ms=N)`: one row of a daemon (`_entry` runs `aos-loop loop.json`, like `procs-kernel`); `defs.daemon(every_ms=N)`: a daemon of its own with a sweeper row (`aos-daemon daemon.json`, like `daemon-kernel` and `llm-kernel`) | like `templates/start-api`: `loop` for `kernel`, `daemon` for `kernel_llm` |
+| `body=` | `defs.loop(every_ms=N)`: one row of a daemon (`_entry` runs `aos-loop loop.json`, like `procs-kernel`); `defs.daemon(every_ms=N)`: a daemon of its own with a sweeper row (`aos-daemon daemon.json`, like `daemon-kernel` and `llm-kernel`). Any other keyword goes into that file as it is, unchecked, and replaces a key of the same name the compile writes (`defs.daemon(procs={...})` = no sweeper row); `every_ms` and `interval_ms` together = `SpecBad` | like `templates/start-api`: `loop` for `kernel`, `daemon` for `kernel_llm` |
 
 Without `defs.main` (a build script, the REPL): `kernel.dry_run()` gives the files, `kernel.compile("FOLDER")` writes them.
 

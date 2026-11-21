@@ -13,6 +13,7 @@
                判前、判後、代回之前三個點寫進 kernel.json 的 hooks；身體是 loop 時 aos-loop 的四個點寫進 loop_hooks.json
       body     defs.loop(every_ms=300)＝掛成 daemon 底下的一列（aos-loop loop.json，同 procs-kernel）、
                defs.daemon(every_ms=300)＝自己一台 daemon（aos-daemon daemon.json，帶清道夫列，同 daemon-kernel、llm-kernel）；
+               兩個都收任意鍵，原樣寫進那份 json、不檢查、同名蓋過編譯寫的（11-21 使用者「任意鍵照傳」，同 agent 的 defs.loop）；
                不給＝照起手範本 start-api：kernel 用 loop、kernel_llm 用 daemon
   home(路徑)／env(變數, 路徑)  指示詞，同 agent 那邊
 main(物件)：kernel.py 最後一行；--compile [資料夾]、--dry-run、--help。
@@ -25,6 +26,7 @@ from aos import fn_spec, hook_point, hook_run
 from aos import spec_base, spec_unit
 from aos.spec_base import SpecBad, DefBad  # noqa: F401（對外的名字：defs.SpecBad、defs.DefBad）
 from aos.agent_spec import home, env  # noqa: F401（對外的名字：defs.home、defs.env，同 agent 那邊）
+from aos.agent_spec import _every     # defs.loop／defs.daemon 跟 agent 的 defs.loop 同一套（every_ms＋任意鍵照傳，11-21）
 
 PUBLIC = ("Kernel", "main", "loop", "daemon", "home", "env", "SpecBad", "DefBad")
 FIELDS = ("description", "knobs", "hooks", "program", "body")
@@ -53,6 +55,8 @@ program="kernel" (the default) is the station that admits procs; program="kernel
 knobs= is the rest of kernel.json, written as given (keys: templates/kernel/README.md).
 body=defs.loop(every_ms=300) mounts it as one row of a daemon (aos-loop); body=defs.daemon(every_ms=300)
 makes it a daemon of its own, with a sweeper row. Default: loop for kernel, daemon for kernel_llm.
+Any other keyword of defs.loop / defs.daemon goes into loop.json / daemon.json as it is, unchecked, and
+replaces a key of the same name that compiling writes (like defs.daemon(procs={...}): no sweeper row then).
 hooks= takes a dict {name: entry}, functions marked @fn.hook("before_verdict") (from aos.py import fn),
 or a list of those; a function is pulled out into a program fn/<name>.py of the folder. Hooks of
 before_verdict, after_verdict and before_reply go into kernel.json; with body=defs.loop(...), hooks of
@@ -69,22 +73,16 @@ def __getattr__(name):
     raise AttributeError("defs has no %s (it has %s)" % (name, ", ".join(PUBLIC)))
 
 
-def _every(what, every_ms):
-    if every_ms is None:
-        every_ms = 300
-    if not isinstance(every_ms, int) or isinstance(every_ms, bool) or every_ms < 0:
-        return {"kind": "bad", "bad": "defs.%s: every_ms must be a whole number of milliseconds >= 0 (0 = no pause), got %r" % (what, every_ms)}
-    return {"kind": what, "every_ms": every_ms}
+def loop(*, every_ms=None, **keys):
+    """body=defs.loop(every_ms=300)：掛成 daemon 底下的一列，aos-loop 每 every_ms 毫秒跑一輪（loop.json；不給＝300）。
+    其他鍵原樣寫進 loop.json、不檢查，同名蓋過編譯寫的（11-21 使用者「任意鍵照傳」，同 agent 的 defs.loop）。"""
+    return _every("loop", every_ms, keys)
 
 
-def loop(*, every_ms=None):
-    """body=defs.loop(every_ms=300)：掛成 daemon 底下的一列，aos-loop 每 every_ms 毫秒跑一輪（loop.json；不給＝300）。"""
-    return _every("loop", every_ms)
-
-
-def daemon(*, every_ms=None):
-    """body=defs.daemon(every_ms=300)：自己一台 daemon，每 every_ms 毫秒跑一輪（daemon.json，帶清道夫列；不給＝300）。"""
-    return _every("daemon", every_ms)
+def daemon(*, every_ms=None, **keys):
+    """body=defs.daemon(every_ms=300)：自己一台 daemon，每 every_ms 毫秒跑一輪（daemon.json，帶清道夫列；不給＝300）。
+    其他鍵原樣寫進 daemon.json、不檢查，同名蓋過編譯寫的（procs 也是：給了就沒有清道夫列）。"""
+    return _every("daemon", every_ms, keys)
 
 
 def _points(body):
@@ -150,12 +148,16 @@ class Kernel(spec_unit.Unit):
     def _body(self):
         if self.program not in PROGRAMS:
             raise SpecBad("program must be one of %s, got %r" % (", ".join(PROGRAMS), self.program))
-        body = self.body if self.body is not None else {"kind": DEFAULT_BODY[self.program], "every_ms": 300}
+        body = self.body if self.body is not None else {"kind": DEFAULT_BODY[self.program], "every_ms": None, "keys": {}}
         if isinstance(body, dict) and body.get("kind") == "bad":
             raise SpecBad(body["bad"])
         if not isinstance(body, dict) or body.get("kind") not in ("loop", "daemon"):
             raise SpecBad("body must come from defs.loop(every_ms=...) or defs.daemon(every_ms=...), got %r" % (body,))
-        return body["kind"], body["every_ms"]
+        every_ms, keys = body.get("every_ms"), body.get("keys") or {}
+        given = keys.get("interval_ms")                 # 直接給 interval_ms（照傳、不驗）：說明裡的毫秒數跟著它，是整數才跟
+        if every_ms is None and isinstance(given, int) and not isinstance(given, bool):
+            every_ms = given
+        return body["kind"], 300 if every_ms is None else every_ms, keys
 
     def events(self):
         """這個 kernel 收的 hook 事件表（引擎的形狀）：kernel 的三個點，身體是 loop 時再加 aos-loop 的四個。"""
@@ -168,7 +170,7 @@ class Kernel(spec_unit.Unit):
         if not isinstance(description, str) or not description.strip():
             raise SpecBad("description must be a non-empty string: one sentence saying what the kernel does")
         description = description.strip()
-        body, every_ms = self._body()
+        body, every_ms, body_keys = self._body()
         knobs = {} if self.knobs is None else self.knobs
         if not isinstance(knobs, dict) or not all(isinstance(k, str) for k in knobs):
             raise SpecBad("knobs must be a dict of kernel.json keys, like {\"max_running\": 2} ({} = manage nothing, pass everything on)")
@@ -190,13 +192,13 @@ class Kernel(spec_unit.Unit):
         if body == "loop":
             out["_entry"] = {"description": "Mount this kernel as one row of the current daemon: aos-loop with loop.json.",
                              "argv": ["aos-loop", "loop.json"]}
-            out["loop.json"] = _loop_json(exec_, every_ms)
+            out["loop.json"] = {**_loop_json(exec_, every_ms), **body_keys}       # 任意鍵照傳、你給的蓋過去（11-21）
         else:
             out["_entry"] = {"description": "Start this kernel as a daemon of its own, with stdout logs.",
                              "argv": ["aos-daemon", "--enable-logs", "daemon.json"]}
             out["daemon.json"] = {"description": "Run %s over kernel.json every %d ms; the _sweeper row cleans old stacks."
                                                  % (self.program, every_ms),
-                                  "exec": exec_, "interval_ms": every_ms, "procs": {"_sweeper": SWEEPER}}
+                                  "exec": exec_, "interval_ms": every_ms, "procs": {"_sweeper": SWEEPER}, **body_keys}
         out["kernel.json"] = kernel_json
         if loop_hooks is not None:
             out[LOOP_HOOKS] = loop_hooks
