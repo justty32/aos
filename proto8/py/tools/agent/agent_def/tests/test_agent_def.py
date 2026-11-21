@@ -1,4 +1,4 @@
-"""Test agent_def new (a plain copy: byte for byte, no path rewritten; directive from, DefExists, outside the workspace) and check (wraps py/tools/aos/defs) in a temp folder."""
+"""Test agent_def new (a plain copy like cp -r: byte for byte, _metainfo.json included, no path rewritten, no lineage; directive from, DefExists, outside the workspace) and check (wraps py/tools/aos/defs) in a temp folder."""
 import json
 import os
 from pathlib import Path
@@ -63,22 +63,10 @@ class AgentDef(unittest.TestCase):
     def tools(self, path="born"):
         return json.loads((self.ws / path / "tools.json").read_text())
 
-    def assert_same_copy(self, src, born, lineage):
-        """born＝src 逐 byte 照抄；設計上該不同的只有兩處：__pycache__ 不抄、_metainfo.json 多（或換掉）lineage 一個鍵。"""
+    def assert_same_copy(self, src, born):
+        """born＝src 逐 byte 照抄（跟 cp -r 一樣）；唯一的不同是 __pycache__ 不抄（11-21 起 _metainfo.json 也不寫 lineage，使用者「不寫」）。"""
         want = {k: v for k, v in tree(src).items() if "__pycache__" not in Path(k).parts}
-        got = tree(born)
-        meta = got.pop("_metainfo.json")
-        old = want.pop("_metainfo.json", None)
-        self.assertEqual(got, want)
-        self.assertEqual(meta[0], "file")
-        new_meta = json.loads(meta[1])
-        self.assertEqual(new_meta.pop("lineage"), lineage)
-        if old is None:
-            self.assertEqual(new_meta, {})
-        else:
-            src_meta = json.loads((Path(src) / "_metainfo.json").read_text())   # 捷徑也照它指的那份讀
-            src_meta.pop("lineage", None)
-            self.assertEqual(new_meta, src_meta)
+        self.assertEqual(tree(born), want)
 
     # ---- new 純粹 cp（使用者 11-20 第 10 題：「純粹的cp過去，各種相對路徑就這樣」）----
     def test_copy_is_byte_for_byte_and_rewrites_no_path(self):
@@ -95,7 +83,7 @@ class AgentDef(unittest.TestCase):
         (tpl / "fn" / "add.py").write_text("#!/usr/bin/env python3\nprint(1)\n")
         (tpl / "fn" / "add.py").chmod(0o750)
         (tpl / "fsm.json").write_text('{"states": {"a": {"exec": {"argv": ["python3", "../../shared/x.py"]}}}}')
-        (tpl / "_metainfo.json").write_text('{"summary": "t", "lineage": {"from": "old"}}')
+        (tpl / "_metainfo.json").write_text('{"summary": "t", "note": {"from": "old"}}')
         (tpl / "in_link").symlink_to("fn/add.py")
         (tpl / "out_link").symlink_to("../../outside")                          # 指夾外（斷的也照搬）
         (tpl / "abs_link").symlink_to("/etc/hostname")
@@ -104,7 +92,7 @@ class AgentDef(unittest.TestCase):
                 r = self.new("tpls/tpl", dest)
                 self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
                 born = Path(dest) if os.path.isabs(dest) else self.ws / dest
-                self.assert_same_copy(tpl, born, {"from": "tpls/tpl"})
+                self.assert_same_copy(tpl, born)
                 self.assertEqual((born / "tools.json").read_text(), tools)        # 一字不改（含指夾外的 ../tool）
 
     def test_symlinked_tools_file_stays_a_link(self):
@@ -119,7 +107,7 @@ class AgentDef(unittest.TestCase):
         self.assertFalse(link.exists())
 
     def test_every_stock_template_is_copied_byte_for_byte(self):
-        """repo 的每份範本（有 interfaces.json 的）抄到深一層的地方：除了 lineage，跟範本逐 byte 相同。"""
+        """repo 的每份範本（有 interfaces.json 的）抄到深一層的地方：跟範本逐 byte 相同。"""
         root = PROTO / "templates"
         names = sorted(d.name for d in root.iterdir() if (d / "interfaces.json").is_file())
         self.assertIn("agent-fsm", names)
@@ -127,7 +115,7 @@ class AgentDef(unittest.TestCase):
             with self.subTest(template=name):
                 r = self.run_tool({"op": "new", "template": name, "path": "deep/er/" + name}, AOS_HOME=str(PROTO))
                 self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
-                self.assert_same_copy(root / name, self.ws / "deep" / "er" / name, {"template": name})
+                self.assert_same_copy(root / name, self.ws / "deep" / "er" / name)
 
     # ---- new（舊 test_copy_repo 的案例改成新介面）----
     def test_repo_template_is_copied_as_written(self):
@@ -140,9 +128,7 @@ class AgentDef(unittest.TestCase):
                 self.assertEqual(r.stdout, "wrote definition %s (copied from %s)\n" % (born, tpl))
                 self.assertEqual((born / "tools.json").read_text(), (tpl / "tools.json").read_text())   # 全是指示詞：一字不改
                 self.assertFalse(any(p.name == "__pycache__" for p in born.rglob("*")))
-                meta, tmeta = json.loads((born / "_metainfo.json").read_text()), json.loads((tpl / "_metainfo.json").read_text())
-                self.assertEqual(meta.pop("lineage"), {"from": str(tpl)})                  # 血統：from 照參數原樣
-                self.assertEqual(meta, tmeta)                                              # 其他鍵照留
+                self.assertEqual((born / "_metainfo.json").read_bytes(), (tpl / "_metainfo.json").read_bytes())   # 照抄，不記 lineage
                 self.assertEqual([p.name for p in self.ws.iterdir()], ["born"])          # 沒留暫存夾
                 shutil.rmtree(born)
 
@@ -156,7 +142,7 @@ class AgentDef(unittest.TestCase):
         r = self.new("alias")
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
         self.assertIn("(copied from %s)" % (self.ws / "alias"), r.stdout)         # 字面路徑，不解開捷徑
-        self.assert_same_copy(real, self.ws / "born", {"from": "alias"})
+        self.assert_same_copy(real, self.ws / "born")
         self.assertEqual(self.tools()["tools"]["t"]["path"], "../tool")         # 照抄
 
     def test_symlinks_copied_as_links(self):
@@ -183,8 +169,7 @@ class AgentDef(unittest.TestCase):
             self.skipTest("aos-directive not on PATH")
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
         self.assertIn("copied from %s" % (self.root / "home" / "templates" / "t1"), r.stdout)
-        self.assertEqual(json.loads((self.ws / "born" / "_metainfo.json").read_text())["lineage"],
-                         {"from": {"$env": "AOS_HOME", "$path": "/templates/t1"}})          # 指示詞照寫法存
+        self.assertEqual(json.loads((self.ws / "born" / "_metainfo.json").read_text()), {"summary": "test"})   # 照抄
         r = self.new({"$env": "AOS_HOME", "$path": "/templates/t1"}, "b2")
         self.assertEqual(r.returncode, 1)
         self.assertIn("%s: error: DirectiveBad" % NAME, r.stdout)
@@ -208,7 +193,7 @@ class AgentDef(unittest.TestCase):
         self.assertFalse((self.ws / "born").exists())
 
     def test_broken_interfaces_is_just_copied(self):
-        """new 不讀 interfaces.json（沒有要改寫的路徑）：壞的也照抄，留給 check 報。失敗清暫存夾見 test_lineage_bad_metainfo。"""
+        """new 不讀 interfaces.json（沒有要改寫的路徑）：壞的也照抄，留給 check 報。失敗清暫存夾見 test_copy_failure_leaves_nothing。"""
         tpl = self.ws / "tpl"
         tpl.mkdir()
         (tpl / "interfaces.json").write_text("not json")
@@ -222,41 +207,39 @@ class AgentDef(unittest.TestCase):
         (self.ws / "plain" / "a.txt").write_text("a")
         self.assertEqual(self.new("plain").returncode, 0)
         self.assertEqual((self.ws / "born" / "a.txt").read_text(), "a")
-        # 沒有 _metainfo.json＝新建只含 lineage；範本那邊不多檔
-        self.assertEqual(json.loads((self.ws / "born" / "_metainfo.json").read_text()), {"lineage": {"from": "plain"}})
-        self.assertFalse((self.ws / "plain" / "_metainfo.json").exists())
+        # 沒有 _metainfo.json＝新的也沒有（11-21 起不寫 lineage）；兩邊都不多檔
+        self.assertEqual(sorted(p.name for p in (self.ws / "born").iterdir()), ["a.txt"])
+        self.assertEqual(sorted(p.name for p in (self.ws / "plain").iterdir()), ["a.txt"])
 
-    # ---- 血統（11-12 Q09）----
-    def test_lineage_overwrites_copied_one_and_keeps_other_keys(self):
+    # ---- _metainfo.json 照抄（11-21 使用者「不寫」：不再記 lineage）----
+    def test_metainfo_copied_as_it_is(self):
+        """每個鍵、排版、捷徑都照抄；new 不讀它，所以不是物件的也照抄。"""
         tpl = good_def(self.ws / "tpl")
-        (tpl / "_metainfo.json").write_text('{"summary": "test", "lineage": {"from": "grandpa"}, "cost": {"time_ms": 1}}')
+        text = '{"summary": "test", "note": {"from": "grandpa"},   "cost": {"time_ms": 1}}'
+        (tpl / "_metainfo.json").write_text(text)
         self.assertEqual(self.new("tpl").returncode, 0)
-        meta = json.loads((self.ws / "born" / "_metainfo.json").read_text())
-        self.assertEqual(meta, {"summary": "test", "lineage": {"from": "tpl"}, "cost": {"time_ms": 1}})
-        self.assertEqual(json.loads((tpl / "_metainfo.json").read_text())["lineage"], {"from": "grandpa"})   # 範本不動
-        # 再從 born 生一代：只記上一代（往上追＝順著 from 找）
-        self.assertEqual(self.new("born", "born2").returncode, 0)
-        self.assertEqual(json.loads((self.ws / "born2" / "_metainfo.json").read_text())["lineage"], {"from": "born"})
-
-    def test_lineage_template_name_and_symlinked_metainfo(self):
-        home = self.root / "home"
-        tpl = good_def(home / "templates" / "t1")
+        self.assertEqual((self.ws / "born" / "_metainfo.json").read_text(), text)
+        (tpl / "_metainfo.json").write_text("[1]")
+        self.assertEqual(self.new("tpl", "born2").returncode, 0)
+        self.assertEqual((self.ws / "born2" / "_metainfo.json").read_text(), "[1]")
         (tpl / "real_meta.json").write_text('{"summary": "linked"}')
         (tpl / "_metainfo.json").unlink()
         (tpl / "_metainfo.json").symlink_to("real_meta.json")
-        r = self.run_tool({"op": "new", "template": "t1", "path": "born"}, AOS_HOME=str(home))
-        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
-        meta = self.ws / "born" / "_metainfo.json"
-        self.assertFalse(meta.is_symlink())                                         # 換成一般檔，捷徑指的那份不動
-        self.assertEqual(json.loads(meta.read_text()), {"summary": "linked", "lineage": {"template": "t1"}})
-        self.assertEqual(json.loads((tpl / "real_meta.json").read_text()), {"summary": "linked"})
+        self.assertEqual(self.new("tpl", "born3").returncode, 0)
+        self.assertEqual(os.readlink(self.ws / "born3" / "_metainfo.json"), "real_meta.json")   # 捷徑照搬
 
-    def test_lineage_bad_metainfo(self):
+    def test_copy_failure_leaves_nothing(self):
+        """抄到一半失敗（讀不了的檔）＝WriteFailed、暫存夾清掉、目的地不在。"""
         tpl = good_def(self.ws / "tpl")
-        (tpl / "_metainfo.json").write_text("[1]")
+        secret = tpl / "secret.txt"
+        secret.write_text("x")
+        secret.chmod(0)
+        self.addCleanup(secret.chmod, 0o644)
+        if os.access(secret, os.R_OK):
+            self.skipTest("running as a user who can read a mode-000 file")
         r = self.new("tpl")
         self.assertEqual(r.returncode, 1)
-        self.assertIn("%s: error: DefBad" % NAME, r.stdout)
+        self.assertIn("%s: error: WriteFailed" % NAME, r.stdout)
         self.assertEqual(sorted(p.name for p in self.ws.iterdir()), ["tpl"])
 
     # ---- 參數 ----

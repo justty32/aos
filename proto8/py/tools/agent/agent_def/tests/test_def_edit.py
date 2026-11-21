@@ -173,11 +173,11 @@ class DefEdit(unittest.TestCase):
         self.assertIn("needs args", self.fails("tools", None, "ArgumentsBad").stdout)
         self.fails("tools", {"op": "ls"}, "DefMissing", path="nope")
 
-    def test_lineage_untouched_by_edits(self):
-        (self.d / "_metainfo.json").write_text('{"summary": "test", "lineage": {"from": "x"}}')
+    def test_metainfo_untouched_by_edits(self):
+        (self.d / "_metainfo.json").write_text('{"summary": "test", "note": {"from": "x"}}')
         self.ok("llm", {"op": "set", "settings": {"model": "y"}})
         self.ok("system", {"op": "set", "text": "y"})
-        self.assertEqual(json.loads((self.d / "_metainfo.json").read_text())["lineage"], {"from": "x"})
+        self.assertEqual(json.loads((self.d / "_metainfo.json").read_text())["note"], {"from": "x"})
 
 
 if __name__ == "__main__":

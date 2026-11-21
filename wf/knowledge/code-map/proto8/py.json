@@ -530,11 +530,11 @@
     "agent_def": {
      "def_edit.py": "agent_def 的細的定義動作：tools（ls／get／add／rm，轉 aos-tools --file 定義那份）、llm（ls／set／rm，轉 aos-json）、system（get／set）；改的是定義本身，不碰任何 stack。",
      "tests": {
-      "test_agent_def.py": "Test agent_def new (a plain copy: byte for byte, no path rewritten; directive from, DefExists, outside the workspace) and check (wraps py/tools/aos/d…",
+      "test_agent_def.py": "Test agent_def new (a plain copy like cp -r: byte for byte, _metainfo.json included, no path rewritten, no lineage; directive from, DefExists, outsid…",
       "test_def_edit.py": "Test agent_def tools / llm / system (change a definition directly; args shaped like self_*) in a temp folder, with this repo's aos-tools and aos-json."
      }
     },
-    "agent_def/": "定義的創造修改：new＝把範本資料夾整份照抄成新定義（內容不改、只在 _metainfo.json 記 lineage），check＝轉叫 py/tools/aos/defs 的 check，tools／llm／system＝直接改某份定義的工具／腦／system",
+    "agent_def/": "定義的創造修改：new＝把範本資料夾整份照抄成新定義（跟 cp -r 一樣，一個字都不改），check＝轉叫 py/tools/aos/defs 的 check，tools／llm／system＝直接改某份定義的工具／腦／system",
     "agents_ctl": {
      "tests": {
       "test_agents_ctl.py": "Test agents_ctl turns each op into the matching aos-agent ctl command line (one key = one flag), rejects unknown keys and passes lower errors up, wit…"

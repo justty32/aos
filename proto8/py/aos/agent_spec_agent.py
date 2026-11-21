@@ -261,9 +261,8 @@ class Agent(Unit):
             raise SpecBad("meta must be a dict like {\"cost\": {\"time_ms\": 60000}, \"resource\": [\"llm\"]}")
         if meta and not all(isinstance(k, str) for k in meta):
             raise SpecBad("meta keys must be strings, like {\"cost\": {\"time_ms\": 60000}}")
-        for k in ("summary", "lineage"):
-            if meta and k in meta:
-                raise SpecBad("meta must not set %s (%s)" % (k, "it comes from the description" if k == "summary" else "agent_def new writes it"))
+        if meta and "summary" in meta:
+            raise SpecBad("meta must not set summary (it comes from the description)")
         every_ms = 300                          # 不給 loop＝跟以前一樣（產物逐 byte 相同）
         if self.loop is not None:
             parts.raise_bad(self.loop)

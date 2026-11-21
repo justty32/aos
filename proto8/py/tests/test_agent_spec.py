@@ -88,7 +88,6 @@ class Declaration(WithHome):
                  "files hidden": dict(files={".x.json": {}}),
                  "files content a number": dict(files={"x.json": 3}),
                  "meta sets summary": dict(meta={"summary": "x"}),
-                 "meta sets lineage": dict(meta={"lineage": {}}),
                  "interfaces sets tools": dict(interfaces={"aos-agent": {"tools": "t.json"}}),
                  "drop without a pack": dict(tools=[defs.tool("a", "x"), defs.drop("b")]),
                  "tool env not strings": dict(tools=[defs.tool("x", "a", env={"A": 1})]),

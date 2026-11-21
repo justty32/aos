@@ -87,7 +87,7 @@ class Script(unittest.TestCase):
         made = snapshot(self.dir)
         (self.dir / "tools.json").write_text('{"tools": {"hand": {"path": "x"}}}\n')     # hand change: overwritten, no word
         meta = json.loads((self.dir / "_metainfo.json").read_text())
-        meta["lineage"] = {"template": "agent-python"}                                   # someone else's key: kept
+        meta["note"] = {"template": "agent-python"}                                      # someone else's key: kept
         (self.dir / "_metainfo.json").write_text(json.dumps(meta, indent=2) + "\n")
         (self.dir / "README.md").write_text("My own readme.\n")                          # already there: not touched
         (self.dir / "notes.txt").write_text("mine\n")                                    # not declared: not touched
@@ -96,7 +96,7 @@ class Script(unittest.TestCase):
         self.assertEqual(r.stderr, "")
         self.assertEqual((self.dir / "tools.json").read_bytes(), made["tools.json"])
         self.assertEqual(json.loads((self.dir / "_metainfo.json").read_text()),
-                         {"summary": "Answer questions about the weather.", "lineage": {"template": "agent-python"}})
+                         {"summary": "Answer questions about the weather.", "note": {"template": "agent-python"}})
         self.assertEqual((self.dir / "README.md").read_text(), "My own readme.\n")
         self.assertEqual((self.dir / "notes.txt").read_text(), "mine\n")
         self.assertIn("kept", r.stdout)

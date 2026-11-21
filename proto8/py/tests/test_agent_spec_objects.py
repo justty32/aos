@@ -97,10 +97,10 @@ class Objects(WithHome):
         self.assertEqual(lines, ["wrote %s" % (d / n) for n in out])
         # the write rules: README.md is kept when it is there, _metainfo.json keeps the keys agent.py does not set
         (d / "README.md").write_text("Mine.\n")
-        (d / "_metainfo.json").write_text(json.dumps({"summary": "old", "lineage": {"template": "x"}}))
+        (d / "_metainfo.json").write_text(json.dumps({"summary": "old", "note": {"template": "x"}}))
         lines = a.compile(str(d))
         self.assertEqual((d / "README.md").read_text(), "Mine.\n")
-        self.assertEqual(json.loads((d / "_metainfo.json").read_text()), dict(out["_metainfo.json"], lineage={"template": "x"}))
+        self.assertEqual(json.loads((d / "_metainfo.json").read_text()), dict(out["_metainfo.json"], note={"template": "x"}))
         self.assertIn("kept %s (it is already there)" % (d / "README.md"), lines)
         for name, value in out.items():
             if name not in ("README.md", "_metainfo.json"):
