@@ -12,7 +12,7 @@ HELP = {
 usage: aos-agent [--daemon D] ctl start [--target NAME] [--timeout-s S] [--on-queued fail|ok] [NAME]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT); or NAME as the last argument
+  -t, --target NAME   which agent (default: $AOS_AGENT, ./.stack, ./); or NAME as the last argument
       --timeout-s S   seconds to wait for the daemon (default 30)
       --on-queued MODE  fail or ok when still queued (default fail)
   -h, --help          show this help
@@ -28,7 +28,7 @@ more: proto8/py/aos/apps/agent/README.md
 usage: aos-agent [--daemon D] ctl stop [--target NAME] [--no-wait] [--timeout-s S] [NAME]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT); or NAME as the last argument
+  -t, --target NAME   which agent (default: $AOS_AGENT, ./.stack, ./); or NAME as the last argument
       --timeout-s S   seconds to wait for the daemon (default 30)
       --no-wait       send it and return; do not wait for it to happen (for an agent stopping itself)
   -h, --help          show this help
@@ -48,7 +48,7 @@ more: proto8/py/aos/apps/agent/README.md
 usage: aos-agent [--daemon D] ctl sleep [--target NAME] [--no-wait] [--timeout-s S] [NAME]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT); or NAME as the last argument
+  -t, --target NAME   which agent (default: $AOS_AGENT, ./.stack, ./); or NAME as the last argument
       --timeout-s S   seconds to wait for the daemon (default 30)
       --no-wait       send it and return; do not wait for it to happen (for an agent stopping itself)
   -h, --help          show this help
@@ -67,7 +67,7 @@ more: proto8/py/aos/apps/agent/README.md
 usage: aos-agent [--daemon D] ctl wake [--target NAME] [--timeout-s S] [--on-queued fail|ok] [NAME]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT); or NAME as the last argument
+  -t, --target NAME   which agent (default: $AOS_AGENT, ./.stack, ./); or NAME as the last argument
       --timeout-s S   seconds to wait for the daemon (default 30)
       --on-queued MODE  fail or ok when still queued (default fail)
   -h, --help          show this help
@@ -83,7 +83,7 @@ more: proto8/py/aos/apps/agent/README.md
 usage: aos-agent [--daemon D] ctl pause [--target NAME] [--no-wait] [NAME]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT); or NAME as the last argument
+  -t, --target NAME   which agent (default: $AOS_AGENT, ./.stack, ./); or NAME as the last argument
       --no-wait       send it and return; do not wait for it to happen (for an agent stopping itself)
   -h, --help          show this help
 
@@ -98,7 +98,7 @@ more: proto8/py/aos/apps/agent/README.md
 usage: aos-agent [--daemon D] ctl resume [--target NAME] [NAME]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT); or NAME as the last argument
+  -t, --target NAME   which agent (default: $AOS_AGENT, ./.stack, ./); or NAME as the last argument
   -h, --help          show this help
 
 Prints one result line on stdout; state already reached is a successful no-op.
@@ -108,11 +108,8 @@ more: proto8/py/aos/apps/agent/README.md
 }
 
 def name_only(opts):
-    """只看回信的路：要名字、不讀表（--target ＞ 子命令前的 --target ＞ $AOS_AGENT；都沒有＝TargetMissing）。"""
-    name = target_name(opts)
-    if not name:
-        target(opts)                                  # TargetMissing
-    return name
+    """只看回信的路：要名字（--target ＞ 子命令前的 --target ＞ $AOS_AGENT，都不讀表；都沒有才從 cwd 找，那一步要讀表；找不到＝TargetMissing）。"""
+    return target_name(opts)
 
 
 def by_letter(cmd, opts, secs, on_queued="fail"):

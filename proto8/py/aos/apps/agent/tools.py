@@ -97,7 +97,7 @@ actions:
 %s
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   -h, --help          show this help
 
 No ACTION means ls. Changes go to this agent's own registry, which overrides the definition's.

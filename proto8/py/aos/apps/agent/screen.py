@@ -5,7 +5,7 @@ HELP = {
 usage: aos-agent [--daemon D] open [-t NAME] [--detach]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   --detach           open the screen without attaching
   -h, --help          show this help
 
@@ -18,7 +18,7 @@ exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, ScreenMissing, Scre
 usage: aos-agent [--daemon D] close [-t NAME]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   -h, --help          show this help
 
 Runs the definition's screen close action and passes its output through.
@@ -30,7 +30,7 @@ exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, ScreenMissing, Scre
 usage: aos-agent [--daemon D] watch [-t NAME]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   -h, --help          show this help
 
 Runs the definition's screen watch action and passes its output through.
@@ -42,7 +42,7 @@ exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, ScreenMissing, Scre
 usage: aos-agent [--daemon D] peek [-t NAME] /status|/usage
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   -h, --help          show this help
 
 Runs the definition's screen peek action and prints its answer: no letter, nothing in

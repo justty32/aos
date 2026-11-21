@@ -30,7 +30,7 @@ subcommands:
   goal     its goal: get, set, done, pause, resume, clear
 
 flags:
-  -d, --daemon D       the daemon's stack folder (default: $AOS_DAEMON, else ./.stack)
+  -d, --daemon D       the daemon's stack folder (default: $AOS_DAEMON; one is required)
   -t, --target NAME    which agent, for every subcommand that takes one (same as after it)
   -h, --help           show this help
 
@@ -38,10 +38,14 @@ flag order: a flag belongs to the level it is listed under (aos-agent, the subco
   the action) and may go anywhere after that level's name, also after later names and
   arguments: aos-agent ctl stop ann -d D = aos-agent -d D ctl stop ann. After -- nothing
   is read as a flag.
-target: every subcommand except ctl add / rm / ls / who acts on -t, --target NAME
-  (default: $AOS_AGENT); neither = TargetMissing. ctl start / stop / sleep / wake /
-  pause / resume / where also take NAME as the last argument. Two different names =
-  ArgumentsBad; ctl add / rm / ls / who take no -t (ArgumentsBad or FlagUnknown).
+daemon: -d D, else $AOS_DAEMON; neither = DaemonMissing (never guessed from the cwd).
+target: every subcommand except ctl add / rm / ls / who acts on -t, --target NAME, else
+  $AOS_AGENT, else the agent whose stack is ./.stack, else the one whose stack is ./ (a
+  folder counts only if it has stderr.txt, which the daemon writes in every proc's stack,
+  and its path must be a stack on the daemon's table); none = TargetMissing. ctl start /
+  stop / sleep / wake / pause / resume / where also take NAME as the last argument. Two
+  different names = ArgumentsBad; ctl add / rm / ls / who take no -t (ArgumentsBad or
+  FlagUnknown).
 output: results on stdout only (one line per item, TAB-separated; --json where listed);
   reminders on stderr as "aos-agent: warning: ...".
 exit codes: 0 ok; 1 error ("aos-agent: error: CODE reason" on stderr); 130 on Ctrl-C.

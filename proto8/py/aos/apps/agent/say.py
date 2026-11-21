@@ -10,7 +10,7 @@ stdin is the message (one trailing newline dropped); stdin being a terminal = Ar
 stdout prints the letter name. A paused or sleeping agent still queues it; a warning says so.
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   --from WHO          the sender's name, shown to an external coding agent with a claude body whose screen is open
                       (default: the listed agent whose stack holds $AOS_STACK, else your login name);
                       its CLI marks the message as not typed by its user. Other agents ignore it.

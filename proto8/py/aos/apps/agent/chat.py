@@ -4,7 +4,7 @@ HELP = """aos-agent chat - send one line per message and wait for each answer
 usage: aos-agent [--daemon D] chat [-t NAME] [--from WHO]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   --from WHO          the sender's name on each message (same as aos-agent say --from)
   -h, --help          show this help
 

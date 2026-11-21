@@ -43,7 +43,7 @@ def cmd(argv):
         raise Fail("InstanceMissing", "%s is not inside the stack of any proc on the daemon table %s" % (os.path.abspath(s), daemon_path()))
     n, r = hit
     if opts.get("json"):
-        # daemon＝這次讀的那份表所在的資料夾（沒走 kernel＝--daemon ＞ $AOS_DAEMON ＞ ./.stack 那台；走 kernel＝問來那份表檔的資料夾；同 daemon_path）
+        # daemon＝這次讀的那份表所在的資料夾（沒走 kernel＝--daemon ＞ $AOS_DAEMON 那台；走 kernel＝問來那份表檔的資料夾；同 daemon_path）
         where = daemon_path()
         print(json.dumps({"name": n, "stack": r.get("stack"), "ws": r.get("ws"), "def": r.get("def"), "daemon": where,
                           **registered_of(r, where)}, ensure_ascii=False))

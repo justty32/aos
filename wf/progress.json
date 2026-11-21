@@ -224,15 +224,15 @@
       "since": "2026-11-18"
     },
     "default-stack": {
-      "title": "預設 stack：11-18 暫定丁（路標）＋乙；11-20 晚使用者改說 agent 不記 daemon、-t 沒給就從 cwd 找",
-      "status": "暫停",
+      "title": "預設 stack：aos-agent 不給 -t 時從 cwd 找目標（11-21 已做），剩 aos-home 跟上與兩件小事",
+      "status": "等使用者",
       "flow": "",
-      "what": "使用者 11-18 晚裁：暫定走丁（agent 的 stack 裡加路標，表示在哪個 daemon 底下）、路標由 daemon 寫、丁順便帶乙（改錯誤訊息）；之後再做、尚未派線。他又補：「不過老實說，stack這塊說不定我之後會改主意，改成往上層資料夾找，先留着。」→ 可能改成戊，先留著。丁要改 N-63 一列、為 AOS_AGENT 開退路，daemon 寫路標要改 C++ daemon。11-20 晚他又說（逐字在 05）：沒給 -t、也沒設環境變數時，先試 ./.stack 再試 ./ 當 agent 的 stack；agent 不要記錄自己在哪個 daemon 底下，daemon 照舊 export AOS_DAEMON 自己指定——跟丁的路標方向相反，丁還算不算數沒問",
-      "next": "等使用者說要做再派線；派之前先問：丁（路標）是不是作廢、變數名是 AOS_TARGET 還是照舊 AOS_AGENT",
+      "what": "11-21 使用者裁「-d不能省略…-t xxx沒寫，AOS_AGENT又沒有的時候，會找./.stack內有沒有一個特徵檔…沒有./.stack那就找./」，又說丁（agent 記自己在哪個 daemon 底下）不行、為了可遷移性。線 top-1121-deft 做完：aos-agent 目標 -t ＞ AOS_AGENT ＞ ./.stack ＞ ./（特徵檔 stderr.txt＋表上對得到 stack），daemon 只從 -d／AOS_DAEMON 來；丁不做、程式裡沒有殘留。",
+      "next": "1. ~/aos-home 要吃到得在 repo 跑 install.py（換掉活樹的 lib/），由使用者點頭；之後殼裡要 export AOS_DAEMON（aos-agent 不再從 cwd 的 ./.stack 找 daemon）。2. 條文 N-63 要不要加註（字在紀錄「要給條文加註的字」）。3. 想問使用者：要不要在 stack 裡記定義夾／工作區，讓沒掛在 daemon 上的 stack 也能下指令（沒問、沒做）。",
       "see": [
-        "[04-使用者裁定](../proto8/thinking/2026-11/18/default-stack-1118/04-使用者裁定.md)",
-        "[調查入口](../proto8/thinking/2026-11/18/default-stack-1118/README.md)",
-        "[05-使用者補充-1120](../proto8/thinking/2026-11/18/default-stack-1118/05-使用者補充-1120.md)"
+        "[aos-agent-預設目標-1121](../proto8/thinking/2026-11/21/aos-agent-預設目標-1121.md)",
+        "[05-使用者補充-1120](../proto8/thinking/2026-11/18/default-stack-1118/05-使用者補充-1120.md)",
+        "[aos-daemon-env-1121](../proto8/thinking/2026-11/21/aos-daemon-env-1121.md)"
       ],
       "since": "2026-11-18"
     },

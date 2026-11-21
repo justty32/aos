@@ -15,11 +15,14 @@ from .state_path import TableFile, names_at, state_at
 
 
 
-def find_daemon(flag=None):
-    """--daemon ＞ $AOS_DAEMON ＞ cwd 的 ./.stack（11-05 題 3）；轉絕對。"""
+def find_daemon(flag=None, cwd=True):
+    """--daemon ＞ $AOS_DAEMON ＞ cwd 的 ./.stack（11-05 題 3）；轉絕對。cwd=False＝不看 ./.stack（aos-agent：使用者 11-21「-d不能省略，
+    要麼-d明確指定，要麼export AOS_DAEMON指定」，./.stack 留給找目標 agent）。"""
     d = flag or os.environ.get("AOS_DAEMON", "")
-    if not d and os.path.isdir(".stack"):
+    if not d and cwd and os.path.isdir(".stack"):
         d = ".stack"
+    if not d and not cwd:
+        raise Fail("DaemonMissing", "no --daemon and AOS_DAEMON not set (give -d D or export AOS_DAEMON=D, D being the daemon's $AOS_STACK folder; the daemon is never guessed from the cwd)")
     if not d:
         raise Fail("DaemonMissing", "no --daemon, AOS_DAEMON not set, and no .stack folder in the cwd (point it at the daemon's $AOS_STACK folder)")
     if not os.path.isdir(d):

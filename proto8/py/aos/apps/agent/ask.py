@@ -15,7 +15,7 @@ A failed brain call is reported as in aos-agent listen: if the agent stopped on 
 ask ends at once with AnswerMissing and the error lines from the agent's stderr file.
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   --from WHO          the sender's name (same as aos-agent say --from)
   --timeout-s SECS    give up after SECS seconds (AnswerMissing); 0 or omitted = no limit
   --timeout-cycles N  give up after N cycles (positive integer); exclusive with --timeout-s

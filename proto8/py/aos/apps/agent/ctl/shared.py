@@ -34,8 +34,7 @@ def need_table():
         return None
     d = daemon_path()
     if not os.path.isfile(os.path.join(d, "procs_state.json")):
-        raise Fail("StateMissing", "%s is not an aos-daemon stack (no procs_state.json); run this in the workspace the daemon was started in (./.stack), "
-                   "or point --daemon / AOS_DAEMON at the daemon's $AOS_STACK" % d)
+        raise Fail("StateMissing", "%s is not an aos-daemon stack (no procs_state.json); point --daemon / AOS_DAEMON at the daemon's $AOS_STACK" % d)
     return d
 
 

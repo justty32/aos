@@ -23,6 +23,9 @@
  "test_ctl_kit.py": {
   "description": "Test aos-agent ctl add / set-def --kit on a real aos-daemon: the kit's system.txt and tools.json become the agent's own copies in its stack (replacin…"
  },
+ "test_cwd_target.py": {
+  "description": "aos-agent with no -t and no AOS_AGENT finds the target in the cwd (./.stack, then ./), and never finds the daemon there (user 11-21)."
+ },
  "test_daemon_down.py": {
   "description": "Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing."
  },

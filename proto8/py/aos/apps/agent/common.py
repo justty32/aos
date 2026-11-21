@@ -1,4 +1,4 @@
-# aos/apps/agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（設了 AOS_KERNEL 先問表在哪再讀；ctl 動作才用的寄信等回信在 ctl/shared.py）。
+# aos/apps/agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon（-d ＞ AOS_DAEMON，不看 cwd）與表上的一隻（-t ＞ AOS_AGENT ＞ cwd 的 ./.stack ＞ ./；設了 AOS_KERNEL 先問表在哪再讀；ctl 動作才用的寄信等回信在 ctl/shared.py）。
 import json
 import os
 import textwrap
@@ -98,12 +98,12 @@ def table_ref():
     """這次讀的那份表：沒走 kernel＝daemon 的資料夾（照舊）；走 kernel＝寄查詢信問來的表檔（TableFile，一次執行只問一次；
     問不到＝KernelFailed，不退回去讀 AOS_DAEMON）。daemon_ctl 的 rows／row_of／cell_of／names_of／write_ctl 兩種都吃。"""
     if not via_kernel():
-        return call_dc(dc.find_daemon, TOP.get("daemon"))
+        return call_dc(dc.find_daemon, TOP.get("daemon"), cwd=False)
     return call_dc(dc.state_path, TOP.get("daemon"), QUERY_S)
 
 
 def daemon_path():
-    """沒走 kernel＝那台 daemon 的 stack（--daemon ＞ $AOS_DAEMON ＞ ./.stack）；走 kernel＝問來那份表所在的資料夾
+    """沒走 kernel＝那台 daemon 的 stack（--daemon ＞ $AOS_DAEMON；都沒有＝DaemonMissing，不看 cwd）；走 kernel＝問來那份表所在的資料夾
     （ctl who --json 的 daemon 欄照字面＝這次讀的表在哪個資料夾；daemon 自己答時就是它的 stack）。"""
     ref = table_ref()
     return os.path.dirname(ref) if isinstance(ref, dc.TableFile) else ref
@@ -235,17 +235,43 @@ def find(name):
     return Agent(name, r)
 
 
+MARK = "stderr.txt"      # 認得出「這是表上某隻 proc 的 stack」的檔：daemon 每次起 proc 都在它的 stack（小格）建這份，loop 型、exec 型都有
+CWD_TRIES = (".stack", ".")
+
+
+def cwd_target():
+    """cwd 裡的 agent（使用者 11-21）：./.stack 有 MARK＝當成 agent 的 stack；沒有（不在、或沒 MARK，例如樹根的 daemon stack）＝再試 ./。
+    認的是表上 stack 欄（轉真實路徑）跟它一樣的那一列，回名字；只讀 daemon 的表，不讀 stack 裡記的任何 daemon（agent 不記自己在哪個 daemon 底下）。
+    有 MARK 但表上沒有＝InstanceMissing（不再試下一個）；兩個都不像＝TargetMissing，說四處各缺什麼。"""
+    why = []
+    for rel in CWD_TRIES:
+        shown = "./" if rel == "." else "./" + rel
+        if not os.path.isdir(rel):
+            why.append("no %s folder" % shown)
+            continue
+        if not os.path.isfile(os.path.join(rel, MARK)):
+            why.append("%s has no %s (not an agent's stack)" % (shown, MARK))
+            continue
+        real = os.path.realpath(rel)
+        for n, r in table().items():
+            st = r.get("stack")
+            if isinstance(st, str) and st and os.path.realpath(st) == real:
+                return n
+        raise Fail("InstanceMissing", "%s (%s) looks like an agent's stack (it has %s), but no agent on the daemon table %s has that stack; "
+                   "check -d / AOS_DAEMON, or add --target NAME" % (shown, real, MARK, daemon_path()))
+    raise Fail("TargetMissing", "no target: no --target, AOS_AGENT not set, %s; add --target NAME, export AOS_AGENT=NAME, "
+               "or cd into the agent's stack (or a folder whose .stack is its stack)" % ", ".join(why))
+
+
 def target_name(opts):
-    """子命令後的 --target ＞ 子命令前的 --target ＞ $AOS_AGENT；前後都給又不同＝ArgumentsBad（11-10 坑-68 代定）。"""
+    """子命令後的 --target ＞ 子命令前的 --target ＞ $AOS_AGENT（空字串＝沒設）＞ cwd 的 ./.stack ＞ ./（cwd_target，要讀表）；
+    前後都給又不同＝ArgumentsBad（11-10 坑-68 代定）；都沒有＝TargetMissing。"""
     sub = opts.get("target")
     if sub and TOP_TARGET and sub != TOP_TARGET:
         raise Fail("ArgumentsBad", "two different targets: %s before the subcommand, %s after it; give --target once" % (TOP_TARGET, sub))
-    return sub or TOP_TARGET or os.environ.get("AOS_AGENT", "")
+    return sub or TOP_TARGET or os.environ.get("AOS_AGENT", "") or cwd_target()
 
 
 def target(opts):
-    """target_name；都沒有＝TargetMissing。"""
-    name = target_name(opts)
-    if not name:
-        raise Fail("TargetMissing", "no target: add --target NAME, or export AOS_AGENT=NAME (or source using-aos-agent.sh NAME)")
-    return find(name)
+    """target_name 那一隻（表上要有）。"""
+    return find(target_name(opts))

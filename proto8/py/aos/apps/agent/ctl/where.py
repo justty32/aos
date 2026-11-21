@@ -1,6 +1,6 @@
 # aos/apps/agent/ctl/where.py - 顯示 agent 的 stack 或工作區路徑。
 from aos import daemon_ctl as dc
-from ..common import bad_args, Fail, call_dc, find, parse, table_ref, target, target_name
+from ..common import bad_args, Fail, call_dc, find, parse, table_ref, target_name
 from .shared import name_last, query_opt
 
 
@@ -9,7 +9,7 @@ HELP = """aos-agent ctl where - print its stack or workspace path
 usage: aos-agent [--daemon D] ctl where [--stack | --ws] [-t NAME] [--timeout-s S] [NAME]
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT); or NAME as the last argument
+  -t, --target NAME   which agent (default: $AOS_AGENT, ./.stack, ./); or NAME as the last argument
   --stack            print its stack (default)
   --ws               print its workspace instead
   --timeout-s S       seconds to wait for AOS_KERNEL's answer about the table (default 3)
@@ -30,9 +30,7 @@ def cmd(argv):
     if opts.get("stack") and opts.get("ws"):
         raise bad_args(HELP, "where takes only one of --stack and --ws (neither = --stack)")
     query_opt(opts, HELP)
-    name = target_name(opts)
-    if not name:
-        target(opts)                                    # TargetMissing
+    name = target_name(opts)                            # 都沒有＝TargetMissing
     if not opts.get("ws"):
         print(call_dc(dc.cell_of, table_ref(), name))
         return

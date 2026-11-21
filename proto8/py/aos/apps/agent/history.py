@@ -94,7 +94,7 @@ actions:
 %s
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   -h, --help          show this help
 
 No ACTION means ls. The file is the one the definition declares (interfaces.json aos-agent.history,

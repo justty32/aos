@@ -32,7 +32,7 @@ parts:
   time       now, and how long it has been up
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   -j, --json          print one JSON object {PART: {...}}
   --timeout-s S       seconds to wait for AOS_KERNEL's answer about the table (default 3)
   -h, --help          show this help

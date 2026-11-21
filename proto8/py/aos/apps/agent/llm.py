@@ -73,7 +73,7 @@ actions:
 %s
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   -h, --help          show this help
 
 No ACTION means ls. Only changed keys are stored; the rest follows the definition.

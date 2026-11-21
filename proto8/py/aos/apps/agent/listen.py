@@ -17,7 +17,7 @@ then the answer. --follow prints new exchanges; add --last N to show history fir
 Ctrl-C leaves follow mode with exit 0; reminders go to stderr.
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   --letter NAME       wait for the answer to this letter (not with --last / --follow)
   --timeout-s SECS    give up after SECS seconds (AnswerMissing); 0 = no limit; omitted = no limit
   --timeout-cycles N  give up after N cycles (positive integer); exclusive with --timeout-s

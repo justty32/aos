@@ -105,7 +105,7 @@ actions:
 %s
 
 flags:
-  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   -h, --help          show this help
 
 No ACTION means get. The goal lives in the agent's stack (goal.json). The agent itself uses its
