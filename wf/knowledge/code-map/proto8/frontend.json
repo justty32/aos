@@ -31,7 +31,7 @@
     "VERSION": "版本號與來源（一行純文字）",
     "index.html": "全景",
     "package.json": "設定（鍵：name、private、version、type、scripts、devDependencies）",
-    "postcss.config.js": "",
+    "postcss.config.js": "PostCSS setup for the v2 page: Tailwind through its PostCSS plugin, nothing else.",
     "scripts": {
      "check-dist.mjs": "build gate (02c §6): JS after compression (gzip) at most 250 KB; no inline <script> in index.html (CSP script-src 'self').",
      "check-src.mjs": "build gate (02c §6): no dangerouslySetInnerHTML / innerHTML / eval in the sources; agent text goes through React text nodes."
@@ -43,7 +43,7 @@
       "poll.ts": "Pulse-driven fetching (12.8 #7): only /api/pulse runs on a timer (5 s; 30 s while the tab is hidden). A kind is",
       "types.ts": "The API contract (aos-frontend API.md + v2 additions B1–B5, 03 §12.3 / §12.8). Written by opus; panels only read these."
      },
-     "app.css": "",
+     "app.css": "The one stylesheet of the v2 page: Tailwind plus a few base rules (page height, colours, focus ring, scrollbars).",
      "composer": {
       "CmdSide.tsx": "A single responsive command strip fills the composer without sending anything immediately.",
       "Composer.tsx": "The composer (02c §5, 12.8 #5): always at the bottom of the right column, talking to whatever is selected.",
@@ -58,7 +58,7 @@
       "Inbox.tsx": "The center 待辦 tab (02f §1.2; was the left column in 02c §2): 待辦 (four kinds, one queue), 追蹤 (everything sent, where it is), 已處理 (answered here)."
      },
      "input": {
-      "keys.test.ts": "",
+      "keys.test.ts": "Tests for the keyboard layer (keys.ts): normalizing a key event, zones, input fields, and which binding wins.",
       "keys.ts": "Keyboard (12.8 #4, Argon A5/A6/A9; written by opus, panels register only through here)."
      },
      "inspector": {
@@ -79,7 +79,7 @@
       "Left.tsx": "The left column (02f §1, §4): the tree on top (it scrolls), \"等你處理\" pinned below (3–4 signposts, the full list is",
       "Tree.tsx": "The left department tree (02f §2, q9 a, q10 a): NERDTree-like layout without the TUI look. Rows of 28 px, 14 px per"
      },
-     "main.tsx": "",
+     "main.tsx": "Entry of the v2 page: apply saved sizes, install keys and the URL hash, render <App />, start polling.",
      "model": {
       "board.ts": "Reading an agent's board/1 (ok-board, board-1114/06 §7.3–§7.4). Pure; the page only reads, never writes for an agent.",
       "cmdHistory.ts": "Command history and pins use injected key-value storage and bounded, deduplicated lists.",
@@ -108,7 +108,7 @@
       "Clamp.tsx": "Expandable text and short lists share a bounded in-memory expansion cache.",
       "CommandPanel.tsx": "The command panel offers page actions, mode buttons, and fill-only CLI commands.",
       "Dialogs.tsx": "Overlays: Ctrl+K search (jump to anyone), the user's board (我的公告), the drafts list. Esc closes the top one.",
-      "Header.tsx": "",
+      "Header.tsx": "The header bar: data freshness, the counters that filter the to-do list, breadcrumb, and font size buttons.",
       "HelpDialog.tsx": "The shortcut dialog renders the shared reference and closes through the overlay stack.",
       "Splitter.tsx": "A drag bar between two panes (11-15 \"各版面大小希望也可以拉調整\"). Drag = resize (live, saved on release);",
       "bits.tsx": "Small shared pieces: the light dot, the delivery steps, a section title. Agent text always as React text."

@@ -1,3 +1,4 @@
+// Tests for the keyboard layer (keys.ts): normalizing a key event, zones, input fields, and which binding wins.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { bind, decide, install, normalize, isSubmit, type Binding, type KeyLike } from "./keys.ts";

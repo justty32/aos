@@ -44,8 +44,20 @@
  "14-被取代的舊檔.md": {
   "description": "被取代的舊檔：第三段移除的 109 份知識庫 `.json`（各被同名 `.md` 取代，路徑從 `proto8/knowledge/` 算）"
  },
+ "15-使用者原話-續四.md": {
+  "description": "使用者原話續四（11-21 晚，逐字）：第三段交件前後的三句——很多東西換成 md、七個檔補檔頭、wf 剩下的也換、以後新寫的預設寫 md"
+ },
+ "16-第四段-wf庫換形狀.md": {
+  "description": "第四段：`wf/` 庫剩下的 38 頁也換成 md（換形狀，645 個值全部讀得回來）、七個檔補一句話檔頭、「新寫的預設寫 md」寫進教寫法的地方"
+ },
+ "17-教寫法六處-改前改後.md": {
+  "description": "教寫法的六處：改前改後的那一句（第 24 句「新寫的就預設寫.md，然後再去用index json做骨架」）"
+ },
  "README.md": {
   "description": "知識庫改成「md 為主、index 當骨架」的規劃（11-21 晚，第五版）：長文章的頁就是一份 `x.md`、短資料的頁留 json、`檔.md#/標題` 照現有標題尋、`#/標題/0` 尋清單與表格、整節只有 json 區塊就當 json；三段都做完"
+ },
+ "kb_md_map-wf.json": {
+  "description": "Old path -> new path for the 38 data-shaped pages of the wf knowledge library moved from .json to .md on 2026-11-21 (made by wf/tools/kb_md_shape.py; paths from proto8/knowledge/). Most pointers stay…"
  },
  "kb_md_map.json": {
   "description": "Old knowledge path -> new path after the 2026-11-21 move of article pages from .json to .md (made by wf/tools/kb_md.py convert; paths from proto8/knowledge/)."

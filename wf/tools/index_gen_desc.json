@@ -224,6 +224,8 @@
   "proto8/cpp/docs/02-從哪開始讀與慣例.md": "cpp 總入口分檔：程式從哪開始讀的建議順序（aos-util → aos-inst → aos-exec → loop／fsm／daemon），以及全家慣例的命名與寫法",
   "proto8/cpp/docs/03-錯誤.md": "cpp 全家慣例分檔：錯誤怎麼丟與印（aos::Error、stderr 只有 error 與 warning 兩種行、轉交下層碼）與全家錯誤代號表",
   "proto8/cpp/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md": "cpp 全家命令列慣例：stdin 設定、旗標規則、三扇門、指示詞、目錄與建置，加上新 C++ 專案照做的清單；開新專案或改命令列行為前先看",
+  "proto8/templates/eca-pi/llm.json": "pi 的模型設定，出廠是 {}＝用 pi 自己登入時選的預設；要指定寫 model（供應商/id）、思考程度寫 reasoning_effort",
+  "proto8/templates/start-api/perm/kernel.json": "權限站的規則，出廠是 {}＝什麼都不管、請求原樣轉給根；要管就加 allowed、max_running、queue 這些鍵",
   "proto8/templates/kernel": "掛在 daemon 上、收請求管資源與排程的 kernel 範本：daemon-kernel、procs-kernel（框架站兩種掛法）、llm-kernel（問腦）、llm-team；要讓 agent 問腦或做請求把關時進去",
   "proto8/templates/kernel/daemon-kernel": "daemon-kernel 範本：一台 daemon，身體就是框架站（py/tools/aos/kernel），請求照 kernel.json 的白名單、max_running、排隊判過才轉進 ctl 信箱；要讓掛 proc 的請求先經管理再進 daemon 時拿它",
   "proto8/templates/kernel/llm-kernel": "llm-kernel 範本：問腦的那台 daemon（身體是 py/tools/aos/kernel_llm），收 agent 的問腦信、照 kernel.json 挑能力包（smart-high、fake…）問模型再回信並記 ledger；要起一台 llm kernel 時拿它",

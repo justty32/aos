@@ -1,0 +1,65 @@
+陌生專案分析：初次接觸外部 repo、開源專案、舊系統或大型資料夾時，建立可延續、可搬移、可被後續 patch／planning 使用的分析產物。產物是記錄，放工作區的 `wf/knowledge/analysis/<project>/`（歸屬見 `wf/layers.md#/skills 與 memory 分家`；產物的形狀與寫法見 `wf/skeletons/analysis.md`）。
+
+# when
+
+初次接觸陌生專案，需要建立可供後續工作延續的架構與能力分析；使用者說「這個陌生專案是怎麼運作的」「幫我分析這個 repo」。
+
+# not_when
+
+只回答一個窄問題（「查清楚這是怎麼運作的」「這樣做可不可行」）→ `wf/workflows/investigation.md`；只是閱讀論文／規格／文章 → 本庫沒有對應的工作流，需要就自建；已在目標 repo 內實作功能 → `wf/workflows/feature-dev.md`。分辨：analysis＝初次接觸、要留下可延續的整套產物；investigation＝回答一個窄問題、留一篇筆記。
+
+# done_when
+
+- 工作區的 `wf/knowledge/analysis/<project>/session_log.md` 與指定 Level 的分析檔存在。
+- 主要入口、核心模組與測試方式的表格已填滿。
+- 被分析專案的 README 指定的 build／run／test 指令回傳 0。
+
+# steps
+
+1. 初始化工作區的 `wf/knowledge/analysis/<project>/` 與它底下的 `session_log.md`（還沒有就建；夾的結構照 `wf/skeletons/analysis.md#/fields`）。
+2. Level 1 初始探索：README、頂層結構、依賴、入口點、build／run／test 指令。
+3. Level 2 核心模組職責：主要模組、權責劃分、耦合點、資料流。
+4. Level 3+ 依專案類型選模板深入（`#/level3_templates`）。
+5. 將可行功能或缺口導向 `wf/workflows/planning.md`；將可套用修改導向 `wf/workflows/patch.md`。
+
+# level3_templates
+
+## 0
+
+- type: 遊戲／引擎
+- focus: game loop、資源、渲染、AI、玩法、存檔
+
+## 1
+
+- type: 嵌入式／IoT
+- focus: 控制迴圈、ISR、通訊、硬體抽象、即時性
+
+## 2
+
+- type: Web／API
+- focus: routing、middleware、domain／service、DB、auth、queue
+
+## 3
+
+- type: 前端／桌面
+- focus: routes、components、state、API client、style、build
+
+## 4
+
+- type: CLI／SDK／library
+- focus: command／API surface、config、I/O、plugin、release
+
+## 5
+
+- type: 資料／ML
+- focus: connector、schema、pipeline、training、serving、monitoring
+
+## 6
+
+- type: DevOps／IaC
+- focus: module、environment、CI/CD、secret、observability
+
+# handoff
+
+- 可行功能或缺口 → `wf/workflows/planning.md`；可獨立套用的修改 → `wf/workflows/patch.md`。
+- 窄問題 → `wf/workflows/investigation.md`；需使用者驗證 → 工作區的 `wf/progress.json` 一條、status 寫「等使用者」。

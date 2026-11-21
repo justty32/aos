@@ -1,0 +1,218 @@
+這一庫的內容從哪裡來、哪些沒帶進來。併入的經過與之後每一塊的搬遷紀錄在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。第 3、4 塊太大，拆在 `source/block-3.json`、`source/block-4.json`，`blocks` 裡原位放 `$ref`。
+
+# commit_ids
+
+模板 repo 在 2026-11-13 push 前改寫過還沒公開的歷史（把內容裡的帳號名換掉；最後的檔案樹與改寫前逐位元相同），commit 編號全變，舊編號已經拿不到。下面各塊的 `commit` 都是改寫後的新編號。當初搬的時候記的舊編號：第 1 塊 7db19654b2bf0a21c8a940cdab9d442d7ae509d0（現在是 019c91240c1fad9a9d6c870f7493bdf2361c9d56）；第 2 塊 7db5ccc0260aa2c5f0bcb6a931ca5e6960edccb3（現在是 584f3f59f6539cfe3e0d761ba68300c7aa4c4014）、「自 45a27d6 起沒再改」的 45a27d68d02325d5000cf475a363560f5d8775f2（現在是 905c096e61fb603fc114303d6e95e68b23bd58dc）。完整對照在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。
+
+# blocks
+
+```json
+[
+ {
+  "block": 1,
+  "what": "組織原則",
+  "from": {
+   "repo": "workflows 模板 repo（使用者 2026-11-13：「workflows repo仍在，只是幾乎不再更新」）",
+   "commit": "019c91240c1fad9a9d6c870f7493bdf2361c9d56",
+   "date": "2026-11-13",
+   "paths": [
+    "wf/knowledge/structure.json",
+    "wf/knowledge/structure/layers.json",
+    "wf/knowledge/structure/nodes.json",
+    "wf/knowledge/structure/tidying.json",
+    "wf/knowledge/structure/repo.json"
+   ]
+  },
+  "carried": [
+   {
+    "here": "wf/layers.md#/分層原則",
+    "from": "structure/layers.json#/layers",
+    "changed": "「怎麼看 index」那句拿掉（docs/01 已有）；指到來源 repo 其他檔的路徑改成文字"
+   },
+   {
+    "here": "`wf/layers.md#/skills 與 memory 分家`",
+    "from": "structure/layers.json#/skills_vs_memory",
+    "changed": "只改路徑寫法"
+   },
+   {
+    "here": "`wf/layers.md#/私有 index`",
+    "from": "structure/layers.json#/index_convention",
+    "changed": "只留私有 index；公共 index 指到 docs/01；`source`／`title`／`date` 額外鍵那條沒帶"
+   },
+   {
+    "here": "wf/layers.md#/日誌寫法",
+    "from": "structure/layers.json#/logs",
+    "changed": "拿掉講來源 repo 自己現況的那段與指到還沒搬的節點的路徑"
+   },
+   {
+    "here": "wf/nodes.md#/檔名與引用",
+    "from": "structure/nodes.json#/names",
+    "changed": "`_description`／`_index`／名字用字／統一路徑的定義指到 docs/01、02；只留 wf 多出來的約定"
+   },
+   {
+    "here": "wf/nodes.md#/工作流的統一形式",
+    "from": "structure/nodes.json#/workflow_form",
+    "changed": "固定鍵直接列出，不再指到範本節點"
+   },
+   {
+    "here": "wf/nodes.md#/一個工作流的成長軌跡（四級）",
+    "from": "structure/nodes.json#/growth",
+    "changed": "只改路徑寫法"
+   },
+   {
+    "here": "wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）",
+    "from": "structure/tidying.json#/split 與 #/data_files",
+    "changed": "json 與資料夾的數字指到 docs/01、02；8 KB 改成使用者 11-13 的說法（推薦、只限 .md、只限拆檔工作流）"
+   },
+   {
+    "here": "wf/tidying.md#/拆法（兩種觸發都照做）",
+    "from": "structure/tidying.json#/split_method",
+    "changed": "數字拿掉"
+   },
+   {
+    "here": "`wf/tidying.md#/archive 規則`",
+    "from": "structure/tidying.json#/archive",
+    "changed": "沒改"
+   }
+  ],
+  "not_carried": [
+   {
+    "what": "structure/nodes.json#/node_shape（節點怎麼寫）",
+    "why": "一段文字＝字串或字串陣列、檔案與 `$ref` 的寫法 docs/02、docs/01 已有；「字串陣列是清單還是多行文字」的判斷規則使用者 11-13 裁不定；「同質記錄一律寫物件陣列」與 docs/02「別人會用路徑指到的放成物件的鍵」說法不同，沒裁；檔案格式（縮排 1 格等）docs 沒有對應條文，沒裁"
+   },
+   {
+    "what": "structure/layers.json#/md_for_humans（內容一律走 json、只留四個 md）",
+    "why": "aos 這邊「哪些檔留 md」還在等使用者裁（C-42 放寬、內容走 json、導航留 md 三句哪句為準）；另外它指到來源 repo 的 `wf-view`"
+   },
+   {
+    "what": "「路由線三層不管幾項一律建 index」",
+    "why": "使用者 11-13 裁 docs/01 不補這條例外"
+   },
+   {
+    "what": "「程式碼單檔 > 300 行、給人看的 md > 300 行」",
+    "why": "與使用者 10-09「原型開發階段不設核心行數上限」說法不同，沒裁"
+   },
+   {
+    "what": "index description「維持一句字串（index_view 還不認陣列形）」",
+    "why": "過時：docs/01 已寫字串陣列也認"
+   },
+   {
+    "what": "「index_check.py 會驗引用走不走得到」與 `wf-view.py`",
+    "why": "使用者 11-13：「檢查工具，wf/的那邊就完全不留」"
+   },
+   {
+    "what": "index 條目的 `source`（kernel／flavor／project）、筆記的 `title`／`date` 額外鍵",
+    "why": "`source` 是給模板升級對照用的，來源 repo 幾乎不再更新；額外鍵本身 docs/01 已允許"
+   },
+   {
+    "what": "structure/tidying.json#/data_files（`wf-table/1`、tabledb、> 1 KB 抽資料檔）",
+    "why": "綁來源 repo 的 md 形態與它的工具，等搬到那一塊再說"
+   },
+   {
+    "what": "structure/repo.json（repo 佈局、試點註記）",
+    "why": "講的是來源 repo 自己"
+   }
+  ]
+ },
+ {
+  "block": 2,
+  "what": "工作流節點的骨架、tidy 一組",
+  "from": {
+   "repo": "workflows 模板 repo",
+   "commit": "584f3f59f6539cfe3e0d761ba68300c7aa4c4014",
+   "note": "這幾份自 905c096e61fb603fc114303d6e95e68b23bd58dc 起沒再改",
+   "date": "2026-11-13",
+   "paths": [
+    "wf/knowledge/workflow-template.md",
+    "wf/workflows/tidy.md",
+    "wf/workflows/tidy/principles.md",
+    "wf/workflows/tidy/content-trim.md",
+    "wf/workflows/tidy/_description.md",
+    "wf/workflows/tidy-manager-brief.md",
+    "wf/knowledge/content-trim.md",
+    "wf/knowledge/gotchas.md（tidy_ 開頭四段）"
+   ]
+  },
+  "carried": [
+   {
+    "here": "wf/knowledge/workflow-template.md",
+    "from": "wf/knowledge/workflow-template.md",
+    "changed": "`fields` 從物件陣列改成以鍵名為鍵的物件；拿掉 `source` 標法與指到 node_shape 的句子；「同質記錄寫物件陣列」那半句沒帶"
+   },
+   {
+    "here": "wf/workflows/tidy.md",
+    "from": "wf/workflows/tidy.md",
+    "changed": "驗收改寫：index 檢查與連結檢查寫成「工作區有工具就跑」；8 KB、300 行、4096 bytes 的硬線拿掉，改成「超過門檻而不拆的寫理由」；盤點指令拿掉來源 repo 的工具路徑；`steps` 改成一行一個元素的編號清單；指到來源 repo 專案記憶的路徑拿掉"
+   },
+   {
+    "here": "wf/workflows/tidy/principles.md",
+    "from": "wf/workflows/tidy/principles.md",
+    "changed": "第 4 條的門檻與工具清單改成指到 `wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）`；加編號"
+   },
+   {
+    "here": "wf/workflows/tidy/content-trim.md",
+    "from": "wf/workflows/tidy/content-trim.md",
+    "changed": "巢狀陣列攤平成一行一個元素；拿掉 index_check 與來源 repo 的 commit 規矩路徑"
+   },
+   {
+    "here": "wf/workflows/tidy-manager-brief.md",
+    "from": "wf/workflows/tidy-manager-brief.md",
+    "changed": "驗收那步改成指到 tidy 的 done_when；巢狀陣列攤平；拿掉資料檔契約與 commit 規矩的路徑"
+   },
+   {
+    "here": "wf/knowledge/content-trim.md",
+    "from": "wf/knowledge/content-trim.md",
+    "changed": "適用範圍裡來源 repo 的檔名改成通稱；日誌指到 `wf/layers.md#/日誌寫法`"
+   },
+   {
+    "here": "wf/knowledge/gotchas.md",
+    "from": "wf/knowledge/gotchas.md 的 tidy_archive_move、tidy_split_datafile、tidy_dispatch、tidy_env",
+    "changed": "工具名改成通稱；tidy_split_datafile 只帶三條、改名 tidy_split"
+   }
+  ],
+  "not_carried": [
+   {
+    "what": "tidy 驗收裡的 `index_check.py … RefBad／IndexWanted`、`wf-lint.sh --strict`、`--self`",
+    "why": "使用者 11-13：「檢查工具，wf/的那邊就完全不留」；aos 的 index 檢查不查節點內容引用（使用者 11-13 對那批題「都按照推薦」）"
+   },
+   {
+    "what": "`.md` > 8192 bytes → 0、README ≤ 300 行／入口 ≤ 100 行、名冊 ≤ 8192、SESSION-LOG ≤ 4096 bytes",
+    "why": "8 KB 使用者 11-13 定為推薦值、只限拆檔工作流、只限 .md；行數與 4096 沒有使用者的話支持，沒裁"
+   },
+   {
+    "what": "A／B 拆法的契約 `data-files.json`、`tabledb.py`、`find_big_lists.py`、`fix_moved_links.py` 的路徑",
+    "why": "綁來源 repo 的工具與 `wf-table/1`；節點裡改成「工作區有這種工具就用」"
+   },
+   {
+    "what": "gotchas 的三條：`link_columns`、入口壓在 8192 邊緣、用空行躲 BIGLIST",
+    "why": "綁 `wf-table/1` 與來源 repo 的 lint"
+   },
+   {
+    "what": "gotchas 的 `threshold`、`common` 兩段",
+    "why": "不在這一塊；等搬 gotchas 工作流那塊再看"
+   },
+   {
+    "what": "「push 先問」與指到 `conventions.json#/git` 的句子",
+    "why": "那是來源 repo 自己的專案記憶；要不要成為通用規則在等使用者裁"
+   },
+   {
+    "what": "not_when 的「只是骨架版本升級…照上游變動記錄手動套」",
+    "why": "講的是模板的版本升級，來源 repo 幾乎不再更新"
+   }
+  ],
+  "added_here": [
+   {
+    "here": "wf/workflows/tidy/principles.md 第 6 條（收斂優先於拆檔）",
+    "from": "aos repo 自己的 `wf/workflows/tidy/README.md` 第 6 條，模板沒有",
+    "why": "使用者 2026-11-13 收工待裁頁 W16 選「補進去，知識庫變六條」"
+   }
+  ]
+ },
+ {
+  "$ref": "source/block-3.json"
+ },
+ {
+  "$ref": "source/block-4.json"
+ }
+]
+```

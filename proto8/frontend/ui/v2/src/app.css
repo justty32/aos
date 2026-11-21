@@ -1,3 +1,4 @@
+/* The one stylesheet of the v2 page: Tailwind plus a few base rules (page height, colours, focus ring, scrollbars). */
 @import "tailwindcss";
 
 html, body, #root { height: 100%; }

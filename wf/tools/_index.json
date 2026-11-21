@@ -53,6 +53,9 @@
  "kb_md.py": {
   "description": "把 knowledge 的長文章頁換成同名 `.md`（convert）、照對照表改寫舊路徑（rewrite）、逐篇比對換完讀不讀得到（verify）；可重跑。"
  },
+ "kb_md_shape.py": {
+  "description": "把 knowledge 裡「資料形狀」的 json 頁換成同名 `.md`：鍵變標題、短字串物件變字典式清單、字串陣列變清單或段落、記錄陣列變編號小節、只適合當資料的留 json 區塊；每個葉值都讀回來核對。"
+ },
  "metainfo_migrate.py": {
   "description": "Move legacy metainfo estimates and execution limits into separate fields."
  },

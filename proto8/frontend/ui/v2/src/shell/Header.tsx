@@ -1,3 +1,4 @@
+// The header bar: data freshness, the counters that filter the to-do list, breadcrumb, and font size buttons.
 import { useEffect } from "react";
 import { ui, type Filter } from "../state/app.ts";
 import { useData, useInbox, useNow, useUi } from "../state/hooks.ts";

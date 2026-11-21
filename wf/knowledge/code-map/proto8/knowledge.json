@@ -128,57 +128,57 @@
    "_description.md": "wf：工作區的工作文檔怎麼組織",
    "knowledge": {
     "_description.md": "出廠的知識節點",
-    "code-map-rules.json": "code map 的通用規則：預設真相層優先序、衝突時誰為準、維護鏈（改碼前怎麼讀、改完怎麼更新）。",
-    "content-trim.json": "內容精簡的判準（tidy 原則 5 的細則）：整理一份檔時，刪掉檔內的過往記錄，只留現行結論並寫精簡；**使用者原文逐字保留**；刪掉的靠 git 歷史找。",
-    "dev-dispatch.json": "開發類工作流怎麼派：碰原始碼前先讀什麼、幾條容易混的工作流（analysis／investigation／patch／feature-dev／planning）怎麼分、本庫沒附的開發工作流去哪。",
-    "gotchas.json": "tidy 整理與拆檔踩過的坑（出廠的；通用規則在 `wf/workflows/tidy.json`）。",
-    "green-is-not-checked.json": "綠燈不等於有檢查：一道檢查通過，可能是因為它根本沒在檢查；新增或修改一道檢查時要證明它能變紅。",
-    "iron-rules.json": "工作區的鐵律：極少、always-on、任何時刻都適用的規矩，常駐工作區根的 `AGENTS.md`；其餘一切按需取用（為什麼這麼少、為什麼常駐，見 `wf/layers.md#/分層原則` 第 4 條，這裡不重講）。",
-    "live-lists.json": "活清單（工作區的 `wf/progress.json` 進度；等使用者做、驗、裁的也記這裡）怎麼寫：誰記哪裡、何時寫、條目欄位、開場怎麼看、骨架。",
-    "workflow-template.json": "新工作流節點的骨架：複製 `#/skeleton` 存成工作區的 `wf/workflows/<名稱>.json`，照 `#/fields` 逐鍵填；固定鍵順序不動，用不到的專屬段刪掉。"
+    "code-map-rules.md": "truth_order",
+    "content-trim.md": "criterion",
+    "dev-dispatch.md": "before_code",
+    "gotchas.md": "tidy_archive_move",
+    "green-is-not-checked.md": "rule",
+    "iron-rules.md": "rules",
+    "live-lists.md": "which",
+    "workflow-template.md": "skeleton"
    },
    "layers.md": "分層原則",
    "nodes.md": "檔名與引用",
    "skeletons": {
     "_description.md": "記憶骨架",
-    "analysis.json": "陌生專案分析產物的記憶骨架：落點、資料夾結構、寫作規則。",
-    "code-map.json": "code map 的記憶骨架：程式碼導航 index（哪個領域在哪些檔、負責什麼、測試在哪）與本專案的真相層優先序。",
-    "conventions.json": "寫碼慣例的記憶骨架：碰原始碼的工作流（feature-dev、refactor、investigation）共用的規矩——寫碼時要遵守什麼、怎麼檢查。",
-    "decisions.json": "決策記錄表的骨架：專案定下了什麼、從誰來、前提是什麼。",
-    "dev-env.json": "開發環境的記憶骨架：fresh clone 後的步驟、冒煙指令、指令表、跨機／離線差異、外部工具與 env var。",
-    "gotchas.json": "踩坑記錄的骨架：撞過兩次以上的坑，每條寫現象與對策。",
-    "ideas.json": "planning 的兩張表的骨架：想法表（要不要做）與 roadmap 表（會做，何時）。",
-    "notes.json": "調查筆記的記憶骨架：一個主題一篇，問題、方法、發現、結論、來源。",
-    "user.json": "使用者偏好與確認邊界的骨架：agent 不用重猜的事。",
-    "verification.json": "驗證表的記憶骨架：專案有哪些驗證、各自的指令、誰跑、測試怎麼分類、離線能跑哪一部分。"
+    "analysis.md": "holds",
+    "code-map.md": "holds",
+    "conventions.md": "holds",
+    "decisions.md": "holds",
+    "dev-env.md": "holds",
+    "gotchas.md": "holds",
+    "ideas.md": "holds",
+    "notes.md": "holds",
+    "user.md": "holds",
+    "verification.md": "holds"
    },
    "source": {
-    "block-3.json": "第 3 塊：kernel 的四條薄工作流、它們的記憶骨架、鐵律、派發通則、活清單寫法。",
-    "block-4.json": "第 4 塊：dev（開發類）的八條工作流、它們的記憶骨架、通用規則。"
+    "block-3.md": "block",
+    "block-4.md": "block"
    },
-   "source.json": "這一庫的內容從哪裡來、哪些沒帶進來。",
+   "source.md": "commit_ids",
    "tidying.md": "什麼時候該整理（膨脹即拆／雜亂即分類）",
    "workflows": {
     "_description.md": "出廠的工作流節點",
-    "analysis.json": "陌生專案分析：初次接觸外部 repo、開源專案、舊系統或大型資料夾時，建立可延續、可搬移、可被後續 patch／planning 使用的分析產物。",
-    "decisions.json": "記決定：留下「定了什麼」與它成立的前提。",
-    "dev-env.json": "開發環境、指令、外部工具：這台機器上要能開發需要什麼、怎麼裝、跑什麼指令；外部工具設定與 env var 也收在這裡。",
-    "feature-dev.json": "功能開發／修 bug：改變行為的工作，加一個功能、修一個 bug，從動手到 commit。",
-    "gotchas.json": "記／查踩坑：不專屬任一工作流的共通坑記在哪、工作流專屬的坑記在哪、撞到第幾次才記。",
-    "investigation.json": "調查／解讀外部系統／可行性：只讀不改，查清楚「這怎麼運作／可不可行」，產出一篇可歸檔的筆記。",
-    "moving-things.json": "搬移與改名（refactor 的搬移專章）：檔案換位置、目錄改名、專案拆 repo；六類常見斷裂與偵測程序（**只 grep 連結是不夠的**；六類依實際踩到的頻率排序，在 `#/breakages`）。",
-    "patch.json": "獨立 patch 包：建立一包可被 agent 套用到原專案的獨立 patch，交給沒有聊天上下文的接手者（冷啟動 agent）套用與驗證。",
-    "planning.json": "想法成熟管線（idea → roadmap → 詳規 → 執行）：從萌芽到動工的四階段收在同一條管線，不拆成四個工作流——免得卡在「這算 idea 還是 roadmap」。",
-    "refactor.json": "重構／拆檔／整理結構：只改結構、不改行為。",
-    "testing.json": "跑測試／驗證：改完怎麼確認沒壞——挑出這次要跑的驗證、agent 跑得了的自己跑、跑不了的交給使用者。",
+    "analysis.md": "when",
+    "decisions.md": "when",
+    "dev-env.md": "when",
+    "feature-dev.md": "when",
+    "gotchas.md": "when",
+    "investigation.md": "when",
+    "moving-things.md": "when",
+    "patch.md": "when",
+    "planning.md": "when",
+    "refactor.md": "when",
+    "testing.md": "when",
     "tidy": {
-     "_description.json": "tidy 工作流的子檔（大段拆進同名資料夾、原位放 `$ref`）：`principles.json` 六條原則、`content-trim.json` 內容精簡的做法。",
-     "content-trim.json": "tidy 原則 5「內容精簡」的做法（從 `wf/workflows/tidy.json#/content_trim` `$ref` 過來；引用請寫入口的統一路徑）。",
-     "principles.json": "tidy 的六條原則（從 `wf/workflows/tidy.json#/principles` `$ref` 過來；引用請寫入口的統一路徑）：封存、分類、合併小檔、抽記錄、內容精簡、收斂優先於拆檔。"
+     "_description.md": "",
+     "content-trim.md": "steps",
+     "principles.md": "principles"
     },
-    "tidy-manager-brief.json": "tidy 的管理線簡報：派管理線時把本節點路徑＋交接書路徑一起給它。",
-    "tidy.json": "文件整理（封存過時、分類雜亂、抽資料檔、內容精簡）：把文件層收乾淨——活文件只留現役與 open 的東西，過時的封存、雜亂的分類、指向被封存檔的連結清掉、過大的條列抽成資料檔、檔內的過往記錄刪掉只留結論。",
-    "user.json": "記使用者偏好與確認邊界：agent 不用重猜的事。"
+    "tidy-manager-brief.md": "when",
+    "tidy.md": "when",
+    "user.md": "when"
    }
   }
  }

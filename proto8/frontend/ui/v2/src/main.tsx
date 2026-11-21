@@ -1,3 +1,4 @@
+// Entry of the v2 page: apply saved sizes, install keys and the URL hash, render <App />, start polling.
 import { createRoot } from "react-dom/client";
 import "./app.css";
 import { App } from "./App.tsx";

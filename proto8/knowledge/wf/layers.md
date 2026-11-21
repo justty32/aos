@@ -20,7 +20,7 @@
 
 **判準一句話**：照著它**做事**的進 `workflows/`；拿來**查**、或做事時往裡**記**的進 `knowledge/`。
 
-舊檔常是「流程外殼包著一張記錄表或參考知識」：流程留在工作流節點，記錄與知識進 `knowledge/`，工作流用統一路徑指過去、不重抄。例：`wf/workflows/decisions.json` 只寫何時記、怎麼記，記錄在 `wf/knowledge/decisions.json#/records`。
+舊檔常是「流程外殼包著一張記錄表或參考知識」：流程留在工作流節點，記錄與知識進 `knowledge/`，工作流用統一路徑指過去、不重抄。例：`wf/workflows/decisions.md` 只寫何時記、怎麼記，記錄在 `wf/knowledge/decisions.json#/records`。
 
 planning 的 **spec／plan** 是記錄，進 `knowledge/`：放 `wf/knowledge/specs/`、`wf/knowledge/plans/`（第一份出現時才建資料夾；動工完成後移各自的 `archive/`）。流程本身在工作流節點。
 
