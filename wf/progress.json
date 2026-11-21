@@ -552,6 +552,17 @@
         "[eca-reasoning-effort-1121](../proto8/thinking/2026-11/21/eca-reasoning-effort-1121.md)"
       ],
       "since": "2026-11-21"
+    },
+    "kb-feedback-1121": {
+      "title": "知識庫使用感想的改進（每頁重點、eca 讀法、常見故障頁）",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-21 夜問知識庫真實感受，聽完「先記下來，之後改」。待改：頁太密（body.md 的 Hooks 一條塞五六件事）、fsm／eca 交錯寫、排錯內容少（eca 讀類工具出不了工作區、前端讀失敗都查不到）、系統文字要先 echo $AOS_HOME；建議每頁開頭三到五行重點、eca 專屬讀法、常見故障頁。順帶：aos-frontend 的 run_json 丟掉 stderr。改之前先問使用者方向",
+      "next": "",
+      "see": [
+        "[知識庫-使用感想-1121](../proto8/thinking/2026-11/21/知識庫-使用感想-1121.md)"
+      ],
+      "since": "2026-11-21"
     }
   }
 }
