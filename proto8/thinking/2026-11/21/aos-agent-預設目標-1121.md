@@ -72,3 +72,9 @@ cd <樹> && aos-agent say hi                           # TargetMissing：樹根�
 - `aos-agent` 以外吃目標 agent 的指令沒動：`aos-hook … --agent`、`aos-gdb NAME`、`aos-daemon-ctl`（`where`／`stop` 等吃名字）、tools 的 `self_*`（本來就用 `ctl who` 認自己）。它們不共用 `common.target`。
 - 範本、教學裡「站在樹根不帶 -d」的寫法沒逐一翻；範本 README 歸別條線，而且出廠範本本來就寫 `-d .stack`。
 - 想問使用者的（沒問）：要不要在 stack 裡記「定義夾、工作區在哪」，好讓沒掛在任何 daemon 上的 stack 也能下 aos-agent 指令——這牽涉可遷移性，是新的設計決定，這次沒做。
+
+## 使用者對特徵檔的回應（11-21，頂層轉逐字）
+
+頂層轉述「特徵檔用 `stderr.txt`，不是 `interfaces.json`」後，他說：「特徵檔竟然是用stderr.txt嗎？好，沒關係，反正這本來就是一種tricky式的非正規用法，本來就要求使用者自己要把握好，至少自己稍微看過，確定這是agent stack」
+
+結論：`stderr.txt` 照用。從所在資料夾找目標是非正規的便利用法，認對 stack 的責任在下指令的人。
