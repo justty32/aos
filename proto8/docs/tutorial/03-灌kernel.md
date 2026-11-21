@@ -33,6 +33,8 @@ endpoints
 fake_slow
 interfaces.json
 kernel.json
+kernel_hookeds.json
+kernel_hooks.json
 01795071378424737732.803235.2492535
 _clock	running	803030	-	-	-
 _sweeper	running	803031	-	-	-
@@ -59,13 +61,13 @@ aos-llm ls | head -4
 
 ```
 {"role": "assistant", "content": "FAKE ANSWER to: hi"}
+astra	normal	high	272000	-	-	LiteLLM gpt-6 astra: images and creative work, about 3x sol's price
 fake	fast	free	-	-	-	fake brain: calls peek_now_time (or the first tool), then answers FAKE ANSWER to ...
 fake-demo-fast	fast	free	-	1	-	fake brain that takes 3 s, one at a time, sorted first (templates/kernel/docs/03 part 3)
 fake-demo-self	fast	free	-	-	-	scripted fake brain for templates/kernel/docs/03 part 1: adds math to its own tools, then uses it
-fake-demo-slow	slow	free	-	1	-	fake brain that takes 3 s, one at a time, sorted last (templates/kernel/docs/03 part 3)
 ```
 
-`aos-llm ls` 列的是 llm kernel 登記的**腦包**（一個代號＝一組模型設定，例如 `fake`、`luna`）；agent 只寫代號，不寫網址和模型名。預設代號是 `fake`。`export AOS_LLM_KERNEL` 只是為了在這個視窗直接問；板子上的 agent 從 `.env` 繼承，不用你設。
+`aos-llm ls` 列的是 llm kernel 登記的**腦包**（一個代號＝一組模型設定，例如 `fake`、`luna`；照名字排，前面幾個真模型的包也列出來，這章用不到）；agent 只寫代號，不寫網址和模型名。預設代號是 `fake`。`export AOS_LLM_KERNEL` 只是為了在這個視窗直接問；板子上的 agent 從 `.env` 繼承，不用你設。
 
 <details><summary>另一種擺法：kernel 自己一台、不掛在板子上</summary>
 

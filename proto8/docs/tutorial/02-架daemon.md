@@ -94,6 +94,8 @@ _sweeper	running	803031	-	-	-
 
 睡著的自己醒了，不用一個個叫。
 
+**想直接起 eca_main**：板子開著（視窗 A 的 `aos-exec root` 別關），跳到 [05b 起 eca_main](05b-起eca_main.md)。上面改的 `.env` 那行對 eca_main 沒影響，留著就好。
+
 <details><summary>關機兩次會怎樣</summary>
 
 板子已經關了再 `shutdown`，退出碼是 1：
