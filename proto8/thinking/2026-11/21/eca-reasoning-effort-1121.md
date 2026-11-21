@@ -55,3 +55,21 @@ aos-json set --str <定義>/llm.json#/reasoning_effort medium   # 改定義那�
 ## 測試（第 1 筆）
 
 `git archive HEAD`（87ad225a5）兩份乾淨複本 `~/.aos/scratch/top-1121-ecaeffort/{base,mine}`，各自 `install.py`，清掉 `AOS_*` 後 unittest 逐夾：`py/tests` 746 → 754（新 `test_cli_reasoning_effort.py` 8 支）；`py/tests/apps/eca` 227 → 229（`test_pi` 加 pi 帶 `--thinking`、壞級別在認領前就停；`test_slash` 加 claude 每輪帶 `--effort`、stack 那份下一輪蓋過、`/status` 寫出來），兩邊都是同樣 4 支紅（`test_switch.TtySocket`，暫存路徑太長，原本就紅）；`apps/agent` 226、`apps/hook` 20、`templates/tests` 30、`defs` 28、`agent_def` 32、`self_hook` 6 兩邊都過。
+
+## 第 2 筆：預設工具包比照 agent-fsm、系統提示寫知識庫在哪
+
+使用者 11-21 對 agent-fsm 選了「只留一兩句＋指去知識庫」與「self 只留兩支」（[tool-desc-瘦身 04](tool-desc-瘦身-1121/04-使用者已答.md)）。工具說明是同一份 `_tooldef.json`，eca 已經吃到短說明；沒跟上的是下面兩件：
+
+- 三份範本（eca-claude、eca-pi、start-eca 的 ann）的 `tools.json` 同樣寫 `"self_llm": null, "self_system": null, "self_history": null, "self_ctl": null`：34 → 30 支。aos-mcp 真的回給 CLI 的 `tools/list` 從 44,316 → 40,778 bytes（−8%；乾淨複本實量）。子 agent 那份 `tools_sub.json` 本來就沒有 self 工具（9 支、5,176 bytes），沒動。
+- 三份範本新加 `system.txt`（兩段：自己是 aos agent、知識庫在 `$AOS_HOME/knowledge/` 要先 `echo $AOS_HOME` 取全路徑、`More: aos/...` 指的就是那裡）。eca 的 `interfaces.json` 本來就宣告 `system`、只是範本沒有這個檔；有了它 claude 多帶 `--append-system-prompt-file`（接在 Claude Code 自己的系統提示後面）、pi 多帶 `--append-system-prompt`。
+- 知識庫 `aos/packs.json`（eca 30 支、比照關掉哪四支）、`aos/definition.json`（system.txt 那句）、`templates/docs/01`、`03`、三份 README 跟著改；`py/tests/agent_spec_helpers.py` 的 eca 版 agent.py 例子一起關掉那四支（`test_eca_templates` 比對編譯結果跟範本一樣）。
+
+### 替使用者做的選擇（第 2 筆）
+
+6. **eca 也關掉同樣四支 self 工具**（self_llm、self_system、self_history、self_ctl）：你選的是 agent-fsm 範本的預設，這裡照同一句話套到 eca。要用的時候 `self_tools add` 加回（self_tools 的說明寫了怎麼加）。eca 的 CLI 自己也有 `/model`、`/effort`、`/compact` 這類指令，但那是 CLI 畫面裡人打的，腦叫不到，所以不構成「CLI 有同名機制、不必比照」。
+7. **新加 `system.txt`**：比照 agent-fsm 那句「知識庫在哪」。只寫兩段，不搬 agent-fsm system.txt 其他段（回信格式、只做被交代的事…）：那些 Claude Code、pi 自己的系統提示都有對應的規矩，疊上去可能打架。
+8. **eca 才掛的四包沒瘦**（events、def、jsonx 與子 agent 用的 subagent 不在 eca）：瘦身線當時寫明「不在這次範圍」，寫新說明要照五條規矩逐支過、`self_hook` 的說明還被 `test_hook_points_match` 逐欄比對，不是比照就能做完的事。現在多大見下面對照表。
+
+### 測試（第 2 筆）
+
+同一份 `mine` 複本疊上第 2 筆：`py/tests` 754 兩邊一樣（第一次跑 `test_agent_spec_script.NoFsm.test_eca_templates` 兩支紅，是測試裡的 eca agent.py 例子還沒關那四支；改 `agent_spec_helpers.py` 後過），`apps/eca` 229（同樣 4 支 TtySocket 紅）、`apps/agent` 226、`apps/hook` 20、`templates/tests` 30（含 `test_start`：start-eca 的 ann 跟 eca-claude 逐字相同）、`defs` 28、`agent_def` 32、`self_hook` 6 都過。

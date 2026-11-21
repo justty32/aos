@@ -38,7 +38,8 @@ agent = defs.Agent(
     %(summary)r,
     meta={"cost": {"time_ms": 60000}, "resource": ["llm"]},
     system="You are the docs team's writer.\\n",
-    tools=[defs.std.pack(p) for p in ("gadgets", "events", "self", "def", "mailbox", "json", "jsonx", "index")] + [defs.drop("do_task")],
+    tools=[defs.std.pack(p) for p in ("gadgets", "events", "self", "def", "mailbox", "json", "jsonx", "index")]
+          + [defs.drop(n) for n in ("do_task", "self_llm", "self_system", "self_history", "self_ctl")],   # as the eca templates (11-21)
     llm=%(llm)r,
     hooks=defs.std.hooks(%(template)r),
 )

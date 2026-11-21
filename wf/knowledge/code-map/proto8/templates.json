@@ -51,6 +51,7 @@
     "_entry": "入口：`aos-eca-screen --eca ..`",
     "interfaces.json": "設定（鍵：aos-agent/screen）"
    },
+   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
    "tools.json": "設定（鍵：$override、tools）",
    "tools_sub.json": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,…"
   },
@@ -65,6 +66,7 @@
     "_entry": "入口：`aos-eca-screen --eca ..`",
     "interfaces.json": "設定（鍵：aos-agent/screen）"
    },
+   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
    "tools.json": "設定（鍵：$override、tools）"
   },
   "eca-pi/": "Run the pi coding agent as an aos agent: one pi --mode rpc run per queue batch (letters that come meanwhile are steered in), answers appended to hist…",
@@ -204,6 +206,7 @@
       "_entry": "入口：`aos-eca-screen --eca ..`",
       "interfaces.json": "設定（鍵：aos-agent/screen）"
      },
+     "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
      "tools.json": "設定（鍵：$override、tools）",
      "tools_sub.json": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,…"
     },

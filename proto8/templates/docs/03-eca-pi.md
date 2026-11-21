@@ -72,7 +72,7 @@ pi --mode rpc --no-approve --session-dir $AOS_STACK/pi/pi-sessions --session-id 
   ```
 
   `llm.json` 寫 `{"model": "litellm/<proxy 上的模型名>"}`。`apiKey` 寫 `$變數名`＝從環境變數讀，不要把值寫進檔。換帳號資料夾＝aos 當成換了一個帳號，下一輪開新對話（帶 aos 的紀錄過去）。
-- `system`（`interfaces.json` 宣告了才有）：用 `--append-system-prompt <檔>` 附加；pi 一輪一個行程，所以每輪重讀，改了下一輪就生效。
+- `system`（`interfaces.json` 宣告了才有；範本的 `system.txt` 兩段短文，寫知識庫在哪，同 eca-claude）：用 `--append-system-prompt <檔>` 附加；pi 一輪一個行程，所以每輪重讀，改了下一輪就生效。
 - `tools`：同 eca-claude（範本是同一份 `tools.json`）。工具名 `mcp__aos__<名>`，直接給模型看（exposure `direct`）。
 - `mcp_servers`（外部 MCP）：pi 身還沒接，寫了＝`CfgBad`。`settings`、`tools_sub` 是 claude 專屬。
 
