@@ -1,0 +1,11 @@
+{
+ "_description": {
+  "$ref": "glob/_description.md"
+ },
+ "rules": {
+  "$ref": "glob/rules.md"
+ },
+ "errors": {
+  "$ref": "glob/errors.md"
+ }
+}

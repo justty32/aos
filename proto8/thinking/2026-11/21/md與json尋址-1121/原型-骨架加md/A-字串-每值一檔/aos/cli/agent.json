@@ -1,0 +1,7 @@
+{
+ "_description": "agent/_description.md",
+ "add": "agent/add.md",
+ "ls_state": "agent/ls_state.md",
+ "phases": "agent/phases.md",
+ "where_who": "agent/where_who.md"
+}

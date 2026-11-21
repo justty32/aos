@@ -1,0 +1,17 @@
+{
+ "_description": {
+  "$ref": "agent/_description.md"
+ },
+ "add": {
+  "$ref": "agent/add.md"
+ },
+ "ls_state": {
+  "$ref": "agent/ls_state.md"
+ },
+ "phases": {
+  "$ref": "agent/phases.md"
+ },
+ "where_who": {
+  "$ref": "agent/where_who.md"
+ }
+}

@@ -1,0 +1,35 @@
+{
+ "_description": {
+  "$ref": "me/_description.md"
+ },
+ "stack": {
+  "$ref": "me/stack.md"
+ },
+ "self_tools": {
+  "$ref": "me/self_tools.json"
+ },
+ "self_llm": {
+  "$ref": "me/self_llm.json"
+ },
+ "self_system": {
+  "$ref": "me/self_system.json"
+ },
+ "self_history": {
+  "$ref": "me/self_history.json"
+ },
+ "do_task": {
+  "$ref": "me/do_task.json"
+ },
+ "compact": {
+  "$ref": "me/compact.json"
+ },
+ "self_hook": {
+  "$ref": "me/self_hook.json"
+ },
+ "self_state": {
+  "$ref": "me/self_state.md"
+ },
+ "self_ctl": {
+  "$ref": "me/self_ctl.md"
+ }
+}
