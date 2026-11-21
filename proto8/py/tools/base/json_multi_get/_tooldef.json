@@ -1,5 +1,5 @@
 {
- "description": "Get several places at once (like json_get for each, in order). One line per place: PATH, a TAB, then the value as one line of JSON (or the \"[too big] ...\" line, or \"[error] CODE reason\" for that place). The places are independent: one failing does not stop the others; if any failed the last line is \"json_multi_get: error: PlacesFailed ...\". Example: {\"paths\": [\"cfg.json#/name\", \"cfg.json#/states/think/next\"]}.",
+ "description": "json_get for several places at once: one line PATH TAB VALUE per place; one failing does not stop the others. More: aos/tools/json_multi_get.json.",
  "parameters": {
   "type": "object",
   "properties": {
@@ -8,17 +8,17 @@
     "items": {
      "type": "string"
     },
-    "description": "the places, each FILE#/POINTER in one string (as in json_get); at least one"
+    "description": "FILE#/POINTER each"
    },
    "max_bytes": {
     "type": "integer",
     "default": 8000,
-    "description": "per place: print the value only if its one-line JSON is at most this many bytes (default: env AOS_JSON_MAX_BYTES, else 8000)"
+    "description": "size limit for the printed value"
    },
    "full": {
     "type": "boolean",
     "default": false,
-    "description": "true = print every value however big"
+    "description": "true = print however big"
    }
   },
   "required": [

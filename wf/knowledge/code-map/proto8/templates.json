@@ -19,7 +19,7 @@
    "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks (lib…",
    "subagents.json": "設定（鍵：max_subagents）",
    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-   "tools.json": "設定（鍵：$override）",
+   "tools.json": "設定（鍵：$override、tools）",
    "wait.py": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
   },
   "agent-fsm/": "Run an aos agent with loop and FSM cells.",
@@ -161,7 +161,7 @@
      "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks (lib…",
      "subagents.json": "設定（鍵：max_subagents）",
      "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-     "tools.json": "設定（鍵：$override）",
+     "tools.json": "設定（鍵：$override、tools）",
      "wait.py": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
     },
     "ann/": "Run an aos agent with loop and FSM cells."

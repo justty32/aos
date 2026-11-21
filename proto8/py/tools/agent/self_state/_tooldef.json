@@ -1,5 +1,5 @@
 {
-  "description": "Look at yourself: facts and numbers about you, the agent calling this tool. Only call it when you want to know; nothing is added to your prompt by itself. Two ways:\n- overview, one line per part: {}\n- some parts in detail: {\"parts\": [\"history\", \"mailbox\"]}  (or {\"parts\": [\"all\"]} for every part)\nParts: who (your name, definition, workspace, stack; parent = who asked to add you; notify_box = where to report (subagent add sets it to the parent's mailbox; null = answer the reply_to of the letter that gave you the work); both are what the requester wrote at add time, not proof of who started you), state (running or paused, letters waiting in your queue, your last answer), tools (your tools and the ones you added or removed), llm (your brain settings), system (where your system text comes from, its size and first line), hooks (your hooks), history (how many messages, how big, the last few), mailbox (letters waiting in your mailbox), subagents (agents you started with subagent, and how many you may have), resources (limits, memory and cpu time in use), time (now, how long you have been up).\nAdd \"json\": true for one JSON object instead of text. A part that cannot be read says \"not available (why)\"; the others still show.",
+  "description": "Facts and numbers about yourself; only reads. {} = one line per part; parts = details (who, state, tools, llm, system, hooks, history, mailbox, subagents, resources, time, all). More: aos/me.json#/self_state.",
   "env": [
     "AOS_DAEMON"
   ],
@@ -38,11 +38,11 @@
             "all"
           ]
         },
-        "description": "which parts to show in detail; leave it out for the one-line-per-part overview"
+        "description": "leave out for the overview"
       },
       "json": {
         "type": "boolean",
-        "description": "true = one JSON object instead of text"
+        "description": "true = JSON output"
       }
     },
     "additionalProperties": false

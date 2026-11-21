@@ -1,19 +1,19 @@
 {
- "description": "Set one place in a JSON file to a value (replace it, or add the key if missing). The value is stored exactly as given. path ending in /- appends to an array; FILE alone replaces (or creates) the whole file. Missing middle levels need parents: true. Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/states/act/next\", \"value\": \"idle\"}.",
+ "description": "Set FILE#/POINTER to value, stored exactly as given (replace, or add the key); /- appends; parents creates missing levels. More: aos/tools/json_set.json.",
  "parameters": {
   "type": "object",
   "properties": {
    "path": {
     "type": "string",
-    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901); a key that contains / is written with ~1 (and ~ with ~0), e.g. idx.json#/sub~1b.json is the key \"sub/b.json\". Relative files start at your workspace."
+    "description": "FILE#/POINTER, e.g. cfg.json#/states/act/next"
    },
    "value": {
-    "description": "required: the new value, any JSON (string, number, boolean, null, object, array); stored exactly as given: a string stays a string"
+    "description": "required: any JSON"
    },
    "parents": {
     "type": "boolean",
     "default": false,
-    "description": "true = create missing objects along the way (like mkdir -p)"
+    "description": "true = create missing levels"
    }
   },
   "required": [

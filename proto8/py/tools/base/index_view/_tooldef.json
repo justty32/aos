@@ -1,29 +1,29 @@
 {
- "description": "Show a node through its index: the notes agents keep about what is under it (KEY<TAB>description). It is a view, not the facts: entries can be missing or stale; for the real contents use ls or json_ls. What an index says about one node X is in the index of X's parent: {\"path\": \"kb\", \"key\": \"app.json\"} (not path kb/app.json). First line \"[index] WHERE, N entries\" names the index read. An entry may also carry \"index\": a path to another index, shown as a third column \"index: PATH\"; an _index inside a JSON file may itself be such a path string, shown as \"[index link] ...\". These are not followed: to read one, call again with {\"index\": PATH}. A path there follows the same rules as $ref: left of # is a file path counted from the folder of the JSON file that holds it (./, ../, absolute); right of # is inside the JSON: #/a/b from the root of the file, #./b from the object that holds the string, #../c from one level above that (repeatable; above the root is bad), # or #/ the whole file; #aaa, y.json#./x, y.json#../x are bad. The object that holds the string: for an _index string the object it sits in, for the index of an entry that entry itself (so a sibling node's index is #../../sub/_index). The PATH shown is already joined. A key joins back to a path as DIR/KEY (folder) or FILE#/KEY, FILE#/POINTER/KEY (json). An entry is KEY: {\"description\": \"...\"}; to change one, edit the place on the [index] line with json_set / json_add / json_del, e.g. json_set {\"path\": \"kb/_index.json#/app.json\", \"value\": {\"description\": \"App settings\"}}.",
+ "description": "Show a node through its index (KEY TAB description per entry). The node is a folder, FILE or FILE#/POINTER; what an index says about X is in the index of X's parent. A view, not the facts; to change an index use the json tools. More: aos/tools/index_view.json.",
  "parameters": {
   "type": "object",
   "properties": {
    "path": {
     "type": "string",
-    "description": "the node to look at: a folder, FILE, or FILE#/POINTER (written like the json tools); shows the index at its natural place (the index key inside _metainfo first, then the separate _index laid over it: on the same key _index wins; a broken _metainfo is skipped with a note on the first line). Relative paths start at your workspace."
+    "description": "the node: folder, FILE or FILE#/POINTER"
    },
    "index": {
     "type": "string",
-    "description": "one index table to read (FILE or FILE#/POINTER, pointing at the table itself, or at an _index that is a path string: then only that path is shown), e.g. your own view. Alone: only this one. With path: laid over the natural index, its entries win on the same key."
+    "description": "read this index table instead (or laid over path's)"
    },
    "key": {
     "type": "string",
-    "description": "show only this entry (the key exactly as written in the index, no patterns)"
+    "description": "show only this entry"
    },
    "offset": {
     "type": "integer",
     "default": 0,
-    "description": "start at this entry (for the next page)"
+    "description": "first one to show (paging)"
    },
    "limit": {
     "type": "integer",
     "default": 200,
-    "description": "at most this many entries (default: env AOS_JSON_MAX_ITEMS, else 200)"
+    "description": "most to show"
    }
   }
  },

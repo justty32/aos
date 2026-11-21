@@ -1,6 +1,6 @@
-{"description": "Write a whole file: created if missing, fully replaced if it exists; parent folders are created. Use it only for new files or full rewrites; use edit to change a part. Errors: FileBad, WriteFailed.",
+{"description": "Write a whole file (new, or fully replaced); parent folders are created. To change a part use edit. More: aos/tools/write.json.",
  "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "the file, relative to your workspace, or absolute"},
-                               "content": {"type": "string", "description": "the whole content of the file"}},
+                "properties": {"path": {"type": "string", "description": "relative to your workspace, or absolute"},
+                               "content": {"type": "string", "description": "the whole file content"}},
                 "required": ["path", "content"]},
  "errors": ["ArgumentsBad", "FileBad", "MkdirFailed", "WriteFailed", "WsMissing"]}

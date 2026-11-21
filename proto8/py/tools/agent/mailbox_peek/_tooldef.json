@@ -1,5 +1,5 @@
 {
- "description": "Look at your mailbox without taking anything: how many letters wait, who sent each, its status and title. Other agents (or the user) send you letters; by default a hook puts one line \"[aos] new_mail: ...\" in your conversation when new ones came, and you can peek any time. Then read them with mailbox_read. Example: {}  (no arguments). Errors: ArgumentsBad, DaemonMissing, InstanceMissing.",
+ "description": "See which letters wait in your mailbox (sender, status, title) without taking any; read them with mailbox_read. More: aos/mailbox.json#/tools.",
  "env": [
   "AOS_DAEMON"
  ],

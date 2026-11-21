@@ -1,11 +1,11 @@
 {
- "description": "Get the length of one place of a JSON file as one integer: an object = number of keys, an array = number of items, a string = number of characters. A number, boolean or null has no length (TargetBad). Example: {\"path\": \"cfg.json#/tags\"} prints 2.",
+ "description": "Length at FILE#/POINTER: keys of an object, items of an array, characters of a string. More: aos/tools/json_len.json.",
  "parameters": {
   "type": "object",
   "properties": {
    "path": {
     "type": "string",
-    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901). Relative files start at your workspace."
+    "description": "FILE#/POINTER"
    }
   },
   "required": [

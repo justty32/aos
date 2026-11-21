@@ -1,33 +1,33 @@
 {
- "description": "Find keys and/or values in a JSON file, below a place (default) or in each ancestor level above it (up: true, nearest first). key = exact key name; value = exact JSON value (same type: 1 is not \"1\"); give both to match key and value together; contains: true = key and string values match by substring. One line per hit: FILE#/POINTER TYPE SIZE; \"[no match]\" if none. No regular expressions. Example: {\"path\": \"cfg.json\", \"key\": \"next\"}.",
+ "description": "Find a key and/or exact value below FILE#/POINTER (up: true = in the levels above); contains = substring; no regular expressions; 1 is not \"1\". One FILE#/POINTER per hit. More: aos/tools/json_search.json.",
  "parameters": {
   "type": "object",
   "properties": {
    "path": {
     "type": "string",
-    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901). Relative files start at your workspace."
+    "description": "FILE#/POINTER or FILE"
    },
    "key": {
     "type": "string",
     "description": "key name to find"
    },
    "value": {
-    "description": "value to find (any JSON)"
+    "description": "exact JSON value to find"
    },
    "contains": {
     "type": "boolean",
     "default": false,
-    "description": "true = substring match for key and string values (case-sensitive)"
+    "description": "true = substring match"
    },
    "up": {
     "type": "boolean",
     "default": false,
-    "description": "true = search the ancestors' own keys, nearest level first, instead of everything below"
+    "description": "true = search the levels above"
    },
    "limit": {
     "type": "integer",
     "default": 200,
-    "description": "at most this many hits (default: env AOS_JSON_MAX_ITEMS, else 200)"
+    "description": "most to show"
    }
   },
   "required": [

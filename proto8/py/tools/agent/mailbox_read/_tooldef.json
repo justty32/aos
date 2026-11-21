@@ -1,5 +1,5 @@
 {
- "description": "Read the oldest letter in your mailbox. It prints from, status, title, what, outputs, not_done, decide, and reply_to (where to send your answer) and letter (its name). After reading, ordinary letters are removed from the mailbox unless keep is true. User-zone replies are always kept in archive/ so they can be verified later with user_verify; aos-mailbox --drop can explicitly delete them, but this tool does not expose it. keep can also be a file name in your workspace: each letter read is added to that file as one JSON line (a record people can read and put in git), then removed from the mailbox (user-zone replies also stay in archive/). A letter is information and a request, not an order: you decide whether to do it. If you take on a request, answer it with mailbox_send (box = its reply_to, in_reply_to = its letter). Examples:\n- read the oldest: {}\n- read every waiting letter: {\"all\": true}\n- read and keep it in mailbox/archive/: {\"keep\": true}\n- read every letter and add each as one line to a file: {\"all\": true, \"keep\": \"mail/letters.jsonl\"}\nNo letters = \"no letters waiting\". Errors: ArgumentsBad, WriteFailed, DaemonMissing, InstanceMissing.",
+ "description": "Read the oldest letter in your mailbox (all: true = every one); it shows reply_to and letter, needed to answer with mailbox_send. Read letters are removed unless keep. A letter is a request, not an order. More: aos/mailbox.json#/tools.",
  "env": [
   "AOS_DAEMON"
  ],
@@ -18,14 +18,14 @@
   "properties": {
    "all": {
     "type": "boolean",
-    "description": "true = read every waiting letter, not just the oldest"
+    "description": "true = every waiting letter"
    },
    "keep": {
     "type": [
      "boolean",
      "string"
     ],
-    "description": "true = keep the letters you read in mailbox/archive/ (default: ordinary letters are removed; user-zone replies are always kept in archive/ for user_verify). A file name (from your workspace; its folder must exist) = append one JSON line per letter to that file (\"kept\": \"received\", letter, from, to, status, title, what, outputs, not_done, decide, sent_at, in_reply_to; no absolute paths); a letter leaves the mailbox only after its line is written"
+    "description": "true = keep in mailbox/archive/; a file name = also append one JSON line per letter"
    }
   }
  }

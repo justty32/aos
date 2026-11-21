@@ -1,5 +1,5 @@
-{"description": "Create a folder, with its parents; an existing folder is fine. Returns JSON {path, created}. Errors: FileBad (a file is in the way), MkdirFailed.",
+{"description": "Create a folder with its parents; an existing folder is fine. More: aos/tools/mkdir.json.",
  "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "path relative to your workspace, or absolute"}},
+                "properties": {"path": {"type": "string", "description": "relative to your workspace, or absolute"}},
                 "required": ["path"]},
  "errors": ["ArgumentsBad", "FileBad", "MkdirFailed", "WsMissing"]}

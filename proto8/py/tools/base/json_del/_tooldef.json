@@ -1,11 +1,11 @@
 {
- "description": "Delete one key or array item from a JSON file (later items move down). It must exist. A whole file is not deleted (use remove or trash). Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/old_key\"}.",
+ "description": "Delete one key or array item at FILE#/POINTER. More: aos/tools/json_del.json.",
  "parameters": {
   "type": "object",
   "properties": {
    "path": {
     "type": "string",
-    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901); a key that contains / is written with ~1 (and ~ with ~0), e.g. idx.json#/sub~1b.json is the key \"sub/b.json\". Relative files start at your workspace."
+    "description": "FILE#/POINTER"
    }
   },
   "required": [

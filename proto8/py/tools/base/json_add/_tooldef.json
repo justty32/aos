@@ -1,19 +1,19 @@
 {
- "description": "Add something new to a JSON file. In an object: adds the key; if it is already there you get KeyExists (use json_set to change it). In an array: path .../2 inserts before item 2 (later items move up), .../- appends. Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/tags/-\", \"value\": \"new\"}.",
+ "description": "Add a new key or array item at FILE#/POINTER (/2 inserts before item 2, /- appends); never overwrites (KeyExists: use json_set). More: aos/tools/json_add.json.",
  "parameters": {
   "type": "object",
   "properties": {
    "path": {
     "type": "string",
-    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901); a key that contains / is written with ~1 (and ~ with ~0), e.g. idx.json#/sub~1b.json is the key \"sub/b.json\". Relative files start at your workspace."
+    "description": "FILE#/POINTER"
    },
    "value": {
-    "description": "required: the new value, any JSON (string, number, boolean, null, object, array); stored exactly as given: a string stays a string"
+    "description": "required: any JSON"
    },
    "parents": {
     "type": "boolean",
     "default": false,
-    "description": "true = create missing objects along the way (like mkdir -p)"
+    "description": "true = create missing levels"
    }
   },
   "required": [

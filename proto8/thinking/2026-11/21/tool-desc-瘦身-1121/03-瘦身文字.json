@@ -115,7 +115,7 @@
   {
    "tool": "move",
    "file_path": "../../../../py/tools/base/move/_tooldef.json",
-   "description": "Move or rename a file or folder (also restores from .trash/); to is the full new path and must not exist. More: aos/tools/move.json.",
+   "description": "Move or rename a file or folder (also restores from .trash/); to is the full new path and must not exist (trash it first to replace it). More: aos/tools/move.json.",
    "params": {
     "from": "current path",
     "to": "full new path"
@@ -149,7 +149,7 @@
   {
    "tool": "shell",
    "file_path": "../../../../py/tools/base/shell/_tooldef.json",
-   "description": "Run one bash command line in your workspace; output ends with [exit code N]. Prefer grep, glob, ls for searching and listing. Not a sandbox. More: aos/tools/shell.json.",
+   "description": "Run one bash command line in your workspace; output ends with [exit code N] (non-zero is your command's result, not a tool error). Prefer grep, glob, ls for searching and listing. Not a sandbox. More: aos/tools/shell.json.",
    "params": {
     "command": "the bash command line",
     "timeout_s": "seconds (at most 300)"
@@ -158,7 +158,7 @@
   {
    "tool": "run_python",
    "file_path": "../../../../py/tools/base/run_python/_tooldef.json",
-   "description": "Run a short Python 3 program (standard library) in your workspace; output ends with [exit code N]. More: aos/tools/run_python.json.",
+   "description": "Run a short Python 3 program (standard library) in your workspace; output ends with [exit code N] (non-zero is your program's result, not a tool error). More: aos/tools/run_python.json.",
    "params": {
     "code": "the whole program",
     "timeout_s": "seconds (at most 300)"
@@ -214,7 +214,7 @@
   {
    "tool": "goal",
    "file_path": "../../../../py/tools/agent/goal/_tooldef.json",
-   "description": "Your goal: one sentence you keep working on; when you stop by yourself you are reminded of it. Ops: get, set (text), done (when really finished or impossible), pause (when waiting for someone), resume. More: aos/tools/goal.json.",
+   "description": "Your goal: one sentence you keep working on; when you stop by yourself you are reminded of it. Ops: get, set (text), done (when really finished or impossible), pause (when waiting for someone; a letter does not resume it), resume. More: aos/tools/goal.json.",
    "params": {
     "op": "what to do",
     "text": "set: the goal, one sentence",
@@ -226,7 +226,7 @@
   {
    "tool": "self_tools",
    "file_path": "../../../../py/tools/agent/self_tools/_tooldef.json",
-   "description": "List or change your own tools (only yours): ls, get one in full, add a tool folder, rm, reset. Changes work at once. More: aos/me/self_tools.json.",
+   "description": "List or change your own tools (only yours): ls, get one in full, add a tool folder, rm, reset. Changes work at once. Self tools not in your default set, add them when needed: self_llm, self_system, self_history, self_ctl, e.g. {\"op\": \"add\", \"path_json\": {\"$env\": \"AOS_HOME\", \"$path\": \"/lib/tools/agent/self_history\"}}. More: aos/me/self_tools.json.",
    "params": {
     "op": "what to do",
     "name": "get, rm: the tool name; add: the name to use (default folder name)",
@@ -253,7 +253,7 @@
   {
    "tool": "self_system",
    "file_path": "../../../../py/tools/agent/self_system/_tooldef.json",
-   "description": "See or replace your own system text: get, set (the whole new text), reset. Works from your next brain call; each change costs one prompt-cache miss. More: aos/me/self_system.json.",
+   "description": "See or replace your own system text: get, set (the whole new text), reset. Works from your next brain call; each change costs one prompt-cache miss; a text that stops you working needs a human to reset it. More: aos/me/self_system.json.",
    "params": {
     "op": "what to do",
     "long": "show where each value comes from",
@@ -314,7 +314,7 @@
   {
    "tool": "mailbox_send",
    "file_path": "../../../../py/tools/agent/mailbox_send/_tooldef.json",
-   "description": "Send one letter to an agent (to = its name) or a mailbox folder (box = a letter's reply_to). To answer a letter: box = its reply_to, in_reply_to = its letter. When you finish or give up on a task someone asked for, send DONE, BLOCKED, NEEDS-USER or FAILED. More: aos/mailbox.json#/tools.",
+   "description": "Send one letter to an agent (to = its name) or a mailbox folder (box = a letter's reply_to). To answer a letter: box = its reply_to, in_reply_to = its letter. When you finish or give up on a task someone asked for, send DONE, BLOCKED, NEEDS-USER or FAILED; taking long is not BLOCKED. More: aos/mailbox.json#/tools.",
    "params": {
     "to": "an agent's name on the daemon table; to yourself = your own name (not self or me)",
     "daemon": "with to: that agent's daemon folder",
@@ -332,7 +332,7 @@
   {
    "tool": "json_get",
    "file_path": "../../../../py/tools/base/json_get/_tooldef.json",
-   "description": "The value at FILE#/POINTER as one line of JSON (\"[too big] ...\" past max_bytes: look deeper or full: true). More: aos/tools/json_get.json.",
+   "description": "The value at FILE#/POINTER as one line of JSON (\"[too big] ...\" past max_bytes: look deeper or full: true); $ref/$env are not resolved. More: aos/tools/json_get.json.",
    "params": {
     "path": "FILE#/POINTER, e.g. cfg.json#/states/think; FILE alone = whole file",
     "max_bytes": "size limit for the printed value",
@@ -354,7 +354,7 @@
   {
    "tool": "json_search",
    "file_path": "../../../../py/tools/base/json_search/_tooldef.json",
-   "description": "Find a key and/or exact value below FILE#/POINTER (up: true = in the levels above); contains = substring. One FILE#/POINTER per hit. More: aos/tools/json_search.json.",
+   "description": "Find a key and/or exact value below FILE#/POINTER (up: true = in the levels above); contains = substring; no regular expressions; 1 is not \"1\". One FILE#/POINTER per hit. More: aos/tools/json_search.json.",
    "params": {
     "path": "FILE#/POINTER or FILE",
     "key": "key name to find",
