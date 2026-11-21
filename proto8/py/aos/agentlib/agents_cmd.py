@@ -233,7 +233,7 @@ def add_argv(args):
     argv += ["--auto-restart"] if flag(args, "auto_restart") else []
     argv += _timeout_flags(args, with_queued=True)
     if "def" in args:
-        argv += [text(args, "def", True)]
+        argv += ["--", text(args, "def", True)]   # 值放 -- 後：- 開頭不被下層當旗標（線 histrange-1121）
     return argv
 
 
@@ -265,7 +265,7 @@ def life_argv(op, args):
     name = text(args, "name", True)
     no_wait = ["--no-wait"] if flag(args, "no_wait") else []
     if op == "rm":
-        return ["ctl", "rm"] + no_wait + (["--purge", "-y"] if flag(args, "purge") else []) + _timeout_flags(args) + [name]
+        return ["ctl", "rm"] + no_wait + (["--purge", "-y"] if flag(args, "purge") else []) + _timeout_flags(args) + ["--", name]
     return ["ctl", op, "--target", name] + no_wait + _timeout_flags(args, with_queued=op in ("start", "wake"))
 
 

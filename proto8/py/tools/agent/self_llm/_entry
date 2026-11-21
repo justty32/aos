@@ -78,7 +78,7 @@ if op == "set":
     if "system" in s:                           # 11-11 使用者翻案「報錯並指路」：不叫下層、不存（thinking/2026-11/11/backlog-rulings.md）
         die("ArgumentsBad", "system is not a brain setting: change your system text with self_system "
             "({\"op\": \"set\", \"text\": \"...\"}); nothing stored")
-    cmd += ["%s=%s" % (k, s[k]) for k in s]
+    cmd += ["--"] + ["%s=%s" % (k, s[k]) for k in s]   # 鍵放 -- 後：-x、--target 這類鍵不被下層當旗標（線 histrange-1121）
 elif op == "ls":
     if args.get("long"):
         cmd += ["-l"]
@@ -86,7 +86,7 @@ elif op == "rm":
     keys = args.get("keys")
     if not isinstance(keys, list) or not keys or not all(isinstance(k, str) and k for k in keys):
         die("ArgumentsBad", "rm needs keys: a list of key names, like [\"temperature\"]")
-    cmd += keys
+    cmd += ["--"] + keys
 elif op == "reset":
     cmd += ["-y"]
 

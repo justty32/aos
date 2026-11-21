@@ -127,6 +127,25 @@ class History(unittest.TestCase):
         self.assertEqual(self.lines(), MSGS)
         self.assertFalse(self.removed.exists())
 
+    def test_last_n(self):
+        """-N＝最後 N 則（線 histrange-1121）：不用 -- 也不被當成旗標，ls／rm／summarize 都收。"""
+        self.assertEqual(self.agent("ls", "-2").stdout.splitlines(), self.agent("ls", "4-5").stdout.splitlines())
+        self.assertEqual(self.agent("ls", "-j", "--", "-1").stdout, self.agent("ls", "-j", "5").stdout)
+        self.assertEqual(self.agent("ls", "-5").stdout, self.agent("ls", "-a").stdout)
+        r = self.agent("rm", "-2")
+        self.assertIn("removed 2 messages from line 4;", r.stdout)
+        self.assertEqual(self.lines(), MSGS[:3])
+        r = self.agent("summarize", "-2", "-5 degrees")       # TEXT 照收，-5 開頭也不是旗標
+        self.assertIn("replaced 2 messages with one user message at line 2", r.stdout)
+        self.assertEqual(self.lines()[1], {"role": "user", "content": "[aos] summary: lines 2-3, 2 messages. -5 degrees"})
+
+    def test_bad_range_says_how_to_write_it(self):
+        for args in (("ls", "-0"), ("ls", "-9"), ("ls", "x"), ("set", "-1", "{}")):
+            r = self.agent(*args, ok=False)
+            self.assertIn("aos-agent: error: RangeBad ", r.stderr, args)
+        self.assertIn("-N = the last N", self.agent("ls", "x", ok=False).stderr)
+        self.assertIn("the history has 5", self.agent("ls", "-9", ok=False).stderr)
+
     def test_errors(self):
         before = self.hist.read_bytes()
         for args, code in ((("rm", "9"), "RangeBad"), (("rm", "3-2"), "RangeBad"), (("rm", "x"), "RangeBad"),

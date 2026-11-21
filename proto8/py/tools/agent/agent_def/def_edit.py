@@ -81,7 +81,7 @@ def tools(run, defdir, a, op):
     if op == "ls":
         cmd += ["--long"] if flag(a, "long") else []
     elif op in ("get", "rm"):
-        cmd += [text(a, "name", True)]
+        cmd += ["--", text(a, "name", True)]   # 值放 -- 後：- 開頭的名字／路徑不被下層當旗標（線 histrange-1121）
     else:
         envs = a.get("envs", {})
         if not isinstance(envs, dict) or not all(isinstance(k, str) and k and "=" not in k and isinstance(v, str) for k, v in envs.items()):
@@ -98,7 +98,7 @@ def tools(run, defdir, a, op):
                 die("ArgumentsBad", "path_json must be a directive object like {\"$env\": \"AOS_HOME\", \"$path\": \"/lib/tools/base/math\"}")
             cmd += ["--path-json", json.dumps(pj, ensure_ascii=False)]
         else:
-            cmd += [text(a, "path", True)]
+            cmd += ["--", text(a, "path", True)]
     emit(run(cmd))
     if op in ("add", "rm"):
         after("tools")

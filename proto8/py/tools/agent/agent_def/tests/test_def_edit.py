@@ -75,6 +75,9 @@ class DefEdit(unittest.TestCase):
         self.ok("tools", {"op": "rm", "name": "math"})
         self.assertEqual(self.reg()["tools"], {})
         self.fails("tools", {"op": "rm", "name": "math"}, "ToolMissing")
+        for name in ("-x", "--help", "-3"):                    # - 開頭的名字照值傳，不被 aos-tools 當旗標（線 histrange-1121）
+            self.fails("tools", {"op": "get", "name": name}, "ToolMissing")
+            self.fails("tools", {"op": "rm", "name": name}, "ToolMissing")
 
     def test_tools_relative_path_from_workspace(self):
         shutil.copytree(PROTO / "py" / "tools" / "base" / "math", self.ws / "mytools" / "calc")

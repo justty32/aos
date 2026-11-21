@@ -96,7 +96,7 @@ cmd = ["tools", "--target", None, op]
 if op == "ls":
     cmd += ["-l"] if flag("long") else []
 elif op in ("get", "rm"):
-    cmd += [text("name", True)]
+    cmd += ["--", text("name", True)]   # 值放 -- 後：- 開頭的名字／路徑不被下層當旗標（線 histrange-1121）
 elif op == "reset":
     cmd += ["-y"]
 else:
@@ -115,7 +115,7 @@ else:
             die("ArgumentsBad", "path_json must be a directive object like {\"$env\": \"AOS_HOME\", \"$path\": \"/lib/tools/base/math\"}")
         cmd += ["--path-json", json.dumps(pj, ensure_ascii=False)]
     else:
-        cmd += [text("path", True)]
+        cmd += ["--", text("path", True)]
 
 cmd[2] = agent("ctl", "who").strip()
 out = agent(*cmd)

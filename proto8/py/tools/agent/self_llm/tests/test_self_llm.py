@@ -54,8 +54,10 @@ class SelfLlm(unittest.TestCase):
     def test_each_op(self):
         for args, want in (({"op": "ls"}, ["ls"]),
                            ({"op": "ls", "long": True}, ["ls", "-l"]),
-                           ({"op": "set", "settings": {"model": "smart-high", "temperature": "0.2"}}, ["set", "model=smart-high", "temperature=0.2"]),
-                           ({"op": "rm", "keys": ["temperature", "top_p"]}, ["rm", "temperature", "top_p"]),
+                           ({"op": "set", "settings": {"model": "smart-high", "temperature": "0.2"}}, ["set", "--", "model=smart-high", "temperature=0.2"]),
+                           ({"op": "rm", "keys": ["temperature", "top_p"]}, ["rm", "--", "temperature", "top_p"]),
+                           ({"op": "rm", "keys": ["a", "--target"]}, ["rm", "--", "a", "--target"]),   # 不會改掉目標（線 histrange-1121）
+                           ({"op": "set", "settings": {"-t": "x"}}, ["set", "--", "-t=x"]),
                            ({"op": "reset"}, ["reset", "-y"])):
             r = self.run_tool(args)
             self.assertEqual(r.returncode, 0, (args, r.stdout, r.stderr))

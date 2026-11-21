@@ -55,13 +55,13 @@ class SelfHook(unittest.TestCase):
         self.assertIn("(takes effect from the next event)", r.stdout)
         self.assertEqual(self.calls()[-1], [str(self.ws), "hook", "--target", "bob", "add", "--event", "before_tool", "--name", "g",
                                             "--condition", "a", "--condition", "b", "--no-intercept", "--on-error", "continue",
-                                            "--timeout-ms", "500", "--replace", "hooks/guard"])
+                                            "--timeout-ms", "500", "--replace", "--", "hooks/guard"])
 
     def test_add_on_clock(self):   # 11-11 clock-hook：every_cycles／every_ms／clock 一對一傳成旗標
         r = self.run_tool({"op": "add", "event": "on_clock", "path": "hooks/guard", "name": "t", "every_ms": 300000, "clock": "_clock"})
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.calls()[-1], [str(self.ws), "hook", "--target", "bob", "add", "--event", "on_clock", "--name", "t",
-                                            "--every-ms", "300000", "--clock", "_clock", "hooks/guard"])
+                                            "--every-ms", "300000", "--clock", "_clock", "--", "hooks/guard"])
         r = self.run_tool({"op": "add", "event": "on_clock", "path": "hooks/guard", "every_cycles": "10"})
         self.assertEqual(r.returncode, 1)
         self.assertIn("self_hook: error: ArgumentsBad every_cycles must be integer", r.stderr)
@@ -86,11 +86,12 @@ class SelfHook(unittest.TestCase):
         d = {"$env": "AOS_HOME", "$path": "/lib/x"}
         for args, want in (({"op": "ls"}, ["ls", "--json"]),
                            ({"op": "ls", "long": True}, ["ls", "-l"]),
-                           ({"op": "get", "name": "guard"}, ["get", "guard"]),
-                           ({"op": "add", "event": "after_queue", "path": "/abs/h", "async": True}, ["add", "--event", "after_queue", "--async", "/abs/h"]),
+                           ({"op": "get", "name": "guard"}, ["get", "--", "guard"]),
+                           ({"op": "rm", "name": "-h"}, ["rm", "--", "-h"]),          # - 開頭的值放 -- 後（線 histrange-1121）
+                           ({"op": "add", "event": "after_queue", "path": "/abs/h", "async": True}, ["add", "--event", "after_queue", "--async", "--", "/abs/h"]),
                            ({"op": "add", "event": "brain_failed", "condition": "ReplyBad", "name": "p", "path_json": d},
                             ["add", "--event", "brain_failed", "--name", "p", "--condition", "ReplyBad", "--path-json", json.dumps(d)]),
-                           ({"op": "rm", "name": "guard"}, ["rm", "guard"]),
+                           ({"op": "rm", "name": "guard"}, ["rm", "--", "guard"]),
                            ({"op": "reset"}, ["reset", "-y"])):
             r = self.run_tool(args)
             self.assertEqual(r.returncode, 0, (args, r.stdout, r.stderr))

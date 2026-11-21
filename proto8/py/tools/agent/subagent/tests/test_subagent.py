@@ -125,7 +125,7 @@ class Subagent(unittest.TestCase):
         self.assertIn("added kid (stack %s); subagents 1/4" % (self.daemon / "procs" / "kid"), out)
         self.assertEqual(self.calls("ctl")[-1], ["ctl", "add", "--stack", str(self.daemon / "procs/kid"), "--name", "kid", "--ws", "kid", "--limits", '{"mem_mb": 64}',
                                                  "--envs", "AOS_NOTIFY_BOX=%s" % (self.mom / "mailbox"),
-                                                 "--timeout-s", "5", "defs/helper"])
+                                                 "--timeout-s", "5", "--", "defs/helper"])
         self.assertTrue((self.ws / "kid").is_dir())
         self.assertEqual(self.record(), [{"name": "kid", "stack": str(self.daemon / "procs/kid")}])
         self.ok({"op": "add", "def": "defs/kid2"})           # name defaults to the folder name, like ctl add
@@ -151,13 +151,13 @@ class Subagent(unittest.TestCase):
                          "envs": {"AOS_NOTIFY_BOX": box, "LANG": "C"}})
                 self.assertEqual(self.calls("ctl")[-1],
                                  ["ctl", "add", "--stack", str(self.daemon / ("procs/kid%d" % i)), "--name", "kid%d" % i,
-                                  "--envs", "AOS_NOTIFY_BOX=" + box, "--envs", "LANG=C", "d"])
+                                  "--envs", "AOS_NOTIFY_BOX=" + box, "--envs", "LANG=C", "--", "d"])
 
     def test_add_defaults_notify_box_with_other_envs(self):
         self.ok({"op": "add", "def": "d", "name": "kid", "envs": {"LANG": "C"}})
         self.assertEqual(self.calls("ctl")[-1],
                          ["ctl", "add", "--stack", str(self.daemon / "procs/kid"), "--name", "kid", "--envs", "AOS_NOTIFY_BOX=%s" % (self.mom / "mailbox"),
-                          "--envs", "LANG=C", "d"])
+                          "--envs", "LANG=C", "--", "d"])
 
     def test_each_targeted_op(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})
@@ -185,11 +185,11 @@ class Subagent(unittest.TestCase):
     def test_rm_keeps_stack_unless_purge(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})
         self.ok({"op": "rm", "name": "kid"})
-        self.assertEqual(self.calls("ctl")[-1], ["ctl", "rm", "kid"])
+        self.assertEqual(self.calls("ctl")[-1], ["ctl", "rm", "--", "kid"])
         self.assertEqual(self.record(), [])
         self.ok({"op": "add", "def": "d", "name": "kid"})
         self.ok({"op": "rm", "name": "kid", "purge": True})
-        self.assertEqual(self.calls("ctl")[-1], ["ctl", "rm", "--purge", "-y", "kid"])
+        self.assertEqual(self.calls("ctl")[-1], ["ctl", "rm", "--purge", "-y", "--", "kid"])
 
     def test_only_my_subagents(self):
         table = json.loads(self.table.read_text()) + [{"name": "other", "stack": str(self.daemon / "procs" / "other")}]
@@ -275,8 +275,8 @@ class Subagent(unittest.TestCase):
     def test_forward_aims_at_the_subagent(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})
         kid_stack = str(self.daemon / "procs" / "kid")
-        for op, sub, args, want in (("tools", "self_tools", {"op": "add", "path": "tools/math"}, ["tools", "--target", "kid", "add", "tools/math"]),
-                                    ("llm", "self_llm", {"op": "set", "settings": {"model": "fake"}}, ["llm", "--target", "kid", "set", "model=fake"]),
+        for op, sub, args, want in (("tools", "self_tools", {"op": "add", "path": "tools/math"}, ["tools", "--target", "kid", "add", "--", "tools/math"]),
+                                    ("llm", "self_llm", {"op": "set", "settings": {"model": "fake"}}, ["llm", "--target", "kid", "set", "--", "model=fake"]),
                                     ("hook", "self_hook", {"op": "ls"}, ["hook", "--target", "kid", "ls"]),
                                     ("system", "self_system", {"op": "get"}, ["system", "--target", "kid", "get"])):
             if not (TOOL.parents[1] / sub / "_entry").exists():

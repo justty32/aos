@@ -1,0 +1,127 @@
+{
+ "contract": "wf-table/1",
+ "source": "self-history-range-1121.md",
+ "extracted": "2026-11-21",
+ "columns": [
+  "tool",
+  "param",
+  "argv",
+  "before",
+  "after",
+  "status"
+ ],
+ "rows": [
+  {
+   "tool": "self_history",
+   "param": "range (ls)",
+   "argv": "aos-agent history --target ME ls [flags] RANGE",
+   "before": "-3 / 整數 -3 → FlagUnknown",
+   "after": "放 -- 後；-3＝最後 3 則",
+   "status": "修"
+  },
+  {
+   "tool": "self_history",
+   "param": "range (rm/summarize)、line (set)、text",
+   "argv": "… -- RANGE TEXT",
+   "before": "本來就在 -- 後，沒問題；-3 回 RangeBad not a range",
+   "after": "-N 收；碰到這一步照舊 RangeBad",
+   "status": "修（-N）"
+  },
+  {
+   "tool": "self_tools",
+   "param": "name (get/rm)、path (add)",
+   "argv": "aos-agent tools --target ME get|rm NAME、add … PATH",
+   "before": "-x、-3 → FlagUnknown；-h、--help 印說明退 0、工具當成功回；--replace、--no-cache 被吃掉再報缺參數",
+   "after": "放 -- 後，照名字／路徑傳（找不到＝ToolMissing 等正常錯）",
+   "status": "修"
+  },
+  {
+   "tool": "self_hook",
+   "param": "name (get/rm)、path (add)",
+   "argv": "aos-agent hook --target ME get|rm NAME、add … PATH",
+   "before": "同 self_tools；--async、--replace、--no-intercept 當 path 會默默生效",
+   "after": "放 -- 後",
+   "status": "修"
+  },
+  {
+   "tool": "agent_def (tools)",
+   "param": "name (get/rm)、path (add)",
+   "argv": "aos-tools --file DEF get|rm NAME、add … PATH（共用 def_edit.tools）",
+   "before": "同 self_tools",
+   "after": "放 -- 後",
+   "status": "修"
+  },
+  {
+   "tool": "self_llm",
+   "param": "keys (rm)、settings 的鍵 (set)",
+   "argv": "aos-agent llm --target ME rm K…、set K=V…",
+   "before": "-x 第一個 → FlagUnknown；rm [\"a\",\"--target\",\"v\"] 或 -t、--daemon 會默默改掉目標或 daemon；set 鍵 --target → 目標改成值",
+   "after": "放 -- 後，全當鍵",
+   "status": "修"
+  },
+  {
+   "tool": "agents_ctl、subagent",
+   "param": "name (rm)、def (add)",
+   "argv": "aos-agent ctl rm … NAME、ctl add … DEF（共用 agents_cmd.life_argv／add_argv）",
+   "before": "-x → FlagUnknown；-h 印說明退 0；--yes、--purge、--no-wait、--auto-restart 被吃掉再報缺名字",
+   "after": "放 -- 後",
+   "status": "修"
+  },
+  {
+   "tool": "subagent",
+   "param": "ctl where NAME",
+   "argv": "aos-agent ctl where NAME（NAME 是 ctl add 印出來的）",
+   "before": "名字 - 開頭且 add 輸出空行才會錯，條件很窄",
+   "after": "沒改",
+   "status": "只列"
+  },
+  {
+   "tool": "board_set",
+   "param": "text",
+   "argv": "aos-comm board set … -- MODE TEXT",
+   "before": "-x 沒問題；text 剛好是 -- 被下層 _words 吃成空字串",
+   "after": "沒改（下層 board_cmd 的事）",
+   "status": "只列"
+  },
+  {
+   "tool": "board_wait",
+   "param": "what",
+   "argv": "board wait -j -- WHO WHAT",
+   "before": "what 剛好是 -- 被吃成空",
+   "after": "沒改",
+   "status": "只列"
+  },
+  {
+   "tool": "feedback",
+   "param": "command、pain、suggest",
+   "argv": "aos-feedback add --by=… -- COMMAND PAIN [SUGGEST]",
+   "before": "值剛好是 -- 被下層再刪一次：suggest 消失、pain 是 -- 時 suggest 補位成 pain（資料錯位）",
+   "after": "沒改（下層 apps/feedback 的事）",
+   "status": "只列"
+  },
+  {
+   "tool": "mailbox_send",
+   "param": "what",
+   "argv": "aos-mailbox … -- WHAT（keep=1）",
+   "before": "- 開頭沒問題；what 剛好是 - 改讀 stdin，回清楚的 ArgumentsBad",
+   "after": "沒改",
+   "status": "只列"
+  },
+  {
+   "tool": "clock_register",
+   "param": "text",
+   "argv": "add … -- NAME TEXT",
+   "before": "text 剛好是 - 改讀 stdin，回 TEXT is empty",
+   "after": "沒改",
+   "status": "只列"
+  },
+  {
+   "tool": "user_send、mailbox_send",
+   "param": "kind、status 的 enum",
+   "argv": "帶值旗標",
+   "before": "工具層 tool_io 只驗型別、不驗 schema 的 enum，靠下層擋",
+   "after": "沒改",
+   "status": "只列"
+  }
+ ]
+}

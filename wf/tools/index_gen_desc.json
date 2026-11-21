@@ -243,7 +243,6 @@
   "proto8/py/tools/agent/do_task": "do_task 工具（小工具包，eca 不掛）：在自己的 history 裡做一段任務，save／load 兩步，做完那段換成總結",
   "proto8/py/tools/agent/fork": "fork 工具（子 agent 包）：把當下的自己連對話複製一份給一個 goal，只拿回短結論",
   "proto8/py/tools/agent/goal": "goal 工具（目標包，eca 不掛）：自己的一句目標，分 get／set／done／pause／resume；自己停下又沒信時身體會丟 goal 提醒",
-  "proto8/py/tools/agent/hook_fire": "hook_fire（不是給腦的工具）：範本 loop.json 的 on_start／on_stop 叫它，發 after_start／after_stop 事件給 agent 的 hook",
   "proto8/py/tools/agent/hook_noop": "hook_noop（不是給腦的工具）：什麼都不做的 hook handler，讀掉事件 JSON 退 0，範本 hooks.json 預設掛點",
   "proto8/py/tools/agent/context_wrap": "context_wrap（不是給腦的工具）：on_clock 的 hook handler，context 用量過門檻（預設 35%）先寄收尾信、答完且 queue 空再單獨寄 /compact，壓完不重複",
   "proto8/py/tools/agent/gdb_trigger": "gdb_trigger（不是給腦的工具）：aos-gdb 觸發器的 hook handler，讀小格的 trigger.json 判條件，成立時 before_tool／before_queue 就自己扣住等放行（續＝照跑或跳過），其他事件就 ctl pause --no-wait；都留字條",

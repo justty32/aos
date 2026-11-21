@@ -58,16 +58,18 @@ class SelfTools(unittest.TestCase):
         self.assertIn("works at once: from your next reply in this turn", r.stdout)
         self.assertEqual(self.calls()[-1], [str(self.ws), "tools", "--target", "bob", "add", "--name", "math", "--replace",
                                             "--envs", "A=x y", "--envs", "B=2", "--env-file", "secrets/m.env", "--no-cache",
-                                            "tools/math"])
+                                            "--", "tools/math"])
 
     def test_each_op(self):
         d = {"$env": "AOS_HOME", "$path": "/lib/tools/base/math"}
         for args, want in (({"op": "ls"}, ["ls"]),
                            ({"op": "ls", "long": True}, ["ls", "-l"]),
-                           ({"op": "get", "name": "math"}, ["get", "math"]),
-                           ({"op": "add", "path": "/anywhere/tool"}, ["add", "/anywhere/tool"]),
+                           ({"op": "get", "name": "math"}, ["get", "--", "math"]),
+                           ({"op": "get", "name": "-x"}, ["get", "--", "-x"]),        # - 開頭的值放 -- 後（線 histrange-1121）
+                           ({"op": "add", "path": "/anywhere/tool"}, ["add", "--", "/anywhere/tool"]),
                            ({"op": "add", "path_json": d}, ["add", "--path-json", json.dumps(d)]),
-                           ({"op": "rm", "name": "self_tools"}, ["rm", "self_tools"]),
+                           ({"op": "rm", "name": "self_tools"}, ["rm", "--", "self_tools"]),
+                           ({"op": "add", "path": "--help"}, ["add", "--", "--help"]),
                            ({"op": "reset"}, ["reset", "-y"])):
             r = self.run_tool(args)
             self.assertEqual(r.returncode, 0, (args, r.stdout, r.stderr))

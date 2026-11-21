@@ -48,16 +48,18 @@ class AgentsCtl(unittest.TestCase):
     def test_each_op(self):
         d = {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}
         for args, want in (
-                ({"op": "add", "def": "defs/helper"}, ["add", "defs/helper"]),
+                ({"op": "add", "def": "defs/helper"}, ["add", "--", "defs/helper"]),
+                ({"op": "add", "def": "-x"}, ["add", "--", "-x"]),          # - 開頭的值放 -- 後（線 histrange-1121）
                 ({"op": "add", "def": "defs/helper", "name": "w", "ws": "work", "stack": "/s/w", "limits": {"mem_mb": 512},
                   "envs": {"B": "2", "A": "x y"}, "auto_restart": True, "timeout_s": 5, "on_queued": "ok"},
                  ["add", "--name", "w", "--ws", "work", "--stack", "/s/w", "--limits", '{"mem_mb": 512}', "--envs", "A=x y",
-                  "--envs", "B=2", "--auto-restart", "--timeout-s", "5", "--on-queued", "ok", "defs/helper"]),
+                  "--envs", "B=2", "--auto-restart", "--timeout-s", "5", "--on-queued", "ok", "--", "defs/helper"]),
                 ({"op": "add", "def_json": d, "name": "w", "ws_json": {"$env": "PROJ"}, "stack_json": "st/w"},
                  ["add", "--name", "w", "--ws-json", '{"$env": "PROJ"}', "--stack-json", '"st/w"', "--path-json", json.dumps(d)]),
-                ({"op": "rm", "name": "w"}, ["rm", "w"]),
-                ({"op": "rm", "name": "w", "purge": True, "timeout_s": 2.5}, ["rm", "--purge", "-y", "--timeout-s", "2.5", "w"]),
-                ({"op": "rm", "name": "w", "no_wait": True, "purge": True}, ["rm", "--no-wait", "--purge", "-y", "w"]),
+                ({"op": "rm", "name": "w"}, ["rm", "--", "w"]),
+                ({"op": "rm", "name": "--purge"}, ["rm", "--", "--purge"]),
+                ({"op": "rm", "name": "w", "purge": True, "timeout_s": 2.5}, ["rm", "--purge", "-y", "--timeout-s", "2.5", "--", "w"]),
+                ({"op": "rm", "name": "w", "no_wait": True, "purge": True}, ["rm", "--no-wait", "--purge", "-y", "--", "w"]),
                 ({"op": "ls"}, ["ls"]),
                 ({"op": "ls", "long": True}, ["ls", "-l"]),
                 ({"op": "ls", "json": True}, ["ls", "--json"]),

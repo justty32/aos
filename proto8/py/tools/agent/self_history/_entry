@@ -8,7 +8,8 @@
 #   rm {range, keep?, no_keep?}                ＝history rm [--keep FILE | --no-keep -y] RANGE
 #   summarize {range, text, role?, keep?, no_keep?} ＝history summarize [--role] [--keep | --no-keep -y] -- RANGE TEXT（新那則內容＝「[aos] summary: lines A-B, N messages. text」，下層套的）
 #   set {line, message, keep?, no_keep?}       ＝history set [--keep | --no-keep -y] -- LINE JSON（message 是物件）
-#   range 收字串（N、A-B、A-）或整數；line 收整數或字串。no_keep 時帶 -y（腦叫了就算確認過）。
+#   range 收字串（N、A-B、A-、-N＝最後 N 則）或整數；line 收整數或字串。no_keep 時帶 -y（腦叫了就算確認過）。
+#   range／line 一律放在 -- 後面交下層（線 histrange-1121：ls 原本沒放，"-3" 被下層當旗標報 FlagUnknown）。
 # 唯一多的規則（使用者第 2 題「可以」）：先 history ls --json，找「這一步」的頭——最後一則 assistant 帶 tool_calls、後面只有 tool＝那則
 #   （fsm：叫我的那則）；不然＝最後一則 assistant 的下一行（eca：這一輪交進來的 user）；沒有 assistant＝第 1 行。改的那段碰到它以後＝RangeBad、不叫下層。
 #   放這層不放 aos-agent history：人用的指令照「寫什麼做什麼」，只有腦改自己時才有「這一步」。
@@ -95,7 +96,8 @@ def spot(key, need):
     if v is None and not need:
         return None
     if isinstance(v, bool) or not isinstance(v, (int, str)) or (isinstance(v, str) and not v.strip()):
-        die("ArgumentsBad", "%s %s a line number like 3 or a range like \"2-5\"" % (key, "needs" if v is None else "must be"))
+        die("ArgumentsBad", "%s %s %s" % (key, "needs" if v is None else "must be", "a line number like 3" if key == "line" else
+                                          "a range like \"4\", \"2-5\", \"6-\" (6 to the end) or \"-3\" (the last 3)"))
     return str(v).strip()
 
 
@@ -118,8 +120,10 @@ def step_start(rows):
 
 
 def end_of(spec, n):
-    """一段的最後一行；寫壞的交給下層報 RangeBad（回 None）。"""
+    """一段的最後一行；寫壞的交給下層報 RangeBad（回 None）。-N＝最後 N 則，到最後一行。"""
     a, dash, b = spec.partition("-")
+    if not a and dash and b.isdecimal():
+        return n
     if not a.isdecimal() or (dash and b and not b.isdecimal()):
         return None
     return int(b) if b else (n if dash else int(a))
@@ -138,7 +142,7 @@ cmd = [op]
 if op == "ls":
     if flag("all") and rng:
         die("ArgumentsBad", "give all or range, not both")
-    cmd += (["--all"] if flag("all") else []) + (["--json"] if flag("json") else []) + (["--long"] if flag("long") else []) + ([rng] if rng else [])
+    cmd += (["--all"] if flag("all") else []) + (["--json"] if flag("json") else []) + (["--long"] if flag("long") else []) + (["--", rng] if rng else [])
 else:
     cmd += keep_flags()
     if op == "summarize":
