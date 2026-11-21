@@ -51,3 +51,31 @@
 ### 整理（頂層的理解）
 
 - `hook_points` 的值三種都收：字串（指到宣告檔）、陣列 `[...]`（每項自己帶 id）、物件 `{...}`（id 當鍵）。
+
+## 第 6 則：定案——新格式、檔名與 interfaces.json 的寫法
+
+看過桌面頁（`~/Desktop/aos-hook點宣告-1121.html`）與 kernel 宣告那頁之後，他說：
+
+「hook point這塊，我決定就是新格式，block,if_block那些都不用，有需要的自己在input schema裏面添加，或是另外自己隨便加key。然後interfaces.json中，我要改成"hooks":...，值可以是string, array of string，ps.interfaces.json必須支援指示詞，pss.應該改成hooks.json, hookeds.json，hooks表示有哪些鉤子，hookeds表示有哪些被勾着。然後hooks:...，那些string就是檔名，檔案就是一個obj，就是新格式。kernel你說的這塊我再想想」
+
+### 整理（頂層的理解，原話以引號內為準）
+
+- **格式定案＝新格式**：一份檔是一個物件，鍵是 hook 點的 id，值裡硬性要有 input schema。`block`、`if_blocked` 那些不是格式的一部分；有需要的自己寫進 input schema，或自己另外加鍵。
+- **`interfaces.json`**：宣告 hook 點的鍵叫 `"hooks"`，值是字串或字串陣列；字串就是檔名，檔案內容就是上面那種物件。
+- **`interfaces.json` 必須支援指示詞**（所以別家的點——例如 aos-loop 那四個——用指示詞寫出路徑放進陣列即可，不必另外發明引入寫法）。
+- **檔名對調**：`hooks.json`＝有哪些鉤子（hook 點的宣告，現在叫 `hook_points.json`）；`hookeds.json`＝有哪些被勾著（掛上去的 handler 清單，現在叫 `hooks.json`）。
+- **kernel 那邊**（宣告不在 `interfaces.json`、見 `kernel-宣告在哪-1121.md`）：他「再想想」，不動。
+
+### 對照規劃稿的四題
+
+1. 引入怎麼寫：不採甲～戊；`interfaces.json` 的 `hooks` 陣列＋指示詞。
+2. `block`／`condition`／`entry_keys` 讀不讀：都不是格式的一部分（「都不用」）。
+3. 動態或靜態連結：照陣列裡的檔名／指示詞執行時去讀，等於動態連結。
+4. 物件寫法哪些鍵不是點：他沒提。
+
+### 還沒問的
+
+- 11-21 第 4、5 則說過 `hook_points` 的值也可以直接寫 `[...]`／`{...}`（內容直接寫在 `interfaces.json`）；這一則只說「string, array of string」。直接寫內容還收不收，沒問。
+- `interfaces.json` 裡指到 `hookeds.json` 的那個鍵叫什麼（現在叫 `hooks`，這個名字被拿去指 hook 點了）。
+- 程式現在靠 `block: true` 才准 handler 攔、靠 `change` 驗 handler 回的欄位、靠 `condition` 比對、靠 `entry_keys` 驗掛法；這些鍵不再是格式之後，引擎怎麼辦（一律交給發事件的那支程式自己決定？），沒問。
+- `change` 改成 output schema（第 2 則）還算不算。
