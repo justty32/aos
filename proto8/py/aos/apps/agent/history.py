@@ -2,7 +2,7 @@
 # 使用者 11-10 晚 self_history 五題：「1.全給，風險自己擔。2.可以。3.可選，默認搬到旁邊(可以選要搬到哪) 4.接受縮水版。5.對」
 #   （thinking 2026-11/10/self-family）。這支是人用的那層；「正在進行的這一步動不了」只在包它的 self_history，這裡不擋。
 # 哪個檔：定義 interfaces.json 的 aos-agent.history（相對這隻的 stack；agent-fsm、eca-claude 都宣告 history.jsonl）；沒宣告＝HistoryMissing。
-# 行號＝第幾則訊息（從 1 起，空行不算）；一段＝N、A-B、A-（到最後）、-N（最後 N 則；不用 -- 也不當旗標，線 histrange-1121）。讀不懂的行照原文顯示、照樣能刪能改。
+# 行號＝第幾則訊息（從 1 起，空行不算）；一段＝N、A-B、A-（到最後）；最後 K 則用旗標 -n K（K、-K 都收，線 histrange-1121）。讀不懂的行照原文顯示、照樣能刪能改。
 # 寫法：整份寫暫存再改名（讀的人不會看到半份）；寫之前再看一次檔有沒有被別人動過（agent 正好接了一行），動過就重讀重做，最多 3 次。
 # 改掉的原文：每則一行 {"removed_at", "op", "line", "message"|"raw"} 接在旁邊那份（預設 history 同資料夾的 <名>_removed.jsonl；
 #   --keep FILE 換位置、相對 cwd；--no-keep 不留＝不可逆，終端上先問、-y 跳過）。先寫旁邊那份、再換 history。
@@ -27,46 +27,49 @@ KEEP_FLAGS = """      --keep FILE     append the removed messages to FILE (relat
 HELPS = {
     "ls": """aos-agent history ls - list this agent's conversation, one message per line
 
-usage: aos-agent [--daemon D] history [--target NAME] ls [-a] [-l | -j] [RANGE]
+usage: aos-agent [--daemon D] history [--target NAME] ls [-a | -n K | RANGE] [-l | -j]
        aos-agent history ls --help
 
 flags:
   -a, --all    print every message (default: only the last %d)
+  -n, --last K print the last K messages (K or -K: -n 3 = -n -3)
   -l, --long   print each message in full (default: TEXT cut at %d characters, ending with …)
   -j, --json   print one JSON array of {"line": N, "message": {...}} ({"line": N, "raw": TEXT} for a line that is not JSON);
-               always every message (or RANGE)
+               always every message (or RANGE, or -n)
   -h, --help   show this help
 
 Print LINE TAB ROLE TAB TEXT per message (newlines shown as \\n; tool calls as -> name(arguments)).
-Without -a or RANGE only the last %d messages are printed, after a first line
+Without -a, -n or RANGE only the last %d messages are printed, after a first line
   (N earlier messages not shown: lines 1-N; %s)
-RANGE = N, A-B, A- (to the end) or -N (the last N); a RANGE is printed whole. Line numbers count messages from 1.
+RANGE = N, A-B or A- (to the end); a RANGE or -n is printed whole. Line numbers count messages from 1.
 exit codes: 0 listed; 1 error (HistoryMissing, RangeBad...).
 """ % (LAST, 200, LAST, ALL_HINT),
     "rm": """aos-agent history rm - delete some messages
 
-usage: aos-agent [--daemon D] history [--target NAME] rm [--keep FILE | --no-keep [-y]] RANGE
+usage: aos-agent [--daemon D] history [--target NAME] rm [--keep FILE | --no-keep [-y]] (RANGE | -n K)
        aos-agent history rm --help
 
 flags:
+  -n, --last K        the last K messages instead of RANGE (K or -K: -n 3 = -n -3)
 %s
   -h, --help          show this help
 
-RANGE = N, A-B, A- (to the end) or -N (the last N). The messages after it move up.
+RANGE = N, A-B or A- (to the end). The messages after it move up.
 exit codes: 0 removed; 1 error (HistoryMissing, RangeBad, WriteFailed...); 130 Ctrl-C.
 """ % KEEP_FLAGS,
     "summarize": """aos-agent history summarize - replace some messages with one message you write
 
-usage: aos-agent [--daemon D] history [--target NAME] summarize [--role ROLE] [--keep FILE | --no-keep [-y]] RANGE TEXT
+usage: aos-agent [--daemon D] history [--target NAME] summarize [--role ROLE] [--keep FILE | --no-keep [-y]] (RANGE | -n K) TEXT
        aos-agent history summarize --help
 
 flags:
       --role ROLE     the new message's role (default: user)
+  -n, --last K        the last K messages instead of RANGE (K or -K: -n 3 = -n -3)
 %s
   -h, --help          show this help
 
-RANGE = N, A-B, A- (to the end) or -N (the last N); TEXT = your summary (- reads it from stdin); flags go before TEXT (from TEXT on
-nothing is read as a flag). The new message goes at line A and reads
+RANGE = N, A-B or A- (to the end); TEXT = your summary (- reads it from stdin); flags go before TEXT (from TEXT on
+nothing is read as a flag; with -n, write -- before a TEXT that starts with -). The new message goes at line A and reads
   [aos] summary: lines A-B, N messages. TEXT
 so it is not taken for something the user said (set writes a message as given).
 exit codes: 0 replaced; 1 error (HistoryMissing, RangeBad, WriteFailed...); 130 Ctrl-C.
@@ -151,25 +154,33 @@ def message(raw):
 
 
 def span(text, n, one=False):
-    """N、A-B、A-、-N＝最後 N 則（one＝只收 N）→ (a, b) 1 起、含兩端；超出或倒過來＝RangeBad。"""
+    """N、A-B、A-（one＝只收 N）→ (a, b) 1 起、含兩端；超出或倒過來＝RangeBad。寫成 -K 的提示改用 -n K。"""
     a, dash, b = text.partition("-")
-    last = not one and not a and dash and b.isdecimal()
-    ok = last or (a.isdecimal() and (not dash or (not one and (b == "" or b.isdecimal()))))
+    ok = a.isdecimal() and (not dash or (not one and (b == "" or b.isdecimal())))
     if not ok:
-        raise Fail("RangeBad", "%s is not a %s (write %s)" % (text, "line number" if one else "range",
-                                                            "N" if one else "N, A-B, A- = A to the end, or -N = the last N"))
+        hint = "; for the last %s messages use -n %s" % (b, b) if not one and not a and b.isdecimal() else ""
+        raise Fail("RangeBad", "%s is not a %s (write %s%s)" % (text, "line number" if one else "range",
+                                                              "N" if one else "N, A-B or A- = A to the end", hint))
     if n == 0:
         raise Fail("RangeBad", "the history is empty")
-    if last:
-        k = int(b)
-        if not 1 <= k <= n:
-            raise Fail("RangeBad", "%s asks for the last %d messages but the history has %d (write -1 to -%d)" % (text, k, n, n))
-        return n - k + 1, n
     a = int(a)
     b = int(b) if b else (n if dash else a)
     if a < 1 or b > n or a > b:
         raise Fail("RangeBad", "%s is outside 1-%d (the history has %d messages)" % (text, n, n))
     return a, b
+
+
+def last_span(text, n):
+    """-n／--last 的值：K 或 -K＝最後 K 則 → (a, b)（使用者 11-21「-N 3, -N -2」「-N "-3"」「-N "2"，都可以」）。
+    0、比總則數大＝RangeBad，不縮成全部（rm -n 9 不會默默刪光）。"""
+    k = text[1:] if text.startswith("-") else text
+    if not k.isdecimal() or int(k) < 1:
+        raise Fail("RangeBad", "-n %s is not a count (write -n 3 or -n -3 for the last 3 messages)" % text)
+    if n == 0:
+        raise Fail("RangeBad", "the history is empty")
+    if int(k) > n:
+        raise Fail("RangeBad", "-n %s asks for the last %s messages but the history has %d (write 1 to %d)" % (text, k, n, n))
+    return n - int(k) + 1, n
 
 
 def one_line(s):
@@ -283,33 +294,48 @@ def cmd(argv):
     flags = {"--keep": "keep"} if act != "ls" else {}
     switches = {"--json": "json", "--long": "long", "--all": "all"} if act == "ls" else {"--no-keep": "no_keep", "--yes": "yes"}
     shorts = {"-j": "--json", "-l": "--long", "-a": "--all"} if act == "ls" else {"-y": "--yes"}
+    if act != "set":                                # 最後 K 則＝旗標 -n K，值寫 K 或 -K 都收（線 histrange-1121）
+        flags["--last"] = "last"
+        shorts["-n"] = "--last"
     if act == "summarize":
         flags["--role"] = "role"
-    topts, args = parse(args, flags, switches, help=HELPS[act], short=shorts, numbers=True,   # -3＝RANGE（最後 3 則），不是旗標
-                        keep=2 if act in ("summarize", "set") else None)   # 11-10 Q3：TEXT／JSON 起原樣收（內容裡的 - 開頭字不是旗標）
-    count = {"ls": (0, 1), "rm": (1, 1), "summarize": (2, 2), "set": (2, 2)}[act]
+
+    given = args
+
+    def opts_of(keep):                              # 11-10 Q3：TEXT／JSON 起原樣收（內容裡的 - 開頭字不是旗標）
+        return parse(given, flags, switches, help=HELPS[act], short=shorts, keep=keep)
+    topts, args = opts_of({"summarize": 1, "set": 2}.get(act))
+    if act == "summarize" and "last" not in topts:  # 沒 -n＝RANGE TEXT，TEXT 是第 2 個
+        topts, args = opts_of(2)
+    last = "last" in topts
+    count = {"ls": (0, 0 if last else 1), "rm": (1 - last, 1 - last), "summarize": (2 - last, 2 - last), "set": (2, 2)}[act]
+    if last and len(args) > count[1]:
+        raise bad_args(HELPS[act], "give -n K or a RANGE, not both")
     if not count[0] <= len(args) <= count[1]:
-        raise bad_args(HELPS[act], "%s needs %s" % (act, {"ls": "at most one RANGE", "rm": "one RANGE",
-                                                           "summarize": "RANGE and TEXT", "set": "LINE and JSON"}[act]))
+        raise bad_args(HELPS[act], "%s needs %s" % (act, {"ls": "at most one RANGE", "rm": "one RANGE (or -n K)",
+                                                           "summarize": "RANGE and TEXT (or -n K and TEXT)", "set": "LINE and JSON"}[act]))
     if "keep" in topts and topts.get("no_keep"):
         raise bad_args(HELPS[act], "give --keep FILE or --no-keep, not both")
     if topts.get("yes") and not topts.get("no_keep"):
         raise bad_args(HELPS[act], "-y only goes with --no-keep")
     if topts.get("json") and topts.get("long"):
         raise bad_args(HELPS[act], "give -l or -j, not both")
-    if topts.get("all") and args:
-        raise bad_args(HELPS[act], "give -a or a RANGE, not both")
+    if topts.get("all") and (args or last):
+        raise bad_args(HELPS[act], "give -a or %s, not both" % ("-n" if last else "a RANGE"))
+
+    def pick(n):
+        return last_span(topts["last"], n) if last else span(args[0], n)
     a = target(opts)
     path = history_file(a)
     if act == "ls":
         rows, _ = read_rows(path, a)
-        lo, hi = span(args[0], len(rows)) if args else (1, len(rows))
+        lo, hi = pick(len(rows)) if args or last else (1, len(rows))
         picked = list(range(lo, hi + 1)) if rows else []
         if topts.get("json"):
             print(json.dumps([dict({"line": n}, **({"message": message(rows[n - 1])} if message(rows[n - 1]) is not None
                                                   else {"raw": rows[n - 1]})) for n in picked], ensure_ascii=False))
         else:
-            if not args and not topts.get("all") and len(picked) > LAST:     # 預設只印最後 LAST 則，先一行說省略了幾則
+            if not args and not last and not topts.get("all") and len(picked) > LAST:     # 預設只印最後 LAST 則，先一行說省略了幾則
                 k = len(picked) - LAST
                 print("(%d earlier message%s not shown: lines 1-%d; %s)" % (k, "" if k == 1 else "s", k, ALL_HINT))
                 picked = picked[k:]
@@ -320,24 +346,24 @@ def cmd(argv):
     if where is None and not aos_flags.confirm(PROG, "delete these messages of %s for good (--no-keep)?" % a.name, yes=topts.get("yes", False)):
         aos_flags.warn(PROG, "nothing done")
         return
-    got = []                                    # 這次換掉那段的第一行（-N 要看當時幾則才知道）
+    got = []                                    # 這次換掉那段的第一行（-n 要看當時幾則才知道）
 
     if act == "rm":
         def change(rows):
-            lo, hi = span(args[0], len(rows))
+            lo, hi = pick(len(rows))
             got[:] = [lo]
             return rows[:lo - 1] + rows[hi:], rows[lo - 1:hi], lo
         k = rewrite(path, change, where, "rm", a, where and keep_said(where, topts, a))
         lo = got[0]
         print("removed %d message%s from line %d; %s" % (k, "" if k == 1 else "s", lo, where_said(where, topts, a)))
     elif act == "summarize":
-        text = from_arg(args[1])
+        text = from_arg(args[-1])
         role = topts.get("role", "user")
         if not text.strip():
             raise bad_args(HELPS[act], "TEXT is empty")
 
         def change(rows):
-            lo, hi = span(args[0], len(rows))
+            lo, hi = pick(len(rows))
             got[:] = [lo]
             new = json.dumps({"role": role, "content": summary_text(lo, hi, text)}, ensure_ascii=False)
             return rows[:lo - 1] + [new] + rows[hi:], rows[lo - 1:hi], lo

@@ -71,9 +71,9 @@ def actions(helps, prefix):
     return "\n".join(out)
 
 
-def parse(argv, flags=None, switches=None, *, help=None, short=None, sub=None, keep=None, numbers=False):
+def parse(argv, flags=None, switches=None, *, help=None, short=None, sub=None, keep=None):
     try:
-        return aos_flags.parse(argv, flags or {}, switches, help=help, short=short, sub=sub, keep=keep, numbers=numbers)
+        return aos_flags.parse(argv, flags or {}, switches, help=help, short=short, sub=sub, keep=keep)
     except aos_flags.Error as e:
         if e.code == "ArgumentsBad" and help:
             raise bad_args(help, str(e)) from e

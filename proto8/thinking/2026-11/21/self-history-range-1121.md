@@ -1,4 +1,4 @@
-self_history 的 `range: "-3"` 報 FlagUnknown：查證根因、修成值照傳、range 加「最後 N 則」`-N`，並盤點其他包命令列的工具（線 top-1121-histrange）。
+self_history 的 `range: "-3"` 報 FlagUnknown：查證根因、修成值照傳、加「最後 K 則」（命令列第二輪改成旗標 `-n K`），並盤點其他包命令列的工具（線 top-1121-histrange）。
 
 ← [2026-11-21](README.md)
 
@@ -24,11 +24,40 @@ self_history 把 rm／summarize／set 的值放在 `--` 後面，**只有 ls 沒
 
 ## 三樣各做了什麼
 
-1. **值照傳**：self_history 的 range 一律放在 `--` 後面（`_entry` 一行）。寫壞的 range 現在由 aos-agent 回 `RangeBad`，訊息講合法寫法：`x is not a range (write N, A-B, A- = A to the end, or -N = the last N)`。
+1. **值照傳**：self_history 的 range 一律放在 `--` 後面（`_entry` 一行）。寫壞的 range 現在由 aos-agent 回 `RangeBad`，訊息講合法寫法：`x is not a range (write N, A-B or A- = A to the end)`（第二輪的寫法）。
 2. **其他工具**：見下面「同類工具」。
-3. **最後 N 則**：range 多一種寫法 `-N`。`aos-agent history ls -3`、`rm -2`、`summarize -2 TEXT` 都收（不用寫 `--`）；self_history `{"op":"ls","range":"-3"}` 也收。`-0`、比總則數大＝`RangeBad`（`-9 asks for the last 9 messages but the history has 5 (write -1 to -5)`）。self_history 的 rm／summarize 給 `-N` 一定碰到「這一步」，照舊 `RangeBad`、不改。
-   - 做法：旗標解析加一個選用的 `numbers`（`aos_flags.parse` → `tool_io.tokenize_flags`），開了就「沒人認又長得像負數的，就算是第一個也當位置參數」；只有 aos-agent history 開。其他指令不變。
-   - 說明跟著補：`_tooldef.json` range 那格（`"4", "2-5", "6-" or "-3" (last 3)`）、`aos-agent history --help` 三處 RANGE 那句、知識庫 `aos/me/self_history.json`、`aos/cli/history.json`（多一行 `ls -3` 例子）、`py/aos/apps/agent/README.md`。
+3. **最後 N 則**：第一輪（6c6255fea）做成 range 的位置參數 `-N`（`ls -3` 不用寫 `--`，旗標解析加了選用開關 `numbers`）；使用者看了改成旗標帶值，見下一節，第一輪的寫法與開關都拿掉了。
+
+## 第二輪：最後 K 則改成旗標 `-n K`
+
+使用者 11-21 看了回報（逐字）：
+
+1. 「self_history這塊set竟然不能收-N？爲何？命令列這塊說不定可以改成-N 3, -N -2這樣，用-N或-n都可，隨你。」
+2. 「啊，-N "-3"」
+3. 「-N "2"，都可以」
+
+旗標的意思是「最後 K 則」，值寫 `3` 或 `-3` 都是最後 3 則。
+
+| 寫法 | 意思 |
+|---|---|
+| `aos-agent history ls -n 3`、`ls -n -3`、`ls --last 3` | 最後 3 則 |
+| `rm -n 2`、`summarize -n 2 TEXT`（TEXT 是 `-` 開頭時寫 `summarize -n 2 -- "-5 degrees"`） | 最後 2 則刪掉／換成一則摘要 |
+| `ls 3-5`、`ls 4`、`ls 6-`、`rm 2-3`、`summarize 1-2 TEXT` | 一般範圍，照舊是位置參數 |
+| `ls -3` | `FlagUnknown`（裸的 `-3` 不再收） |
+| `ls -- -3` | `RangeBad -3 is not a range (write N, A-B or A- = A to the end; for the last 3 messages use -n 3)` |
+| `ls -n 0`、`ls -n 9`（只有 5 則）、`ls -n x` | `RangeBad`（`-n 9 asks for the last 9 messages but the history has 5 (write 1 to 5)`） |
+| `ls -n 2 3`、`ls -a -n 2`、`rm -n 1 2` | `ArgumentsBad`（擇一） |
+| self_history `{"op":"ls","range":"-3"}` | JSON 介面不變；底下改傳 `--last 3`。`-0`、比總則數大在工具這層先報 `RangeBad range "-9" asks for the last 9 messages but you have 6 (write "-1" to "-6")` |
+
+改的地方：`history.py`（`-n/--last`、`last_span`、summarize 有 `-n` 時 TEXT 是第一個位置參數）、旗標解析的 `numbers` 開關拿掉（`tool_io`、`flags`、`common` 回到第一輪之前）、self_history 的 `_entry`、`--help`、apps/agent README、知識庫 `cli/history`、`cli/flags`、`me/self_history`。測試：`test_history` 的 `test_last_n`、`test_bad_range_says_how_to_write_it` 改寫，self_history 改預期的命令列、加 `test_last_k_more_than_the_history`，修前都紅；相關幾夾（`py/tests/apps/agent` 226、self_history 8、self_tools、subagent、旗標與 tool_io 的測試）乾淨複本全綠。
+
+### set 收不收 `-n`（只評估，沒做）
+
+技術上加起來很短（set 多收 `-n K`＝倒數第 K 則），但有三個坑：
+
+- **工具用不到**：history 的最後一則永遠是「正在進行的這一步」（叫 self_history 的那則或這一輪的 user），self_history 給 set 倒數第 1 則一定 `RangeBad`；只有倒數第 2 則以前才改得到，模型得先 ls 算位置，跟寫行號差不多。
+- **會跑掉**：在跑的 agent 一直往 history 接新的一行，「倒數第 1 則」每接一行就換一則；寫入前發現檔被動過會重讀重做（最多 3 次），重做時倒數第 1 則已經是別則，改到的不是你看到的那則。正數行號只有刪改前面時才會位移，接新行不影響。要用就得先 `ctl pause`。
+- **值的意思要定**：set 只改一行，`-n 3` 是「倒數第 3 則」還是不收大於 1 的值，要另外定；而 ls／rm／summarize 的 `-n 3` 是「最後 3 則」（一段），同一個旗標在 set 意思不一樣容易誤會。
 
 ## 同類工具
 
@@ -63,7 +92,14 @@ self_history 把 rm／summarize／set 的值放在 `--` 後面，**只有 ls 沒
 
 ## 替使用者定的細節
 
-- **寫法選 `-3`**：現有文法是 `N`、`A-B`、`A-`，`-3` 原本不合法（回 RangeBad），沒有舊意思要讓；模型自己就會這樣寫（luna 就是）。可能的誤讀是照 `A-` 對稱讀成「從頭到第 3 則」，說明一律寫明 `-N = the last N`。
-- **`-N` 比總則數大＝RangeBad**，不自動縮成全部：跟現有「超出範圍＝RangeBad」一致，`rm -9` 不會默默刪光。
-- **`set` 的 LINE 不收 `-N`**：只說要「最後 N 則」的 range；`set -1` 回 `RangeBad ... (write N)`。
-- **CLI 的 `-3` 不用寫 `--`**：用選用開關只開在 aos-agent history，不改全部指令的解析規則。
+第二輪（現行）：
+
+- **字母選 `-n`、長名 `--last`**：小寫跟其他短名一致（`-a`、`-l`、`-j`、`-y`）；`--last` 讀起來就是「最後」。
+- **一般範圍留位置參數，最後 K 則只有 `-n` 一種寫法**：位置參數的 `-3`（裸的或寫在 `--` 後）都不收，`-- -3` 的錯誤訊息直接提示 `-n 3`；第一輪加的旗標解析開關拿掉，不留兩種寫法。
+- **`-n` 跟 RANGE、`-a` 擇一**，都給＝`ArgumentsBad`。
+- **`-n 0`、比總則數大＝RangeBad**，不自動縮成全部（同第一輪）。
+- **summarize 有 `-n` 時 TEXT 是第一個位置參數**：TEXT 是 `-` 開頭要先寫 `--`（工具一律帶）；沒 `-n` 照舊 `RANGE TEXT`、TEXT 起原樣。
+- **self_history 的 JSON 不變**：`"range": "-3"`（或整數 -3）＝最後 3 則，工具轉成 `--last 3`；K 超出在工具層先報錯，用工具的寫法講。
+- **set 不收 `-n`**：等使用者看上面的評估再定。
+
+第一輪（已被第二輪取代，留著當紀錄）：寫法選 range 的 `-3`；`-N` 比總則數大＝RangeBad；set 的 LINE 不收 `-N`；CLI 的 `-3` 不用寫 `--`（旗標解析的選用開關）。

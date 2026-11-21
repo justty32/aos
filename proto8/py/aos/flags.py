@@ -243,12 +243,11 @@ def hide(*names):
         _scopes[i] = (flags, switches, multi, alias, opts)
 
 
-def parse(argv, flags, switches=None, multi=None, help=None, short=None, *, sub=None, keep=None, anywhere=False, numbers=False):
+def parse(argv, flags, switches=None, multi=None, help=None, short=None, *, sub=None, keep=None, anywhere=False):
     """sub＝None：外層沒推過表＝舊規則（第一個位置參數起不再解）；推過＝動作那層：位置參數後的旗標也收、外層旗標也認。
     sub＝True／"root"：派發的一層，解到第一個位置參數（下一層的名字）為止，再把自己的表推進去。
     keep＝N（動作那層）：第 N 個位置參數起原樣交出、不再解（後面要原樣交給別人的那類）。
     anywhere＝True：只有一層的程式（沒有子命令）＝這層就是動作那層（11-11）。
-    numbers＝True：長得像負數的（-3）沒人認時就算第一個位置參數也收成位置參數（aos-agent history 的 RANGE -N）。
     -- 結束解析：在任何位置參數前＝丟掉它；之後＝連它一起原樣留在 rest（呼叫者看得到 XXX -- ARGS）。"""
     switches, multi = switches or {}, multi or {}
     if sub == "root" or anywhere:
@@ -282,7 +281,7 @@ def parse(argv, flags, switches=None, multi=None, help=None, short=None, *, sub=
 
     seen_help = []
     try:
-        pairs, rest = tool_io.tokenize_flags(argv, _HelpNow(kind, seen_help, text), anywhere, keep, numbers)
+        pairs, rest = tool_io.tokenize_flags(argv, _HelpNow(kind, seen_help, text), anywhere, keep)
     except tool_io.Error as e:
         raise Error(str(e), e.code) from None
     if seen_help:

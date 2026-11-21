@@ -71,8 +71,9 @@ class SelfHistory(unittest.TestCase):
         base = ["history", "--target", "bob"]
         for args, want in (({"op": "ls"}, ["ls"]),
                            ({"op": "ls", "range": "2-3", "json": True}, ["ls", "--json", "--", "2-3"]),
-                           ({"op": "ls", "range": "-3"}, ["ls", "--", "-3"]),       # 減號開頭的值放 -- 後（線 histrange-1121）
-                           ({"op": "ls", "range": -3}, ["ls", "--", "-3"]),
+                           ({"op": "ls", "range": "-3"}, ["ls", "--last", "3"]),    # -K＝最後 K 則，交 --last K（線 histrange-1121）
+                           ({"op": "ls", "range": -3}, ["ls", "--last", "3"]),
+                           ({"op": "ls", "range": "-x"}, ["ls", "--", "-x"]),        # 其他減號開頭的值放 -- 後，由下層報 RangeBad
                            ({"op": "ls", "long": True}, ["ls", "--long"]),
                            ({"op": "ls", "all": True, "long": True}, ["ls", "--all", "--long"]),
                            ({"op": "rm", "range": 2}, ["rm", "--", "2"]),
@@ -133,6 +134,15 @@ class SelfHistory(unittest.TestCase):
         self.assertEqual(r.returncode, 1, r.stdout)
         self.assertIn("self_history: error: RangeBad lines 4-4 are the step in progress", r.stdout)
         self.assertEqual([c[4] for c in self.calls()[before:] if c[1] == "history"], ["ls"])
+
+    def test_last_k_more_than_the_history(self):
+        for rng in ("-9", "-0"):
+            before = len(self.calls())
+            r = self.run_tool({"op": "ls", "range": rng})
+            self.assertEqual(r.returncode, 1, r.stdout)
+            self.assertIn('self_history: error: RangeBad range "%s" asks for the last' % rng, r.stdout)
+            self.assertIn('write "-1" to "-4"', r.stdout)
+            self.assertEqual([c[4:] for c in self.calls()[before:] if c[1] == "history"], [["ls", "--json"]])
 
     def test_lower_error_passed_up(self):
         r = self.run_tool({"op": "rm", "range": "1"}, FAKE_FAIL="1")

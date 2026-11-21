@@ -128,23 +128,33 @@ class History(unittest.TestCase):
         self.assertFalse(self.removed.exists())
 
     def test_last_n(self):
-        """-N＝最後 N 則（線 histrange-1121）：不用 -- 也不被當成旗標，ls／rm／summarize 都收。"""
-        self.assertEqual(self.agent("ls", "-2").stdout.splitlines(), self.agent("ls", "4-5").stdout.splitlines())
-        self.assertEqual(self.agent("ls", "-j", "--", "-1").stdout, self.agent("ls", "-j", "5").stdout)
-        self.assertEqual(self.agent("ls", "-5").stdout, self.agent("ls", "-a").stdout)
-        r = self.agent("rm", "-2")
+        """最後 K 則＝旗標 -n K，值寫 K 或 -K 都收（使用者 11-21「-N 3, -N -2」「-N "-3"」「-N "2"，都可以」；線 histrange-1121）。"""
+        two = self.agent("ls", "4-5").stdout
+        for args in (("ls", "-n", "2"), ("ls", "-n", "-2"), ("ls", "--last", "2"), ("ls", "--last=-2"), ("ls", "-l", "-n", "2")):
+            self.assertEqual(self.agent(*args).stdout, two, args)
+        self.assertEqual(self.agent("ls", "-j", "-n", "1").stdout, self.agent("ls", "-j", "5").stdout)
+        self.assertEqual(self.agent("ls", "-n", "5").stdout, self.agent("ls", "-a").stdout)
+        r = self.agent("rm", "-n", "-2")
         self.assertIn("removed 2 messages from line 4;", r.stdout)
         self.assertEqual(self.lines(), MSGS[:3])
-        r = self.agent("summarize", "-2", "-5 degrees")       # TEXT 照收，-5 開頭也不是旗標
+        r = self.agent("summarize", "-n", "2", "--", "-5 degrees")    # -n 時 TEXT 是第一個位置參數；- 開頭的 TEXT 前面寫 --
         self.assertIn("replaced 2 messages with one user message at line 2", r.stdout)
         self.assertEqual(self.lines()[1], {"role": "user", "content": "[aos] summary: lines 2-3, 2 messages. -5 degrees"})
+        r = self.agent("summarize", "--role", "assistant", "1-2", "--role x")   # 沒 -n：照舊 RANGE TEXT，TEXT 起原樣
+        self.assertEqual(self.lines(), [{"role": "assistant", "content": "[aos] summary: lines 1-2, 2 messages. --role x"}])
 
     def test_bad_range_says_how_to_write_it(self):
-        for args in (("ls", "-0"), ("ls", "-9"), ("ls", "x"), ("set", "-1", "{}")):
+        for args, code in ((("ls", "-n", "0"), "RangeBad"), (("ls", "-n", "-9"), "RangeBad"), (("ls", "-n", "x"), "RangeBad"),
+                           (("ls", "x"), "RangeBad"), (("ls", "--", "-3"), "RangeBad"), (("ls", "-3"), "FlagUnknown"),
+                           (("set", "-n", "1", "1", "{}"), "FlagUnknown"), (("ls", "-n", "2", "3"), "ArgumentsBad"),
+                           (("ls", "-a", "-n", "2"), "ArgumentsBad"), (("rm", "-n", "1", "2"), "ArgumentsBad"),
+                           (("summarize", "-n", "1", "-x"), "FlagUnknown")):
             r = self.agent(*args, ok=False)
-            self.assertIn("aos-agent: error: RangeBad ", r.stderr, args)
-        self.assertIn("-N = the last N", self.agent("ls", "x", ok=False).stderr)
-        self.assertIn("the history has 5", self.agent("ls", "-9", ok=False).stderr)
+            self.assertIn("aos-agent: error: %s " % code, r.stderr, args)
+        self.assertIn("for the last 3 messages use -n 3", self.agent("ls", "--", "-3", ok=False).stderr)
+        self.assertIn("write -n 3 or -n -3", self.agent("ls", "-n", "x", ok=False).stderr)
+        self.assertIn("the history has 5", self.agent("ls", "-n", "9", ok=False).stderr)
+        self.assertEqual(self.lines(), MSGS)
 
     def test_errors(self):
         before = self.hist.read_bytes()

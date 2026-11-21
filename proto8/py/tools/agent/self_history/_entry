@@ -3,13 +3,14 @@
 # 使用者 11-10 晚 self_history 五題：「1.全給，風險自己擔。2.可以。3.可選，默認搬到旁邊(可以選要搬到哪) 4.接受縮水版。5.對」（thinking 2026-11/10/self-family）；
 #   原則同 self_tools（「這支工具就是aos-agent tools的包裝，只是目標改自己」：純包裝、參數一對一）。**對應關係**：aos-agent history 加了動作或旗標，這支要跟著加。
 # 介面（py/README 的契約）：stdin 收 {"op": "ls"|"rm"|"summarize"|"set", …}；別的鍵＝ArgumentsBad：
-#   ls {range?, all?, json?, long?}            ＝history ls [--all] [--json] [--long] [RANGE]（預設只印最後 20 則、每則 TEXT 截 200 字；all＝全部、long＝全文）；
+#   ls {range?, all?, json?, long?}            ＝history ls [--all] [--json] [--long] [--last K | -- RANGE]（預設只印最後 20 則、每則 TEXT 截 200 字；all＝全部、long＝全文）；
 #        下層的省略行「(…; -a shows all, or give a RANGE)」換成這支的鍵名；最後多一行說哪幾行是這一步、動不了
-#   rm {range, keep?, no_keep?}                ＝history rm [--keep FILE | --no-keep -y] RANGE
-#   summarize {range, text, role?, keep?, no_keep?} ＝history summarize [--role] [--keep | --no-keep -y] -- RANGE TEXT（新那則內容＝「[aos] summary: lines A-B, N messages. text」，下層套的）
+#   rm {range, keep?, no_keep?}                ＝history rm [--keep FILE | --no-keep -y] (--last K | -- RANGE)
+#   summarize {range, text, role?, keep?, no_keep?} ＝history summarize [--role] [--keep | --no-keep -y] (--last K -- TEXT | -- RANGE TEXT)（新那則內容＝「[aos] summary: lines A-B, N messages. text」，下層套的）
 #   set {line, message, keep?, no_keep?}       ＝history set [--keep | --no-keep -y] -- LINE JSON（message 是物件）
-#   range 收字串（N、A-B、A-、-N＝最後 N 則）或整數；line 收整數或字串。no_keep 時帶 -y（腦叫了就算確認過）。
-#   range／line 一律放在 -- 後面交下層（線 histrange-1121：ls 原本沒放，"-3" 被下層當旗標報 FlagUnknown）。
+#   range 收字串（N、A-B、A-、-K＝最後 K 則）或整數；line 收整數或字串。no_keep 時帶 -y（腦叫了就算確認過）。
+#   -K 交下層的 --last K（使用者 11-21 命令列改成「-N 3」這種旗標帶值）；其他 range／line 一律放在 -- 後面
+#   （線 histrange-1121：ls 原本沒放，"-3" 被下層當旗標報 FlagUnknown）。-K 的 K 是 0 或比總則數大，這層先報 RangeBad（用這支的寫法講）。
 # 唯一多的規則（使用者第 2 題「可以」）：先 history ls --json，找「這一步」的頭——最後一則 assistant 帶 tool_calls、後面只有 tool＝那則
 #   （fsm：叫我的那則）；不然＝最後一則 assistant 的下一行（eca：這一輪交進來的 user）；沒有 assistant＝第 1 行。改的那段碰到它以後＝RangeBad、不叫下層。
 #   放這層不放 aos-agent history：人用的指令照「寫什麼做什麼」，只有腦改自己時才有「這一步」。
@@ -120,13 +121,23 @@ def step_start(rows):
 
 
 def end_of(spec, n):
-    """一段的最後一行；寫壞的交給下層報 RangeBad（回 None）。-N＝最後 N 則，到最後一行。"""
-    a, dash, b = spec.partition("-")
-    if not a and dash and b.isdecimal():
+    """一段的最後一行；寫壞的交給下層報 RangeBad（回 None）。-K＝最後 K 則，到最後一行。"""
+    if last_k(spec) is not None:
         return n
+    a, dash, b = spec.partition("-")
     if not a.isdecimal() or (dash and b and not b.isdecimal()):
         return None
     return int(b) if b else (n if dash else int(a))
+
+
+def last_k(spec):
+    """「-K」＝最後 K 則：回 K（整數），不是這種寫法回 None。"""
+    return int(spec[1:]) if spec and spec[0] == "-" and spec[1:].isdecimal() else None
+
+
+def where(spec):
+    """range 交下層的樣子：-K＝--last K，其他放 -- 後。"""
+    return ["--last", spec[1:]] if last_k(spec) is not None else ["--", spec]
 
 
 me = None
@@ -142,24 +153,29 @@ cmd = [op]
 if op == "ls":
     if flag("all") and rng:
         die("ArgumentsBad", "give all or range, not both")
-    cmd += (["--all"] if flag("all") else []) + (["--json"] if flag("json") else []) + (["--long"] if flag("long") else []) + (["--", rng] if rng else [])
+    cmd += (["--all"] if flag("all") else []) + (["--json"] if flag("json") else []) + (["--long"] if flag("long") else []) + (where(rng) if rng else [])
 else:
     cmd += keep_flags()
     if op == "summarize":
         role = text("role")
-        cmd += (["--role", role] if role else []) + ["--", rng, text("text", True)]
+        cmd += (["--role", role] if role else []) + (["--last", rng[1:], "--"] if last_k(rng) is not None else ["--", rng]) \
+            + [text("text", True)]
     elif op == "set":
         m = args.get("message")
         if not isinstance(m, dict) or not m:
             die("ArgumentsBad", "message must be the whole new message as an object, like {\"role\": \"user\", \"content\": \"hi\"}")
         cmd += ["--", line, json.dumps(m, ensure_ascii=False)]
     else:
-        cmd += ["--", rng]
+        cmd += where(rng)
 
 me = agent("ctl", "who").strip()
 rows = json.loads(history("ls", "--json"))
 n = len(rows)
 lock = step_start(rows)
+k = last_k(rng) if rng else None
+if k is not None and not 1 <= k <= n:
+    die("RangeBad", "range \"%s\" asks for the last %d messages but you have %d (write \"-1\" to \"-%d\")" % (rng, k, n, n)
+        if n else "your history is empty")
 if op != "ls":
     end = end_of(line if op == "set" else rng, n)
     if end is not None and end >= lock:
