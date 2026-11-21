@@ -79,3 +79,16 @@
 - `interfaces.json` 裡指到 `hookeds.json` 的那個鍵叫什麼（現在叫 `hooks`，這個名字被拿去指 hook 點了）。
 - 程式現在靠 `block: true` 才准 handler 攔、靠 `change` 驗 handler 回的欄位、靠 `condition` 比對、靠 `entry_keys` 驗掛法；這些鍵不再是格式之後，引擎怎麼辦（一律交給發事件的那支程式自己決定？），沒問。
 - `change` 改成 output schema（第 2 則）還算不算。
+
+## 第 7 則：兩個確認與引擎怎麼辦
+
+頂層問兩題（1 直接把內容寫在 `interfaces.json` 裡還收不收；2 指到 `hookeds.json` 的鍵叫什麼，猜是 `"hookeds"`），並說明「引擎現在靠 `block`、`change`、`condition`、`entry_keys` 做事，這些鍵不再是格式之後就變成發事件的程式自己決定」。他答：
+
+「1.不收。2.就是hookeds。你說引擎靠這些做事，沒關係，反正就是有提供這些key，就照着做，沒提供就用預設，說明寫好就好，總之hook這邊就保持極簡。然後派個調查線，讓fable去想想，關於kernel的宣告如何整合進interfaces.json，用類似我們剛剛說的hooks的方式。」
+
+### 整理（頂層的理解）
+
+- `interfaces.json` 的 `"hooks"` **只收檔名**（字串或字串陣列，可用指示詞），不收直接寫內容；第 4、5 則「也可以直接寫 `[...]`／`{...}`」被這一則取代。
+- 指到被勾清單的鍵就叫 **`"hookeds"`**。
+- **引擎**：宣告裡有提供那些鍵（`block`、`condition`…）就照著做，沒提供就用預設；說明寫清楚。hook 這邊保持極簡。（所以頂層前一句「變成發事件的程式自己決定」不對，以他這句為準。）
+- kernel 的宣告怎麼整合進 `interfaces.json`：派調查線、用 fable，方式類似這次定的 `hooks`。
