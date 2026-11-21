@@ -78,5 +78,26 @@ class Board(unittest.TestCase):
         self.assertTrue(ok and V.board_get(home) is None)
 
 
+@unittest.skipUnless(__import__("shutil").which("aos-post"), "needs aos-post on PATH")
+class Mail(unittest.TestCase):
+    def test_mail_makes_the_agents_mailbox(self):
+        """An agent that never got a letter has no <stack>/mailbox yet: the page's mail makes it, then sends."""
+        import shutil
+        import tempfile
+        d = tempfile.mkdtemp(prefix="aosview-mail-")
+        self.addCleanup(shutil.rmtree, d, True)
+        stack = os.path.join(d, "procs", "ann")
+        os.makedirs(stack)
+        home = V.Home(os.path.join(d, "view"))
+        home.init()
+        tree = {"nodes": {"ann": {"kind": "agent", "stack": stack}}}
+        ok, msg, letter = V.do_mail({"name": "ann", "title": "t1", "what": "what time"}, tree, home)
+        self.assertTrue(ok, msg)
+        self.assertTrue(os.path.isfile(os.path.join(stack, "mailbox", "new", letter, "letter.json")))
+        ok, msg, letter2 = V.do_mail({"name": "ann", "title": "t2", "what": "again"}, tree, home)
+        self.assertTrue(ok, msg)
+        self.assertEqual(len(os.listdir(os.path.join(stack, "mailbox", "new"))), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1986,6 +1986,11 @@ def do_mail(form, tree, home, extra=None, kind="mail"):
                     "If the user does not answer for long, read the user's board: %s board" % (home.mailbox, SELF)}
     if extra:
         body.update(extra)
+    # an agent's mailbox is made on first use (aos-mailbox send --to does the same); aos-post send never makes one
+    if not os.path.isdir(os.path.join(box, "new")):
+        code, out, err = run(["aos-post", "init", box])
+        if code != 0:
+            return False, "!寄不出去：%s" % short(err or out or "aos-post init failed", 300), None
     env = cli_env()
     env["AOS_STACK"] = home.dir
     with CLI_LOCK:

@@ -54,7 +54,7 @@ class Phase1(unittest.TestCase):
         self.rows([("ok-t", "running", "think"), ("ok-t-sol-1", "running", None), ("ok-t-aide-1", "running", None),
                    ("repo-aos", "running", None)])
         self.env = {"PATH": os.environ["PATH"], "HOME": os.environ["HOME"], "LANG": "C.UTF-8",
-                    "PYTHONDONTWRITEBYTECODE": "1", "AOS_USER_ZONE": self.zone, "VIEW_LS_FIXTURE": self.fixture}
+                    "PYTHONDONTWRITEBYTECODE": "1", "AOS_USER_ZONE": self.zone, "VIEW_LS_FIXTURE": self.fixture, "VIEW_TOOLS": TOOLS}
         self.ok(["aos-post", "init", os.path.join(self.leader, "mailbox")])
         self.ok([VIEW, "--home", self.home, "init"])
         self.ok([AOS_USER, "init"])

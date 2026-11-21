@@ -41,7 +41,7 @@ Errors: HTTP 4xx/5xx with `{"ok": false, "error": "Code", "message": "human text
   - other kinds: `{"letter", "do": "reply", "text": str}`; fyi: `{"letter", "do": "ok"}`
   - → `{"ok": true, "message": "已送出：…"}`
 - `POST /api/say` `{"name", "text"}` → `{"ok", "message"}`. Agents only. Backend prefixes `[使用者經全景頁]` and appends how to reply.
-- `POST /api/mail` `{"name", "status": "REQUEST"|"DONE"|"BLOCKED"|"NEEDS-USER"|"FAILED"|"PROGRESS", "title", "what"}` → `{"ok", "message", "letter"}`. Sent as from `user` with `reply_to` = the relay mailbox, so replies show up in `/api/thread`.
+- `POST /api/mail` `{"name", "status": "REQUEST"|"DONE"|"BLOCKED"|"NEEDS-USER"|"FAILED"|"PROGRESS", "title", "what"}` → `{"ok", "message", "letter"}`. Sent as from `user` with `reply_to` = the relay mailbox, so replies show up in `/api/thread`. An agent that never got a letter has no `<stack>/mailbox/` yet: the backend makes it first (`aos-post init`, as `aos-mailbox send --to` does).
 
 No stop / rm / push / start endpoints exist, by design. Later phases add endpoints under `/api/` (departments `tags`, zoom map, HR `hire` requests, power `budget`); the frontend should keep one module per panel so new panels plug in.
 

@@ -62,11 +62,12 @@
       "title": "全景頁剩的",
       "status": "open",
       "flow": "",
-      "what": "地圖方向鍵、Ctrl+K 原始碼已做（`06cf02300`）；P5 文字、按鈕字「（排隊中）」核不到：網頁 `dist/` 11-17 起不進 git，要有 Node 的機器重建一次看（原始碼 `ui/v2/src/inspector/ReadButtons.tsx` 仍有「（排隊中）」那格）；沒驗 /context 真畫面、Firefox、手機單欄等（要活樹與使用者）；`frontend/bin/aos-frontend` 仍寫死 `~/aos-home/ws/tools`（`VIEW_TOOLS`），改讀設定沒做，跟前端大修一起；前端三個小毛病（`8e0cf5caa` 回報：起前端要自設 AOS_DAEMON 否則錯誤訊息不清、前端去活樹找 aos-user、首頁 / 轉到已刪 v1 的路徑）使用者 11-18 晚：「前端的三個小毛病這塊都還好，，先留着。」→ 先留著不修",
+      "what": "地圖方向鍵、Ctrl+K 原始碼已做（`06cf02300`）；P5 文字、按鈕字「（排隊中）」核不到：網頁 `dist/` 11-17 起不進 git，要有 Node 的機器重建一次看（原始碼 `ui/v2/src/inspector/ReadButtons.tsx` 仍有「（排隊中）」那格）；沒驗 /context 真畫面、Firefox、手機單欄等（要活樹與使用者）；`frontend/bin/aos-frontend` 仍寫死 `~/aos-home/ws/tools`（`VIEW_TOOLS`），改讀設定沒做，跟前端大修一起；前端三個小毛病（`8e0cf5caa` 回報：起前端要自設 AOS_DAEMON 否則錯誤訊息不清、前端去活樹找 aos-user、首頁 / 轉到已刪 v1 的路徑）使用者 11-18 晚：「前端的三個小毛病這塊都還好，，先留着。」→ 先留著不修；11-21 線 top-1121-frontend 乾淨複本試跑全過（hook 新格式沒弄壞前端；修寄信給沒信箱的 agent 失敗），網頁 dist/ 已 build 在工作樹 ui/v2/dist/（P5 那格字在 build 裡有，畫面沒核）；活樹 ~/aos-home 已沒有 ws/，頁上「要決定」那欄是空的、回專區信不能用；大修盤點 14 項在 frontend-備妥-1121",
       "next": "",
       "see": [
         "[留底 41](../proto8/thinking/2026-11/17/session-log-瘦身留底/05-第39到42條.md#t41)",
-        "[43](../proto8/thinking/2026-11/17/session-log-瘦身留底/06-第43到48條.md#t43)"
+        "[43](../proto8/thinking/2026-11/17/session-log-瘦身留底/06-第43到48條.md#t43)",
+        "[frontend-備妥-1121](../proto8/thinking/2026-11/21/frontend-備妥-1121.md)"
       ],
       "since": "2026-11-17"
     },
