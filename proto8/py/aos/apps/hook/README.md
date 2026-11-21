@@ -1,10 +1,11 @@
 # proto8/py/aos/apps/hook — aos-hook 指令（讓任何子程式提供 hook 點），與 aos-loop 那一層的 hook 點宣告
 
-← [cmd](../../../docs/05-commands.md)｜跑 hook 的引擎：[aos.hook_run](../../hook_run.py)｜讀被勾清單：[aos.hook_lists](../../hook_lists.py)｜interfaces.json 的 hooks／hookeds 與宣告：[aos.hook_point](../../hook_point.py)｜現在的樣子：[hook 新格式施工 01](../../../../thinking/2026-11/21/hook-新格式施工-1121/01-現在怎麼寫.md)（設計沿革：[aos-hook-plan-1120](../../../../thinking/2026-11/20/aos-hook-plan-1120/05-發事件指令.md)、[aos-hook-簡化-1121](../../../../thinking/2026-11/21/aos-hook-簡化-1121/07-使用者已答.md)）
+← [cmd](../../../docs/05-commands.md)｜**hook 總文件（整套怎麼回事）：[docs/](docs/README.md)**｜跑 hook 的引擎：[aos.hook_run](../../hook_run.py)｜讀被勾清單：[aos.hook_lists](../../hook_lists.py)｜interfaces.json 的 hooks／hookeds 與宣告：[aos.hook_point](../../hook_point.py)｜現在的樣子：[hook 新格式施工 01](../../../../thinking/2026-11/21/hook-新格式施工-1121/01-現在怎麼寫.md)（設計沿革：[aos-hook-plan-1120](../../../../thinking/2026-11/20/aos-hook-plan-1120/05-發事件指令.md)、[aos-hook-簡化-1121](../../../../thinking/2026-11/21/aos-hook-簡化-1121/07-使用者已答.md)）
 
 | 檔 | 是什麼 |
 |---|---|
 | `main.py` | `aos-hook` 本體：只有 `fire` 一個子指令、英文 `--help`；清單從 `--list` 或 `--def` 的 interfaces.json 來，跑 handler 交給引擎 `aos.hook_run` |
+| [`docs/`](docs/README.md) | hook 總文件：三樣東西一條流程、宣告格式、寫 handler、掛 hook、各家的點與規矩、自己發事件、限制與還沒做的 |
 | [`loop_hooks.json`](loop_hooks.json) | 用 aos-loop 跑、loop.json 有接線的子程式提供的四個點的宣告：`after_start`、`after_stop`；`before_run`、`after_run`（每跑一次身體的前後）。只是參考，`aos-hook` 不讀它 |
 
 使用者 11-20「任何子程式，含非 Python」；11-21 簡化到「第四層」：`aos-hook fire` 只做一件事——照名字一個一個起掛在那個事件上的 handler、交回各自的退出碼與 stdout。**攔不攔、改不改欄位、比不比條件、失敗怎麼算，都是發事件的程式自己決定**（使用者 11-21「發事件的程式自己決定」）；宣告「只是參考」，`aos-hook` 從不讀。範本的 loop.json 用它發 loop 的四個點。

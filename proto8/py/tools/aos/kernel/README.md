@@ -100,7 +100,7 @@ hook 不寫在 `kernel.json`：被勾清單是同夾 `interfaces.json` 最外層
 
 被勾清單不在 `kernel.json`：骨架每輪照 `kernel.json` 所在夾（定義夾）的 `interfaces.json` 最外層 `hookeds` 讀（檔名、指示詞或它們的陣列，後面的同名蓋前面、`null`＝關掉；沒寫、檔不在＝沒有 hook）。編譯（`aos.py.kernel.defs`）與範本都寫 `"hookeds": "kernel_hookeds.json"`，loop 身體的 loop 四點也掛在同一份；三個點的宣告 `kernel_hooks.json`（正本在本夾，每個 kernel 定義夾一份抄本）只是參考，程式不讀。
 
-清單是 `{"description": "一句話", 名字: 一格 或 null}`。每格必填 `event`、`handler`；`handler` 是非空路徑字串或指示詞物件，相對路徑從那份清單所在夾算。選填 `timeout_ms`（非負整數，0＝不限，預設 60000）、`condition`（字串或字串陣列，只有 `after_verdict` 拿來比 `verdict`，別的點寫了不看）；以前的 `intercept`、`async`、`on_error` 拿掉了，寫了也不讀。事件名不驗。名字須非空、不含 `/`、不以 `.` 開頭、不叫 `description`；清單或格的形狀錯＝`CfgBad`。掛 proc 這一包有 `before_reply` hook 時必須開 `reply_via_me`，由包的 `load` 檢查。掛 proc 這一包有 `before_reply` hook 時必須開 `reply_via_me`，由包的 `load` 檢查。
+清單是 `{"description": "一句話", 名字: 一格 或 null}`。每格必填 `event`、`handler`；`handler` 是非空路徑字串或指示詞物件，相對路徑從那份清單所在夾算。選填 `timeout_ms`（非負整數，0＝不限，預設 60000）、`condition`（字串或字串陣列，只有 `after_verdict` 拿來比 `verdict`，別的點寫了不看）；以前的 `intercept`、`async`、`on_error` 拿掉了，寫了也不讀。事件名不驗。名字須非空、不含 `/`、不以 `.` 開頭、不叫 `description`；清單或格的形狀錯＝`CfgBad`。掛 proc 這一包有 `before_reply` hook 時必須開 `reply_via_me`，由包的 `load` 檢查。
 
 | 事件 | 時機與事件欄位 | 能改 |
 |---|---|---|

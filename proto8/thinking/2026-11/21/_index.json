@@ -50,6 +50,9 @@
  "hook-新格式施工-1121": {
   "description": "使用者原話（11-21，逐字，挑最直接的）"
  },
+ "hook-總文件-1121.md": {
+  "description": "總文件放哪、分幾份"
+ },
  "kernel-宣告在哪-1121.md": {
   "description": "原話"
  },

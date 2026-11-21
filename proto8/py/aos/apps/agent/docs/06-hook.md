@@ -10,23 +10,25 @@
 - **agent 一家自己的規矩**（哪些點能攔、能改哪些鍵、`condition` 比什麼、失敗怎麼算）寫在程式 [py/aos/agentlib/hooks.py](../../../agentlib/hooks.py) 的 `POINTS`；agent-fsm 四格、aos-eca-turn、aos-mcp、`aos-agent hook` 共用它。
 - **宣告**（`hooks.json`）只是參考：給人和工具看「有哪些點、handler 收到什麼」，沒有任何程式因為「沒宣告」而不跑、不給掛。
 
+整套 hook（宣告、被勾清單、各家的規矩、自己發事件）的總說明在 [apps/hook/docs](../../hook/docs/README.md)；本份只講 agent 這邊。
+
 ## 事件
 
 每個事件什麼時候發、事件 JSON 帶哪些欄位，寫在各身體的宣告檔：agent-fsm 四格 [templates/agent-fsm/hooks.json](../../../../../templates/agent-fsm/hooks.json)、起來與停下、每一格前後 [py/aos/apps/hook/loop_hooks.json](../../hook/loop_hooks.json)，eca 見下面「eca（縮水版）」。下表是手抄的 agent-fsm 版，[py/tests/test_hook_points_match.py](../../../../tests/test_hook_points_match.py) 比對點名與欄位名有沒有漏。
 
 | 事件 | 什麼時候（agent-fsm） | 事件 JSON 多的欄位 | `condition` 比什麼 | 退 10／能改 |
 |---|---|---|---|---|
-| `before_queue` | idle：信從 queue 拿出來、進 history 之前（`/compact` 信先被挑走，不過這裡） | `letter`、`content` | 不收 condition | 攔（丟掉這封）；改 `content`（非空字串） |
-| `after_queue` | idle：信進 history 之後 | `letter`、`content` | 不收 condition | — |
+| `before_queue` | idle：信從 queue 拿出來、進 history 之前（`/compact` 信先被挑走，不過這裡） | `letter`、`content` | 不比（寫了照收、不看） | 攔（丟掉這封）；改 `content`（非空字串） |
+| `after_queue` | idle：信進 history 之後 | `letter`、`content` | 不比（寫了照收、不看） | — |
 | `before_tool` | act：工具要跑之前 | `name`、`id`、`arguments`（解開的 JSON） | 工具名 | 攔（工具不跑）；改 `arguments` |
 | `after_tool` | act：工具跑完、結果進 history 之前（被攔下的不觸發） | 上面三個＋`content`、`code`（逾時＝null）、`timed_out` | 工具名 | 改 `content`（字串） |
 | `brain_failed` | wait：`LlmKernelMissing`／`SendFailed`／`BudgetMissing`（額度拒絕，11-14 AK17）／`BrainFailed`／`ReplyBad` 那一刻 | `name`（代號）、`reason`（一句話）；解到 kernel 的 error 物件時多 `error`（`BudgetMissing`、`BrainFailed`）；只有 `BrainFailed` 帶 `retry`（true＝等一下重送同一份、false＝agent 停）、`attempt`（連續第幾次失敗），kernel 的 error 有才帶 `code`（kernel 的代號）、`status`（HTTP 狀態），`retry` 為 true 才帶 `wait_s`（幾秒後再試） | 代號 | — |
 | `tool_added` | think：工具清單多了名字（一個名字一次；第一次只記不觸發） | `name`、`path` | 工具名 | — |
-| `after_start` | loop 起來、第一次之前（loop.json 的 `on_start` → `aos-hook fire --def`） | —（只有共通三欄） | 不收 condition | — |
-| `after_stop` | loop 要退時（`on_stop`：stop、sleep、rm、daemon 收工、出錯停；kill -9 不跑） | —（要退的碼、訊號、原因在環境變數 `AOS_LOOP_CODE`、`AOS_LOOP_SIGNAL`、`AOS_LOOP_CAUSE`：`stop`／`sleep`／`remove`／`shutdown`／`stuck`／`signal`／`max`／`body_exit`／`error`，空的＝沒給；給程式比的代號，不是表上給人看的 `reason`） | 不收 condition | — |
-| `before_run` | 每跑一格之前（loop.json 的 `on_before_run` → `aos-hook fire`；讀過 ctl、等過 `interval_ms` 之後；暫停中不發；loop.json 要有接這條線，見下面「每一格前後」） | —（第幾次在 `AOS_LOOP_RUNS`；要跑的那一格在 `<stack>/stage.txt`，第一圈還沒有這個檔＝fsm.json 的起始格） | 不收 condition | 退 10＝跳過這一圈：這格不跑、不算一次、不發 `after_run`，過 `interval_ms` 再問一次 |
-| `after_run` | 每跑完一格之後（`on_after_run`；身體起不來、loop 收到訊號的那圈不發） | —（環境變數 `AOS_LOOP_RUNS`（跟 before_run 同一個數）、`AOS_LOOP_RUN_CODE`（那格的結束碼）、`AOS_LOOP_RUN_SIGNAL`（結束它的訊號，沒有＝空）、`AOS_LOOP_RUN_MS`（跑了多久）；表現在停在哪一格在 `<stack>/stage.txt`） | 不收 condition | — |
-| `on_clock` | 每格開頭（idle、think、wait、act）看一次時鐘，條件到了才跑（見下面「時鐘」） | `clock`、`cycle`、`interval_ms`、`first`、`last_cycle`、`missed`；格裡寫了 `config` 才多 `config`（原樣） | 不收 condition（條件寫 `every_cycles`／`every_ms`） | — |
+| `after_start` | loop 起來、第一次之前（loop.json 的 `on_start` → `aos-hook fire --def`） | —（只有共通三欄） | 不比（寫了照收、不看） | — |
+| `after_stop` | loop 要退時（`on_stop`：stop、sleep、rm、daemon 收工、出錯停；kill -9 不跑） | —（要退的碼、訊號、原因在環境變數 `AOS_LOOP_CODE`、`AOS_LOOP_SIGNAL`、`AOS_LOOP_CAUSE`：`stop`／`sleep`／`remove`／`shutdown`／`stuck`／`signal`／`max`／`body_exit`／`error`，空的＝沒給；給程式比的代號，不是表上給人看的 `reason`） | 不比（寫了照收、不看） | — |
+| `before_run` | 每跑一格之前（loop.json 的 `on_before_run` → `aos-hook fire`；讀過 ctl、等過 `interval_ms` 之後；暫停中不發；loop.json 要有接這條線，見下面「每一格前後」） | —（第幾次在 `AOS_LOOP_RUNS`；要跑的那一格在 `<stack>/stage.txt`，第一圈還沒有這個檔＝fsm.json 的起始格） | 不比（寫了照收、不看） | 退 10＝跳過這一圈：這格不跑、不算一次、不發 `after_run`，過 `interval_ms` 再問一次 |
+| `after_run` | 每跑完一格之後（`on_after_run`；身體起不來、loop 收到訊號的那圈不發） | —（環境變數 `AOS_LOOP_RUNS`（跟 before_run 同一個數）、`AOS_LOOP_RUN_CODE`（那格的結束碼）、`AOS_LOOP_RUN_SIGNAL`（結束它的訊號，沒有＝空）、`AOS_LOOP_RUN_MS`（跑了多久）；表現在停在哪一格在 `<stack>/stage.txt`） | 不比（寫了照收、不看） | — |
+| `on_clock` | 每格開頭（idle、think、wait、act）看一次時鐘，條件到了才跑（見下面「時鐘」） | `clock`、`cycle`、`interval_ms`、`first`、`last_cycle`、`missed`；格裡寫了 `config` 才多 `config`（原樣） | 不比（條件寫 `every_cycles`／`every_ms`） | — |
 
 每份事件 JSON 都有 `event`、`hook`（這個 hook 的名字）、`stack`（agent 的 stack 絕對路徑）。同一事件多個 hook＝照名字排序一個一個跑；agent 自己發的點（表上前七個）前一個改過的後一個看得到，被攔下就不往下；經 `aos-hook fire` 發的四個 loop 點每個 handler 拿同一份事件。連鎖（hook 寄信給自己又觸發）不檢測，自行承擔。
 
@@ -93,7 +95,7 @@ agent 自己發的點（表上前七個）照 `agentlib/hooks.py` 的 `POINTS` �
 | `clock`（`--clock`） | `on_clock` 看哪個時鐘：proc 名稱或路徑 | `$AOS_CLOCK` |
 | `config`（`--config JSON`） | `on_clock` 才收：任意 JSON，原樣放進事件的 `config` 給 handler 讀（例 context_wrap 的 `{"percent": 50}`） | 不帶 |
 
-queue 事件給 `--condition`＝`add` 直接 `ArgumentsBad`（由 `hooks.check_entry` 說原因）。以前的 `intercept`、`async`、`on_error` 拿掉了：格裡寫了也不讀。
+`condition` 寫在不比的點（queue、on_clock、loop 四點…）＝照收、不比、不報錯（宣告只是參考）；`--config` 給 on_clock 以外的事件、on_clock 的鍵給別的事件才是 `ArgumentsBad`。以前的 `intercept`、`async`、`on_error` 拿掉了：格裡寫了也不讀。
 
 ## 兩份檔怎麼疊
 
@@ -146,7 +148,7 @@ cat >> "$HOME/letters.jsonl"
 
 ## eca 畫面延後關
 
-範本有 `screen_linger_start`／`screen_linger_stop` 兩格 after_start／after_stop handler，前者排第一撤掉舊到期單，後者寫單並交 tmux 計時（4000 ms；以前的 `on_error: continue` 拿掉了，它輸入壞、讀寫失敗時退 1＝跟其他 loop 點一樣讓 loop 停）。定義 cli.json 的 screen_close_after_s 非負整數秒，預設 600，0 寫單後當場核身分關畫面。handler 用事件 stack，不是自己的 AOS_STACK；處理 claude、codex 小格。
+範本有 `screen_linger_start`／`screen_linger_stop` 兩格 after_start／after_stop handler，前者排第一撤掉舊到期單，後者寫單並交 tmux 計時（4000 ms；以前靠 `on_error: continue` 不擋 eca 起停，11-21 拿掉之後由它自己保證：當 hook 跑時輸入壞、讀寫失敗只印一行 warning、退 0，不會讓 loop 停；tmux 叫的 reap 照舊出錯退 1）。定義 cli.json 的 screen_close_after_s 非負整數秒，預設 600，0 寫單後當場核身分關畫面。handler 用事件 stack，不是自己的 AOS_STACK；處理 claude、codex 小格。
 
 start／wake 撤單，新活 loop 或新畫面不關；鎖忙 30 秒後再試、最多 10 次。有人接著看照關；stop／sleep／rm 或 daemon shutdown 有 after_stop 都會排，pause 不排。兩格在 stack 設 null 可停用，SIGKILL／OOM 與停著才開畫面第一批不補排。stack 的 hookeds 覆蓋須另外核對。`aos-agent ctl stop` 自己不關畫面（C′ B 包），全靠這兩格；`ctl rm`、`ctl set-def` 照舊當場關。
 
