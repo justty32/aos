@@ -268,8 +268,11 @@ def main():
         if args.get("op") not in rule.get("ops", []):
             out("blocked: agents_ctl op %r is not allowed for you (allowed: %s). Use it only to ring the bell: stop yourself." % (args.get("op"), ", ".join(rule.get("ops", []))))
         if rule.get("self_only"):
-            st = os.path.normpath(os.environ.get("AOS_STACK", ""))
-            if os.path.basename(os.path.dirname(st)) == "hooks":   # a hook runs with AOS_STACK = its own cell <stack>/hooks/<hook>
+            # the agent's stack: the event's "stack" field (set by the hook engine); else AOS_STACK,
+            # which for a hook is its own cell <stack>/hookeds/<hook>
+            st = event.get("stack")
+            st = os.path.normpath(st if isinstance(st, str) and st else os.environ.get("AOS_STACK", ""))
+            if os.path.basename(os.path.dirname(st)) == "hookeds":
                 st = os.path.dirname(os.path.dirname(st))
             me = os.path.basename(st)
             if not me or args.get("name") != me:

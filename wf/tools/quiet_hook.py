@@ -2,11 +2,14 @@
 # quiet_hook.py - before_queue hook：清淨期間擋下「[aos] new_mail」「[aos] kernel_hold」兩種通知（原文附加到 quiet/deferred.jsonl、退 10 丟掉）。
 # 放行：寄件人含 <stack>/quiet/config.json 的 urgent_senders 任一名字的 new_mail（repo-aos 設 xiaosi：小廝只轉要緊的事與彙整；不設＝沒有人特別放行）、其他所有訊息（人打的、不是 [aos] 開頭的、cross-session 的）、沒開清淨或已過期。
 # 介面：stdin＝事件 JSON（event、stack＝agent 的 stack、letter、content）；退 0 無輸出＝照常放行、退 10＝丟掉。讀不懂的一律放行（寧可吵也不吞）。
-# 使用者 11-14 清淨時段；指令與共用函式在 quiet.py。掛它用 on_error: continue。
+# 使用者 11-14 清淨時段；指令與共用函式在 quiet.py。before_queue 的 hook 失敗會讓 agent 停（11-21 hook 新格式，沒有 on_error 了），所以這支自己吞掉所有錯、一律放行退 0。
 import json, os, re, sys, time
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-import quiet as q
+try:
+    import quiet as q
+except Exception as e:                              # quiet.py missing or broken: let everything through
+    q, IMPORT_ERROR = None, e
 
 MARKS = ("[aos] new_mail", "[aos] kernel_hold")
 FROM = re.compile(r"letters? from (.*?)\. Look with", re.S)
@@ -21,6 +24,9 @@ def urgent(stack, content):
 
 
 def main():
+    if q is None:
+        sys.stderr.write("quiet_hook: error: ModuleMissing cannot load quiet.py (%s); let it through\n" % IMPORT_ERROR)
+        return 0
     try:
         ev = json.load(sys.stdin)
         stack, content = ev["stack"], ev["content"]
@@ -46,4 +52,9 @@ def main():
     return 10
 
 
-sys.exit(main())
+try:
+    CODE = main()
+except Exception as e:                              # never fail: a failing before_queue hook stops the agent
+    sys.stderr.write("quiet_hook: error: Crashed %s; let it through\n" % e)
+    CODE = 0
+sys.exit(CODE)

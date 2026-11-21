@@ -39,5 +39,5 @@
 ## 已知限制（P0）
 
 - **寫檔範圍只是約定**：write_guard、mail_guard 在 P2 才做。在那之前，「只寫自己的 ws」靠 system 的文字，沒有 hook 擋（計劃 03 §9）。
-- **沒掛 brain_notify**：活樹 lib 的複本還沒有它，換樹之後再補進 hooks.json。
+- **沒掛 brain_notify**：活樹 lib 的複本還沒有它，換樹之後再補進被勾清單 hookeds.json（11-21 起 hooks.json 是宣告、不是清單）。
 - **其他包還沒做**：「做」「幫」「帶」在 P3；C、D 級的通用層和實測在 P1，要等 ok-release 讓出模型用量。

@@ -1,4 +1,4 @@
-# test_guard - unittest for fsm-guard: runs guard as a subprocess with a temp guard.json (relaxed shell check, bypasses, old rules).
+# test_guard - unittest for fsm-guard: runs guard as a subprocess with a temp guard.json (relaxed shell check, bypasses, old rules), and mounted in hookeds.json on the real agent-fsm act cell.
 import importlib.machinery, importlib.util, json, os, subprocess, sys, tempfile, unittest
 
 sys.dont_write_bytecode = True   # loading guard (a file without .py) must not leave __pycache__ next to it
@@ -62,10 +62,14 @@ class Base(unittest.TestCase):
         with open(self.cfg_path, "w", encoding="utf-8") as f:
             json.dump(self.cfg, f)
 
-    def run_guard(self, name, arguments, stack=None):
+    def run_guard(self, name, arguments, stack=None, event_stack=None):
+        """stack = AOS_STACK the guard sees; event_stack = the event's "stack" field (left out when None)."""
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         env.update(AOS_GUARD_CFG=self.cfg_path, AOS_WS=self.ws, AOS_STACK=stack or self.stack)
-        p = subprocess.run([sys.executable, GUARD], input=json.dumps({"name": name, "arguments": arguments}),
+        event = {"name": name, "arguments": arguments, "event": "before_tool", "hook": "guard"}
+        if event_stack is not None:
+            event["stack"] = event_stack
+        p = subprocess.run([sys.executable, GUARD], input=json.dumps(event),
                            capture_output=True, text=True, env=env, timeout=30)
         return p.returncode, p.stdout
 
@@ -471,9 +475,15 @@ class OldRules(Base):
         self.allowed("agents_ctl", {"op": "stop", "name": "sol-T01", "timeout_s": 60, "no_wait": True})
 
     def test_agents_ctl_from_hook_cell(self):
-        cell = os.path.join(self.stack, "hooks", "guard")
+        # what the hook engine gives: AOS_STACK = the hook's cell <stack>/hookeds/guard, event "stack" = the agent's stack
+        cell = os.path.join(self.stack, "hookeds", "guard")
         os.makedirs(cell)
-        self.allowed("agents_ctl", {"op": "stop", "name": "sol-T01", "timeout_s": 60, "no_wait": True}, stack=cell)
+        stop = {"op": "stop", "name": "sol-T01", "timeout_s": 60, "no_wait": True}
+        self.allowed("agents_ctl", stop, stack=cell, event_stack=self.stack)
+        self.allowed("agents_ctl", stop, stack=cell)                  # no "stack" field: AOS_STACK cut by one cell
+        self.blocked("agents_ctl", dict(stop, name="guard"), stack=cell, event_stack=self.stack)
+        other = os.path.join(os.path.dirname(self.stack), "sol-T02")
+        self.blocked("agents_ctl", stop, stack=cell, event_stack=other)   # the event's stack wins over AOS_STACK
 
     def test_agents_ctl_rules(self):
         self.blocked("agents_ctl", {"op": "start", "name": "sol-T01", "timeout_s": 60, "no_wait": True})
@@ -491,6 +501,81 @@ class OldRules(Base):
         self.blocked("subagent", {"op": "ls"})
         self.blocked("kernel_gate", {"op": "ls"})
         self.blocked("agents_ctl", {"op": "stop"})
+
+
+PROTO = os.path.normpath(os.path.join(HERE, "..", "..", "..", "..", "..", "proto8"))   # this repo's proto8 (installed: lib/ bin/)
+
+
+@unittest.skipUnless(os.path.isfile(os.path.join(PROTO, "templates", "agent-fsm", "act.py"))
+                     and os.path.isdir(os.path.join(PROTO, "lib", "aos")), "needs an installed proto8 next to wf/")
+class Mounted(unittest.TestCase):
+    """Mount the guard as the README says (hookeds.json of a definition, wrapper + defs/shared/guard) and run the real act cell."""
+
+    def setUp(self):
+        import shutil
+        self.tmp = tempfile.TemporaryDirectory()
+        t = self.tmp.name
+        self.ws, self.stack, fake = os.path.join(t, "ws"), os.path.join(t, "procs", "sol-T01"), os.path.join(t, "bin")
+        self.defn = os.path.join(t, "defs", "worker")
+        shutil.copytree(os.path.join(PROTO, "templates", "agent-fsm"), self.defn)
+        os.makedirs(os.path.join(t, "defs", "shared"))
+        shutil.copy(GUARD, os.path.join(t, "defs", "shared", "guard"))
+        for d in (self.ws, self.stack, fake):
+            os.makedirs(d)
+        with open(os.path.join(self.defn, "guard"), "w") as f:
+            f.write('#!/bin/sh\n# guard wrapper\nd=$(dirname "$0")\nAOS_GUARD_CFG="$d/guard.json" exec python3 "$d/../shared/guard"\n')
+        os.chmod(os.path.join(self.defn, "guard"), 0o755)
+        self.tools = ["write", "agents_ctl"]
+        with open(os.path.join(self.defn, "hookeds.json"), "w") as f:   # only the guard: the shipped on_clock hooks need a daemon tree
+            json.dump({"guard": {"event": "before_tool", "condition": self.tools, "handler": "guard", "timeout_ms": 10000}}, f)
+        self.write_cfg({"write_roots": [self.ws], "agents_ctl": {"ops": ["stop"], "self_only": True, "max_timeout_s": 600}})
+        listed = [{"name": n, "path": "/fake/" + n, "tooldef": {}} for n in self.tools]
+        with open(os.path.join(fake, "aos-tools"), "w") as f:
+            f.write("#!%s\nimport json, sys\nif 'ls' in sys.argv: print(json.dumps(%r))\n"
+                    "else: sys.stdin.read(); print('TOOL RAN')\n" % (sys.executable, listed))
+        os.chmod(os.path.join(fake, "aos-tools"), 0o755)
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env.update(AOS_HOME=PROTO, AOS_STACK=self.stack, AOS_CD=self.defn, AOS_WS=self.ws,
+                   PATH=os.pathsep.join([fake, os.path.join(PROTO, "bin"), env.get("PATH", "")]))
+        self.env = env
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write_cfg(self, cfg):
+        with open(os.path.join(self.defn, "guard.json"), "w") as f:
+            json.dump(cfg, f)
+
+    def act(self, tool, args, code=0):
+        """Put one tool call at the end of history, run act.py; return (tool result or None, stderr)."""
+        call = {"id": "c1", "type": "function", "function": {"name": tool, "arguments": json.dumps(args)}}
+        hist = os.path.join(self.stack, "history.jsonl")
+        with open(hist, "w") as f:
+            f.write(json.dumps({"role": "user", "content": "hi"}) + "\n" + json.dumps({"role": "assistant", "tool_calls": [call]}) + "\n")
+        p = subprocess.run([sys.executable, os.path.join(self.defn, "act.py")], env=self.env, capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.returncode, code, p.stderr)
+        with open(hist) as f:
+            last = [json.loads(l) for l in f if l.strip()][-1]
+        return (last.get("content") if last.get("role") == "tool" else None), p.stderr
+
+    def test_blocks_and_allows(self):
+        out, _ = self.act("write", {"path": "/etc/fsm-guard-test", "content": "x"})
+        self.assertTrue(out.startswith("[aos] guard: blocked: /etc/fsm-guard-test is outside"), out)
+        out, _ = self.act("write", {"path": os.path.join(self.ws, "ok.txt"), "content": "x"})
+        self.assertEqual(out.strip(), "TOOL RAN")
+        self.assertTrue(os.path.isdir(os.path.join(self.stack, "hookeds", "guard")))
+
+    def test_stop_yourself(self):
+        out, _ = self.act("agents_ctl", {"op": "stop", "name": "sol-T01", "timeout_s": 60, "no_wait": True})
+        self.assertEqual(out.strip(), "TOOL RAN")
+        out, _ = self.act("agents_ctl", {"op": "stop", "name": "sol-T02", "timeout_s": 60, "no_wait": True})
+        self.assertIn("agents_ctl may only stop yourself", out)
+
+    def test_missing_config_stops_the_agent(self):
+        os.remove(os.path.join(self.defn, "guard.json"))
+        out, err = self.act("write", {"path": os.path.join(self.ws, "ok.txt"), "content": "x"}, code=1)
+        self.assertIsNone(out)                                   # the tool did not run
+        self.assertIn("HookFailed hook guard (event before_tool)", err)
 
 
 if __name__ == "__main__":

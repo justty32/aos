@@ -140,7 +140,7 @@ def setup(stack, cmd, flags):
         if cmd == "install" and name == "autoreply_tick" and "--no-autoreply" in flags:
             continue
         if cmd == "install":
-            p = agent_hook(stack, "add", "-n", name, "--on-error", "continue", "--replace", *extra, os.path.join(here, fname))
+            p = agent_hook(stack, "add", "-n", name, "--replace", *extra, os.path.join(here, fname))
         else:
             p = agent_hook(stack, "rm", name)
         if p.returncode != 0 and not (cmd == "uninstall" and "HookMissing" in p.stderr):
