@@ -100,7 +100,7 @@
       "title": "其他小題",
       "status": "等使用者",
       "flow": "",
-      "what": "eca-claude 範本 Read 不在 allowedTools（`templates/eca-claude/cli.json` 仍是 `Write,Edit,Bash`）、A② gate（Pages 正式發佈那項 11-18 晚併進 pages-trial-1116）",
+      "what": "A② gate（Pages 正式發佈那項 11-18 晚併進 pages-trial-1116）。eca-claude 範本 Read 不在 allowedTools 那項 11-21 夜已做（`6f09d3f93`，Read／Glob／Grep 進白名單、模型換 opus）",
       "next": "",
       "see": [
         "[留底 49](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#t49)",
