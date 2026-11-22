@@ -1,0 +1,53 @@
+{
+ "HANDOFF.md": {
+  "description": "HANDOFF — compact 交接"
+ },
+ "STRUCTURE": {
+  "description": "STRUCTURE.md 拆出的分檔夾，四份：01 分層原則；02 結構整理原則與拆檔做法；03 工作流成長軌跡與統一形式；04 archive 規則與資料檔慣例；入口與目錄在同層 STRUCTURE.md"
+ },
+ "STRUCTURE.md": {
+  "description": "STRUCTURE — 結構整理參考（被動 / 按需取用）"
+ },
+ "WORKFLOWS.md": {
+  "description": "WORKFLOWS — 工作流派發器"
+ },
+ "advices": {
+  "description": "對 aos 本身的意見庫：各隊做事時對 aos 的改進意見，頂層派 Claude 子 agent 審與整理、按主題歸檔建索引；之後改進 aos 從這裡找參考"
+ },
+ "inbox": {
+  "description": "樹外專案（arcagi）寄來的信的放信處：頂層的 .md 是未處理的信、done/ 是已處理的；每個 session 開始先 ls 這裡，有信先讀；樹內的信走 aos 信箱"
+ },
+ "knowledge": {
+  "description": "wf 的機讀知識：code map（proto8 程式地圖冊）等生成或手寫的 json"
+ },
+ "progress": {
+  "description": "progress 條目的大段內文：wf/progress.json 裡寫成 {\"$ref\": \"progress/.md\"} 的 what／next，一條一檔、檔名＝條目鍵"
+ },
+ "progress.json": {
+  "description": "進度（hub）：只放「還沒完成」的活狀態，一條一個鍵，完成就刪那一鍵（每日日誌 11-17 起停寫；哪天做了什麼看 thinking 的日索引）；等使用者親自驗、做、裁的也記在這裡，status 寫「等使用者」（有使用者專區的機器，新題照舊寄專區）。11-17 瘦身前的全文在 留底（條目裡「留底 N」＝其中第 N 條）。某工作流的條目 flow 填工作流名，不屬任何工作流的留空。"
+ },
+ "public": {
+  "description": "公用知識庫：所有 agent 可讀可投稿，頂層管；tools/ 放公用小工具",
+  "index": "public/_index.json"
+ },
+ "session_logs": {
+  "description": "wf 的每日工作日誌：當月一天一檔放月份夾、已結束月份收成月摘要（2026-08、09、10.md），原檔封存在 archive/；要查某天做了什麼、定了什麼時進去"
+ },
+ "tools": {
+  "description": "wf 工作流的腳本：index_gen（_index.json 與 code map 逐檔表；codemap_lib 是它的檔頭一句話認法函式庫）、tabledb 資料表讀寫、進度看板 progress_board、離線待裁頁 decide_page、連結修補等；要跑生成器或檢查時進去",
+  "index": "tools/_index.json"
+ },
+ "tree": {
+  "description": "wf/tree：`_stack` 那棵樹的根定義（只帶時鐘與清道夫）"
+ },
+ "user": {
+  "description": "wf/user：使用者專屬區"
+ },
+ "workflows": {
+  "description": "wf 的工作流全集：每個工作流一個資料夾或單檔（feature-dev、tidy、dispatch、inbox…），派發表在 wf/WORKFLOWS.md，照使用者說的話挑一個讀入口檔",
+  "index": "workflows/_index.json"
+ },
+ "ws": {
+  "description": "wf/ws：私有地盤"
+ }
+}
