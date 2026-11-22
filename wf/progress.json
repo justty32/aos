@@ -10,24 +10,11 @@
     "since": "YYYY-MM-DD；11-18 從 SESSION-LOG.md 搬來的條目取的是那一行最後改寫的日子（git blame），不是事情開始的日子"
   },
   "open": {
-    "rebuild-aos-home": {
-      "title": "重建 `~/aos-home`",
-      "status": "等使用者",
-      "flow": "",
-      "what": "使用者自己照步驟單的安裝六步重建（`AOS_HOME` 一台設一次、`cp -r` 起手範本 `templates/start-api`、樹裡 `source env.sh`；程式只有 repo 一份）；以前「換樹時帶／換樹後驗」的尾巴都等重建後再驗。公司 WSL：agent 11-18 已清掉→照步驟單重建→試跑→再整個清掉（`b05e59368`，現在 WSL 沒有 aos），教學本是 11-18 的公司WSL-重建試跑紀錄，使用者之後單開 session 照著一步一步做；步驟單 11-18 晚照紀錄文末卡點補了六處（線 wrap-1118）。剩：公司 WSL 由使用者自己重建；家機重建沒做；真模型（API 端點）另一條線 litellm-1118 在弄",
-      "next": "",
-      "see": [
-        "[重建步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)",
-        "[公司WSL-重建試跑紀錄](../proto8/thinking/2026-11/18/公司WSL-重建試跑紀錄.md)",
-        "[留底](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#rebuild)"
-      ],
-      "since": "2026-11-17"
-    },
     "refactor-tidy-inventory": {
-      "title": "重構與 tidy 盤點剩的",
+      "title": "重構與 tidy 盤點剩的：thinking 11-13 起先提取再精簡（Q1）",
       "status": "open",
       "flow": "tidy",
-      "what": "九題與追加三題都已交；code-tidy-1118 做完的（aos-tools 拆成 main／common／helps／registry／tooldef 五支、兩支自寫的 `read_json` 收進 `tool_io.read_json`、測試共用 `env_helper`、舊名註解）已交 `43a07ea85`；它列的七題使用者 11-18 晚已裁（測試 PATH 拿掉 `~/.local/bin`、拿掉 `agentlib/agent_files.py` 轉接、`hook_run` 改用 `directive_value`、`swap` 搬進 `py/aos/` 四題由線 wrap-1118 做完；listen／ask 舊退路、`self_*` 測試的 `run_tool`、測試起真 daemon 三題「不動」）。剩：拆 aos-frontend（前端先不動，等大修）、thinking 11-13 起先提取再精簡（Q1）",
+      "what": "九題與追加三題都已交；code-tidy-1118 做完的已交 `43a07ea85`，它列的七題使用者 11-18 晚已裁、線 wrap-1118 做完。剩：thinking 11-13 起先提取再精簡（Q1）。拆 aos-frontend 併進 overview-page（前端大修）",
       "next": "",
       "see": [
         "[盤點](workflows/tidy/reports/2026-11-17-重構與tidy盤點.md)",
@@ -59,53 +46,34 @@
       "since": "2026-11-17"
     },
     "overview-page": {
-      "title": "全景頁剩的",
+      "title": "前端大修（全景頁剩的；併 later-1115 前端那半、拆 aos-frontend）",
       "status": "open",
       "flow": "",
-      "what": "地圖方向鍵、Ctrl+K 原始碼已做（`06cf02300`）；P5 文字、按鈕字「（排隊中）」核不到：網頁 `dist/` 11-17 起不進 git，要有 Node 的機器重建一次看（原始碼 `ui/v2/src/inspector/ReadButtons.tsx` 仍有「（排隊中）」那格）；沒驗 /context 真畫面、Firefox、手機單欄等（要活樹與使用者）；`frontend/bin/aos-frontend` 仍寫死 `~/aos-home/ws/tools`（`VIEW_TOOLS`），改讀設定沒做，跟前端大修一起；前端三個小毛病（`8e0cf5caa` 回報：起前端要自設 AOS_DAEMON 否則錯誤訊息不清、前端去活樹找 aos-user、首頁 / 轉到已刪 v1 的路徑）使用者 11-18 晚：「前端的三個小毛病這塊都還好，，先留着。」→ 先留著不修；11-21 線 top-1121-frontend 乾淨複本試跑全過（hook 新格式沒弄壞前端；修寄信給沒信箱的 agent 失敗），網頁 dist/ 已 build 在工作樹 ui/v2/dist/（P5 那格字在 build 裡有，畫面沒核）；活樹 ~/aos-home 已沒有 ws/，頁上「要決定」那欄是空的、回專區信不能用；大修盤點 14 項在 frontend-備妥-1121；11-21 夜 eca-aos 讀 frontend/bin/aos-frontend 看到：run_json 丟掉子程式的 stderr，失敗只剩「aos-agent ctl ls --json failed」看不出原因（使用者「兩個都記下來」）",
+      "what": {
+        "$ref": "progress/overview-page.md"
+      },
       "next": "",
       "see": [
         "[留底 41](../proto8/thinking/2026-11/17/session-log-瘦身留底/05-第39到42條.md#t41)",
         "[43](../proto8/thinking/2026-11/17/session-log-瘦身留底/06-第43到48條.md#t43)",
         "[frontend-備妥-1121](../proto8/thinking/2026-11/21/frontend-備妥-1121.md)",
-        "[知識庫-使用感想-1121](../proto8/thinking/2026-11/21/知識庫-使用感想-1121.md)"
-      ],
-      "since": "2026-11-17"
-    },
-    "eca-rest": {
-      "title": "eca 剩的",
-      "status": "open",
-      "flow": "",
-      "what": "a2a 的 codex 身沒接、三項實測（帳號端關掉跨 session 傳訊、父對子說話的署名、確認框等人時訊息擠進來）沒做；codex 身回合中收信的研究沒開（11-16 起沒有相關 commit）；live_mail 回合中併信、`context_wrap` 的 `config.window`（從沒跑過 -p 的 agent 要設）隨重建後再驗；fsm「先更新交接檔再壓」待定（要先決定思考中途收不收一般信）；daemon 子行程增減 11-18 晚作廢（現象已沒了）；codex 身沒做的幾項（a2a 實測、回合中收信研究、子 agent 用 codex 身）使用者 11-18 晚選項框「先留著」",
-      "next": "",
-      "see": [
-        "[留底 19](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t19)",
-        "[52](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#t52)",
-        "[53](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#t53)"
-      ],
-      "since": "2026-11-17"
-    },
-    "later-1115": {
-      "title": "11-15 意見裡「之後再說」的",
-      "status": "等使用者",
-      "flow": "",
-      "what": "stack 遷移、aos-frontend 大修（使用者 11-17：之後整個大修大重構；環境變數名、`API.md` 還沒跟著改名——11-18 查仍是 `VIEW_*`、`view-api/0`）、systemd 規則、全景頁為何常掛",
-      "next": "",
-      "see": [
+        "[知識庫-使用感想-1121](../proto8/thinking/2026-11/21/知識庫-使用感想-1121.md)",
         "[留底 39](../proto8/thinking/2026-11/17/session-log-瘦身留底/05-第39到42條.md#t39)",
         "[40](../proto8/thinking/2026-11/17/session-log-瘦身留底/05-第39到42條.md#t40)"
       ],
       "since": "2026-11-17"
     },
-    "small-questions": {
-      "title": "其他小題",
-      "status": "等使用者",
+    "eca-rest": {
+      "title": "eca 剩的（含子 agent codex 身）",
+      "status": "open",
       "flow": "",
-      "what": "A② gate（Pages 正式發佈那項 11-18 晚併進 pages-trial-1116）。eca-claude 範本 Read 不在 allowedTools 那項 11-21 夜已做（`6f09d3f93`，Read／Glob／Grep 進白名單、模型換 opus）",
+      "what": "a2a 的 codex 身沒接、三項實測（帳號端關掉跨 session 傳訊、父對子說話的署名、確認框等人時訊息擠進來）沒做；codex 身回合中收信的研究沒開（11-16 起沒有相關 commit）；live_mail 回合中併信、`context_wrap` 的 `config.window`（從沒跑過 -p 的 agent 要設）隨重建後再驗；fsm「先更新交接檔再壓」待定（要先決定思考中途收不收一般信）；daemon 子行程增減 11-18 晚作廢（現象已沒了）；codex 身沒做的幾項（a2a 實測、回合中收信研究、子 agent 用 codex 身）使用者 11-18 晚選項框「先留著」；併 design-tails-1113 的 eca 子 agent codex 身（使用者 11-13「以後再想辦法處理，不急。」）",
       "next": "",
       "see": [
-        "[留底 49](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#t49)",
-        "[35](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t35)"
+        "[留底 19](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t19)",
+        "[52](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#t52)",
+        "[53](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#t53)",
+        "[留底 12](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t12)"
       ],
       "since": "2026-11-17"
     },
@@ -121,49 +89,31 @@
       "since": "2026-11-18"
     },
     "workspace-stack-alloc": {
-      "title": "正規的工作區與 stack 分配機制（待派工）",
+      "title": "_stack 剩的線：線 7、線 8 與題 4（併 rebuild-aos-home、home-cleanup）",
       "status": "open",
       "flow": "",
-      "what": "使用者 11-14：「現在先這樣，勉強夠用，等有空的時候可以派fable去規劃更正規的工作區，乃至stack的分配機制，可以和我們的權限系統有關聯。」有空時派 fable 規劃（11-18 查還沒開）；現況是各線 `wf/temp/<線>/`、隊員在其下 `sol-N/`，暫存樹 11-15 起改 `~/.aos/scratch/<線名-日期>/`（`c0b12e551`）；11-14 記的不一致：ok-limits 的 sol 共用一格、工作區在 repo 內怕 `git clean`；要跟 ok-sec（uid 權限）與 ok-onboard（開場建工作區）對上",
+      "what": "線 6（家機搬家，`~/aos-home` → `~/repo/aos/_stack`）已完成；剩線 7 改現行文件（`ws-stack-1122-docs` 正在做）、線 8 公司那台起 `_stack`（使用者：公司現有的樹別管）、題 4（公司那台的 llm kernel 也放那台的 `~/aos-home/llm` 嗎？線 8 開工前答）。11-14 要的正規工作區與 stack 分配，由 11-22 的 `_stack` 規劃與線 1～5、9 做掉。併來的 rebuild-aos-home：照步驟單重建 `~/aos-home` 被 11-22 決定 D 蓋過（`~/aos-home` 往後只裝這台的 llm kernel），公司那台走線 8。併來的 home-cleanup：`~/.aos/scratch`（9.1 GB）、`~/.claude/projects`（2.5 GB）、`~/.cache/aos-*` 四夾、`~/.stack` 舊信箱，使用者 11-18 晚選項框「先不清」，`~/.aos/scratch` 用完怎麼收使用者 11-15 說之後自己定；跟搬家退路 `~/aos-home.old-1122/` 什麼時候刪一起等使用者點頭（刪檔要使用者本人說）",
       "next": "",
       "see": [
-        "[user-advice 20261114 第九段](../proto8/thinking/user-advice/20261114.md)"
+        "[_stack 規劃](../proto8/thinking/2026-11/22/工作區與stack-1122/02-規劃.md)",
+        "[換機說明書](workflows/dev-env/03-換機.md)",
+        "[留底 38](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t38)",
+        "[progress 整理-1122](../proto8/thinking/2026-11/22/progress整理-1122/README.md)"
       ],
       "since": "2026-11-18"
     },
-    "home-cleanup": {
-      "title": "家目錄清理（家機）",
-      "status": "open",
-      "flow": "",
-      "what": "核不到：要家機——`~/.claude/projects` 1.8G、`~/.cache/aos-*` 四夾、`~/.stack` 舊信箱；`~/.aos/scratch` 用完怎麼收使用者 11-15 說之後自己定（aos-teams/06）；兩個常駐服務使用者自己處理；`~/.aos/scratch`（9.1 GB）與 `~/.claude/projects`（2.5 GB）要不要清：使用者 11-18 晚選項框「先不清」",
-      "next": "",
-      "see": [
-        "[留底 38](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t38)"
-      ],
-      "since": "2026-11-17"
-    },
     "design-tails-1113": {
-      "title": "11-13 前開的設計尾巴",
+      "title": "11-13 前開的設計尾巴（剩四件小的）",
       "status": "open",
       "flow": "",
-      "what": "外部 MCP：CLI 自己接的 server 起來後才壞 aos 看不到（P3）、三項 11-18 晚驗過（verify-night-1118，真 claude haiku＋假 server）：`except`→`--disallowedTools` 有效（那支整支不在清單）、CLI 自接的一起來就退＝stack `stderr.txt` 一行 warning、回合照走，中途死＝腦拿到 `Connection closed`、claude 自己重起 server、aos 看不到，經 aos 的卡住不回＝60 秒收掉行程群、腦照走下一步；P1 `--envs` 改成指 env 檔沒做（文件那半已寫在 `aos-agent ctl add --help`）；ops-agent：yes/no 時由 hook 接住寄信（使用者說之後再做）；index 三題（同一節點多處 index 聽誰的、過時、專屬工具長怎樣；`index_view` 已有）等使用者；eca 子 agent codex 身（使用者 11-13「以後再想辦法處理，不急。」）；team-model 跟 skyrim 那份同步，核不到：要家機的 `~/repo/moddings`；compact_reload 補驗，核不到：要真 Claude Code compact 一次（驗完才補 user/02 那句）（11-18 晚作廢：Codex 兩隻 `gpt-price`／`gpt-soap` 跟盤點對不對得上、ops-agent 索引檢查出廠工具，原本都要公司活樹核，那棵已清掉）",
+      "what": "外部 MCP 三項 11-18 晚已驗、compact_reload 11-15 起多次 compact 都照常讀回（整理報告推測已驗），了結；eca 子 agent codex 身併進 eca-rest。剩：P1 `--envs` 改成指 env 檔沒做（文件那半已寫在 `aos-agent ctl add --help`）；team-model 跟 skyrim 那份同步（原本核不到、要家機的 `~/repo/moddings`，現在就在家機）；index 三題（同一節點多處 index 聽誰的、過時、專屬工具長怎樣）等使用者，index_check 11-21 整支重寫（`6c769595d`）後題目要重看；ops-agent：yes/no 時由 hook 接住寄信（使用者說之後再做）",
       "next": "",
       "see": [
+        "[改寫前逐字](progress/改寫前-design-tails-1113.md)",
         "[留底 12](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t12)",
         "[留底 01](../proto8/thinking/2026-11/17/session-log-瘦身留底/01-第1到11條.md)",
         "[03](../proto8/thinking/2026-11/17/session-log-瘦身留底/03-第21到34條.md#t21)",
         "[verify-night-1118](../proto8/thinking/2026-11/18/verify-night-1118.md#件-2外部-mcp-沒驗的三項)"
-      ],
-      "since": "2026-11-17"
-    },
-    "old-lines-1112": {
-      "title": "11-12 前的舊線",
-      "status": "open",
-      "flow": "",
-      "what": "two-machines B14、B16、B20、B21 留大修、B22 整理階段；大修材料 56 列待裁；node-pool 第五輪 N2～N10（沒開工）；apply-ideas 序 5 條文日那批文件句子、序 6 aos-serve（沒做）；LLM kernel `_metainfo` 第二步（`llm_tokens` 預估額度、閘門帶 `from` 按函數統計；程式裡沒有 `llm_tokens`）；補驗要真模型：11-10 gemma 五項、eca haiku 整項、MCP tools/list 字元數，11-11 claude haiku new_mail 一輪；i18n 只記想法；小尾巴：eca_tidy 產出的 SUMMARY 核不到（產出在家機；11-14 已判那次試跑過時、十條都收）",
-      "next": "",
-      "see": [
-        "[留底 03](../proto8/thinking/2026-11/17/session-log-瘦身留底/03-第21到34條.md)"
       ],
       "since": "2026-11-17"
     },
@@ -213,12 +163,13 @@
       "since": "2026-11-18"
     },
     "decisions-1118-night": {
-      "title": "11-18 晚使用者的裁定（逐字）",
+      "title": "litellm 兩台版本要不要統一（11-18 晚裁定只剩這題）",
       "status": "等使用者",
       "flow": "",
-      "what": "aos-llm 丁案（Python 函式庫＋同名薄指令）：「順延，這個不是大問題」；家機 pi：「我已經更新了」；家機 proxy master key：「先不加」；litellm 兩台版本：「先不統一，明天再看」；公司 litellm：「我確實想要讓那邊有litellm，那個等一下再說」；家機 `~/aos-home` 重建：「要等一下」；rm-treestart 的 AOS_* 檢查：「不補」（已記進 lines-1118-decide）；選項框四項——eca codex 身沒做的幾項：「先留著」（eca-rest）；guard 要不要做下去：「先擱著」（wrapup-1115）；cooldown 兩個小改：「前綴補回、清單只限 set-def (Recommended)」（lines-1118-decide）；家機 `~/.aos/scratch`（9.1 GB）與 `~/.claude/projects`（2.5 GB）要不要清：「先不清」（home-cleanup）；proto8/impls 舊編譯產物：「刪掉」（先不刪，見 impls-old-builds）。11-19 早使用者定公司用 ~/litellm-proxy 的 1.109.1、自己抄好 codex 登入；線 litellm-up-1119 起起來、三模型非串流與串流都通、aos 整條線真模型回字（公司 litellm 這項了結）。還等的：litellm 兩台版本要不要統一（1.87.5 的釘版理由在 1.109.1 已不成立）、家機重建。~/litellm-proxy 進 llm_proxy：使用者 11-19「好，併進llm_proxy當子夾」，已併進 ~/repo/llm_proxy/pinned_1.109.1/（llm_proxy commit bf9f5ec、432f9a8，沒 push）；同日「排吧」後公司機 proxy 已改從子夾起（pid 33494）。~/litellm-proxy 舊夾：11-19 上午使用者說「刪掉」，頂層已刪除（現行 proxy 照常跑）",
+      "what": "11-18 晚使用者的裁定各項已落進別條或了結；還等的只剩 litellm 兩台版本要不要統一（使用者 11-18 晚：「先不統一，明天再看」；1.87.5 的釘版理由在 1.109.1 已不成立）。家機重建被 11-22 決定 D 與線 6 蓋過",
       "next": "",
       "see": [
+        "[改寫前逐字](progress/改寫前-decisions-1118-night.md)",
         "[aos-llm 去留調查](../proto8/thinking/2026-11/18/aos-llm-去留調查/README.md)",
         "[重建步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)",
         "[litellm 1.109.1 實測](../proto8/thinking/2026-11/19/litellm-1.109.1-實測.md)"
@@ -226,11 +177,11 @@
       "since": "2026-11-18"
     },
     "default-stack": {
-      "title": "預設 stack：aos-agent 不給 -t、-d 時從 cwd 的 agent stack 找目標與 daemon（11-21 已做），剩 aos-home 跟上與兩件小事",
+      "title": "預設 stack 剩兩件小事：條文 N-63 加註、要不要在 stack 裡記定義夾",
       "status": "等使用者",
       "flow": "",
-      "what": "11-21 使用者裁「-t xxx沒寫，AOS_AGENT又沒有的時候，會找./.stack…沒有./.stack那就找./」，丁不做（agent 不和 daemon 耦合）；同天又說「把-d省略也做一下吧，弄成往上兩層去找」。線 top-1121-deft 兩輪做完：目標 -t ＞ AOS_AGENT ＞ ./.stack ＞ ./（特徵檔 stderr.txt＋表上對得到），daemon -d ＞ AOS_DAEMON ＞ 那個 stack 往上兩層（要是 daemon 的 stack 且表上有它）；樹根的 ./.stack 不當 daemon。",
-      "next": "1. ~/aos-home 要吃到得在 repo 跑 install.py（換掉活樹的 lib/），由使用者點頭；站在 agent stack 以外的地方要 export AOS_DAEMON 或給 -d。2. 條文 N-63 要不要加註（字在紀錄「要給條文加註的字」，第二輪後要改寫成「aos-agent 改從 agent stack 往上兩層找」）。3. 想問使用者：要不要在 stack 裡記定義夾／工作區（沒問、沒做）。",
+      "what": "預設 stack（不給 -t、-d 時從 cwd 的 agent stack 找）11-21 已做；install.py 11-21 跑過多次，`e8d87d7cd` 在活樹驗過省略 -t／-d；站在 stack 外要 export AOS_DAEMON 已寫進換機說明書",
+      "next": "1. 條文 N-63 要不要加註（字在紀錄「要給條文加註的字」，第二輪後要改寫成「aos-agent 改從 agent stack 往上兩層找」；整理報告歸組 4 條文大修）。2. 想問使用者：要不要在 stack 裡記定義夾／工作區（daemon 表的 as_written 已經記了，可能不用另記；沒問、沒做）",
       "see": [
         "[aos-agent-預設目標-1121](../proto8/thinking/2026-11/21/aos-agent-預設目標-1121.md)",
         "[05-使用者補充-1120](../proto8/thinking/2026-11/18/default-stack-1118/05-使用者補充-1120.md)",
@@ -239,18 +190,40 @@
       "since": "2026-11-18"
     },
     "aos-compile": {
-      "title": "aos-compile：用 Python 寫、編譯成 aos 夾",
+      "title": "編譯與 Python 庫：等使用者親手試（併 aos-pylib、aos-compile-base、aos-gdb-1120）",
       "status": "等使用者",
       "flow": "",
-      "what": "使用者 11-18 晚裁定：庚（一支 agent.py 宣告 SYSTEM／TOOLS／LLM／FSM 編譯成定義夾的 json）先做、己（一頁總覽）後做；除錯以 loop 那層為主。11-19 設計稿與六題裁定（定調「C 與 .o」：重新編譯直接蓋、不記指紋、產出後的 json 照常能改）。11-19 第一刀施工完（線 compile-geng-s1-1119）：py/aos/agent_spec.py、templates/agent-python（agent.py＋編譯產物＋英文 README）、py/tests/test_agent_spec.py，七條驗收在乾淨複本全過；沒動 agent_def、知識庫、現有範本。11-19 寫定義的名字 ag 改叫 defs（線 aos-defs-rename-1119，使用者「就 aos.py.agent.defs 吧」）：agent.py 開頭 from aos.py.agent import defs、其後 defs.main／defs.tool／defs.load…。11-19 換成編譯用語（線 aos-defs-rename2-1119，使用者「要，可以參考那些程式語言的類似的功能的名字」「然後以後也用編譯、重新編譯來說，不要再用生、重生這樣」）：指令 --compile／--dry-run、Python defs.compile／defs.write；編譯產物一字不變。11-19 下午兩個名字照使用者改（線 aos-defs-rename3-1119，選項框「改 defs.drop」「留 defs.load」「改 defs.extern」）：defs.no→defs.drop、defs.by_hand→defs.extern；工具骨架 tool.py 旗標對齊（「開一刀對齊 (Recommended)」）：--compile [位置]／--dry-run、Python tool_spec.write，--tooldef／--metainfo 留著（aos-tools 協定）；編譯產物一字不變。",
-      "next": "使用者：點頭後在 ~/repo/aos/proto8 跑 install.py（會換掉使用中的 bin/lib），照紀錄「使用者怎麼試」複製骨架、改 agent.py、python3 agent.py --compile、ctl add 試用。之後：工具包靜態／動態連結做成編譯選項（線 aos-defs-rename2-1119 第二筆）；第二刀（agent_def check 順手重新編譯）使用者 11-19 劃掉、不做；知識庫最後",
+      "what": {
+        "$ref": "progress/aos-compile.md"
+      },
+      "next": "",
       "see": [
         "[第一刀施工紀錄](../proto8/thinking/2026-11/19/aos-compile-庚-第一刀.md)",
         "[第一刀範圍說明](../proto8/thinking/2026-11/19/aos-compile-庚/08-範圍切法.md)",
         "[庚設計稿 README](../proto8/thinking/2026-11/19/aos-compile-庚/README.md)",
         "[11-19 六題裁定](../proto8/thinking/2026-11/19/aos-compile-庚/10-使用者裁定.md)",
         "[11-18 使用者裁定](../proto8/thinking/2026-11/18/aos-compile-1118/07-使用者裁定.md)",
-        "[ag 改叫 defs、換成編譯用語、drop／extern、tool.py 旗標](../proto8/thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)"
+        "[ag 改叫 defs、換成編譯用語、drop／extern、tool.py 旗標](../proto8/thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)",
+        "[施工紀錄](../proto8/thinking/2026-11/19/aos-pylib-施工.md)",
+        "[aos-pylib-1119](../proto8/thinking/2026-11/19/aos-pylib-1119/README.md)",
+        "[使用者裁定](../proto8/thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)",
+        "[README](../proto8/thinking/2026-11/20/aos-compile-base-1120/README.md)",
+        "[待裁題](../proto8/thinking/2026-11/20/aos-compile-base-1120/09-C-待裁題.md)",
+        "[使用者裁定](../proto8/thinking/2026-11/20/aos-compile-base-1120/10-使用者裁定.md)",
+        "[規劃稿 README](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/README.md)",
+        "[要帶給使用者的衝突](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/06-對照與衝突.md)",
+        "[規劃稿的待裁題](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/08-待裁題.md)",
+        "[使用者已答四題](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/12-使用者已答.md)",
+        "[第 0 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k0-1120.md)",
+        "[第 1 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k1-1120.md)",
+        "[第 2 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k2-1120.md)",
+        "[第 3 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k3-1120.md)",
+        "[第 4 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k4-1120.md)",
+        "[第 5 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k5-1120.md)",
+        "[kernel 入口紀錄](../proto8/thinking/2026-11/21/aos-pylib-kernel入口-1121.md)",
+        "[aos-gdb-問答-1120](../proto8/thinking/2026-11/20/aos-gdb-問答-1120.md)",
+        "[aos-gdb-wait-1120](../proto8/thinking/2026-11/20/aos-gdb-wait-1120.md)",
+        "[aos-gdb-small-1120](../proto8/thinking/2026-11/20/aos-gdb-small-1120.md)"
       ],
       "since": "2026-11-18"
     },
@@ -292,19 +265,6 @@
       ],
       "since": "2026-11-19"
     },
-    "aos-pylib": {
-      "title": "整套 Python 庫版面（aos.py 入口＋通用代理＋把手）",
-      "status": "等使用者",
-      "flow": "",
-      "what": "三刀已交（3c4cc4c52 install.py 抄完刪孤兒、ee96fd190 入口 aos.py＋通用代理＋把手、1b1e108cc a.bp／a.look 接上與 a.bp.add.<種類>(...)）。寫定義的叫 defs、在 aos.py.agent.defs（使用者 11-19「就 aos.py.agent.defs 吧」），入口不轉出 ag；std 暫放入口頂層（頂層暫定）。",
-      "next": "等使用者：std 留不留在入口頂層、建斷點參數名 id=／tool=（brain_failed 是 code）、skip／wait_stopped 名字；在要用的那份 proto8 跑 install.py（換活樹）要使用者說。py/README.md 補一段 aos.py 等 aos-defs-rename-1119 交完再做；骨架與測試的 ag.→defs. 歸那條改名線。",
-      "see": [
-        "[施工紀錄](../proto8/thinking/2026-11/19/aos-pylib-施工.md)",
-        "[aos-pylib-1119](../proto8/thinking/2026-11/19/aos-pylib-1119/README.md)",
-        "[使用者裁定](../proto8/thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)"
-      ],
-      "since": "2026-11-19"
-    },
     "aos-base-audit": {
       "title": "基底體檢（daemon 到 kernel）",
       "status": "等使用者",
@@ -328,19 +288,6 @@
       ],
       "since": "2026-11-19"
     },
-    "aos-vs-c": {
-      "title": "aos 的「C 語言」跟真實世界 C 對照，還缺什麼",
-      "status": "open",
-      "flow": "",
-      "what": "線 aos-vs-c-1119（11-19）只查不修：七個面向逐項對照，缺口 G1～G13 依痛感排序；Argon 審 18 點採納 16。使用者 11-19 下午選項框答了七題：第 1 題選「只放進檢查指令」，第 2 題「維持現狀」但把「靜態連結只固定名單」寫清楚，第 3 題維持現狀，第 4、6 題不做，第 5 題不加，第 7 題都先不排。線 aos-check-refs-1119 已交第 1 題（agent_def check 補查工具路徑、格／loop／hook 程式、腦設定型別）與第 2 題的文件（骨架 README、教學、C-87 加註），也改正骨架 README 的「next start」。",
-      "next": "照使用者，其餘不做；本條沒有待做。",
-      "see": [
-        "[README](../proto8/thinking/2026-11/19/aos-vs-c-1119/README.md)",
-        "[02-缺口清單](../proto8/thinking/2026-11/19/aos-vs-c-1119/02-缺口清單.md)",
-        "[aos-check-refs-1119](../proto8/thinking/2026-11/19/aos-check-refs-1119.md)"
-      ],
-      "since": "2026-11-19"
-    },
     "aos-init-kernel": {
       "title": "初始 kernel：llm 件＋權限沙箱件、都可選（調查＋發想）",
       "status": "等使用者",
@@ -353,50 +300,14 @@
       ],
       "since": "2026-11-20"
     },
-    "aos-compile-base": {
-      "title": "編譯的通用底座與 Python 函數直接當工具／hook",
-      "status": "等使用者",
-      "flow": "",
-      "what": "調查與發想已寫好（只查只寫，沒改程式）：底座五個形狀、函數當工具／hook 四個形狀與一個 repo 外原型；八題待裁。使用者 11-20 選項框答四題：底座做到哪一步「整套是一個程式庫」；函數變成工具或 hook 後產物要不要跟 agent.py 脫鉤「抽出來」；說明與參數從哪來「兩種都收，明寫的贏」；先做哪個「一起，同一套寫法」。11-20 規劃稿已交（線 aos-pylib-plan-1120，只出稿）：程式庫長相（defs.Agent 物件、.dry_run()／.compile(夾)、fn 模組的 @fn.tool／@fn.hook、defs.extern 連結版）、跟已定的逐條對照、施工六刀、Argon 審一次。11-20 使用者選項框答規劃稿待裁四題：第 4 題「新名字 fn」、第 1 題「先不定」、第 6 題「接受，寫進「別濫用」」、第 5 題「先不定」（先照全部報錯）；第 2、3 題只告知、未明確裁；問開工答「兩邊都開工」。第 0 刀已交（線 aos-pylib-k0-1120）：新檔 py/aos/spec_base.py（例外、推名字、旗標殼、寫檔後端含程式檔與連結），agent_spec、tool_spec、tools_def 改用它，兩個骨架的產物與輸出逐 byte 不變。第 1 刀已交（線 aos-pylib-k1-1120）：新模組 fn（py/aos/py/fn.py 只轉出，本體 fn_mark、fn_run）：@fn.tool、@fn.hook、fn.param、fn.fail、fn.block、fn.main；說明取 docstring、型別取註記、參數說明取 Args:，也收明寫的、明寫的贏；工具骨架換成 @fn.tool def add(a: float, b: float)＋fn.main(add)，tools_def 跟著，舊寫法不留、tool_spec 留作內部零件；骨架產物與四個旗標、直接執行的輸出逐 byte 不變；@fn.hook 的回話（None／dict／fn.block 退 10）已能用。11-20 使用者選項框再答：第 2 題「.compile(夾) 寫檔、.dry_run() 只算」、第 3 題「小寫」、開哪幾刀「第 1、2 刀都開」。第 2 刀已交（線 aos-pylib-k2-1120）：defs.Agent(說明, system=, tools=, llm=, fsm=, hooks=…) 物件與 .dry_run()／.compile(夾)、defs.main(物件)、defs.fsm 回的能單獨編譯 fsm.json、defs.load 回物件（欄位小寫、base.pack(...)）；defs.compile／defs.write 拿掉；agent 骨架、教學 04～08、骨架 README 改新寫法；骨架與八隻例子重新編譯的產物與各旗標輸出逐 byte 不變（--help 除外）。11-20 使用者說「開工吧」，第 3 刀已交（線 aos-pylib-k3-1120）：agent.py 裡 @fn.tool／@fn.hook 的函數放進 tools=[…]／hooks=[…]，編譯時抽成定義夾的 fn/<名>.py、寫進 tools.json／hooks.json（新 aos/fn_spec.py、hook 那塊拆成 aos/agent_spec_hooks.py）；函數只能用內建、自己的變數、fn、最上層 import 的模組，其餘 SpecBad（第 5 題「先不定」照設計）；相對路徑從 fn/ 算（第 7 題）；沒用函數的骨架與八隻例子產物逐 byte 不變；假腦實掛：腦叫 add 拿到 5、含 secret 的 ws_write 被攔。第 4 刀第一筆已交（線 aos-pylib-k4-1120）：defs.extern(目標) 換意思＝那一欄編成連結（照字面存、只重做連結、不碰目標）；fsm 只能連同一夾（實測：連到夾外格程式讀錯夾）；defs.load 的底連到夾外照樣交出、夾內接不上；agent_def check 報斷鏈；說明寫明別濫用與會被指令寫穿（第 6 題「接受」）；沒用 extern 的產物逐 byte 不變。第 4 刀第二筆已交：defs.Agent(..., loop=defs.loop(every_ms=N)) 定 loop.json 的 interval_ms（第 8 題「加一個宣告」；只開 every_ms），不給＝300、產物逐 byte 不變；實掛量到間隔約 1000 毫秒。第 5 刀已交（線 aos-pylib-k5-1120）：教學 01～08 照新寫法在乾淨複本＋暫存教學夾、真 daemon、假腦從頭打兩遍，程式沒錯；改了教學五處字（06-1 兩處舊詞 SYSTEM／TOOLS、aos-llm ls 挪到問過腦之後、06-2「衍生還能做的」兩個例子補前提）；C-87 加註字擬好在紀錄裡、沒交進條文檔。11-21 kernel 入口已交（線 top-1121-kdefs，使用者「編譯的kernel入口那塊可以派」、待裁第 9 題「from aos.py.kernel import defs」）：defs.Kernel(說明, knobs=, hooks=, program=\"kernel\"／\"kernel_llm\", body=defs.loop()／defs.daemon())、defs.main(物件)；編出跟 templates/kernel 手寫夾同樣的 _entry、loop.json／daemon.json、kernel.json、loop_hooks.json、llm 的 interfaces.json；@fn.hook 抽成 fn/<名>.py；骨架 templates/kernel/kernel-python；真站跑一輪、真 daemon 掛一列都驗過",
-      "next": "A2、A3、B4、C1 未問；往程式庫走要先規劃，還沒派線；規劃稿已交、等使用者看衝突六條與待裁十題（只有第 0 刀不依賴任何題；施工另要他點頭）；第 0 刀已交，下一步是第 1 刀（fn，第 4 題已答）與第 2 刀（Agent 物件），都等使用者點頭；第 2 刀前宜再明確問第 2、3 題；活樹要在 repo 跑 install.py 才吃到（要使用者點頭）；第 1 刀已交：第 3 刀（函數進 agent、抽成 fn/<名>.py）等第 2 刀交了才開；py/README.md、templates/README.md、py/docs/04 三份共用文件本線交件時被別線佔著，要加的字在第 1 刀紀錄末節；第 2 刀已交：下一步第 4 刀（extern 連結版）、第 3 刀（函數進 agent，等第 1 刀）；教學 06-1 兩行與 py/docs/04 一列因別線 claim 未改（見第 2 刀紀錄）；活樹要在 repo 跑 install.py 才吃到新寫法（要使用者點頭）；第 3 刀已交：下一步第 4 刀（extern 連結版）；py/docs/01、py/README.md、py/docs/04 要補的字列在第 3 刀紀錄；第 4 刀已交：第二筆 loop= 宣告（第 8 題）同線接著交；之後第 5 刀（教學實跑、條文加註）等使用者；第二筆已交：loop.json 其餘可開放的鍵（max、on_timeout_ms）列在第 4 刀紀錄等使用者看；第 5 刀已交：C-87 加註那句等使用者點頭；hook 兩條線（k2b、k5）交件後教學 06-3、06-1 末節、04 的 loop.json 那幾處要再對一次（列在第 5 刀紀錄）；kernel 入口已交：替使用者做的九個選擇（一個類別用 program= 分兩種、body 預設照 start-api、knobs 不驗等）等使用者看；defs.load／extern／files= 與 endpoint 程式沒做；活樹要 install.py 才吃到",
-      "see": [
-        "[README](../proto8/thinking/2026-11/20/aos-compile-base-1120/README.md)",
-        "[待裁題](../proto8/thinking/2026-11/20/aos-compile-base-1120/09-C-待裁題.md)",
-        "[使用者裁定](../proto8/thinking/2026-11/20/aos-compile-base-1120/10-使用者裁定.md)",
-        "[規劃稿 README](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/README.md)",
-        "[要帶給使用者的衝突](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/06-對照與衝突.md)",
-        "[規劃稿的待裁題](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/08-待裁題.md)",
-        "[使用者已答四題](../proto8/thinking/2026-11/20/aos-pylib-plan-1120/12-使用者已答.md)",
-        "[第 0 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k0-1120.md)",
-        "[第 1 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k1-1120.md)",
-        "[第 2 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k2-1120.md)",
-        "[第 3 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k3-1120.md)",
-        "[第 4 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k4-1120.md)",
-        "[第 5 刀紀錄](../proto8/thinking/2026-11/20/aos-pylib-k5-1120.md)",
-        "[kernel 入口紀錄](../proto8/thinking/2026-11/21/aos-pylib-kernel入口-1121.md)"
-      ],
-      "since": "2026-11-20"
-    },
-    "aos-gdb-1120": {
-      "title": "aos-gdb：pause 加 wait=、斷點 id 與 add 的回傳（11-20 問答）",
-      "status": "等使用者",
-      "flow": "",
-      "what": "使用者 11-20 問 a.stop() 是不是阻塞、斷點 id 為什麼是 xxxx_1；只讀快查後選項框答四題：加 wait= 的是「暫停 a.bp.pause()」；不等時「回一個可以查的物件。用is_done()」；id 格式他在 Other 反問「不能純數字，然後搭配id、屬性(hook點種類)嗎？」（頂層的解讀：要純數字 id、種類放屬性，刪了重不重用待確認）；a.bp.add「回物件、帶屬性」。之後又答：resume／step「三個都加」、號碼「不重用」、屬性「每次讀都重新查」、扣在斷點上下 ctl stop「這次不動」。線 aos-gdb-wait-1120 已施工：三個動作 wait=False 回 Pending（is_done()、wait()）；id 純數字不重用；add 回斷點物件；替使用者選了：id=\"mine\" 照留、號碼不能自己挑、觀察者與觸發器同一條數列、Pending 只多 wait()。乾淨複本假腦測試全過。三小題使用者選「Pending 加 cancel(),a.bp.set 也回物件,斷點號碼檔名補零」，線 aos-gdb-small-1120 已施工：cancel() 只是不等、不收回；set 回斷點物件；名字號碼補零到 4 位（gdb_0012）；gdb 測試 66 支全過",
-      "next": "使用者點頭後在要用的 proto8 跑 install.py，照兩份紀錄試；已經掛著舊名 gdb_1 的 agent 先 aos-agent hook rm 再重下",
-      "see": [
-        "[aos-gdb-問答-1120](../proto8/thinking/2026-11/20/aos-gdb-問答-1120.md)",
-        "[aos-gdb-wait-1120](../proto8/thinking/2026-11/20/aos-gdb-wait-1120.md)",
-        "[aos-gdb-small-1120](../proto8/thinking/2026-11/20/aos-gdb-small-1120.md)"
-      ],
-      "since": "2026-11-20"
-    },
     "aos-hook-iface": {
-      "title": "hook 點的介面與耦合",
+      "title": "hook 點的介面：剩看替你做的選擇與 gdb 岔路",
       "status": "等使用者",
       "flow": "",
-      "what": "調查與發想已寫好（只查只寫，沒改程式）：加一個 hook 點要動的地方、呼叫端與手抄清單的耦合、fsm 與 eca 差異；甲～戊五個形狀；十題待裁；11-20 使用者用選項框答三題：整理到「宣告式＋小函式都做」、管到「任何子程式，含非 Python」、「在 loop 層加通用的點」（他另說「我原本以為你會把hook界面和compile分開來設計」，所以 hook 介面獨立一條線）。設計稿與施工計劃已交（線 aos-hook-plan-1120，只出稿沒改程式）：每個提供者一份 hook_points.json、小庫 aos.hook_point、指令 aos-hook fire、aos-loop 的 before_run／after_run；六條衝突、十四題待裁、施工七刀（第 1、2、4 刀不依賴待裁題）；使用者 11-20 已答七題（方向三題：宣告式＋小函式都做、任何子程式含非 Python、在 loop 層加通用的點；設計四題：能攔、四個點都跟著停、before_run／after_run、不留舊的裝新版時一起重新編譯）。施工第 1 刀已交（線 aos-hook-k1-1120，使用者「兩邊都開工」）：五份宣告檔、小庫 aos.hook_point、兩支測試，只加不改、執行時沒人讀；17 項文件漂移列成已知、沒補。施工第 4 刀已交（線 aos-hook-k4-1120，使用者「先開第 4 刀」）：新指令 aos-hook（fire、points、check），非 Python 的子程式也能發 hook 事件；跑 hook 全交共用引擎、只加不改，沒人叫它、hook_fire 照舊；--agent 只留位置（等第 2 刀）。待裁第 8 題已做（線 aos-hook-drift-1120，使用者選「派線：補文件＋查證」）：17 項文件漂移照程式與宣告補進 06-hook.md、self_hook 說明、知識庫 me/self_hook.json，一致性測試的已知清單清空；eca 等回答時來的 /compact 信實跑確認 before_queue 跑兩次（沒修）。施工第 2 刀的庫那一半（2a）已交（線 aos-hook-k2-1120，使用者「開工吧」）：把手 hook_point.open 與 agent 的 agentlib/agent_hooks.open（take_letter、guard_tool、announce_tools、clock_tick）做好、測好，aos-hook 經把手跑並接上 --agent；呼叫端一支沒換、舊函式留著。第 8 題的 slash 雙過已修（線 aos-hook-drift-1120 第二輪，使用者選「修：只過一次」）：eca 等回答時來的 slash 信先認、不過 hook，留到下一輪過一次；新測試 test_slash_hook_once 守四種情境。施工第 5 刀的 aos-loop 那一半已交（線 aos-hook-k5-1120）：loop.json 多 on_before_run／on_after_run 與兩個 _if 旗標檔（before 退 10＝跳過這一圈）、四個點失敗都收工（使用者「四個點都跟著停」，錯誤行 PointFailed；aos-daemon 起停照舊只 warning）、aos-daemon 不收那四鍵；沒人掛時每圈多花的量不出來。施工第 2 刀的後半已交（線 aos-hook-k2b-1120）：agent-fsm 格程式與 start-api 抄本、aos-eca-turn、aos-mcp、kernel、hook_fire 全部改用 hook 遙控器（包裝與三段重抄拿掉）；apps/hook/lists.py 刪掉（使用者「lists.py可以刪掉」）；agentlib/hooks.py 拆出 hook_clock.py（350→207 行）；全套測試逐夾比對與假腦真 daemon 實跑行為不變（eca 攔信多查 aos-post done 退碼，設計就寫了）。施工第 3 刀已交（線 aos-hook-k3-1120）：agent 的 hook 遙控器與 hooks.fire 改讀定義夾 interfaces.json 的 hook_points（有 hook 沒寫＝HooksBad）；hooks.EVENTS 改由 aos 自己帶的四份宣告算出（只驗事件名與給 gdb，第 6 刀拿掉）；kernel 三個點改讀 kernel/hook_points.json（使用者「一起搬」）；六份有 hooks 的定義與編譯輸出寫 hook_points；掛到不會發的事件照舊不管。施工第 5 刀後半已交（線 top-1121-hook5，11-21 凌晨家機）：範本 loop.json（agent-fsm、agent-python、eca-claude、eca-pi 與兩份抄本）接上 before_run／after_run（aos-hook fire --agent、旗標檔在才跑）；編譯有 hooks 時寫四鍵；旗標由 aos-agent hook add／rm／reset、aos-hook fire after_start、aos-hook check（帶 stack）對（新小庫 aos/hook_flags.py）；procs-kernel 與 perm 抄本接 loop 的四個點，清單在同夾 loop_hooks.json（kernel 程式沒改）；loop_points.json 拿掉 not_fired_yet；hook_fire 照舊沒動。hook_fire 換 aos-hook fire 已交（線 top-1121-hookfire，使用者 11-21「1.可以。2.可以。」）：範本與編譯的 on_start／on_stop 改叫 aos-hook fire -q --agent，py/tools/agent/hook_fire 刪掉；起來就照清單對旗標（k5b 留的那塊自動解決）；舊 loop.json（還指 hook_fire）裝新版後那隻起不來。使用者 11-21 看了 k5b 回報：「剛剛那個hook我覺得OK，畢竟hook體系的唯一約定，就是要在interfaces.json中宣告，有宣告就能用，至於怎麽實作的，就是各家自己的事情。」（逐字記在 hook_fire 換紀錄） 使用者 11-21 審宣告格式（hook-points-格式-使用者審-1121 第 1～5 則）：硬性只要 id 與 input schema、change 改 output schema、其餘鍵想放啥放啥；provider 寫 aos-loop 看不出哪來，要像 #include、兼容指示詞；interfaces.json 的 hook_points 收字串（檔名）、陣列（每項帶 id）、物件（id 當鍵）。引入寫法規劃稿已交（線 top-1121-hpinclude，只出稿沒改程式）：五種候選，建議 $include 鍵、值寫 {\"$env\": \"AOS_HOME\", \"$path\": …}（同 procs-kernel loop.json 與 tools.json $override 的樣子，不改指示詞、不動 C++、動態連結）；查實 block、change、condition、entry_keys 會改變行為，其餘只驗或列給人看，gdb 沒讀宣告；loop 與 agent-fsm 新格式樣本；施工兩刀，排在第 6、7 刀之前；四題待裁、十條衝突（宣告檔不解指示詞是現況就違反 N-45）。 使用者 11-21 定案（新格式、hooks.json／hookeds.json、第四層「庫也極簡」、kernel 甲案）已施工交件（線 top-1121-hooknew）：interfaces.json 最外層 hooks／hookeds（收檔名與指示詞）、宣告只要 input、清單 {名: 格}、handler 工作夾 hookeds/；引擎只叫 handler 交回退出碼與 stdout，攔／改／condition／失敗規矩改由 agent 一家、kernel、compact_hook、gdb_trigger 自己做；intercept／async／on_error、旗標檔、aos-hook points／check、--field*、provider 表拿掉；aos-hook fire 只剩 --list／--def、--stack、--stop-on-nonzero、-q；before_run／after_run 編譯時有人掛才接；kernel_hooks.json／kernel_hookeds.json＋\"kernel\": {}。 hook 總文件（原第 7 刀）已交（線 top-1121-hookdoc，只動文件與知識庫）：py/aos/apps/hook/docs/ 入口＋七份（一頁看懂、宣告格式、寫 handler、掛 hook、各家的點與規矩、自己發事件、限制與還沒做的）；06-hook、mcp／eca／fork／kernel README、知識庫五頁、docs/zh 教學一頁對齊到程式（queue 點 condition 照收不比、screen_linger 只 warning、mcp／eca 讀的是 hookeds、kernel 的 hook 在 kernel_hookeds.json）。 gdb 從宣告讀（原第 6 刀）照使用者 11-21「4.要做，我覺得可以在gdb啓動時給他選項，跟他說可以參考這份宣告，然後再去做一些事情。」做成啟動選項（線 top-1121-gdbdecl）：aos-gdb --hooks FILE（可重複）／--def-hooks（讀那隻定義 interfaces.json 的 hooks）載入宣告當參考；REPL 裡 hooks 列點與欄位、宣告多的點也能下斷點、主詞照 condition／subject、點名或 py 條件欄位對不上只一行 warning、a.bp.event() 照 input schema 排停下的事件；不給選項照舊；扣住或暫停不從宣告讀（before_run／before_compact 要不要改扣住是岔路，等使用者）。",
-      "next": "使用者：1) 活樹在裝新版前不要起；照 hook-新格式施工-1121/03 的步驟停樹→repo 跑 install.py→換 ann／llm／perm／eca 定義夾的檔→把各 stack 的舊 hooks.json 轉成 hookeds.json、hooks/ 夾改名 hookeds/→hook ls -l 驗過再起；2) 看 02 的替你做的選擇（尤其第 1 條：能攔的點 hook 失敗＝停、其餘只 warning；第 3 條：after 點退 10 也讓 loop 收工）；3) 點頭刪 py/aos/hook_handle.py、hook_flags.py（沒人用）；4) 看條文要補的字（05：C-90、N-45、附錄 4…）；5) 之後：agent-fsm 的壓縮兩點（compact4 施工中）；gdb 讀宣告已做成 aos-gdb --hooks／--def-hooks（要 install.py 才吃到），試用後定岔路：有宣告時 phase before＋block true 的 before_run、before_compact 要不要改成扣住（gdb-參考宣告-1121 第四節）；6) wf/public/tools/fsm-guard 還是舊格式（程式＋README），要不要改",
+      "what": "hook 介面各刀、新格式、總文件、gdb 讀宣告都已交；活樹換新格式已做（`62129fe49`），hook_handle.py、hook_flags.py 已刪（`370962554`），fsm-guard 已改 hookeds 格式。使用者 11-21：「剛剛那個hook我覺得OK，畢竟hook體系的唯一約定，就是要在interfaces.json中宣告，有宣告就能用，至於怎麽實作的，就是各家自己的事情。」",
+      "next": "使用者：1) 看 02 的替你做的選擇（尤其第 1 條：能攔的點 hook 失敗＝停、其餘只 warning；第 3 條：after 點退 10 也讓 loop 收工）；2) gdb 岔路：有宣告時 phase before＋block true 的 before_run、before_compact 要不要改成扣住（gdb-參考宣告-1121 第四節）；3) 條文要補的字（05：C-90、N-45、附錄 4…；整理報告歸組 4 條文大修）。agent-fsm 的壓縮兩點歸 compact-improve",
       "see": [
+        "[改寫前逐字](progress/改寫前-aos-hook-iface.md)",
         "[README](../proto8/thinking/2026-11/20/aos-hook-iface-1120/README.md)",
         "[待裁題](../proto8/thinking/2026-11/20/aos-hook-iface-1120/08-D-待裁題.md)",
         "[設計與計劃 README](../proto8/thinking/2026-11/20/aos-hook-plan-1120/README.md)",
@@ -462,11 +373,11 @@
       "since": "2026-11-20"
     },
     "aos-home-browse-1120": {
-      "title": "使用者 11-20 晚瀏覽 ~/aos-home 提的問題與改進點（陸續記）",
+      "title": "start-eca 的 compact_hook 要不要也改成借的（11-20 瀏覽 ~/aos-home 剩的一題）",
       "status": "暫停",
       "flow": "",
-      "what": "他說「總之我接下來說的，都麻煩先記下來」；逐字與當場查的現況在筆記裡，一則一段。已裁：起手範本的格程式改成借的（從 AOS_HOME 取，不整份帶進定義夾）——11-21 線 top-1121-borrow 做完：start-api 的 ann 的 fsm.json 四格與 hook_points 動態連結 $AOS_HOME/templates/agent-fsm；interfaces.json 保持想加啥就加啥、有需求再定規矩；description 放著。待討論：hook_points.json 的宣告格式他要審、會提建議（例：直接拿 json schema），審之前現在的格式算暫定。另見 agent-fsm-py-folder（.py 收進子夾、重新規劃架構）",
-      "next": "1. 起手範本 ann 夾裡已沒人引用的九個檔（八支 .py＋hook_points.json）等使用者點頭刪；~/aos-home 的 ann 怎麼跟上寫在紀錄。2. start-eca 的 compact_hook 要不要也改（是 Claude Code 設定裡的 shell 字串，不在現有寫法裡），等使用者說。3. hook 點宣告格式找時間跟他討論（hook 第 6、7 刀與總文件動到這格式前先問他）",
+      "what": "使用者 11-20 晚瀏覽 ~/aos-home 時說「總之我接下來說的，都麻煩先記下來」。已了：起手範本的格程式改成借的（11-21 線 top-1121-borrow）、沒人引用的九個檔已刪（`dff53b667`）、hook 宣告格式使用者 11-21 已審、新格式已施工。整理報告把這條跟 agent-fsm-py-folder 歸同一組（格程式整理，整組暫停）",
+      "next": "start-eca 的 compact_hook 要不要也改（是 Claude Code 設定裡的 shell 字串，不在現有寫法裡），等使用者說",
       "see": [
         "[aos-home-瀏覽筆記-1120](../proto8/thinking/2026-11/20/aos-home-瀏覽筆記-1120.md)",
         "[agent-fsm-py-收進子夾-1120](../proto8/thinking/2026-11/20/agent-fsm-py-收進子夾-1120.md)",
@@ -478,7 +389,9 @@
       "title": "agent-fsm 每輪問模型的輸入成本：工具說明佔九成六、快取沒命中",
       "status": "open",
       "flow": "",
-      "what": "11-20 晚家機 ~/aos-home 的 ann（sol）：think/request.json 53 KB 裡 tools 50.8 KB，問一句話 prompt_tokens 約 12.6k、cached_tokens 0。11-21 暫存樹實測（線 top-1121-skey）：sol 不加 session_key 4 輪快取都是 0；加 \"session_key\": \"litellm_session_id\" 第 2 輪起每輪命中 12,416（約 99%），4 輪沒中快取的 50,314 → 13,066。工具順序、system、對話前綴都穩定，原因就是沒寫這個鍵。續量（線 top-1121-skey2）：luna、terra、astra（chatgpt-gpt-6-astra，暫存樹新加一包）結果跟 sol 一樣；命中停在 12,416 是上游 128 一格、短句長不過下一格，長句會往上長。範本與活樹都沒改。 範本兩份與 ~/aos-home 已加 session_key、新增 astra 包（11-21）；使用者提：公開發佈時怕別人誤以為 aos 依賴 litellm（只記錄）。 工具說明（線 top-1121-tooldesc，11-21）：使用者選「只留一兩句＋指去知識庫」「self 只留兩支」，已施工：39 支說明改短、系統提示寫明知識庫在 $AOS_HOME/knowledge、agent-fsm 範本 self 只開 self_tools 與 self_state（36 支），sol 每輪 12,553 → 5,837 token（−53%）；全套測試沒有新紅。",
+      "what": {
+        "$ref": "progress/prompt-cost-cache.md"
+      },
       "next": "等別線交了補：self_llm 的說明（top-1121-effort）、三份寫著「11 包 40 支」的範本文件（top-1121-hookfire）；使用者要在 proto8 跑 install.py、把 templates/start-api/agents/ann 的 tools.json 與 system.txt 抄到 ~/aos-home/agents/ann 才吃到",
       "see": [
         "[session-key-實測-1121](../proto8/thinking/2026-11/21/session-key-實測-1121.md)",
@@ -486,18 +399,6 @@
         "[tool-desc-瘦身-1121](../proto8/thinking/2026-11/21/tool-desc-瘦身-1121/README.md)"
       ],
       "since": "2026-11-20"
-    },
-    "llm-effort": {
-      "title": "llm kernel 思考程度（reasoning_effort）的收尾",
-      "status": "等使用者",
-      "flow": "",
-      "what": "11-21 線 top-1121-effort 兩輪已交：信的 body 帶 reasoning_effort，kernel 照包的 reasoning_efforts 查；llm_http 的 api responses 把程度接成 configuration_update，換程度快取照中；隊 kernel 轉送也補了。（agent_spec_parts 的 LLM_KEYS 加 reasoning_effort 已由線 top-1121-hookfire 補上，agent-python、reviewer 範本的 interfaces.json 跟著多一鍵）。eca 也跟上（線 top-1121-ecaeffort）：llm.json 的 reasoning_effort 補成 claude --effort、pi --thinking；另比照縮預設工具包、加 system.txt、eca-claude 接上 before_compact／after_compact",
-      "next": "~/aos-home 跟著改要使用者點頭：repo 跑 install.py、llm/kernel.json 加 reasoning_effort_levels 與四包的 api、reasoning_efforts（完整內容在紀錄與回報）、agent 定義夾換新的 brain.py／llm_settings.py／interfaces.json；eca 定義夾換新的 interfaces.json、tools.json、system.txt、cli.json、compact_hook",
-      "see": [
-        "[llm-effort-1121](../proto8/thinking/2026-11/21/llm-effort-1121.md)",
-        "[eca-reasoning-effort-1121](../proto8/thinking/2026-11/21/eca-reasoning-effort-1121.md)"
-      ],
-      "since": "2026-11-21"
     },
     "shell-metaphor": {
       "title": "「在 shell 裡下 aos 指令」的比喻：等使用者定",
