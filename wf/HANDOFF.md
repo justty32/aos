@@ -17,7 +17,7 @@
 **醒來先做**（eca-aos，搬完或退回後）：
 1. 看 `~/.aos/scratch/home-move-1122/run-all.log` 最後幾行：`run-all: done`＝搬好；`rolled back`＝退回舊樹；其他＝卡住，查 `home-move.log`。
 2. 搬好時核對：`subagent ls` 要 3/4；`echo $AOS_STACK` 在 `_stack/procs/eca-aos`；跑 `bash ~/repo/aos/wf/tools/home-move-1122/home-move verify`。
-3. 收掉被打斷的線 A（`prompt-cache-key-1122`）留在 `~/.aos/scratch/prompt-cache-key-1122/` 的行程：只收 cwd 在那個夾裡的（`readlink /proc/<pid>/cwd` 核對後 kill），再重派 A（任務書在對話紀錄；要點：暫存 LiteLLM 放行 `prompt_cache_key`、20 輪比改前改後、正式那台不碰、第二段等回覆）。
+3. 線 A（`prompt-cache-key-1122`）搬家前已做完：無效（上游本來就拿 session_id 表頭當快取鍵），紀錄 `22501d7af`，不用收、不用重派；第一次搬家 13:53 在 stop-old 失敗已自動退回（腳本把使用者分頁算成舊樹），已修 `48478426e` 再搬。
 4. 告訴使用者結果、新的 Remote Control 要在 Claude app 的 session 列表找新的那個。他晚上要：真模型的 `LITELLM_KEY`（`aos-daemon-ctl -d ~/aos-home/.llm-stack shutdown` 後從有金鑰的殼 `home-move start-llm`）、第一次換機 commit（`stack-commit leave`）與要不要 push。
 
 **使用者今天的授權（逐字）**：「可以開工，去吧也可以動活樹」「你也可以先搬家」「zshrc可以動」「停下舊根斷線這件事情，你可以像用剛剛那個tmux一樣就是請他可能隔一段時間做幫你重啟」。push 沒給。刪檔沒給（搬家腳本只 mv、不刪）。`install.py` 今天跑過兩次（上午一次、線 3 後一次，`139d8dd2b`）。
