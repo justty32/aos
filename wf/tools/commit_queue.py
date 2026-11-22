@@ -2,7 +2,7 @@
 """commit_queue — 多條線共用一個工作樹時的 commit 排隊：申請者自己拿鎖當場做，在 repo 外的快取樹組 commit（HEAD＋這次的檔＋共用索引檔操作＋index_gen 生成物），CAS 推進 main，再補回共用 index 與工作樹。
 
   commit-request submit --line L [--files F…] [--rm F…] --msg-file M [--op JSON]… [--ops-file J]
-                        [--dry-run] [--keep-claim] [--wait S] [--repo R] [--cache C]
+                        [--dry-run] [--keep-claim] [--stack-commit] [--wait S] [--repo R] [--cache C]
   commit-request claim   --line L F…            開工時宣告「這些檔我在改」；被別條線 claim 著就失敗
   commit-request release --line L (F…|--all)    放掉自己的 claim；--force F… 不分是誰（頂層用）
   commit-request claims                         列出所有 claim
@@ -20,6 +20,8 @@
 單檔大小：--files 點名的每個檔在工作樹的大小（bytes；符號連結看連結本身）超過門檻，整個申請不收（FAILED RequestBad，exit 3），什麼都不 commit。
   太大＝本該放 temp/ 的東西被交進來（使用者 11-22 決定 C）。門檻預設 1 MB（MAX_FILE_BYTES）；wf/tools/commit_queue.json 的 max_file_bytes 改門檻、
   big_ok 放行（repo 根相對路徑或 glob）。設定從 HEAD 讀：改它要先交件，誰放行過什麼查得到；不在或讀不懂＝預設值並警告。_stack/ 底下的檔、--rm、--op 不查。
+--stack-commit：只給換機工具 wf/tools/stack-commit 用（線 ws-stack-1122-move-tool）。repo 根的 _stack/ 被根 .gitignore 忽略，這個旗標讓 _stack/ 開頭的新檔
+  跳過「被 .gitignore 忽略」那道檢查（該帶走哪些由 stack-commit 照 stack.gitignore 挑好）；前綴寫死在 STACK_COMMIT_PREFIX，其他路徑照舊擋。
 結果：stderr 給人看，stdout 最後一行 JSON {"status": DONE|BLOCKED|FAILED, "code", "commit", "files", "generated", "warnings", "hint"}。
 exit：0 DONE、1 內部錯誤、2 BLOCKED、3 申請不合格、4 生成器失敗、5 忙碌（等鎖逾時）、6 repo 狀態異常。
 設計與測試：proto8/thinking/2026-11/14/commit-queue-1114.md。純標準庫；不改訊息、不開分支、不 push、不刪共用工作樹裡的非生成檔。
@@ -51,6 +53,7 @@ STALE_MIN = 120          # claim 超過這麼多分鐘，擋下時標 stale
 CONFIG = "wf/tools/commit_queue.json"   # 可調的設定（單檔門檻、放行名單）；從 HEAD 讀
 MAX_FILE_BYTES = 1048576 # 單檔大小門檻的預設值（1 MB）；設定檔沒給或讀不懂就用這個
 SIZE_FREE_PREFIX = "_stack/"   # repo 根的 _stack/ 底下不查大小（對話紀錄長大是正常的）
+STACK_COMMIT_PREFIX = "_stack/"   # --stack-commit 只對這個前綴跳過 .gitignore 檢查（呼叫的人不能指定別的）
 DAY_TEMPLATE = """# proto8 討論紀錄：{date}
 
 ← [{month}](../README.md)｜[thinking](../../README.md)
@@ -649,6 +652,8 @@ class Queue:
         if bad:
             raise Stop("FAILED", "RequestBad", EXIT["invalid"], "; ".join(bad))
         new_files = [p for p in files if p not in head]
+        if a.stack_commit:              # 換機工具交的 _stack/ 檔：根 .gitignore 本來就忽略它們，照 stack.gitignore 挑過了
+            new_files = [p for p in new_files if not p.startswith(STACK_COMMIT_PREFIX)]
         if new_files:
             ign = g.run(["check-ignore", "--stdin", "-z"], data="\0".join(new_files).encode(), check=False).stdout.decode()
             ign = [p for p in ign.split("\0") if p]
@@ -841,6 +846,7 @@ def main(argv):
     s.add_argument("--ops-file")
     s.add_argument("--dry-run", action="store_true")
     s.add_argument("--keep-claim", action="store_true")
+    s.add_argument("--stack-commit", action="store_true")
     c = sub.add_parser("claim")
     c.add_argument("--line", required=True)
     c.add_argument("paths", nargs="+")

@@ -1,5 +1,5 @@
 #!/bin/bash
-# test_commit_queue.sh — 在 repo 外的暫存 clone 上測 commit_queue.py（兩線同時、別人 staged、索引列合併、claim 擋下、生成器失敗、CAS、半途被殺、生成物、month_set、進度檔 progress.json 的兩個 op、單檔大小門檻與放行名單）；不碰來源 repo
+# test_commit_queue.sh — 在 repo 外的暫存 clone 上測 commit_queue.py（兩線同時、別人 staged、索引列合併、claim 擋下、生成器失敗、CAS、半途被殺、生成物、month_set、進度檔 progress.json 的兩個 op、單檔大小門檻與放行名單、--stack-commit 只讓 _stack/ 跳過 .gitignore 檢查）；不碰來源 repo
 # 用法：test_commit_queue.sh <來源 repo> <repo 外的暫存夾>   每次在暫存夾下開一個新的 run-<時間> 子夾，不刪任何東西
 set -u
 [ -n "${BASH_VERSION:-}" ] || { echo "not bash" >&2; exit 1; }
@@ -290,6 +290,18 @@ printf '# t14 no config\n' > "$DAYDIR/t14nocfg.md"
 cq submit --line ok-a --files "$DAYDIR/t14nocfg.md" --msg-file "$(msg t14n m14n)" > "$RUN/t14n.out" 2>&1; E=$?
 check "config missing in main → default and a warning ($E)" bash -c "[ $E = 0 ] && grep -q 'not in main; using the default size limit 1048576' $RUN/t14n.out"
 rm -rf _stack "$DAYDIR/t14link.md"
+
+echo "== T15 --stack-commit: only _stack/ skips the .gitignore check (stack-commit's flag)"
+mkdir -p _stack/p wf/temp; printf 't15\n' > _stack/p/t15.txt; printf 't15\n' > wf/temp/t15.txt
+B=$(head_)
+cq submit --line ok-a --files _stack/p/t15.txt --msg-file "$(msg t15a m15a)" > "$RUN/t15a.out" 2>&1; E=$?
+check "without the flag a new _stack/ file is refused as ignored ($E), main unchanged" bash -c "[ $E = 3 ] && grep -q 'ignored by .gitignore' $RUN/t15a.out && [ $(head_) = $B ]"
+cq submit --line ok-a --stack-commit --files _stack/p/t15.txt wf/temp/t15.txt --msg-file "$(msg t15b m15b)" > "$RUN/t15b.out" 2>&1; E=$?
+check "with the flag an ignored file outside _stack/ is still refused ($E)" bash -c "[ $E = 3 ] && grep -q \"ignored by .gitignore: \['wf/temp/t15.txt'\]\" $RUN/t15b.out && [ $(head_) = $B ]"
+cq submit --line ok-a --stack-commit --files _stack/p/t15.txt --msg-file "$(msg t15c m15c)" > "$RUN/t15c.out" 2>&1; E=$?
+check "with the flag the _stack/ file is committed ($E), shared index has it" bash -c "[ $E = 0 ] && [ -z \"\$(git status --porcelain -- _stack/p/t15.txt)\" ]"
+check "the commit holds _stack/p/t15.txt" in_commit main _stack/p/t15.txt
+rm -f wf/temp/t15.txt
 
 check "end: nothing staged except the foreign file" [ "$(git diff --cached --name-only)" = proto8/foreign_staged.md ]
 
