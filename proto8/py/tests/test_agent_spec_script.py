@@ -162,7 +162,7 @@ class NoFsm(unittest.TestCase):
         return dest
 
     def test_eca_templates(self):
-        for template, llm in (("eca-claude", {"model": "opus"}), ("eca-pi", {})):
+        for template, llm in (("eca-claude", {"model": "opus", "reasoning_effort": "high"}), ("eca-pi", {})):
             with self.subTest(template=template):
                 dest = self.copy(template)
                 meta = json.loads((dest / "_metainfo.json").read_text())

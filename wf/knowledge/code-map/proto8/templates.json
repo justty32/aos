@@ -45,7 +45,7 @@
    "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
    "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
    "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
-   "llm.json": "設定（鍵：model）",
+   "llm.json": "設定（鍵：model、reasoning_effort）",
    "loop.json": "Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho…",
    "screen": {
     "_entry": "入口：`aos-eca-screen --eca ..`",
@@ -218,7 +218,7 @@
      "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
      "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
      "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
-     "llm.json": "設定（鍵：model）",
+     "llm.json": "設定（鍵：model、reasoning_effort）",
      "loop.json": "Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho…",
      "screen": {
       "_entry": "入口：`aos-eca-screen --eca ..`",

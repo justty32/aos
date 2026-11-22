@@ -30,7 +30,7 @@ eca-claude/
   cli.json    怎麼叫 CLI（kind、flags、print_flags、tools_sub、timeout_ms〔0＝不限時〕）：--tools Read,Write,Edit,Glob,Grep,Bash,Agent,Skill、--permission-mode dontAsk、--allowedTools Read,Glob,Grep,Write,Edit,Bash、--strict-mcp-config；
               tools_sub＝子 agent 那台的登記檔（見下「子 agent 與 skill」）
               （claude 內建的寫檔、改檔、指令都開，aos 不給檔案與 shell 工具；--model 不寫在這，見 llm.json；不加全繞過權限的旗標）
-  llm.json    腦設定：{"model": "opus"}（cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；認 model 與 reasoning_effort（思考程度，補成 --effort，見下「思考程度」）；claude CLI 沒有 temperature 等取樣旗標，那些鍵這邊沒有對應
+  llm.json    腦設定：{"model": "opus", "reasoning_effort": "high"}（11-22 加 high，使用者「llm.json那邊加上思考程度:high」；cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；認 model 與 reasoning_effort（思考程度，補成 --effort，見下「思考程度」）；claude CLI 沒有 temperature 等取樣旗標，那些鍵這邊沒有對應
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
   tools.json  aos-tools 的登記檔：`"$override"` 一串 [py/packs](../../py/packs/README.md) 五包（gadgets、self、mailbox、json〔json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set〕、index〔index_view〕），self 包比照 agent-fsm 關掉 self_llm、self_system、self_history、self_ctl（11-21 線 top-1121-ecaeffort，照使用者對 agent-fsm 選的「self 只留兩支」，[tool-desc-瘦身 04](../../thinking/2026-11/21/tool-desc-瘦身-1121/04-使用者已答.md)；要用 `self_tools add` 加回），共 18 支（11-22 拿掉 events、def、jsonx 三包，使用者「是，就是這個。」；要用 `self_tools add` 加回）；不掛通用四包 look、change、delete（含 trash）、shell（11-11 晚使用者「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」）與 subagent、goal、todo（原話與代定見範本 README）；do_task 只給 agent-fsm，寫 `"do_task": null`；
@@ -43,7 +43,7 @@ eca-claude/
   README.md、_metainfo.json  首行一句話與 summary 一致；估時 cost.time_ms 60000、resource ["llm"]，沒有頂層 timeout_ms（讓 agent_def check 過）
 ```
 
-**思考程度**（11-21 線 top-1121-ecaeffort；使用者「eca也都有跟上嗎？reasoning eff那些」）：`llm.json` 的 `reasoning_effort`＝claude 的 `--effort`，pi 身（[03](03-eca-pi.md)）＝`--thinking`。`aos-agent llm --target myproj set reasoning_effort=high`、`llm rm reasoning_effort` 回定義的值（範本沒寫＝CLI 自己的預設）。
+**思考程度**（11-21 線 top-1121-ecaeffort；使用者「eca也都有跟上嗎？reasoning eff那些」）：`llm.json` 的 `reasoning_effort`＝claude 的 `--effort`，pi 身（[03](03-eca-pi.md)）＝`--thinking`。`aos-agent llm --target myproj set reasoning_effort=high`、`llm rm reasoning_effort` 回定義的值。eca-claude 範本 11-22 起寫 `high`（使用者「llm.json那邊加上思考程度:high」；範本不再讀使用者 `~/.claude/settings.json` 的 `effortLevel`，見下「範本關掉的外掛與 skill」）；eca-pi 範本沒寫＝pi 自己的預設。
 
 | 身體 | 旗標 | 收的級別（出處） |
 |---|---|---|
@@ -130,8 +130,8 @@ hook 失敗（退 0／10 以外、逾時、起不來、stdout 不合）：能攔
   - `settings.skillOverrides`：同步來的 13 支 `anthropic-skills:*` 與 cowork-plugin-management 的 2 支設 `"off"`；`settings.enabledPlugins`：那 8 個外掛設 `false`。有了上一條這兩格其實沒作用（11-22 實測一樣），留著是保險：哪天拿掉 `--setting-sources`，或同步來的東西改從別處載入。
   - 實測（11-22，opus，「Say ok.」一題的輸入 token）：什麼都不關 17548；只關 4 支 skill 16297；skill 全關 14390；再關外掛 13482；`--setting-sources` 13226（單開它也是 13226）。剩下的 19 支是 Claude Code 內建 skill（dataviz、claude-api、loop…）。
   - **畫面裡的 claude-in-chrome 與 easel**（使用者 11-22「mcp那個幫我全關。」）：`-p` 那條本來就沒有；開畫面（互動）時 `--strict-mcp-config` 擋不住這兩個——claude-in-chrome 是內建的（使用者帳號 `claudeInChromeDefaultEnabled`，20 支工具），easel 是內建外掛 `cc-plugin-easel@builtin` 帶的 MCP（1 支），`--setting-sources` 也擋不住。範本 `flags` 加 `--no-chrome`、`settings.enabledPlugins` 加 `"cc-plugin-easel@builtin": false`。11-22 在暫存的互動 claude（tmux、範本原樣旗標＋aos 併過的 settings）打 `/mcp` 確認：之前列 claude-in-chrome 與 easel，之後「No MCP servers loaded」（aos 自己的 `--mcp-config` 那台照有）。使用者在 `~/.claude.json` 對 /home/lorkhan/repo/aos 設的 `disabledMcpServers` 只管那個資料夾，範本這兩格不靠它。
-  - **沒做的 `--disable-slash-commands`**（使用者也說要關）：內建 skill 也全沒、`Skill` 工具跟著消失（實測再少約 3.1k，到 10081），但 `claude -p "/compact"`、`/context` 都只回「isn't available in this environment」——aos 交給 claude 的 `/compact` 信（`context_wrap` 自動收尾壓縮、人寄的 `/compact`）與 `/usage` 會壞，所以先不加，等使用者再決定。
-  - **`autoCompactWindow` 與 `effortLevel`**：Claude Code 回的 `modelUsage.contextWindow`（`context_wrap` 拿來當分母）不管哪種都是 1M；變的是 Claude Code 自己的自動壓縮點：使用者那層有 `autoCompactWindow: 300000` 時 `/context` 顯示「/ 300k」，`--setting-sources` 之後是「/ 1m」。寫回 `cli.json` 的 `settings`（`"modelSettings": {"claude-opus-5-5": {"autoCompactWindow": 300000}}`）就回到 300k（實測）。思考程度要固定用 `llm.json` 的 `reasoning_effort`（補成 `--effort`），不靠使用者那層。範本兩個都沒補，等使用者決定。
+  - **沒做的 `--disable-slash-commands`**（使用者也說要關）：內建 skill 也全沒、`Skill` 工具跟著消失（實測再少約 3.1k，到 10081），但 `claude -p "/compact"`、`/context` 都只回「isn't available in this environment」——aos 交給 claude 的 `/compact` 信（`context_wrap` 自動收尾壓縮、人寄的 `/compact`）與 `/usage` 會壞。使用者 11-22 聽完裁不做：「d不做。副作用不補。install.py可以跑。然後llm.json那邊加上思考程度:high」。
+  - **`autoCompactWindow` 與 `effortLevel`**：Claude Code 回的 `modelUsage.contextWindow`（`context_wrap` 拿來當分母）不管哪種都是 1M；變的是 Claude Code 自己的自動壓縮點：使用者那層有 `autoCompactWindow: 300000` 時 `/context` 顯示「/ 300k」，`--setting-sources` 之後是「/ 1m」。寫回 `cli.json` 的 `settings`（`"modelSettings": {"claude-opus-5-5": {"autoCompactWindow": 300000}}`）就回到 300k（實測），但使用者 11-22 裁「副作用不補」：範本維持 Claude Code 的 1M，由 `context_wrap` 35%（＝350k）先叫收尾再 `/compact`。思考程度改由 `llm.json` 的 `reasoning_effort: high` 固定（補成 `--effort high`），不靠使用者那層；11-22 用範本原樣旗標跑真的 claude：transcript 記 `effort: high`，拿掉 `--effort` 是 `medium`（`--setting-sources` 之後 opus 的預設）。
 
 ## 接外部 MCP server（11-12 external-mcp）
 

@@ -36,7 +36,7 @@ aos-daemon-ctl -d .stack ls
 你會看到（做過 03～05 的話，表上還有 `llm`、`ann`）：
 
 ```
-{"model": "opus"}
+{"model": "opus", "reasoning_effort": "high"}
 ~/code/aos-tut/.stack/procs/eca_main
 _clock	running	3584360	-	-	-
 _sweeper	running	3584361	-	-	-
@@ -83,7 +83,7 @@ aos-agent -d .stack ctl state --target eca_main
 who       eca_main (def ~/code/aos-tut/agents/eca_main, ws ~/code/aos-tut, stack ~/code/aos-tut/.stack/procs/eca_main)
 state     running (daemon phase running); 0 queued; last answer "pong"
 tools     18 tools (index_view, json_add, json_del, json_get, json_len, json_ls, …)
-llm       model=opus
+llm       model=opus reasoning_effort=high
 system    484 bytes from definition; first line "You run as an aos agent: aos hands you the letters in your queue, and your conve…"
 hooks     6 hooks (brain_notify on brain_failed, context_wrap on on_clock, mail_notify on on_clock, screen_linger_start on after_start, screen_linger_stop on after_stop, timer on on_clock)
 history   2 messages, 255 bytes (assistant 1, user 1)
@@ -116,8 +116,10 @@ aos-agent -d .stack ctl start eca_main
 ```
 aos-agent: warning: created ~/code/aos-tut/.stack/procs/eca_main/llm.json (only the changed keys, the rest follows the definition; llm rm KEY or llm reset undoes)
 model=sonnet
+reasoning_effort=high
 aos-agent: warning: deleted ~/code/aos-tut/.stack/procs/eca_main/llm.json (the changed keys); back to the definition's ~/code/aos-tut/agents/eca_main/llm.json
 model=opus
+reasoning_effort=high
 stopped, stack kept (~/code/aos-tut/.stack/procs/eca_main); say still queues letters meanwhile, aos-agent ctl start --target eca_main to carry on
 started (same stack); 0 queued letter(s) will be answered next
 ```
