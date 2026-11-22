@@ -29,7 +29,7 @@
 | [templates/](templates/README.md) | 起手範本 [start-api](templates/start-api/README.md)、[start-eca](templates/start-eca/README.md)（一包抄好一棵樹：根＋一隻 agent＋樹裡的 `env.sh`，`cp -r` 一行；11-18 S6）；agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent）等；kernel 範本在 [templates/kernel/](templates/kernel/README.md)：llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |
 | [knowledge/](knowledge/README.md) | 出廠內容樹：普通資料夾＋`.json`，用一般檔案／json 工具讀；第一本是 `aos/`——給小模型的 aos 體系說明（英文） |
 | [archive/](archive/README.md) | 封存（11-17 重建：langs、tree-swap、aos-home；清單在它的 README） |
-| [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論）；使用者自己的意見稿在 `thinking/user-advice/` |
+| [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論）；使用者自己的意見稿 11-22 搬到 repo 根的 [`wf/user/advice/`](../wf/user/advice/) |
 
 **以 [CONCEPTS.md](docs/CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-92，作廢的號只留在表上；只收使用者說過的）。圖解兩頁（10-20 的狀態）：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。實作上的想法在 [restart §3g](thinking/2026-10/11/restart/README.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環）。
 
@@ -51,7 +51,7 @@
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
 - **[docs/notes/](docs/notes/README.md)**：AI 寫的參考筆記（不是規範、不算數）：拿外面現成的東西跟 aos 對照，例如 [跟 s6、runit 的對照](docs/notes/s6-runit.md)。
 - 之前乾淨的兩個時刻，要回頭看的：九月初 ideas 13 章（舊入口已封存，看 git 歷史）、十月初 proto7 核心 spec 與 設計原則。
-- 使用者自己的草稿：[thinking/user-advice/2026-09/](thinking/user-advice/2026-09/)（2026-09-19～24）。
+- 使用者自己的草稿與意見稿：[`wf/user/advice/`](../wf/user/advice/)（9 月草稿 2026-09-19～24 與之後一天一份；11-22 從 `thinking/user-advice/` 搬過去，那夾是使用者的地盤，檔名可能會變）。
 - 這兩個月做過什麼、每一代長什麼樣：[thinking/2026-10/11/restart/README.md](thinking/2026-10/11/restart/README.md) 第一節。
 
 ## 規矩（使用者 10-11 定）

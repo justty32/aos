@@ -12,7 +12,7 @@
 > 11-17 proto8 頂層收夾第二、三步＋路徑規則一（[路徑規則](2026-11/17/路徑規則.md)、[proto8-八夾](2026-11/17/proto8-八夾.md)；頂層剩 `impls cmd lib templates knowledge docs thinking archive` 八夾）：`py/` 的模組攤平進 `lib/` 頂層（`py/aos_flags.py` → `lib/aos_flags.py`、`py/daemon_ctl/` → `lib/daemon_ctl/`，`py/tests/` → `lib/tests/`，`py/README.md` → `lib/docs/04-共用模組.md`）；`kernel/` → `templates/kernel/`；`extras/aos-home/env.sh` → `env.sh`（proto8 頂層），它的測試 → `cmd/aos-tree-start/tests/test_env_sh.py`；`install.sh` → `cmd/install.sh`；`extras/aos-view/` → `cmd/aos-view/`；`extras/fake-mcp-http/` → `lib/tests/fake-mcp-http/`；`extras/kernel-chain-check/` → `templates/kernel/tests/kernel-chain-check/`；`extras/image-move-check/` → `templates/tests/image-move-check/`；`extras/langs/`、`extras/tree-swap/`、`extras/aos-home/`（copy_tree）→ `archive/` 同名夾。舊紀錄的連結同樣沒改，照這張換著看。
 > 11-17 下午全景頁改名（使用者「aos-view確實應該是選配的網頁外掛」「那就改名為aos-frontend吧」，放 `proto8/frontend/`、現在就改；頂層變九夾）：指令 `aos-view` → `aos-frontend`；整夾 `cmd/aos-view/` → `frontend/`（執行檔 `cmd/aos-view/aos-view`、後來的 `cmd/aos-view/bin/aos-view` → `frontend/bin/aos-frontend`；`systemd/aos-view.service` → `frontend/systemd/aos-frontend.service`；`ui/v2/`、`aide-def/`、`tests/`、`API.md` 跟著整夾搬、夾內位置不變）。資料夾 `~/.aos/view`、環境變數 `AOS_VIEW_HOME`、`aos-user`、`aos-user-tick` 沒改名。舊紀錄照舊名，照這張換著看。
 
-使用者自己的意見稿（非 AI 產出，原文不動）在 [user-advice/](user-advice/)：9 月的草稿在 `user-advice/2026-09/`，之後一天一份 `user-advice/<年月日>.md`。
+使用者自己的意見稿（非 AI 產出，原文不動）11-22 整夾搬到 repo 根的 [`wf/user/advice/`](../../wf/user/advice/)（使用者「user advice可以搬進去」）；舊紀錄裡的 `thinking/user-advice/…` 指的就是那裡，連結照「舊紀錄不回頭改」不修。
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|

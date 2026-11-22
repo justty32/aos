@@ -1,5 +1,5 @@
 {
- "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區；templates、kernel 只看頂層與 docs／tests（定義夾會被整夾抄走）、py/packs 與各 bin、各夾的 expect／ws 不放、knowledge 不在範圍（那棵樹手寫維護）。",
+ "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區；templates、kernel 只看頂層與 docs／tests（定義夾會被整夾抄走）、py/packs 與各 bin、各夾的 expect／ws 不放、wf/user 不放（使用者的地盤，agent 不主動寫）、knowledge 不在範圍（那棵樹手寫維護）。",
  "more_than": 15,
  "scopes": [
   {
@@ -81,6 +81,7 @@
  ],
  "skip_dirs": [
   "wf/inbox",
+  "wf/user",
   "proto8/py/packs",
   "proto8/frontend/ui/v2/dist/assets"
  ],

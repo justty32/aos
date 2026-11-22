@@ -4,6 +4,8 @@
 # HANDOFF.md 沒有條目時，改印 wf/progress.json 的 open 條目（一條兩行：狀態｜標題：現況，下一行細節連結）。從任何 cwd 都能跑。
 # what／next 寫成 {"$ref": "progress/x.md"}（路徑從 wf/ 算）時，印那份 md 的第一行加全文路徑，不印全文。
 # subagent（AOS_PARENT_STACK 不是空的）不貼 HANDOFF／progress（那是上層的），改印一句指向自己的筆記（$AOS_STACK/notes_path）；user.md 照貼。
+# 最後印 wf/user（使用者專屬區）還沒讀的檔名、不印全文：還沒交的改動，加上「上次讀到的 commit」之後交過的；讀到哪記在 agent 自己地盤的 user-seen.json
+# （筆記檔 notes_path 同一夾；頂層沒有 notes_path 就用 wf/ws/eca-aos/）。沒有 wf/user 夾或不是 git 工作樹就整段不印。
 root="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 user="$root/wf/workflows/common/user.md"
 handoff="$root/wf/HANDOFF.md"
@@ -67,15 +69,16 @@ echo
 
 entry=""
 [ -f "$handoff" ] && entry=$(first_section "$handoff")
+# 自己的筆記：$AOS_STACK/notes_path 一行，相對路徑從 $AOS_WS 算（subagent 那段與 wf/user 那段都用）
+notes=""
+nf="${AOS_STACK:+$AOS_STACK/notes_path}"
+[ -n "$nf" ] && [ -f "$nf" ] && notes=$(sed -n '1{s/^[[:space:]]*//;s/[[:space:]]*$//;p;}' "$nf")
+case "$notes" in
+    ""|/*) ;;
+    *) notes="${AOS_WS:-$root}/$notes" ;;
+esac
 if [ -n "${AOS_PARENT_STACK:-}" ]; then
-    # subagent：HANDOFF 與 progress 是上層的，不貼；改指向自己的筆記（$AOS_STACK/notes_path 一行，相對路徑從 $AOS_WS 算）
-    notes=""
-    nf="${AOS_STACK:+$AOS_STACK/notes_path}"
-    [ -n "$nf" ] && [ -f "$nf" ] && notes=$(sed -n '1{s/^[[:space:]]*//;s/[[:space:]]*$//;p;}' "$nf")
-    case "$notes" in
-        ""|/*) ;;
-        *) notes="${AOS_WS:-$root}/$notes" ;;
-    esac
+    # subagent：HANDOFF 與 progress 是上層的，不貼；改指向自己的筆記
     echo "===== wf/HANDOFF.md left out: you are a subagent ====="
     echo "wf/HANDOFF.md (and wf/progress.json) is your parent's handoff, not yours (your parent's stack is $AOS_PARENT_STACK)."
     if [ -n "$notes" ]; then
@@ -90,5 +93,37 @@ else
     echo "===== wf/HANDOFF.md 沒有交接條目，改看 wf/progress.json 的 open 條目 ====="
     if [ -f "$progress" ]; then print_progress "$progress"; else echo "（找不到 $progress）"; fi
 fi
+
+# wf/user：只印檔名（使用者 11-22 待裁第 4 題 b）
+print_user_zone() {
+    git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+    if [ -n "$notes" ]; then seen="$(dirname "$notes")/user-seen.json"; else seen="$root/wf/ws/eca-aos/user-seen.json"; fi
+    echo
+    echo "===== wf/user (the user's own folder): file names only, read the ones you have not read ====="
+    # GIT_OPTIONAL_LOCKS=0：status 不順手寫回 .git/index，不跟 commit-request 搶 index.lock
+    changed=$(GIT_OPTIONAL_LOCKS=0 git -C "$root" -c core.quotePath=false status --porcelain --untracked-files=all -- wf/user 2>/dev/null)
+    if [ -n "$changed" ]; then
+        echo "Not committed yet:"
+        printf '%s\n' "$changed" | sed 's/^/  /'
+    fi
+    commit=""
+    [ -f "$seen" ] && commit=$(sed -n 's/.*"commit"[[:space:]]*:[[:space:]]*"\([0-9a-f]\{7,40\}\)".*/\1/p' "$seen" | head -n 1)
+    if [ -z "$commit" ]; then
+        echo "No seen record at $seen (or it has no \"commit\"); look with: git log --name-only -- wf/user"
+    elif ! git -C "$root" cat-file -e "$commit^{commit}" 2>/dev/null; then
+        echo "Seen record $seen names commit $commit, which is not in this repo; look with: git log --name-only -- wf/user"
+    else
+        since=$(git -C "$root" -c core.quotePath=false log --format= --name-only "$commit..HEAD" -- wf/user 2>/dev/null | sed '/^$/d' | sort -u)
+        if [ -n "$since" ]; then
+            echo "Committed since your last read ($commit):"
+            printf '%s\n' "$since" | sed 's/^/  /'
+        elif [ -z "$changed" ]; then
+            echo "Nothing new since your last read ($commit)."
+        fi
+    fi
+    echo "After reading, write the HEAD commit into $seen."
+}
+[ -d "$root/wf/user" ] && print_user_zone
+
 echo
 echo "提醒：設計題先讀相關 NORMS／CONCEPTS 再回答；說「已寫進」前先查。開場兩軸（inbox、progress.json）照 AGENTS.md。"

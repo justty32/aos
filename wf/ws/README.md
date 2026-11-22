@@ -21,3 +21,5 @@
 
 - `eca-aos/`：頂層 `eca-aos`。
   - `eca-aos/eca-aos-templates/`、`eca-aos/eca-aos-kb/`、`eca-aos/aos-eca-frontend/`：掛在 eca-aos 底下的三個 subagent。
+
+人的那一格不在這裡，在 [`wf/user/`](../user/)：規矩同上，主人是使用者，agent 只讀、叫了才寫（使用者 11-22 定）。agent 讀 wf/user 讀到哪，記在自己這格的 `user-seen.json`，不寫進 wf/user。
