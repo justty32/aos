@@ -62,3 +62,5 @@ hook 什麼都不印＝照跑、不問人；印 `deny`＝不跑、腦收到理�
 ```
 
 手動也可以：寄一封內容只有 `/compact`（或 `/compact 指示`）的信，例 `aos-agent say -t 名 /compact`。
+
+**壓完先讀自己的筆記**（11-22，使用者「我人還在外面玩，總之先按推薦做」）：stack 裡放一個 `notes_path`（一行路徑，絕對或相對 `AOS_WS`），`compact_hook start` 就不叫它讀「工作區規矩說的交接檔」，改叫它先讀那份筆記；subagent 另外會被告知頂層交接不是它的。沒放＝照舊。見 [eca-claude 說明](../docs/01-eca-claude.md)。

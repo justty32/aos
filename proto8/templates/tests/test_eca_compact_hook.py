@@ -48,9 +48,9 @@ class CompactHook(unittest.TestCase):
         (self.defn / name).write_text("#!/usr/bin/env python3\nimport json, os, sys\n" + body)
         (self.defn / name).chmod(0o755)
 
-    def run_hook(self, what, given, home=True):
+    def run_hook(self, what, given, home=True, **extra):
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        env.update(AOS_STACK=str(self.stack), AOS_CLI_DEF=str(self.defn), PYTHONDONTWRITEBYTECODE="1")
+        env.update(AOS_STACK=str(self.stack), AOS_CLI_DEF=str(self.defn), PYTHONDONTWRITEBYTECODE="1", **extra)
         if home:
             env["AOS_HOME"] = str(PROTO)
         return subprocess.run([sys.executable, str(self.defn / "compact_hook"), what], input=json.dumps(given),
@@ -135,6 +135,51 @@ class CompactHook(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(r.stdout.startswith("When you write the summary, keep:"))
         self.assertEqual(self.seen(), [])
+
+    # 11-22 線 eca-aos-templates-1122-notes-hook-a（使用者「我人還在外面玩，總之先按推薦做」）：$AOS_STACK/notes_path 指自己的筆記
+    def notes(self, line, make=True):
+        ws = self.t / "ws"
+        (ws / "wf" / "ws" / "boss" / "kid").mkdir(parents=True, exist_ok=True)
+        if make:
+            (ws / "wf" / "ws" / "boss" / "kid" / "notes.md").write_text("mine\n")
+        (self.stack / "notes_path").write_text(line + "\n")
+        return ws
+
+    def test_start_without_notes_path_is_as_before(self):
+        (self.stack / "handoff.md").write_text("OLD HANDOFF\n")
+        r = self.run_hook("start", {}, AOS_PARENT_STACK="/x/procs/boss")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(r.stdout.startswith("[aos] compact: this conversation was just compacted. Before you go on, read your handoff notes again "
+                                            "(the handoff file or session log your workspace's rules name, or %s)" % (self.stack / "handoff.md")), r.stdout)
+        self.assertIn("OLD HANDOFF", r.stdout)
+        self.assertNotIn("your own notes", r.stdout)
+
+    def test_start_subagent_reads_its_notes_not_the_top_handoff(self):
+        ws = self.notes("wf/ws/boss/kid/notes.md")
+        (self.stack / "handoff.md").write_text("OLD HANDOFF\n")
+        r = self.run_hook("start", {}, AOS_WS=str(ws), AOS_PARENT_STACK="/x/procs/boss")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stderr, "")
+        first = r.stdout.splitlines()[0]
+        self.assertTrue(first.startswith("[aos] compact: your own notes are %s. Read them now, before anything else; "
+                                         "you are a subagent (your parent's stack is /x/procs/boss)" % (ws / "wf/ws/boss/kid/notes.md")), first)
+        self.assertIn("is your parent's, not yours", first)
+        self.assertNotIn("your workspace's rules name, or", r.stdout)     # the old sentence is replaced, not added to
+        self.assertIn("OLD HANDOFF", r.stdout)                            # the stack's own handoff.md is still shown
+
+    def test_start_top_agent_gets_only_the_notes_line(self):
+        ws = self.notes(str(self.t / "ws" / "wf" / "ws" / "boss" / "kid" / "notes.md"))    # absolute path
+        r = self.run_hook("start", {}, AOS_WS=str(ws), AOS_PARENT_STACK="")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), "[aos] compact: your own notes are %s. Read them now, before anything else."
+                         % (ws / "wf/ws/boss/kid/notes.md"))
+
+    def test_start_notes_path_to_a_missing_file_warns_and_still_reminds(self):
+        ws = self.notes("wf/ws/boss/kid/notes.md", make=False)
+        r = self.run_hook("start", {}, AOS_WS=str(ws))
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("compact_hook: warning: %s names %s, which is not a file" % (self.stack / "notes_path", ws / "wf/ws/boss/kid/notes.md"), r.stderr)
+        self.assertIn("your own notes are %s" % (ws / "wf/ws/boss/kid/notes.md"), r.stdout)
 
     def test_ann_is_the_same_file(self):
         ann = PROTO / "templates" / "start-eca" / "agents" / "ann" / "compact_hook"

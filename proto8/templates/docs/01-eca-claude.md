@@ -99,8 +99,9 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 |---|---|---|---|
 | `PreCompact` | `before_compact` | `trigger`（`manual`＝/compact、`auto`＝CLI 自己壓）、`asked`（/compact 後面的字）、`instructions`（compact_hook 給 CLI 的摘要指示，起始是範本那段「要留什麼」）、`restore`（null） | 改 `instructions`（空字串＝不給）；交 `restore`（一段字，壓完接進對話）；退 10＝攔下，compact_hook 退 2，Claude Code 不壓 |
 | `PostCompact` | `after_compact` | `trigger`、`summary`（Claude Code 寫好的摘要） | 只告知（Claude Code 的 PostCompact 沒有決定權） |
-| `SessionStart`（matcher `compact`） | （不發） | | compact_hook 印提醒、`handoff.md`、`restore`（印一次就刪） |
+| `SessionStart`（matcher `compact`） | （不發） | | compact_hook 印提醒（有 `notes_path`＝換成「讀你自己的筆記」，見下）、`handoff.md`、`restore`（印一次就刪） |
 
+- **壓完先讀自己的筆記（`notes_path`）**（11-22 線 eca-aos-templates-1122-notes-hook-a；使用者「我人還在外面玩，總之先按推薦做」＝[提案](../../../wf/ws/eca-aos/eca-aos-templates/notes-hook-提案.md)的 A、只印路徑）：stack 裡放 `notes_path`，一行，寫這隻自己筆記的路徑（絕對路徑，或相對工作區 `AOS_WS`，例 `wf/ws/eca-aos/eca-aos-kb/notes.md`）。有這個檔時，`start` 那句「read your handoff notes again (the handoff file or session log your workspace's rules name …)」換成「your own notes are X. Read them now, before anything else」；是 subagent（`AOS_PARENT_STACK` 不是空的）時再加一句「工作區規矩說的頂層交接是上層的、不是你的」。stack 的 `handoff.md` 與 `restore` 照印。沒有這個檔時，輸出跟以前一字不差；路徑指到不存在的檔時，stderr 一行 warning、照樣提醒。誰寫：上層開 subagent 時寫（使用者裁的提案第 4 題 a）。只印路徑、不貼筆記全文。
 - **補回的字為什麼在 `before_compact`**：11-21 實測 claude 2.1.330 的 `-p` `/compact`，`SessionStart`（compact）比 `PostCompact` 早跑，`PostCompact` 才交的字要等下一次壓縮才印得出來；所以 `restore` 在壓之前交、存在 `$AOS_STACK/claude/compact_restore.txt`，壓完由 `SessionStart` 印進壓縮後的對話（沒交或被攔＝刪掉上次留下的）。
 - **摘要內容 hook 寫不了**：Claude Code 不讓 hook 給摘要（agent-fsm 規劃裡「換」那層在這裡做不到）；能調的是指示、能補的是 `restore`、能攔。
 - **攔下 `/compact` 那封信**：實測 aos-eca-turn 照一般回答收（history 多 `/compact` 與一句「Compaction blocked by PreCompact hook: … compact blocked by hook 名: 那個 hook 的 stdout」），不算 `CliFailed`、不冷卻，history 沒被換成摘要。自動壓縮被攔：Claude Code 照它的規則跳過，或那次需要空間的請求失敗。

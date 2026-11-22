@@ -7,6 +7,7 @@ eca-aos-templates（改 `proto8/templates/` 的 subagent）的筆記：使用者
 （使用者原話逐字；經 eca-aos 轉來的標「轉述」。）
 
 - 2026-11-22（轉述，eca-aos 傳話）：「自動記憶那塊幫我清空，然後不理他，agent愛寫就寫，之後我們再想辦法解決這塊。」→ Claude Code 自動記憶不用特別避開，也不用特別寫；要留給下一個人的寫在這裡。
+- 2026-11-22（轉述）：「我人還在外面玩，總之先按推薦做」→ [notes-hook 提案](notes-hook-提案.md)四題照推薦定：1＝A（stack 的 `notes_path`）、2＝只印路徑、3＝A＋b（b 是 `wf/tools/compact_reload.sh`，不歸我，eca-aos 另派）、4＝a（上層寫 `notes_path`；寫進地盤規矩也由那邊做）。`notes_path` 格式：一行、相對 `AOS_WS`，例 `wf/ws/eca-aos/<名>/notes.md`；要改格式先問 eca-aos。
 - 2026-11-22（轉述）：「install.py可以跑。」——講的是那一批的 py/tools 改動；當時 eca-aos 說由它跑。repo 裡的 install.py 還是照任務書：沒交代就不跑。
 
 ## 做這份工作學到的

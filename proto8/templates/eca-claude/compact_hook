@@ -10,7 +10,9 @@
 #           Claude Code 就不壓（手動 /compact 會看到那句；自動的照它的規則跳過或失敗）。restore 寫進 $AOS_STACK/claude/compact_restore.txt
 #           （沒交或被攔＝刪掉上次留下的），等 start 印出來（SessionStart 的 stdout 會進壓縮後的 context）。
 #   post  ＝after_compact：欄位 trigger、summary（Claude Code 寫好的摘要）；只是告知，什麼都改不了（PostCompact 沒有決定權）。
-#   start ＝不發 hook：印提醒、handoff.md、compact_restore.txt（印完刪掉）。
+#   start ＝不發 hook：印提醒、handoff.md、compact_restore.txt（印完刪掉）。$AOS_STACK/notes_path 有一行路徑（絕對，或相對 AOS_WS）＝提醒那句換成
+#           「你自己的筆記在 X、先讀」，是 subagent（AOS_PARENT_STACK 不是空的）再加「工作區規矩說的頂層交接是上層的、不是你的」；沒有這個檔＝照舊。
+#           11-22 線 eca-aos-templates-1122-notes-hook-a（使用者「我人還在外面玩，總之先按推薦做」＝提案 wf/ws/eca-aos/eca-aos-templates/notes-hook-提案.md 的 A、只印路徑）。
 #   補回的字放在 before_compact 而不是 after_compact：11-21 實測 claude 2.1.330 -p 的 /compact，SessionStart（compact）比 PostCompact 早跑
 #   （transcript 裡 SessionStart 03:11:15.057、PostCompact 那次 hook 的檔 15.111），PostCompact 才交的字要等下一次壓縮才印得出來。
 # 用法：python3 "$AOS_CLI_DEF/compact_hook" pre|post|start（stdin＝Claude Code 給的 hook JSON）。stdout：PreCompact＝摘要的指示、SessionStart＝注入壓縮後的上下文。
@@ -21,6 +23,7 @@ import subprocess
 import sys
 
 LIMIT = 8000                                       # handoff.md 最多附這麼多字（太長只留尾巴，最新的通常在後面）
+NOTES = "notes_path"                               # stack 裡一行：這隻自己的筆記在哪（絕對，或相對工作區 AOS_WS）；start 用
 RESTORE = "compact_restore.txt"                    # before_compact 的 hook 交的補回字，放在 $AOS_STACK/claude/ 等 SessionStart 印
 BLOCKED = 10                                       # handler 退 10：攔下 before_compact
 
@@ -131,11 +134,32 @@ def read(path):
         return ""
 
 
+NOTES_TEXT = """[aos] compact: your own notes are %s. Read them now, before anything else%s."""
+NOT_YOURS = ("; you are a subagent (your parent's stack is %s), so a top-level handoff file the workspace's rules name "
+             "is your parent's, not yours: carry on from your notes, this compaction's summary and the letters in your queue")
+
+
+def notes_line(stack):
+    """$AOS_STACK/notes_path 有一行路徑＝回提醒那句（含路徑；subagent 多一句「頂層的交接不是你的」）；沒有這個檔或是空的＝None（照舊）。"""
+    raw = read(os.path.join(stack, NOTES)).strip() if stack else ""
+    if not raw:
+        return None
+    path = raw.splitlines()[0].strip()
+    ws = os.environ.get("AOS_WS", "")
+    if not os.path.isabs(path) and ws:
+        path = os.path.join(ws, path)
+    if not os.path.isfile(path):
+        warn("%s names %s, which is not a file; reminding of it anyway" % (os.path.join(stack, NOTES), path))
+    parent = os.environ.get("AOS_PARENT_STACK", "")
+    return NOTES_TEXT % (path, (NOT_YOURS % parent) if parent else "")
+
+
 def start():
     stack = os.environ.get("AOS_STACK", "")
+    line = notes_line(stack)
     path = os.path.join(stack, "handoff.md") if stack else ""
     text = read(path) if path else ""
-    print(START % ((", or %s" % path) if path else ""))
+    print(line if line else START % ((", or %s" % path) if path else ""))   # 有筆記＝這句取代「讀工作區規矩說的交接」
     if text.strip():
         if len(text) > LIMIT:
             text = "[... %d earlier characters left out ...]\n" % (len(text) - LIMIT) + text[-LIMIT:]
