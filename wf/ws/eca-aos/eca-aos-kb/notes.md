@@ -40,6 +40,18 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - 中文檔名：不要直接拿 `git diff --name-only` 的輸出，git 會把中文檔名轉成 `"\346…"` 這種跳脫字串，claim 會拿到錯的路徑、submit 也會失敗（`does not exist`）。改用 `git -c core.quotePath=false diff --name-only`，或手寫路徑。拿錯的 claim 用 `commit-request release --line <線名> <同樣那串路徑>` 放掉（`release --all` 在這裡被權限擋了）。
 - 交之前 `git diff -- 檔` 確認只有自己的字；不 push，不刪檔。
 
+## 要先問方向的工作：只出提案
+
+- progress 條目或任務書寫「改之前先問使用者」，就只出提案，不改 `proto8/knowledge/`。提案放 `proposals/`，示範稿放 `drafts/`，兩者都在我的地盤裡（換台後還要給使用者看，所以不放 `temp/`）。
+- 每題寫法：實例（頁、行）、2～3 種改法，每種附好處、代價、要改幾頁，最後給推薦和理由。頁數用 `find`、`grep -l` 實際數出來寫，不要估。
+- 使用者定了「邊用邊建」（2026-11-22：「這些都只是初步的調查規劃……一邊用一邊去把它建起來」），所以每題都給一個「用到哪頁改哪頁」的選項。
+- 示範稿只用原頁已有的事實，不加新事實；原頁的標題（錨點）保留，因為別頁有連過去（改標題之前先 `grep -rn "頁.md#/"`）。
+- 想寫進知識庫但還沒查證的事（例：eca 的 Read 讀不到工作區以外的檔），在提案裡標「待查證」，不寫進知識庫。
+
+## 掃日期註記，不要漏
+
+- `grep` 的結果太長時，會被截斷在一行的前段，句尾的「before this was fixed」就看不到了。c7bc08dae 因此漏掉了 `aos/body.md` 第 19 行。搜尋時用 `grep -o '.{0,40}關鍵字.{0,40}'`，只印關鍵字周圍，逐筆看完。
+
 ## 範圍與回報
 
 - 只改 `proto8/knowledge/`。發現範本、程式、`wf/` 寫錯（例：py/packs/README.md 寫錯 eca-pi 掛哪幾包）就回報 eca-aos，不自己改。
