@@ -30,6 +30,11 @@ NAMES = ("AOS_PARENT_STACK", "AOS_NOTIFY_BOX")
 BODY = '#!/bin/sh\naos-agent ctl who --json > "$AOS_WS/who.json" 2> "$AOS_WS/who.err"\necho up > "$AOS_WS/up.txt"\nexec sleep 60\n'
 
 
+def resolved(envs, daemon):
+    """the daemon keeps values under its stack as {"$env": "AOS_DAEMON", "$path": relative} (ws-stack-1122-abs); join them back"""
+    return {k: str(daemon / v["$path"]) if isinstance(v, dict) and v.get("$env") == "AOS_DAEMON" else v for k, v in envs.items()}
+
+
 def until(condition, timeout=20):
     return env_helper.until(condition, timeout)
 
@@ -92,7 +97,10 @@ class AddParentDaemon(unittest.TestCase):
         return json.loads((self.daemon / "procs_state.json").read_text())["procs"]
 
     def cell_envs(self, name):
-        """the registered names in the launch single the daemon keeps in the cell (exec type: exec.json#/exec)"""
+        """the registered names in the launch single the daemon keeps in the cell (exec type: exec.json#/exec), joined back to absolute"""
+        return resolved(self.raw_envs(name), self.daemon)
+
+    def raw_envs(self, name):
         envs = json.loads((self.daemon / "procs" / name / "exec.json").read_text())["exec"].get("envs", {})
         return {k: envs[k] for k in NAMES if k in envs}
 
@@ -176,7 +184,7 @@ class AddParentDaemon(unittest.TestCase):
                 self.assertNotIn("secret-value-1114", (ws / "who.json").read_text() + (ws / "who.err").read_text())
         elsewhere = self.root / "elsewhere" / "kid"          # a stack outside the daemon's procs/: the cell is that stack
         kid, ws = self.attach("far", "-s", str(elsewhere), "--envs", "X=1", stack=self.mom / "tools" / "subagent")
-        self.assertEqual(json.loads((elsewhere / "exec.json").read_text())["exec"]["envs"]["AOS_PARENT_STACK"], str(self.mom))
+        self.assertEqual(resolved(json.loads((elsewhere / "exec.json").read_text())["exec"]["envs"], self.daemon)["AOS_PARENT_STACK"], str(self.mom))
         self.assertEqual(self.who("far", ws)["parent"], str(self.mom))
         j = json.loads(self.run_agent("who", "--json", "--stack", str(elsewhere)).stdout)
         self.assertEqual(j["parent"], str(self.mom))
@@ -210,6 +218,8 @@ class AddParentDaemon(unittest.TestCase):
         self.tool(SUBAGENT, {"op": "add", "def": str(self.definition), "name": "sub1", "ws": "ws-sub1"}, self.mom / "tools" / "subagent")
         until(lambda: (self.root / "ws-sub1" / "up.txt").exists())
         self.assertEqual(self.cell_envs("sub1"), {"AOS_PARENT_STACK": str(self.mom), "AOS_NOTIFY_BOX": str(self.mom / "mailbox")})
+        self.assertEqual(self.raw_envs("sub1"), {"AOS_PARENT_STACK": {"$env": "AOS_DAEMON", "$path": "procs/mom"},   # kept relative, moves with the tree
+                                                 "AOS_NOTIFY_BOX": {"$env": "AOS_DAEMON", "$path": "procs/mom/mailbox"}})
         j = self.who("sub1", self.root / "ws-sub1")
         self.assertEqual((j["parent"], j["notify_box"]), (str(self.mom), str(self.mom / "mailbox")))
         self.tool(SUBAGENT, {"op": "add", "def": str(self.definition), "name": "sub2", "ws": "ws-sub2", "envs": {"AOS_NOTIFY_BOX": ""}},

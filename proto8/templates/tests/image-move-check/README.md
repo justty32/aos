@@ -35,3 +35,11 @@ python3 proto8/templates/tests/image-move-check/check.py
 - 只驗「已完成回信後休眠、搬家、新問答成功」；不驗搬家時仍在途的 kernel 回信或跨主機環境。
 
 </details>
+
+## 換家目錄：home_move.py（11-22）
+
+```sh
+python3 proto8/templates/tests/image-move-check/home_move.py
+```
+
+在暫存夾 `A/` 起一台根 daemon，掛一隻 `parent`，用 `parent` 的身分（它的工具小格當 `AOS_STACK`）跑 `subagent add` 生一隻 `kid`；`kid` 起來就寄一封通知到自己的 `AOS_NOTIFY_BOX`。根收 SIGINT、整夾改名成 `B/` 再起，要看到：`subagent ls` 還列著 `kid`、`kid` 的通知寄進 `B/` 裡父的信箱、`ctl who` 的 `notify_box`／`parent` 指向 `B/`、會帶走的檔（照 `stack.gitignore` 過濾，不往 stack 寫 `.gitignore`）裡找不到 `A/` 的絕對路徑（結果在證據夾的 `old-path-hits.json`）。程序記錄與收尾沿用 `check.py` 的 `Check`；暫存夾跟著 `TMPDIR`。修之前（11-22 以前的程式）會在最後一項紅：`procs_state.json`、`procs/kid/exec.json`、`procs/parent/tools/subagent/subagents.json` 三檔記著 `A/`。

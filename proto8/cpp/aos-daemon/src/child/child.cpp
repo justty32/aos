@@ -196,6 +196,20 @@ static void pin_cwd(Json& inst, const std::string& cwd, const std::string& cell,
     } else if (c.is_string()) {
         inst["cwd"] = daemon_ref(aos::abspath(aos::join(cwd, c.get<std::string>())), dstack);
     }
+    // 11-22（ws-stack-1122-abs）：登記的兩名（AOS_NOTIFY_BOX、AOS_PARENT_STACK，信上收絕對路徑）落在 daemon 的 stack 底下＝同 cwd 存成
+    // 相對它的指示詞；aos-exec 起的時候解整張單子、從當下的 AOS_DAEMON 拼回，整棵搬家、換家目錄照樣指得到。stack 外的值、其他名字原樣。
+    if (inst.contains("envs") && inst["envs"].is_object()) {
+        for (const char* key : {"AOS_NOTIFY_BOX", "AOS_PARENT_STACK"}) {
+            auto it = inst["envs"].find(key);
+            if (it == inst["envs"].end() || !it->is_string() || it->get<std::string>().empty() || it->get<std::string>()[0] != '/') {
+                continue;
+            }
+            std::string rel = rel_to(it->get<std::string>(), dstack);
+            if (rel != ".." && !rel.starts_with("../")) {
+                *it = Json::object({{"$env", "AOS_DAEMON"}, {"$path", rel}});
+            }
+        }
+    }
     inst = rel_refs(inst, cell);
 }
 

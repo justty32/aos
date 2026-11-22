@@ -267,7 +267,8 @@
     "test_slash_clear.py": "Verify an agent-fsm /clear letter (line top-1121-apiclear) empties history into history_removed.jsonl without a brain call, with fake commands."
    },
    "image-move-check": {
-    "check.py": "Verify a sleeping fake-brain daemon tree survives copying and a local git clone."
+    "check.py": "Verify a sleeping fake-brain daemon tree survives copying and a local git clone.",
+    "home_move.py": "Verify a subagent survives renaming the whole tree folder (A/ to B/): still listed, its notices reach the parent's mailbox, no old path in the files …"
    },
    "judge-llm": {
     "endpoint.py": "Return deterministic semantic-comparison replies with nonzero fake token usage.",

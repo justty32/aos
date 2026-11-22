@@ -46,7 +46,12 @@ elif argv[:2] == ["ctl", "add"]:
     if os.environ.get("FAKE_QUEUE"):
         print("queued %s at position 1 (letter L1; applied when a slot frees)" % name)
         sys.exit(0)
-    stack = os.path.join(os.environ["AOS_DAEMON"], "procs", name)
+    if "--stack" in argv:
+        stack = argv[argv.index("--stack") + 1]
+    elif "--stack-json" in argv:                        # only the {"$env": "AOS_DAEMON", "$path": ...} directive the tool writes
+        stack = os.path.join(os.environ["AOS_DAEMON"], json.loads(argv[argv.index("--stack-json") + 1])["$path"])
+    else:
+        stack = os.path.join(os.environ["AOS_DAEMON"], "procs", name)
     os.makedirs(stack, exist_ok=True)
     table.append({"name": name, "stack": stack})
     save()
@@ -123,11 +128,11 @@ class Subagent(unittest.TestCase):
     def test_add_records_and_argv(self):
         out = self.ok({"op": "add", "def": "defs/helper", "name": "kid", "ws": "kid", "limits": {"mem_mb": 64}, "timeout_s": 5})
         self.assertIn("added kid (stack %s); subagents 1/4" % (self.daemon / "procs" / "kid"), out)
-        self.assertEqual(self.calls("ctl")[-1], ["ctl", "add", "--stack", str(self.daemon / "procs/kid"), "--name", "kid", "--ws", "kid", "--limits", '{"mem_mb": 64}',
+        self.assertEqual(self.calls("ctl")[-1], ["ctl", "add", "--stack-json", '{"$env": "AOS_DAEMON", "$path": "procs/%s"}' % "kid", "--name", "kid", "--ws", "kid", "--limits", '{"mem_mb": 64}',
                                                  "--envs", "AOS_NOTIFY_BOX=%s" % (self.mom / "mailbox"),
                                                  "--timeout-s", "5", "--", "defs/helper"])
         self.assertTrue((self.ws / "kid").is_dir())
-        self.assertEqual(self.record(), [{"name": "kid", "stack": str(self.daemon / "procs/kid")}])
+        self.assertEqual(self.record(), [{"name": "kid", "stack": "procs/kid"}])   # relative to the daemon stack (ws-stack-1122-abs)
         self.ok({"op": "add", "def": "defs/kid2"})           # name defaults to the folder name, like ctl add
         self.assertEqual([k["name"] for k in self.record()], ["kid", "kid2"])
         self.assertEqual(self.ok({"op": "ls"}), "kid\t-\t-\t-\t-\nkid2\t-\t-\t-\t-\nsubagents 2/4\n")   # short lines, not mom
@@ -138,11 +143,27 @@ class Subagent(unittest.TestCase):
                          "kid\trunning\t-\t-\t-\t2\t0\t-\t-\nkid2\trunning\t-\t-\t-\t2\t0\t-\t-\nsubagents 2/4\n")
         self.assertEqual(json.loads(self.ok({"op": "ls", "long": True, "json": True}))["max_subagents"], 4)   # json wins
 
-    def test_relative_stack_records_are_not_recognized(self):
+    def test_record_follows_a_moved_tree(self):
+        """ws-stack-1122-abs：帳上存相對 daemon stack 的寫法；整棵改名（換家目錄、換台）後表與環境都換成新位置，照樣認得、子的工具小格也在新位置。"""
         self.ok({"op": "add", "def": "d", "name": "kid"})
-        (self.cell / "subagents.json").write_text(json.dumps([{"name": "kid", "stack": "procs/kid"}]))
-        self.assertEqual(self.ok({"op": "ls"}), "subagents 0/4\n")
-        self.assertEqual(self.record(), [])
+        moved = self.tmp / "moved"
+        self.daemon.rename(moved)
+        self.table.write_text(json.dumps([{"name": n, "stack": str(moved / "procs" / n)} for n in ("mom", "kid")]))
+        cell = moved / "procs" / "mom" / "tools" / NAME
+        env = dict(AOS_DAEMON=str(moved), AOS_STACK=str(cell))
+        self.assertEqual(self.ok({"op": "ls"}, **env), "kid\t-\t-\t-\t-\nsubagents 1/4\n")
+        self.assertEqual(json.loads((cell / "subagents.json").read_text()), [{"name": "kid", "stack": "procs/kid"}])
+        if (TOOL.parents[1] / "self_hook" / "_entry").exists():   # the kid's tool cell is found in the moved tree too
+            self.ok({"op": "hook", "name": "kid", "args": {"op": "ls"}}, **env)
+            who = [json.loads(l) for l in self.log.read_text().splitlines()][-2]
+            self.assertEqual(who[1:4], [str(moved / "procs" / "kid" / "tools" / "self_hook"), "ctl", "who"])
+
+    def test_stack_outside_the_daemon_stays_absolute(self):
+        far = self.tmp / "far" / "kid"
+        self.ok({"op": "add", "def": "d", "name": "kid", "stack": str(far)})
+        self.assertEqual(self.calls("ctl")[-1][:4], ["ctl", "add", "--name", "kid"])
+        self.assertEqual(self.record(), [{"name": "kid", "stack": str(far)}])
+        self.assertEqual(self.ok({"op": "ls"}), "kid\t-\t-\t-\t-\nsubagents 1/4\n")
 
     def test_add_keeps_explicit_notify_box(self):
         for i, box in enumerate(("/x", "")):
@@ -150,13 +171,13 @@ class Subagent(unittest.TestCase):
                 self.ok({"op": "add", "def": "d", "name": "kid%d" % i,
                          "envs": {"AOS_NOTIFY_BOX": box, "LANG": "C"}})
                 self.assertEqual(self.calls("ctl")[-1],
-                                 ["ctl", "add", "--stack", str(self.daemon / ("procs/kid%d" % i)), "--name", "kid%d" % i,
+                                 ["ctl", "add", "--stack-json", '{"$env": "AOS_DAEMON", "$path": "procs/%s"}' % ("kid%d" % i), "--name", "kid%d" % i,
                                   "--envs", "AOS_NOTIFY_BOX=" + box, "--envs", "LANG=C", "--", "d"])
 
     def test_add_defaults_notify_box_with_other_envs(self):
         self.ok({"op": "add", "def": "d", "name": "kid", "envs": {"LANG": "C"}})
         self.assertEqual(self.calls("ctl")[-1],
-                         ["ctl", "add", "--stack", str(self.daemon / "procs/kid"), "--name", "kid", "--envs", "AOS_NOTIFY_BOX=%s" % (self.mom / "mailbox"),
+                         ["ctl", "add", "--stack-json", '{"$env": "AOS_DAEMON", "$path": "procs/%s"}' % "kid", "--name", "kid", "--envs", "AOS_NOTIFY_BOX=%s" % (self.mom / "mailbox"),
                           "--envs", "LANG=C", "--", "d"])
 
     def test_each_targeted_op(self):

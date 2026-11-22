@@ -170,16 +170,19 @@ def _launch_single(row, base):
     return single if isinstance(single, dict) else None
 
 
-def _registered(row, single, field, env, mine):
+def _registered(row, single, field, env, mine, base=None):
     """一格登記（parent 或 notify_box）照 05 定稿 1.3 的順序讀：① 列上的欄（第 2 期 daemon 寫）；② 那列啟動單子的 envs（第 1 期）；
     ③ 查的是自己＝自己的環境變數。前一處有這個鍵（含空字串＝明確沒有）就不看後面；空白、非字串、全讀不到＝None。
-    只取這一個名字，不輸出別的 envs（可能帶金鑰）。"""
+    單子裡落在 daemon stack 底下的值，daemon 存成 {"$env": "AOS_DAEMON", "$path": 相對}（11-22 ws-stack-1122-abs）：從 base（表所在的資料夾）拼回絕對；
+    base 沒給、別的指示詞＝None。只取這一個名字，不輸出別的 envs（可能帶金鑰）。"""
     if field in row:
         v = row[field]
         return v.strip() or None if isinstance(v, str) else None
     envs = single.get("envs") if isinstance(single, dict) else None
     if isinstance(envs, dict) and env in envs:
         v = envs[env]
+        if isinstance(v, dict) and set(v) == {"$env", "$path"} and v["$env"] == "AOS_DAEMON" and isinstance(v["$path"], str) and base:
+            return os.path.normpath(base.rstrip("/") + "/" + v["$path"].lstrip("/"))   # $path 是字串拼接（N-45）
         return v.strip() or None if isinstance(v, str) else None
     if mine:
         return os.environ.get(env, "").strip() or None
@@ -193,7 +196,7 @@ def registered_of(row, base=None):
     me = os.environ.get("AOS_STACK", "")
     mine = bool(me and isinstance(stack, str) and stack and under(me, stack))
     single = None if all(field in row for field, _ in REGISTERED) else _launch_single(row, base)
-    return {field: _registered(row, single, field, env, mine) for field, env in REGISTERED}
+    return {field: _registered(row, single, field, env, mine, base) for field, env in REGISTERED}
 
 
 class Agent:

@@ -6,6 +6,7 @@
 #   add {def | def_json, name, ws | ws_json, stack | stack_json, limits?, envs?, auto_restart?, timeout_s?, on_queued?}
 #        先對帳、數配額（滿＝SubagentSlotMissing、不寄信）→ ctl add（旗標一對一，同 agents_ctl；../agents_cmd.py）→ 記帳；印 added … ; subagents N/MAX
 #        envs 沒給 AOS_NOTIFY_BOX 時補成父 agent 的 <stack>/mailbox（ctl who --json 的 stack）；明給的值（含空字串）優先。
+#        stack 沒給＝放自己 stack 隔壁：落在 daemon 的 stack 底下＝給 --stack-json {"$env": "AOS_DAEMON", "$path": 相對}（表上存指示詞、整棵搬家照樣對得上），不然給絕對路徑。
 #   rm {name, purge?, timeout_s?}  先抄公開子帳 → ctl rm [--purge -y]（預設留 stack）→ 從帳上拿掉
 #   stop／sleep {name, timeout_s?}；start／wake {name, timeout_s?, on_queued?}；pause／resume／state {name}＝ctl 同名動作 --target
 #   ls {long?, json?}  一行一隻「NAME TAB STATE TAB WORKSPACE TAB QUEUED TAB REASON」（同 ctl ls；排隊中的＝NAME queued - - letter L），末行 subagents N/MAX；
@@ -17,7 +18,9 @@
 #   tools／llm／history／hook／system {name, args}：跑旁邊 self_tools／self_llm／self_history／self_hook／self_system（11-11）的 _entry，stdin＝args、AOS_STACK＝<子的 stack>/tools/<那支>/
 #        （那支靠 ctl who 認自己＝變成改子的）；stdout 原樣（「your」改成子的名字）；它的錯誤代號與原因接成自己的；旁邊沒那支＝ToolMissing；子還在排隊＝SubagentQueued。
 #   每個帶 name 的動作先對帳：不是我生的＝SubagentUnknown；記過但不在表上＝SubagentMissing（之後就忘掉）。ask／listen／rm 抄公開子帳（observed_children.copy_child）。
-# 記帳：$AOS_STACK/subagents.json（$AOS_STACK＝我 stack 裡這支的小格 tools/subagent/）＝[{name, stack（絕對路徑；不是絕對路徑的那筆對不上表，當不在、忘掉）} | {name, queued_letter}]；對帳＝名字與 stack 都對得上 ctl ls --json 那列才算還在。
+# 記帳：$AOS_STACK/subagents.json（$AOS_STACK＝我 stack 裡這支的小格 tools/subagent/）＝[{name, stack} | {name, queued_letter}]；stack 落在 daemon 的 stack
+#   （ctl who --json 的 daemon）底下＝存相對它的寫法（例 procs/kid），其他存絕對（11-22 ws-stack-1122-abs：整棵搬家、換台照樣認得）；
+#   對帳＝名字與「帳上 stack 從這次的 daemon 拼回的絕對路徑」都對得上 ctl ls --json 那列才算還在。
 # 配額：max_subagents 從 subagents.json 讀——我的定義那份疊我的 stack 那份（ctl who --json 的 def 與 stack；只放改過的鍵）；都沒有＝4。
 # 錯：stderr 與 stdout 各一行「subagent: error: 代號 原因」、退 1；下層 stderr 原樣透出；下層最後一行錯誤行接成自己的（C-52 例外 ⑤）。
 import json, os, re, sys
@@ -83,8 +86,19 @@ def write_book(kids):
         die("WriteFailed", "cannot write %s: %s" % (tool_io.place(book_path), tool_io.os_reason(e)))
 
 
+def kid_stack(s):
+    """帳上的 stack → 絕對路徑：相對的從 daemon 的 stack（ctl who --json 的 daemon）拼回。"""
+    return os.path.normpath(s if os.path.isabs(s) else os.path.join(DAEMON, s))
+
+
+def book_stack(path):
+    """絕對路徑 → 記進帳的寫法：落在 daemon 的 stack 底下＝相對它（例 procs/kid），其他＝絕對（原樣）。"""
+    rel = os.path.relpath(os.path.normpath(path), DAEMON)
+    return path if rel == ".." or rel.startswith("../") else rel
+
+
 def reconcile():
-    """對帳：名字與 stack 都對得上表上那列的才算還在；不在的忘掉（寫回）。回 (還在的, 忘掉的名字, 表)。"""
+    """對帳：名字與 stack（帳上的從 daemon 拼回絕對）都對得上表上那列的才算還在；不在的忘掉（寫回）。回 (還在的, 忘掉的名字, 表)。"""
     kids = load_json(book_path, [])
     if not isinstance(kids, list) or not all(isinstance(k, dict) and isinstance(k.get("name"), str) for k in kids):
         die("ReadFailed", "%s is not a JSON array of {name, stack}" % tool_io.place(book_path))
@@ -96,9 +110,9 @@ def reconcile():
     for kid in kids:
         if kid.get("queued_letter") and not isinstance(kid.get("stack"), str):
             row = by_name.get(kid["name"])            # 排隊中：還沒上表就照記；上表後改記表上的 stack
-            alive.append({"name": kid["name"], "stack": os.path.normpath(row["stack"])} if row else kid)
-        elif (isinstance(kid.get("stack"), str) and os.path.isabs(kid["stack"])
-              and (kid["name"], os.path.normpath(kid["stack"])) in on_table):
+            alive.append({"name": kid["name"], "stack": book_stack(row["stack"])} if row else kid)
+        elif (isinstance(kid.get("stack"), str) and kid["stack"]
+              and (kid["name"], kid_stack(kid["stack"])) in on_table):
             alive.append(kid)
     gone = [k["name"] for k in kids if k["name"] not in {a["name"] for a in alive}]
     if alive != kids:
@@ -135,7 +149,7 @@ def my_subagent(name):
 def preserve_child(name):
     for record in load_json(book_path, []):
         if isinstance(record, dict) and record.get("name") == name and isinstance(record.get("stack"), str):
-            copy_child(stack, name, record["stack"])
+            copy_child(stack, name, kid_stack(record["stack"]))
             break
 
 
@@ -173,8 +187,12 @@ stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
 book_path = os.path.join(stack, CFG)
-# 查表交給 aos-agent 問 kernel；配額看自己那列的 stack，子帳直接存絕對路徑，不依賴表檔所在夾。
+# 查表交給 aos-agent 問 kernel；配額看自己那列的 stack；子帳的相對路徑從 ctl who 的 daemon（這次讀的表所在的資料夾）拼回。
 ME = json.loads(cmd.agent(["ctl", "who", "--json"]))
+DAEMON = ME.get("daemon")
+if not isinstance(DAEMON, str) or not os.path.isabs(DAEMON):
+    die("StackMissing", "aos-agent ctl who did not give the absolute folder of your daemon")
+DAEMON = os.path.normpath(DAEMON)
 
 if op == "add":
     alive, gone, _ = reconcile()
@@ -187,22 +205,24 @@ if op == "add":
     argv = cmd.add_argv(args)
     cmd.make_ws(args)
     if "stack" not in args and "stack_json" not in args:
-        # 預設把子放自己 stack 隔壁，不拿換過位置的表檔所在夾當 daemon。
+        # 預設把子放自己 stack 隔壁；落在 daemon 的 stack 底下＝寫成相對它的指示詞（daemon 表上記指示詞原形、每次起再解），不然照舊絕對。
         own_stack = ME.get("stack")
         if not isinstance(own_stack, str) or not os.path.isabs(own_stack):
             die("StackMissing", "aos-agent ctl who did not give your absolute stack")
-        argv[2:2] = ["--stack", os.path.join(os.path.dirname(own_stack.rstrip("/")), name)]
+        at = book_stack(os.path.join(os.path.dirname(own_stack.rstrip("/")), name))
+        argv[2:2] = (["--stack", at] if os.path.isabs(at)
+                     else ["--stack-json", json.dumps({"$env": "AOS_DAEMON", "$path": at}, ensure_ascii=False)])
     result = cmd.parse_added(cmd.agent(argv, timeout_s=cmd.guard(args)))
     if "stack" in result and not result["stack"]:
         result["stack"] = cmd.agent(["ctl", "where", name]).strip()
-    record = {"name": name, "queued_letter": result["queued_letter"]} if "queued_letter" in result else {"name": name, "stack": os.path.abspath(result["stack"])}
+    record = {"name": name, "queued_letter": result["queued_letter"]} if "queued_letter" in result else {"name": name, "stack": book_stack(os.path.abspath(result["stack"]))}
     write_book([k for k in alive if k["name"] != name] + [record])
     print("%s; subagents %d/%d" % (result.get("message") or "added %s (stack %s)" % (name, result["stack"]), len(alive) + 1, n))
     sys.exit(0)
 
 if op == "ls":
     alive, _, rows = reconcile()
-    on = {k["name"]: os.path.normpath(k["stack"]) for k in alive if "stack" in k}
+    on = {k["name"]: kid_stack(k["stack"]) for k in alive if "stack" in k}
     listed = [r for r in rows if on.get(r.get("name")) == os.path.normpath(r["stack"])]
     queued = [{"name": k["name"], "queued_letter": k["queued_letter"]} for k in alive if "stack" not in k]
     n = max_subagents()
@@ -247,7 +267,7 @@ elif op in ("listen", "ask"):
 else:                                           # tools／llm／history／hook／system：用子的身分跑旁邊的 self_*
     if not isinstance(kid.get("stack"), str):
         die("SubagentQueued", "%s is still queued (letter %s) and has no stack yet; try again when op ls shows it on the table" % (name, kid.get("queued_letter")))
-    env = dict(os.environ, AOS_STACK=os.path.join(kid["stack"], "tools", sub))
+    env = dict(os.environ, AOS_STACK=os.path.join(kid_stack(kid["stack"]), "tools", sub))
     out = cmd.must([entry], text=json.dumps(args["args"], ensure_ascii=False), timeout_s=150, env=env,
                    err_re=re.compile(re.escape(sub) + r": error: ([A-Z][A-Za-z]+) (.*)\Z"))
     out = out.replace("your next", "%s's next" % name).replace("your body", "%s's body" % name)

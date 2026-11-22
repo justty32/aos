@@ -19,6 +19,13 @@ s = pathlib.Path(os.environ['AOS_STACK'])
     'ws': os.environ.get('AOS_WS'), 'tag': os.path.basename(sys.argv[0])}))
 time.sleep(60)
 '''
+ENV_BODY = '''#!/usr/bin/env python3
+# Record the two registered names (and one other) I was started with, then idle.
+import json, os, pathlib, time
+s = pathlib.Path(os.environ['AOS_STACK'])
+(s / 'seen.json').write_text(json.dumps({k: os.environ.get(k) for k in ('AOS_NOTIFY_BOX', 'AOS_PARENT_STACK', 'OTHER')}))
+time.sleep(60)
+'''
 
 
 def alive(pid):
@@ -229,6 +236,40 @@ class TwoMachines(unittest.TestCase):
             b.running(n)
             self.assertEqual(read(b.stack / 'procs' / n / 'seen.json')['ws'], str(want), n)
         self.assertEqual(b.rows()['kept']['as_written'], {'ws': str(ws)})
+
+    def test_registered_envs_under_the_stack_follow_a_move(self):
+        # 11-22（ws-stack-1122-abs）：單子 envs 的 AOS_NOTIFY_BOX、AOS_PARENT_STACK 落在 daemon 的 stack 底下＝exec.json 存相對它的指示詞，
+        # 起的時候 aos-exec 解回絕對；整棵改名再起，子項拿到新位置。stack 外的值、其他名字原樣（照舊絕對）。
+        outside = str(self.base / 'outside' / 'mailbox')
+        a = self.tree('a', {})
+        (a.root / 'env_body.py').write_text(ENV_BODY)
+        (a.root / 'env_body.py').chmod(0o755)
+        a.start()
+        parent = str(a.stack / 'procs' / 'parent')
+        a.post({'procs_added': {
+            'kid': {'exec': {'argv': ['./env_body.py'],
+                             'envs': {'AOS_NOTIFY_BOX': parent + '/mailbox', 'AOS_PARENT_STACK': parent, 'OTHER': parent}}},
+            'far': {'exec': {'argv': ['./env_body.py'], 'envs': {'AOS_NOTIFY_BOX': outside, 'AOS_PARENT_STACK': ''}}}}})
+        for n in ('kid', 'far'):
+            a.running(n)
+        envs = read(a.stack / 'procs' / 'kid' / 'exec.json')['exec']['envs']
+        self.assertEqual(envs['AOS_NOTIFY_BOX'], {'$env': 'AOS_DAEMON', '$path': 'procs/parent/mailbox'})
+        self.assertEqual(envs['AOS_PARENT_STACK'], {'$env': 'AOS_DAEMON', '$path': 'procs/parent'})
+        self.assertEqual(envs['OTHER'], parent)
+        self.assertEqual(read(a.stack / 'procs' / 'far' / 'exec.json')['exec']['envs'], {'AOS_NOTIFY_BOX': outside, 'AOS_PARENT_STACK': ''})
+        self.assertEqual(read(a.stack / 'procs' / 'kid' / 'seen.json'),
+                         {'AOS_NOTIFY_BOX': parent + '/mailbox', 'AOS_PARENT_STACK': parent, 'OTHER': parent})
+        self.assertEqual(read(a.stack / 'procs' / 'far' / 'seen.json')['AOS_NOTIFY_BOX'], outside)
+        a.stop()
+        shutil.move(str(a.root), str(self.base / 'b'))
+        b = self.tree('b')
+        for n in ('kid', 'far'):
+            (b.stack / 'procs' / n / 'seen.json').unlink()
+        b.start()
+        b.running('kid')
+        moved = str(b.stack / 'procs' / 'parent')
+        self.assertEqual(read(b.stack / 'procs' / 'kid' / 'seen.json'),
+                         {'AOS_NOTIFY_BOX': moved + '/mailbox', 'AOS_PARENT_STACK': moved, 'OTHER': parent})
 
     def test_mailbox_as_written_must_be_absolute_paths(self):
         a = self.tree('a', {})
