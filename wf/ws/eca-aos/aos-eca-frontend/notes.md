@@ -30,11 +30,15 @@ aos-eca-frontend 的工作筆記：使用者給這份工作的規矩（逐字附
 - **11-18 晚**：「前端的三個小毛病這塊都還好，，先留着。」（`wf/progress.json` 的 `overview-page`；三個小毛病＝起前端要自設 AOS_DAEMON、去 `~/aos-home/ws/tools` 找 aos-user、首頁轉到已刪的 v1 路徑）。同一晚 HANDOFF 記「前端相關先不動」（commit `4bdf62e59`、`eefead8a4`，在頂層轉述的一段話裡）。
 - **11-21 15:00**（[frontend-備妥-1121](../../../../proto8/thinking/2026-11/21/frontend-備妥-1121.md) 第 7 行）：「然後aos frontend也幫我準備好，能先動工的就先動工。」
 - **11-21 夜**：eca-aos 看到 `run_json` 丟掉子程式的 stderr，使用者「兩個都記下來」（`wf/progress.json` 的 `overview-page`）。
+- **11-22**，部門來源提案的三題（eca-aos 轉來的原話）：「我人還在外面玩，總之先按推薦做」。裁定照推薦：1＝乙現在做、丙以後接；2＝a，不是用 subagent 掛的平鋪在最上層；3＝a，`aide.json` 那條先留（[提案](部門來源-提案-1122.md#要使用者選的題)）。施工線 `aos-eca-frontend-1122-parents-b`。
 - **11-22 上午**，對 eca-aos 說（eca-aos 對話紀錄；前半「frontend真的應該大修了」也在 `wf/HANDOFF.md` 11-22 上午那版，commit `c6a3751aa`，現行版已沒有）：「frontend真的應該大修了，這設定檔/名字前綴/規則，這是剛入行的初級軟體工程師才設計的出來的醜陋架構。」他嫌的就是 `proto8/frontend/bin/aos-frontend` 的 `parents()`（約 377～419 行）。
 
 ## 做這份工作學到的（給下一個人）
 
 - frontend 存檔就生效（活的全景頁立刻用新檔），改檔要一次寫完整份；只在 `proto8/frontend/` 裡動，超出先問 eca-aos。
 - 不對活 daemon 下指令（`aos-agent ctl ls` 也不跑）；要看資料就讀 `proto8/frontend/tests/` 的 fixture。
-- 活樹的前端設定在 `~/.aos/view/config.json`（只讀）；今天裡面還有 `ok-*`、`xiaosi` → `repo-aos` 兩條規則，`repo-aos` 是舊頂層的名字。
+- 活樹的前端設定在 `~/.aos/view/config.json`（只讀）；裡面的 `parents`、`parent_rules` 兩個鍵 11-22 起程式不再讀，留著無害。
+- 頁上的樹（11-22 起）只看兩種紀錄：daemon 的 subagent 紀錄、隊長的 `aide.json`；沒紀錄的平鋪在最上層。測試的 fixture（`VIEW_LS_FIXTURE`）每列可帶 `"subagents": [...]` 來造上下級。
+- 施工流程：`git archive` 抄到 `~/.aos/scratch/<線名>/repo`、在那份跑 `install.py`、改那份、跑 `tests/run.sh`（設 `VIEW_TEST_TMP`；要跑 test_phase1 就設 `VIEW_TOOLS`＝抄來的 aos-user 夾，`~/.aos/scratch/top-1121-frontend/tools/` 有一份）；再用 `templates/start-api` 起暫存樹，掛 agent 後以「冒充那隻 agent 的環境」跑 `aos-tools call subagent` 造 subagent，起前端用 18767／18768（避開 8767／8768），最後才用「寫暫存檔再 mv」換進 repo。
+- 起前端的 `serve.pid` 若是 setsid 那層，真正的行程 pid 在 serve 印的那行 `pid N`；收尾要殺那個。
 - 大修盤點 14 項在 [frontend-備妥-1121](../../../../proto8/thinking/2026-11/21/frontend-備妥-1121.md)；部門怎麼認的提案在 [部門來源-提案-1122](部門來源-提案-1122.md)。

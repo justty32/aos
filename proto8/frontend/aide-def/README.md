@@ -25,10 +25,10 @@ history 不會多任何一則，也不叫腦。範本刻意拿掉了 `timer` 和
 2. **寫 aide.json**：建 `~/.aos/view/teams/<隊>/aide.json`（資料夾沒有就 `mkdir -p`），內容：
 
    ```json
-   {"team": "<隊>", "parent": "repo-aos", "leader": "<隊>", "aide": "<隊>-aide-1", "tags": []}
+   {"team": "<隊>", "parent": "<上層隊長>", "leader": "<隊>", "aide": "<隊>-aide-1", "tags": []}
    ```
 
-   - `team`＝資料夾名；`leader`＝隊長在 daemon 表上的名字（通常跟 `team` 一樣）；`aide`＝下一步的名字，一字不差（中轉信箱只收這個名字寄來的信）；`parent`＝上層隊伍（頂層底下寫 `repo-aos`）；`tags`＝部門標籤，可空。
+   - `team`＝資料夾名；`leader`＝隊長在 daemon 表上的名字（通常跟 `team` 一樣）；`aide`＝下一步的名字，一字不差（中轉信箱只收這個名字寄來的信）；`parent`＝上層隊伍（頂層底下寫頂層 agent 的名字）；只寫進小助手轉出的信，頁上的樹不看它（樹只看 subagent 紀錄）；`tags`＝部門標籤，可空。
    - 這是隊伍資料夾裡唯一要手寫的檔；其他檔都由 `aos-frontend` 指令寫，不要手改。
 
 3. **聘小助手**（aos 工具 `subagent`，這樣它算你的，親子查得到）：

@@ -126,6 +126,13 @@ def main():
     # claude cells with a live stream: (last event, age s). ok-view: a long quiet turn = yellow, not red
     live = {"ok-view": ("assistant", 40 * 60), "ok-view-sol-2": ("assistant", 30), "repo-aos": ("result", 120),
             "xiaosi": ("result", 600), "ok-board": ("result", 60)}
+    # who is under whom: the subagent records (the page reads nothing else)
+    subs = {"repo-aos": ["ok-view", "ok-board", "ok-release", "xiaosi", "ok-green", "ok-errors", "ok-cooling"],
+            "ok-view": ["ok-view-sol-2", "ok-view-astra-1"],
+            "ok-board": ["ok-board-sol-1", "ok-board-sol-2", "ok-board-sol-3", "ok-board-room"],
+            "ok-board-room": ["ok-board-room-sol-1"],
+            "ok-green": ["ok-green-sol-1", "ok-green-member-with-a-very-long-name-for-the-map-and-inspector"],
+            "ok-errors": ["ok-errors-sol-1"]}
     rows = []
     for n, st, busy, reason in spec:
         os.makedirs(os.path.join(procs, n))
@@ -139,7 +146,7 @@ def main():
         rows.append({"name": n, "state": st, "phase": st, "ws": t, "stack": os.path.join(procs, n), "queued": 2 if n == "ok-view-sol-2" else 0,
                      "reason": reason, "auto_restart": False, "queue": 0,
                      "cooldown": {"failures": 4, "reason": "cooldown reason; " * 60, "until": now + 600} if n == "ok-cooling" else None,
-                     "busy": busy})
+                     "busy": busy, "subagents": subs.get(n, [])})
         history = [{"line": i + 1, "message": {"role": "user" if i % 2 == 0 else "assistant",
                     "content": "Demo history row %02d" % (i + 1)}} for i in range(29)]
         history.append({"line": 30, "message": {"role": "assistant", "content": "[aos] slash: /context: screen output:\n" + long_text}})
@@ -179,7 +186,6 @@ def main():
         cfg = json.load(f)
     cfg["ui_ports"] = [{"port": p2, "dir": DIST}]
     cfg["externals"] = []
-    cfg["parents"] = {"ok-board-room": "ok-board", "ok-board-room-sol-1": "ok-board-room"}
     cfg["poll_s"] = 5
     with open(cfgp, "w") as f:
         json.dump(cfg, f)

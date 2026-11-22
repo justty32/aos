@@ -22,8 +22,10 @@ usage: aos-frontend [--port 8767] [--home DIR] serve     run the page on 127.0.0
   (aide-tick: the aide's name without -aide-N)
 
 home: --home > $AOS_VIEW_HOME > ~/.aos/view
-  config.json   optional: {"parents": {"name": "parent"}, "parent_rules": [["ok-*", "repo-aos"]],
-                           "say_log": "path", "poll_s": 20}
+  config.json   optional: {"say_log": "path", "poll_s": 20, "orders": {"hire": {"to": "name"}}}
+Who is under whom comes from records only: the daemon's subagent record of whoever started an agent, and a
+leader's teams/<team>/aide.json for its aide. No record = a top-level node (no guessing by names or by config).
+aos-user (the user zone) is not part of proto8: $VIEW_TOOLS/aos-user/ when set, else aos-user on PATH.
   mailbox/      the relay mailbox (aos-post layout); teams send replies here, the page only reads it
   state/        activity.json (when each agent last changed), say.jsonl (default say log),
                 teams/<team>.json (latest report, last beat, latest post), passed/<team>/<id>.json (receipts)
@@ -38,7 +40,6 @@ GET /api/slash_results?name=NAME returns recent page slash commands and their re
 """
 from contextlib import nullcontext
 import fcntl
-import fnmatch
 import hashlib
 import html
 import http.server
@@ -47,6 +48,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import signal
 import socketserver
 import subprocess
@@ -56,11 +58,23 @@ import time
 import urllib.parse
 from datetime import datetime, timezone
 
-sys.dont_write_bytecode = True  # never leave a __pycache__ next to zone.py in ~/aos-home
+sys.dont_write_bytecode = True  # never leave a __pycache__ next to aos-user's zone.py
 
-TOOLS = os.environ.get("VIEW_TOOLS") or os.path.expanduser("~/aos-home/ws/tools")   # VIEW_TOOLS: tests / demos with stub tools
-AOS_USER = os.path.join(TOOLS, "aos-user", "aos-user")
-ZONE_PY = os.path.join(TOOLS, "aos-user", "zone.py")
+
+def find_aos_user():
+    """aos-user and its zone.py: $VIEW_TOOLS/aos-user/ (tests, demos with stub tools), else aos-user on PATH
+    (zone.py next to the file it resolves to). Not found: the bare name and None (no zone; the page still runs)."""
+    tools = os.environ.get("VIEW_TOOLS")
+    if tools:
+        d = os.path.join(tools, "aos-user")
+        return os.path.join(d, "aos-user"), os.path.join(d, "zone.py")
+    found = shutil.which("aos-user")
+    if not found:
+        return "aos-user", None
+    return found, os.path.join(os.path.dirname(os.path.realpath(found)), "zone.py")
+
+
+AOS_USER, ZONE_PY = find_aos_user()
 SAY_PREFIX = "[使用者經全景頁]"
 SAY_FROM = "user-via-view"
 # The page's own name, kept in one place (the user 11-15: it will be renamed). New code reads APP_NAME, never the
@@ -200,8 +214,7 @@ class Home:
                     os.makedirs(os.path.join(self.mailbox, sub), exist_ok=True)
         cfg = os.path.join(self.dir, "config.json")
         if not os.path.exists(cfg):
-            write_json(cfg, {"parents": {}, "parent_rules": [["ok-*", "repo-aos"], ["xiaosi", "repo-aos"]],
-                             "poll_s": 20})
+            write_json(cfg, {"poll_s": 20})
 
     def config(self):
         return load_json(os.path.join(self.dir, "config.json"), {})
@@ -280,8 +293,8 @@ class Collector:
                 n["kind"] = self.kinds.get(name, "agent")
             s = st.get("state") or {}
             n["last_answer"] = mask(s.get("last_answer")) if s.get("last_answer") else None
-            n["subagents"] = [x.get("name") if isinstance(x, dict) else x
-                              for x in ((st.get("subagents") or {}).get("subagents") or [])]
+            subs = r.get("subagents") if fixture else (st.get("subagents") or {}).get("subagents")  # fixture rows may list them
+            n["subagents"] = [x.get("name") if isinstance(x, dict) else x for x in (subs or [])]
             # activity: when history size last changed (seen by this page)
             sig = "%s/%s" % (hist.get("messages"), hist.get("bytes"))
             a = self.activity.get(name)
@@ -375,35 +388,17 @@ class Collector:
         write_json(path, cache)
 
     def parents(self, nodes, aides=None):
+        """Who is above whom, from records only: the leader's aide.json names its aide ("aide"), else the daemon's
+        subagent record of whoever started it ("subagent"). No record = a top-level node (parent None)."""
         aides = aides or {}
-        cfg = self.home.config()
-        explicit = cfg.get("parents") or {}
-        rules = cfg.get("parent_rules") or []
-        names = sorted(nodes, key=len, reverse=True)
         for n in nodes.values():
             p, by = None, None
             if aides.get(n["id"]) in nodes and aides[n["id"]] != n["id"]:
-                n["parent"], n["parent_by"] = aides[n["id"]], "aide"  # §10: only in the leader's aide field
-                continue
-            if explicit.get(n["id"]) in nodes:
-                p, by = explicit[n["id"]], "config"
-            if not p:
+                p, by = aides[n["id"]], "aide"  # §10: only in the leader's aide field
+            else:
                 for other in nodes.values():
                     if n["id"] in other["subagents"] and other["id"] != n["id"]:
                         p, by = other["id"], "subagent"
-                        break
-            if not p:
-                for other in names:
-                    if other != n["id"] and n["id"].startswith(other + "-"):
-                        p, by = other, "prefix"
-                        break
-            if not p:
-                for rule in rules:
-                    if not (isinstance(rule, list) and len(rule) == 2 and all(isinstance(x, str) for x in rule)):
-                        continue
-                    pat, par = rule
-                    if par in nodes and par != n["id"] and fnmatch.fnmatch(n["id"], pat):
-                        p, by = par, "rule"
                         break
             n["parent"], n["parent_by"] = p, by
         # break loops: walk up; if we come back, cut the edge
@@ -597,6 +592,8 @@ class Collector:
 
 
 def load_zone():
+    if not ZONE_PY:
+        return None
     try:
         spec = importlib.util.spec_from_file_location("aos_user_zone", ZONE_PY)
         m = importlib.util.module_from_spec(spec)
@@ -652,7 +649,8 @@ def secret_hit(text):
 def need_zone_mod():
     z = load_zone()
     if z is None:
-        raise Fail("ToolMissing", "cannot load the user zone library %s" % ZONE_PY)
+        raise Fail("ToolMissing", "cannot load the user zone library %s" % ZONE_PY if ZONE_PY else
+                   "aos-user not found (put it on PATH or set VIEW_TOOLS to the folder holding aos-user/)")
     return z
 
 
@@ -2012,10 +2010,11 @@ def do_mail(form, tree, home, extra=None, kind="mail"):
 
 
 ORDER_KINDS = {
-    # kind: (default receiver; None = the target department itself, label)
+    # kind: (default receiver; None = the target department itself, label). No HR or power department exists yet, so
+    # every kind goes to the target itself unless config orders.<kind>.to names a receiver.
     "expand": (None, "擴充部門"),
-    "hire": ("repo-aos", "HR：增派人員"),
-    "power": ("repo-aos", "電力：llm 額度"),
+    "hire": (None, "HR：增派人員"),
+    "power": (None, "電力：llm 額度"),
 }
 ORDER_FIELDS = {"expand": ("budget",), "hire": ("role", "model", "count"), "power": ("priority", "quota")}
 

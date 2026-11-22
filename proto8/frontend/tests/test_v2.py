@@ -51,12 +51,15 @@ class V2(unittest.TestCase):
             f.write(STUB)
         os.chmod(os.path.join(bindir, "aos-agent"), 0o755)
         names = [("boss", "running", None), ("boss-a", "running", None), ("boss-a-x", "stopped", "exited with code 1"),
-                 ("boss-b", "sleeping", None)]
+                 ("boss-b", "sleeping", None), ("boss-loner", "running", None)]
+        # who is under whom = the subagent records only; boss-loner has a boss- name but nobody's record lists it
+        subs = {"boss": ["boss-a", {"name": "boss-b"}], "boss-a": ["boss-a-x"]}
         rows = []
         for n, st, reason in names:
             os.makedirs(os.path.join(cls.procs, n, "mailbox"))
             rows.append({"name": n, "state": st, "phase": st, "ws": t, "stack": os.path.join(cls.procs, n), "queued": 0,
-                         "reason": reason, "auto_restart": False, "queue": 0, "cooldown": None, "busy": None})
+                         "reason": reason, "auto_restart": False, "queue": 0, "cooldown": None, "busy": None,
+                         "subagents": subs.get(n, [])})
         cls.fixture = os.path.join(t, "ls.json")
         with open(cls.fixture, "w") as f:
             json.dump(rows, f)
@@ -205,6 +208,16 @@ class V2(unittest.TestCase):
         self.assertEqual(r["worst_ids"][0], "boss-a-x")
         self.assertNotIn("_bad", r)
         self.assertNotIn("stack", n["boss"])
+
+    def test_tree_from_subagent_records(self):
+        t = self.j(self.p2, "/api/tree")["tree"]
+        n = t["nodes"]
+        self.assertEqual(sorted(n["boss"]["children"]), ["boss-a", "boss-b"])
+        self.assertEqual((n["boss-a-x"]["parent"], n["boss-a-x"]["parent_by"]), ("boss-a", "subagent"))
+        self.assertEqual((n["boss-loner"]["parent"], n["boss-loner"]["parent_by"]), (None, None))  # no record = top level
+        self.assertIn("boss-loner", t["roots"])
+        with open(os.path.join(self.home, "config.json")) as f:
+            self.assertEqual(sorted(json.load(f)), ["externals", "poll_s", "ui_ports"])   # init writes no parent keys
 
     # B3
     def test_b3_outbox(self):
