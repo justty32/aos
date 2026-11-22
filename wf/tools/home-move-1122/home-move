@@ -1,0 +1,709 @@
+#!/usr/bin/env bash
+# home-move：線 6（家機搬家，11-22）的一次性工具——把 eca-aos 與三個 subagent 從舊樹 ~/aos-home/.stack 搬到 ~/repo/aos/_stack，分段可單獨跑，all 照順序跑、任何一步失敗自動 rollback。
+#
+# 用法、每段做什麼、真跑時外面那個 Claude 的完整步驟：同夾 README.md。規劃：proto8/thinking/2026-11/22/工作區與stack-1122/02-規劃.md「線 6」。
+#   home-move check|stop-old|copy|fix|retire-old|start-llm|start-root|reattach|verify|rollback|start-old|screen|probe|all|status
+# 路徑全部從 HM_* 變數來（預設從 HM_HOME＝$HOME 推）；演練＝HM_HOME 指暫存夾裡的假家目錄，同一支腳本。
+# 不刪檔：要拿掉的檔一律 mv 進 $HM_WORK 底下的備份夾；不讀、不印、不寫任何金鑰（LITELLM_KEY 只看有沒有設）；不把整份環境寫進 log。
+# 輸出與 log 英文（使用者偏好：程式輸出一律英文）；註解中文。
+[ -n "${BASH_VERSION:-}" ] || { echo "home-move: error: run me with bash" >&2; exit 2; }
+set -u -o pipefail
+umask 022
+PROG=home-move
+
+# ---- 清環境（硬規則 2）：AOS_* 全清，之後每個 aos 指令都在 aos() 裡明確給 AOS_HOME ----
+for _v in $(compgen -e | grep '^AOS_' || true); do unset "$_v"; done
+if compgen -e | grep -q '^AOS_'; then echo "$PROG: error: AOS_* still set after unset" >&2; exit 2; fi
+unset _v
+
+# ---- 設定（全部可用環境變數蓋；演練只給 HM_HOME 與 HM_PATH_PREPEND、HM_GIT_REPO）----
+HM_HOME=${HM_HOME:-$HOME}
+HM_REPO=${HM_REPO:-$HM_HOME/repo/aos}                     # 新樹所在的 repo（_stack 放它的根）
+HM_AOS_HOME=${HM_AOS_HOME:-$HM_REPO/proto8}               # 跑哪一份 bin/ lib/（線 3 已 install.py 過的）
+HM_GIT_REPO=${HM_GIT_REPO:-$HM_REPO}                      # check 查 commit 用的 git repo（演練的 repo 是 git archive，沒有 .git）
+HM_OLD=${HM_OLD:-$HM_HOME/aos-home}                       # 舊樹（往後只留 llm/ 與 .llm-stack/）
+HM_RETIRE=${HM_RETIRE:-$HM_HOME/aos-home.old-1122}        # 退路：舊樹 llm 以外的東西整批搬來這裡
+HM_LLM_DEF=${HM_LLM_DEF:-$HM_OLD/llm}                     # llm kernel 的定義（原地用）
+HM_LLM_STACK=${HM_LLM_STACK:-$HM_OLD/.llm-stack}          # 新的 llm kernel 的 stack（AOS_LLM_KERNEL）
+HM_WORK=${HM_WORK:-$HM_HOME/.aos/scratch/home-move-1122}  # log、備份、狀態記號、runner、tmux socket
+HM_TMUX_SOCK=${HM_TMUX_SOCK:-$HM_WORK/tmux.sock}
+HM_TMUX_SESSION=${HM_TMUX_SESSION:-home-move}
+HM_PATH_PREPEND=${HM_PATH_PREPEND:-}                      # 演練：放假 claude 的夾，排在 PATH 最前面
+HM_TIMEOUT=${HM_TIMEOUT:-120}                             # 每個等待的上限（秒）
+HM_SUBAGENTS=${HM_SUBAGENTS:-add}                         # add＝reattach 從外面把三個 subagent 掛回；hint＝只印提示，留給 eca-aos 自己 rm/add
+HM_FAIL_AT=${HM_FAIL_AT:-}                                # 演練用：all 跑完這一步後故意失敗（驗 rollback）
+HM_SYS_TO=${HM_SYS_TO:-'~/repo/aos'}                      # system.txt 裡的 $HM_REPO 改寫成這串（提示詞文字）
+
+STACK=$HM_REPO/_stack
+OLD_STACK=$HM_OLD/.stack
+ROOT_DEF=wf/tree/root                                     # 相對 HM_REPO
+ECA_DEF_JSON='{"$env": "AOS_HOME", "$path": "/templates/eca-claude"}'
+PARENT=eca-aos
+SUBAGENTS=(eca-aos-templates aos-eca-frontend eca-aos-kb)  # 照 eca-aos 帳上的順序
+MOVED=("$PARENT" "${SUBAGENTS[@]}")
+SCREENS=("$PARENT" "${SUBAGENTS[@]}" eca-claude)            # stop-old 先關這幾隻還開著的畫面
+# 舊樹頂層：清單寫死，對不上就停（規劃線 6 第 6 步；01「第三輪量到的」）
+RETIRE_ITEMS=(.stack README.md README.md.bak-1121c README.md.bak-1121d agents env.sh perm root root.log)
+KEEP_ITEMS=(llm)
+# 要已經在 HEAD 裡的 commit（線 1～5、9）
+COMMITS=("b6a3702e2 line 1 (.gitignore, wf/ws)" "15c23d7b5 line 2 (size check)" "139d8dd2b line 3 (relative paths)"
+         "7b596847f line 4 (stack-commit)" "6dff15cdb line 5 (wf/tree/root)" "db7d1b9be line 9 (move manual)")
+# 線 3 改到、要已經 install 進 lib/ 的檔（py/ 與 lib/ 一模一樣才算裝了）
+LINE3_FILES=(tools/agent/subagent/_entry aos/apps/agent/common.py)
+STEPS_ALL=(stop-old copy fix retire-old start-llm start-root reattach verify)
+
+for _p in HM_HOME HM_REPO HM_AOS_HOME HM_OLD HM_RETIRE HM_LLM_DEF HM_LLM_STACK HM_WORK HM_TMUX_SOCK; do
+    case ${!_p} in /*) ;; *) echo "$PROG: error: $_p must be an absolute path, not ${!_p}" >&2; exit 2;; esac
+    printf -v "$_p" '%s' "$(realpath -m -- "${!_p}")"
+done
+unset _p
+STACK=$HM_REPO/_stack
+OLD_STACK=$HM_OLD/.stack
+STATE=$HM_WORK/state
+LOG=$HM_WORK/home-move.log
+
+# ---- 小工具 ----
+say()  { printf '%s %s: %s\n' "$(date '+%F %T')" "$PROG" "$*"; }
+warn() { say "warning: $*"; }
+fail() { say "error: $*"; return 1; }
+mark() { mkdir -p "$STATE" && date '+%F %T' > "$STATE/$1"; }
+marked() { [ -e "$STATE/$1" ]; }
+
+unset_claude() { local v; for v in $(compgen -e | grep -E '^(CLAUDECODE$|CLAUDE_)' || true); do unset "$v"; done; unset TMUX TMUX_PANE; }
+
+# 在乾淨的 aos 環境跑一支 aos 指令：只有 AOS_HOME（env.sh 清其他 AOS_*、放 PATH）、HOME＝HM_HOME、沒有 CLAUDE*。不帶腳本的鎖 fd。
+aos() {
+    ( unset_claude
+      export HOME="$HM_HOME" AOS_HOME="$HM_AOS_HOME"
+      . "$HM_AOS_HOME/env.sh" >/dev/null || exit 1
+      [ -z "$HM_PATH_PREPEND" ] || PATH="$HM_PATH_PREPEND:$PATH"
+      exec "$@" 9>&- )
+}
+tm() { tmux -S "$HM_TMUX_SOCK" "$@" 9>&- </dev/null; }
+
+# 共用的 Python 小幫手（純標準庫；只讀寫這次點名的檔）
+read -r -d '' PYH <<'PY'
+import hashlib, json, os, sys
+op, args = sys.argv[1], sys.argv[2:]
+def load(p):
+    with open(p, encoding="utf-8") as f:
+        return json.load(f)
+def write_atomic(p, text):
+    tmp = os.path.join(os.path.dirname(p), ".%s.home-move.%d" % (os.path.basename(p), os.getpid()))
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, p)
+if op == "ledger-state":            # FILE OLDPROCS NAMES… → print old|new|other
+    path, oldprocs, names = args[0], args[1], args[2:]
+    try:
+        kids = load(path)
+    except Exception as e:
+        print("other cannot read: %s" % e); sys.exit(0)
+    if not isinstance(kids, list) or [k.get("name") if isinstance(k, dict) else None for k in kids] != names:
+        print("other names are %s" % json.dumps([k.get("name") if isinstance(k, dict) else k for k in kids] if isinstance(kids, list) else kids)); sys.exit(0)
+    stacks = [k.get("stack") for k in kids]
+    if stacks == [os.path.join(oldprocs, n) for n in names]:
+        print("old")
+    elif stacks == ["procs/%s" % n for n in names]:
+        print("new")
+    else:
+        print("other stacks are %s" % json.dumps(stacks))
+elif op == "ledger-write":          # FILE NAMES…
+    path, names = args[0], args[1:]
+    write_atomic(path, json.dumps([{"name": n, "stack": "procs/%s" % n} for n in names], ensure_ascii=False) + "\n")
+elif op == "replace":               # FILE FROM TO → print how many
+    path, old, new = args
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    n = text.count(old)
+    if n:
+        st = os.stat(path)
+        write_atomic(path, text.replace(old, new))
+        os.chmod(path, st.st_mode & 0o7777)
+    print(n)
+elif op == "table":                 # stdin = aos-daemon-ctl ls -j → "name phase" lines
+    rows = json.load(sys.stdin)
+    if isinstance(rows, dict):
+        rows = [dict(v, name=k) for k, v in (rows.get("procs") or rows).items() if isinstance(v, dict)]
+    for r in rows:
+        if isinstance(r, dict):
+            print("%s %s" % (r.get("name"), r.get("phase") or r.get("state")))
+elif op == "pids":                  # procs_state.json → pid lines (table rows and the daemon itself)
+    try:
+        d = load(args[0])
+    except Exception:
+        sys.exit(0)
+    out = [d.get("pid")] + [r.get("pid") for r in (d.get("procs") or {}).values() if isinstance(r, dict)]
+    for p in out:
+        if isinstance(p, int) and p > 0:
+            print(p)
+elif op == "envjson":               # FILE → KEY=VALUE for the path variables only (they hold no secrets)
+    d = load(args[0])
+    for k in ("AOS_HOME", "AOS_DAEMON", "AOS_LLM_KERNEL", "AOS_KERNEL", "AOS_CLOCK"):
+        print("%s=%s" % (k, d.get(k, "")))
+elif op == "exec-check":            # FILE PARENT → problems, one per line (none = fine)
+    d = load(args[0]).get("exec", {})
+    envs, parent = d.get("envs", {}), args[1]
+    want = {"AOS_PARENT_STACK": {"$env": "AOS_DAEMON", "$path": "procs/%s" % parent},
+            "AOS_NOTIFY_BOX": {"$env": "AOS_DAEMON", "$path": "procs/%s/mailbox" % parent}}
+    for k, v in want.items():
+        if envs.get(k) != v:
+            print("envs.%s is %s, want %s" % (k, json.dumps(envs.get(k)), json.dumps(v)))
+    cwd = d.get("cwd")
+    if not (isinstance(cwd, dict) and cwd.get("$env") == "AOS_DAEMON"):
+        print("cwd is %s, want an AOS_DAEMON directive" % json.dumps(cwd))
+elif op == "screen-sock":           # CELL → the screen's tmux socket (same rule as aos.agentlib.cli_cell.tty_socket)
+    cell = os.path.realpath(args[0])
+    h = hashlib.sha256(cell.encode()).hexdigest()[:16] + ".sock"
+    sub = "aos-tty-%d" % os.getuid()
+    xdg = os.environ.get("XDG_RUNTIME_DIR") or ""
+    base = os.path.join(xdg, sub) if (os.path.isabs(xdg) and os.path.isdir(xdg) and os.access(xdg, os.W_OK | os.X_OK)
+                                      and len(os.path.join(xdg, sub).encode()) <= 80) else os.path.join("/tmp", sub)
+    for cand in (os.path.join(base, h), os.path.join("/tmp", sub, h), os.path.join(cell, "tty.sock")):
+        if os.path.exists(cand):
+            print(cand); break
+    else:
+        print(os.path.join(base, h))
+elif op == "ledger-on-table":       # LEDGER DAEMON ; stdin = ls -j → "on N of M" and the missing names
+    kids = load(args[0]); daemon = args[1]
+    rows = json.load(sys.stdin)
+    if isinstance(rows, dict):
+        rows = [dict(v, name=k) for k, v in (rows.get("procs") or rows).items() if isinstance(v, dict)]
+    on = {(r.get("name"), os.path.normpath(os.path.join(daemon, r["stack"]))) for r in rows if isinstance(r, dict) and isinstance(r.get("stack"), str)}
+    hit = [k["name"] for k in kids if (k.get("name"), os.path.normpath(os.path.join(daemon, k.get("stack", "")))) in on]
+    print("on %d of %d; missing: %s" % (len(hit), len(kids), " ".join(k["name"] for k in kids if k["name"] not in hit) or "-"))
+else:
+    sys.exit("unknown op " + op)
+PY
+py() { python3 -I -c "$PYH" "$@"; }
+
+# 這個使用者、cwd 在 PREFIX（或底下）的行程：「pid cwd」一行一支
+pids_under() {
+    local p c
+    for p in /proc/[0-9]*; do
+        [ -O "$p" ] || continue
+        c=$(readlink "$p/cwd" 2>/dev/null) || continue
+        case $c in "$1"|"$1"/*) echo "${p#/proc/} $c";; esac
+    done
+}
+pids_at() {   # cwd 正好是 DIR 的行程
+    local p c
+    for p in /proc/[0-9]*; do
+        [ -O "$p" ] || continue
+        c=$(readlink "$p/cwd" 2>/dev/null) || continue
+        [ "$c" = "$1" ] && echo "${p#/proc/} $c"
+    done
+}
+alive() { [ -d "/proc/$1" ]; }
+all_gone() { local p; for p in "$@"; do alive "$p" && return 1; done; return 0; }
+daemons_at() {   # cwd 正好是 DIR、執行檔是 aos-daemon 的行程（一台 daemon 一支）
+    local p c
+    for p in /proc/[0-9]*; do
+        [ -O "$p" ] || continue
+        c=$(readlink "$p/cwd" 2>/dev/null) || continue
+        [ "$c" = "$1" ] || continue
+        case $(readlink "$p/exe" 2>/dev/null) in */aos-daemon|*"/aos-daemon (deleted)") echo "${p#/proc/}";; esac
+    done
+}
+close_screen() {   # DAEMON NAME SOCK：請它關畫面，關掉了才算
+    aos aos-agent -d "$1" close -t "$2" >>"$LOG" 2>&1
+    ! tmux -S "$3" has-session -t cli 2>/dev/null 9>&-
+}
+screen_open() { [ -S "$1" ] && tmux -S "$1" has-session -t cli 2>/dev/null 9>&-; }
+# 有 daemon 握著 stack 資料夾的鎖（daemon.cpp check_running 鎖資料夾本身）＝在跑。只在「不該有東西正在起」的時候用（拿鎖那一瞬會擋住正要起的 daemon）。
+locked() { [ -d "$1" ] || return 1; flock -n -E 75 "$1" true 9>&- ; [ $? -eq 75 ]; }
+daemon_up() { [ -d "$1" ] && aos aos-daemon-ctl -d "$1" ping --timeout-s 3 >/dev/null 2>&1; }
+table() { aos aos-daemon-ctl -d "$1" ls -j 2>/dev/null | py table; }
+row_phase() { table "$1" | awk -v n="$2" '$1==n {print $2}'; }
+wait_until() {   # SECONDS DESC CMD… ：每秒試一次
+    local t=$1 desc=$2 end=$((SECONDS + $1)); shift 2
+    while :; do
+        "$@" && return 0
+        [ $SECONDS -ge $end ] && { say "timed out after ${t}s waiting for: $desc"; return 1; }
+        sleep 1
+    done
+}
+no_pids_under() { [ -z "$(pids_under "$1")" ]; }
+no_pids_at() { [ -z "$(pids_at "$1")" ]; }
+listing() { LC_ALL=C ls -A "$1" 2>/dev/null | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//'; }
+want_listing() { printf '%s\n' "$@" | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//'; }
+all_running() {   # STACK NAME… ：每一列都 running
+    local t n; t=$(table "$1") || return 1; shift
+    for n in "$@"; do grep -qx "$n running" <<<"$t" || return 1; done
+}
+same_fs() { [ "$(stat -c %d "$1")" = "$(stat -c %d "$2")" ]; }
+backup_mv() {   # SRC DEST：DEST 已在就停（不蓋）
+    [ -e "$2" ] && { fail "backup $2 already exists; not overwriting"; return 1; }
+    mkdir -p "$(dirname "$2")" && mv -n -T -- "$1" "$2" && [ -e "$2" ] && [ ! -e "$1" ] || { fail "could not move $1 to $2"; return 1; }
+    say "moved $1 -> $2"
+}
+ps_line() { echo "pgrep -u $USER -af aos-daemon (pid cwd):"; local p; for p in $(pgrep -u "$USER" aos-daemon); do echo "  $p $(readlink /proc/$p/cwd 2>/dev/null)"; done; }
+
+# 舊樹還活著的行程：cwd 在舊樹底下的，加上舊表上記的（eca 的 loop cwd 在範本夾，只能從表認）
+old_pids() {
+    { pids_under "$HM_OLD" | cut -d' ' -f1
+      for f in "$OLD_STACK/procs_state.json" "$HM_RETIRE/.stack/procs_state.json"; do [ -f "$f" ] && py pids "$f"; done
+    } | sort -un | while read -r p; do alive "$p" && echo "$p"; done
+}
+under_old_tree() {   # 這支腳本是不是舊樹行程的子孫（停舊根會連自己一起停）
+    local olds p=$$ pp
+    olds=" $(old_pids | tr '\n' ' ') "
+    while [ "$p" -gt 1 ] 2>/dev/null; do
+        case $olds in *" $p "*) return 0;; esac
+        pp=$(awk '{print $4}' "/proc/$p/stat" 2>/dev/null) || break
+        p=$pp
+    done
+    return 1
+}
+
+# tmux 視窗裡跑的一支前台 daemon：寫成 runner 檔（值已展開；只 export 需要的變數），再開一個視窗跑它
+make_runner() {   # FILE DIR LOGFILE KEY(keep|drop) LLMK CMD…
+    local f=$1 dir=$2 log=$3 key=$4 llmk=$5; shift 5
+    {
+        echo '#!/bin/bash'
+        echo "# runner written by home-move at $(date '+%F %T'): one daemon in the foreground of a tmux window; its output goes to the log below"
+        echo 'for v in $(compgen -e | grep -E "^(AOS_|CLAUDECODE$|CLAUDE_)"); do unset "$v"; done'
+        echo 'unset TMUX TMUX_PANE'
+        [ "$key" = drop ] && echo 'unset LITELLM_KEY   # the root does not need it; agents then do not inherit it'
+        printf 'export HOME=%q AOS_HOME=%q\n' "$HM_HOME" "$HM_AOS_HOME"
+        echo '. "$AOS_HOME/env.sh" || exit 1   # clears AOS_* but AOS_HOME, puts bin/ on PATH'
+        [ -z "$HM_PATH_PREPEND" ] || printf 'export PATH=%q:"$PATH"\n' "$HM_PATH_PREPEND"
+        [ -z "$llmk" ] || printf 'export AOS_LLM_KERNEL=%q\n' "$llmk"
+        printf 'cd %q || exit 1\n' "$dir"
+        printf 'echo "== $(date "+%%F %%T") start (pid $$): %s" >>%q\n' "$*" "$log"
+        printf 'exec'; printf ' %q' "$@"; printf ' >>%q 2>&1\n' "$log"
+    } > "$f"
+    chmod 755 "$f"
+}
+open_window() {   # NAME RUNNER
+    if tm has-session -t "=$HM_TMUX_SESSION" 2>/dev/null; then
+        tm new-window -d -t "=$HM_TMUX_SESSION:" -n "$1" "bash $(printf %q "$2")" >>"$LOG" 2>&1
+    else
+        tm new-session -d -s "$HM_TMUX_SESSION" -n "$1" "bash $(printf %q "$2")" >>"$LOG" 2>&1
+    fi || { fail "tmux could not open window $1"; return 1; }
+    say "tmux window $1 opened: tmux -S $HM_TMUX_SOCK attach -t $HM_TMUX_SESSION   (its log: $HM_WORK/$1.log)"
+}
+
+# ===================== 各段 =====================
+
+step_check() {   # 只讀：前提都對才退 0
+    local bad=0 c h n f
+    say "check: read-only look at the preconditions"
+    for c in tmux python3 flock realpath git; do command -v "$c" >/dev/null || { fail "missing command $c"; bad=1; }; done
+    for c in aos-exec aos-daemon-ctl aos-agent; do [ -x "$HM_AOS_HOME/bin/$c" ] || { fail "$HM_AOS_HOME/bin/$c not installed"; bad=1; }; done
+    [ -f "$HM_AOS_HOME/env.sh" ] || { fail "no $HM_AOS_HOME/env.sh"; bad=1; }
+    for c in "${COMMITS[@]}"; do
+        h=${c%% *}
+        if git -C "$HM_GIT_REPO" merge-base --is-ancestor "$h" HEAD 2>/dev/null; then say "ok: commit $c is in HEAD of $HM_GIT_REPO"
+        else fail "commit $c is not in HEAD of $HM_GIT_REPO"; bad=1; fi
+    done
+    for f in "${LINE3_FILES[@]}"; do
+        if cmp -s "$HM_AOS_HOME/py/$f" "$HM_AOS_HOME/lib/$f"; then say "ok: line 3 installed: lib/$f = py/$f"
+        else fail "lib/$f differs from py/$f (run install.py first)"; bad=1; fi
+    done
+    c=$(git -C "$HM_GIT_REPO" log -1 --format=%ct 139d8dd2b 2>/dev/null || echo 0)
+    [ "$(stat -c %Y "$HM_AOS_HOME/bin/aos-daemon" 2>/dev/null || echo 0)" -ge "$c" ] && say "ok: bin/aos-daemon is newer than the line 3 commit" \
+        || { fail "bin/aos-daemon is older than the line 3 commit (install.py not run?)"; bad=1; }
+    [ -f "$HM_REPO/$ROOT_DEF/daemon.json" ] || { fail "no $HM_REPO/$ROOT_DEF"; bad=1; }
+    grep -q '^AOS_LLM_KERNEL=' "$HM_REPO/$ROOT_DEF/.env" 2>/dev/null && { fail "$ROOT_DEF/.env still sets AOS_LLM_KERNEL"; bad=1; }
+    # 舊樹
+    h=$(want_listing "${RETIRE_ITEMS[@]}" "${KEEP_ITEMS[@]}")
+    [ "$(listing "$HM_OLD")" = "$h" ] && say "ok: ls -A $HM_OLD = $h" || { fail "ls -A $HM_OLD = '$(listing "$HM_OLD")', want '$h'"; bad=1; }
+    for n in "${MOVED[@]}"; do [ -d "$OLD_STACK/procs/$n" ] || { fail "no $OLD_STACK/procs/$n"; bad=1; }; done
+    c=$(py ledger-state "$OLD_STACK/procs/$PARENT/tools/subagent/subagents.json" "$OLD_STACK/procs" "${SUBAGENTS[@]}")
+    [ "$c" = old ] && say "ok: $PARENT's ledger lists ${SUBAGENTS[*]} at their old stacks" || { fail "$PARENT's ledger: $c"; bad=1; }
+    [ -f "$HM_LLM_DEF/kernel.json" ] || { fail "no $HM_LLM_DEF/kernel.json"; bad=1; }
+    # 新位置還空著
+    [ -e "$STACK" ] && { fail "$STACK already exists"; bad=1; }
+    [ -e "$HM_LLM_STACK" ] && { fail "$HM_LLM_STACK already exists"; bad=1; }
+    if [ -e "$HM_RETIRE" ]; then [ -d "$HM_RETIRE" ] && [ -z "$(ls -A "$HM_RETIRE")" ] && say "ok: $HM_RETIRE exists and is empty (left by a rollback)" \
+        || { fail "$HM_RETIRE exists and is not an empty folder"; bad=1; }; fi
+    same_fs "$HM_OLD" "$(dirname "$HM_RETIRE")" && say "ok: $HM_OLD and $(dirname "$HM_RETIRE") are on one filesystem (mv is a rename)" \
+        || { fail "$HM_OLD and $(dirname "$HM_RETIRE") are on different filesystems"; bad=1; }
+    [ -n "$(ls -A "$STATE" 2>/dev/null)" ] && { fail "$STATE has marks of an earlier run ($(ls "$STATE" | tr '\n' ' ')); run rollback first or move it away"; bad=1; }
+    for n in llm root; do   # 同名視窗已在＝上次的還沒收（old-root 視窗可以在：rollback 起回的舊根就住那裡）
+        tm list-windows -t "=$HM_TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep -qx "$n" && { fail "tmux window $n already runs in session $HM_TMUX_SESSION ($HM_TMUX_SOCK)"; bad=1; }
+    done
+    under_old_tree && { fail "this shell is a descendant of the old tree; stopping the old root would stop this script too. Run from a terminal outside it"; bad=1; }
+    # 現況（只看）
+    daemon_up "$OLD_STACK" && say "info: the old root answers ping (stop-old will stop it)" || say "info: the old root does not answer ping"
+    say "info: processes of the old tree: $(old_pids | tr '\n' ' ')"
+    for n in "${SCREENS[@]}"; do
+        f=$(py screen-sock "$OLD_STACK/procs/$n/claude")
+        [ -S "$f" ] && tmux -S "$f" has-session -t cli 2>/dev/null 9>&- && say "info: $n's screen is open ($f); stop-old closes it"
+    done
+    [ -n "${LITELLM_KEY+x}" ] && say "info: LITELLM_KEY is set in this shell; the llm kernel window keeps it" \
+        || say "info: LITELLM_KEY is not set in this shell; the new llm kernel answers fake endpoints only"
+    ps_line
+    [ $bad = 0 ] && say "check: all preconditions hold" || say "check: some preconditions do not hold (see the error lines)"
+    return $bad
+}
+
+step_stop_old() {   # 關畫面、shutdown 舊根、等舊樹的行程全部不見
+    local n f olds left
+    if ! daemon_up "$OLD_STACK"; then
+        [ -z "$(old_pids)" ] && { say "stop-old: the old root is already down and nothing of the old tree runs"; mark stop-old.done; return 0; }
+        fail "the old root does not answer ping but old-tree processes still run: $(old_pids | tr '\n' ' ')"; return 1
+    fi
+    under_old_tree && { fail "this shell is a descendant of the old tree; run from a terminal outside it"; return 1; }
+    mark stop-old.begun
+    olds=$(old_pids | tr '\n' ' ')
+    say "stop-old: old-tree processes now: $olds"
+    for n in "${SCREENS[@]}"; do
+        f=$(py screen-sock "$OLD_STACK/procs/$n/claude")
+        [ -S "$f" ] && tmux -S "$f" has-session -t cli 2>/dev/null 9>&- || continue
+        say "stop-old: closing $n's screen ($f)"
+        wait_until "$HM_TIMEOUT" "$n's screen to close" close_screen "$OLD_STACK" "$n" "$f" \
+            || { fail "could not close $n's screen (is it answering? try again when it is idle)"; return 1; }
+    done
+    say "stop-old: aos-daemon-ctl -d $OLD_STACK shutdown"
+    aos aos-daemon-ctl -d "$OLD_STACK" shutdown --timeout-s "$HM_TIMEOUT" || warn "shutdown did not report success; waiting for the processes anyway"
+    wait_until "$HM_TIMEOUT" "old-tree processes to exit" all_gone $olds \
+        || { fail "still running: $(for p in $olds; do alive "$p" && echo -n "$p "; done)"; return 1; }
+    left=$(pids_under "$HM_OLD"); [ -z "$left" ] || { fail "processes with a cwd under $HM_OLD remain: $left"; return 1; }
+    no_pids_at "$HM_LLM_DEF" || { fail "the old llm kernel (cwd $HM_LLM_DEF) still runs"; return 1; }
+    locked "$OLD_STACK" && { fail "something still holds the lock of $OLD_STACK"; return 1; }
+    ps_line
+    mark stop-old.done; say "stop-old: done; nothing of the old tree runs"
+}
+
+step_copy() {   # 四格 stack cp -a 到 _stack/procs/；抄本裡的 claude/env.json 搬進備份夾
+    local n
+    [ -z "$(old_pids)" ] && ! locked "$OLD_STACK" || { fail "the old tree still runs; run stop-old first"; return 1; }
+    for n in "${MOVED[@]}"; do [ -d "$OLD_STACK/procs/$n" ] || { fail "no $OLD_STACK/procs/$n"; return 1; }; done
+    if marked copy.done; then say "copy: already done"; return 0; fi
+    [ -e "$STACK" ] && { fail "$STACK already exists"; return 1; }
+    mark copy.begun
+    mkdir -p "$STACK/procs" || { fail "cannot make $STACK/procs"; return 1; }
+    for n in "${MOVED[@]}"; do
+        cp -a -- "$OLD_STACK/procs/$n" "$STACK/procs/$n" || { fail "cp -a $n failed"; return 1; }
+        [ "$(cd "$OLD_STACK/procs/$n" && find . | LC_ALL=C sort | md5sum)" = "$(cd "$STACK/procs/$n" && find . | LC_ALL=C sort | md5sum)" ] \
+            || { fail "the copy of $n does not list the same files"; return 1; }
+        say "copy: $n -> $STACK/procs/$n ($(du -sh "$STACK/procs/$n" | cut -f1))"
+    done
+    for n in "${MOVED[@]}"; do
+        if [ -e "$STACK/procs/$n/claude/env.json" ]; then backup_mv "$STACK/procs/$n/claude/env.json" "$HM_WORK/env-json-bak/$n/env.json" || return 1
+        else say "copy: $n has no claude/env.json"; fi
+    done
+    mark copy.done; say "copy: done (the table is not copied; the new root starts an empty one)"
+}
+
+step_fix() {   # 重寫三處舊資料：eca-aos 的帳、三個 exec.json（搬進備份，重掛時 daemon 重寫）、兩份 system.txt
+    local n f s c
+    locked "$STACK" && { fail "a daemon runs on $STACK; fix only while it is down"; return 1; }
+    [ -z "$(old_pids)" ] || { fail "the old tree still runs"; return 1; }
+    for n in "${MOVED[@]}"; do [ -d "$STACK/procs/$n" ] || { fail "no $STACK/procs/$n; run copy first"; return 1; }; done
+    f=$STACK/procs/$PARENT/tools/subagent/subagents.json
+    s=$(py ledger-state "$f" "$OLD_STACK/procs" "${SUBAGENTS[@]}")
+    case $s in
+        old) [ -e "$HM_WORK/fix-bak/$PARENT/subagents.json" ] && { fail "backup of $PARENT's ledger already exists"; return 1; }
+             mkdir -p "$HM_WORK/fix-bak/$PARENT" && cp -p -- "$f" "$HM_WORK/fix-bak/$PARENT/subagents.json" || { fail "cannot back up $f"; return 1; }
+             py ledger-write "$f" "${SUBAGENTS[@]}" || { fail "cannot write $f"; return 1; }
+             say "fix: $PARENT's ledger now $(cat "$f")";;
+        new) say "fix: $PARENT's ledger is already in the new form";;
+        *)   fail "$PARENT's ledger is not what this script knows: $s"; return 1;;
+    esac
+    for n in "${SUBAGENTS[@]}"; do
+        f=$STACK/procs/$n/exec.json
+        if [ -e "$f" ]; then
+            grep -qF "$OLD_STACK" "$f" || { fail "$f does not name $OLD_STACK; not touching it"; return 1; }
+            backup_mv "$f" "$HM_WORK/fix-bak/$n/exec.json" || return 1
+        else say "fix: $n has no exec.json (already moved); the daemon writes a new one on add"; fi
+    done
+    for n in "${SUBAGENTS[@]}"; do
+        f=$STACK/procs/$n/system.txt
+        [ -f "$f" ] || continue
+        grep -qF "$HM_REPO" "$f" || { say "fix: $n/system.txt does not name $HM_REPO"; continue; }
+        [ -e "$HM_WORK/fix-bak/$n/system.txt" ] && { fail "backup of $n/system.txt already exists"; return 1; }
+        mkdir -p "$HM_WORK/fix-bak/$n" && cp -p -- "$f" "$HM_WORK/fix-bak/$n/system.txt" || { fail "cannot back up $f"; return 1; }
+        c=$(py replace "$f" "$HM_REPO" "$HM_SYS_TO") || { fail "cannot rewrite $f"; return 1; }
+        say "fix: $n/system.txt: $c x '$HM_REPO' -> '$HM_SYS_TO'"
+    done
+    mark fix.done; say "fix: done"
+}
+
+step_retire_old() {   # 舊樹 llm 以外的東西 mv 進 HM_RETIRE（清單寫死）
+    local want item
+    [ -z "$(old_pids)" ] && ! locked "$OLD_STACK" || { fail "the old tree still runs"; return 1; }
+    for item in "${MOVED[@]}"; do [ -d "$STACK/procs/$item" ] || { fail "no $STACK/procs/$item; copy first (the old stack would be the only copy)"; return 1; }; done
+    want=$(want_listing "${RETIRE_ITEMS[@]}" "${KEEP_ITEMS[@]}")
+    if [ "$(listing "$HM_OLD")" = "$(want_listing "${KEEP_ITEMS[@]}")" ] && [ "$(listing "$HM_RETIRE")" = "$(want_listing "${RETIRE_ITEMS[@]}")" ]; then
+        say "retire-old: already done"; mark retire-old.done; return 0
+    fi
+    [ "$(listing "$HM_OLD")" = "$want" ] || { fail "ls -A $HM_OLD = '$(listing "$HM_OLD")', want '$want'; stopping (ask the user)"; return 1; }
+    if [ -e "$HM_RETIRE" ]; then [ -d "$HM_RETIRE" ] && [ -z "$(ls -A "$HM_RETIRE")" ] || { fail "$HM_RETIRE exists and is not empty"; return 1; }; fi
+    same_fs "$HM_OLD" "$(dirname "$HM_RETIRE")" || { fail "different filesystems: mv would copy"; return 1; }
+    mark retire-old.begun
+    mkdir -p "$HM_RETIRE" || { fail "cannot make $HM_RETIRE"; return 1; }
+    for item in "${RETIRE_ITEMS[@]}"; do
+        mv -n -T -- "$HM_OLD/$item" "$HM_RETIRE/$item" && [ -e "$HM_RETIRE/$item" ] && [ ! -e "$HM_OLD/$item" ] \
+            || { fail "could not move $HM_OLD/$item"; return 1; }
+        say "retire-old: $HM_OLD/$item -> $HM_RETIRE/$item"
+    done
+    [ "$(listing "$HM_OLD")" = "$(want_listing "${KEEP_ITEMS[@]}")" ] || { fail "after the move ls -A $HM_OLD = '$(listing "$HM_OLD")'"; return 1; }
+    mark retire-old.done; say "retire-old: done; ls -A $HM_OLD = $(listing "$HM_OLD")"
+}
+
+step_start_llm() {   # 從 HM_LLM_DEF 起獨立的 llm kernel（stack HM_LLM_STACK），tmux 視窗 llm
+    if daemon_up "$HM_LLM_STACK"; then say "start-llm: already up"; mark start-llm.done; return 0; fi
+    no_pids_at "$HM_LLM_DEF" || { fail "something already runs with cwd $HM_LLM_DEF (the old llm kernel?): $(pids_at "$HM_LLM_DEF")"; return 1; }
+    locked "$HM_LLM_STACK" && { fail "something holds $HM_LLM_STACK"; return 1; }
+    [ -f "$HM_LLM_DEF/kernel.json" ] || { fail "no $HM_LLM_DEF/kernel.json"; return 1; }
+    mark start-llm.begun
+    [ -n "${LITELLM_KEY+x}" ] && echo set > "$STATE/llm-key" || echo unset > "$STATE/llm-key"
+    make_runner "$HM_WORK/run-llm.sh" "$HM_LLM_DEF" "$HM_WORK/llm.log" keep "" aos-exec --stack "$HM_LLM_STACK" "$HM_LLM_DEF" || return 1
+    open_window llm "$HM_WORK/run-llm.sh" || return 1
+    wait_until "$HM_TIMEOUT" "the llm kernel to answer ping" daemon_up "$HM_LLM_STACK" || { tail -5 "$HM_WORK/llm.log" 2>/dev/null; return 1; }
+    [ "$(daemons_at "$HM_LLM_DEF" | wc -l)" = 1 ] || { fail "aos-daemon processes with cwd $HM_LLM_DEF: $(daemons_at "$HM_LLM_DEF" | tr '\n' ' ')(want exactly one)"; return 1; }
+    mark start-llm.done; say "start-llm: up (AOS_LLM_KERNEL=$HM_LLM_STACK); table: $(table "$HM_LLM_STACK" | tr '\n' ',')"
+}
+
+step_start_root() {   # 起 _stack 的根（cwd HM_REPO，wf/tree/root），tmux 視窗 root
+    local n
+    if daemon_up "$STACK"; then say "start-root: already up"; mark start-root.done; return 0; fi
+    daemon_up "$HM_LLM_STACK" || { fail "the llm kernel ($HM_LLM_STACK) does not answer; start-llm first"; return 1; }
+    for n in "${MOVED[@]}"; do [ -d "$STACK/procs/$n" ] || { fail "no $STACK/procs/$n"; return 1; }; done
+    [ "$(py ledger-state "$STACK/procs/$PARENT/tools/subagent/subagents.json" "$OLD_STACK/procs" "${SUBAGENTS[@]}")" = new ] || { fail "run fix first"; return 1; }
+    locked "$STACK" && { fail "something holds $STACK"; return 1; }
+    mark start-root.begun
+    make_runner "$HM_WORK/run-root.sh" "$HM_REPO" "$HM_WORK/root.log" drop "$HM_LLM_STACK" aos-exec --stack _stack "$ROOT_DEF" || return 1
+    open_window root "$HM_WORK/run-root.sh" || return 1
+    wait_until "$HM_TIMEOUT" "the root to answer ping" daemon_up "$STACK" || { tail -5 "$HM_WORK/root.log" 2>/dev/null; return 1; }
+    wait_until "$HM_TIMEOUT" "_clock and _sweeper to run" all_running "$STACK" _clock _sweeper || return 1
+    mark start-root.done; say "start-root: up; table: $(table "$STACK" | tr '\n' ',')"
+}
+
+add_row() {   # NAME [ctl add 旗標…]：已在表上就跳過
+    local n=$1; shift
+    if [ -n "$(row_phase "$STACK" "$n")" ]; then say "reattach: $n is already on the table ($(row_phase "$STACK" "$n"))"; return 0; fi
+    say "reattach: aos-agent -d $STACK ctl add -n $n $*   (cwd $HM_REPO)"
+    # AOS_DAEMON：--stack-json 的指示詞由 aos-agent 在這邊先解一次（subagent 工具裡本來就有這個變數）
+    ( cd "$HM_REPO" && aos env AOS_DAEMON="$STACK" aos-agent -d "$STACK" ctl add -n "$n" "$@" --timeout-s "$HM_TIMEOUT" ) || { fail "ctl add $n failed"; return 1; }
+}
+step_reattach() {   # 先掛三個 subagent（eca-aos 還沒起，帳不會被對帳忘掉），再掛 eca-aos；全部相對路徑或指示詞
+    local n
+    daemon_up "$STACK" || { fail "the root does not answer; start-root first"; return 1; }
+    mark reattach.begun
+    if [ "$HM_SUBAGENTS" = add ]; then
+        for n in "${SUBAGENTS[@]}"; do
+            add_row "$n" -w . --stack-json "{\"\$env\": \"AOS_DAEMON\", \"\$path\": \"procs/$n\"}" --path-json "$ECA_DEF_JSON" \
+                --parent "$STACK/procs/$PARENT" --notify-box "$STACK/procs/$PARENT/mailbox" || return 1
+        done
+    fi
+    add_row "$PARENT" -w . -s "_stack/procs/$PARENT" --path-json "$ECA_DEF_JSON" || return 1
+    if [ "$HM_SUBAGENTS" = add ]; then
+        wait_until "$HM_TIMEOUT" "the four agents to run" all_running "$STACK" "${MOVED[@]}" || { table "$STACK"; return 1; }
+    else
+        wait_until "$HM_TIMEOUT" "$PARENT to run" all_running "$STACK" "$PARENT" || { table "$STACK"; return 1; }
+        say "reattach: HM_SUBAGENTS=hint: the three subagents are NOT on the table. When $PARENT is awake it runs, for each of ${SUBAGENTS[*]}:"
+        say "  subagent {\"op\": \"add\", \"name\": \"<name>\", \"def_json\": $ECA_DEF_JSON}   (its ledger already holds them in the new form; rm first only if subagent ls still lists one)"
+    fi
+    mark reattach.done; say "reattach: done; table: $(table "$STACK" | tr '\n' ',')"
+}
+
+step_verify() {   # 核對；硬錯退 1，軟的只印 warning
+    local bad=0 n f t s want e
+    say "verify: checking the new tree"
+    t=$(table "$STACK") || { fail "cannot read the table of $STACK"; return 1; }
+    for n in _clock _sweeper "${MOVED[@]}"; do
+        [ "$HM_SUBAGENTS" = hint ] && [[ " ${SUBAGENTS[*]} " == *" $n "* ]] && continue
+        grep -qx "$n running" <<<"$t" && say "ok: $n running" || { fail "$n is not running ($(awk -v n="$n" '$1==n{print $2}' <<<"$t"))"; bad=1; }
+    done
+    grep -qF "$HM_HOME" "$STACK/procs_state.json" && { fail "the new table holds an absolute path under $HM_HOME: $(grep -oF "$HM_HOME" "$STACK/procs_state.json" | head -1)"; bad=1; } \
+        || say "ok: the new table holds no absolute path under $HM_HOME"
+    if [ "$HM_SUBAGENTS" = add ]; then
+        for n in "${SUBAGENTS[@]}"; do
+            e=$(py exec-check "$STACK/procs/$n/exec.json" "$PARENT" 2>&1)
+            [ -z "$e" ] && say "ok: $n/exec.json: parent and notify box are AOS_DAEMON directives" || { fail "$n/exec.json: $e"; bad=1; }
+        done
+        s=$(aos aos-daemon-ctl -d "$STACK" ls -j 2>/dev/null | py ledger-on-table "$STACK/procs/$PARENT/tools/subagent/subagents.json" "$STACK")
+        [[ $s == "on 3 of 3;"* ]] && say "ok: $PARENT's ledger vs the table: $s (subagent ls shows 3)" || { fail "$PARENT's ledger vs the table: $s"; bad=1; }
+    fi
+    daemon_up "$HM_LLM_STACK" && say "ok: the llm kernel answers; its table: $(table "$HM_LLM_STACK" | tr '\n' ',')" || { fail "the llm kernel does not answer"; bad=1; }
+    [ "$(daemons_at "$HM_LLM_DEF" | wc -l)" = 1 ] && say "ok: exactly one llm kernel (aos-daemon with cwd $HM_LLM_DEF): $(daemons_at "$HM_LLM_DEF")" \
+        || { fail "aos-daemon processes with cwd $HM_LLM_DEF: $(daemons_at "$HM_LLM_DEF" | tr '\n' ' ')(want exactly one)"; bad=1; }
+    for n in "${MOVED[@]}"; do
+        [ "$HM_SUBAGENTS" = hint ] && [ "$n" != "$PARENT" ] && continue
+        f=$STACK/procs/$n/claude/env.json
+        wait_until "$HM_TIMEOUT" "$n's claude/env.json" test -s "$f" || { fail "$n wrote no claude/env.json"; bad=1; continue; }
+        e=$(py envjson "$f")
+        want="AOS_HOME=$HM_AOS_HOME AOS_DAEMON=$STACK AOS_LLM_KERNEL=$HM_LLM_STACK AOS_KERNEL="
+        s=$(grep -v '^AOS_CLOCK=' <<<"$e" | sed 's#/$##' | tr '\n' ' ' | sed 's/ $//')
+        [ "$s" = "$want" ] && say "ok: $n/claude/env.json: $s" || { fail "$n/claude/env.json: '$s', want '$want'"; bad=1; }
+        s=$(sed -n 's/^AOS_CLOCK=//p' <<<"$e")
+        [[ $s == "$STACK"/* ]] && say "ok: $n's AOS_CLOCK is under $STACK" || { fail "$n's AOS_CLOCK is '$s', not under $STACK"; bad=1; }
+    done
+    s=$(listing "$HM_OLD"); want=$(want_listing "${KEEP_ITEMS[@]}" "$(basename "$HM_LLM_STACK")")
+    [ "$s" = "$want" ] && say "ok: ls -A $HM_OLD = $s" || { fail "ls -A $HM_OLD = '$s', want '$want'"; bad=1; }
+    s=$(listing "$HM_RETIRE"); want=$(want_listing "${RETIRE_ITEMS[@]}")
+    [ "$s" = "$want" ] && say "ok: ls -A $HM_RETIRE = $s" || { fail "ls -A $HM_RETIRE = '$s', want '$want'"; bad=1; }
+    [ -z "$(pids_under "$HM_RETIRE")" ] && say "ok: nothing runs from $HM_RETIRE" || { fail "running from $HM_RETIRE: $(pids_under "$HM_RETIRE")"; bad=1; }
+    s=$(grep -rlF "$OLD_STACK" "$STACK" --exclude=history.jsonl --exclude=history_removed.jsonl --exclude-dir=transcripts --exclude=live.jsonl --exclude=turns.jsonl --exclude='*.log' 2>/dev/null | sed "s#^$STACK/##" | tr '\n' ' ')
+    [ -z "$s" ] && say "ok: no file in $STACK (outside histories and transcripts) names $OLD_STACK" || warn "files in $STACK that still name $OLD_STACK (runtime files the agents rewrite, or letters): $s"
+    [ "$(cat "$STATE/llm-key" 2>/dev/null)" = set ] || warn "the key real models need is not set (LITELLM_KEY was not in the shell that started the llm kernel); fake endpoints answer, sol and the like will fail"
+    ps_line
+    [ $bad = 0 ] && { mark verify.done; say "verify: all checks pass"; } || say "verify: some checks fail"
+    say "next: open eca-aos's screen with: $0 screen   (or by hand: aos-agent -d $STACK open -t $PARENT --detach)"
+    return $bad
+}
+
+step_screen() {   # 選用（不在 all 裡）：開 eca-aos 的畫面（不 attach），印怎麼看
+    local f
+    daemon_up "$STACK" && [ "$(row_phase "$STACK" "$PARENT")" = running ] || { fail "$PARENT is not running on $STACK"; return 1; }
+    [ -s "$STACK/procs/$PARENT/claude/env.json" ] || { fail "$PARENT has not written claude/env.json yet (the screen would take this shell's values); wait for its loop"; return 1; }
+    f=$(py screen-sock "$STACK/procs/$PARENT/claude")
+    if ! { [ -S "$f" ] && tmux -S "$f" has-session -t cli 2>/dev/null 9>&-; }; then
+        say "screen: aos-agent -d $STACK open -t $PARENT --detach"
+        aos aos-agent -d "$STACK" open -t "$PARENT" --detach </dev/null >>"$LOG" 2>&1 || { fail "open --detach failed (see $LOG)"; tail -3 "$LOG"; return 1; }
+    fi
+    wait_until 30 "$PARENT's screen" bash -c 'tmux -S "$0" has-session -t cli 2>/dev/null' "$f" || return 1
+    say "screen: $PARENT's screen is open (tmux socket $f, session cli)"
+    say "  look without attaching: tmux -S $f capture-pane -p -t cli | tail -20"
+    say "  attach from a terminal (the user): aos-agent -d $STACK open -t $PARENT   (Ctrl-] detaches, the screen stays)"
+}
+
+step_probe() {   # 選用（不在 all 裡）：掛一隻 agent-fsm、腦設 fake、問一句、拿下表、stack 搬進 HM_WORK（不叫真模型）
+    local n=hm-probe out e
+    daemon_up "$STACK" || { fail "the root is not up"; return 1; }
+    [ -e "$STACK/procs/$n" ] && { fail "$STACK/procs/$n already exists"; return 1; }
+    ( cd "$HM_REPO" && aos aos-agent -d "$STACK" ctl add -n "$n" -w . --path-json '{"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}' --timeout-s "$HM_TIMEOUT" ) || { fail "add $n failed"; return 1; }
+    aos aos-agent -d "$STACK" llm -t "$n" set model=fake || { fail "llm set failed"; return 1; }
+    out=$(aos aos-agent -d "$STACK" ask -t "$n" --timeout-s "$HM_TIMEOUT" "Reply with one short sentence." 2>&1); e=$?
+    say "probe: answer: $(head -c 300 <<<"$out")"
+    aos aos-agent -d "$STACK" ctl rm "$n" >/dev/null || warn "ctl rm $n failed"
+    backup_mv "$STACK/procs/$n" "$HM_WORK/probe-$(date +%H%M%S)/$n" || true
+    [ $e = 0 ] && [[ $out == *FAKE* ]] && say "probe: the new llm kernel answered through the fake endpoint" || { fail "probe: no fake answer"; return 1; }
+}
+
+step_start_old() {   # 起回舊根（rollback 用；cwd HM_OLD、aos-exec root），tmux 視窗 old-root
+    if daemon_up "$OLD_STACK"; then say "start-old: the old root is already up"; return 0; fi
+    [ -d "$OLD_STACK" ] && [ -d "$HM_OLD/root" ] || { fail "$OLD_STACK or $HM_OLD/root is missing (retired items not moved back?)"; return 1; }
+    no_pids_at "$HM_LLM_DEF" || { fail "something runs with cwd $HM_LLM_DEF (the new llm kernel?); stop it first"; return 1; }
+    make_runner "$HM_WORK/run-old-root.sh" "$HM_OLD" "$HM_WORK/old-root.log" keep "" aos-exec root || return 1
+    open_window old-root "$HM_WORK/run-old-root.sh" || return 1
+    wait_until "$HM_TIMEOUT" "the old root to answer ping" daemon_up "$OLD_STACK" || { tail -5 "$HM_WORK/old-root.log" 2>/dev/null; return 1; }
+    wait_until "$HM_TIMEOUT" "the old tree's rows to run" all_running "$OLD_STACK" _clock _sweeper llm "${MOVED[@]}" \
+        || warn "not every old row runs yet: $(table "$OLD_STACK" | tr '\n' ',')"
+    say "start-old: the old root is up; table: $(table "$OLD_STACK" | tr '\n' ',')"
+}
+
+step_rollback() {   # 照現況退回：停新根 → 停新 llm（確認 cwd 在 llm/ 的不見）→ 搬回舊東西 → 新的 _stack、.llm-stack 搬進 HM_WORK → 起回舊根
+    local item stamp aside bad=0 pids f
+    stamp=$(date +%Y%m%d-%H%M%S); aside=$HM_WORK/rolled-back-$stamp
+    say "rollback: start"
+    if daemon_up "$STACK"; then   # 新樹開著的畫面先關（不然那個 claude 留著、對著一棵停掉又搬走的樹）
+        for item in "${MOVED[@]}"; do
+            f=$(py screen-sock "$STACK/procs/$item/claude")
+            screen_open "$f" || continue
+            say "rollback: closing $item's screen on the new tree ($f)"
+            wait_until "$HM_TIMEOUT" "$item's screen to close" close_screen "$STACK" "$item" "$f" || warn "$item's screen on the new tree did not close; close it by hand: tmux -S $f kill-server"
+        done
+    fi
+    if daemon_up "$STACK" || locked "$STACK"; then
+        pids=$( { py pids "$STACK/procs_state.json"; } | tr '\n' ' ')
+        say "rollback: aos-daemon-ctl -d $STACK shutdown"
+        aos aos-daemon-ctl -d "$STACK" shutdown --timeout-s "$HM_TIMEOUT" || warn "shutdown of the new root did not report success"
+        wait_until "$HM_TIMEOUT" "the new tree's processes to exit" all_gone $pids || bad=1
+        locked "$STACK" && { fail "the new root still holds $STACK"; return 1; }
+    fi
+    if daemon_up "$HM_LLM_STACK" || locked "$HM_LLM_STACK"; then
+        say "rollback: aos-daemon-ctl -d $HM_LLM_STACK shutdown"
+        aos aos-daemon-ctl -d "$HM_LLM_STACK" shutdown --timeout-s "$HM_TIMEOUT" || warn "shutdown of the new llm kernel did not report success"
+    fi
+    if marked start-llm.begun || [ -d "$HM_LLM_STACK" ]; then
+        wait_until "$HM_TIMEOUT" "nothing with cwd $HM_LLM_DEF" no_pids_at "$HM_LLM_DEF" || { fail "still running with cwd $HM_LLM_DEF: $(pids_at "$HM_LLM_DEF"); not starting the old root"; return 1; }
+    fi
+    # 搬回（清單寫死；兩邊都有就停）
+    if [ -d "$HM_RETIRE" ]; then
+        for item in "${RETIRE_ITEMS[@]}"; do
+            [ -e "$HM_RETIRE/$item" ] || continue
+            [ -e "$HM_OLD/$item" ] && { fail "both $HM_OLD/$item and $HM_RETIRE/$item exist; stopping (ask the user)"; return 1; }
+            mv -n -T -- "$HM_RETIRE/$item" "$HM_OLD/$item" && [ -e "$HM_OLD/$item" ] || { fail "could not move $item back"; return 1; }
+            say "rollback: $HM_RETIRE/$item -> $HM_OLD/$item"
+        done
+        [ -z "$(ls -A "$HM_RETIRE")" ] && say "rollback: $HM_RETIRE is empty now (left in place; removing it is the user's call)"
+    fi
+    # 新的那兩夾與這次的備份夾搬到 HM_WORK/rolled-back-*/ 留著查（不刪）；之後可以重跑 all
+    for item in env-json-bak fix-bak; do [ -e "$HM_WORK/$item" ] && { backup_mv "$HM_WORK/$item" "$aside/$item" || bad=1; }; done
+    if marked copy.begun && [ -e "$STACK" ]; then backup_mv "$STACK" "$aside/_stack" || bad=1; fi
+    if marked start-llm.begun && [ -e "$HM_LLM_STACK" ]; then backup_mv "$HM_LLM_STACK" "$aside/$(basename "$HM_LLM_STACK")" || bad=1; fi
+    # 起回舊根：stop-old 開始過才起（舊根本來就在跑的狀態）
+    if marked stop-old.begun; then
+        [ "$(listing "$HM_OLD")" = "$(want_listing "${RETIRE_ITEMS[@]}" "${KEEP_ITEMS[@]}")" ] || warn "ls -A $HM_OLD = '$(listing "$HM_OLD")'"
+        step_start_old || bad=1
+    else
+        say "rollback: stop-old never ran; the old root was not touched"
+    fi
+    if [ $bad = 0 ]; then
+        [ -d "$STATE" ] && { mkdir -p "$aside" && mv -T -- "$STATE" "$aside/state" && say "rollback: state marks moved to $aside/state"; }
+        say "rollback: done. The old tree runs again; eca-aos's screen: aos-agent -d $OLD_STACK open -t $PARENT --detach"
+    else
+        say "rollback: finished with errors (marks kept in $STATE)"
+    fi
+    ps_line
+    return $bad
+}
+
+step_status() {   # 只看
+    say "status: marks: $(ls "$STATE" 2>/dev/null | tr '\n' ' ')"
+    say "status: old root up: $(daemon_up "$OLD_STACK" && echo yes || echo no); llm kernel up: $(daemon_up "$HM_LLM_STACK" && echo yes || echo no); new root up: $(daemon_up "$STACK" && echo yes || echo no)"
+    say "status: ls -A $HM_OLD = $(listing "$HM_OLD")"
+    [ -d "$HM_RETIRE" ] && say "status: ls -A $HM_RETIRE = $(listing "$HM_RETIRE")"
+    daemon_up "$STACK" && say "status: new table: $(table "$STACK" | tr '\n' ',')"
+    tm list-windows -t "=$HM_TMUX_SESSION" -F '#{window_name}' 2>/dev/null | sed "s/^/$(date '+%F %T') $PROG: status: tmux window: /"
+    ps_line
+}
+
+run_step() {
+    local s=$1 fn rc
+    fn=step_${s//-/_}
+    declare -F "$fn" >/dev/null || { fail "unknown step $s"; return 2; }
+    say "===== $s ====="
+    "$fn"; rc=$?
+    [ $rc = 0 ] && say "----- $s: ok" || say "----- $s: FAILED ($rc)"
+    return $rc
+}
+
+usage() {
+    cat <<EOF
+usage: $PROG STEP      (bash; every path comes from the HM_* variables below)
+steps, in the order "all" runs them (after check):
+  check       read-only: commits in HEAD, line 3 installed, the old tree's exact listing, new places empty, who runs
+  stop-old    close the old agents' screens, shutdown the old root, wait until every old-tree process (llm too) is gone
+  copy        cp -a eca-aos and its three subagents into _stack/procs/; move the copies' claude/env.json to a backup folder
+  fix         eca-aos's subagent ledger to the new form, the three exec.json to the backup folder, system.txt paths
+  retire-old  mv the old tree's items but llm/ into the retire folder (fixed list; a mismatch stops)
+  start-llm   start the llm kernel from its definition with its own stack, in tmux window "llm"
+  start-root  start the root of _stack (wf/tree/root) in tmux window "root"
+  reattach    ctl add the three subagents (HM_SUBAGENTS=add) and eca-aos, relative paths and directives only
+  verify      check rows, paths, ledger, claude/env.json, listings; warn when LITELLM_KEY was not set
+  rollback    undo from what is there: stop new root and llm, move items back, move new stacks aside, start the old root
+  all         check, then the steps above; any failure runs rollback and stops
+extra: start-old (start the old root; rollback uses it), screen (open eca-aos's screen detached),
+       probe (agent-fsm on the fake endpoint through the new llm kernel), status
+now:   HM_HOME=$HM_HOME HM_REPO=$HM_REPO HM_AOS_HOME=$HM_AOS_HOME
+       HM_OLD=$HM_OLD HM_RETIRE=$HM_RETIRE HM_LLM_DEF=$HM_LLM_DEF HM_LLM_STACK=$HM_LLM_STACK
+       HM_WORK=$HM_WORK (log: home-move.log)  tmux: -S $HM_TMUX_SOCK session $HM_TMUX_SESSION
+EOF
+}
+
+# ===================== main =====================
+[ $# -ge 1 ] || { usage; exit 2; }
+case $1 in -h|--help|help) usage; exit 0;; esac
+mkdir -p "$HM_WORK" || { echo "$PROG: error: cannot make $HM_WORK" >&2; exit 2; }
+cd "$HM_WORK" || exit 2
+exec 9>"$HM_WORK/home-move.lock"
+flock -n 9 || { echo "$PROG: error: another home-move runs (lock $HM_WORK/home-move.lock)" >&2; exit 2; }
+exec > >(tee -a "$LOG") 2>&1
+say "run: $* (pid $$, user $USER, HM_HOME=$HM_HOME, HM_REPO=$HM_REPO, HM_OLD=$HM_OLD, HM_WORK=$HM_WORK, tmux -S $HM_TMUX_SOCK)"
+[ -n "$HM_FAIL_AT" ] && say "HM_FAIL_AT=$HM_FAIL_AT (rehearsal: all fails on purpose after that step)"
+if [ "$1" = all ]; then
+    run_step check || { say "all: check failed; nothing was changed"; exit 1; }
+    for s in "${STEPS_ALL[@]}"; do
+        if ! run_step "$s"; then say "all: $s failed; rolling back"; run_step rollback; exit 1; fi
+        if [ "$HM_FAIL_AT" = "$s" ]; then say "all: failing on purpose after $s (HM_FAIL_AT); rolling back"; run_step rollback; exit 1; fi
+    done
+    mark all.done; say "all: done. Next: $0 screen  (opens eca-aos's screen)"
+    exit 0
+fi
+run_step "$1"

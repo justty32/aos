@@ -35,6 +35,9 @@
  "fmt-vars.json": {
   "description": "設定（鍵：contract、vars、namespaces）"
  },
+ "home-move-1122": {
+  "description": "home-move-1122"
+ },
  "index_check.py": {
   "description": "查 aos 的夾 index（`_index.json`，沒有才看 `_index.md`）寫得對不對：形狀、列的東西在不在、`index` 欄指不指得到、子夾的 index 有沒有連過去。"
  },
