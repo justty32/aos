@@ -1,0 +1,5 @@
+{
+ "description": "commit-request 的可調設定：交件時單檔大小的門檻（max_file_bytes，bytes，預設 1048576＝1 MB）與放行名單（big_ok，repo 根相對路徑或 glob）。--files 點名的檔超過門檻、又不在 big_ok，整個申請不收——太大＝本該放 temp/ 的東西被交進來（使用者 11-22 決定 C）。commit_queue.py 從 main 讀這份，所以改門檻或放行一個檔要先把這份交件，誰放行過什麼查 git log 就有；這份不在或讀不懂＝用預設值並警告。repo 根的 _stack/ 底下不查。",
+ "max_file_bytes": 1048576,
+ "big_ok": []
+}

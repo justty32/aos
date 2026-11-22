@@ -1,5 +1,5 @@
 #!/bin/bash
-# test_commit_queue.sh — 在 repo 外的暫存 clone 上測 commit_queue.py（兩線同時、別人 staged、索引列合併、claim 擋下、生成器失敗、CAS、半途被殺、生成物、month_set、進度檔 progress.json 的兩個 op）；不碰來源 repo
+# test_commit_queue.sh — 在 repo 外的暫存 clone 上測 commit_queue.py（兩線同時、別人 staged、索引列合併、claim 擋下、生成器失敗、CAS、半途被殺、生成物、month_set、進度檔 progress.json 的兩個 op、單檔大小門檻與放行名單）；不碰來源 repo
 # 用法：test_commit_queue.sh <來源 repo> <repo 外的暫存夾>   每次在暫存夾下開一個新的 run-<時間> 子夾，不刪任何東西
 set -u
 [ -n "${BASH_VERSION:-}" ] || { echo "not bash" >&2; exit 1; }
@@ -238,6 +238,58 @@ cq submit --line ok-a --files wf/progress.json --msg-file "$(msg t13j m13j)" > "
 check "progress.json in --files → refused ($E)" bash -c "[ $E = 3 ] && grep -q 'shared index file' $RUN/t13j.out"
 git checkout -q -- wf/progress.json
 check "main unchanged by the refusals" [ "$(head_)" = "$B" ]
+
+echo "== T14 single-file size limit: over the limit refused, big_ok from main lets it in, a lower limit refuses, bad config falls back"
+CFG=wf/tools/commit_queue.json
+cfg() { printf '{\n "description": "t14 test config.",\n %s\n}\n' "$1" > "$CFG"; }
+big() { { printf '# %s\n' "$1"; head -c "$2" /dev/zero | tr '\0' x; } > "$DAYDIR/$1.md"; }
+LIM=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["max_file_bytes"])' "$CFG")
+check "default config in main says 1 MB ($LIM)" [ "$LIM" = 1048576 ]
+big t14big 1048576; printf '# t14 small\n' > "$DAYDIR/t14small.md"
+B=$(head_)
+cq submit --line ok-a --files "$DAYDIR/t14small.md" "$DAYDIR/t14big.md" --msg-file "$(msg t14a m14a)" > "$RUN/t14a.out" 2>&1; E=$?
+check "over 1 MB → refused RequestBad ($E), names the file and its size" bash -c "[ $E = 3 ] && grep -q RequestBad $RUN/t14a.out && grep -qF '$DAYDIR/t14big.md is 1048585 bytes' $RUN/t14a.out"
+check "whole request refused: main unchanged, small file not committed" bash -c "[ $(head_) = $B ] && ! git show --name-only --format= main | grep -q t14small"
+check "hint says temp/ or big_ok" grep -q 'temp/.*big_ok' "$RUN/t14a.out"
+check "the big file was not hashed into .git" bash -c "! git cat-file -e \$(git hash-object $DAYDIR/t14big.md) 2>/dev/null"
+{ printf '# t14 edge\n'; head -c $((1048576 - 11)) /dev/zero | tr '\0' x; } > "$DAYDIR/t14edge.md"
+cq submit --line ok-a --files "$DAYDIR/t14edge.md" --msg-file "$(msg t14b m14b)" > "$RUN/t14b.out" 2>&1; E=$?
+check "exactly at the limit ($(stat -c %s "$DAYDIR/t14edge.md") bytes) passes ($E)" bash -c "[ $E = 0 ] && git show --name-only --format= main | grep -qx $DAYDIR/t14edge.md"
+cfg "\"max_file_bytes\": 1048576, \"big_ok\": [\"$DAYDIR/t14b*.md\"]"
+B=$(head_)
+cq submit --line ok-a --files "$DAYDIR/t14big.md" --msg-file "$(msg t14c m14c)" > "$RUN/t14c.out" 2>&1; E=$?
+check "big_ok only in the working tree does not count ($E), main unchanged" bash -c "[ $E = 3 ] && [ $(head_) = $B ]"
+cq submit --line ok-a --files "$CFG" --msg-file "$(msg t14d m14d)" > "$RUN/t14d.out" 2>&1; E=$?
+check "config with big_ok submitted ($E)" bash -c "[ $E = 0 ] && git show main:$CFG | grep -q t14b"
+cq submit --line ok-a --files "$DAYDIR/t14big.md" --msg-file "$(msg t14e m14e)" > "$RUN/t14e.out" 2>&1; E=$?
+check "big file listed in big_ok (glob) passes ($E)" bash -c "[ $E = 0 ] && git show --name-only --format= main | grep -qx $DAYDIR/t14big.md"
+printf '# t14 two hundred bytes %0180d\n' 0 > "$DAYDIR/t14mid.md"; printf '# t14 tiny\n' > "$DAYDIR/t14tiny.md"
+cq submit --line ok-a --files "$DAYDIR/t14mid.md" --msg-file "$(msg t14f m14f)" --dry-run > "$RUN/t14f.out" 2>&1; E=$?
+check "a 200-byte file passes under the 1 MB limit (dry run $E)" [ $E = 0 ]
+cfg '"max_file_bytes": 100, "big_ok": []'
+cq submit --line ok-a --files "$CFG" --msg-file "$(msg t14g m14g)" > "$RUN/t14g.out" 2>&1; E=$?
+check "config with a 100-byte limit submitted ($E)" bash -c "[ $E = 0 ] && git show main:$CFG | grep -q '\"max_file_bytes\": 100'"
+B=$(head_)
+cq submit --line ok-a --files "$DAYDIR/t14mid.md" --msg-file "$(msg t14h m14h)" > "$RUN/t14h.out" 2>&1; E=$?
+check "lower limit: the 200-byte file that passed is now refused ($E), main unchanged" bash -c "[ $E = 3 ] && grep -q 'limit 100 bytes' $RUN/t14h.out && [ $(head_) = $B ]"
+cq submit --line ok-a --files "$DAYDIR/t14tiny.md" --msg-file "$(msg t14i m14i)" > "$RUN/t14i.out" 2>&1; E=$?
+check "a file under 100 bytes still passes ($E)" [ $E = 0 ]
+ln -s t14big.md "$DAYDIR/t14link.md"
+cq submit --line ok-a --files "$DAYDIR/t14link.md" --msg-file "$(msg t14j m14j)" --dry-run > "$RUN/t14j.out" 2>&1; E=$?
+check "symlink counts its own size, not the target's ($E)" bash -c "[ $E = 0 ] && ! grep -q 'too big' $RUN/t14j.out"
+mkdir -p _stack; big t14stack 200; mv "$DAYDIR/t14stack.md" _stack/t14stack.md
+cq submit --line ok-a --files _stack/t14stack.md --msg-file "$(msg t14k m14k)" --dry-run > "$RUN/t14k.out" 2>&1
+check "files under _stack/ are not size-checked" bash -c "! grep -q 'too big' $RUN/t14k.out"
+cfg '"max_file_bytes": "big", "big_ok": "x"'
+cq submit --line ok-a --files "$CFG" --msg-file "$(msg t14l m14l)" > "$RUN/t14l.out" 2>&1; E=$?
+check "config with wrong types submitted ($E)" [ $E = 0 ]
+cq submit --line ok-a --files "$DAYDIR/t14mid.md" --msg-file "$(msg t14m m14m)" > "$RUN/t14m.out" 2>&1; E=$?
+check "wrong-type config → default 1 MB: the 200-byte file passes ($E), both keys warned about" bash -c "[ $E = 0 ] && grep -q 'max_file_bytes must be a positive integer' $RUN/t14m.out && grep -q 'big_ok must be a list' $RUN/t14m.out"
+rm -f "$CFG" && git commit -q -m t14-no-config -- "$CFG"
+printf '# t14 no config\n' > "$DAYDIR/t14nocfg.md"
+cq submit --line ok-a --files "$DAYDIR/t14nocfg.md" --msg-file "$(msg t14n m14n)" > "$RUN/t14n.out" 2>&1; E=$?
+check "config missing in main → default and a warning ($E)" bash -c "[ $E = 0 ] && grep -q 'not in main; using the default size limit 1048576' $RUN/t14n.out"
+rm -rf _stack "$DAYDIR/t14link.md"
 
 check "end: nothing staged except the foreign file" [ "$(git diff --cached --name-only)" = proto8/foreign_staged.md ]
 

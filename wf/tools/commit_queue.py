@@ -17,6 +17,9 @@
       status 是 open｜等使用者｜暫停｜凍結；flow、next、see、since 可省（since 省了就沿用舊的，新條用今天）
   {"op": "progress_delete", "key": "short-name"}                 刪那一鍵（沒有這鍵只警告）
 路徑：--files／--rm 的相對路徑從 repo 根算（不管 cwd）；--msg-file、--ops-file 從 cwd 算。
+單檔大小：--files 點名的每個檔在工作樹的大小（bytes；符號連結看連結本身）超過門檻，整個申請不收（FAILED RequestBad，exit 3），什麼都不 commit。
+  太大＝本該放 temp/ 的東西被交進來（使用者 11-22 決定 C）。門檻預設 1 MB（MAX_FILE_BYTES）；wf/tools/commit_queue.json 的 max_file_bytes 改門檻、
+  big_ok 放行（repo 根相對路徑或 glob）。設定從 HEAD 讀：改它要先交件，誰放行過什麼查得到；不在或讀不懂＝預設值並警告。_stack/ 底下的檔、--rm、--op 不查。
 結果：stderr 給人看，stdout 最後一行 JSON {"status": DONE|BLOCKED|FAILED, "code", "commit", "files", "generated", "warnings", "hint"}。
 exit：0 DONE、1 內部錯誤、2 BLOCKED、3 申請不合格、4 生成器失敗、5 忙碌（等鎖逾時）、6 repo 狀態異常。
 設計與測試：proto8/thinking/2026-11/14/commit-queue-1114.md。純標準庫；不改訊息、不開分支、不 push、不刪共用工作樹裡的非生成檔。
@@ -24,6 +27,7 @@ exit：0 DONE、1 內部錯誤、2 BLOCKED、3 申請不合格、4 生成器失�
 import argparse
 import datetime
 import fcntl
+import fnmatch
 import hashlib
 import json
 import os
@@ -44,6 +48,9 @@ PROGRESS_STATUS = ("open", "等使用者", "暫停", "凍結")
 PROGRESS_KEY_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
 SHARED_RE = re.compile(r"proto8/thinking/\d{4}-\d\d/(\d\d/)?README\.md")
 STALE_MIN = 120          # claim 超過這麼多分鐘，擋下時標 stale
+CONFIG = "wf/tools/commit_queue.json"   # 可調的設定（單檔門檻、放行名單）；從 HEAD 讀
+MAX_FILE_BYTES = 1048576 # 單檔大小門檻的預設值（1 MB）；設定檔沒給或讀不懂就用這個
+SIZE_FREE_PREFIX = "_stack/"   # repo 根的 _stack/ 底下不查大小（對話紀錄長大是正常的）
 DAY_TEMPLATE = """# proto8 討論紀錄：{date}
 
 ← [{month}](../README.md)｜[thinking](../../README.md)
@@ -550,8 +557,10 @@ class Queue:
                 bad.append(f"{p}: shared index file; send --op instead of the file")
         if bad:
             raise Stop("FAILED", "RequestBad", EXIT["invalid"], "; ".join(bad))
+        # 查單檔大小放在拍快照之前：快照會把檔寫進 .git 的物件庫，太大的檔擋下時一個 byte 都不進去
+        self.check_sizes(files)
         # 等鎖之前先拍一次快照：等鎖期間又被改，就擋下（交出的是半成品）
-        pre = {p: g.blob_of_file(os.path.join(self.repo, p), p, True) for p in files}
+        pre ={p: g.blob_of_file(os.path.join(self.repo, p), p, True) for p in files}
         with Lock(self.cache, a.line, a.wait):
             self.repair()
             for attempt in range(3):
@@ -561,6 +570,51 @@ class Queue:
                     return res
                 self.warnings.append(f"main moved during processing (attempt {attempt + 1}); redone on the new HEAD")
             raise Stop("FAILED", "MainMoving", EXIT["repo"], "main kept moving; 3 attempts failed")
+
+    def size_rules(self):
+        """(門檻 bytes, 放行名單)：讀 main 上那份 CONFIG（工作樹沒交的改動不算）；不在或讀不懂的鍵用預設值並警告。"""
+        limit, allow = MAX_FILE_BYTES, []
+        p = self.git.run(["show", f"{REF}:{CONFIG}"], check=False)
+        if p.returncode != 0:
+            self.warnings.append(f"{CONFIG} not in main; using the default size limit {MAX_FILE_BYTES} bytes")
+            return limit, allow
+        try:
+            cfg = json.loads(p.stdout.decode("utf-8"))
+            if not isinstance(cfg, dict):
+                raise ValueError("not a JSON object")
+        except ValueError as e:
+            self.warnings.append(f"{CONFIG} unreadable ({e}); using the default size limit {MAX_FILE_BYTES} bytes")
+            return limit, allow
+        v = cfg.get("max_file_bytes", MAX_FILE_BYTES)
+        if isinstance(v, bool) or not isinstance(v, int) or v <= 0:
+            self.warnings.append(f"{CONFIG}: max_file_bytes must be a positive integer ({v!r}); using {MAX_FILE_BYTES}")
+        else:
+            limit = v
+        b = cfg.get("big_ok", [])
+        if not isinstance(b, list) or not all(isinstance(x, str) and x for x in b):
+            self.warnings.append(f"{CONFIG}: big_ok must be a list of paths or globs; ignored")
+        else:
+            allow = b
+        return limit, allow
+
+    def check_sizes(self, files):
+        """--files 裡超過門檻的檔（不在 big_ok、不在 _stack/）：有就整個申請不收。"""
+        if not files:
+            return
+        limit, allow = self.size_rules()
+        big = []
+        for p in files:
+            if p.startswith(SIZE_FREE_PREFIX) or any(p == pat or fnmatch.fnmatchcase(p, pat) for pat in allow):
+                continue
+            size = os.lstat(os.path.join(self.repo, p)).st_size
+            if size > limit:
+                big.append((p, size))
+        if big:
+            raise Stop("FAILED", "RequestBad", EXIT["invalid"],
+                       f"file too big (limit {limit} bytes): " + "; ".join(f"{p} is {s} bytes" for p, s in big),
+                       files=[p for p, _ in big],
+                       hint=f"put it under a temp/ folder (not tracked), or ask the top level to add it to big_ok in {CONFIG}; "
+                            "nothing was committed")
 
     def held_by_others(self, line, paths):
         cl = self.claims()
