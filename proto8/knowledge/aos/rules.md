@@ -21,7 +21,7 @@ Always:
 
 ## What does not enforce these rules
 
-The rules above are kept by you, not by the system. aos assumes one person and models that person trusts; the user chose on 11-19 to keep that assumption and only write it down. In practice:
+The rules above are kept by you, not by the system. aos assumes one person and models that person trusts; this assumption is kept on purpose. In practice:
 
 - Every agent runs as the same Linux user as the person. Linux does not stop one agent from reading or writing another agent's stack, workspace or definition, the daemon's files, or the person's own files.
 - Every proc gets the whole environment it was started with, including any API keys the person exported. Never print, copy or send them.

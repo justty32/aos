@@ -36,7 +36,7 @@ Timing:
 - A letter that cannot be sent is only a warning line from the clock; the clock keeps going.
 - While you sleep, letters wait in your queue; you get them all when you wake.
 - Errors: `EntryExists` (the name is taken: pick another, or `"replace": true`), `EntryMissing` (no entry with that name: `ls` first), `ClockMissing` (no clock: you are not under a daemon tree with one; or give `daemon`), `RegisterBad` (the register file next to the clock cannot be read: a human must fix it), `WriteFailed` (the register cannot be written). Without `box`: `DaemonMissing` / `InstanceMissing` = you are not on a daemon table, so you have no queue to wake; give `box`.
-- A screen a person opens (`aos-agent open`) gets `AOS_CLOCK` as your loop has it. A screen opened before this was fixed, or before your loop ran once, took it from that person's shell, where it can be missing: `peek_clock` and `clock_register` then answer `ClockMissing` although the tree has a clock. Have the screen closed and opened again. `on_clock` hooks are not affected: they run in your loop, not in the screen.
+- A screen a person opens (`aos-agent open`) gets `AOS_CLOCK` as your loop has it. A screen opened before your loop ran once takes it from that person's shell, where it can be missing: `peek_clock` and `clock_register` then answer `ClockMissing` although the tree has a clock. Have the screen closed and opened again. `on_clock` hooks are not affected: they run in your loop, not in the screen.
 
 # A timer that does not enter your conversation
 

@@ -31,26 +31,24 @@ What a pack costs: every pack you have is sent with every question to your brain
 
 | pack | tools | characters |
 |---|---|---|
-| look | 6 | 4,755 |
-| change | 5 | 2,294 |
-| delete | 2 | 775 |
-| shell | 2 | 1,010 |
-| gadgets | 4 | 1,623 |
-| todo | 1 | 1,034 |
-| self | 6 | 5,407 |
-| mailbox | 3 | 2,343 |
-| goal | 1 | 867 |
-| json | 9 | 4,834 |
-| index | 1 | 803 |
+| look | 6 | 4,743 |
+| change | 5 | 2,284 |
+| delete | 2 | 771 |
+| shell | 2 | 1,006 |
+| gadgets | 4 | 1,615 |
+| todo | 1 | 1,032 |
+| self | 6 | 5,439 |
+| mailbox | 3 | 2,367 |
+| goal | 1 | 865 |
+| json | 9 | 5,856 |
+| index | 1 | 998 |
 | events (optional) | 2 | 10,263 |
 | subagent (optional) | 3 | 10,940 |
 | def (optional) | 2 | 6,427 |
 | jsonx (optional) | 8 | 11,961 |
 | comm (optional) | 5 | 6,120 |
 | ws-write (optional) | 1 | 1,067 |
-| kernel_gate (optional) | 1 | 1,410 |
-
-The eleven agent-fsm packs as shipped (self pack with only self_tools and self_state, about 2,100 of its 5,407): 36 tools, about 22,500 characters. Measured 2026-11-21, after the tool descriptions of the stock packs were cut to a sentence or two with a pointer to their knowledge page; the optional packs keep their longer descriptions.
+| kernel_gate (optional) | 1 | 1,442 |
 
 How to add a pack: whoever makes the definition adds one item to "$override" in its tools.json, for example {"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"}; a kit can add it too (aos/kits.md). Add it when the definition is made, not while the agent runs: self_tools add takes one tool at a time, and every change to your tool list makes the brain lose the cached start of your conversation.
 

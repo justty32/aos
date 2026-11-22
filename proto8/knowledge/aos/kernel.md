@@ -10,7 +10,7 @@ Requests can pass through several kernels: agent -> kernel_1 -> kernel_2 -> ... 
 
 # The initial kernel
 
-What a new board gets (the user, 2026-11-20: two parts plus a minimal core, then a row of optional parts):
+What a new board gets (two parts plus a minimal core, then a row of optional parts):
 
 - Minimal core, always there: the daemon (table, ctl mailbox, limits, restarts), identity (the envelope `sender` is the sender's own stack, self-reported and not checked), mailboxes (aos-post), the clock `_clock` and the sweeper `_sweeper`. The clock and the sweeper are part of the core: do not remove their rows.
 - The llm part: the brain kernel (`$AOS_LLM_KERNEL`, aos/brain.md), normally a row `llm` on the same board. Brain-call budgets live here too. It is optional only for procs that do not think: an agent without it stops with `LlmKernelMissing` at its first brain call.
@@ -40,7 +40,7 @@ Without the permission part, what stops a request is only Linux file permissions
 
 - With `$AOS_KERNEL` set, the stock tools that need to know who you are ask the kernel first (`aos-agent ctl who`, the same table question as above): `mailbox_peek`, `mailbox_send`, `clock_register` (even when you give `box`), the `self_*` tools, and `say`/`listen` in aos.gdb. They wait up to 3 s for the answer.
 - A kernel that does not answer in 3 s makes all of them fail with `KernelFailed`. This happens whenever the kernel is busy: a `kernel_gate` kernel is an agent, and while it is in a long turn or asleep its station does not run, so every agent under it can neither read nor send mail, nor set a timer, until it comes back.
-- This is how aos works today, not a fault: the user chose on 11-19 to keep it and only write it down. What to do: wait and try again later (once, not in a loop); if it keeps failing, report that the kernel is not answering. Do not work around it by mailing `$AOS_DAEMON` directly (aos/rules.md).
+- This is how aos works, not a fault: a known limit, kept on purpose. What to do: wait and try again later (once, not in a loop); if it keeps failing, report that the kernel is not answering. Do not work around it by mailing `$AOS_DAEMON` directly (aos/rules.md).
 
 # Example kernels
 
