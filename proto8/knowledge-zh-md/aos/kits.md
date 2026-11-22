@@ -1,6 +1,6 @@
 # `knowledge/aos/kits.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 正本：`proto8/knowledge/aos/kits.md`，跟到正本 commit `c7bc08dae`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/kits.md#/…` 對的就是它。改請改正本，再照 [README](../README.md) 的做法跟上這份。
+> 正本：`proto8/knowledge/aos/kits.md`，跟到正本 commit `d9c9e2d79`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/kits.md#/…` 對的就是它。改請改正本，再照 [README](../README.md) 的做法跟上這份。
 
 ---
 
@@ -40,7 +40,7 @@
 3. 角色：`kits/roles/gather.txt` 或 `kits/roles/review.txt`。
 4. 任務：交辦，放在啟動 agent 的那封信裡寄；不在 system.txt 裡。
 
-general.A.txt 有佔位字：`<KNOWLEDGE>`（知識資料夾的路徑）、`<BOARD>`（怎麼讀公告板：一個指令，或一個要讀的檔；沒有就刪掉這一行）、`<OWN_BOARD>`（agent 怎麼公告它在等誰，或刪掉這一行）。附的 `gather/system.txt` 和 `review/system.txt` 寫明交辦會點出知識資料夾，把 BOARD 落實成 board_read（who＝被等的那位，或用 "user" 看使用者的公告），把 OWN_BOARD 落實成 board_wait（停下來等時寫 who 和 what，回覆來了寫 done = true），而且都在 3,000 字元以內。如果你改了某一層，照同樣順序再組一次。
+general.A.txt 有佔位字：`<KNOWLEDGE>`（知識資料夾的路徑）、`<BOARD>`（怎麼讀公告板：一個指令，或一個要讀的檔；沒有就刪掉這一行）、`<OWN_BOARD>`（agent 怎麼公告它在等誰，或刪掉這一行）。附的 `gather/system.txt` 和 `review/system.txt` 寫明交辦會點出知識資料夾，把 BOARD 落實成 board_read（who＝被等的那位，或用 "user" 看使用者的公告），把 OWN_BOARD 落實成 board_wait（停下來等時寫 who 和 what，回覆來了寫 done = true），而且都在 3,500 字元以內。如果你改了某一層，照同樣順序再組一次。
 
 **`#/Why a kit cuts tools`**
 

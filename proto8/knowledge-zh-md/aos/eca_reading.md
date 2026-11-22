@@ -14,7 +14,7 @@
 
 - 檔案、指令和幫手由你的 CLI 自己的工具處理；aos 給你 mailbox、self、json、index 和幾個小工具（`aos/packs.md#/Tool packs`）。
 - 很多頁也描述 agent-fsm。讀寫著 eca、或沒提到身體的那幾行；跳過寫著只有 agent-fsm 的那幾行。
-- 頁面教的工具不一定在你的清單裡：`self_tools` `{"op": "ls"}` 會顯示你有什麼。不在原廠 eca 範本裡的工具（self_hook、clock_register、agent_def、tools_def、jsonx_*）要用 `self_tools` 一次加一個。
+- 頁面教的工具不一定在你的清單裡：`self_tools` `{"op": "ls"}` 會顯示你有什麼。不在內建 eca 範本裡的工具（self_hook、clock_register、agent_def、tools_def、jsonx_*）要用 `self_tools` 一次加一個。
 - 出了問題：`aos/troubleshooting.md`；工具失敗了：`aos/errors.md`。
 
 **`#/Read these`**
@@ -25,7 +25,7 @@
 - `aos/body.md`：eca 有什麼不同（腦、工具、hook、畫面、系統文字、對話歷史）。
 - `aos/cli/eca.md`：你自己的身體：一回合、畫面、斜線指令、外部 MCP 伺服器、看守 CLI 自己的工具。
 - `aos/mailbox.md`：信，以及告訴你有新信的 `mail_notify` hook。
-- `aos/me.md`：你的名字、你的 stack、`self_state`、`self_ctl`（原廠範本裡 `self_ctl` 是關掉的；用 `self_tools` 加上它）。
+- `aos/me.md`：你的名字、你的 stack、`self_state`、`self_ctl`（內建範本裡 `self_ctl` 是關掉的；用 `self_tools` 加上它）。
 - `aos/me/self_tools.md`：加入和移除你自己的工具。
 - `aos/user_zone.md`：怎麼問使用者。
 - `aos/rules.md`：你絕不能做的事。
@@ -37,8 +37,8 @@
 
 - `aos/me/self_hook.md`：掛在你自己事件上的 hook。先加入 `self_hook`。在 eca 上，`before_tool` / `after_tool` 只看得到 aos 工具，而 `before_compact` / `after_compact` 跟著 CLI 自己的壓縮（claude）。
 - `aos/clock.md`：時鐘信（先加入 `clock_register`）和 on_clock hook。
-- `aos/me/self_system.md`、`aos/me/self_llm.md`、`aos/me/self_history.md`：你的系統文字、腦的設定和對話歷史。這三個工具在原廠範本裡是關掉的；用 `self_tools` 加上它們。在 eca 上，你的腦的設定只有 `model` 和 `reasoning_effort` 有作用。
-- `aos/agents.md`：用 `agent_def` 做新的定義（先加入它）；`subagent` 工具包不在原廠 eca 範本裡，所以旁支工作用你的 CLI 自己的幫手。
+- `aos/me/self_system.md`、`aos/me/self_llm.md`、`aos/me/self_history.md`：你的系統文字、腦的設定和對話歷史。這三個工具在內建範本裡是關掉的；用 `self_tools` 加上它們。在 eca 上，你的腦的設定只有 `model` 和 `reasoning_effort` 有作用。
+- `aos/agents.md`：用 `agent_def` 做新的定義（先加入它）；`subagent` 工具包不在內建 eca 範本裡，所以旁支工作用你的 CLI 自己的幫手。
 - `aos/definition.md`、`aos/kits.md`：做或改定義（這是人的工作，或用 `agent_def`）。
 - `aos/status.md`、`aos/world.md`、`aos/kernel.md`：daemon 的表、心裡的模型、kernel。
 - 你有的那些工具在 `aos/tools/` 底下的節點：json 工具、`index_view`、`math`、`peek_clock`、`peek_now_time`。

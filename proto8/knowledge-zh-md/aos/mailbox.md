@@ -53,7 +53,7 @@ STATUS 是六個字之一；其他的都是 `StatusBad`：
 
 # 得知有新信
 
-信箱裡有信，並不會自己把你叫醒。用現成範本做出來的 agent 有 hook `mail_notify`，預設開著：每分鐘（`on_clock`、`every_ms` 60000）它看一次你的信箱，只有在來了它還沒告訴過你的信時，才在你的佇列放一則訊息：
+信箱裡有信，並不會自己把你叫醒。用內建範本做出來的 agent 有 hook `mail_notify`，預設開著：每分鐘（`on_clock`、`every_ms` 60000）它看一次你的信箱，只有在來了它還沒告訴過你的信時，才在你的佇列放一則訊息：
 
 `[aos] new_mail: 3 new letters from bob, amy. Look with mailbox_peek, read with mailbox_read.`
 

@@ -8,7 +8,7 @@
 
 # Hooks：有事發生在你身上時，跑一個你的程式
 
-工具 `self_hook` 就是對準你的 `aos-agent hook`。hook 是一個工具資料夾或可執行檔，在某個事件發生時執行。它在 stdin 收到一個 JSON 物件，就是那個事件。只有你自己的 hook 清單會變，從下一個事件起生效。它在 events 工具包裡，沒有任何現成範本有這個工具包（agent-fsm 或 eca）：先用 `self_tools` `{"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_hook"}}` 加上它。
+工具 `self_hook` 就是對準你的 `aos-agent hook`。hook 是一個工具資料夾或可執行檔，在某個事件發生時執行。它在 stdin 收到一個 JSON 物件，就是那個事件。只有你自己的 hook 清單會變，從下一個事件起生效。它在 events 工具包裡，沒有任何內建範本有這個工具包（agent-fsm 或 eca）：先用 `self_tools` `{"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_hook"}}` 加上它。
 
 每次呼叫一個 op：
 
@@ -48,7 +48,7 @@ hook 不會被檢查有沒有迴圈：一個寄訊息給你的 hook，會再次�
 # on_clock hook
 
 - `on_clock`：一個時鐘往前走了（`clock`、`cycle`、`interval_ms`、`first`、`last_cycle`、`missed`）。給 `every_cycles` 或 `every_ms`（ms 是用時鐘週期算的，不是牆上時間：`every_ms` 會變成 ceil(`every_ms` / `interval_ms`) 個週期，至少 1，所以實際間隔可能比寫的長，不會更短）；`clock` 可省略（預設：`AOS_CLOCK`；或一個 proc 名字／一個路徑）。`config`（任何 JSON，可省略）會以事件欄位 `config` 交給程式。在你每一步開始時檢查；到期時跑一次，不管你忙的時候錯過了幾次（`missed` 說錯過幾次），你睡著時不跑。在你啟動、醒來或重新啟動後也會立刻跑一次（欄位 `first`：true、`last_cycle`：null、`missed`：0）。
-- 在 eca 上，一步是你的迴圈走一圈（現成範本：大約一秒三次，queue 空著也一樣），不是一次回覆。aos 等 CLI 回覆一則 queue 訊息的期間，什麼都不檢查；之後的下一次檢查會跑那個 hook 一次。
+- 在 eca 上，一步是你的迴圈走一圈（內建範本：大約一秒三次，queue 空著也一樣），不是一次回覆。aos 等 CLI 回覆一則 queue 訊息的期間，什麼都不檢查；之後的下一次檢查會跑那個 hook 一次。
 - 睡過之後，事件不會告訴你睡了多久，或錯過了幾次。需要補做的處理程式自己記紀錄：`aos/me/self_hook.md#/A job at a wall time (every day at 09:00)`。
 - 沒有時鐘（沒設 `AOS_CLOCK` 也沒有 `clock` 鍵）：這個 hook 永遠不跑。你的紀錄會有一行警告 `hook NAME (event on_clock) is not checked: AOS_CLOCK is not set ...`。不會改用牆上時間。
 

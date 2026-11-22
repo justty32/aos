@@ -74,9 +74,9 @@ stdio：`"transport": "stdio", "command", "args", "env", "env_file"`；它透過
 
 aos 的 hook（`before_tool`、`after_tool`）只看得到 aos 工具。要檢查 Bash、Write 或 Edit，用 Claude Code 自己的 hook。
 
-aos 在你的工作區裡啟動 claude，沒有把它隔離：工作區的 `.claude/settings.json` 照常會被讀，裡面的 hook 會跟 aos 加的 hook 一起跑。原裝範本用 `--permission-mode dontAsk` 跑，而且允許 Bash：沒有人確認指令。
+aos 在你的工作區裡啟動 claude，沒有把它隔離：工作區的 `.claude/settings.json` 照常會被讀，裡面的 hook 會跟 aos 加的 hook 一起跑。內建範本用 `--permission-mode dontAsk` 跑，而且允許 Bash：沒有人確認指令。
 
-原裝範本沒有這種 hook。要把關 Bash，在工作區的 `.claude/settings.json` 加一個 matcher 是 `Bash` 的 `PreToolUse` hook：
+內建範本沒有這種 hook。要把關 Bash，在工作區的 `.claude/settings.json` 加一個 matcher 是 `Bash` 的 `PreToolUse` hook：
 
 ```json
 {"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 /abs/path/gate.py"}]}]}}

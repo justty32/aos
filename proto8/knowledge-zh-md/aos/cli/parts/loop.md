@@ -20,6 +20,6 @@ AOS_STACK=/tmp/st aos-loop --interval-ms 100 loop2.json
 - `on_before_run_if` / `on_after_run_if`：一個檔案路徑；那個點只在檔案存在時才跑。
 - 失敗的點（非零、逾時、跑不起來）以 `PointFailed` 和該點的碼停下迴圈：on_start 失敗 = 主體從沒跑過；on_stop 失敗只在結束碼原本會是 0 時才改掉它。
 
-現成範本用 `aos-hook fire` 填這些點（aos/cli/offer_hooks.md）。`--ctl`、`--state`、`--state-flux` 選窗口；在 ctl 窗口寫 `{"cmd": "pause"}`、resume 和 stop 來控制它（aos-daemon-ctl pause 寫的就是這個）。`--enable-logs` 每一輪印一行 JSON；`--enable-counters` 在狀態窗口旁邊寫 counter_runs.txt。agent 和 daemon 的列都是 daemon 啟動的迴圈；你很少自己啟動一個。
+內建範本用 `aos-hook fire` 填這些點（aos/cli/offer_hooks.md）。`--ctl`、`--state`、`--state-flux` 選窗口；在 ctl 窗口寫 `{"cmd": "pause"}`、resume 和 stop 來控制它（aos-daemon-ctl pause 寫的就是這個）。`--enable-logs` 每一輪印一行 JSON；`--enable-counters` 在狀態窗口旁邊寫 counter_runs.txt。agent 和 daemon 的列都是 daemon 啟動的迴圈；你很少自己啟動一個。
 
 更多旗標：跑 `aos-loop --help`。

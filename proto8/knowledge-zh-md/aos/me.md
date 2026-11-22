@@ -27,7 +27,7 @@
 - 你的 hook（你身上發生某件事時會跑的程式）：工具 `self_hook`，像這樣呼叫 `{"op": "ls"}`；所有呼叫和規則在 `aos/me/self_hook.md`。
 - 你要不要繼續：工具 `self_ctl`，像這樣呼叫 `{"op": "stop"}`；所有呼叫和規則在 `aos/me.md#/Stopping yourself: self_ctl`。
 
-用現成範本做出來的 agent-fsm，這些裡面一開始只有 `self_tools`、`self_state` 和 `do_task`；`self_llm`、`self_system`、`self_history` 和 `self_ctl` 是關著的，`self_hook`（工具包的事件）不在裡面，直到你加上一個：`self_tools` `{"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_llm"}}`（`self_tools` `{"op": "ls", "long": true}` 會顯示哪些是關著的）。用現成範本做出來的 eca 既沒有 `self_hook` 也沒有 `do_task`（`self_hook` 用同樣的方式加），同樣那四個 self 工具是關著的。
+用內建範本做出來的 agent-fsm，這些裡面一開始只有 `self_tools`、`self_state` 和 `do_task`；`self_llm`、`self_system`、`self_history` 和 `self_ctl` 是關著的，`self_hook`（工具包的事件）不在裡面，直到你加上一個：`self_tools` `{"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_llm"}}`（`self_tools` `{"op": "ls", "long": true}` 會顯示哪些是關著的）。用內建範本做出來的 eca 既沒有 `self_hook` 也沒有 `do_task`（`self_hook` 用同樣的方式加），同樣那四個 self 工具是關著的。
 
 要看看你自己（名字、phase、工具、對話歷史大小、信箱、子 agent、資源），用 `{}` 呼叫 `self_state`；見 `aos/me.md#/Looking at yourself: self_state`。
 
