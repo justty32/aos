@@ -1,18 +1,16 @@
-# `knowledge/aos/cli/mcp.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/mcp.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/mcp.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/mcp.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/mcp.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/aos tools for an external agent`**
 
 # 給外部 agent 用的 aos 工具
 
 用 aos-mcp 透過 stdio，把 aos-tools 登記表（registry）裡的工具當作 MCP 工具提供出去（JSON-RPC：initialize、ping、tools/list、tools/call）。eca agent 會自動拿到它；只有你自己的 MCP client 才需要手動設定。
 
----
-
-**`#/serve`**
+**`#/Serving a registry`**
 
 # 提供一份登記表
 
@@ -23,9 +21,7 @@ aos-mcp --ws /abs/ws tools.json
 
 在你的 MCP client 裡把這行指令註冊成一個 stdio server；aos-tools 和 aos-exec 必須在它的 PATH 上。工作區 = `--ws` > `$AOS_WS`（沒有或不是資料夾 = `WsMissing`）；stack = `--stack` > `$AOS_STACK` > `WS/.stack/`。旗標可以放在登記表前面或後面。沒給登記表 = `./tools.json`；不是檔案 = `ToolMissing`；兩份登記表有同名的工具 = `ToolsBad`。`--own FILE` 只要那份 agent 自己的登記表存在就用它；這時只提供那一份，列出的登記表都不管。FILE 是空的 = `ArgumentsBad`。`--hooks DEF` 會執行 agent 定義夾 DEF 的 before_tool／after_tool hook（不是資料夾 = `ArgumentsBad`）。更多旗標：執行 `aos-mcp --help`。
 
----
-
-**`#/calls`**
+**`#/What a call does`**
 
 # 一次呼叫做了什麼
 

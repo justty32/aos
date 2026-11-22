@@ -1,63 +1,100 @@
-# `knowledge/wf/skeletons/user.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/skeletons/user.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/skeletons/user.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
-
-**`#/_description`**：使用者偏好與確認邊界的骨架：agent 不用重猜的事。落點是工作區的 `wf/knowledge/user.json`；何時記、怎麼記在 `wf/workflows/user.json`。
+> 正本：`proto8/knowledge/wf/skeletons/user.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/holds`**（原文是字串陣列，2 行）
+使用者偏好與確認邊界的骨架：agent 不用重猜的事。落點是工作區的 `wf/knowledge/user.json`；何時記、怎麼記在 `wf/workflows/user.md`。
+
+# holds
 
 - 放：這位使用者的長期偏好——語言、分支慣例、哪些事直接做不用問、哪些一定先問、回覆風格、時區。
-- 不放：always-on 鐵律（在工作區的 `AGENTS.md`，條文見 `wf/knowledge/iron-rules.json#/rules`）；一次性的當下指示。
+- 不放：always-on 鐵律（在工作區的 `AGENTS.md`，條文見 `wf/knowledge/iron-rules.md#/rules`）；一次性的當下指示。
 
----
+# fields
 
-**`#/fields`**（物件，2 個鍵：`item`、`setting`）
+- item: 項目名
+- setting: 設定：這位使用者的說法；有原話就附日期與原文。
 
-**`#/fields/item`**：項目名
+# items
 
-**`#/fields/setting`**：設定：這位使用者的說法；有原話就附日期與原文。
+## 0
 
----
+- item: 語言
+- meaning: 回覆與文件用什麼語言；程式註解用什麼語言。
+- examples: 繁中；程式註解英文
 
-**`#/items`**（陣列，6 項；每項是同一組鍵的小物件，排成表：第 i 列＝`#/items/i`）
+## 1
 
-| i | `item` | `meaning` | `examples` |
-|---|---|---|---|
-| 0 | 語言 | 回覆與文件用什麼語言；程式註解用什麼語言。 | 繁中；程式註解英文 |
-| 1 | 分支慣例 | commit 與分支怎麼走。 | 直接 commit main／開 branch 走 PR |
-| 2 | 直接做、不用問 | agent 可以自己動手的事。 | 改文件、加測試、跑唯讀指令 |
-| 3 | 一定先問 | 動手前一定要問的事；push 與對外動作另由鐵律管（`wf/knowledge/iron-rules.json#/rules/authorization`）。 | 刪檔、動 DB、安裝依賴 |
-| 4 | 回覆風格 | 這位使用者對回覆風格的偏好。 | 不要每段都 bullet |
-| 5 | 時區 | 使用者的時區。 | Asia/Taipei |
+- item: 分支慣例
+- meaning: commit 與分支怎麼走。
+- examples: 直接 commit main／開 branch 走 PR
 
----
+## 2
 
-**`#/rules`**（原文是字串陣列，4 行）
+- item: 直接做、不用問
+- meaning: agent 可以自己動手的事。
+- examples: 改文件、加測試、跑唯讀指令
+
+## 3
+
+- item: 一定先問
+- meaning: 動手前一定要問的事；push 與對外動作另由鐵律管（`wf/knowledge/iron-rules.md#/rules/authorization`）。
+- examples: 刪檔、動 DB、安裝依賴
+
+## 4
+
+- item: 回覆風格
+- meaning: 這位使用者對回覆風格的偏好。
+- examples: 不要每段都 bullet
+
+## 5
+
+- item: 時區
+- meaning: 使用者的時區。
+- examples: Asia/Taipei
+
+# rules
 
 - `prefs` 寫成物件陣列，用 json 工具讀寫；一項一筆，表外的長期偏好新增一筆。
 - `items` 的 `examples` 只是常見寫法示範，不是事實；沒問過使用者就留空，不要照填。
 - 改一項時，同檔裡跟新偏好矛盾的舊值一併改掉。
 - `skeleton` 裡的路徑是工作區裡的路徑。
 
-**`#/glossary`**：領域詞彙常猜錯、術語多了 → 開工作區的 `wf/knowledge/glossary.json`（用到才建）：物件陣列，每筆 `term`（詞）、`meaning`（意思）、`aliases`（別名）；建了在工作區的 `wf/knowledge/_index.json` 加一條。
+# glossary
 
----
+領域詞彙常猜錯、術語多了 → 開工作區的 `wf/knowledge/glossary.json`（用到才建）：物件陣列，每筆 `term`（詞）、`meaning`（意思）、`aliases`（別名）；建了在工作區的 `wf/knowledge/_index.json` 加一條。
 
-**`#/skeleton`**（物件，2 個鍵：`_description`、`prefs`）
+# skeleton
 
-**`#/skeleton/_description`**：使用者偏好與確認邊界：agent 不用重猜的事。always-on 鐵律在 `AGENTS.md`，這裡是這位使用者的偏好——改了改這裡，不改鐵律。怎麼記見 `wf/workflows/user.json`。
-
----
-
-**`#/skeleton/prefs`**（陣列，6 項；每項是同一組鍵的小物件，排成表：第 i 列＝`#/skeleton/prefs/i`）
-
-| i | `item` | `setting` |
-|---|---|---|
-| 0 | 語言 |  |
-| 1 | 分支慣例 |  |
-| 2 | 直接做、不用問 |  |
-| 3 | 一定先問 |  |
-| 4 | 回覆風格 |  |
-| 5 | 時區 |  |
+```json
+{
+ "_description": "使用者偏好與確認邊界：agent 不用重猜的事。always-on 鐵律在 `AGENTS.md`，這裡是這位使用者的偏好——改了改這裡，不改鐵律。怎麼記見 `wf/workflows/user.md`。",
+ "prefs": [
+  {
+   "item": "語言",
+   "setting": ""
+  },
+  {
+   "item": "分支慣例",
+   "setting": ""
+  },
+  {
+   "item": "直接做、不用問",
+   "setting": ""
+  },
+  {
+   "item": "一定先問",
+   "setting": ""
+  },
+  {
+   "item": "回覆風格",
+   "setting": ""
+  },
+  {
+   "item": "時區",
+   "setting": ""
+  }
+ ]
+}
+```

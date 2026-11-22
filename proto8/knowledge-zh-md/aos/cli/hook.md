@@ -1,10 +1,10 @@
-# `knowledge/aos/cli/hook.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/hook.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/hook.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/hook.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/hook.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**（整份）**
+**`#/Hooks on one agent`**
 
 # 一個 agent 上的 hook
 
@@ -27,7 +27,7 @@ aos-agent hook -t bob reset -y              # delete the agent's own list, back 
 - 名字預設是檔案或資料夾的名字；用 `--path-json` 時 `--name` 必填。`NameBad`：空的、含 `/`、以 `.` 開頭，或是 `description`。
 - 相對路徑從目前的資料夾算；不存在 = `PathMissing`。
 - `HookExists`：加上 `--replace`。`HookMissing`：沒有那個名字的 hook。`HooksBad`：清單壞了。
-- 事件包括 after_start / after_stop（loop 開始 / 快要結束）、before_run / after_run（包住 loop 主體的每一次執行；before_run hook 結束碼 10 會跳過那一次執行；只有在定義的 loop.json 有接上它們時才有，否則 add 會印一行警告：重新編譯並重新啟動）、before_compact / after_compact（包住 agent-fsm 的 /compact，以及帶 claude 的 eca 透過它的 compact_hook；在那裡失敗的 hook 只是警告；aos/me/compact.json）和 on_clock（需要 --every-cycles 或 --every-ms；不會有東西進對話歷史）；on_clock 在 add、start 或 wake 之後馬上跑一次，之後每 N 跑一次，事件裡有 `first`。
-- Eca 畫面的生命週期：內建的 screen_linger_start / screen_linger_stop hook 會取消 / 排定延後關閉畫面（cli.json screen_close_after_s，預設 600 秒，0 是立刻）。兩個都設成 null 就停用。見 aos/cli/eca.json#/screen_linger。
-- 寫處理程式（stdin、`$AOS_STACK` = hook 自己的資料夾 `<stack>/hookeds/NAME/`、用 JSON 項目代替 chmod）：`aos/me/self_hook.json#/handler`；檢查信箱的範例：`aos/mailbox.json#/check_hook`。
-- 事件和回覆協定跟 agent 自己的工具一樣：`aos/me.json#/self_hook`。
+- 事件包括 after_start / after_stop（loop 開始 / 快要結束）、before_run / after_run（包住 loop 主體的每一次執行；before_run hook 結束碼 10 會跳過那一次執行；只有在定義的 loop.json 有接上它們時才有，否則 add 會印一行警告：重新編譯並重新啟動）、before_compact / after_compact（包住 agent-fsm 的 /compact，以及帶 claude 的 eca 透過它的 compact_hook；在那裡失敗的 hook 只是警告；aos/me/compact.md）和 on_clock（需要 --every-cycles 或 --every-ms；不會有東西進對話歷史）；on_clock 在 add、start 或 wake 之後馬上跑一次，之後每 N 跑一次，事件裡有 `first`。
+- Eca 畫面的生命週期：內建的 screen_linger_start / screen_linger_stop hook 會取消 / 排定延後關閉畫面（cli.json screen_close_after_s，預設 600 秒，0 是立刻）。兩個都設成 null 就停用。見 `aos/cli/eca.md#/Delayed screen closure`。
+- 寫處理程式（stdin、`$AOS_STACK` = hook 自己的資料夾 `<stack>/hookeds/NAME/`、用 JSON 項目代替 chmod）：`aos/me/self_hook.md#/Writing the hook program`；檢查信箱的範例：`aos/mailbox.md#/The mail_notify hook`。
+- 事件和回覆協定跟 agent 自己的工具一樣：`aos/me/self_hook.md`。

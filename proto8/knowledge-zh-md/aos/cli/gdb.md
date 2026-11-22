@@ -1,10 +1,10 @@
-# `knowledge/aos/cli/gdb.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/gdb.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/gdb.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/gdb.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/gdb.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**（整份）**
+**`#/aos-gdb and aos.py: drive a running agent from Python, stop it when a condition holds, look, go on`**
 
 # aos-gdb 與 aos.py：從 Python 操控一個在跑的 agent，條件成立時讓它停下，看一看，再繼續
 
@@ -55,4 +55,4 @@ a.bp.pause()                                          # stop it now without a br
 - 等待時按 Ctrl-C 只停止等待：agent 繼續，不會留下任何東西（某一步送出、還沒生效的暫停會被收回）。`a.bp.pause()` 之後，暫停就維持送出的狀態。
 - Python 條件在另一個程序裡跑：它們看得到 `json`、`re`、`os` 和內建函式；其他值用預設參數傳進去（`lambda ev, x=x: ...`）。用到外層變數或不認得的名字時，會立刻被拒絕。
 - 當作參考的 hook 宣告（只在你要的時候）：`aos-gdb --hooks FILE`（可重複；一個 hooks.json：`{point id: {"input": JSON Schema, ...free keys}}`）或 `--def-hooks`（NAME 的定義在它的 interfaces.json 裡 `"hooks"` 底下列的那些檔案）。在 REPL 裡，`hooks` 會列出各個點、中斷點在每個點上怎麼停、主體（subject）和輸入欄位（`hooks.load(FILE)`、`hooks.load_def(a)`、`hooks.clear()`、`hooks.fields(id)`）。gdb 不認得的已宣告點會變成 `a.bp.add.<point>` 種類（它們用暫停）；宣告了 `"condition": "field"`（並以 `"subject"` 當參數名）時，第一個參數就是拿來跟它比對的。點沒有宣告，或 py 條件讀了沒宣告的欄位 `ev["x"]` 時，`a.bp.add` 會印一行警告但照樣加入。`a.bp.event()` 顯示觸發器停下時的整個事件，照宣告的格式排好。讀不了的檔案是一行警告；完全沒有宣告時，一切照舊運作。
-- 除非有人叫你去除錯另一個 agent，否則不要在它身上下中斷點：那會讓那個 agent 停下（aos/rules.json）。更多：`aos-gdb --help`、REPL 裡的 `help(a.bp)` 和 `a.bp.add`、proto8/py/aos/apps/gdb/README.md。
+- 除非有人叫你去除錯另一個 agent，否則不要在它身上下中斷點：那會讓那個 agent 停下（aos/rules.md）。更多：`aos-gdb --help`、REPL 裡的 `help(a.bp)` 和 `a.bp.add`、proto8/py/aos/apps/gdb/README.md。

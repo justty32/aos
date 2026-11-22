@@ -1,32 +1,32 @@
-# `knowledge/wf/workflows/refactor.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/workflows/refactor.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/workflows/refactor.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
-
-**`#/_description`**：重構／拆檔／整理結構：只改結構、不改行為。拆與分類的方法在 `wf/tidying.json#/split_method`，本節點只管流程；搬檔、改目錄名、拆 repo 的專章在 `wf/workflows/moving-things.json`。
-
-**`#/when`**：結構門檻超標（單檔過大、資料夾雜亂：`wf/tidying.json#/split`；程式碼單檔的行數門檻是專案自己的，記在工作區的 `wf/knowledge/conventions.json`），或使用者說「重構」「拆檔」「整理結構」（行為不變）。
+> 正本：`proto8/knowledge/wf/workflows/refactor.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/not_when`**
+重構／拆檔／整理結構：只改結構、不改行為。拆與分類的方法在 `wf/tidying.md#/拆法（兩種觸發都照做）`，本節點只管流程；搬檔、改目錄名、拆 repo 的專章在 `wf/workflows/moving-things.md`。
 
-順手改了行為 → `wf/workflows/feature-dev.json`；還沒搞懂現況 → `wf/workflows/investigation.json`；使用者說「整理 X」「封存過時的」「檔案太多／太雜」「太大要拆」「只留結論」而對象是工作文檔（不是程式碼）→ tidy 工作流（`wf/workflows/tidy.json`；整理規則在 `wf/tidying.json`）。
+# when
 
----
+結構門檻超標（單檔過大、資料夾雜亂：`wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）`；程式碼單檔的行數門檻是專案自己的，記在工作區的 `wf/knowledge/conventions.json`），或使用者說「重構」「拆檔」「整理結構」（行為不變）。
 
-**`#/done_when`**（原文是字串陣列，2 行）
+# not_when
+
+順手改了行為 → `wf/workflows/feature-dev.md`；還沒搞懂現況 → `wf/workflows/investigation.md`；使用者說「整理 X」「封存過時的」「檔案太多／太雜」「太大要拆」「只留結論」而對象是工作文檔（不是程式碼）→ tidy 工作流（`wf/workflows/tidy.md`；整理規則在 `wf/tidying.md`）。
+
+# done_when
 
 - 工作區的 `wf/knowledge/verification.json#/checks` 的驗證指令綠燈，且與動手前結果相同。
 - 工作區的 `wf/knowledge/code-map.json#/domains` 中受影響領域的列已更新。
 
----
+# steps
 
-**`#/steps`**（原文是字串陣列，5 行）
-
-0. 碰原始碼前先讀工作區的 `wf/knowledge/conventions.json`（寫碼慣例）與 `wf/knowledge/code-map.json`（哪個檔負責什麼）；環境與指令看 `wf/knowledge/dev-env.json`（`wf/knowledge/dev-dispatch.json#/before_code`）。工作區還沒有 → 照 `wf/skeletons/conventions.json#/skeleton`、`wf/skeletons/code-map.json#/skeleton` 建。驗證指令在工作區的 `wf/knowledge/verification.json`（還沒有 → 照 `wf/skeletons/verification.json#/skeleton` 建）。
+0. 碰原始碼前先讀工作區的 `wf/knowledge/conventions.json`（寫碼慣例）與 `wf/knowledge/code-map.json`（哪個檔負責什麼）；環境與指令看 `wf/knowledge/dev-env.json`（`wf/knowledge/dev-dispatch.md#/before_code`）。工作區還沒有 → 照 `wf/skeletons/conventions.md#/skeleton`、`wf/skeletons/code-map.md#/skeleton` 建。驗證指令在工作區的 `wf/knowledge/verification.json`（還沒有 → 照 `wf/skeletons/verification.md#/skeleton` 建）。
 1. 先跑驗證指令記下基準；紅的先修掉，別和重構混在一起。
-2. 照 `wf/tidying.json#/split_method` 按職責拆／分類，不等分硬切。
-3. 一次搬一塊，搬完就跑驗證（換位置、改名、拆 repo 照 `wf/workflows/moving-things.json`）。
+2. 照 `wf/tidying.md#/拆法（兩種觸發都照做）` 按職責拆／分類，不等分硬切。
+3. 一次搬一塊，搬完就跑驗證（換位置、改名、拆 repo 照 `wf/workflows/moving-things.md`）。
 4. 更新 code map 與所有指向舊路徑的引用（統一路徑、連結）。
 
-**`#/handoff`**：結構就位後要加功能 → `wf/workflows/feature-dev.json`；為什麼這樣拆 → `wf/workflows/decisions.json`。
+# handoff
+
+結構就位後要加功能 → `wf/workflows/feature-dev.md`；為什麼這樣拆 → `wf/workflows/decisions.md`。

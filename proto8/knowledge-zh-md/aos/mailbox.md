@@ -1,24 +1,22 @@
-# `knowledge/aos/mailbox.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/mailbox.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/mailbox.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/mailbox.md`，跟到正本 commit `76381cb2a`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/mailbox.md#/…` 對的就是它。改請改正本，再照 [README](../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Mailbox: letters between agents`**
 
 # 信箱：agent 之間的信
 
 每個 stack 都有一個信箱資料夾 `<stack>/mailbox/`。agent 在那裡互相寄信，人也在那裡寄信給 agent。它跟你的 `queue/` 是分開的：信不會自己跑進你的對話。預設有一個 hook 會在新信來時告訴你，用一則訊息 `[aos] new_mail: 2 new letters from bob, amy. ...`；然後呼叫 `mailbox_peek`。
 
-- 看有什麼在等：`mailbox_peek`（見 `aos/mailbox.json#/tools`）
+- 看有什麼在等：`mailbox_peek`（見 `aos/mailbox.md#/Mailbox tools`）
 - 讀：`mailbox_read`
 - 寄信或回覆：`mailbox_send`
-- 一封信對你代表什麼，以及什麼時候你一定要回覆：`aos/mailbox.json#/rules`
-- 新信訊息，以及怎麼關掉它或改它多久提醒一次：`aos/mailbox.json#/check`
+- 一封信對你代表什麼，以及什麼時候你一定要回覆：`aos/mailbox.md#/Mailbox rules`
+- 新信訊息，以及怎麼關掉它或改它多久提醒一次：`aos/mailbox.md#/Hearing about new letters`
 
----
-
-**`#/tools`**
+**`#/Mailbox tools`**
 
 # 信箱工具
 
@@ -30,11 +28,9 @@
 - 檔案寫不進去時：`WriteFailed`。對 `mailbox_read` 來說，信會留在你的信箱，下次再讀一次；對 `mailbox_send` 來說，什麼都不會寄出。
 - 用 `"keep": true` 讀過的信，以及沒加 `--drop` 讀過的使用者區的信：在你 stack 裡的 `mailbox/archive/<letter>/letter.json`。在 shell 裡，同樣的紀錄是 `aos-mailbox -s "$AOS_STACK" read --all --keep-to FILE` 和 `aos-mailbox ... send --keep-to FILE ...`。
 
-錯誤：`aos/errors/common.json#/mail`。人用的是指令 `aos-mailbox`（見 `aos/cli/mailbox.json`）。
+錯誤：`aos/errors/common.md#/Codes from mailboxes`。人用的是指令 `aos-mailbox`（見 `aos/cli/mailbox.md`）。
 
----
-
-**`#/rules`**
+**`#/Mailbox rules`**
 
 # 信箱規則
 
@@ -43,7 +39,7 @@ STATUS 是六個字之一；其他的都是 `StatusBad`：
 - `REQUEST`：請做某件事。
 - `DONE`：做完了。
 - `BLOCKED`：卡住了。
-- `NEEDS-USER`：只有使用者能決定。要自己問使用者，就寄到使用者區：`aos/user_zone.json`。
+- `NEEDS-USER`：只有使用者能決定。要自己問使用者，就寄到使用者區：`aos/user_zone.md`。
 - `FAILED`：放棄了。
 - `PROGRESS`：還沒做完，一個里程碑。
 
@@ -53,9 +49,7 @@ STATUS 是六個字之一；其他的都是 `StatusBad`：
 - 如果你接下一個請求，最後一定要用 DONE、BLOCKED、NEEDS-USER 或 FAILED 其中之一回覆它。
 - 如果你卡住超過 10 分鐘，先寄 BLOCKED。
 
----
-
-**`#/check`**
+**`#/Hearing about new letters`**
 
 # 得知有新信
 
@@ -65,17 +59,15 @@ STATUS 是六個字之一；其他的都是 `StatusBad`：
 
 好幾封信＝一則訊息。沒有新信＝什麼都沒有：你的對話歷史不會變長。它從不顯示信的內文。
 
-勿擾，或換別的間隔（只改你自己的那份複本；你的定義保持原樣；現成的 agent-fsm 要先加上工具 `self_hook`，aos/me/self_hook.json）：
+勿擾，或換別的間隔（只改你自己的那份複本；你的定義保持原樣；用內建範本（agent-fsm 或 eca）做的 agent 要先加上工具 `self_hook`，aos/me/self_hook.md）：
 
 - 關掉：`self_hook` `{"op": "rm", "name": "mail_notify"}`。再打開：再加一次（下一行），或 `{"op": "reset"}`（撤銷你所有的 hook 修改）。
 - 改成每 5 分鐘而不是每分鐘：`self_hook` `{"op": "add", "name": "mail_notify", "event": "on_clock", "every_ms": 300000, "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/mail_notify"}, "timeout_ms": 10000, "replace": true}`
 - 看看它：`self_hook` `{"op": "get", "name": "mail_notify"}`
 
-其他做法：在你開始或做完一件工作時自己呼叫 `mailbox_peek`；或用時鐘信（`clock_register` `{"op": "add", "name": "mail", "every": 300, "text": "Call mailbox_peek."}`），它每次都是一則訊息加一輪腦，就算沒有信也一樣。計時器的比較：`aos/clock.json#/choose`。這個 hook 的細節：`aos/mailbox.json#/check_hook`。
+其他做法：在你開始或做完一件工作時自己呼叫 `mailbox_peek`；或用時鐘信（`clock_register` `{"op": "add", "name": "mail", "every": 300, "text": "Call mailbox_peek."}`），它每次都是一則訊息加一輪腦，就算沒有信也一樣。計時器的比較：`aos/clock.md#/Doing something on a timer: which way`。這個 hook 的細節：`aos/mailbox.md#/The mail_notify hook`。
 
----
-
-**`#/check_hook`**
+**`#/The mail_notify hook`**
 
 # mail_notify 這個 hook
 
@@ -84,5 +76,5 @@ STATUS 是六個字之一；其他的都是 `StatusBad`：
 - 你醒來之後（`first`），你睡著時來的信會告訴你一次；睡著之前已經告訴過你的信不會再說。全新啟動時（你的 stack 裡還沒有 `notified.json`，也沒有非空的 `history.jsonl`），在等的信只會被標成已知；已經跑過的 stack（有非空的對話歷史）會被當成醒來處理：在等的信會宣告一次。要看有什麼在等，呼叫 `mailbox_peek`。
 - 你寄給自己的信也算。還沒有信箱＝安靜。
 - 如果它壞了（例如找不到 `aos-mailbox`），你的記錄檔會多一行警告，然後照常繼續（on_clock hook 失敗只是警告）。
-- 這則訊息跟任何訊息一樣在你的佇列裡等：它不會打斷你正在做的事；你在下一輪會看到它。有一種身體不一樣：畫面開著的 claude 會立刻收到佇列訊息，顯示成 `Message from @aos通知中心: [aos] new_mail: ...`（`aos/cli/eca.json#/turn`）。
-- 想要別的（只看某些寄件人、換別的字）？寫你自己的程式（`aos/me/self_hook.json#/handler`），用 `mail_notify` 這個名字、加上 `"replace": true` 加進去。
+- 這則訊息跟任何訊息一樣在你的佇列裡等：它不會打斷你正在做的事；你在下一輪會看到它。有一種身體不一樣：畫面開著的 claude 會立刻收到佇列訊息，顯示成 `Message from @aos通知中心: [aos] new_mail: ...`（`aos/cli/eca.md#/aos-eca-turn: one turn`）。
+- 想要別的（只看某些寄件人、換別的字）？寫你自己的程式（`aos/me/self_hook.md#/Writing the hook program`），用 `mail_notify` 這個名字、加上 `"replace": true` 加進去。

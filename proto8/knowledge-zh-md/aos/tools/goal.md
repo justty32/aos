@@ -1,10 +1,10 @@
-# `knowledge/aos/tools/goal.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/tools/goal.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/tools/goal.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/tools/goal.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/tools/goal.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Tool goal`**
 
 # 工具 goal
 
@@ -24,14 +24,12 @@
 ```
 
 - `get` -> 幾行 `status TAB active`、`text TAB ...`、`reminded TAB 2 of 10`、`reason`、`set_by`、`updated`；或 `no goal`。
-- `set` 取代你原本的目標，計數從 0 開始。人或你的上層 agent 也能設定、暫停、繼續或清除它（`aos-agent goal`、`aos/cli/goal.json`）。
-- 計數什麼時候算數、什麼時候用 done 或 pause：`aos/tools/goal.json#/rules`。
+- `set` 取代你原本的目標，計數從 0 開始。人或你的上層 agent 也能設定、暫停、繼續或清除它（`aos-agent goal`、`aos/cli/goal.md`）。
+- 計數什麼時候算數、什麼時候用 done 或 pause：`aos/tools/goal.md#/goal: how the reminders work`。
 
-錯誤：`aos/tools/goal.json#/errors`。
+錯誤：`aos/tools/goal.md#/goal: errors`。
 
----
-
-**`#/rules`**
+**`#/goal: how the reminders work`**
 
 # goal：提醒怎麼運作
 
@@ -43,9 +41,7 @@
 - `pause`：暫時沒辦法繼續時用：你在等回覆、等人或等另一個 agent。給一句理由。信不會讓它繼續：能繼續時自己呼叫 `resume`。在 agent-fsm 裡，如果你暫停自己的目標之後來了一則訊息，而你回覆時沒呼叫 goal，你會收到一則 "[aos] goal: paused ..." 提示；目標不會幫你繼續。
 - 目標存在你的 stack（`goal.json`），不在你的對話歷史裡：對話歷史被摘要時它還在。
 
----
-
-**`#/errors`**
+**`#/goal: errors`**
 
 # goal：錯誤
 
@@ -53,6 +49,6 @@
 - `GoalEnded`：目標已經 done 或 abandoned，所以不能暫停或繼續。還有事要做就 `set` 一個新的。
 - `GoalBad`：你 stack 裡的目標檔壞了。`set` 會重新寫它。
 - `WriteFailed`：目標檔寫不進去（磁碟、權限）。回報它。
-- `CommandMissing`、`WsMissing`、`LaunchFailed`、`CommandFailed`、`DaemonFailed`：輔助程式不見了或起不來、沒有工作區、輔助程式失敗或超過 60 秒，或 daemon 沒在時間內回覆。這些是環境問題：回報它們（`aos/errors.json`）。
+- `CommandMissing`、`WsMissing`、`LaunchFailed`、`CommandFailed`、`DaemonFailed`：輔助程式不見了或起不來、沒有工作區、輔助程式失敗或超過 60 秒，或 daemon 沒在時間內回覆。這些是環境問題：回報它們（`aos/errors.md`）。
 - `DaemonMissing`、`InstanceMissing`：你不是在 daemon 底下跑，所以工具找不到你。回報它。
-- `ArgumentsBad`、`OpUnknown`：op 是 get、set、done、pause、resume 其中之一；set 需要 `text`；done 和 pause 需要 `reason`；`limit` 是 1 到 1000 的整數；目標文字最多 1000 個字元。見 `aos/errors/common.json#/input`。
+- `ArgumentsBad`、`OpUnknown`：op 是 get、set、done、pause、resume 其中之一；set 需要 `text`；done 和 pause 需要 `reason`；`limit` 是 1 到 1000 的整數；目標文字最多 1000 個字元。見 `aos/errors/common.md#/Codes about what you gave`。

@@ -1,10 +1,10 @@
-# `knowledge/aos/tools/jsonx_del.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/tools/jsonx_del.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/tools/jsonx_del.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/tools/jsonx_del.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/tools/jsonx_del.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Tool jsonx_del`**
 
 # 工具 jsonx_del
 
@@ -18,4 +18,4 @@
 ```
 印出 `ok fsm.json#/states/think/n`；這個鍵從 lib.json 消失了，也就是那個 `$ref` 指向的地方。
 
-不能是整個檔案（`TargetBad`）。路徑：`aos/tools/json_get.json#/path`。錯誤：`aos/tools/jsonx_set.json#/errors`。
+不能是整個檔案（`TargetBad`）。路徑：`aos/tools/json_get.md#/JSON tools: the path`。錯誤：`aos/tools/jsonx_set.md#/jsonx_get, jsonx_ls, jsonx_search, jsonx_set, jsonx_add, jsonx_del, jsonx_multi_get, jsonx_multi_set: errors`。

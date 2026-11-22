@@ -1,6 +1,6 @@
-`knowledge/wf/workflows/_index.json` 的中文映照版，11-21 改寫成這一夾（中文映照版）自己的 index：一項「名字: 一句話」，名字是本夾裡的檔名或子夾名。
+`knowledge/wf/workflows/_index.json` 的中文映照版，也是這一夾（中文映照版）自己的 index：一項「名字: 一句話」，名字是本夾裡的檔名或子夾名。
 
-> 來源：`proto8/knowledge/wf/workflows/_index.json`，commit `fad6bef74`（英文說明譯成中文）。原本是照 json 轉出來的兩欄表格；使用者 11-21「幫我處理，重寫」，改成清單，讓 `index_view`／`index_check` 讀得出來。正本的知識庫 11-21 起長文章的頁改成 `.md`，本夾的檔名本來就是 `.md`。不自動跟正本更新。
+> 正本：`proto8/knowledge/wf/workflows/_index.json`，跟到正本 commit `33835099a`（正本這份最後一次改動）。說明本來就是中文，照抄。正本是 json 表，這裡寫成清單，讓 `index_view`／`index_check` 讀得出來（使用者 11-21「幫我處理，重寫」）。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 - `_description.md`: 這一夾是什麼、路徑怎麼讀、派發通則（怎麼選、可以跳流程、都不符去哪）；不確定該走哪條時讀。
 - `decisions.md`: 記決定的流程（只記結論、來源與前提）；使用者說「記個決定」「為什麼選 A 不選 B」、或選定方案後日後可能被問時讀。（其他鍵：`{"kind": "workflow", "source": "kernel"}`）

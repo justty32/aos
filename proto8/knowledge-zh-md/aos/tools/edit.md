@@ -1,10 +1,10 @@
-# `knowledge/aos/tools/edit.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/tools/edit.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/tools/edit.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/tools/edit.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/tools/edit.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Tool edit`**
 
 # 工具 edit
 
@@ -25,11 +25,9 @@
 - Windows 行尾（CRLF）的檔案也行：`old_text` 用 `\n` 寫；CRLF 行尾會保留（只要有一個行尾是 CRLF，全部都寫成 CRLF）。
 - 連結：改的是它指向的那個檔案。
 
-錯誤：`aos/tools/edit.json#/errors`。
+錯誤：`aos/tools/edit.md#/edit: errors`。
 
----
-
-**`#/errors`**
+**`#/edit: errors`**
 
 # edit：錯誤
 
@@ -39,4 +37,4 @@
 - `TextBad`：有個 `old_text` 出現 N 次（把它周圍的行加進來直到唯一）；有個 `old_text` 是空的；兩項重疊（合成一項）；或檔案會保持不變。
 - `FileMissing`：沒有這個檔案，或路徑是資料夾（新檔案用 `write`）。`FileBad`：不是 UTF-8 文字檔。
 - `ArgumentsBad`：也包括 `edits` 是空的，或某一項沒有那兩個字串。
-- `ReadFailed`、`WriteFailed`、`WsMissing`：`aos/errors/common.json#/files`。鍵寫錯或不認得的鍵（`ArgumentsBad`）：`aos/errors/common.json#/input`。
+- `ReadFailed`、`WriteFailed`、`WsMissing`：`aos/errors/common.md#/Codes from file work`。鍵寫錯或不認得的鍵（`ArgumentsBad`）：`aos/errors/common.md#/Codes about what you gave`。

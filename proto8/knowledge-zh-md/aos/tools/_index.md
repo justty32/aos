@@ -1,6 +1,6 @@
-`knowledge/aos/tools/_index.json` 的中文映照版，11-21 改寫成這一夾（中文映照版）自己的 index：一項「名字: 一句話」，名字是本夾裡的檔名或子夾名。
+`knowledge/aos/tools/_index.json` 的中文映照版，也是這一夾（中文映照版）自己的 index：一項「名字: 一句話」，名字是本夾裡的檔名或子夾名。
 
-> 來源：`proto8/knowledge/aos/tools/_index.json`，commit `fad6bef74`（英文說明譯成中文）。原本是照 json 轉出來的兩欄表格；使用者 11-21「幫我處理，重寫」，改成清單，讓 `index_view`／`index_check` 讀得出來。正本的知識庫 11-21 起長文章的頁改成 `.md`，本夾的檔名本來就是 `.md`。不自動跟正本更新。
+> 正本：`proto8/knowledge/aos/tools/_index.json`，跟到正本 commit `578a7c762`（正本這份最後一次改動）。英文說明譯成中文，路徑照原樣。正本是 json 表，這裡寫成清單，讓 `index_view`／`index_check` 讀得出來（使用者 11-21「幫我處理，重寫」）。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 - `read.md`: 工具 read：把一個文字檔當成純文字行讀出來，檔案大就分段讀。
 - `ls.md`: 工具 ls：列出一個資料夾，每個項目一行；long 和 json 看細節。
@@ -40,23 +40,23 @@
 - `math.md`: 工具 math：計算一個算式；允許什麼、範例、ExprBad。
 - `todo.md`: 工具 todo：長任務用的你自己的待辦清單（ls、set、add、mark）；存在你的對話歷史之外。
 - `goal.md`: 工具 goal：你的目標，你自己停下時會被提醒；set、done、pause、resume。
-- `../mailbox.md`: 指標。工具 mailbox_peek、mailbox_read、mailbox_send：看有哪些信在等、讀最舊的那封、寄一封。講在 aos/mailbox.json#/tools。（正本的鍵是 `../mailbox.json#/tools`，指那一頁裡的一段）
-- `../user_zone.md`: 指標。工具 user_send：寄一封 decide/verify/trial/chore/fyi 信到使用者區。講在 aos/user_zone.json#/send。（正本的鍵是 `../user_zone.json#/send`，指那一頁裡的一段）
-- `../user_zone.md`: 指標。工具 user_verify：檢查一封回覆信真的是從使用者區來的。講在 aos/user_zone.json#/answer。（正本的鍵是 `../user_zone.json#/answer`，指那一頁裡的一段）
-- `../clock.md`: 指標。工具 clock_register：clock 每 N 個週期送來的信（add、rm、ls）；只送一次、在某個時間或 cron：aos/clock.json#/wake_at。講在 aos/clock.json#/wake_me。（正本的鍵是 `../clock.json#/wake_me`，指那一頁裡的一段）
-- `../me/self_hook.md`: 指標。工具 self_hook：有事發生在你身上時，跑一個你的程式（你自己的 hook、on_clock 計時器）。講在 aos/me/self_hook.json。（正本的鍵是 `../me/self_hook.json#/_description`，指那一頁裡的一段）
-- `../me/do_task.md`: 指標。工具 do_task（只有 agent-fsm）：在你自己的對話裡做一件任務，只留下它的摘要。講在 aos/me/do_task.json。（正本的鍵是 `../me/do_task.json#/_description`，指那一頁裡的一段）
-- `../me/self_tools.md`: 指標。工具 self_tools：改你自己的工具清單。講在 aos/me/self_tools.json。（正本的鍵是 `../me/self_tools.json#/_description`，指那一頁裡的一段）
-- `../me/self_llm.md`: 指標。工具 self_llm：改你自己的腦的設定。講在 aos/me/self_llm.json（整個檔案是一段文字）。
-- `../me/self_system.md`: 指標。工具 self_system：看或改你自己的系統文字。講在 aos/me/self_system.json（整個檔案是一段文字）。
-- `../me/self_history.md`: 指標。工具 self_history：列出、刪除、摘要或替換你自己對話裡的訊息。講在 aos/me/self_history.json。（正本的鍵是 `../me/self_history.json#/_description`，指那一頁裡的一段）
-- `../me.md`: 指標。工具 self_state：關於你自己的資訊和數字；它只讀。講在 aos/me.json#/self_state。（正本的鍵是 `../me.json#/self_state`，指那一頁裡的一段）
-- `../me.md`: 指標。工具 self_ctl：停止、暫停、讓你自己睡眠或移除你自己。講在 aos/me.json#/self_ctl。（正本的鍵是 `../me.json#/self_ctl`，指那一頁裡的一段）
-- `../agents/subagent.md`: 指標。工具 subagent：啟動並管理屬於你的 agent（算在你的配額裡）。講在 aos/agents/subagent.json。（正本的鍵是 `../agents/subagent.json#/_description`，指那一頁裡的一段）
-- `../agents.md`: 指標。工具 agents_ctl：對你 daemon 的表上任何一個 agent 用的 aos-agent ctl，不只是你的。講在 aos/agents.json#/agents_ctl。（正本的鍵是 `../agents.json#/agents_ctl`，指那一頁裡的一段）
-- `../agents/fork.md`: 指標。工具 fork（只有 agent-fsm）：為了一個目標複製一份你自己；只有它簡短的結論會回來。講在 aos/agents/fork.json。（正本的鍵是 `../agents/fork.json#/_description`，指那一頁裡的一段）
-- `../agents.md`: 指標。工具 agent_def：從一個範本做出新的 agent 定義，或檢查一份。講在 aos/agents.json#/agent_def。（正本的鍵是 `../agents.json#/agent_def`，指那一頁裡的一段）
-- `../tools_def.md`: 指標。工具 tools_def：從 Python 骨架做一個新工具，或檢查一個工具。講在 aos/tools_def.json#/tools_def。（正本的鍵是 `../tools_def.json#/tools_def`，指那一頁裡的一段）
-- `../kernel.md`: 指標。工具 kernel_gate：當一個 kernel 閘門：其他 proc 的請求會被扣住，你一個一個放行或拒絕。講在 aos/kernel.json#/gate。（正本的鍵是 `../kernel.json#/gate`，指那一頁裡的一段）
-- `../cli/mcp_import.md`: 指標。mcp_tool：執行每一個匯入的外部 MCP 工具的程式（你從來不會用名字呼叫它）；它的錯誤代號。講在 aos/cli/mcp_import.json#/errors。（正本的鍵是 `../cli/mcp_import.json#/errors`，指那一頁裡的一段）
-- `_description.md`: 每個在這裡有一頁的內建工具一個節點：它做什麼、什麼時候用、它的參數、附真實輸出的範例和錯誤；怎麼讀指標列（以 ../ 開頭的鍵）；工具包在 aos/packs.json。
+- `../mailbox.md`: 指標。工具 mailbox_peek、mailbox_read、mailbox_send：看有哪些信在等、讀最舊的那封、寄一封。講在 `aos/mailbox.md#/Mailbox tools`。（正本的鍵是 `../mailbox.md#/Mailbox tools`，指那一頁裡的一段）
+- `../user_zone.md`: 指標。工具 user_send：寄一封 decide/verify/trial/chore/fyi 信到使用者區。講在 `aos/user_zone.md#/How to send`。（正本的鍵是 `../user_zone.md#/How to send`，指那一頁裡的一段）
+- `../user_zone.md`: 指標。工具 user_verify：檢查一封回覆信真的是從使用者區來的。講在 `aos/user_zone.md#/The answer`。（正本的鍵是 `../user_zone.md#/The answer`，指那一頁裡的一段）
+- `../clock.md`: 指標。工具 clock_register：clock 每 N 個週期送來的信（add、rm、ls）；只送一次、在某個時間或 cron：`aos/clock.md#/Wake me once, at a time, or on a schedule`。講在 `aos/clock.md#/Wake me every N cycles`。（正本的鍵是 `../clock.md#/Wake me every N cycles`，指那一頁裡的一段）
+- `../me/self_hook.md`: 指標。工具 self_hook：有事發生在你身上時，跑一個你的程式（你自己的 hook、on_clock 計時器）。講在 aos/me/self_hook.md。（正本的鍵是 `../me/self_hook.md#/Hooks: run a program of yours when something happens to you`，指那一頁裡的一段）
+- `../me/do_task.md`: 指標。工具 do_task（只有 agent-fsm）：在你自己的對話裡做一件任務，只留下它的摘要。講在 aos/me/do_task.md。（正本的鍵是 `../me/do_task.md#/do_task: one task inside your own conversation, only its summary kept`，指那一頁裡的一段）
+- `../me/self_tools.md`: 指標。工具 self_tools：改你自己的工具清單。講在 aos/me/self_tools.md。（正本的鍵是 `../me/self_tools.md#/Changing your own toolbox`，指那一頁裡的一段）
+- `../me/self_llm.md`: 指標。工具 self_llm：改你自己的腦的設定。講在 aos/me/self_llm.md（整個檔案是一段文字）。
+- `../me/self_system.md`: 指標。工具 self_system：看或改你自己的系統文字。講在 aos/me/self_system.md（整個檔案是一段文字）。
+- `../me/self_history.md`: 指標。工具 self_history：列出、刪除、摘要或替換你自己對話裡的訊息。講在 aos/me/self_history.md。（正本的鍵是 `../me/self_history.md#/Changing your own conversation history`，指那一頁裡的一段）
+- `../me.md`: 指標。工具 self_state：關於你自己的資訊和數字；它只讀。講在 `aos/me.md#/Looking at yourself: self_state`。（正本的鍵是 `../me.md#/Looking at yourself: self_state`，指那一頁裡的一段）
+- `../me.md`: 指標。工具 self_ctl：停止、暫停、讓你自己睡眠或移除你自己。講在 `aos/me.md#/Stopping yourself: self_ctl`。（正本的鍵是 `../me.md#/Stopping yourself: self_ctl`，指那一頁裡的一段）
+- `../agents/subagent.md`: 指標。工具 subagent：啟動並管理屬於你的 agent（算在你的配額裡）。講在 aos/agents/subagent.md。（正本的鍵是 `../agents/subagent.md#/Your own subagents: subagent`，指那一頁裡的一段）
+- `../agents.md`: 指標。工具 agents_ctl：對你 daemon 的表上任何一個 agent 用的 aos-agent ctl，不只是你的。講在 `aos/agents.md#/Any agent on the table: agents_ctl`。（正本的鍵是 `../agents.md#/Any agent on the table: agents_ctl`，指那一頁裡的一段）
+- `../agents/fork.md`: 指標。工具 fork（只有 agent-fsm）：為了一個目標複製一份你自己；只有它簡短的結論會回來。講在 aos/agents/fork.md。（正本的鍵是 `../agents/fork.md#/fork: a copy of you, one goal, just the conclusion`，指那一頁裡的一段）
+- `../agents.md`: 指標。工具 agent_def：從一個範本做出新的 agent 定義，或檢查一份。講在 `aos/agents.md#/New definitions: agent_def`。（正本的鍵是 `../agents.md#/New definitions: agent_def`，指那一頁裡的一段）
+- `../tools_def.md`: 指標。工具 tools_def：從 Python 骨架做一個新工具，或檢查一個工具。講在 aos/tools_def.md#/tools_def。（正本的鍵是 `../tools_def.md#/tools_def`，指那一頁裡的一段）
+- `../kernel.md`: 指標。工具 kernel_gate：當一個 kernel 閘門：其他 proc 的請求會被扣住，你一個一個放行或拒絕。講在 `aos/kernel.md#/Being a kernel yourself: kernel_gate`。（正本的鍵是 `../kernel.md#/Being a kernel yourself: kernel_gate`，指那一頁裡的一段）
+- `../cli/mcp_import.md`: 指標。mcp_tool：執行每一個匯入的外部 MCP 工具的程式（你從來不會用名字呼叫它）；它的錯誤代號。講在 `aos/cli/mcp_import.md#/Codes from external MCP tools`。（正本的鍵是 `../cli/mcp_import.md#/Codes from external MCP tools`，指那一頁裡的一段）
+- `_description.md`: 每個在這裡有一頁的內建工具一個節點：它做什麼、什麼時候用、它的參數、附真實輸出的範例和錯誤；怎麼讀指標列（以 ../ 開頭的鍵）；工具包在 aos/packs.md。

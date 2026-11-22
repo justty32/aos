@@ -1,21 +1,19 @@
-# `knowledge/aos/tools_def.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/tools_def.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/tools_def.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/tools_def.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/tools_def.md#/…` 對的就是它。改請改正本，再照 [README](../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Making a new tool: tools_def`**
 
 # 做一個新工具：tools_def
 
 工具是一個位置，有三個部分：entry（跑什麼）、`_metainfo`（它對自己的說明：供參考，不是規則；可省略）和 `_tooldef`（模型看到的東西）。在資料夾裡，它們是檔案 `_entry` 或 `_entry.json`、`_metainfo.json`、`_tooldef.json`；在 JSON 物件裡，它們是鍵 `_entry`、`_metainfo`、`_tooldef`。`_tooldef` 也可以寫成 `_metainfo` 裡的 `tooldef` 鍵；`tools_def` check 和 `aos-tools` 兩種都算，兩個都有時，同一個最上層鍵以獨立的 `_tooldef` 為準。
 
-- 從 Python 骨架做一個新工具並檢查它：`tools_def`（見 `aos/tools_def.json#/tools_def`）。
+- 從 Python 骨架做一個新工具並檢查它：`tools_def`（見 `aos/tools_def.md#/tools_def`）。
 - 一步一步做（entry 和一個小腳本，然後 `_metainfo`，然後 `_tooldef`）：`tools_def` add_entry、add_metainfo、add_tooldef。
-- 用 `fn` 把工具寫成一個 Python 函式（`@fn.tool` 和 `fn.main`；見 `aos/tools_def.json#/fn`）。
-- 把它加進你自己的工具：`self_tools` 加上 `{"op": "add", "path": "..."}`（見 `aos/me.json#/self_tools`）。
-
----
+- 用 `fn` 把工具寫成一個 Python 函式（`@fn.tool` 和 `fn.main`；見 `aos/tools_def.md#/fn (write a tool as one Python function)`）。
+- 把它加進你自己的工具：`self_tools` 加上 `{"op": "add", "path": "..."}`（見 `aos/me/self_tools.md`）。
 
 **`#/tools_def`**
 
@@ -43,9 +41,7 @@ check 的 `path` 也可以是一個 JSON 檔，或物件裡有 `_entry` 鍵（�
 
 錯誤：`ArgumentsBad`、`OpUnknown`、`PathExists`（換一個路徑）、`PathMissing`、`FileBad`、`PointerMissing`、`MkdirFailed`、`WriteFailed`、`ToolBad`。
 
----
-
-**`#/fn`**
+**`#/fn (write a tool as one Python function)`**
 
 # fn（把工具寫成一個 Python 函式）
 

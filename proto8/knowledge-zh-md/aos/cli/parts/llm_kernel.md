@@ -1,10 +1,10 @@
-# `knowledge/aos/cli/parts/llm_kernel.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/parts/llm_kernel.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/parts/llm_kernel.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/parts/llm_kernel.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/parts/llm_kernel.md#/…` 對的就是它。改請改正本，再照 [README](../../../README.md) 的做法跟上這份。
 
 ---
 
-**（整份）**
+**`#/kernel_llm: one round of the llm kernel`**
 
 # kernel_llm：llm kernel 的一輪
 
@@ -18,4 +18,4 @@ aos-daemon-ctl -d stacks/llm shutdown           # stop it
 
 每一輪它會回覆已經完成的腦呼叫，並從 `$AOS_STACK/requests/` 替 `kernel.json` 裡的端點包挑出最該處理的等待中的信（slots、優先順序、預算）。壞掉的信會得到錯誤回覆；那不是 kernel 的錯誤。沒有 `AOS_STACK` 卻手動跑 = `StackMissing`。kernel 停著時，agent 只會等（不會失敗）。
 
-腦呼叫在哪裡跑：有設 `$AOS_KERNEL` 時，每個呼叫都是送給它的一封 add 信，否則送到 `$AOS_DAEMON` 的 ctl 信箱（kernel 沒有 `next`）。所以啟動 llm daemon 的那個 shell 要 `unset AOS_KERNEL`，除非你是故意的。hook（`before_verdict`、`after_verdict`、`before_reply`）放在 `kernel.json` 旁邊的 `kernel_hookeds.json`（由它的 `interfaces.json` 裡的 `"hookeds"` 指名），寫法跟 kernel station 一樣（aos/kernel.json）：exit 10 擋下，失敗的 hook 會以 `HookFailed` 停掉這一輪；`kernel.json` 沒有 `hooks`。範本的 `interfaces.json` 也指名了 hook 點宣告（`"hooks": "kernel_hooks.json"`，只供閱讀），並有 `"kernel": {}`。範本的 daemon.json 用了 `$AOS_HOME`，所以啟動時必須設好 `AOS_HOME`。
+腦呼叫在哪裡跑：有設 `$AOS_KERNEL` 時，每個呼叫都是送給它的一封 add 信，否則送到 `$AOS_DAEMON` 的 ctl 信箱（kernel 沒有 `next`）。所以啟動 llm daemon 的那個 shell 要 `unset AOS_KERNEL`，除非你是故意的。hook（`before_verdict`、`after_verdict`、`before_reply`）放在 `kernel.json` 旁邊的 `kernel_hookeds.json`（由它的 `interfaces.json` 裡的 `"hookeds"` 指名），寫法跟 kernel station 一樣（aos/kernel.md）：exit 10 擋下，失敗的 hook 會以 `HookFailed` 停掉這一輪；`kernel.json` 沒有 `hooks`。範本的 `interfaces.json` 也指名了 hook 點宣告（`"hooks": "kernel_hooks.json"`，只供閱讀），並有 `"kernel": {}`。範本的 daemon.json 用了 `$AOS_HOME`，所以啟動時必須設好 `AOS_HOME`。

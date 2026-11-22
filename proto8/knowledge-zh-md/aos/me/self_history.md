@@ -1,10 +1,10 @@
-# `knowledge/aos/me/self_history.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/me/self_history.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/me/self_history.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/me/self_history.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/me/self_history.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Changing your own conversation history`**
 
 # 改你自己的對話歷史
 
@@ -19,11 +19,9 @@
 
 範圍是 `"N"`、`"A-B"`、`"A-"`（A 到最後）或 `"-K"`（最後 K 則，例如 `"-3"`）。
 
-規則與錯誤：`aos/me/self_history.json#/rules`。
+規則與錯誤：`aos/me/self_history.md#/self_history: rules and errors`。
 
----
-
-**`#/rules`**
+**`#/self_history: rules and errors`**
 
 # self_history：規則與錯誤
 
@@ -32,5 +30,5 @@
 - 預設什麼都不會丟：被移除或被取代的訊息會移到你 stack 裡的 `history_removed.jsonl`。`rm`、`summarize` 和 `set` 接受 `"keep": "FILE"`（改把原文放那裡）或 `"no_keep": true`（不保留）。
 - 有些訊息有 `aos` 鍵（信上是 `{"letter": ...}`，最終回覆上是 `{"answer_to": [...]}`）：它讓提問的人找得到他那封信的回覆。用 `set` 時，把舊的 `aos` 鍵抄進新訊息。被移除或被取代的回覆在 `history_removed.jsonl` 裡還找得到，但用了 `keep` 或 `no_keep` 就找不到。
 - 如果你的身體是外部 CLI（eca，例如 claude），一次改動會讓你的下一輪開一段新對話，把改過的紀錄帶過去。
-- `DaemonMissing`、`DaemonFailed`、`InstanceMissing`：這個功能暫時不能用；照實說，之後最多再試一次（`aos/errors.json#/common`）。
+- `DaemonMissing`、`DaemonFailed`、`InstanceMissing`：這個功能暫時不能用；照實說，之後最多再試一次（`aos/errors/common.md`）。
 - `MessageBad`：`message` 不是一個 JSON 物件。`HistoryMissing`、`HistoryBad`（你的對話歷史讀不了）、`InterfaceBad`（你定義的 `interfaces.json` 壞了）：要人來修；回報。

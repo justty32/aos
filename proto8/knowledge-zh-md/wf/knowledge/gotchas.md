@@ -1,12 +1,12 @@
-# `knowledge/wf/knowledge/gotchas.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/knowledge/gotchas.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/knowledge/gotchas.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
-
-**`#/_description`**：gotchas — tidy 整理與拆檔踩過的坑（出廠的；通用規則在 `wf/workflows/tidy.json`）。工作區自己踩到的坑記在工作區的 `wf/knowledge/gotchas.json`，不寫回這裡。
+> 正本：`proto8/knowledge/wf/knowledge/gotchas.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/tidy_archive_move`**（原文是字串陣列，8 行）
+gotchas — tidy 整理與拆檔踩過的坑（出廠的；通用規則在 `wf/workflows/tidy.md`）。工作區自己踩到的坑記在工作區的 `wf/knowledge/gotchas.md`，不寫回這裡。
+
+# tidy_archive_move
 
 - 母 repo 的全庫連結檢查工具可能吃**檔案**路徑不吃目錄、且只掃母 repo 追蹤的檔；子 repo 內部用它自己的檢查，全庫檢查由調度者在母 repo 根跑。
 - ```markdown 圍籬內可能刻意放「壞」連結當測試字串；改寫器與檢查都要跳過 code fence。
@@ -17,17 +17,13 @@
 - 資料夾可能有 `.` 開頭的隱藏檔；用 `ls -A`，否則大小統計也可能漏掉。
 - 線報告的「需要裁示」清單要在 `wf/progress.json` 各記一條、status 寫「等使用者」，不能只留在回報裡。
 
----
-
-**`#/tidy_split`**（原文是字串陣列，3 行）
+# tidy_split
 
 - 拆檔最常見的破壞是**別處的 `#錨點`**（json 形態是別處指到 `<檔>#/<鍵>` 的統一路徑）：只查自己這個 repo 的檢查抓不到跨 repo 的；拆前先 `grep -rn '<檔名>#'`，被指著的標題或鍵保留在入口。
 - 給人讀的總覽表（README 能力表、工具說明表）不是記錄表，不抽成資料；判準是「一列一個要去的地方／要知道的事」對上「一列一筆同構記錄」。
 - `grep -c` 接在不存在的腳本後面會印 `0` 假通過；驗收命令要在腳本所在 repo 根跑，或先 `test -f`。
 
----
-
-**`#/tidy_dispatch`**（原文是字串陣列，5 行）
+# tidy_dispatch
 
 - 便宜模型的工人可能把中途追加的規則當側路訊息拒收；規則改了就開新工人、把規則寫進主交接書，不要用續訊息機制追加。
 - 工人偶爾漏 stage 改過的檔；管理線驗收要含 `git status --short | grep -v '^[MADR] '` → 0，並以明確路徑補 `git add`。
@@ -35,9 +31,7 @@
 - 契約先定稿再派；中途每改一次規則，已做完的批都要回補。
 - 母 repo 的檢查對 `.` 跑會遞迴掃進所有子 repo，數字會隨別條線在動；母 repo 自己只掃自己那一份。
 
----
-
-**`#/tidy_env`**（原文是字串陣列，2 行）
+# tidy_env
 
 - **CRLF checkout 會同時弄壞執行與計數。** `.sh` 帶 `\r` 在 Linux／WSL 直接跑不動；`wc -c` 每行多算 1 byte，在 Windows 工作區量大小會偏大。量大小用 `git show HEAD:<檔> | wc -c`。
 - **`command -v` 只判存在、不判能不能跑。** 檢查腳本裡借用的直譯器若是系統塞的假 shim，呼叫失敗又被 `2>/dev/null` 吃掉，那幾項是「沒跑」不是「乾淨」；要驗就直接手跑一次對應的那支，別拿這種綠燈當證據。

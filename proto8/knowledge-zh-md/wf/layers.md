@@ -1,12 +1,10 @@
-# `knowledge/wf/layers.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/layers.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/layers.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
-
-**`#/_description`**：分層與歸屬：東西該放哪一層、流程（skills）與知識（memory）怎麼分、私有 index、日誌寫法。文中的 `wf/…`、`AGENTS.md` 都是工作區裡的路徑。
+> 正本：`proto8/knowledge/wf/layers.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../README.md) 的做法跟上這份。
 
 ---
 
-**`#/layers`**（原文是字串陣列，12 行）
+分層與歸屬：東西該放哪一層、流程（skills）與知識（memory）怎麼分、私有 index、日誌寫法。文中的 `wf/…`、`AGENTS.md` 都是工作區裡的路徑。
 
 # 分層原則
 
@@ -21,10 +19,6 @@
 3. **活狀態只列 open**：進度記 `wf/progress.json`（一條一個鍵；等使用者的也記這裡、status 寫「等使用者」），**完成即刪**；「改了什麼」交給 git log，決定記進 `wf/knowledge/` 的決策記錄；檔內只留現行結論。條目膨脹就把細節寫到別處、`see` 指過去，條目本身留一句；日誌寫法見本檔 `#/logs`。
 4. **鐵律極少而 always-on**：3–5 條任何時刻都適用的規矩常駐 AGENTS.md，其餘一切按需取用。
 
----
-
-**`#/skills_vs_memory`**（原文是字串陣列，12 行）
-
 # skills 與 memory 分家
 
 - 工作區的 `wf/workflows/`＝**skills**：做事的流程，一個工作流一個節點（何時用／何時不用／done_when／步驟／交接）。
@@ -32,15 +26,11 @@
 
 **判準一句話**：照著它**做事**的進 `workflows/`；拿來**查**、或做事時往裡**記**的進 `knowledge/`。
 
-舊檔常是「流程外殼包著一張記錄表或參考知識」：流程留在工作流節點，記錄與知識進 `knowledge/`，工作流用統一路徑指過去、不重抄。例：`wf/workflows/decisions.json` 只寫何時記、怎麼記，記錄在 `wf/knowledge/decisions.json#/records`。
+舊檔常是「流程外殼包著一張記錄表或參考知識」：流程留在工作流節點，記錄與知識進 `knowledge/`，工作流用統一路徑指過去、不重抄。例：`wf/workflows/decisions.md` 只寫何時記、怎麼記，記錄在 `wf/knowledge/decisions.json#/records`。
 
 planning 的 **spec／plan** 是記錄，進 `knowledge/`：放 `wf/knowledge/specs/`、`wf/knowledge/plans/`（第一份出現時才建資料夾；動工完成後移各自的 `archive/`）。流程本身在工作流節點。
 
 analysis 的**分析產物**也是記錄：放 `wf/knowledge/analysis/<project>/`（用到才建）。
-
----
-
-**`#/private_index`**（原文是字串陣列，5 行）
 
 # 私有 index
 
@@ -48,14 +38,10 @@ analysis 的**分析產物**也是記錄：放 `wf/knowledge/analysis/<project>/
 
 agent 自己的看法（主觀、cache）可以放一份**私有 index** `wf/_index.local.json`：不進版控（gitignore）、用到才建、不給別人當依據。看的時候用 `index_view` 的 `index` 參數把它疊在公共那份上，同名項以疊上去的為準。
 
----
-
-**`#/logs`**（原文是字串陣列，7 行）
-
 # 日誌寫法
 
 工作區若記日誌（`session_logs/`，按日記的那種），它只記「哪天做了什麼」，**不是第二份知識庫**：
 
 - **每日檔少寫**：`session_logs/<月>/<日期>` 每條一行「動了哪些檔／做了什麼」＋指到結論所在處。結論寫進它自己的節點，日誌只指過去；沒有別的家可放的（代定清單、當天交接）才寫在日誌裡。
 - **總目錄**每天一條，寫一句「這天定下了什麼」（結論），不列做了哪些事；指到該日檔，已收月摘要的指月摘要的該日段。
-- **月摘要**：月結後把該月每日檔濃縮成一份：每天一段，只留結論（別處已有就指過去）與使用者原文。被指過的舊錨點／鍵在月摘要保留同名。每日原檔照 `wf/tidying.json#/archive`（本庫）封存，活文件裡指向它的路徑改指月摘要同名段。
+- **月摘要**：月結後把該月每日檔濃縮成一份：每天一段，只留結論（別處已有就指過去）與使用者原文。被指過的舊錨點／鍵在月摘要保留同名。每日原檔照 `wf/tidying.md#/archive 規則`（本庫）封存，活文件裡指向它的路徑改指月摘要同名段。

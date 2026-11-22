@@ -1,16 +1,20 @@
-# `knowledge/wf/workflows/moving-things.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/workflows/moving-things.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/workflows/moving-things.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
-
-**`#/_description`**：搬移與改名（refactor 的搬移專章）：檔案換位置、目錄改名、專案拆 repo；六類常見斷裂與偵測程序（**只 grep 連結是不夠的**；六類依實際踩到的頻率排序，在 `#/breakages`）。上層是 `wf/workflows/refactor.json`。
-
-**`#/when`**：檔案換位置、目錄改名、專案拆 repo；使用者說「搬檔案」「改目錄名」「拆 repo」。
-
-**`#/not_when`**：不換位置、不改名的結構重排 → `wf/workflows/refactor.json`。
+> 正本：`proto8/knowledge/wf/workflows/moving-things.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/done_when`**（原文是字串陣列，5 行）
+搬移與改名（refactor 的搬移專章）：檔案換位置、目錄改名、專案拆 repo；六類常見斷裂與偵測程序（**只 grep 連結是不夠的**；六類依實際踩到的頻率排序，在 `#/breakages`）。上層是 `wf/workflows/refactor.md`。
+
+# when
+
+檔案換位置、目錄改名、專案拆 repo；使用者說「搬檔案」「改目錄名」「拆 repo」。
+
+# not_when
+
+不換位置、不改名的結構重排 → `wf/workflows/refactor.md`。
+
+# done_when
 
 - 逐檔比對已落地（size＋basename；刻意不搬的已明確列出）。
 - 六類斷裂已掃（`#/breakages` 每類的掃描都跑過）。
@@ -18,85 +22,51 @@
 - 連結歸零（跑了第 4 步才適用）：專案的連結／引用檢查沒有報問題，且確認檢查器涵蓋新位置（見 `#/tool_gap`）。
 - CI 指令實跑過一次。
 
----
+# iron_rule
 
-**`#/iron_rule`**
+**複製，不要搬移，直到驗證完**：`cp -a` 進新位置 → 驗證 → 最後才清掉舊的。這樣不需要靠 tar 當救命繩，而且中途出錯不會兩邊都沒有。清舊的之前先確認**來源已 commit 且已 push**（push 是對外動作，要有授權來源，見 `wf/knowledge/iron-rules.md#/rules/authorization`；落地後在工作區 `AGENTS.md` 的鐵律段）。
 
-**複製，不要搬移，直到驗證完**：`cp -a` 進新位置 → 驗證 → 最後才清掉舊的。這樣不需要靠 tar 當救命繩，而且中途出錯不會兩邊都沒有。清舊的之前先確認**來源已 commit 且已 push**（push 是對外動作，要有授權來源，見 `wf/knowledge/iron-rules.json#/rules/authorization`；落地後在工作區 `AGENTS.md` 的鐵律段）。
+# breakages
 
----
+## 0
 
-**`#/breakages`**（陣列，6 項）
+- kind: 硬編碼絕對路徑
+- scan: grep -rn '<舊路徑>' --include='*.py' --include='*.sh' --include='*.json'
+- detail: 常見目標：腳本裡的資料根目錄、設定檔的路徑欄位、多支腳本共用的預設路徑常數。
 
----
+## 1
 
-**`#/breakages/0`**（物件，3 個鍵：`kind`、`scan`、`detail`）
+- kind: `__file__` 相對推導——**語意會變**
+- scan: grep -rn '__file__' --include='*.py'
+- detail: 程式碼與相對路徑文字都沒變，**基準點仍會變**。例：某支工具用 `Path(__file__).parent.parent / "backups"` 當備份目錄，搬進版控範圍之後每次備份都把大檔提交進版控。判準：`parents[n]` 指向**跟著一起搬的東西**就安全，指向**沒跟著搬的東西**就要改。
 
-**`#/breakages/0/kind`**：硬編碼絕對路徑
+## 2
 
-**`#/breakages/0/scan`**：grep -rn '<舊路徑>' --include='*.py' --include='*.sh' --include='*.json'
+- kind: package import
+- scan: grep -rn '^from \|^import ' --include='test_*.py'
+- detail: `from scripts import x` 在 `scripts/` 消失後死掉；主程式可能仍能執行，只有依賴 package 佈局的測試失敗。改成從自身位置推導。
 
-**`#/breakages/0/detail`**：常見目標：腳本裡的資料根目錄、設定檔的路徑欄位、多支腳本共用的預設路徑常數。
+## 3
 
----
+- kind: 相對 markdown 連結
+- scan:
+- detail: 跨 repo 拆分後**原本的兄弟變成別的 repo**。`git ls-files` 走到**子 repo 的指標**就停，所以檢查器預設看不到子 repo 內部。修法：拿目標的 basename 去整個工作區找實體，再算相對路徑。同名多候選要手工指定。
 
-**`#/breakages/1`**（物件，3 個鍵：`kind`、`scan`、`detail`）
+## 4
 
-**`#/breakages/1/kind`**：`__file__` 相對推導——**語意會變**
+- kind: CI 與外部設定
+- scan: grep -rn '<舊路徑>' .github/ *.yml *.json <agent 工具的設定檔>
+- detail: 常見目標：CI workflow 裡跑的指令、agent 工具的 hook／設定檔。
 
-**`#/breakages/1/scan`**：grep -rn '__file__' --include='*.py'
+## 5
 
-**`#/breakages/1/detail`**：程式碼與相對路徑文字都沒變，**基準點仍會變**。例：某支工具用 `Path(__file__).parent.parent / "backups"` 當備份目錄，搬進版控範圍之後每次備份都把大檔提交進版控。判準：`parents[n]` 指向**跟著一起搬的東西**就安全，指向**沒跟著搬的東西**就要改。
+- kind: 執行期資料目錄
+- scan:
+- detail: 不進版控的東西（鎖、投遞區、DB 快照）不能跟著搬進 repo，但它們的路徑常寫在跟著搬的程式裡。路徑指向已經不存在的目錄時，**「已釋放／不存在」的檢查會恆真通過**。例：某個鎖檔檢查指著一個已被刪掉的目錄，於是每次收尾檢查都在檢查一個不可能存在的路徑。（恆真檢查的通則見 `wf/knowledge/green-is-not-checked.md`）
 
----
+# steps
 
-**`#/breakages/2`**（物件，3 個鍵：`kind`、`scan`、`detail`）
-
-**`#/breakages/2/kind`**：套件匯入（package import）
-
-**`#/breakages/2/scan`**：grep -rn '^from \|^import ' --include='test_*.py'
-
-**`#/breakages/2/detail`**：`from scripts import x` 在 `scripts/` 消失後死掉；主程式可能仍能執行，只有依賴 package 佈局的測試失敗。改成從自身位置推導。
-
----
-
-**`#/breakages/3`**（物件，3 個鍵：`kind`、`scan`、`detail`）
-
-**`#/breakages/3/kind`**：相對 markdown 連結
-
-**`#/breakages/3/scan`**：（空字串）
-
-**`#/breakages/3/detail`**：跨 repo 拆分後**原本的兄弟變成別的 repo**。`git ls-files` 走到**子 repo 的指標**就停，所以檢查器預設看不到子 repo 內部。修法：拿目標的 basename 去整個工作區找實體，再算相對路徑。同名多候選要手工指定。
-
----
-
-**`#/breakages/4`**（物件，3 個鍵：`kind`、`scan`、`detail`）
-
-**`#/breakages/4/kind`**：CI 與外部設定
-
-**`#/breakages/4/scan`**：grep -rn '<舊路徑>' .github/ *.yml *.json <agent 工具的設定檔>
-
-**`#/breakages/4/detail`**：常見目標：CI workflow 裡跑的指令、agent 工具的 hook／設定檔。
-
----
-
-**`#/breakages/5`**（物件，3 個鍵：`kind`、`scan`、`detail`）
-
-**`#/breakages/5/kind`**：執行期資料目錄
-
-**`#/breakages/5/scan`**：（空字串）
-
----
-
-**`#/breakages/5/detail`**
-
-不進版控的東西（鎖、投遞區、DB 快照）不能跟著搬進 repo，但它們的路徑常寫在跟著搬的程式裡。路徑指向已經不存在的目錄時，**「已釋放／不存在」的檢查會恆真通過**。例：某個鎖檔檢查指著一個已被刪掉的目錄，於是每次收尾檢查都在檢查一個不可能存在的路徑。（恆真檢查的通則見 `wf/knowledge/green-is-not-checked.json`）
-
----
-
-**`#/steps`**（原文是字串陣列，16 行）
-
-0. 碰原始碼前先讀工作區的 `wf/knowledge/conventions.json`（寫碼慣例）與 `wf/knowledge/code-map.json`（哪個檔負責什麼）；環境與指令看 `wf/knowledge/dev-env.json`（`wf/knowledge/dev-dispatch.json#/before_code`）。工作區還沒有 → 照 `wf/skeletons/conventions.json#/skeleton`、`wf/skeletons/code-map.json#/skeleton` 建。
+0. 碰原始碼前先讀工作區的 `wf/knowledge/conventions.json`（寫碼慣例）與 `wf/knowledge/code-map.json`（哪個檔負責什麼）；環境與指令看 `wf/knowledge/dev-env.json`（`wf/knowledge/dev-dispatch.md#/before_code`）。工作區還沒有 → 照 `wf/skeletons/conventions.md#/skeleton`、`wf/skeletons/code-map.md#/skeleton` 建。
 
 驗證程序：
 
@@ -113,9 +83,7 @@ python3 -m unittest discover -s <dir> -p 'test_*.py'
 # 5. CI 指令實跑一次
 ```
 
----
-
-**`#/renaming`**（原文是字串陣列，5 行）
+# renaming
 
 改名時額外注意：
 
@@ -123,10 +91,10 @@ python3 -m unittest discover -s <dir> -p 'test_*.py'
 - **所有分支都要改。** 只改現役分支的話，切回其他分支時目錄名就對不上了。用 worktree 在別的分支上做，現役 checkout 全程不動。
 - **區分「同一個東西的路徑」與「當時的紀錄」。** 驗收報告、歷史 log 這類**當時的紀錄**裡的舊路徑**不要改**——那些記的是當時實際用的路徑，改了就是竄改紀錄。只改「還會再跑」的東西：活工具、spec、CI、現役文件。
 
----
-
-**`#/tool_gap`**
+# tool_gap
 
 原文第 4 步與 done_when「連結歸零」用的是 workflows 模板的 `wf-lint.sh`（或該專案自己的連結檢查器），會查 md 相對連結與錨點。使用者 2026-11-13 裁不帶 workflows 的檢查工具；knowledge 沒有查連結或統一路徑的出廠工具（aos repo 自己的 `wf/tools/` 有一支 index 檢查，不在知識庫裡）。所以這裡只寫「專案的連結／引用檢查」，沒有就靠第 2 步的六類 grep。
 
-**`#/handoff`**：搬完回 `wf/workflows/refactor.json` 接剩下的步驟（更新 code map 與引用）。
+# handoff
+
+搬完回 `wf/workflows/refactor.md` 接剩下的步驟（更新 code map 與引用）。

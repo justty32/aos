@@ -1,3 +1,3 @@
-# `knowledge/wf/skeletons/` 這一夾的中文映照版，給人審用；正本是 json
+# `knowledge/wf/skeletons/` 這一夾的中文映照版，給人看；正本是 `knowledge/` 那份
 
-這一夾的每份 md 對 `proto8/knowledge/wf/skeletons/` 裡同名的一份 json（`x.json` → `x.md`，`_index.json` → `_index.md`）。本 README 是映照腳本加的，知識庫那邊沒有對應的 json。正本是 json；這裡不會自動跟著 json 更新，改這裡也不會回寫 json。
+這一夾的每份 md 對 `proto8/knowledge/wf/skeletons/` 裡同名的一份（`x.md` → `x.md`，`_index.json` → `_index.md`）。這一庫本來就是中文，內容照抄正本。本 README 是映照版自己加的，知識庫那邊沒有對應的檔。改這裡不會回寫正本；每份檔頭寫著它跟到正本的哪個 commit，怎麼找出過期的頁、怎麼跟上，見[總 README](../../README.md)。

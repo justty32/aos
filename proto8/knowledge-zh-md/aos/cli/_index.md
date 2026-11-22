@@ -1,6 +1,6 @@
-`knowledge/aos/cli/_index.json` 的中文映照版，11-21 改寫成這一夾（中文映照版）自己的 index：一項「名字: 一句話」，名字是本夾裡的檔名或子夾名。
+`knowledge/aos/cli/_index.json` 的中文映照版，也是這一夾（中文映照版）自己的 index：一項「名字: 一句話」，名字是本夾裡的檔名或子夾名。
 
-> 來源：`proto8/knowledge/aos/cli/_index.json`，commit `fad6bef74`（英文說明譯成中文）。原本是照 json 轉出來的兩欄表格；使用者 11-21「幫我處理，重寫」，改成清單，讓 `index_view`／`index_check` 讀得出來。正本的知識庫 11-21 起長文章的頁改成 `.md`，本夾的檔名本來就是 `.md`。不自動跟正本更新。
+> 正本：`proto8/knowledge/aos/cli/_index.json`，跟到正本 commit `fe053b828`（正本這份最後一次改動）。英文說明譯成中文，路徑照原樣。正本是 json 表，這裡寫成清單，讓 `index_view`／`index_check` 讀得出來（使用者 11-21「幫我處理，重寫」）。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 - `flags.md`: 每個 aos-* 指令的旗標放哪裡（在它那一層之後的任何位置，或在第一個參數之前）、help 的層級與短名。
 - `errors.md`: 先看程式名、錯誤代號與原因，再決定要不要重試。
@@ -28,6 +28,6 @@
 - `parts`: 其他指令用來組成的低階程式：aos-exec、aos-loop、aos-fsm、aos-daemon、aos-post、aos-lock、aos-json、aos-directive、aos-llm，以及 llm kernel（工具資料夾 lib/aos/kernel_llm）。
 - `json_view.md`: aos-json-view 把一個 JSON 檔或它的一部分，用緊湊的排版印出來給人看；只讀，輸出不是 JSON。
 - `share.md`: 用 aos-share 替一個共用資料夾或一個檔案，對某個群組或使用者 id 設定 ACL（team、read、key、work、drop、stack）；用 --dry-run 預覽。
-- `sandbox.md`: 指標。aos-asuser：不用 root，以你的某個子 id 身分跑一個程式；aos-sandbox 用它來做 `user: sub:N`。它沒有自己的一頁：看 aos/cli/sandbox.json#/config 裡的 `user` 鍵，再看 `aos-asuser --help`。（正本的鍵是 `sandbox.json#/config`，指那一頁裡的一段）
-- `eca.md`: 指標。aos-mcp-launch SERVER_FILE：啟動一個外部的 stdio MCP server，它的 env_file 只讀進那個 server 的行程裡；eca CLI 會替你跑它。它沒有自己的一頁：aos/cli/eca.json#/external_mcp。（正本的鍵是 `eca.json#/external_mcp`，指那一頁裡的一段）
+- `sandbox.md`: 指標。aos-asuser：不用 root，以你的某個子 id 身分跑一個程式；aos-sandbox 用它來做 `user: sub:N`。它沒有自己的一頁：看 `aos/cli/sandbox.md#/Config keys` 裡的 `user` 鍵，再看 `aos-asuser --help`。（正本的鍵是 `sandbox.md#/Config keys`，指那一頁裡的一段）
+- `eca.md`: 指標。aos-mcp-launch SERVER_FILE：啟動一個外部的 stdio MCP server，它的 env_file 只讀進那個 server 的行程裡；eca CLI 會替你跑它。它沒有自己的一頁：`aos/cli/eca.md#/External MCP servers (claude and codex)`。（正本的鍵是 `eca.md#/External MCP servers (claude and codex)`，指那一頁裡的一段）
 - `_description.md`: 給人類與外部 agent 用的指令：在 aos 裡優先用已註冊的工具、daemon 與 agent 怎麼選，以及先讀哪一頁。

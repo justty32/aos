@@ -1,18 +1,16 @@
-# `knowledge/aos/cli/sandbox.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/sandbox.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/sandbox.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/sandbox.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/sandbox.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Running a program in a sandbox`**
 
 # 在沙箱裡跑程式
 
 用 aos-sandbox 跑一個程式，只給它設定允許的路徑、網路和限制。
 
----
-
-**`#/run`**
+**`#/aos-sandbox: run a program in a sandbox`**
 
 # aos-sandbox：在沙箱裡跑程式
 
@@ -24,9 +22,7 @@ aos-sandbox meta.json#/x/sandbox cat /work/a.txt   # a config inside a bigger fi
 
 它組出 `[s6-softlimit ...] [s6-setuidgid USER] bwrap ... -- prog args` 然後 exec 它，所以結束碼、stdin 和 stdout 都是 prog 的（訊號 N = 128+N，例如 143）。非零而且有一行 `aos-sandbox: error:` = aos-sandbox 失敗；沒有那行的話，是 prog 自己的代碼。沒列出的路徑看不見；唯讀路徑拒絕寫入（`Read-only file system`）。只有 `rw` 路徑和 `/tmp`（空的，prog 結束就消失）可以寫：寫到其他任何地方，連看不見的路徑也一樣，會以 `Read-only file system` 失敗，而不是悄悄消失。如果找不到 CONFIG 但找得到 `CONFIG.json`，就用那個。`/proc` 和 `/dev` 一定在。旗標可以放在 CONFIG 前面或後面；PROG 和它的參數原樣轉交。壞掉的 CONFIG（不是 JSON、不是物件、某個鍵型別錯，例如 `ro must be an array of non-empty strings`、一個 `$ref`、沒設的 `$env` 變數、讀不了的檔案）當成沒寫：PROG 會在「沒有」沙箱的情況下跑，stderr 會出現一行 `aos-sandbox: warning: sandbox config ignored, running unsandboxed: ...`。錯誤：`CfgMissing`（沒有這個檔案，或指標指到空的）、`PathMissing`（列出的某個路徑不存在）、`CommandMissing`（下面其中一個找不到：bwrap；有設限制時的 s6-softlimit；`user` 要的 s6-setuidgid、aos-asuser、sudo 或 `true`；`commands` 裡的某個名字；不用沙箱跑時的 PROG 本身）、`UserBad`、`EnvBad`（有設 AOS_HOME 但它不是 aos home）。
 
----
-
-**`#/config`**
+**`#/Config keys`**
 
 # 設定的鍵
 

@@ -1,14 +1,14 @@
-# `knowledge/aos/cli/offer_hooks.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/offer_hooks.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/offer_hooks.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/offer_hooks.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/offer_hooks.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**（整份）**
+**`#/aos-hook: offer hook points from your own program`**
 
 # aos-hook：從你自己的程式提供 hook 點
 
-當你寫的程式（C++、shell、任何能啟動行程的東西）要讓別人 hook 進來，就像 agent 的 hookeds.json hook 進 agent 那樣，用 aos-hook。要 hook 進一個現有的 agent，則是用 `aos-agent hook`（aos/cli/hook.json）。
+當你寫的程式（C++、shell、任何能啟動行程的東西）要讓別人 hook 進來，就像 agent 的 hookeds.json hook 進 agent 那樣，用 aos-hook。要 hook 進一個現有的 agent，則是用 `aos-agent hook`（aos/cli/hook.md）。
 
 一個 hook 點就是在那個時刻的一次 `aos-hook fire`。aos-hook 只照名字順序跑掛在那個事件上的處理程式（handler），交回每一個的結束碼和 stdout；它們代表什麼（擋下、改一個欄位、失敗）由你的程式決定。要 hook 進來的人寫一份 hookeds 清單：
 

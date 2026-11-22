@@ -1,10 +1,10 @@
-# `knowledge/aos/tools/trash.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/tools/trash.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/tools/trash.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/tools/trash.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/tools/trash.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Tool trash`**
 
 # 工具 trash
 
@@ -18,19 +18,17 @@
 印出 `{"path":"out/hello.txt","to":".trash/20261111-111744/out/hello.txt"}`。
 
 - 同一秒內再丟同一個路徑，會到 `.trash/<time>-1/<its path>`，再來 `-2`，依此類推；同一秒內不同的路徑共用 `.trash/<time>/`。
-- 復原：用 `move`，`"from"`＝那個 `to`，`"to"`＝原來的路徑（`aos/tools/move.json`）。
+- 復原：用 `move`，`"from"`＝那個 `to`，`"to"`＝原來的路徑（`aos/tools/move.md`）。
 - `<time>` 是本地時間 `YYYYMMDD-HHMMSS`。工作區外的路徑保留完整的絕對路徑：`/tmp/b1out/f.txt` 會到 `.trash/<time>/tmp/b1out/f.txt`。
 - 垃圾桶永遠不會自己清空。要清空它：用 `remove`，`{"path": ".trash", "recursive": true}`（不能復原）。`ls` 會藏起 `.trash`，除非 `"hidden": true`。
 
-錯誤：`aos/tools/trash.json#/errors`。
+錯誤：`aos/tools/trash.md#/trash: errors`。
 
----
-
-**`#/errors`**
+**`#/trash: errors`**
 
 # trash：錯誤
 
 - `FileMissing`：那個路徑什麼都沒有。
 - `PathBad`：工作區本身、已經在 `.trash` 裡的東西，或包含 `.trash` 的資料夾。
-- `MoveFailed`：系統拒絕了搬移（`aos/errors/common.json#/files`）。
-- `WsMissing`：垃圾桶一定在你的工作區裡，所以就算是絕對路徑，trash 也需要工作區。錯的或不認得的鍵（`ArgumentsBad`）：`aos/errors/common.json#/input`。
+- `MoveFailed`：系統拒絕了搬移（`aos/errors/common.md#/Codes from file work`）。
+- `WsMissing`：垃圾桶一定在你的工作區裡，所以就算是絕對路徑，trash 也需要工作區。錯的或不認得的鍵（`ArgumentsBad`）：`aos/errors/common.md#/Codes about what you gave`。

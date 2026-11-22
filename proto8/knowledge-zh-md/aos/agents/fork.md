@@ -1,10 +1,10 @@
-# `knowledge/aos/agents/fork.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/agents/fork.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/agents/fork.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/agents/fork.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/agents/fork.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/fork: a copy of you, one goal, just the conclusion`**
 
 # fork：一份你的複本，一個目標，只拿結論
 
@@ -17,11 +17,9 @@
 
 呼叫：`{"goal": "Check the three config files we discussed for the port setting and return the values"}`。在 `goal` 裡講要帶回什麼（最多 `max_chars`，預設 600）。
 
-更多：`aos/agents/fork.json#/rules`（複製了什麼、fork 看到什麼）、`aos/agents/fork.json#/results`（等待、深度、keep、錯誤）。
+更多：`aos/agents/fork.md#/fork: what is copied`（複製了什麼、fork 看到什麼）、`aos/agents/fork.md#/fork: waiting, depth, keep, errors`（等待、深度、keep、錯誤）。
 
----
-
-**`#/rules`**
+**`#/fork: what is copied`**
 
 # fork：複製了什麼
 
@@ -31,9 +29,7 @@
 - 只給 agent-fsm 身體的 agent 用。Claude 或 Codex agent 呼叫 `fork` 會拿到 `BodyUnsupported`：要把工作交給另一個 agent，用 `subagent`。
 - fork 改的東西（工作區裡的檔案除外）留在 fork 裡。
 
----
-
-**`#/results`**
+**`#/fork: waiting, depth, keep, errors`**
 
 # fork：等待、深度、keep、錯誤
 
@@ -42,4 +38,4 @@
 - `keep: true`：fork 被停下而不是移除，回覆會多最後一行 `details: <its stack>/`。要再問它，由人跑 `aos-agent ctl start --target <name>`，再 `say` / `listen`。
 - `AnswerMissing`：時間內沒有回覆；錯誤行結尾是 `(details: <its stack>/)`，fork 被停下，留給人處理。
 - `ArgumentsBad`：缺 `goal`、值不對，或給了 fork 不收的鍵（`from`、`tools`、`model`：用 `subagent`）。`HistoryMissing`、`InterfaceMissing`、`InterfaceBad`、`DefMissing`：你的定義沒辦法複製。`BodyUnsupported`：不是 agent-fsm 身體；用 `subagent`。
-- `DaemonMissing`、`DaemonFailed`：自己做那一步；之後最多再試一次（`aos/errors.json#/common`）。
+- `DaemonMissing`、`DaemonFailed`：自己做那一步；之後最多再試一次（`aos/errors/common.md`）。

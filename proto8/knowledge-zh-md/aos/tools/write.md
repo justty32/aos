@@ -1,10 +1,10 @@
-# `knowledge/aos/tools/write.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/tools/write.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/tools/write.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/tools/write.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/tools/write.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Tool write`**
 
 # 工具 write
 
@@ -21,11 +21,9 @@
 - 是連結的路徑，會寫到它指向的那個檔案。
 - 檔案會先寫成旁邊的 `.NAME.tmp`，再改名，所以不會留下寫到一半的檔案。
 
-錯誤：`aos/tools/write.json#/errors`。
+錯誤：`aos/tools/write.md#/write: errors`。
 
----
-
-**`#/errors`**
+**`#/write: errors`**
 
 # write：錯誤
 
@@ -33,4 +31,4 @@
 - `MkdirFailed`：有一層上層資料夾建不起來：有個檔案擋在那裡（`cfg.json` 是檔案時的 `cfg.json/x`），或沒有權限。用 `stat` 檢查路徑。
 - `WriteFailed`：系統拒絕了這次寫入（權限、磁碟滿了）。舊檔案（如果有的話）不變。
 - `ArgumentsBad`：也包括 `content` 沒給或不是字串。
-- `WsMissing`：`aos/errors/common.json#/files`。錯誤或不認得的鍵（`ArgumentsBad`）：`aos/errors/common.json#/input`。
+- `WsMissing`：`aos/errors/common.md#/Codes from file work`。錯誤或不認得的鍵（`ArgumentsBad`）：`aos/errors/common.md#/Codes about what you gave`。

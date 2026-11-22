@@ -1,34 +1,34 @@
-# `knowledge/wf/workflows/gotchas.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/workflows/gotchas.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/workflows/gotchas.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
-
-**`#/_description`**：記／查踩坑：不專屬任一工作流的共通坑記在哪、工作流專屬的坑記在哪、撞到第幾次才記。踩坑記錄長什麼樣在 `wf/skeletons/gotchas.json`。
+> 正本：`proto8/knowledge/wf/workflows/gotchas.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/when`**（原文是字串陣列，3 行）
+記／查踩坑：不專屬任一工作流的共通坑記在哪、工作流專屬的坑記在哪、撞到第幾次才記。踩坑記錄長什麼樣在 `wf/skeletons/gotchas.md`。
+
+# when
 
 - 使用者說「記個踩坑」「記／查踩坑」「上次也是這樣」。
 - 同一個坑第二次撞到。
 - 動手前要查這個現象以前撞過沒。
 
----
-
-**`#/not_when`**（原文是字串陣列，2 行）
+# not_when
 
 - 只撞過一次的意外 → 不記（門檻是第二次撞到）。
 - 坑專屬某個工作流、而那個工作流已有自己的踩坑記錄 → 記在那裡（看 `routes` 導流）。
 
-**`#/done_when`**（原文是字串陣列，1 行）：工作區的 `wf/knowledge/gotchas.json`（或 `routes` 指到的那份）對應那段多一條（粗體標題＋一兩句現象與對策），或查到既有條目並照它處理。
+# done_when
 
----
+- 工作區的 `wf/knowledge/gotchas.md`（或 `routes` 指到的那份）對應那段多一條（粗體標題＋一兩句現象與對策），或查到既有條目並照它處理。
 
-**`#/steps`**（原文是字串陣列，5 行）
+# steps
 
-- 查：讀工作區的 `wf/knowledge/gotchas.json`，先看 `routes` 決定去哪份、哪段，再看 `common` 與手上工作流那段。
+- 查：讀工作區的 `wf/knowledge/gotchas.md`，先看 `routes` 決定去哪份、哪段，再看 `common` 與手上工作流那段。
 - 記錄門檻：第二次撞到、或使用者說「上次也是這樣」才記；一次性的意外不記。
-- 記哪裡：共通坑 → `common`；工作流專屬、而它已有自己的踩坑記錄 → 記在那裡。工作流的坑長成自己的一份記錄時（照 `wf/nodes.json#/growth` 第 3 級，放在工作區的 `wf/knowledge/`），在 `routes` 加一筆導流。
-- 條目格式：一條一個坑，粗體標題＋一兩句現象與對策（例見 `wf/skeletons/gotchas.json#/rules`）。
-- 工作區還沒有這份檔 → 照 `wf/skeletons/gotchas.json#/skeleton` 建；用 json 工具寫。
+- 記哪裡：共通坑 → `common`；工作流專屬、而它已有自己的踩坑記錄 → 記在那裡。工作流的坑長成自己的一份記錄時（照 `wf/nodes.md#/一個工作流的成長軌跡（四級）` 第 3 級，放在工作區的 `wf/knowledge/`），在 `routes` 加一筆導流。
+- 條目格式：一條一個坑，粗體標題＋一兩句現象與對策（例見 `wf/skeletons/gotchas.md#/rules`）。
+- 工作區還沒有這份檔 → 照 `wf/skeletons/gotchas.md#/skeleton` 建；用 json 工具寫。
 
-**`#/handoff`**：記完回到撞坑的那個工作流繼續；查到的坑照它的對策處理後再繼續。
+# handoff
+
+記完回到撞坑的那個工作流繼續；查到的坑照它的對策處理後再繼續。

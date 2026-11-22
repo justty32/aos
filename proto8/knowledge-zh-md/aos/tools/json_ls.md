@@ -1,10 +1,10 @@
-# `knowledge/aos/tools/json_ls.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/tools/json_ls.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/tools/json_ls.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/tools/json_ls.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/tools/json_ls.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Tool json_ls`**
 
 # 工具 json_ls
 
@@ -36,4 +36,4 @@ max	number	20
 
 分頁：`limit`（預設 200，或環境變數 `AOS_JSON_MAX_ITEMS`）和 `offset`。還有剩 = 最後一行 `[more] 0 to 1 of 5 shown; next: "offset": 2`。
 
-路徑：`aos/tools/json_get.json#/path`。錯誤：`aos/tools/json_get.json#/errors`。
+路徑：`aos/tools/json_get.md#/JSON tools: the path`。用在 `.md` 檔上時，它會列出標題（以及清單項或表格列）：`aos/tools/json_get.md#/JSON tools: reading markdown`。錯誤：`aos/tools/json_get.md#/json_get, json_ls, json_search: errors`。

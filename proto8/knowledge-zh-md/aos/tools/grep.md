@@ -1,10 +1,10 @@
-# `knowledge/aos/tools/grep.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/tools/grep.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/tools/grep.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/tools/grep.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/tools/grep.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Tool grep`**
 
 # 工具 grep
 
@@ -25,11 +25,9 @@ notes/b.txt:1:two words
 ... skipped 1 binary file
 ```
 
-`... ` 開頭的行是附註：`next_offset N` = 用 `"offset": N` 再呼叫一次；`no matches` = 什麼都沒找到；`no matches from offset N` = `offset` 已經超過最後一個符合。`files`、`context`：`aos/tools/grep.json#/output`。略過、`... stopped`：`aos/tools/grep.json#/rules`。錯誤：`aos/tools/grep.json#/errors`。
+`... ` 開頭的行是附註：`next_offset N` = 用 `"offset": N` 再呼叫一次；`no matches` = 什麼都沒找到；`no matches from offset N` = `offset` 已經超過最後一個符合。`files`、`context`：`aos/tools/grep.md#/grep: files and context`。略過、`... stopped`：`aos/tools/grep.md#/grep: what it searches`。錯誤：`aos/tools/grep.md#/grep: errors`。
 
----
-
-**`#/output`**
+**`#/grep: files and context`**
 
 # grep：files 與 context
 
@@ -57,9 +55,7 @@ notes/b.txt-3-Two again
 ... skipped 1 binary file
 ```
 
----
-
-**`#/rules`**
+**`#/grep: what it searches`**
 
 # grep：它搜尋什麼
 
@@ -71,9 +67,7 @@ notes/b.txt-3-Two again
 - 一次一行（不會跨行比對）；結尾的 `\r` 會去掉；不是 UTF-8 的位元組會變成替代字元。印出的行超過 300 個字元時，結尾會是 `…[cut]`。
 - 掃描預算：20 秒或 20000 個名字，然後出現 `... stopped after ...`；總數會寫 `at least`。把 `path` 或 `glob` 縮小。
 
----
-
-**`#/errors`**
+**`#/grep: errors`**
 
 # grep：錯誤
 
@@ -81,4 +75,4 @@ notes/b.txt-3-Two again
 - `FileMissing`：沒有這個路徑。用 `ls` 或 `glob` 確認。
 - `ReadFailed`：`path` 本身讀不了，或者不是一般檔案或資料夾。樹裡更深處讀不了的檔案只會被計數。
 - `ArgumentsBad`：還有 `context` 不在 0 到 5、`max_matches` 不在 1 到 500、`offset` 是負的。
-- `WsMissing`：`aos/errors/common.json#/files`。錯的或不認得的鍵（`ArgumentsBad`）：`aos/errors/common.json#/input`。
+- `WsMissing`：`aos/errors/common.md#/Codes from file work`。錯的或不認得的鍵（`ArgumentsBad`）：`aos/errors/common.md#/Codes about what you gave`。

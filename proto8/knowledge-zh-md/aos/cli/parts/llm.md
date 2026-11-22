@@ -1,10 +1,10 @@
-# `knowledge/aos/cli/parts/llm.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/parts/llm.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/parts/llm.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/parts/llm.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/parts/llm.md#/…` 對的就是它。改請改正本，再照 [README](../../../README.md) 的做法跟上這份。
 
 ---
 
-**（整份）**
+**`#/aos-llm: ask the llm kernel`**
 
 # aos-llm：問 llm kernel
 
@@ -23,6 +23,6 @@ aos-llm regret LETTER            # withdraw a request still waiting
 
 自動偵測只看那一列的 stack：裡面必須同時有 `endpoints.json` 檔和 `requests/` 資料夾。表的各部分和相對於 daemon stack 的 stack 路徑都支援。
 
-ls 的欄位（TAB）：name、speed、cost、context、slots、backend、summary。沒有 `endpoint` 的請求內容（body）用 kernel 的預設端點包（pack）；不認得的＝`EndpointUnknown`。`send` 和 `ask` 接受 `--priority P`（蓋過 body 裡的）；`ask --full` 印的跟 `recv --full` 一樣。body 也可以帶 `reasoning_effort`（aos/brain.json）。`recv --quiet` 不印為什麼還沒有回覆的警告（給輪詢用）。`ls --json` 把窗口（window）印成 JSON；`EndpointsMissing`：kernel 還沒跑過。對 kernel 已經拿走的信做 `regret`＝`RegretFailed`。端點包（pack）和優先順序：`aos/brain.json`。
+ls 的欄位（TAB）：name、speed、cost、context、slots、backend、summary。沒有 `endpoint` 的請求內容（body）用 kernel 的預設端點包（pack）；不認得的＝`EndpointUnknown`。`send` 和 `ask` 接受 `--priority P`（蓋過 body 裡的）；`ask --full` 印的跟 `recv --full` 一樣。body 也可以帶 `reasoning_effort`（aos/brain.md）。`recv --quiet` 不印為什麼還沒有回覆的警告（給輪詢用）。`ls --json` 把窗口（window）印成 JSON；`EndpointsMissing`：kernel 還沒跑過。對 kernel 已經拿走的信做 `regret`＝`RegretFailed`。端點包（pack）和優先順序：`aos/brain.md`。
 
 更多旗標：跑 `aos-llm --help`。

@@ -1,10 +1,10 @@
-# `knowledge/aos/cli/goal.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/goal.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/goal.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/goal.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/goal.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**（整份）**
+**`#/The goal of one agent`**
 
 # 一個 agent 的目標
 
@@ -27,4 +27,4 @@ aos-agent goal -t bob clear -y
 - 提醒之後的一次工具呼叫（goal 本身除外）算進展：次數歸 0。連續 LIMIT 次提醒都沒有進展（預設 10）時，目標會暫停，並附上最後一則訊息說明這件事。
 - agent-fsm 的 agent 和 eca（claude、codex、pi）都能用；對 eca 來說，工具呼叫是從那個 CLI 自己的對話紀錄（transcript）裡看到的。
 - `GoalMissing`：沒有目標。`GoalEnded`：已完成或已放棄的目標不能暫停或恢復（設一個新的）。`GoalBad`：檔案壞了（set 或 clear 會重寫它）。
-- agent 自己的工具和提醒的規則：`aos/tools/goal.json`。
+- agent 自己的工具和提醒的規則：`aos/tools/goal.md`。

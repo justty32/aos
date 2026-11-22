@@ -1,10 +1,10 @@
-# `knowledge/aos/cli/parts/loop.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/parts/loop.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/parts/loop.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/parts/loop.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/parts/loop.md#/…` 對的就是它。改請改正本，再照 [README](../../../README.md) 的做法跟上這份。
 
 ---
 
-**（整份）**
+**`#/aos-loop: run a body again and again`**
 
 # aos-loop：一遍又一遍地跑一個主體
 
@@ -20,6 +20,6 @@ AOS_STACK=/tmp/st aos-loop --interval-ms 100 loop2.json
 - `on_before_run_if` / `on_after_run_if`：一個檔案路徑；那個點只在檔案存在時才跑。
 - 失敗的點（非零、逾時、跑不起來）以 `PointFailed` 和該點的碼停下迴圈：on_start 失敗 = 主體從沒跑過；on_stop 失敗只在結束碼原本會是 0 時才改掉它。
 
-現成範本用 `aos-hook fire` 填這些點（aos/cli/offer_hooks.json）。`--ctl`、`--state`、`--state-flux` 選窗口；在 ctl 窗口寫 `{"cmd": "pause"}`、resume 和 stop 來控制它（aos-daemon-ctl pause 寫的就是這個）。`--enable-logs` 每一輪印一行 JSON；`--enable-counters` 在狀態窗口旁邊寫 counter_runs.txt。agent 和 daemon 的列都是 daemon 啟動的迴圈；你很少自己啟動一個。
+現成範本用 `aos-hook fire` 填這些點（aos/cli/offer_hooks.md）。`--ctl`、`--state`、`--state-flux` 選窗口；在 ctl 窗口寫 `{"cmd": "pause"}`、resume 和 stop 來控制它（aos-daemon-ctl pause 寫的就是這個）。`--enable-logs` 每一輪印一行 JSON；`--enable-counters` 在狀態窗口旁邊寫 counter_runs.txt。agent 和 daemon 的列都是 daemon 啟動的迴圈；你很少自己啟動一個。
 
 更多旗標：跑 `aos-loop --help`。

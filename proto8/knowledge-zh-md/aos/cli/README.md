@@ -1,3 +1,3 @@
-# `knowledge/aos/cli/` 這一夾的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/` 這一夾的中文映照版，給人看；正本是 `knowledge/` 那份
 
-這一夾的每份 md 對 `proto8/knowledge/aos/cli/` 裡同名的一份 json（`x.json` → `x.md`，`_index.json` → `_index.md`）。本 README 是映照腳本加的，知識庫那邊沒有對應的 json。正本是 json；這裡不會自動跟著 json 更新，改這裡也不會回寫 json。
+這一夾的每份 md 對 `proto8/knowledge/aos/cli/` 裡同名的一份（`x.md` → `x.md`，`_index.json` → `_index.md`）。英文譯成繁體中文。本 README 是映照版自己加的，知識庫那邊沒有對應的檔。改這裡不會回寫正本；每份檔頭寫著它跟到正本的哪個 commit，怎麼找出過期的頁、怎麼跟上，見[總 README](../../README.md)。

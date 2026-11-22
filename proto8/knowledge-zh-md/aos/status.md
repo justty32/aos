@@ -1,10 +1,10 @@
-# `knowledge/aos/status.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/status.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/status.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/status.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/status.md#/…` 對的就是它。改請改正本，再照 [README](../README.md) 的做法跟上這份。
 
 ---
 
-**（整份）**
+**`#/Reading state`**
 
 # 讀狀態
 
@@ -26,7 +26,7 @@ Phase：
 
 `queue N`：它的 queue 裡有幾封信在等。`queue 0` 加上 phase `running` 表示閒著。
 
-讀 `reason`：它是死掉的那個東西最後一行錯誤，常見的格式是 `program: error: Code reason`。例子：`agent-fsm: error: LlmKernelMissing AOS_LLM_KERNEL is not set` 表示這個 agent 連不到 llm kernel；必須由人來設定。代號見 `aos/errors.json`。
+讀 `reason`：它是死掉的那個東西最後一行錯誤，常見的格式是 `program: error: Code reason`。例子：`agent-fsm: error: LlmKernelMissing AOS_LLM_KERNEL is not set` 表示這個 agent 連不到 llm kernel；必須由人來設定。代號見 `aos/errors.md`。
 
 很久沒動靜：當一個 agent 在很長的一輪裡（eca 的 CLI 一輪，或 agent-fsm 在等它的腦），而且 10 分鐘都沒有任何變動，它的 stack 會有 `quiet.json`（`{"quiet": true, "what": "cli_turn" | "brain_reply", "since", "at", "quiet_s", "pid"}`）。它只是一個標記：不會殺掉任何東西，不會丟掉任何信，phase 仍是 `running`。這一輪又動起來或結束時，它就消失；如果它的 `pid` 不在了，這個檔就是過期的。很長的一輪不是當掉：除非定義設了，否則沒有時間限制。
 

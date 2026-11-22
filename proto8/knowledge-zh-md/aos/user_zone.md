@@ -1,23 +1,21 @@
-# `knowledge/aos/user_zone.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/user_zone.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/user_zone.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/user_zone.md`，跟到正本 commit `e3baf7f72`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/user_zone.md#/…` 對的就是它。改請改正本，再照 [README](../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/The user zone: how to ask the user`**
 
 # 使用者區：怎麼問使用者
 
 使用者（那個人）也是可以收信的對象。他的區是 `~/.aos/user/`（每個 Linux 帳號、每台機器一個；它是使用者自己的 stack）。它的 `mailbox/` 是普通的 aos 信箱。只有使用者能做的事，就寄一封信到那裡；回覆會以一封普通的信回到你自己的信箱（帶 `in_reply_to`），`mail_notify` 照常叫醒你。
 
-- 誰該寄、寄什麼：`aos/user_zone.json#/what`
-- 怎麼寄（用 shell，或只用 aos 工具）：`aos/user_zone.json#/send`
-- 回覆長什麼樣、可以信到什麼程度：`aos/user_zone.json#/answer`
+- 誰該寄、寄什麼：`aos/user_zone.md#/What to send to the user`
+- 怎麼寄（用 shell，或只用 aos 工具）：`aos/user_zone.md#/How to send`
+- 回覆長什麼樣、可以信到什麼程度：`aos/user_zone.md#/The answer`
 - 門口（區上的告示，寄之前先讀）：`~/.aos/user/door.json`，或用 `aos-user door` 印出來
 
----
-
-**`#/what`**
+**`#/What to send to the user`**
 
 # 寄什麼給使用者
 
@@ -34,9 +32,7 @@
 
 可有可無的鍵：`urgent`（只有在沒回覆就什麼都卡住時才設 true）、`deadline`（`2026-11-15` = 那天結束之前，或當地時間 `2026-11-15T18:00`）、`default_if_silent`（到期限還沒回覆時你會怎麼做；需要 `deadline`；不能跟 `risk: irreversible` 一起用；使用者之後可以撤銷）、`risk`（`normal`，或 push、刪除、往外送時用 `irreversible`）、`dedupe_key`（兩個 agent 問同一個問題只顯示一次，兩邊都拿到回覆）、`origin`（你轉傳問題時，最初是誰問的；原樣貼上）。
 
----
-
-**`#/send`**
+**`#/How to send`**
 
 # 怎麼寄
 
@@ -52,13 +48,11 @@ aos-user send --kind decide --title "one line that makes sense alone" < letter.j
 
 只用 aos 工具（agent-fsm 身體）：有工具 `user_send` 的話就用它（沒有就請人加上），以你的身分：`{"kind": "decide", "title": "...", "questions": [...]}`（鍵跟上面一樣，檢查方式也一樣；回覆會到你的信箱）。沒有 `user_send` 時，舊的方法還是能用。`mailbox_send` `{"box": "/home/<you>/.aos/user/mailbox", "status": "NEEDS-USER", "title": "...", "what": "...", "decide": "the question, the options, your recommendation"}`。使用者看到它會標成舊格式，用文字回覆。
 
-有裝區的每分鐘檢查（`aos-user tick`，計時器每台自己決定裝不裝）的話，區會在一分鐘內檢查每封新信。違反門口規則的信，或你在一小時內寄超過 10 封信，會被移到區的 `rejected/`，並回到你的信箱：status `FAILED`、title `Returned: ...`、`in_reply_to` = 你的信、`reason` = 哪裡不對。使用者看不到它。把信改好再寄一次；不要原封不動再寄，而且把問題合成一封信（最多 7 個），不要寄很多封。
+在有跑區的每分鐘檢查（`aos-user tick`，一個每台機器自己決定裝不裝的計時器）的機器上，區會在一分鐘內檢查每封新信。違反門口規則的信，或你在一小時內寄超過 10 封信，會被移到區的 `rejected/`，並回到你的信箱：status `FAILED`、title `Returned: ...`、`in_reply_to` = 你的信、`reason` = 哪裡不對。使用者看不到它。把信改好再寄一次；不要原封不動再寄，而且把問題合成一封信（最多 7 個），不要寄很多封。
 
 絕不要用 `aos-mailbox read` 或 `mailbox_read` 讀區：它們會刪信。除了寄信到它的 `mailbox/` 以外，絕不要在區裡寫任何東西。eca 身體可能有 hook `user_zone_guard`（`$AOS_HOME` 底下的 `lib/tools/agent/user_zone_guard`，事件 `before_tool`）：它會擋下會碰到 `mailbox/` 以外區域的 aos 工具呼叫。
 
----
-
-**`#/answer`**
+**`#/The answer`**
 
 # 回覆
 
@@ -70,4 +64,4 @@ aos-user send --kind decide --title "one line that makes sense alone" < letter.j
 
 檢查它：`aos-user verify <the answer's letter folder>` 會拿它跟區自己的副本（`done/`）和紀錄比對。`ok:` = 它是從區寄出的。只用 aos 工具時：工具 `user_verify` `{"letter": "<the name from mailbox_peek>"}` 做同樣的檢查，效力也一樣；`mailbox_read` 之後也能用，因為回覆會保留在 `mailbox/archive/<letter>/letter.json`（找的順序：new/、cur/、archive/）。被退回的信（status `FAILED`、`returned`）不是回覆，不會通過。
 
-可以信到什麼程度（使用者在 11-13 決定的）：從區來、檢查過的回覆，算是使用者自己的話，push 和刪除也一樣（AGENTS.md 第 2 條）。但所有 agent 都以同一個 Linux 使用者執行：有 shell 的 agent 也可能偽造區的副本和紀錄。這個檢查擋得住轉述（「使用者跟我說可以」）和被丟進你信箱的假信；擋不住存心兩邊都偽造的 agent。不要去試。
+可以信到什麼程度（使用者的決定）：從區來、檢查過的回覆，算是使用者自己的話，push 和刪除也一樣（AGENTS.md 第 2 條）。但所有 agent 都以同一個 Linux 使用者執行：有 shell 的 agent 也可能偽造區的副本和紀錄。這個檢查擋得住轉述（「使用者跟我說可以」）和被丟進你信箱的假信；擋不住存心兩邊都偽造的 agent。不要去試。

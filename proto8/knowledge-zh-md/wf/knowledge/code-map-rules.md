@@ -1,12 +1,12 @@
-# `knowledge/wf/knowledge/code-map-rules.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/knowledge/code-map-rules.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/knowledge/code-map-rules.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
-
-**`#/_description`**：code map 的通用規則：預設真相層優先序、衝突時誰為準、維護鏈（改碼前怎麼讀、改完怎麼更新）。每個專案都一樣；專案自己的領域表與優先序在工作區的 `wf/knowledge/code-map.json`（骨架 `wf/skeletons/code-map.json`）。
+> 正本：`proto8/knowledge/wf/knowledge/code-map-rules.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/truth_order`**（原文是字串陣列，10 行）
+code map 的通用規則：預設真相層優先序、衝突時誰為準、維護鏈（改碼前怎麼讀、改完怎麼更新）。每個專案都一樣；專案自己的領域表與優先序在工作區的 `wf/knowledge/code-map.json`（骨架 `wf/skeletons/code-map.md`）。
+
+# truth_order
 
 各專案可以改自己的優先序，但必須明確。預設：
 
@@ -19,9 +19,7 @@ code/tests > schema/examples/fixtures > code map > docs > generated
 - 原始來源與摘要衝突時，以**原始來源**為準。
 - code map 是**導航不是規格**；行為以 code/tests 為準。
 
----
-
-**`#/maintenance_chain`**（原文是字串陣列，8 行）
+# maintenance_chain
 
 **維護鏈：程式碼 > code map > 文檔**。
 
@@ -30,11 +28,9 @@ code/tests > schema/examples/fixtures > code map > docs > generated
 1. **修改前**：先讀 code map 找到相關領域，只讀清單裡的檔——不讀無關領域的檔。
 2. **修改後**：新增／刪除了原始碼檔案，或某檔職責顯著改變，必須同步更新 code map。
 3. 原始碼裡**不加**「對應 code map」的註釋（維護成本過高）；反向查找直接搜 code map。
-4. 迭代期間 code map 可暫時落後，**commit 前必須對齊**（見 `wf/workflows/feature-dev.json`）。
+4. 迭代期間 code map 可暫時落後，**commit 前必須對齊**（見 `wf/workflows/feature-dev.md`）。
 
----
-
-**`#/per_file_table`**（原文是字串陣列，4 行）
+# per_file_table
 
 **逐檔表（選用）**：程式檔多到手寫領域表顧不到每個檔時，可以讓每個檔的檔頭第一行寫一句「它負責什麼」，用生成器從檔頭產出逐檔表，放在工作區的 `wf/knowledge/code-map/`（例：一個頂層夾一份 json，照資料夾巢狀、葉子是那一句話）。
 - 逐檔表是**生成物、不手改**：要改說明去改檔頭再重生，生成物跟程式同一個 commit。

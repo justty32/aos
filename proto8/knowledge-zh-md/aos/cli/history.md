@@ -1,10 +1,10 @@
-# `knowledge/aos/cli/history.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/history.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/history.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/history.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/history.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**（整份）**
+**`#/Conversation history of an agent`**
 
 # 一個 agent 的對話歷史
 
@@ -22,7 +22,7 @@ aos-agent history -t NAME set 2 '{"role": "user", "content": "..."}'
 
 在 `summarize RANGE TEXT` 和 `set LINE JSON` 裡，`-` 代表從 stdin 讀 TEXT 或 JSON。`summarize` 寫入一則訊息，內容是 `[aos] summary: lines A-B, N messages. TEXT`（role 是 `user`，除非給了 `--role`）；`set` 照給的樣子寫入訊息。
 
-沒給動作就是 `ls`。範圍是 `N`、`A-B` 或 `A-`（A 到最後）。要最後 K 則訊息，就給 `-n K`（或 `--last K`）來代替範圍：`ls -n 3`、`rm -n 2`、`summarize -n 2 TEXT`；`-n -3` 跟 `-n 3` 意思一樣。`--target NAME` 預設是 `$AOS_AGENT`，沒有就是 stack 為目前資料夾的那個 agent（aos/cli/flags.json#/target）。
+沒給動作就是 `ls`。範圍是 `N`、`A-B` 或 `A-`（A 到最後）。要最後 K 則訊息，就給 `-n K`（或 `--last K`）來代替範圍：`ls -n 3`、`rm -n 2`、`summarize -n 2 TEXT`；`-n -3` 跟 `-n 3` 意思一樣。`--target NAME` 預設是 `$AOS_AGENT`，沒有就是 stack 為目前資料夾的那個 agent（`aos/cli/flags.md#/Naming the agent in aos-agent`）。
 
 有些訊息除了 `role` 和 `content` 之外，還有一個 `aos` 鍵：從信來的訊息上是 `{"letter": NAME}`，最終回覆上是 `{"answer_to": [NAME, ...]}`。`aos-agent ask` 和 `listen --letter` 就是靠這個找到某一封信的回覆。`ls` 不顯示它；`ls -j` 會顯示。`set` 照給的樣子寫入訊息，所以要把舊的 `aos` 鍵抄進去，才能保住這個對應；`summarize` 寫入的訊息沒有這個鍵。
 
@@ -34,4 +34,4 @@ aos-agent history -t NAME set 2 '{"role": "user", "content": "..."}'
 
 更多旗標：執行 `aos-agent history --help`。
 
-agent 用工具 `self_history` 改自己的對話歷史：看 `aos/me.json#/self_history`。
+agent 用工具 `self_history` 改自己的對話歷史：看 `aos/me/self_history.md`。

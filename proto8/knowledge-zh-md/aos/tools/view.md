@@ -1,10 +1,10 @@
-# `knowledge/aos/tools/view.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/tools/view.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/tools/view.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/tools/view.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/tools/view.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Tool view`**
 
 # 工具 view
 
@@ -15,11 +15,9 @@
 
 用它看你還不熟的檔案，或大檔案。要照順序讀文字用 `read`，要列出某個 JSON 位置的鍵用 `json_ls`，要拿一個值用 `json_get`，只要大小和型別用 `stat`。
 
-附真實輸出的例子：`aos/tools/view.json#/examples`。錯誤：`aos/tools/view.json#/errors`。
+附真實輸出的例子：`aos/tools/view.md#/view: examples`。錯誤：`aos/tools/view.md#/view: errors`。
 
----
-
-**`#/examples`**
+**`#/view: examples`**
 
 # view：例子
 
@@ -43,13 +41,11 @@ JSON 檔的一層：
 
 給了 `start` 或 `end`（從 1 起的整數），`pointer` 會被忽略，任何檔案（JSON 也是）都以行顯示。一段最多 2000 行或 50KB；被截斷時，`hint` 會說 `use start=N to continue`。
 
----
-
-**`#/errors`**
+**`#/view: errors`**
 
 # view：錯誤
 
 - `FileMissing`：沒有這個檔。`FileBad`：是資料夾（用 `ls`）、二進位檔，或對不是 JSON 的檔案給了 `pointer`（用 `start` 和 `end`）。
 - `PointerMissing`：那個鍵不在；原因裡會寫出它的名字。往上一層，看 `children`。
 - `ArgumentsBad`：`pointer` 不是以 `/` 開頭，或 `start` 超過檔案結尾，也是這個。
-- `ReadFailed`、`WsMissing`：`aos/errors/common.json#/files`。鍵錯了或不認得（`ArgumentsBad`）：`aos/errors/common.json#/input`。
+- `ReadFailed`、`WsMissing`：`aos/errors/common.md#/Codes from file work`。鍵錯了或不認得（`ArgumentsBad`）：`aos/errors/common.md#/Codes about what you gave`。

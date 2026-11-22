@@ -1,10 +1,10 @@
-# `knowledge/aos/me/do_task.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/me/do_task.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/me/do_task.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/me/do_task.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/me/do_task.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/do_task: one task inside your own conversation, only its summary kept`**
 
 # do_task：在你自己的對話裡做一件任務，只留下它的摘要
 
@@ -16,11 +16,9 @@
 
 `{"op": "status"}` 列出你還開著的任務。任務可以巢狀（最多 5 層）；`end` 一律關掉最內層的。
 
-想要另一個獨立的工作者，而不是摺掉你自己的工作？用 `fork`（你的一份複本）或 `subagent`（`aos/agents.json#/subagent`）。規則與錯誤：`aos/me/do_task.json#/rules`。
+想要另一個獨立的工作者，而不是摺掉你自己的工作？用 `fork`（你的一份複本）或 `subagent`（`aos/agents/subagent.md`）。規則與錯誤：`aos/me/do_task.md#/do_task: rules and errors`。
 
----
-
-**`#/rules`**
+**`#/do_task: rules and errors`**
 
 # do_task：規則與錯誤
 
@@ -31,4 +29,4 @@
 - 如果你自己把標記刪掉或摘要掉（`self_history`），`end` 會關掉任務但不摺：`MarkerMissing`。
 - `TaskMissing`：你不在任務裡。`DepthExceeded`：先結束一個任務。`ArgumentsBad`：沒有 `summary`、`keep_others` 不是 true 或 false、或者有這個 op 不收的鍵。`OpUnknown`：op 不是 start、end 或 status。
 - `BodyUnsupported`：你的身體把工具呼叫放在對話歷史之外（eca）；改用 `fork` 或 `subagent`。`StateBad`：`tasks.json` 壞了；要人來修。
-- `DaemonMissing`、`DaemonFailed`、`InstanceMissing`：暫時不能用；照實說，之後最多再試一次（`aos/errors.json#/common`）。其他錯誤來自 `self_history` 那一層（`aos/me/self_history.json#/rules`）。
+- `DaemonMissing`、`DaemonFailed`、`InstanceMissing`：暫時不能用；照實說，之後最多再試一次（`aos/errors/common.md`）。其他錯誤來自 `self_history` 那一層（`aos/me/self_history.md#/self_history: rules and errors`）。

@@ -1,18 +1,16 @@
-# `knowledge/aos/cli/mcp_import.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/mcp_import.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/mcp_import.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/mcp_import.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/mcp_import.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/External MCP tools frozen into aos`**
 
 # 凍結進 aos 的外部 MCP 工具
 
-用 aos-mcp-import 連一次外部 MCP 伺服器，把它的工具凍結進伺服器檔；之後定義的 tools.json 像工具包一樣疊上那個檔。兩種身體（agent-fsm、eca）的腦都把它們當一般 aos 工具呼叫。eca agent 也可以改讓它的 CLI 自己連那個伺服器（`aos/cli/eca.json#/external_mcp`）。每個伺服器挑一種方式。
+用 aos-mcp-import 連一次外部 MCP 伺服器，把它的工具凍結進伺服器檔；之後定義的 tools.json 像工具包一樣疊上那個檔。兩種身體（agent-fsm、eca）的腦都把它們當一般 aos 工具呼叫。eca agent 也可以改讓它的 CLI 自己連那個伺服器（`aos/cli/eca.md#/External MCP servers (claude and codex)`）。每個伺服器挑一種方式。
 
----
-
-**`#/where_from`**
+**`#/Where an external tool comes from`**
 
 # 外部工具從哪裡來
 
@@ -24,9 +22,7 @@
 - 它是一般的 aos 工具：`before_tool`／`after_tool` hook 看得到它，`self_tools {"op": "rm", "name": "time_get_current_time"}` 可以關掉其中一個。
 - 輸出：文字照順序，超過 2000 行或 50KB 就截斷；圖片和音訊存在你的 stack 裡：`[image saved: $AOS_STACK/tools/<tool name>/image-xxxx.png (image/png, 12345 bytes)]`；那裡的 `$AOS_STACK` 是你自己的 stack。
 
----
-
-**`#/import`**
+**`#/Importing a server`**
 
 # 匯入一個伺服器
 
@@ -48,9 +44,7 @@ aos-mcp-import --only get_current_time mcp/time.json
 - 先把檔案放好，再把它列進 `"$override"`：檔案不見 = `PathMissing`，整個登記表都讀不了。還沒匯入的檔案不會加任何工具。
 - 已經匯入過的檔案 = `PackExists`；用 sync。
 
----
-
-**`#/sync`**
+**`#/Refreshing the frozen tools`**
 
 # 更新凍結的工具
 
@@ -61,9 +55,7 @@ aos-mcp-import sync --yes mcp/time.json  # writes them
 
 各行：`+ NAME`（新的）、`- NAME`（不見了；它的登記項目也跟著拿掉）、`~ NAME: description changed` 或 `parameters changed`，後面接一行 `before:` 和一行 `after:`。沒有差異 = `no changes`。有差異但沒給 `--yes`，最後一行是 `run again with --yes to write`；給了 `--yes`，最後一行是 `synced N of M tools from SERVER -> FILE`。`--timeout-s` 跟匯入時一樣。只比對說明和參數。你手動改過的 `timeout_ms` 會保留。sync 用檔案的 `only`／`except`：改了它們之後，跑 `sync --yes`。從沒匯入過的檔案 = `PackBad`。匯入後改名或用別的名字複製的檔案也是 `PackBad`：它的工具仍然跑當初匯入時的那個檔，所以拿掉它的 `mcp_import`、`mcp_tools` 和 `tools` 鍵，重新匯入（同名搬到別的資料夾沒問題）。
 
----
-
-**`#/routes`**
+**`#/Through aos or by the CLI itself`**
 
 # 經過 aos，還是讓 CLI 自己來
 
@@ -77,9 +69,7 @@ aos-mcp-import sync --yes mcp/time.json  # writes them
 
 同一個伺服器兩種都用，腦會看到同一個工具有兩個名字（`mcp__time__x` 和 `mcp__aos__time_x`）：挑一個。經過 aos 時，http 只收 Bearer token；`bearer_token_env` 需要 `env_file`（沒有就 `PackBad`）。`env_file` 現在用跟 aos-tools env 檔一樣的 dotenv 子集：`${X}` 展開、行內 `#` 註解、引號要嚴格成對；`A=x # note` 讀成 `x`，接著 `B=${A}y` 讀成 `xy`。env 檔保持 `chmod 600`，放在定義和工作區之外。在 proxy 後面時，本機的 http 伺服器要設 `NO_PROXY=<host>`。
 
----
-
-**`#/errors`**
+**`#/Codes from external MCP tools`**
 
 # 外部 MCP 工具的代號
 

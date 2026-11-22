@@ -1,52 +1,63 @@
-# `knowledge/wf/knowledge/workflow-template.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/knowledge/workflow-template.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/knowledge/workflow-template.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
-
----
-
-**`#/_description`**
-
-新工作流節點的骨架：複製 `#/skeleton` 存成工作區的 `wf/workflows/<名稱>.json`，照 `#/fields` 逐鍵填；固定鍵順序不動，用不到的專屬段刪掉。改完在 `wf/workflows/_index.json` 加一條（description 含觸發說法）。形式規則在 `wf/nodes.json#/workflow_form`。
+> 正本：`proto8/knowledge/wf/knowledge/workflow-template.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/skeleton`**（物件，6 個鍵：`_description`、`when`、`not_when`、`done_when`、`steps`、`handoff`）
+新工作流節點的骨架：複製 `#/skeleton` 存成工作區的 `wf/workflows/<名稱>.json`，照 `#/fields` 逐鍵填；固定鍵順序不動，用不到的專屬段刪掉。改完在 `wf/workflows/_index.json` 加一條（description 含觸發說法）。形式規則在 `wf/nodes.md#/工作流的統一形式`。
 
-**`#/skeleton/_description`**：<一句話：這工作流做什麼、產出什麼>
+# skeleton
 
-**`#/skeleton/when`**：<觸發情境；index 那句「你說…」的展開>
+```json
+{
+ "_description": "<一句話：這工作流做什麼、產出什麼>",
+ "when": "<觸發情境；index 那句「你說…」的展開>",
+ "not_when": "<像是但不該進來的情境 → 該去哪個工作流（統一路徑）>",
+ "done_when": [
+  "<可觀察的完成條件>"
+ ],
+ "steps": [
+  "<步驟>",
+  "<步驟>"
+ ],
+ "handoff": "完成後 → 接 <哪個工作流>；卡在使用者 → `wf/progress.json` 一條、status 寫「等使用者」，跨 session → `wf/progress.json` 一條，為什麼這樣選 → `wf/workflows/decisions.md`。"
+}
+```
 
-**`#/skeleton/not_when`**：<像是但不該進來的情境 → 該去哪個工作流（統一路徑）>
+# fields
 
-**`#/skeleton/done_when`**（原文是字串陣列，1 行）：<可觀察的完成條件>
+## _description
 
----
+必填。一句話：這工作流做什麼、產出什麼。記錄或知識放在 `wf/knowledge/` 的，在這裡指過去。
 
-**`#/skeleton/steps`**（原文是字串陣列，2 行）
+## when
 
-- <步驟>
-- <步驟>
+必填。觸發情境；把 `wf/workflows/_index.json` 那條的觸發說法（使用者會怎麼說）展開。
 
-**`#/skeleton/handoff`**：完成後 → 接 <哪個工作流>；卡在使用者 → `wf/progress.json` 一條、status 寫「等使用者」，跨 session → `wf/progress.json` 一條，為什麼這樣選 → `wf/workflows/decisions.json`。
+## not_when
 
----
+必填。像是但不該進來的情境 → 該去哪個工作流，寫統一路徑（例 `wf/workflows/refactor.md`）。
 
-**`#/fields`**（物件，8 個鍵：`_description`、`when`、`not_when`、`done_when`、`steps`、`handoff`、`contents`、`<其他>`）
+## done_when
 
-**`#/fields/_description`**：必填。一句話：這工作流做什麼、產出什麼。記錄或知識放在 `wf/knowledge/` 的，在這裡指過去。
+必填。一條一個可觀察條件，只准三類：檔案存在、指令回傳、表格填滿。✗「功能做好」「使用者滿意」；✓「`<驗證指令>` 回傳 0，且 `docs/<x>.md` 有『用法』段」。
 
-**`#/fields/when`**：必填。觸發情境；把 `wf/workflows/_index.json` 那條的觸發說法（使用者會怎麼說）展開。
+## steps
 
-**`#/fields/not_when`**：必填。像是但不該進來的情境 → 該去哪個工作流，寫統一路徑（例 `wf/workflows/refactor.json`）。
+必填。流程：一段 markdown 文字（字串或字串陣列，寫法見 knowledge 的 `docs/02`）。
 
-**`#/fields/done_when`**：必填。一條一個可觀察條件，只准三類：檔案存在、指令回傳、表格填滿。✗「功能做好」「使用者滿意」；✓「`<驗證指令>` 回傳 0，且 `docs/<x>.md` 有『用法』段」。
+## handoff
 
-**`#/fields/steps`**：必填。流程：一段 markdown 文字（字串或字串陣列，寫法見 knowledge 的 `docs/02`）。
+必填。交接：做完接哪個工作流；卡在使用者 → `wf/progress.json` 一條、status 寫「等使用者」；跨 session → `wf/progress.json` 一條；為什麼這樣選 → `wf/workflows/decisions.md`。
 
-**`#/fields/handoff`**：必填。交接：做完接哪個工作流；卡在使用者 → `wf/progress.json` 一條、status 寫「等使用者」；跨 session → `wf/progress.json` 一條；為什麼這樣選 → `wf/workflows/decisions.json`。
+## contents
 
-**`#/fields/contents`**：長出來才寫。資料夾型才有：子檔一覽（例 `archive/`：過時節點封存，規則見 `wf/tidying.json#/archive`）。
+長出來才寫。資料夾型才有：子檔一覽（例 `archive/`：過時節點封存，規則見 `wf/tidying.md#/archive 規則`）。
 
-**`#/fields/<其他>`**：選填。該工作流專屬段落，自取英文鍵名（`[a-z0-9_-]`）。
+## <其他>
 
-**`#/paths`**：引用一律寫從 repo 根算的統一路徑，單節點或資料夾型寫法都一樣，不必像舊 md 那樣多一層 `../`。
+選填。該工作流專屬段落，自取英文鍵名（`[a-z0-9_-]`）。
+
+# paths
+
+引用一律寫從 repo 根算的統一路徑，單節點或資料夾型寫法都一樣，不必像舊 md 那樣多一層 `../`。

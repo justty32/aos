@@ -1,20 +1,18 @@
-# `knowledge/wf/knowledge/green-is-not-checked.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/knowledge/green-is-not-checked.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/knowledge/green-is-not-checked.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
-
-**`#/_description`**：綠燈不等於有檢查：一道檢查通過，可能是因為它根本沒在檢查；新增或修改一道檢查時要證明它能變紅。每個專案都一樣，`wf/workflows/testing.json`、`wf/workflows/moving-things.json` 用到。
+> 正本：`proto8/knowledge/wf/knowledge/green-is-not-checked.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/rule`**（原文是字串陣列，3 行）
+綠燈不等於有檢查：一道檢查通過，可能是因為它根本沒在檢查；新增或修改一道檢查時要證明它能變紅。每個專案都一樣，`wf/workflows/testing.md`、`wf/workflows/moving-things.md` 用到。
+
+# rule
 
 **一道檢查通過，可能是因為它根本沒在檢查。** 這不是假設：曾在一天內抓到四個恆真檢查——結構稽核、「鎖已釋放」的檢查指向已刪目錄、連結檢查器走到子 repo 指標就停、自製字元偵測。
 
 **規則：新增或修改一道檢查時，要證明它能變紅。** 先餵一個**應該被擋**的輸入，確認 exit ≠ 0；再餵正確的輸入，確認 exit = 0。**沒做過這個雙向驗證的綠燈不算證據。**
 
----
+# corollaries
 
-**`#/corollaries`**（原文是字串陣列，2 行）
-
-- 檢查器的**涵蓋範圍要跟著結構走**——拆出子 repo、搬走目錄之後，回頭確認檢查器還看得到那些地方（見 `wf/workflows/moving-things.json`）。
+- 檢查器的**涵蓋範圍要跟著結構走**——拆出子 repo、搬走目錄之後，回頭確認檢查器還看得到那些地方（見 `wf/workflows/moving-things.md`）。
 - **靜態全過不等於畫面上是對的**：方框、亂碼、截斷、手感只有人眼看得出來，這類記到工作區的 `wf/progress.json` 一條、status 寫「等使用者」，不要自己宣稱通過。

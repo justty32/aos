@@ -1,16 +1,12 @@
-# `knowledge/aos/kernel.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/kernel.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/kernel.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/kernel.md`，跟到正本 commit `c7bc08dae`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/kernel.md#/…` 對的就是它。改請改正本，再照 [README](../README.md) 的做法跟上這份。
 
 ---
-
-**`#/_description`**
 
 aos 裡 kernel 是什麼、新板子一開始的 kernel 由什麼組成、請求要送到哪裡、$AOS_HOME/templates/kernel/ 裡的範例 kernel、怎麼自己當 kernel（kernel_gate），以及怎麼寫自己的 kernel。各節：what、where_to_send、templates、gate、write_your_own。
 
----
-
-**`#/what`**
+**`#/What a kernel is`**
 
 # kernel 是什麼
 
@@ -20,28 +16,30 @@ kernel 是資源管理加上排程，從寄件的一方看過去。當你有一�
 
 請求可以經過好幾個 kernel：agent -> kernel_1 -> kernel_2 -> ... -> daemon。每一站只看到這封信是誰寄的、要寄到哪裡，做好自己那一份。站與站之間全都是 aos-post 的信；請求就是信的內文（body），每種請求有它自己的內文。
 
+**`#/The initial kernel`**
+
 # 一開始的 kernel
 
-新板子拿到什麼（使用者，2026-11-20：兩個部分加上一個最小的核心部分，再加一排可選的部分）：
+新板子拿到什麼（兩個部分加上一個最小的核心部分，再加一排可選的部分）：
 
 - 最小核心部分，一直都在：daemon（表、ctl 信箱、上限、重啟）、身分（信封上的 `sender` 是寄件者自己的 stack，自己報的、沒有查）、信箱（aos-post）、時鐘 `_clock` 和清掃程式 `_sweeper`。時鐘和清掃程式屬於核心部分：不要移除它們那幾列。
-- llm 部分：腦的 kernel（`$AOS_LLM_KERNEL`，aos/brain.json），通常是同一塊板子上的一列 `llm`。腦呼叫的預算也放在這裡。只有對不思考的 proc 來說它才是可選的：沒有它的 agent 在第一次腦呼叫時以 `LlmKernelMissing` 停下。
-- 權限部分：一個決定啟動請求的 kernel 站（`$AOS_KERNEL`，#/templates）。可選，預設關閉。guard 和 aos-sandbox 不屬於它。它是給守規矩的 proc 的規則，不是一道牆：寄件者可以丟掉 `AOS_KERNEL` 直接寄信給 daemon，只有分開的 Linux 帳號才是牆。不要為了繞過拒絕這樣做（aos/rules.json）。它開著的時候，站如果 3 秒內不回應，你的 who、信箱和時鐘呼叫就會以 `KernelFailed` 失敗（#/where_to_send）。
+- llm 部分：腦的 kernel（`$AOS_LLM_KERNEL`，aos/brain.md），通常是同一塊板子上的一列 `llm`。腦呼叫的預算也放在這裡。只有對不思考的 proc 來說它才是可選的：沒有它的 agent 在第一次腦呼叫時以 `LlmKernelMissing` 停下。
+- 權限部分：一個決定啟動請求的 kernel 站（`$AOS_KERNEL`，#/templates）。可選，預設關閉。guard 和 aos-sandbox 不屬於它。它是給守規矩的 proc 的規則，不是一道牆：寄件者可以丟掉 `AOS_KERNEL` 直接寄信給 daemon，只有分開的 Linux 帳號才是牆。不要為了繞過拒絕這樣做（aos/rules.md）。它開著的時候，站如果 3 秒內不回應，你的 who、信箱和時鐘呼叫就會以 `KernelFailed` 失敗（#/where_to_send）。
 - 更多可選部分：還沒決定。
 
 沒有權限部分時，能擋下請求的只有 Linux 檔案權限和 daemon 自己的上限。
 
----
-
-**`#/where_to_send`**
+**`#/Where to send requests`**
 
 # 請求送到哪裡
 
-- 啟動、停止、睡、醒：`$AOS_KERNEL`。沒設的話：`$AOS_DAEMON` 的 ctl 信箱。兩個都沒設（也沒有 `--daemon`）：aos-agent 取目前資料夾裡某個 agent 的 stack 往上兩層的資料夾（aos/cli/flags.json `target`），不然就是 `DaemonMissing`。
-- 腦的請求：`$AOS_LLM_KERNEL`，另一個變數（aos/brain.json）。
+- 啟動、停止、睡、醒：`$AOS_KERNEL`。沒設的話：`$AOS_DAEMON` 的 ctl 信箱。兩個都沒設（也沒有 `--daemon`）：aos-agent 取目前資料夾裡某個 agent 的 stack 往上兩層的資料夾（aos/cli/flags.md `target`），不然就是 `DaemonMissing`。
+- 腦的請求：`$AOS_LLM_KERNEL`，另一個變數（aos/brain.md）。
 - 這些信你通常不用親手寫：`aos-agent ctl` 替你送，而且有設 `$AOS_KERNEL` 時會經由它轉送。
 - `AOS_DAEMON` 會傳給你，但照慣例你不直接寄信給 daemon。
-- `aos-daemon-ctl` 指名一個 daemon，而且一律直接寄給它，跳過前面任何 kernel。只要 Linux 權限讓你寫得進那個信箱，它就能用。不要用它繞過拒絕（aos/rules.json）。
+- `aos-daemon-ctl` 指名一個 daemon，而且一律直接寄給它，跳過前面任何 kernel。只要 Linux 權限讓你寫得進那個信箱，它就能用。不要用它繞過拒絕（aos/rules.md）。
+
+**`#/Reading the table through the kernel`**
 
 ## 透過 kernel 讀表
 
@@ -52,15 +50,15 @@ kernel 是資源管理加上排程，從寄件的一方看過去。當你有一�
 - 回覆送到 `$AOS_STACK/daemon_reply/`；沒有 `AOS_STACK`、經過 kernel 的人用 shell，會在 `$AOS_KERNEL/reply/` 收到回覆。
 - 只有 `AOS_KERNEL`（沒有 `AOS_DAEMON`）時還不行的：`fork` 和 `subagent` 工具，以及時鐘是 proc 名稱的 `on_clock` hook，還是需要 daemon。目前請把 `AOS_DAEMON` 也設著。
 
+**`#/When the kernel is slow or busy`**
+
 ## kernel 慢或忙的時候
 
 - 有設 `$AOS_KERNEL` 時，需要知道你是誰的內建工具會先問 kernel（`aos-agent ctl who`，就是上面那個表的問題）：`mailbox_peek`、`mailbox_send`、`clock_register`（就算你給了 `box`）、`self_*` 工具，以及 aos.gdb 裡的 `say`/`listen`。它們最多等 3 秒回覆。
 - kernel 3 秒內不回覆，它們全都會以 `KernelFailed` 失敗。只要 kernel 在忙就會這樣：`kernel_gate` kernel 是一個 agent，它在一輪很長的回合裡或睡著時，它的站不會跑，所以它底下的每個 agent 都既不能讀信也不能寄信，也不能設定時器，直到它回來。
-- 這是 aos 今天的運作方式，不是故障：使用者 11-19 選擇保留它，只把它寫下來。該怎麼做：等一下晚點再試（一次，不要迴圈）；如果一直失敗，回報 kernel 沒有回應。不要靠直接寄信給 `$AOS_DAEMON` 來繞過它（aos/rules.json）。
+- 這是 aos 的運作方式，不是故障：一個已知的限制，刻意保留。該怎麼做：等一下晚點再試（一次，不要迴圈）；如果一直失敗，回報 kernel 沒有回應。不要靠直接寄信給 `$AOS_DAEMON` 來繞過它（aos/rules.md）。
 
----
-
-**`#/templates`**
+**`#/Example kernels`**
 
 # 範例 kernel
 
@@ -74,11 +72,9 @@ kernel 是資源管理加上排程，從寄件的一方看過去。當你有一�
 | `llm-team/` | 一個團隊的腦 kernel；轉送到下一個 llm kernel。 |
 | `kernel-python/` | 寫成單一 `kernel.py` 的 kernel 定義（`from aos.py.kernel import defs`）；`python3 kernel.py --compile` 從它寫出其他檔案。出廠時它把每個請求都往下傳。 |
 
-站的程式是 `$AOS_HOME/lib/tools/aos/kernel`。llm kernel（`llm-kernel/`、`llm-team/`）跑 `$AOS_HOME/lib/tools/aos/kernel_llm`：同一套框架，帶著腦請求的規則和同樣三個 hook，但沒有 `next`；它們的 add 信在有設 `$AOS_KERNEL` 時送到那裡，不然送到 `$AOS_DAEMON` 的 ctl 信箱（細節：`aos/cli/parts/llm_kernel.json`）。站把它放行的東西轉送到哪裡：它 `kernel.json` 裡的 `next`；沒寫的話，站自己環境裡的 `$AOS_KERNEL`，如果那就是站自己的信箱則跳過；再不然是 `$AOS_DAEMON` 的 ctl 信箱。所以當整棵樹都 export 了 `AOS_KERNEL`，沒有 `next` 的站會轉送到 `AOS_KERNEL` 指的那個站；要避免這樣，在啟動站的 shell 裡 `unset AOS_KERNEL`，或寫 `next`。`next` 是一個信箱；要把不同的信送到不同的下一站（每封信剛好送到一站），規則放在 hook 裡：站的 `kernel_hookeds.json` 裡的一個 `after_verdict` hook 為那封信印出 `{"next": "<absolute mailbox path>"}`，它沒說什麼的信照平常的路走。拒絕會以 `{"applied": false, "error": {"code": ..., "msg": ...}}` 回來，代號有 `NameUnknown`、`SlotMissing`、`BodyBad`、`ForwardFailed`，以及 hook 拒絕時的 `HookRejected`。
+站的程式是 `$AOS_HOME/lib/tools/aos/kernel`。llm kernel（`llm-kernel/`、`llm-team/`）跑 `$AOS_HOME/lib/tools/aos/kernel_llm`：同一套框架，帶著腦請求的規則和同樣三個 hook，但沒有 `next`；它們的 add 信在有設 `$AOS_KERNEL` 時送到那裡，不然送到 `$AOS_DAEMON` 的 ctl 信箱（細節：`aos/cli/parts/llm_kernel.md`）。站把它放行的東西轉送到哪裡：它 `kernel.json` 裡的 `next`；沒寫的話，站自己環境裡的 `$AOS_KERNEL`，如果那就是站自己的信箱則跳過；再不然是 `$AOS_DAEMON` 的 ctl 信箱。所以當整棵樹都 export 了 `AOS_KERNEL`，沒有 `next` 的站會轉送到 `AOS_KERNEL` 指的那個站；要避免這樣，在啟動站的 shell 裡 `unset AOS_KERNEL`，或寫 `next`。`next` 是一個信箱；要把不同的信送到不同的下一站（每封信剛好送到一站），規則放在 hook 裡：站的 `kernel_hookeds.json` 裡的一個 `after_verdict` hook 為那封信印出 `{"next": "<absolute mailbox path>"}`，它沒說什麼的信照平常的路走。拒絕會以 `{"applied": false, "error": {"code": ..., "msg": ...}}` 回來，代號有 `NameUnknown`、`SlotMissing`、`BodyBad`、`ForwardFailed`，以及 hook 拒絕時的 `HookRejected`。
 
----
-
-**`#/gate`**
+**`#/Being a kernel yourself: kernel_gate`**
 
 # 自己當 kernel：kernel_gate
 
@@ -107,15 +103,13 @@ if "desc" in body:
 
 錯誤：ArgumentsBad、OpUnknown、LetterMissing（沒被扣住：已經決定過、寄件者的期限讓它結束了，或名字錯了）、LetterRefused、PostFailed、WriteFailed、LaunchFailed、CommandFailed、DaemonMissing、DaemonFailed、InstanceMissing。
 
----
-
-**`#/write_your_own`**
+**`#/Writing your own kernel`**
 
 # 寫你自己的 kernel
 
 任何從信箱拿請求信、並決定它們怎麼處理的 proc，都是 kernel。從最省事到最費事：
 
-1. 想自己決定請求的 agent：`kernel_gate` 工具（`aos/kernel.json#/gate`）。
+1. 想自己決定請求的 agent：`kernel_gate` 工具（`aos/kernel.md#/Being a kernel yourself: kernel_gate`）。
 2. 只有規則的站，做成一個 proc：複製 `templates/kernel/daemon-kernel/` 或 `templates/kernel/procs-kernel/` 然後編輯 `kernel.json`；或複製 `templates/kernel/kernel-python/`，在它的 `kernel.py` 寫規則和 hook，然後編譯（`python3 kernel.py --compile`；它的 README 有說怎麼做）。
 3. 不用那個工具、用你已經有的東西（`self_hook`、你的檔案工具）在自己身上架一個站：
    - 在你的工作區寫 `gate/kernel.json`（例如 `{"allowed": ["worker"]}`）和一個可執行的 `gate/run`：
@@ -127,7 +121,7 @@ exec aos-exec --stack "$AOS_STACK" "$AOS_HOME/lib/tools/aos/kernel" "$(dirname "
 
    - 掛上它：`self_hook` `{"op": "add", "event": "on_clock", "every_cycles": 1, "name": "gate", "path": "gate/run"}`。你的請求信箱是 `<your stack>/hookeds/gate/requests`。（失敗的 on_clock hook 只是一個警告。）
    - 要自己決定某些信，在 `gate/kernel.json` 旁邊放 `gate/interfaces.json`（`{"hookeds": "kernel_hookeds.json"}`），並在 `gate/kernel_hookeds.json` 放一個 `after_verdict` hook，它的程式對那些信印出 `{"verdict": "hold"}`，並寄給你一則通知（`aos-post send <your stack>/queue`，內容 `{"role": "user", "content": "..."}`；站的 stack 是事件裡的 `stack`，你自己的 stack 在它往上兩層）。之後那封信在 `<your stack>/hookeds/gate/requests/cur/` 等著，並列在旁邊的 `hold.json` 裡。你寫一個檔來回覆：`<your stack>/hookeds/gate/decisions/<letter name>.json`，內容 `{"verdict": "pass"}` 或 `{"verdict": "refuse", "error": {"code": "NotNow", "msg": "one line for the sender"}}`。剩下的站會在它下一輪（你的回合之後）做完：轉送那封信或寄出拒絕。你不用親手寄任何信。
-4. 從零寫一個程式（由你的程式每一輪做這些；不要在 shell 裡親手做，`aos/rules.json` 第 5 條規則）：
+4. 從零寫一個程式（由你的程式每一輪做這些；不要在 shell 裡親手做，`aos/rules.md` 第 5 條規則）：
    - 拿一封信：`aos-post take BOX`，然後 `aos-post see BOX NAME`。
    - 決定：拒絕、留著晚點處理，或往下傳。
    - 往下傳：用 `aos-post send` 把同樣的內文送到下一站（啟動請求的話，最後是 daemon 的 ctl 信箱）。保留信的 `reply_to`，回覆就會直接回到寄件者；或在那裡放你自己的信箱，讓回覆先經過你回來。

@@ -1,32 +1,40 @@
-# `knowledge/wf/source/block-4.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/source/block-4.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/source/block-4.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/wf/source/block-4.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
-
-**`#/_description`**
 
 第 4 塊：dev（開發類）的八條工作流、它們的記憶骨架、通用規則。來源是 workflows 模板 repo 的備料 `aos-prep/dev/`（備料把模板的 md 原稿轉成 json 節點；每份備料自己記的模板原稿與 commit 留在 `template_files`、`prep_commit`）。搬遷紀錄與代定在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。
 
-**`#/block`**：`4`
+# block
 
-**`#/what`**：dev（開發類）的八條工作流、它們的記憶骨架、通用規則
+```json
+4
+```
 
----
+# what
 
-**`#/from`**（物件，5 個鍵：`repo`、`commit`、`note`、`date`、`paths`）
+dev（開發類）的八條工作流、它們的記憶骨架、通用規則
 
-**`#/from/repo`**：workflows 模板 repo
+# from
 
-**`#/from/commit`**：0d0091a2ec046e3d7bc734a70dfbd51fa80e961c
+## repo
 
-**`#/from/note`**：備料最終版 01959cecec110a8322544dc92196a12bd13c128b；它到 0d0091a 之間 aos-prep 只改了內文引用的 commit 編號
+workflows 模板 repo
 
-**`#/from/date`**：2026-11-13
+## commit
 
----
+0d0091a2ec046e3d7bc734a70dfbd51fa80e961c
 
-**`#/from/paths`**（原文是字串陣列，17 行）
+## note
+
+備料最終版 01959cecec110a8322544dc92196a12bd13c128b；它到 0d0091a 之間 aos-prep 只改了內文引用的 commit 編號
+
+## date
+
+2026-11-13
+
+## paths
 
 - aos-prep/dev/feature-dev.json
 - aos-prep/dev/testing.json
@@ -46,338 +54,407 @@
 - aos-prep/dev/green-is-not-checked.json
 - aos-prep/dev/dispatch.json
 
----
+# carried
 
-**`#/carried`**（陣列，17 項）
+## 0
 
----
+### here
 
-**`#/carried/0`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+wf/workflows/feature-dev.md
 
-**`#/carried/0/here`**：wf/workflows/feature-dev.json
+### from
 
-**`#/carried/0/from`**：aos-prep/dev/feature-dev.json
+aos-prep/dev/feature-dev.json
 
----
-
-**`#/carried/0/template_files`**（原文是字串陣列，3 行）
+### template_files
 
 - flavors/dev/workflows/feature-dev/README.md
 - flavors/dev/WORKFLOWS.dev.md
 - template/WORKFLOWS.md
 
-**`#/carried/0/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### prep_commit
 
-**`#/carried/0/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；尾端 commit 照備料，不加「被派出去的不 commit」（W12＝B）
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
 
----
+### changed
 
-**`#/carried/1`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；尾端 commit 照備料，不加「被派出去的不 commit」（W12＝B）
 
-**`#/carried/1/here`**：wf/workflows/testing.json
+## 1
 
-**`#/carried/1/from`**：aos-prep/dev/testing.json
+### here
 
----
+wf/workflows/testing.md
 
-**`#/carried/1/template_files`**（原文是字串陣列，2 行）
+### from
+
+aos-prep/dev/testing.json
+
+### template_files
 
 - flavors/dev/workflows/testing.md
 - flavors/dev/WORKFLOWS.dev.md
 
-**`#/carried/1/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### prep_commit
 
-**`#/carried/1/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
 
----
+### changed
 
-**`#/carried/2`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
 
-**`#/carried/2/here`**：wf/workflows/refactor.json
+## 2
 
-**`#/carried/2/from`**：aos-prep/dev/refactor.json
+### here
 
----
+wf/workflows/refactor.md
 
-**`#/carried/2/template_files`**（原文是字串陣列，3 行）
+### from
+
+aos-prep/dev/refactor.json
+
+### template_files
 
 - flavors/dev/workflows/refactor/README.md
 - flavors/dev/WORKFLOWS.dev.md
 - template/WORKFLOWS.md
 
-**`#/carried/2/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### prep_commit
 
-**`#/carried/2/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
 
----
+### changed
 
-**`#/carried/3`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
 
-**`#/carried/3/here`**：wf/workflows/moving-things.json
+## 3
 
-**`#/carried/3/from`**：aos-prep/dev/moving-things.json
+### here
 
----
+wf/workflows/moving-things.md
 
-**`#/carried/3/template_files`**（原文是字串陣列，2 行）
+### from
+
+aos-prep/dev/moving-things.json
+
+### template_files
 
 - flavors/dev/workflows/refactor/moving-things.md
 - flavors/dev/WORKFLOWS.dev.md
 
-**`#/carried/3/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### prep_commit
 
----
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
 
-**`#/carried/3/changed`**
+### changed
 
 路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`tool_gap` 改寫成使用者已裁不帶 workflows 檢查工具、knowledge 沒有查連結的出廠工具（wf-lint 的路徑改成只寫檔名）
 
----
+## 4
 
-**`#/carried/4`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+### here
 
-**`#/carried/4/here`**：wf/workflows/analysis.json
+wf/workflows/analysis.md
 
-**`#/carried/4/from`**：aos-prep/dev/analysis.json
+### from
 
----
+aos-prep/dev/analysis.json
 
-**`#/carried/4/template_files`**（原文是字串陣列，2 行）
+### template_files
 
 - flavors/dev/workflows/analysis.md
 - flavors/dev/WORKFLOWS.dev.md
 
-**`#/carried/4/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### prep_commit
 
----
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
 
-**`#/carried/4/changed`**
+### changed
 
 路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；not_when 的「research 包（若有導入）」改成「本庫沒有，需要就自建」；產物照原文留 md（W13）
 
----
+## 5
 
-**`#/carried/5`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+### here
 
-**`#/carried/5/here`**：wf/workflows/investigation.json
+wf/workflows/investigation.md
 
-**`#/carried/5/from`**：aos-prep/dev/investigation.json
+### from
 
----
+aos-prep/dev/investigation.json
 
-**`#/carried/5/template_files`**（原文是字串陣列，3 行）
+### template_files
 
 - flavors/dev/workflows/investigation.md
 - flavors/dev/WORKFLOWS.dev.md
 - template/WORKFLOWS.md
 
-**`#/carried/5/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### prep_commit
 
-**`#/carried/5/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
 
----
+### changed
 
-**`#/carried/6`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
 
-**`#/carried/6/here`**：wf/workflows/dev-env.json
+## 6
 
-**`#/carried/6/from`**：aos-prep/dev/dev-env.json
+### here
 
----
+wf/workflows/dev-env.md
 
-**`#/carried/6/template_files`**（原文是字串陣列，3 行）
+### from
+
+aos-prep/dev/dev-env.json
+
+### template_files
 
 - flavors/dev/workflows/dev-env.md
 - flavors/dev/WORKFLOWS.dev.md
 - flavors/dev/README.md
 
-**`#/carried/6/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### prep_commit
 
-**`#/carried/6/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
 
----
+### changed
 
-**`#/carried/7`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
 
-**`#/carried/7/here`**：wf/workflows/patch.json
+## 7
 
-**`#/carried/7/from`**：aos-prep/dev/patch.json
+### here
 
----
+wf/workflows/patch.md
 
-**`#/carried/7/template_files`**（原文是字串陣列，2 行）
+### from
+
+aos-prep/dev/patch.json
+
+### template_files
 
 - flavors/dev/workflows/patch.md
 - flavors/dev/WORKFLOWS.dev.md
 
-**`#/carried/7/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### prep_commit
 
----
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
 
-**`#/carried/7/changed`**
+### changed
 
 路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；產物落點照備料寫工作區的 `wf/patches/<patch>/`（W14＝A）；PATCH.md、APPLY.md 留 md（W13）
 
----
+## 8
 
-**`#/carried/8`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+### here
 
-**`#/carried/8/here`**：wf/skeletons/verification.json
+wf/skeletons/verification.md
 
-**`#/carried/8/from`**：aos-prep/dev/memory-verification.json
+### from
 
-**`#/carried/8/template_files`**（原文是字串陣列，1 行）：flavors/dev/workflows/testing.md
+aos-prep/dev/memory-verification.json
 
-**`#/carried/8/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### template_files
 
-**`#/carried/8/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件
+- flavors/dev/workflows/testing.md
 
----
+### prep_commit
 
-**`#/carried/9`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
 
-**`#/carried/9/here`**：wf/skeletons/dev-env.json
+### changed
 
-**`#/carried/9/from`**：aos-prep/dev/memory-dev-env.json
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件
 
-**`#/carried/9/template_files`**（原文是字串陣列，1 行）：flavors/dev/workflows/dev-env.md
+## 9
 
-**`#/carried/9/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### here
 
-**`#/carried/9/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件
+wf/skeletons/dev-env.md
 
----
+### from
 
-**`#/carried/10`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+aos-prep/dev/memory-dev-env.json
 
-**`#/carried/10/here`**：wf/skeletons/code-map.json
+### template_files
 
-**`#/carried/10/from`**：aos-prep/dev/memory-code-map.json
+- flavors/dev/workflows/dev-env.md
 
----
+### prep_commit
 
-**`#/carried/10/template_files`**（原文是字串陣列，2 行）
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+
+### changed
+
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件
+
+## 10
+
+### here
+
+wf/skeletons/code-map.md
+
+### from
+
+aos-prep/dev/memory-code-map.json
+
+### template_files
 
 - flavors/dev/workflows/common/code-map.md
 - flavors/dev/COMMON.dev.md
 
-**`#/carried/10/prep_commit`**：9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
+### prep_commit
 
-**`#/carried/10/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件
+9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
 
----
+### changed
 
-**`#/carried/11`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件
 
-**`#/carried/11/here`**：wf/skeletons/conventions.json
+## 11
 
-**`#/carried/11/from`**：aos-prep/dev/memory-conventions.json
+### here
 
----
+wf/skeletons/conventions.md
 
-**`#/carried/11/template_files`**（原文是字串陣列，3 行）
+### from
+
+aos-prep/dev/memory-conventions.json
+
+### template_files
 
 - flavors/dev/workflows/common/conventions.md
 - flavors/dev/COMMON.dev.md
 - flavors/dev/AGENTS.dev.md
 
-**`#/carried/11/prep_commit`**：9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
+### prep_commit
 
----
+9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
 
-**`#/carried/11/changed`**
+### changed
 
-路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件；`suggested_items` 檔案拆分那條的「單檔超過 300 行」拿掉，改成「檔太大照 `wf/tidying.json#/split` 檢視」（第 1 塊牴觸第 3 條）
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件；`suggested_items` 檔案拆分那條的「單檔超過 300 行」拿掉，改成「檔太大照 `wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）` 檢視」（第 1 塊牴觸第 3 條）
 
----
+## 12
 
-**`#/carried/12`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+### here
 
-**`#/carried/12/here`**：wf/skeletons/notes.json
+wf/skeletons/notes.md
 
-**`#/carried/12/from`**：aos-prep/dev/memory-notes.json
+### from
 
-**`#/carried/12/template_files`**（原文是字串陣列，1 行）：flavors/dev/workflows/investigation.md
+aos-prep/dev/memory-notes.json
 
-**`#/carried/12/prep_commit`**：9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
+### template_files
 
-**`#/carried/12/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件
+- flavors/dev/workflows/investigation.md
 
----
+### prep_commit
 
-**`#/carried/13`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
 
-**`#/carried/13/here`**：wf/skeletons/analysis.json
+### changed
 
-**`#/carried/13/from`**：aos-prep/dev/memory-analysis.json
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件
 
-**`#/carried/13/template_files`**（原文是字串陣列，1 行）：flavors/dev/workflows/analysis.md
+## 13
 
-**`#/carried/13/prep_commit`**：9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
+### here
 
----
+wf/skeletons/analysis.md
 
-**`#/carried/13/changed`**
+### from
+
+aos-prep/dev/memory-analysis.json
+
+### template_files
+
+- flavors/dev/workflows/analysis.md
+
+### prep_commit
+
+9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
+
+### changed
 
 路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件；`skeleton` 照備料是檔名清單（`["session_log.md"]`），沒改名
 
----
+## 14
 
-**`#/carried/14`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+### here
 
-**`#/carried/14/here`**：wf/knowledge/code-map-rules.json
+wf/knowledge/code-map-rules.md
 
-**`#/carried/14/from`**：aos-prep/dev/code-map-rules.json
+### from
 
-**`#/carried/14/template_files`**（原文是字串陣列，1 行）：flavors/dev/workflows/common/code-map.md
+aos-prep/dev/code-map-rules.json
 
-**`#/carried/14/prep_commit`**：9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
+### template_files
 
-**`#/carried/14/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
+- flavors/dev/workflows/common/code-map.md
 
----
+### prep_commit
 
-**`#/carried/15`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
 
-**`#/carried/15/here`**：wf/knowledge/green-is-not-checked.json
+### changed
 
-**`#/carried/15/from`**：aos-prep/dev/green-is-not-checked.json
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
 
-**`#/carried/15/template_files`**（原文是字串陣列，1 行）：flavors/dev/workflows/testing.md
+## 15
 
-**`#/carried/15/prep_commit`**：9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
+### here
 
-**`#/carried/15/changed`**：路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
+wf/knowledge/green-is-not-checked.md
 
----
+### from
 
-**`#/carried/16`**（物件，5 個鍵：`here`、`from`、`template_files`、`prep_commit`、`changed`）
+aos-prep/dev/green-is-not-checked.json
 
-**`#/carried/16/here`**：wf/knowledge/dev-dispatch.json
+### template_files
 
-**`#/carried/16/from`**：aos-prep/dev/dispatch.json
+- flavors/dev/workflows/testing.md
 
----
+### prep_commit
 
-**`#/carried/16/template_files`**（原文是字串陣列，3 行）
+9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2
+
+### changed
+
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡
+
+## 16
+
+### here
+
+wf/knowledge/dev-dispatch.md
+
+### from
+
+aos-prep/dev/dispatch.json
+
+### template_files
 
 - flavors/dev/AGENTS.dev.md
 - flavors/dev/WORKFLOWS.dev.md
 - flavors/dev/README.md
 
-**`#/carried/16/prep_commit`**：ef0b1412a86d62804daab7fd53eb7a0650bbc80d
+### prep_commit
 
----
+ef0b1412a86d62804daab7fd53eb7a0650bbc80d
 
-**`#/carried/16/changed`**
+### changed
 
-路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`_description` 改寫（派發通則改指 `wf/workflows/_description.json`、觸發說法改指 `wf/workflows/_index.json`）；`disambiguation` 的「混合型專案（同時用了 knowledge 包）」一條拿掉（knowledge 包不併，W21）；`menu` 的「本包」改「本庫」
+路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`_description` 改寫（派發通則改指 `wf/workflows/_description.md`、觸發說法改指 `wf/workflows/_index.json`）；`disambiguation` 的「混合型專案（同時用了 knowledge 包）」一條拿掉（knowledge 包不併，W21）；`menu` 的「本包」改「本庫」
 
----
+# not_carried
 
-**`#/not_carried`**（陣列，2 項；每項是同一組鍵的小物件，排成表：第 i 列＝`#/not_carried/i`）
+## 0
 
-| i | `what` | `why` |
-|---|---|---|
-| 0 | aos-prep/dev/_description.json、_index.json、prep-report*.json（六份） | 備料的說明與報告，不是節點；`_index.json` 的 description 拿來寫 `wf/workflows/_index.json` |
-| 1 | 「被派出去的不 commit、由主線驗收後 commit；push 一律先問」 | 使用者 2026-11-13 W12＝B：不寫進通用版，留給各工作區自己的偏好與鐵律 |
+- what: aos-prep/dev/_description.json、_index.json、prep-report*.json（六份）
+- why: 備料的說明與報告，不是節點；`_index.json` 的 description 拿來寫 `wf/workflows/_index.json`
+
+## 1
+
+- what: 「被派出去的不 commit、由主線驗收後 commit；push 一律先問」
+- why: 使用者 2026-11-13 W12＝B：不寫進通用版，留給各工作區自己的偏好與鐵律

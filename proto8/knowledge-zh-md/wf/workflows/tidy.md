@@ -1,43 +1,41 @@
-# `knowledge/wf/workflows/tidy.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/wf/workflows/tidy.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/wf/workflows/tidy.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/wf/workflows/tidy.md`，跟到正本 commit `33835099a`（正本這頁最後一次改動）。這一庫本來就是中文，內容照抄正本，標題就是尋址。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**（原文是字串陣列，3 行）
-
-文件整理（封存過時、分類雜亂、抽資料檔、內容精簡）：把文件層收乾淨——活文件只留現役與 open 的東西，過時的封存、雜亂的分類、指向被封存檔的連結清掉、過大的條列抽成資料檔、檔內的過往記錄刪掉只留結論。結構方法在 `wf/tidying.json`（膨脹即拆／雜亂即分類／archive 規則），內容精簡的判準在 `wf/knowledge/content-trim.json`；本節點記的是**整理這件事怎麼跑一輪**：盤點 → 交接書 → 派工 → 核驗。
+文件整理（封存過時、分類雜亂、抽資料檔、內容精簡）：把文件層收乾淨——活文件只留現役與 open 的東西，過時的封存、雜亂的分類、指向被封存檔的連結清掉、過大的條列抽成資料檔、檔內的過往記錄刪掉只留結論。結構方法在 `wf/tidying.md`（膨脹即拆／雜亂即分類／archive 規則），內容精簡的判準在 `wf/knowledge/content-trim.md`；本節點記的是**整理這件事怎麼跑一輪**：盤點 → 交接書 → 派工 → 核驗。
 
 範圍可以是 **json 形態**（`_index.json`＋json 節點）或 **md 形態**（還是 md 的地方）；原則兩邊一樣，標「md 形態時」的命令只在 md 形態的範圍跑。
 
-**`#/when`**：「幫我整理 X」「封存過時的」「檔案太多／太雜」「太大要拆」「只留結論」；一個資料夾幾十個檔扁平混放；某份表格被歷史項塞到幾十 KB；log／inbox 堆了一堆沒消化；文件自述「歷史」「已被取代」卻還被活文件連著；檔內堆著決策過程、改過幾版、作廢方案。
+# when
 
-**`#/not_when`**：改程式碼結構（行為不變的搬檔／拆模組）→ `wf/workflows/refactor.json`；只搬一兩個檔且不涉及封存或拆表 → 直接 `git mv`，不必走本流程。
+「幫我整理 X」「封存過時的」「檔案太多／太雜」「太大要拆」「只留結論」；一個資料夾幾十個檔扁平混放；某份表格被歷史項塞到幾十 KB；log／inbox 堆了一堆沒消化；文件自述「歷史」「已被取代」卻還被活文件連著；檔內堆著決策過程、改過幾版、作廢方案。
 
-**`#/principles`**：→ `$ref` `tidy/principles.json#/principles`（映照版：[tidy/principles.md](tidy/principles.md)）
+# not_when
 
----
+改程式碼結構（行為不變的搬檔／拆模組）→ `wf/workflows/refactor.md`；只搬一兩個檔且不涉及封存或拆表 → 直接 `git mv`，不必走本流程。
 
-**`#/done_when`**（原文是字串陣列，8 行）
+# principles
 
-目標資料夾根層只剩入口 ＋ 語意子資料夾（或同類檔案集合），每個子資料夾有入口：json 形態是 `_description.json`（東西多再加 `_index.json`，見 `wf/tidying.json#/split_method`），md 形態是 `README.md`。
-每個被封存檔：`grep -rn '<檔名>' <repo> | grep -v archive/` → 0 行（對**整個 repo** 查，範圍外的活文件還連著也算；md 形態時加 `--include='*.md'`，json 形態時加 `--include='*.json' --include='*.md'`，`wf/progress.json`、`AGENTS.md` 裡的引用也要清）；所屬 `archive/` 的索引有它那一列（json 形態 `archive/_index.json`、md 形態 `<資料夾>/archive/README.md`）。
-範圍裡有 `_index.json` 時：每份 index 跟實際的樹對得上（列了的都在、在的都列了）。工作區有 index 檢查工具就跑它、回傳 0；沒有就用 `index_view` 與 `ls` 逐夾對。
-md 形態且工作區有連結檢查工具時：對**交接書指定的整理範圍**跑（不對整個 repo：會連帶算進範圍外的東西），沒有壞連結。
-交接書列出要拆的檔都拆了；超過門檻而不拆的，報告裡每個寫理由（門檻見 `wf/tidying.json#/split`：都是觸發檢視的訊號；`.md` 約 8 KB 是推薦值）。
-精簡過的檔：`#/content_trim` 的原文檢查 → 0 行 `LOST`（被推翻而刪的列進報告）；報告列每檔精簡前後 bytes。
-報告附 `moves.tsv`（`舊路徑<TAB>新路徑`）。
-`wf/progress.json` 只列 open。
+→ `wf/workflows/tidy/principles.md#/principles`
 
----
+# done_when
 
-**`#/roles`**
+- 目標資料夾根層只剩入口 ＋ 語意子資料夾（或同類檔案集合），每個子資料夾有入口：json 形態是 `_description.json`（東西多再加 `_index.json`，見 `wf/tidying.md#/拆法（兩種觸發都照做）`），md 形態是 `README.md`。
+- 每個被封存檔：`grep -rn '<檔名>' <repo> | grep -v archive/` → 0 行（對**整個 repo** 查，範圍外的活文件還連著也算；md 形態時加 `--include='*.md'`，json 形態時加 `--include='*.json' --include='*.md'`，`wf/progress.json`、`AGENTS.md` 裡的引用也要清）；所屬 `archive/` 的索引有它那一列（json 形態 `archive/_index.json`、md 形態 `<資料夾>/archive/README.md`）。
+- 範圍裡有 `_index.json` 時：每份 index 跟實際的樹對得上（列了的都在、在的都列了）。工作區有 index 檢查工具就跑它、回傳 0；沒有就用 `index_view` 與 `ls` 逐夾對。
+- md 形態且工作區有連結檢查工具時：對**交接書指定的整理範圍**跑（不對整個 repo：會連帶算進範圍外的東西），沒有壞連結。
+- 交接書列出要拆的檔都拆了；超過門檻而不拆的，報告裡每個寫理由（門檻見 `wf/tidying.md#/什麼時候該整理（膨脹即拆／雜亂即分類）`：都是觸發檢視的訊號；`.md` 約 8 KB 是推薦值）。
+- 精簡過的檔：`#/content_trim` 的原文檢查 → 0 行 `LOST`（被推翻而刪的列進報告）；報告列每檔精簡前後 bytes。
+- 報告附 `moves.tsv`（`舊路徑<TAB>新路徑`）。
+- `wf/progress.json` 只列 open。
 
-**調度者**只盤點、寫交接書、核驗、修跨資料夾／跨 repo 的連結；**實作線**（一個或多個工人）分類、切批、逐批驗收。線**不得**進交接書範圍以外的資料夾或 repo。線可以再分一層：一個範圍一條**管理線**，管理線再派**工人**（簡報範本 `wf/workflows/tidy-manager-brief.json`）。
+# roles
 
----
+**調度者**只盤點、寫交接書、核驗、修跨資料夾／跨 repo 的連結；**實作線**（一個或多個工人）分類、切批、逐批驗收。線**不得**進交接書範圍以外的資料夾或 repo。線可以再分一層：一個範圍一條**管理線**，管理線再派**工人**（簡報範本 `wf/workflows/tidy-manager-brief.md`）。
 
-**`#/steps`**（原文是字串陣列，6 行）
+# steps
 
 1. **盤點（調度者）**：跑 `#/inventory` 的命令。把病灶寫成編號清單，直接放進交接書；不要讓線自己找範圍。
 2. **交接書**固定寫：分類方案（類別數 5–7，一張表列每類收什麼）、**檔名一律不改**（外部連結靠檔名對映修）、一律 `git mv`、每個子資料夾要入口（json 形態 `_description.json`、md 形態 `README.md`）、封存規則與六條原則（`#/principles`）、禁區（不 commit／不進交接書以外的範圍／不刪／不碰 `AGENTS.md` 實質內容）、**固定條數**的驗收命令、報告要附 `moves.tsv`。
@@ -46,9 +44,7 @@ md 形態且工作區有連結檢查工具時：對**交接書指定的整理範
 5. **搬檔後修連結**：md 連結用各批的 `moves.tsv` 改（工作區有搬檔改連結的工具就用它，先 dry-run 再套用；要跳過 code fence、解析相對路徑後重算）。**指向被封存檔的連結不重寫**——照第 1 條原則拿掉。json 形態的反引號統一路徑與 `$ref` 要手修，改完 `grep -rn '<舊路徑>'` → 0 行。跨資料夾／跨 repo 的壞連結留給調度者收尾。
 6. **收尾**：確認 `#/done_when` 全過後由調度者 commit，內容精簡與搬檔拆檔分開 commit；線與工人不 commit。
 
----
-
-**`#/inventory`**（原文是字串陣列，8 行）
+# inventory
 
 ```bash
 find . -path ./.git -prune -o -type f -print | sed 's|/[^/]*$||' | sort | uniq -c | sort -rn | head   # 哪個資料夾擠
@@ -59,10 +55,18 @@ grep -rlE --include='*.md' '<dir>/' <其他資料夾…> | wc -l                
 ```
 md 形態、工作區有掃大表的工具時（找超過 1 KB 的表／清單、超過十條的連結表）也跑一次；連結表要人判斷該留 md 還是抽資料。
 
-**`#/content_trim`**：→ `$ref` `tidy/content-trim.json#/steps`（映照版：[tidy/content-trim.md](tidy/content-trim.md)）
+# content_trim
 
-**`#/content_converge`**：→ `$ref` `tidy/content-trim.json#/converge`（映照版：[tidy/content-trim.md](tidy/content-trim.md)）
+→ `wf/workflows/tidy/content-trim.md#/steps`
 
-**`#/gotchas`**：整理與拆檔實際踩過的坑集中在 `wf/knowledge/gotchas.json` 的 `tidy_` 開頭各段（封存與搬檔、拆檔、派線與工人、執行環境）；動手前先讀一遍。
+# content_converge
 
-**`#/handoff`**：完成後 → 若整理揭露了要裁示的事，`wf/progress.json` 一條、status 寫「等使用者」。
+→ `wf/workflows/tidy/content-trim.md#/converge`
+
+# gotchas
+
+整理與拆檔實際踩過的坑集中在 `wf/knowledge/gotchas.md` 的 `tidy_` 開頭各段（封存與搬檔、拆檔、派線與工人、執行環境）；動手前先讀一遍。
+
+# handoff
+
+完成後 → 若整理揭露了要裁示的事，`wf/progress.json` 一條、status 寫「等使用者」。

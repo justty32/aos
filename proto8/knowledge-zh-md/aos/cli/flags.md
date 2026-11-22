@@ -1,18 +1,16 @@
-# `knowledge/aos/cli/flags.json` 的中文映照版，給人審用；正本是 json
+# `knowledge/aos/cli/flags.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 來源：`proto8/knowledge/aos/cli/flags.json`，commit `fad6bef74`。這份是照 json 一對一轉出來的：每一塊前面的粗體 `#/…` 是它在 json 裡的位置（JSON 指標）；英文說明譯成中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣。原文本來是中文的照抄。要改請改 json，這份會重新轉。
+> 正本：`proto8/knowledge/aos/cli/flags.md`，跟到正本 commit `fe053b828`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/cli/flags.md#/…` 對的就是它。改請改正本，再照 [README](../../README.md) 的做法跟上這份。
 
 ---
 
-**`#/_description`**
+**`#/Help and flag placement`**
 
 # 說明與旗標位置
 
 旗標可以放哪裡、哪些指令不一樣、說明的層級，還有短名。
 
----
-
-**`#/placement`**
+**`#/A flag goes after its level`**
 
 # 旗標放在它那一層的後面
 
@@ -27,9 +25,7 @@ aos-tools add tools/clock --name now
 
 每個 aos 指令都是這樣，`aos/cli/parts/` 裡的零件也是（`aos-json get FILE#/a --str`、`aos-eca-turn /abs/def --one`）。例外的情況是字會原樣往下傳：`aos-exec FOLDER ARGS` 裡資料夾後面的全部都交給那個資料夾的程式；`aos-sandbox CONFIG PROG ...` 把 PROG 和它的參數往下傳；`aos-mcp-launch SERVER_FILE` 不收旗標；`aos-json set`、`append` 和 `merge` 的旗標要放在 FILE 前面，因為值可以是任何字（`aos-json set --str FILE#/a -x`）。參數後面的字如果看起來像負數（`-3`）或含有空白，就仍然當參數。
 
----
-
-**`#/target`**
+**`#/Naming the agent in aos-agent`**
 
 # 在 aos-agent 裡指定 agent
 
@@ -41,17 +37,13 @@ aos-tools add tools/clock --name now
 cd /abs/tree/.stack/procs/ann && aos-agent say hello   # target = ann, daemon = /abs/tree/.stack
 ```
 
----
-
-**`#/text`**
+**`#/Text ends flag reading`**
 
 # 文字會結束旗標的讀取
 
 原樣往下傳的文字會結束旗標的讀取：`aos-agent say WORDS`、`history summarize RANGE TEXT`（或 `summarize -n K TEXT`）、`history set LINE JSON`、`goal set TEXT`、`aos-mailbox send WHAT`、`aos-clock-register add NAME TEXT` 從第一個字起全部都是文字，所以旗標要放在它前面。`--` 之後沒有東西是旗標：`aos-daemon-ctl add tools/job -- --verbose`、`aos-agent say -t bob -- -hello`。
 
----
-
-**`#/help`**
+**`#/Help levels`**
 
 # 說明的層級
 
@@ -59,9 +51,7 @@ cd /abs/tree/.stack/procs/ann && aos-agent say hello   # target = ann, daemon = 
 
 指令裡沒人認得的旗標會得到 `FlagUnknown`。沒給子指令會得到 `ArgumentsBad`（`aos-post: error: ArgumentsBad missing subcommand`）；不認得的子指令會得到 `CommandUnknown`。
 
----
-
-**`#/short`**
+**`#/Short names`**
 
 # 短名
 
