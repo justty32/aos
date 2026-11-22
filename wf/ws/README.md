@@ -13,7 +13,7 @@
 3. **地盤進 git；任何一層的 `temp/` 不進**（根 `.gitignore` 的 `temp/` 那行）。放不放 `temp/` 的判準一句話：**換台之後還要用的放地盤，其他放 `temp/`**（大檔、跑出來的產物、log、抄來的複本、暫存樹都算其他）。
 4. **誰建**：上層替下層建——`subagent add` 之前先 `mkdir` 並放一份 `README.md`（第一行一句話說這是誰的地盤；git 不收空資料夾），在任務書裡告訴它地盤在哪。
 5. **現在只是規矩，不是牆**：commit-request 不查誰交了誰地盤裡的檔，其他 agent 讀得到也改得到。牆等以後的權限系統。
-6. **交件一樣走 commit-request**（[規矩卡「交件」](../workflows/common/rules-card.md#交件aos-teams-第-1-件07commit)）。commit-request 會加上單檔大小檢查（線 `ws-stack-1122-size`，門檻可調）；單檔太大被擋，多半是該放 `temp/` 的東西進了追蹤（使用者 11-22：「如果太大，那就代表agent不守規矩，把本該進temp的也進track」）。
+6. **交件一樣走 commit-request**（[規矩卡「交件」](../workflows/common/rules-card.md#交件aos-teams-第-1-件07commit)）。commit-request 會查單檔大小：`--files` 點名的檔有一個超過 1 MB（1,048,576 bytes），整個申請不收（`FAILED RequestBad`，什麼都不 commit）。門檻與放行名單是 [`wf/tools/commit_queue.json`](../tools/commit_queue.json) 的 `max_file_bytes`、`big_ok`；那份從 main 讀，要改門檻或放行一個檔得先把它交件；`_stack/` 底下、`--rm`、`--op` 不查。單檔太大被擋，多半是該放 `temp/` 的東西進了追蹤（使用者 11-22：「如果太大，那就代表agent不守規矩，把本該進temp的也進track」）。
 
 另外：地盤裡不建 `_index.json`（`wf/tools/index_gen.json` 的 `skip_dir_names` 跳過名叫 `ws` 的夾，只在上一層留一項）。
 

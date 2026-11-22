@@ -23,7 +23,7 @@ eca 隊長用 Bash 工具（實際是 zsh）驅動暫存樹、派隊員時：
 
 ## Read／Glob／Edit 在工作區外被擋
 
-eca 的工作區是 `wf/temp/<線>`，必讀檔在 repo 別處；Claude 子 agent 也一樣。don't ask 模式下 Read、Glob 讀工作區外的檔被拒，Edit 又要求先 Read；子 agent 被擋後有的不回報、停在那裡（[claude子agent](claude子agent.md)）。改用 Bash 的 `cat` 讀；要改檔用 python 寫同目錄暫存檔再改名；派子 agent 時任務書寫明「讀檔用 bash，不要用 Read 讀暫存樹」。
+eca 的工作區不是 repo 根、必讀檔在工作區外時會撞到（11-22 以前線的工作區是 `wf/temp/<線>`；現在常見的是要讀 `~/.aos/scratch/…` 暫存樹裡的檔）；Claude 子 agent 也一樣。11-22 起家機的 agent 工作區都是 repo 根 `~/repo/aos`（[wf/ws](../ws/README.md)），讀 repo 裡的檔不再撞到這條。don't ask 模式下 Read、Glob 讀工作區外的檔被拒，Edit 又要求先 Read；子 agent 被擋後有的不回報、停在那裡（[claude子agent](claude子agent.md)）。改用 Bash 的 `cat` 讀；要改檔用 python 寫同目錄暫存檔再改名；派子 agent 時任務書寫明「讀檔用 bash，不要用 Read 讀暫存樹」。
 
 ## `pgrep -af aos-daemon` 會多列幾行，不一定是多了 daemon
 

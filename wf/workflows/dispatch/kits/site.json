@@ -1,6 +1,6 @@
 {
  "description": "Site values for the wf kits (this user's machine): fill the placeholders of general.*.txt when assembling a kit's system.txt.",
- "KNOWLEDGE": "/home/lorkhan/aos-home/knowledge",
+ "KNOWLEDGE": "/home/lorkhan/repo/aos/proto8/knowledge",
  "BOARD": {
   "no_shell": "read /home/lorkhan/.aos/view/board/user.json (no file = no notice)",
   "shell": "aos-frontend board (--all adds each team's latest note)",
@@ -8,7 +8,7 @@
  },
  "OWN_BOARD": "",
  "late_answer_minutes": 30,
- "llm_kernel": "/home/lorkhan/aos-home/ws/.stack/procs/llm-gpt",
+ "llm_kernel": "/home/lorkhan/aos-home/.llm-stack",
  "limits": {
   "gather": {
    "mem_mb": 1024,

@@ -7,7 +7,7 @@
 ## 誰做什麼
 
 - **頂層 `repo-aos` 只當調度者**：只跟使用者交流、派線、收線，不親自做內容；收線＝讀隊長附的證據逐條對、不重跑，真要獨立驗證就派一條便宜的線去跑；想順手做小事時先問能不能一句話交給別人（使用者 08-30「頂層不要做太多事」、09-24「你不要自己做事，盡量交給 agent」）。11-14 起頂層底下分了幾個部，各一位 fable 部長（你歸哪一部、回報寄誰，看你的任務書），線的回報與 commit 放行找部長；寫活樹、push、刪檔、開關線由部長轉頂層。
-- **一條線＝一隻 opus 或 fable 的 eca**（名字 `ok-<線名>`，工作區 `wf/temp/<名字>/`），掛在頂層的 kernel_gate 底下，自己也可以開 gate、在底下掛隊員。
+- **一條線＝一隻 opus 或 fable 的 eca**（名字 `ok-<線名>`；工作區 11-22 起是 repo 根 `~/repo/aos`，自己的草稿、任務書、定義夾放私有地盤 `wf/ws/<上層>/<名字>/`，不進 git 的放地盤裡的 `temp/`，見 [wf/ws](../../ws/README.md)），掛在頂層的 kernel_gate 底下，自己也可以開 gate、在底下掛隊員。
 - **隊員＝sol 的 agent-fsm**（腦走本地 LiteLLM，pack `sol-high`）：蒐集、照圖紙寫碼、寫文件、雜活。**蒐集和施工不用 terra、不走 codex**（使用者 11-14「不要terra，盡量用sol，把sol作爲sonnet來用」「不要走codex」）。走不通才由 Claude 子 agent 補位（普通 opus、簡單 sonnet）。
 - **gpt 系不做設計決策**（使用者 11-07，長期；原話在 [03](aos-teams/03-使用者原話.md)）：能做照已定圖紙寫碼、寫文件、雜活、網頁施工（內容題目由隊長定）；審查只挑實作錯、與圖紙不符。設計、架構、判斷設計對錯由 opus／fable 做，寫進任務書。
 - **「簡單工作」的界線**（使用者 11-06 確認：「1.對。2.是。」）：雜活、純文字小改、查找盤點、跑指令收結果才算簡單，才給 sonnet（補位時）。**碰程式碼邏輯、改寫使用者的概念／規範條文不算簡單**，不給 sonnet（使用者 09-30「不要 sonnet」「就 opus」；見 [common/user「子 agent 模型」](../common/user.md)）。
@@ -41,12 +41,13 @@
     --reply-to <自己的 stack>/mailbox --title "一句話" 題目.json
 ```
 
+- 上面這支 `aos-user` 的路徑是公司那台舊樹的；家機 `_stack` 這邊目前沒有這支（新家不在 11-22 搬家的範圍，[規劃邊緣狀況 32](../../../proto8/thinking/2026-11/22/工作區與stack-1122/02-規劃.md#邊緣狀況規劃員挖到輸入檔沒寫的)）。
 - 一封最多 7 題，每題 `id`、`question`、`eli5`、`options`（`key`、`label`、`consequence`）、`recommend`；每小時最多 10 封。
 - 回信用 `mailbox_read` 讀（專區回信自動留在 `mailbox/archive/<信名>/`），再跑 `aos-user verify <那個夾>`，看到 `ok: matches` 才算數。push、刪檔的授權一定要驗。更多：[user-zone-mail](../../public/user-zone-mail.md)、知識庫 `aos/user_zone.md`。
 
 ### 3. 掛 sol 隊員
 
-`subagent` 這支工具不是每隻 eca 都有：現成的 eca 範本只掛到 `agent_def`（def 包），線用的定義（`~/aos-home/agents/` 的 `opus-kernel`、`fable-kernel`）才多掛了 `subagent`、`kernel_gate` 兩包。`self_state {"parts":["tools"]}` 看得到自己有沒有。
+`subagent` 這支工具不是每隻 eca 都有：現成的 eca 範本只掛到 `agent_def`（def 包），線用的定義（公司那台舊樹 `~/aos-home/agents/` 的 `opus-kernel`、`fable-kernel`；家機 11-22 起新做的定義放 `wf/tree/` 或上層的地盤 `wf/ws/…`，兩處現在都還沒有這兩份）才多掛了 `subagent`、`kernel_gate` 兩包。`self_state {"parts":["tools"]}` 看得到自己有沒有。
 
 1. `agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}`，把 [kits/gather/](kits/README.md) 的 `system.txt`、`tools.json`、`llm.json`、`.env` 蓋過去，`agent_def check`。
 2. `subagent {"op":"add","def":"defs/gather","name":"ok-x-sol-1","ws":"ok-x-sol-1","limits":{"mem_mb":1024,"files":256}}`（`ws` 從你的工作區算，所以它的工作區是 `<線夾>/<agent 名>`；`procs` 別設；開檔的鍵是 `files`）。
@@ -57,9 +58,11 @@
 
 `subagent say` 之後就結束這一回合；用 `clock_register {"op":"add","name":"…","at":"+10m","text":"…"}` 叫醒自己再看，或等它寄來的信。`subagent listen` 預設不限時一直等（11-15 起，以前 600 秒），別讓它卡著這一回合：帶 `"timeout_s": 60`，或用 `"last": 1` 只看最後一則不等。
 
-### 5. 活樹旁邊：`~/aos-home` 有使用者正在用的樹
+### 5. 活樹旁邊：`~/repo/aos/_stack` 有使用者正在用的樹
 
-- 活樹不碰（06 第 1 條）：不寫 `~/aos-home` 底下任何檔、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）；唯讀查看只限任務書點名的，與 06 第 9 條的核對。
+- 活樹＝家機 11-22 起是 `~/repo/aos/_stack`（根定義 `wf/tree/root/`）；這台的 `~/aos-home` 只剩 llm kernel，舊樹退路在 `~/aos-home.old-1122/`；公司那台線 8 起 `_stack` 之前照舊是 `~/aos-home`（[06「現況」](aos-teams/06-公司WSL活樹與任務書硬規則.md#現況)）。
+- 活樹不碰（06 第 1 條）：不寫活樹底下任何檔（家機連同 `~/aos-home`、`~/aos-home.old-1122/`）、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）；唯讀查看只限任務書點名的，與 06 第 9 條的核對。
+- 不在共用工作樹跑 `git stash`、`git reset --hard`、`git checkout -- .`、`git clean -fdx`（06 第 7 條）：`_stack` 被根 `.gitignore` 忽略，`git clean -fdx` 會連活樹一起刪。
 - 你的 shell 帶著活樹的 `AOS_*`：跑任何 aos 指令或測試，一律經一支 bash 腳本（不是 bash 就拒絕 → 逐一 unset `AOS_*` → 還有殘留就拒絕 → exec）。shell 是 zsh，要分詞的寫法包 `bash -c`。
 - 不把整份環境變數寫進檔、log 或信（`env`、`printenv`、`/proc/*/environ` 都不行，裡面有 API key）；要看只列變數名或只列 `AOS_*`。
 - 不刪檔（連自己的暫存也不刪）。收行程只准兩種（06 第 4 條）：`aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`，或 kill 自己記下的 pid（kill 前 `readlink /proc/<pid>/cwd`）；禁 `pkill`、`killall` 與任何按名字收行程的寫法。

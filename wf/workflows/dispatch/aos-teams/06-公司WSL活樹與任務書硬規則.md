@@ -4,8 +4,9 @@
 
 ## 現況
 
-- 使用者的樹住 `~/aos-home`，整天在用（下面叫「活樹」）；repo 是 `~/repo/aos`，只有 `main`。
-- **頂層 session 是樹裡的一隻 agent**，名字 `repo-aos`（工作區 `~/repo/aos`、stack `~/aos-home/ws/.stack/procs/repo-aos`；[main-session-in-aos](../../../../proto8/thinking/2026-11/13/main-session-in-aos.md)）。它派出去的每個子 agent，Bash 都帶著活樹的 `AOS_*` 變數。
+- 使用者正在用的樹下面叫「活樹」；兩台的 repo 都是 `~/repo/aos`，只有 `main`。
+- **家機（11-22 14:12 搬好）**：活樹＝`~/repo/aos/_stack`（被根 `.gitignore` 忽略，只有換機那次才 commit），根定義 `wf/tree/root/`。eca-aos 與三個 subagent（eca-aos-templates、eca-aos-kb、aos-eca-frontend）住在這裡；工作區（cwd）照舊是 `~/repo/aos`，私有地盤在 `wf/ws/<上層>/<名>/`（[wf/ws](../../../ws/README.md)）。llm kernel 自己一台：定義 `~/aos-home/llm`、stack `~/aos-home/.llm-stack`，`~/aos-home` 只剩這兩樣；舊樹其他東西在 `~/aos-home.old-1122/`（退路，不刪、不在那裡起東西）。殼怎麼設、怎麼起樹、怎麼換台見[換機說明書](../../dev-env/03-換機.md)；搬家經過見 [04-線6演練](../../../../proto8/thinking/2026-11/22/工作區與stack-1122/04-線6演練.md)。
+- **公司 WSL（線 8 起 `_stack` 之前）**：使用者的樹照舊住 `~/aos-home`，整天在用。**頂層 session 是樹裡的一隻 agent**，名字 `repo-aos`（工作區 `~/repo/aos`、stack `~/aos-home/ws/.stack/procs/repo-aos`；[main-session-in-aos](../../../../proto8/thinking/2026-11/13/main-session-in-aos.md)）。它派出去的每個子 agent，Bash 都帶著活樹的 `AOS_*` 變數。
 - 活樹的 `AOS_HOME` 是 `~/repo/aos/proto8`（照[重建步驟單](../../../../proto8/thinking/2026-11/17/重建步驟單.md)建）：跑的是那裡 `install.py` 產的 `bin/`（指令）、`lib/`（工具與共用套件），**改 `py/`、`cpp/` 存檔不會動到活樹，在那份 proto8 跑 `install.py` 才換**（11-18 S3 起；以前「存檔即生效」的說法作廢）。`knowledge/`、`frontend/` 不經 install.py、活樹直接讀，存檔即生效；`templates/` 要重抄進樹才生效。`~/.local/bin` 不再放 aos 的東西（舊 `cmd/install.sh` 11-18 S5 收掉）。
 - 各條為什麼、踩過什麼 → wf/public 的 [活樹旁邊](../../../public/活樹旁邊.md)、[行程與環境](../../../public/行程與環境.md)。
 
@@ -14,16 +15,16 @@
 會跑程式、跑測試或改 `proto8/` 的線，任務書開頭整段照貼（`<…>` 由調度者填；隊長往下派時原樣帶進子任務書，codex 也一樣）。純改文件的線貼第 1、7 條。
 
 ```
-## 硬規則（這台的 ~/aos-home 有一棵使用者正在用的樹；你的 shell 繼承了它的環境）
-1. 活樹不碰：不寫 ~/aos-home 底下任何檔、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）。唯讀查看只限本任務書點名的，與第 9 條的核對。
+## 硬規則（這台有一棵使用者正在用的樹＝活樹：家機是 ~/repo/aos/_stack，公司那台是 ~/aos-home；你的 shell 繼承了它的環境）
+1. 活樹不碰：不寫活樹底下任何檔、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）。家機的活樹是 ~/repo/aos/_stack 與根定義 ~/repo/aos/wf/tree/，同樣不碰的還有 ~/aos-home（這台的 llm kernel）與 ~/aos-home.old-1122/（舊樹退路）；公司那台是 ~/aos-home。唯讀查看只限本任務書點名的，與第 9 條的核對。
 2. 先清環境：你的 Bash 帶著活樹的 AOS_STACK、AOS_DAEMON、AOS_HOME、AOS_WS 等。起任何 aos 行程、跑任何測試或 aos 指令，一律經一支 bash 腳本：開頭「不是 bash 就拒絕」、逐一 unset 所有 AOS_*、「還有殘留就拒絕」，再 exec 你的指令。不在 zsh 裡 source 環境檔、不用 `env -u $VARS`（在 zsh 都等於沒清）。其他要靠分詞的寫法也一樣（隊長的 shell 是 zsh，`$VAR` 不分詞）：多字迴圈、`set -- $p`、`for f in $(cat list)` 一律包在 `bash -c '…'` 或寫成 bash 腳本。
 3. 暫存樹：要起樹，起在 ~/.aos/scratch/<線名-日期>/ 這個獨一無二的暫存夾；不放 ~/code（那是使用者自己的空間）。tmux 只用 `tmux -S <暫存夾內的 socket>`。
 4. 收行程只准兩種：(a) `aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`，下之前 echo 那個路徑、確認在自己的暫存夾下；(b) kill 起的時候自己記下的 pid，kill 前 `readlink /proc/<pid>/cwd` 確認在自己的暫存夾裡。禁止 pkill、killall、`kill $(pgrep …)` 與任何按名字或命令列字串收行程的寫法。
 5. 改 py/、cpp/ 要 install.py 之後才生效：活樹只跑 proto8/bin、proto8/lib（install.py 從 py/、cpp/ 產的），在 repo 改程式存檔不會動到它。在 repo 裡跑 `python3 proto8/install.py` 會先清再重填 bin/ lib/ include/＝當場換掉活樹的 daemon、指令、工具與共用模組，要跑先回報調度者、等放行（舊的 `build.sh` 在 repo 外編、11-17 封存在 `proto8/archive/tree-swap/`）。只想試編、試裝，就把整份 repo 抄到自己暫存夾（第 3 條）、在那份裡跑 `install.py`（使用者 11-15 經全景頁答「可以」放寬本條）。proto8/knowledge、proto8/frontend 不經 install.py，存檔當下活樹就在用：改既有檔先寫暫存檔再改名；新東西先放新檔、測到綠，接到既有路徑的那一步放在最後一個 commit。
 6. 測試：全套測試在 `git archive <commit>` 抄到自己暫存夾（第 3 條）裡的乾淨複本上跑（乾淨複本不帶 bin/ lib/ include/：先在複本的 proto8 跑一次 install.py，再 `export AOS_HOME=<複本的 proto8>` 後 source 它的 env.sh）；定向測試也先照第 2 條清環境。
-7. git：家機 11-14 起改用 `~/repo/aos/wf/tools/commit-request`（開工 `claim`，交件 `submit --line <線名> --files 檔… --msg-file 訊息檔`；共用索引檔走 `--op`，不手改、不自己跑 index_gen；用法見 [07](07-預設流程與agent-fsm.md)）；沒有 commit-request 的機器才用 `git commit -F <訊息檔> -- <逐一點名的檔>`。一律不 `git add -A`、不 `git add .`；commit 前 `git diff -- <那些檔>` 確認裡面只有自己寫的字。只動領地清單上的檔：<領地>。
+7. git：家機 11-14 起改用 `~/repo/aos/wf/tools/commit-request`（開工 `claim`，交件 `submit --line <線名> --files 檔… --msg-file 訊息檔`；共用索引檔走 `--op`，不手改、不自己跑 index_gen；用法見 [07](07-預設流程與agent-fsm.md)）；沒有 commit-request 的機器才用 `git commit -F <訊息檔> -- <逐一點名的檔>`。一律不 `git add -A`、不 `git add .`；不在共用工作樹跑 `git stash`、`git reset --hard`、`git checkout -- .`、`git clean -fdx`（會蓋掉別線還沒交的字；_stack 被根 .gitignore 忽略，`git clean -fdx` 會連活樹一起刪）；commit 前 `git diff -- <那些檔>` 確認裡面只有自己寫的字。只動領地清單上的檔：<領地>。
 8. 叫真模型測試時只給它真的小工作；不編理由、不繞它講明的限制。
-9. 開工前與收尾各跑一次、把指令與輸出貼進回報：`pgrep -u "$USER" -af aos-daemon`（活樹的 daemon 一台不少、你起的一台不剩）、`ls -la <活樹裡頂層那一格 stack>`（跟開工前的清單一樣）。對不上立刻停手回報，不自己重起、不自己清。
+9. 開工前與收尾各跑一次、把指令與輸出貼進回報：`pgrep -u "$USER" -af aos-daemon`（活樹的 daemon 一台不少、你起的一台不剩；家機 11-22 起是五台：cwd 在 ~/repo/aos/wf/tree/root 的根、cwd 在 ~/repo/aos/_stack/procs/ 底下的三個 subagent、cwd 在 ~/aos-home/llm 的 llm kernel）、`ls -la <活樹裡頂層那一格 stack>`（家機是 ~/repo/aos/_stack/procs/eca-aos；跟開工前的清單一樣）。對不上立刻停手回報，不自己重起、不自己清。
 ```
 
 暫存夾放哪（使用者 11-15 裁「4.a」）：以後的暫存樹、乾淨複本、C++ build 夾一律放 `~/.aos/scratch/<線名-日期>/`，不再放 `~/code/<線名-日期>/`。`~/code` 是使用者自己的空間；11-15 已清掉 53 個 aos 的舊暫存夾（留 `view-1114` 等）。舊文件裡寫的 `~/code/<x>-1114` 路徑多半已不存在。`~/.aos/scratch` 用完怎麼收，使用者之後自己定，目前沒有規則。

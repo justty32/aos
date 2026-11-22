@@ -1,6 +1,6 @@
 agent-fsm 每輪問腦的輸入成本重量（HEAD 139d8dd2b）：aos 送出的前綴每輪逐字穩定、沒有可在 aos 這側不改行為就修的快取問題；現在沒中快取的 token 八成來自上游偶發整段沒中（約 18% 的後續輪），其次是 LiteLLM 每輪自動加的約 1,620 token codex 指示，要再省都得使用者定。
 
-← [2026-11-22](../README.md)｜進度 `prompt-cost-cache`｜前情：[session-key 實測 1121](../../21/session-key-實測-1121.md)、[工具說明瘦身 1121](../../21/tool-desc-瘦身-1121/README.md)｜線 `prompt-cost-1122`｜逐輪數字 [01-逐輪數字.json](01-逐輪數字.json)
+← [2026-11-22](../README.md)｜進度 `prompt-cost-cache`｜前情：[session-key 實測 1121](../../21/session-key-實測-1121.md)、[工具說明瘦身 1121](../../21/tool-desc-瘦身-1121/README.md)｜線 `prompt-cost-1122`｜逐輪數字 [01-逐輪數字.json](01-逐輪數字.json)｜選項 A 實驗 [02-選項A實驗](02-選項A實驗.md)
 
 ## 一頁結論
 
@@ -79,6 +79,8 @@ agent-fsm 每輪問腦的輸入成本重量（HEAD 139d8dd2b）：aos 送出的�
 | E. 都不做 | 0 | 現況：每輪約 6,200 token，八成多的輪只付 100～200 token |
 
 推薦先做 A 的「試」那一步（在暫存的 LiteLLM 上改白名單量 20 輪，看整段沒中有沒有消失），量到有效再決定要不要真的改代理；B、C 是方向題，照你的偏好。
+
+**A 已試過（11-22，線 prompt-cache-key-1122，使用者答「做A」）：無效。** 上游本來就拿 `session_id` 表頭當快取鍵，body 送的鍵會被蓋掉；改前改後各 20 輪的沒中 token 一樣。見 [02-選項A實驗](02-選項A實驗.md)。
 
 ## 看到的事（照實列，沒修）
 

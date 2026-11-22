@@ -28,7 +28,7 @@
 - **是什麼**：在 aos 體系裡開一隻 agent-fsm 身的 agent（aos 自己的四格迴圈 idle、think、wait、act），腦是寄信給 llm kernel。不叫 codex CLI，也不用 eca 身。
 - **腦**：家機本地的 LiteLLM proxy `http://127.0.0.1:4000`（OpenAI 相容）。配給包 `kits/gather/` 裡的兩個檔決定走哪裡：
   - `llm.json` 內容是 `{"model": "sol-high"}`。`model` 填的是 **endpoint pack 名**，pack 由 llm kernel 擁有（知識庫 `aos/brain.md`）。
-  - `.env` 內容是 `AOS_LLM_KERNEL=${HOME}/aos-home/ws/.stack/procs/llm-gpt`，把信指到 llm-gpt 這個 kernel。
+  - `.env` 內容是 `AOS_LLM_KERNEL=${HOME}/aos-home/ws/.stack/procs/llm-gpt`，把信指到公司那台舊樹的 llm-gpt 這個 kernel。家機 11-22 起 llm kernel 自己一台、stack 是 `~/aos-home/.llm-stack`（[換機說明書](../../dev-env/03-換機.md)），包裡這行還沒跟著改，在家機用要先改成它。
 - **蒐集和施工不用 terra**，只用 sol；terra 只用在使用者點名的地方（例如全景頁的小幫手）。
 - **怎麼掛、怎麼驗收**：步驟在 [kits/card](../kits/card.md)，包的內容與已知限制在 [kits](../kits/README.md)，帶 sol 的心得在 [sol-crew](../../../public/sol-crew.md)。蒐集員、審稿員用「看」包，不抄別線的 system.txt（使用者 11-14「都按照推薦」，[onboard-1114](../../../../proto8/thinking/2026-11/14/onboard-1114.md)）。
 - **自己掛 kernel 或 agent 不用先問**（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）：掛在暫存樹（`~/.aos/scratch/<線名-日期>/`，使用者 11-15 裁「4.a」）的 aos 裡，自己記 pid、收尾收乾淨，活樹照舊不動。
@@ -81,6 +81,12 @@
 使用者 11-14：「善用aos體系，掛opus eca，讓他們成爲kernel，然後讓他們自己底下掛各種」「你自己也成爲kernel好了」「讓他們都掛在你底下」「他們的工作區...你可以在wf弄temp/xxx分給他們」。
 
 - 頂層 `repo-aos` 開 `kernel_gate`，各線是掛在它底下的 eca，啟動請求經過頂層的 gate。
-- 定義在 `~/aos-home/agents/`：`opus-kernel`、`fable-kernel`，小廝是 `xiaosi`。
-- 工作區是 `wf/temp/<名字>`（已 gitignore）。
+- 定義在 `~/aos-home/agents/`（公司那台舊樹）：`opus-kernel`、`fable-kernel`，小廝是 `xiaosi`。
+- 工作區是 `wf/temp/<名字>`（已 gitignore；11-22 起改了，見下一條）。
 - 這些 eca 自己也可以開 gate，在底下掛 sol 的 agent-fsm。
+
+**11-22 新定（家機搬進 `_stack` 之後）**：使用者 11-22「然後工作區仍然就是~/repo/aos」「現在就是讓他們有自己的私有地盤這樣」（[01-決定與調查](../../../../proto8/thinking/2026-11/22/工作區與stack-1122/01-決定與調查.md)）。
+
+- 家機的樹是 `~/repo/aos/_stack`（根定義 `wf/tree/root/`），頂層是住在裡面的 eca-aos，底下掛三個 subagent；上面四條是公司那台舊樹的做法，那台線 8 起 `_stack` 之後再對齊。
+- 線與隊員的工作區一律是 repo 根 `~/repo/aos`；草稿、任務書、自己做的定義夾放私有地盤 `wf/ws/<上層>/<名>/`（照掛的層級嵌套），不進 git 的放地盤裡的 `temp/`（[wf/ws](../../../ws/README.md)）。
+- 新做的定義放 `wf/tree/` 或地盤裡，不放 `~/aos-home`（家機那裡只剩 llm kernel）。

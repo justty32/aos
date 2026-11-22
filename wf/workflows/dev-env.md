@@ -16,7 +16,7 @@
 
 1. **相依**：在 proto8 跑 `python3 install.py --check`（Python ≥ 3.11、只用標準庫）：必需 g++ ≥ 10、gcc、make、ar，缺了退 1；選配工具（git、tmux、bwrap、s6…）只列表、不擋。11-17 起不用 CMake、vcpkg（nlohmann json 是收進 repo 的單檔 `proto8/cpp/third_party/nlohmann/json.hpp`）。Python 選用模組清單在 `proto8/py/requirements-optional.txt`（現在只有 jsonschema；install.py 只檢查、不 pip）。
 2. 在 proto8 跑 `python3 install.py` 建一次（見 [testing「proto8」](testing.md#proto8)）：填 `proto8/bin/`（9 支 C++ 執行檔＋19 支 Python 指令入口）、`proto8/lib/`（`py/` 的抄本＋C++ 函式庫）與 `proto8/include/`，都不進 git。**執行期只認這三夾**：改了 `py/` 或 `cpp/` 要重跑 `install.py` 才生效（11-18 S3 起；不再「存檔即生效」）。
-3. 一台設一次 `export AOS_HOME=<這份 proto8 的絕對路徑>`（寫進 `~/.bashrc`；`install.py` 最後一行會印），之後每個視窗先 `source $AOS_HOME/env.sh`（或在樹裡 `source env.sh`，那份轉去家裡這份）把指令放進 PATH（見下表）。
+3. 一台設一次 `export AOS_HOME=<這份 proto8 的絕對路徑>`（寫進 `~/.bashrc`；`install.py` 最後一行會印），之後每個視窗先 `source $AOS_HOME/env.sh`（或在樹裡 `source env.sh`，那份轉去家裡這份）把指令放進 PATH（見下表）。殼設定檔的完整寫法（`AOS_DAEMON`、`AOS_LLM_KERNEL` 要寫在 `source env.sh` 後面）、起 llm kernel 與 `_stack` 的根、換台的順序，照[換機說明書](dev-env/03-換機.md)，這裡不重寫。
 4. 內容 json 的 diff：跑一次 `python3 wf/tools/json_text.py --setup`（Windows 可能叫 `python`；重跑無妨，`--setup --check` 只看；`--help`／`--setup` 由同夾的 `json_text_cli.py` 做，抄到別的 repo 要兩支一起抄）——在這個 clone 的 `.git/config` 設 `diff.json_text.textconv`，`git diff`／`show`／`log -p` 碰到 `.gitattributes` 點名的知識庫與 `_index.json`／`_description.json` 就展開成逐行文字再比；沒設照原檔比。`--stat`／`--numstat`／`--shortstat` 不吃這個設定，數的是原檔的行（要看展開後改了幾行就數 `git diff` 本身的 +／- 行）。`git blame` 預設也吃這個設定（要原檔行號加 `--no-textconv`）；要做成 patch 給 `git apply` 用時加 `--no-textconv` 或用 `format-patch`。
 
 ## 指令表
@@ -42,13 +42,14 @@
 
 ## 跨機、外部工具、模型端點
 
-**Windows 機**：使用者在 Windows 機（`C:\code\mine\simple_tools\aos`）工作時，這台有 WSL Ubuntu，實跑（build、proto8 的程式與試驗場）都在 WSL 那邊做（使用者 10-28：「這台有wsl ubuntu，可能之後都要在那邊做處理」）。WSL 裡的 clone 是 `~/repo/aos`（11-13 起唯一一份；`AOS_HOME` 指它的 `proto8`，樹住 `~/aos-home`）。**不要在 `/mnt/c` 底下跑**：那裡每個檔都帶 `+x`，aos-exec 會把 JSON 當可執行檔（N-61）。從 Windows 端經 `\\wsl.localhost\Ubuntu\…` 改檔會把 `+x` 弄掉，改完要在 WSL `chmod +x`。
+**Windows 機**：使用者在 Windows 機（`C:\code\mine\simple_tools\aos`）工作時，這台有 WSL Ubuntu，實跑（build、proto8 的程式與試驗場）都在 WSL 那邊做（使用者 10-28：「這台有wsl ubuntu，可能之後都要在那邊做處理」）。WSL 裡的 clone 是 `~/repo/aos`（11-13 起唯一一份；`AOS_HOME` 指它的 `proto8`；起 `_stack` 之前樹照舊住 `~/aos-home`，家機 11-22 起樹是 `~/repo/aos/_stack`，見[換機說明書](dev-env/03-換機.md)）。**不要在 `/mnt/c` 底下跑**：那裡每個檔都帶 `+x`，aos-exec 會把 JSON 當可執行檔（N-61）。從 Windows 端經 `\\wsl.localhost\Ubuntu\…` 改檔會把 `+x` 弄掉，改完要在 WSL `chmod +x`。
 
 <!-- wf-nav -->
 | 分檔 | 涵蓋段落 |
 |---|---|
 | [01-跨機與外部工具](dev-env/01-跨機與外部工具.md) | 跨機 / 離線差異；外部工具與 env var |
 | [02-模型端點](dev-env/02-模型端點.md) | 模型端點（2026-09-25 定，10-10 核對） |
+| [03-換機](dev-env/03-換機.md) | 換機說明書（11-22）：每台要有什麼、`.zshrc`／`.bashrc` 怎麼寫、起 llm kernel 與 `_stack` 的根、換台時離站與到站的順序、常見錯誤 |
 
 ## 交接
 

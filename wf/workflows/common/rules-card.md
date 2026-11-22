@@ -36,13 +36,13 @@
 
 ## 活樹旁九條硬規則（[06](../dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#任務書必貼的硬規則)，全文照貼進任務書；純改文件的線貼第 1、7 條）
 
-1. 活樹不碰（`~/aos-home` 不寫、不下指令、不寄信進去）。
+1. 活樹不碰（`_stack`、`wf/tree/`、`~/aos-home`、`~/aos-home.old-1122/` 不寫、不下令、不寄信）。
 2. 先清環境：aos 指令與測試一律經 bash 腳本 unset 所有 `AOS_*`。
 3. 暫存樹起在 `~/.aos/scratch/<線名-日期>/`。
 4. 收行程只准兩種（shutdown 自己的 stack、kill 自己記的 pid）；禁 `pkill`、`killall`。
 5. 改 `py/`、`cpp/` 要 `install.py` 之後才生效（活樹只跑 `bin/`、`lib/`；在 repo 裡跑 `install.py`＝換掉活樹那份，先回報；`knowledge/`、`frontend/` 存檔即生效）。
 6. 測試在 `git archive` 抄出的乾淨複本上跑。
-7. git：走 `commit-request`；不 `git add -A`／`.`；只動領地清單上的檔。
+7. git：走 `commit-request`；不 `git add -A`／`.`／`stash`／`reset --hard`／`checkout -- .`／`clean -fdx`；只動領地清單上的檔。
 8. 叫真模型只給真的小工作；不編理由、不繞限制。
 9. 開工前與收尾各跑一次 `pgrep`／`ls` 核對，對不上停手回報。
 
@@ -65,7 +65,7 @@
 
 ## 要更多去哪查
 
-- 碰程式 → [conventions](conventions.md)（及 [01-程式碼慣例](conventions/01-程式碼慣例.md)）。
+- 碰程式 → [conventions](conventions.md)。
 - 當線隊長、要派隊員 → [aos-teams](../dispatch/aos-teams.md)（細節 [07](../dispatch/aos-teams/07-預設流程與agent-fsm.md)）。
 - 坑與做法 → [wf/public](../../public/README.md)（先看 [recipes](../../public/recipes.md)）。
 - 鐵律與使用者偏好的原文 → [AGENTS.md](../../../AGENTS.md)、[user.md](user.md) 與 `user/01～03`。
