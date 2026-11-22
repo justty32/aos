@@ -31,12 +31,10 @@
 - **kits 重組**：`34aba891b`，`wf/workflows/dispatch/kits/` 的 site.txt、gather/.env、gather/system.txt 改成新位置。
 - **index_view.md 前後矛盾已修**：`677e79b50`，[`proto8/knowledge/aos/tools/index_view.md`](../proto8/knowledge/aos/tools/index_view.md) 照程式改成 index 項目可以是純字串，舊的「必須是物件」說法已拿掉；中文版沒跟，等使用者定同步做法（見等使用者第 1 題）。
 - **knowledge-zh-md 跟上英文正本**：`f16babeb4`，158 頁＋14 份 README 跟上 HEAD（使用者原話「可以的話我是希望knowledge zh md能夠跟上最新的」）。使用者也同意 `e3baf7f72` 對 zh-md 的改動留著；早上那句「不要動 zh-md」已不適用。
+- **kits 對齊**：`d9c9e2d79`，`system.txt` 上限放寬到 3,500；產品版 `general.A.txt` 改成跟 wf 版一字不差；兩個產品包重拼；test_kits 8 過。
+- **zh-md 規矩與譯法**：`eb97fd28f`，收工時查中文版過期頁，有就派 opus 補，規矩寫在 `wf/workflows/common/user/02-交接與收工.md`「收工」那節；index_view、kits 兩頁補上；stock template 統一譯成「內建範本」；progress 的 `kb-zh-md-redo` 結掉。
 
-**等使用者（新）**：
-1. zh-md 以後怎麼同步：a 同一筆 commit 跟改／b 每天收工由 eca-aos 查過期頁、派一條線補（推薦）／c 他要看時才補。現記在 progress `kb-zh-md-redo`。
-2. kits `system.txt` 3,180 字元，超過上限 3,000（改之前就超）；推薦上限放寬到 3,500。
-3. kits `general.A.txt` wf 版跟產品版 `proto8/templates/kits/` 對不上（卡住規則：一邊 10 分鐘、一邊真卡住才回）；推薦產品版跟上 wf 版。
-4. stock template 中文譯法統一：現有內建、現成、原廠、原裝四種。
+**等使用者（新）**：四題 11-22 都照推薦定了（使用者「都先按照推薦」），見上面兩筆。
 
 **在跑**：（無）
 
