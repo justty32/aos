@@ -29,7 +29,7 @@ HM_WORK=${HM_WORK:-$HM_HOME/.aos/scratch/home-move-1122}  # log、備份、狀�
 HM_TMUX_SOCK=${HM_TMUX_SOCK:-$HM_WORK/tmux.sock}
 HM_TMUX_SESSION=${HM_TMUX_SESSION:-home-move}
 HM_PATH_PREPEND=${HM_PATH_PREPEND:-}                      # 演練：放假 claude 的夾，排在 PATH 最前面
-HM_TIMEOUT=${HM_TIMEOUT:-120}                             # 每個等待的上限（秒）
+HM_TIMEOUT=${HM_TIMEOUT:-300}                             # 每個等待的上限（秒）；關畫面時 eca-aos 正在答話會一直等到這裡
 HM_SUBAGENTS=${HM_SUBAGENTS:-add}                         # add＝reattach 從外面把三個 subagent 掛回；hint＝只印提示，留給 eca-aos 自己 rm/add
 HM_FAIL_AT=${HM_FAIL_AT:-}                                # 演練用：all 跑完這一步後故意失敗（驗 rollback）
 HM_SYS_TO=${HM_SYS_TO:-'~/repo/aos'}                      # system.txt 裡的 $HM_REPO 改寫成這串（提示詞文字）
@@ -164,6 +164,106 @@ elif op == "screen-sock":           # CELL → the screen's tmux socket (same ru
             print(cand); break
     else:
         print(os.path.join(base, h))
+elif op == "procscan":              # OLDSTACKS DIRS TABLE… (OLDSTACKS, DIRS: ':'-separated) → "own\tPID" / "stray\tPID\tWHY\tCWD\tCMD" lines
+    # 舊樹的行程（own）＝表上的 pid、AOS_STACK 指進舊 stack 的、根 daemon 的父行程 aos-exec，再加它們的子孫。
+    # 其他 cwd 在 DIRS 底下或 AOS_DAEMON 指著舊 stack 的（使用者的終端機分頁、aos-frontend serve、aos-agent open）＝stray：不等、只列。
+    # environ 只取 AOS_STACK、AOS_DAEMON 兩個鍵，其餘不留、不印。
+    olds = [os.path.normpath(x) for x in args[0].split(":") if x]
+    dirs = [os.path.normpath(x) for x in args[1].split(":") if x]
+    def under(p, bases):
+        if not p:
+            return False
+        p = os.path.normpath(p)
+        return any(p == b or p.startswith(b + "/") for b in bases)
+    uid, me, procs = os.getuid(), {os.getpid(), os.getppid()}, {}
+    for n in os.listdir("/proc"):
+        if not n.isdigit():
+            continue
+        d = "/proc/" + n
+        try:
+            if os.stat(d).st_uid != uid:
+                continue
+            with open(d + "/stat", "rb") as f:
+                st = f.read().decode("utf-8", "replace")
+            ppid = int(st.rsplit(")", 1)[1].split()[1])
+        except (OSError, ValueError, IndexError):
+            continue
+        env = {}
+        try:
+            with open(d + "/environ", "rb") as f:
+                for kv in f.read().split(b"\0"):
+                    for k in (b"AOS_STACK=", b"AOS_DAEMON="):
+                        if kv.startswith(k):
+                            env[k[:-1].decode()] = kv[len(k):].decode("utf-8", "replace")
+        except OSError:
+            pass
+        try:
+            cwd = os.readlink(d + "/cwd")
+        except OSError:
+            cwd = ""
+        try:
+            exe = os.path.basename(os.readlink(d + "/exe")).replace(" (deleted)", "")
+        except OSError:
+            exe = ""
+        procs[int(n)] = {"ppid": ppid, "env": env, "cwd": cwd, "exe": exe}
+    own, roots = set(), []
+    for t in args[2:]:
+        try:
+            tb = load(t)
+        except Exception:
+            continue
+        if isinstance(tb.get("pid"), int):
+            roots.append(tb["pid"])
+        for p in [tb.get("pid")] + [r.get("pid") for r in (tb.get("procs") or {}).values() if isinstance(r, dict)]:
+            if isinstance(p, int) and p in procs:
+                own.add(p)
+    for p, i in procs.items():
+        if under(i["env"].get("AOS_STACK"), olds):
+            own.add(p)
+    for r in roots:                 # 起根 daemon 的 aos-exec（cwd 在舊樹、自己沒有 AOS_STACK；根停了它就退）
+        pp = procs.get(r, {}).get("ppid")
+        if pp in procs and procs[pp]["exe"] == "aos-exec":
+            own.add(pp)
+    kids = {}
+    for p, i in procs.items():
+        kids.setdefault(i["ppid"], []).append(p)
+    todo = list(own)
+    while todo:
+        for c in kids.get(todo.pop(), []):
+            if c not in own:
+                own.add(c); todo.append(c)
+    for p in sorted(procs):
+        i = procs[p]
+        if p in own:
+            print("own\t%d" % p); continue
+        if p in me or "AOS_STACK" in i["env"] or i["exe"] in ("aos-exec", "aos-daemon", "aos-loop"):
+            continue                # 這支掃描自己；別棵樹的行程（新的 llm kernel 也住舊樹的 llm/）
+        why = [w for w, hit in (("cwd", under(i["cwd"], dirs)), ("AOS_DAEMON", under(i["env"].get("AOS_DAEMON"), olds))) if hit]
+        if not why:
+            continue
+        try:
+            with open("/proc/%d/cmdline" % p, "rb") as f:
+                argv = [a.decode("utf-8", "replace") for a in f.read().split(b"\0") if a]
+        except OSError:
+            argv = []
+        cmd = " ".join(os.path.basename(a) for a in argv[:3] if "=" not in a)[:60] or "?"   # 指令名：前三個字的檔名，帶 = 的不印
+        print("stray\t%d\t%s\t%s\t%s" % (p, "+".join(why), i["cwd"], cmd))
+elif op == "aos-at":                # DIR → pids with cwd DIR that are aos programs or carry AOS_STACK (a user's shell there is not one)
+    want = os.path.normpath(args[0])
+    for n in sorted(os.listdir("/proc"), key=lambda s: int(s) if s.isdigit() else 0):
+        if not n.isdigit():
+            continue
+        d = "/proc/" + n
+        try:
+            if os.stat(d).st_uid != os.getuid() or os.readlink(d + "/cwd") != want:
+                continue
+            exe = os.path.basename(os.readlink(d + "/exe")).replace(" (deleted)", "")
+            with open(d + "/environ", "rb") as f:
+                has_stack = any(kv.startswith(b"AOS_STACK=") for kv in f.read().split(b"\0"))
+        except OSError:
+            continue
+        if exe in ("aos-exec", "aos-daemon", "aos-loop") or has_stack:
+            print(n)
 elif op == "ledger-on-table":       # LEDGER DAEMON ; stdin = ls -j → "on N of M" and the missing names
     kids = load(args[0]); daemon = args[1]
     rows = json.load(sys.stdin)
@@ -177,25 +277,11 @@ else:
 PY
 py() { python3 -I -c "$PYH" "$@"; }
 
-# 這個使用者、cwd 在 PREFIX（或底下）的行程：「pid cwd」一行一支
-pids_under() {
-    local p c
-    for p in /proc/[0-9]*; do
-        [ -O "$p" ] || continue
-        c=$(readlink "$p/cwd" 2>/dev/null) || continue
-        case $c in "$1"|"$1"/*) echo "${p#/proc/} $c";; esac
-    done
-}
-pids_at() {   # cwd 正好是 DIR 的行程
-    local p c
-    for p in /proc/[0-9]*; do
-        [ -O "$p" ] || continue
-        c=$(readlink "$p/cwd" 2>/dev/null) || continue
-        [ "$c" = "$1" ] && echo "${p#/proc/} $c"
-    done
-}
 alive() { [ -d "/proc/$1" ]; }
 all_gone() { local p; for p in "$@"; do alive "$p" && return 1; done; return 0; }
+aos_at() { py aos-at "$1" | tr '\n' ' ' | sed 's/ $//'; }   # cwd 正好是 DIR 的 aos 程式（llm kernel 在不在；使用者在那裡開的殼不算）
+no_aos_at() { [ -z "$(aos_at "$1")" ]; }
+pdesc() { local p; for p in "$@"; do alive "$p" && printf '%s(%s, cwd %s) ' "$p" "$(cat "/proc/$p/comm" 2>/dev/null)" "$(readlink "/proc/$p/cwd" 2>/dev/null)"; done; }
 daemons_at() {   # cwd 正好是 DIR、執行檔是 aos-daemon 的行程（一台 daemon 一支）
     local p c
     for p in /proc/[0-9]*; do
@@ -215,16 +301,15 @@ locked() { [ -d "$1" ] || return 1; flock -n -E 75 "$1" true 9>&- ; [ $? -eq 75 
 daemon_up() { [ -d "$1" ] && aos aos-daemon-ctl -d "$1" ping --timeout-s 3 >/dev/null 2>&1; }
 table() { aos aos-daemon-ctl -d "$1" ls -j 2>/dev/null | py table; }
 row_phase() { table "$1" | awk -v n="$2" '$1==n {print $2}'; }
-wait_until() {   # SECONDS DESC CMD… ：每秒試一次
-    local t=$1 desc=$2 end=$((SECONDS + $1)); shift 2
+wait_every() {   # SECONDS STEP DESC CMD… ：每 STEP 秒試一次
+    local t=$1 step=$2 desc=$3 end=$((SECONDS + $1)); shift 3
     while :; do
         "$@" && return 0
         [ $SECONDS -ge $end ] && { say "timed out after ${t}s waiting for: $desc"; return 1; }
-        sleep 1
+        sleep "$step"
     done
 }
-no_pids_under() { [ -z "$(pids_under "$1")" ]; }
-no_pids_at() { [ -z "$(pids_at "$1")" ]; }
+wait_until() { local t=$1; shift; wait_every "$t" 1 "$@"; }   # SECONDS DESC CMD… ：每秒試一次
 listing() { LC_ALL=C ls -A "$1" 2>/dev/null | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//'; }
 want_listing() { printf '%s\n' "$@" | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//'; }
 all_running() {   # STACK NAME… ：每一列都 running
@@ -239,18 +324,36 @@ backup_mv() {   # SRC DEST：DEST 已在就停（不蓋）
 }
 ps_line() { echo "pgrep -u $USER -af aos-daemon (pid cwd):"; local p; for p in $(pgrep -u "$USER" aos-daemon); do echo "  $p $(readlink /proc/$p/cwd 2>/dev/null)"; done; }
 
-# 舊樹還活著的行程：cwd 在舊樹底下的，加上舊表上記的（eca 的 loop cwd 在範本夾，只能從表認）
-old_pids() {
-    { pids_under "$HM_OLD" | cut -d' ' -f1
-      for f in "$OLD_STACK/procs_state.json" "$HM_RETIRE/.stack/procs_state.json"; do [ -f "$f" ] && py pids "$f"; done
-    } | sort -un | while read -r p; do alive "$p" && echo "$p"; done
+# 舊樹還活著的行程（py procscan）：舊表上記的 pid、AOS_STACK 指進舊 stack（或退路夾裡那份）的、根 daemon 的父行程 aos-exec，加上它們的子孫。
+# 只是 cwd 在舊樹底下、沒有 AOS_STACK 的（使用者的終端機分頁、aos-frontend serve 只帶 AOS_DAEMON、aos-agent open 兩個都沒帶）不算：
+# 腳本不收也不等它們，只列成 warning（warn_strays）。11-22 13:53 真跑就是被這種分頁擋到 stop-old 逾時。
+procscan() {
+    local f tables=()
+    for f in "$OLD_STACK/procs_state.json" "$HM_RETIRE/.stack/procs_state.json"; do [ -f "$f" ] && tables+=("$f"); done
+    py procscan "$OLD_STACK:$HM_RETIRE/.stack" "$HM_OLD:$HM_RETIRE" "${tables[@]}"
+}
+old_pids() { procscan | awk -F'\t' '$1=="own" {print $2}'; }
+no_old_pids() { [ -z "$(old_pids)" ]; }
+warn_strays() {   # WHEN：列出留著的非舊樹行程，不擋；回 0
+    local when=$1 k p why cwd cmd n=0 moved=0 daemon=0
+    while IFS=$'\t' read -r k p why cwd cmd; do
+        n=$((n + 1))
+        case $cwd in "$OLD_STACK"|"$OLD_STACK"/*|"$HM_RETIRE"|"$HM_RETIRE"/*) moved=1;; esac
+        [[ $why == *AOS_DAEMON* ]] && daemon=1
+        warn "$when: left running, not part of the old tree (no AOS_STACK): pid $p, cwd $cwd, command: $cmd$([[ $why == *AOS_DAEMON* ]] && echo "; its AOS_DAEMON names $OLD_STACK")"
+    done < <(procscan | grep '^stray')
+    [ $n = 0 ] && return 0
+    warn "$when: these $n are the user's own terminal tabs or programs; home-move neither stops nor waits for them. After the move the user closes those tabs (or cd's out)."
+    [ $moved = 1 ] && warn "$when: a process whose cwd is under $OLD_STACK keeps working: retire-old renames the folder, so its cwd moves along to $HM_RETIRE/.stack/... (it then sits in the retired copy, not in $STACK)"
+    [ $daemon = 1 ] && warn "$when: a program with AOS_DAEMON=$OLD_STACK (aos-frontend serve, say) still talks to the old root, which is gone; restart it against the new root (AOS_DAEMON=$STACK)"
+    return 0
 }
 under_old_tree() {   # 這支腳本是不是舊樹行程的子孫（停舊根會連自己一起停）
     local olds p=$$ pp
     olds=" $(old_pids | tr '\n' ' ') "
     while [ "$p" -gt 1 ] 2>/dev/null; do
         case $olds in *" $p "*) return 0;; esac
-        pp=$(awk '{print $4}' "/proc/$p/stat" 2>/dev/null) || break
+        pp=$(sed 's/.*) //' "/proc/$p/stat" 2>/dev/null | cut -d' ' -f2) || break   # 指令名可能有空白（tmux: client），切掉括號再取
         p=$pp
     done
     return 1
@@ -327,7 +430,8 @@ step_check() {   # 只讀：前提都對才退 0
     under_old_tree && { fail "this shell is a descendant of the old tree; stopping the old root would stop this script too. Run from a terminal outside it"; bad=1; }
     # 現況（只看）
     daemon_up "$OLD_STACK" && say "info: the old root answers ping (stop-old will stop it)" || say "info: the old root does not answer ping"
-    say "info: processes of the old tree: $(old_pids | tr '\n' ' ')"
+    say "info: processes of the old tree (stop-old waits for these): $(old_pids | tr '\n' ' ')"
+    warn_strays check
     for n in "${SCREENS[@]}"; do
         f=$(py screen-sock "$OLD_STACK/procs/$n/claude")
         [ -S "$f" ] && tmux -S "$f" has-session -t cli 2>/dev/null 9>&- && say "info: $n's screen is open ($f); stop-old closes it"
@@ -339,30 +443,31 @@ step_check() {   # 只讀：前提都對才退 0
     return $bad
 }
 
-step_stop_old() {   # 關畫面、shutdown 舊根、等舊樹的行程全部不見
-    local n f olds left
+step_stop_old() {   # 關畫面、shutdown 舊根、等舊樹的行程全部不見（使用者的分頁不等，只列 warning）
+    local n f olds
     if ! daemon_up "$OLD_STACK"; then
-        [ -z "$(old_pids)" ] && { say "stop-old: the old root is already down and nothing of the old tree runs"; mark stop-old.done; return 0; }
-        fail "the old root does not answer ping but old-tree processes still run: $(old_pids | tr '\n' ' ')"; return 1
+        [ -z "$(old_pids)" ] && { say "stop-old: the old root is already down and nothing of the old tree runs"; warn_strays stop-old; mark stop-old.done; return 0; }
+        fail "the old root does not answer ping but old-tree processes still run: $(pdesc $(old_pids))"; return 1
     fi
     under_old_tree && { fail "this shell is a descendant of the old tree; run from a terminal outside it"; return 1; }
     mark stop-old.begun
     olds=$(old_pids | tr '\n' ' ')
-    say "stop-old: old-tree processes now: $olds"
+    say "stop-old: old-tree processes now (the old table, AOS_STACK under $OLD_STACK, their descendants): $olds"
     for n in "${SCREENS[@]}"; do
         f=$(py screen-sock "$OLD_STACK/procs/$n/claude")
         [ -S "$f" ] && tmux -S "$f" has-session -t cli 2>/dev/null 9>&- || continue
-        say "stop-old: closing $n's screen ($f)"
-        wait_until "$HM_TIMEOUT" "$n's screen to close" close_screen "$OLD_STACK" "$n" "$f" \
+        say "stop-old: closing $n's screen ($f); while it is answering, close is refused and retried every 5s for up to ${HM_TIMEOUT}s"
+        wait_every "$HM_TIMEOUT" 5 "$n's screen to close" close_screen "$OLD_STACK" "$n" "$f" \
             || { fail "could not close $n's screen (is it answering? try again when it is idle)"; return 1; }
     done
     say "stop-old: aos-daemon-ctl -d $OLD_STACK shutdown"
     aos aos-daemon-ctl -d "$OLD_STACK" shutdown --timeout-s "$HM_TIMEOUT" || warn "shutdown did not report success; waiting for the processes anyway"
-    wait_until "$HM_TIMEOUT" "old-tree processes to exit" all_gone $olds \
-        || { fail "still running: $(for p in $olds; do alive "$p" && echo -n "$p "; done)"; return 1; }
-    left=$(pids_under "$HM_OLD"); [ -z "$left" ] || { fail "processes with a cwd under $HM_OLD remain: $left"; return 1; }
-    no_pids_at "$HM_LLM_DEF" || { fail "the old llm kernel (cwd $HM_LLM_DEF) still runs"; return 1; }
+    # 重掃（不是只等開頭那份 pid）：關畫面、停根的途中新起的子行程也要等到
+    wait_until "$HM_TIMEOUT" "old-tree processes to exit" no_old_pids \
+        || { fail "still running: $(pdesc $(old_pids))"; return 1; }
+    no_aos_at "$HM_LLM_DEF" || { fail "the old llm kernel (cwd $HM_LLM_DEF) still runs: $(pdesc $(aos_at "$HM_LLM_DEF"))"; return 1; }
     locked "$OLD_STACK" && { fail "something still holds the lock of $OLD_STACK"; return 1; }
+    warn_strays stop-old
     ps_line
     mark stop-old.done; say "stop-old: done; nothing of the old tree runs"
 }
@@ -434,6 +539,9 @@ step_retire_old() {   # 舊樹 llm 以外的東西 mv 進 HM_RETIRE（清單寫�
     if [ -e "$HM_RETIRE" ]; then [ -d "$HM_RETIRE" ] && [ -z "$(ls -A "$HM_RETIRE")" ] || { fail "$HM_RETIRE exists and is not empty"; return 1; }; fi
     same_fs "$HM_OLD" "$(dirname "$HM_RETIRE")" || { fail "different filesystems: mv would copy"; return 1; }
     mark retire-old.begun
+    # mv 是改名：cwd 在被搬的項目裡的殼跟著到 HM_RETIRE，不會壞（整份清單 stop-old、verify 各列一次，這裡只說誰會跟著搬）
+    item=$(procscan | awk -F'\t' -v s="$OLD_STACK" '$1=="stray" && ($4==s || index($4, s "/")==1) {printf "%s ", $2}')
+    [ -z "$item" ] || warn "retire-old: user processes with a cwd under $OLD_STACK (pids ${item% }) keep running; their cwd moves along to $HM_RETIRE/.stack/..."
     mkdir -p "$HM_RETIRE" || { fail "cannot make $HM_RETIRE"; return 1; }
     for item in "${RETIRE_ITEMS[@]}"; do
         mv -n -T -- "$HM_OLD/$item" "$HM_RETIRE/$item" && [ -e "$HM_RETIRE/$item" ] && [ ! -e "$HM_OLD/$item" ] \
@@ -446,7 +554,7 @@ step_retire_old() {   # 舊樹 llm 以外的東西 mv 進 HM_RETIRE（清單寫�
 
 step_start_llm() {   # 從 HM_LLM_DEF 起獨立的 llm kernel（stack HM_LLM_STACK），tmux 視窗 llm
     if daemon_up "$HM_LLM_STACK"; then say "start-llm: already up"; mark start-llm.done; return 0; fi
-    no_pids_at "$HM_LLM_DEF" || { fail "something already runs with cwd $HM_LLM_DEF (the old llm kernel?): $(pids_at "$HM_LLM_DEF")"; return 1; }
+    no_aos_at "$HM_LLM_DEF" || { fail "an aos program already runs with cwd $HM_LLM_DEF (the old llm kernel?): $(pdesc $(aos_at "$HM_LLM_DEF"))"; return 1; }
     locked "$HM_LLM_STACK" && { fail "something holds $HM_LLM_STACK"; return 1; }
     [ -f "$HM_LLM_DEF/kernel.json" ] || { fail "no $HM_LLM_DEF/kernel.json"; return 1; }
     mark start-llm.begun
@@ -537,7 +645,9 @@ step_verify() {   # 核對；硬錯退 1，軟的只印 warning
     [ "$s" = "$want" ] && say "ok: ls -A $HM_OLD = $s" || { fail "ls -A $HM_OLD = '$s', want '$want'"; bad=1; }
     s=$(listing "$HM_RETIRE"); want=$(want_listing "${RETIRE_ITEMS[@]}")
     [ "$s" = "$want" ] && say "ok: ls -A $HM_RETIRE = $s" || { fail "ls -A $HM_RETIRE = '$s', want '$want'"; bad=1; }
-    [ -z "$(pids_under "$HM_RETIRE")" ] && say "ok: nothing runs from $HM_RETIRE" || { fail "running from $HM_RETIRE: $(pids_under "$HM_RETIRE")"; bad=1; }
+    s=$(old_pids | tr '\n' ' ')
+    [ -z "$s" ] && say "ok: nothing of the old tree runs (also not from $HM_RETIRE)" || { fail "old-tree processes run: $(pdesc $s)"; bad=1; }
+    warn_strays verify
     s=$(grep -rlF "$OLD_STACK" "$STACK" --exclude=history.jsonl --exclude=history_removed.jsonl --exclude-dir=transcripts --exclude=live.jsonl --exclude=turns.jsonl --exclude='*.log' 2>/dev/null | sed "s#^$STACK/##" | tr '\n' ' ')
     [ -z "$s" ] && say "ok: no file in $STACK (outside histories and transcripts) names $OLD_STACK" || warn "files in $STACK that still name $OLD_STACK (runtime files the agents rewrite, or letters): $s"
     [ "$(cat "$STATE/llm-key" 2>/dev/null)" = set ] || warn "the key real models need is not set (LITELLM_KEY was not in the shell that started the llm kernel); fake endpoints answer, sol and the like will fail"
@@ -578,7 +688,7 @@ step_probe() {   # 選用（不在 all 裡）：掛一隻 agent-fsm、腦設 fak
 step_start_old() {   # 起回舊根（rollback 用；cwd HM_OLD、aos-exec root），tmux 視窗 old-root
     if daemon_up "$OLD_STACK"; then say "start-old: the old root is already up"; return 0; fi
     [ -d "$OLD_STACK" ] && [ -d "$HM_OLD/root" ] || { fail "$OLD_STACK or $HM_OLD/root is missing (retired items not moved back?)"; return 1; }
-    no_pids_at "$HM_LLM_DEF" || { fail "something runs with cwd $HM_LLM_DEF (the new llm kernel?); stop it first"; return 1; }
+    no_aos_at "$HM_LLM_DEF" || { fail "an aos program runs with cwd $HM_LLM_DEF (the new llm kernel?): $(pdesc $(aos_at "$HM_LLM_DEF")); stop it first"; return 1; }
     make_runner "$HM_WORK/run-old-root.sh" "$HM_OLD" "$HM_WORK/old-root.log" keep "" aos-exec root || return 1
     open_window old-root "$HM_WORK/run-old-root.sh" || return 1
     wait_until "$HM_TIMEOUT" "the old root to answer ping" daemon_up "$OLD_STACK" || { tail -5 "$HM_WORK/old-root.log" 2>/dev/null; return 1; }
@@ -611,7 +721,7 @@ step_rollback() {   # 照現況退回：停新根 → 停新 llm（確認 cwd �
         aos aos-daemon-ctl -d "$HM_LLM_STACK" shutdown --timeout-s "$HM_TIMEOUT" || warn "shutdown of the new llm kernel did not report success"
     fi
     if marked start-llm.begun || [ -d "$HM_LLM_STACK" ]; then
-        wait_until "$HM_TIMEOUT" "nothing with cwd $HM_LLM_DEF" no_pids_at "$HM_LLM_DEF" || { fail "still running with cwd $HM_LLM_DEF: $(pids_at "$HM_LLM_DEF"); not starting the old root"; return 1; }
+        wait_until "$HM_TIMEOUT" "no aos program with cwd $HM_LLM_DEF" no_aos_at "$HM_LLM_DEF" || { fail "still running with cwd $HM_LLM_DEF: $(pdesc $(aos_at "$HM_LLM_DEF")); not starting the old root"; return 1; }
     fi
     # 搬回（清單寫死；兩邊都有就停）
     if [ -d "$HM_RETIRE" ]; then
