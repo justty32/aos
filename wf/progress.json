@@ -569,7 +569,7 @@
       "title": "eca agent 固定佔 context：剩兩題等使用者（--disable-slash-commands、c 丟掉的兩個使用者設定）",
       "status": "等使用者",
       "flow": "",
-      "what": "11-22 已做：三包拿掉（a7779de17）；--setting-sources project,local、skillOverrides 15 支、enabledPlugins 8 個、claude 工具拿掉 0.5 上限（線 eca-aos-templates-1122-trim2）；opus 一題輸入 17548→13226。剩：(1) d --disable-slash-commands 沒做：會讓 claude -p 的 /compact、/context 回 isn't available，aos 的 context_wrap 壓縮與 /usage 會壞；再省約 3.1k。(2) --setting-sources 之後使用者那層的 effortLevel high、opus autoCompactWindow 300000 不算了：自動壓縮點從 300k 變 1m（contextWindow 一直是 1M、context_wrap 35%＝350k）；要不要在 cli.json settings 補 modelSettings、llm.json 補 reasoning_effort。",
+      "what": "11-22 已做：三包拿掉（a7779de17）；--setting-sources project,local、skillOverrides 15 支、enabledPlugins 8 個、claude 工具拿掉 0.5 上限、畫面也不帶 claude-in-chrome 與 easel（--no-chrome、cc-plugin-easel@builtin 關；線 eca-aos-templates-1122-trim2）；opus 一題輸入 17548→13226。剩：(1) d --disable-slash-commands 沒做：會讓 claude -p 的 /compact、/context 回 isn't available，aos 的 context_wrap 壓縮與 /usage 會壞；再省約 3.1k。(2) --setting-sources 之後使用者那層的 effortLevel high、opus autoCompactWindow 300000 不算了：自動壓縮點從 300k 變 1m（contextWindow 一直是 1M、context_wrap 35%＝350k）；要不要在 cli.json settings 補 modelSettings、llm.json 補 reasoning_effort。",
       "next": "使用者決定 (1)(2)",
       "see": [
         "[eca-claude 說明](../proto8/templates/docs/01-eca-claude.md)"
