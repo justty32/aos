@@ -1,4 +1,4 @@
-Timers: clock letters to your queue (tool clock_register: every N cycles, once after N cycles, once at a wall-clock time, or cron), or a program on a clock that adds nothing to your conversation (an on_clock hook). Which to choose: `aos/clock.md#/Doing something on a timer: which way`.
+Timers: clock letters to your queue (tool clock_register: every N cycles, once after N cycles, once at a wall-clock time, or cron), or a program on a clock that adds nothing to your conversation (an on_clock hook). Which to choose: `aos/clock.md#/Doing something on a timer: which way`. No stock template has `clock_register` (agent-fsm or eca): add it first with `self_tools` `{"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/clock_register"}}`.
 
 # Wake me every N cycles
 

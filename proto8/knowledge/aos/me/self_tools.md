@@ -27,7 +27,7 @@ Rules and errors: `aos/me/self_tools.md#/self_tools: rules and errors`.
 
 - Relative paths (`path`, `env_file`, a path in `rm`/`get`) start at your workspace: `tools/math` means `$AOS_WS/tools/math`. Absolute paths are used as they are.
 - Adding a tool does not create it. The folder must already exist (`PathMissing` otherwise). Write the tool files in your workspace first, or ask a human.
-- `ToolDefMissing`: the folder has no `_tooldef.json`, so it is not a tool. `ToolDefBad`: its `_tooldef.json` is broken. Make or fix it with `tools_def` (`aos/tools_def.md#/tools_def`).
+- `ToolDefMissing`: the folder has no `_tooldef.json`, so it is not a tool. `ToolDefBad`: its `_tooldef.json` is broken. Make or fix it with `tools_def` (`aos/tools_def.md#/tools_def`); no stock template has `tools_def` (agent-fsm or eca): add it first with `self_tools` `{"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/tools_def"}}`.
 - A tool whose path is gone or whose definition broke is shown by `ls` as `NAME TAB broken: CODE (...)` (kind `broken` with `"long": true`). It is not offered for calls; your other tools work as usual. Fix it with `{"op": "rm", "name": "NAME"}` and add it again from where it is now; `get` shows the full error.
 - Moving a tool you added (for example `tools/x` to `new_tools/x`): `rm` it first, move the folder, then `add` the new path. The list keeps the old path until you do.
 - `ToolExists`: a tool with that name is already there. Use `"replace": true` only if you mean to replace it.
