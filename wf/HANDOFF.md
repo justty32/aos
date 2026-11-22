@@ -29,6 +29,7 @@
 - **aos-user 新家**：`cd2164274` 規劃（[aos-user新家-1122](../proto8/thinking/2026-11/22/aos-user新家-1122/)）；`e3baf7f72` 施工，四題都 a：程式在 `proto8/frontend/aos-user/`，`bin/aos-user` 是相對 symlink、source env.sh 就在 PATH；tick 沒裝、systemd 沒碰；progress 新開 `aos-user-home`。
 - **progress 整理**：`24589f675` 結 3 條、改寫 10 條，剩 29 條（之後 `aos-user-home`、`kb-zh-md-redo` 狀態又變）。`99011908a`、`7e0d8f43a` 出待答清單 `wf/user/待答-1122.md`（11-22 檔名）；第 55 行問「kb-zn不用管」的意思已有答案：指 eca-aos-kb 不用管中文版，跟後來「要中文版跟上」不衝突。
 - **kits 重組**：`34aba891b`，`wf/workflows/dispatch/kits/` 的 site.txt、gather/.env、gather/system.txt 改成新位置。
+- **index_view.md 前後矛盾已修**：`677e79b50`，[`proto8/knowledge/aos/tools/index_view.md`](../proto8/knowledge/aos/tools/index_view.md) 照程式改成 index 項目可以是純字串，舊的「必須是物件」說法已拿掉；中文版沒跟，等使用者定同步做法（見等使用者第 1 題）。
 - **knowledge-zh-md 跟上英文正本**：`f16babeb4`，158 頁＋14 份 README 跟上 HEAD（使用者原話「可以的話我是希望knowledge zh md能夠跟上最新的」）。使用者也同意 `e3baf7f72` 對 zh-md 的改動留著；早上那句「不要動 zh-md」已不適用。
 
 **等使用者（新）**：
@@ -37,7 +38,7 @@
 3. kits `general.A.txt` wf 版跟產品版 `proto8/templates/kits/` 對不上（卡住規則：一邊 10 分鐘、一邊真卡住才回）；推薦產品版跟上 wf 版。
 4. stock template 中文譯法統一：現有內建、現成、原廠、原裝四種。
 
-**在跑**：已寄信請 eca-aos-kb 修 [`proto8/knowledge/aos/tools/index_view.md`](../proto8/knowledge/aos/tools/index_view.md) 的前後矛盾（index 項目能不能是純字串）；回信後用 `git show --stat` 核對再轉述。
+**在跑**：（無）
 
 **使用者照推薦定的（11 題）**：kb 1c、2c＋2a、3c、4c；frontend 乙現在做丙以後接、孤兒平鋪 a、aide.json 先留 a；compact 提醒 A、只印路徑、A＋b、notes_path 由上層寫 a。沒按推薦做的：公司體制 7 題（`proto8/thinking/2026-11/22/公司體制-1122/03-要問的.md`，第 1 題是使用者的想法、沒推薦）、筆記調查 5 題（`筆記調查-1122/`，多半已被上面蓋過）。
 
