@@ -11,11 +11,12 @@
 `aos-agent tools add／rm` 只在 `interfaces.json` 的 `aos-agent.tools` **宣告的相對路徑**記這一隻自己加的、拿掉的（K-6）：定義讀 `<定義>/<tools 路徑>`，這隻自己那份寫 `<stack>/<同一 tools 路徑>`。例如宣告 `"tools": "cfg/my_tools.json"`，自己那份就是 `<stack>/cfg/my_tools.json`。`tools`／`llm` 宣告都只能是定義內的相對檔名；不可絕對、不可含 `..`、不可指資料夾。不複製定義，只存差異。**長得跟一般登記檔一樣**（[aos-tools-cli](../../../../../thinking/2026-11/10/aos-tools-cli/README.md) 步 4；使用者 N1「跟一般清單同形狀。想要rm的話，就是指定的key : null」（11-10 改口：「null就是null，我們不做rm功能」「寫成 null，讀的人當它不是工具」）、K1「現在就寫 $override」）：
 
 ```json
-{"$override": "../../defs/bob/tools.json",
+{"$override": "/home/me/defs/bob/tools.json",
  "tools": {"math": {"path": "../../../../agents/lib/math"}, "peek_now_time": null}}
 ```
 
-- `$override`：底檔（定義那份）。第一次 `tools add／rm` 由 aos-agent 寫（`aos-tools --file 自己那份 override …`），寫法照當初 `ctl add` 給定義的寫法（使用者 N2「跟你加 agent 時的寫法走」）：daemon 表 `as_written.def` 是 `$env` 指示詞＝原樣接上宣告的 tools 路徑（例 `{"$env": "DEFS", "$path": "/bob/tools.json"}`）；其餘（表上只有解好的絕對路徑，分不出原寫法）＝相對自己那份的資料夾。定義那份不存在時不寫 `$override`，`add` 直接建一般登記檔。
+- `$override`：底檔（定義那份）。第一次 `tools add／rm` 由 aos-agent 寫（`aos-tools --file 自己那份 override …`），寫法照當初 `ctl add` 給定義的寫法（使用者 N2「跟你加 agent 時的寫法走」）：daemon 表 `as_written.def` 是 `$env` 指示詞＝原樣接上宣告的 tools 路徑（例 `{"$env": "DEFS", "$path": "/bob/tools.json"}`）；其餘（表上只有解好的絕對路徑，分不出原寫法）不看 stack 在哪：定義在 `$AOS_HOME` 底下＝`{"$env": "AOS_HOME", "$path": "/templates/eca-claude/tools.json"}` 這種寫法，不在＝絕對路徑。定義那份不存在時不寫 `$override`，`add` 直接建一般登記檔。
+  - 為什麼不再存「相對自己那份的資料夾」（線 override-path-1122）：stack 一搬到別的深度（11-22 家機搬家，`~/aos-home/.stack/procs/eca-aos` → `~/repo/aos/_stack/procs/eca-aos`），相對的 `$override` 就指到不存在的地方，aos-tools 報 `PathMissing`、eca 的 aos-mcp 一起動就退出。`$AOS_HOME` 指示詞跟範本自己的工具路徑同一種寫法，換台、換深度都對；不在 `$AOS_HOME` 底下的定義存絕對路徑，因為它不靠任何環境變數（手打 `aos-tools --file <stack>/tools.json ls` 也解得開），只在定義本身搬走時才斷，那時表上那列也得 `ctl rm` 再 `add`；要兩台都對，`ctl add` 時用 `--path-json` 給 `$env` 指示詞（走上一種寫法）。
 - `tools`：加的（跟登記檔裡一項一樣：`path`，可加 `env`／`env_file`／`cache: false`）與不要的（`"名": null`——值是 null 的那格不算工具）。`path` 保留使用者的寫法（TC）——給絕對＝存絕對、給相對＝存相對自己那份所在資料夾（字串算、不 realpath）；要寫指示詞直接 `aos-tools --file <stack>/<tools 路徑> add --path-json …`。
 - 疊法是照順序疊，後面蓋前面（補丁式往下合，合併沒有刪除、`null` 只是值）：只寫 `{"env": {…}}` 的同名格會沿用定義那格的 `path`；`tools add --replace` 要整格換時，aos-tools 用 `null` 蓋過定義那格有、這次沒給的欄位（值是 null 的欄位＝當沒設）。`tools rm` 定義也有的名字＝寫 `"名": null`，只有自己那份記的＝刪那個 key。
 - 沒改過＝沒有這份檔＝就是定義那份。`tools reset`＝刪掉這份。
@@ -44,4 +45,4 @@
 - **它加的工具不見了＝只少那一支**（[tool-path-broken](../../../../../thinking/2026-11/12/tool-path-broken.md)）：`aos-tools ls` 略過路徑不在、定義缺或壞的那支（stderr 一行 warning），brain／act／aos-mcp 的清單少那一支、其他照常；`tools ls`（self_tools `ls`）把它標 `broken`，`tools rm 名` 拿掉、搬到哪就從哪 `add` 回來。
 - **自己那份壞掉＝整隻停下**（[edge-agent](../../../../../thinking/2026-11/05/edge-agent/README.md) 實測）：brain／act 每格 `aos-tools ls`，自己那份 JSON 壞、`$override` 指不到，aos-tools 報 `RegistryBad`／`PathMissing`、身體報 `ToolsBad` 退 1，那隻留在表上 `stopped`＋`reason`（11-05 使用者裁「留表標 stopped (Recommended)」）；修好後 `aos-agent tools reset`（或 `tools rm` 那個、手動改 `<stack>/<宣告的 tools 路徑>`）再 `aos-agent ctl start`，同一個 stack 從停的那格接著做；不要了 `aos-agent ctl rm`。登記檔本身壞照 aos-tools「不猜」整份報錯，不改成略過。
 - **跟定義同名的**：`tools add --name 名 路徑` 撞到定義裡已有的名字＝aos-tools `ToolExists`；要這隻改用自己的就 `tools add --replace --name 名 路徑`（使用者 11-10 N3「旗標改叫 --replace」；寫進自己那份，定義那格有、這次沒給的 key 寫成 `null`）。
-- 指到 image 外面的工具（例 repo 裡的 `py/tools/base/peek_now_time`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`，或改用 `--path-json` 的環境變數寫法。
+- 指到 image 外面的工具（例 repo 裡的 `py/tools/base/peek_now_time`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。`tools add` 給相對路徑（self_tools 的 `path` 從工作區算）存的是相對 stack 那份的資料夾（TC，[two-machines D25](../../../../../thinking/2026-11/10/two-machines/decided.json)），stack 單獨搬到別的深度時也一樣斷：那支標 `broken`、其他照常；搬家的人照新位置改寫，或 `tools rm` 再從新位置 `add`。`aos-agent hook add` 給相對路徑的 handler 也是同一種存法（相對 stack 裡那份 hookeds）。照 [portable-flow 03 原則 5](../../../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`，或改用 `--path-json` 的環境變數寫法。

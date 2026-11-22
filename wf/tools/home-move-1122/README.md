@@ -22,12 +22,12 @@
 | `check` | 只讀：六個 commit 在 HEAD、線 3 已 `install.py`、`ls -A ~/aos-home` 跟寫死的清單一字不差、新位置還空著、搬家的 `mv` 是同一顆碟上的改名、這個殼不是舊樹的子孫、誰在跑、哪幾隻的畫面開著 | 什麼都沒動 |
 | `stop-old` | 先關還開著的畫面（`aos-agent close`；正在答話會被拒，每 5 秒重試、最多 `HM_TIMEOUT` 秒），再 `aos-daemon-ctl -d ~/aos-home/.stack shutdown`，等舊樹的每一支行程都不見（含舊 llm）。「舊樹的行程」怎麼算見下面「使用者自己的分頁」；使用者的分頁不等，只在 log 列 warning | 退回＝起回舊根 |
 | `copy` | 四格 stack `cp -a` 進 `_stack/procs/`，比對檔案清單；抄本的 `claude/env.json` 搬進 `env-json-bak/`。表不抄 | 新的 `_stack` 搬去備份夾 |
-| `fix` | eca-aos 的 subagent 帳改成新寫法（`procs/<名>`）；三份 `exec.json` 搬進 `fix-bak/`，重掛時 daemon 會重寫；兩份 `system.txt` 的 `/home/…/repo/aos` 改成 `~/repo/aos`（原檔先備份） | 同上 |
+| `fix` | eca-aos 的 subagent 帳改成新寫法（`procs/<名>`）；三份 `exec.json` 搬進 `fix-bak/`，重掛時 daemon 會重寫；兩份 `system.txt` 的 `/home/…/repo/aos` 改成 `~/repo/aos`（原檔先備份）；四格的 `tools.json`、`hookeds.json` 裡走出 stack 的相對指標改寫（見下面「相對指標」） | 同上 |
 | `retire-old` | `~/aos-home` 裡 llm 以外的九項，照寫死的清單逐一 `mv` 進 `~/aos-home.old-1122/`；搬完只剩 `llm` | 逐項搬回 |
 | `start-llm` | 在 tmux 視窗 `llm` 起獨立的 llm kernel（`aos-exec --stack ~/aos-home/.llm-stack ~/aos-home/llm`），等它回 ping | 停掉，等 cwd 在 `llm/` 的行程不見 |
 | `start-root` | 在 tmux 視窗 `root` 起 `_stack` 的根（`cd ~/repo/aos && aos-exec --stack _stack wf/tree/root`，帶 `AOS_LLM_KERNEL`、不帶 `LITELLM_KEY`） | 停掉 |
 | `reattach` | 先掛三個 subagent，再掛 eca-aos，全部用相對路徑或指示詞。subagent 掛的參數跟 subagent 工具自己 `add` 時一樣，另明給 `--parent`、`--notify-box`。先掛子、後掛父，所以 eca-aos 醒來對帳時三隻都已在表上 | 同上 |
-| `verify` | 六列 `running`；表上沒有絕對路徑；三份新 `exec.json` 的 parent 與通知信箱是指示詞；帳對得上表（＝`subagent ls` 3/4）；llm kernel 只有一台；四份 `claude/env.json` 重記成新值；兩邊的 `ls -A`；舊樹的行程一支都不剩；留著的使用者分頁再列一次 warning | 退回 |
+| `verify` | 六列 `running`；表上沒有絕對路徑；三份新 `exec.json` 的 parent 與通知信箱是指示詞；帳對得上表（＝`subagent ls` 3/4）；llm kernel 只有一台；四份 `claude/env.json` 重記成新值；兩邊的 `ls -A`；舊樹的行程一支都不剩；留著的使用者分頁再列一次 warning；**每格自己的 `tools.json` 跑 `aos-tools --file <stack>/tools.json ls` 要退 0、沒有 warning**；**每格照 `claude/mcp.json` 的參數起一次 aos-mcp、送 `tools/list`、收掉，要列得出工具**（見下面「相對指標」） | 退回 |
 | `rollback` | 照現況退：先關新樹開著的畫面 → 停新根 → 停新 llm kernel（等 cwd 在 `llm/` 的不見）→ 逐項搬回 → 新的 `_stack`、`.llm-stack` 與這次的備份夾搬進 `rolled-back-<時刻>/` → 只有 `stop-old` 開始過才起回舊根 | — |
 | `all` | `check` 之後照上表順序跑到 `verify`；`check` 不過就停（沒動任何東西），之後任何一步失敗就跑 `rollback` 並停 | — |
 
@@ -41,9 +41,14 @@
 
 判斷「舊 llm kernel 還在不在」也只看 cwd 在 `llm/` 的 aos 程式（`aos-exec`、`aos-daemon`、`aos-loop`，或帶 `AOS_STACK` 的行程）。新的 llm kernel 的 stack `~/aos-home/.llm-stack` 也在 `~/aos-home` 底下，但它不在 `.stack` 底下，所以不算舊樹。
 
+**相對指標**（11-22 真跑之後補，線 override-path-1122）：stack 裡的 `tools.json`（`$override`、`tools.*.path`、`tools.*.env_file`）與 `hookeds.json`（`*.handler`）寫成相對路徑時，是從檔所在的資料夾算的。stack 從 `~/aos-home/.stack/procs/<名>` 搬到 `~/repo/aos/_stack/procs/<名>` 多了一層，`../../../../repo/aos/…` 就變成 `~/repo/repo/aos/…`：eca-aos 的 `$override` 指空，aos-mcp 一起動就 `PathMissing` 退出，aos 工具全部連不上（真跑當天就是這樣，eca-aos 手動改好）；handler 指空的那隻在 `after_start` 就停下。
+- `fix` 照舊位置解出每個相對指標指到哪：還在 stack 裡＝不動（跟著搬）；在 `$AOS_HOME`（`HM_AOS_HOME`）底下＝改成 `{"$env": "AOS_HOME", "$path": "/…"}`（`env_file` 只收字串，改成絕對路徑）；其餘＝絕對路徑。`#/指標` 照留。改之前原檔抄進 `fix-bak/<名>/`，log 一行列出每個改了什麼。重跑時已經沒有相對指標，什麼都不動。
+- `verify` 的兩項：`aos-tools … ls` 抓 `$override` 與每支工具；aos-mcp 那項用 `claude/mcp.json` 的參數（那份是上一次起 CLI 時寫的，搬過來還寫舊 stack：舊 stack 的路徑換成新位置再起，下次起 CLI 時也會照新位置重寫），沒有 `mcp.json` 的那格（CLI 沒起過）只印 warning。
+- 演練過：`HM_SKIP_REBASE=1`（只列、不改寫）時，eca-aos 的 `aos-tools ls` 報 `PathMissing …/repo/repo/aos/…`、aos-mcp 報 `ToolsBad`，`verify` 失敗並自動退回；hookeds 的相對 handler 讓那隻在 `reattach` 就停下（`EntryMissing`），同樣退回。拿掉 `HM_SKIP_REBASE` 重跑全部通過。
+
 **tmux**：daemon 都在 socket `~/.aos/scratch/home-move-1122/tmux.sock`、session `home-move` 裡跑（視窗 `llm`、`root`，退回時多一個 `old-root`）。看：`tmux -S ~/.aos/scratch/home-move-1122/tmux.sock attach -t home-move`。**不要對這個 socket 下 `kill-server`、不要關那幾個視窗**：daemon 在前台，視窗關了 daemon 就跟著停。要停用 `aos-daemon-ctl … shutdown`，視窗會自己收掉。每個視窗跑的是 `~/.aos/scratch/home-move-1122/run-*.sh`，裡面寫明 export 了哪幾個變數。
 
-**變數**（都有預設值，真跑不用給）：`HM_HOME`（$HOME）、`HM_REPO`、`HM_AOS_HOME`、`HM_OLD`、`HM_RETIRE`、`HM_LLM_DEF`、`HM_LLM_STACK`、`HM_WORK`、`HM_TMUX_SOCK`、`HM_TMUX_SESSION`、`HM_TIMEOUT`（每個等待的上限秒數，300）、`HM_SUBAGENTS`（`add`＝從外面掛回三個 subagent；`hint`＝只印提示，留給 eca-aos 自己 `subagent add`）。只給演練用的三個：`HM_PATH_PREPEND`（假 claude 的夾）、`HM_GIT_REPO`（查 commit 的 repo）、`HM_FAIL_AT`（跑完這一步就故意失敗）。
+**變數**（都有預設值，真跑不用給）：`HM_HOME`（$HOME）、`HM_REPO`、`HM_AOS_HOME`、`HM_OLD`、`HM_RETIRE`、`HM_LLM_DEF`、`HM_LLM_STACK`、`HM_WORK`、`HM_TMUX_SOCK`、`HM_TMUX_SESSION`、`HM_TIMEOUT`（每個等待的上限秒數，300）、`HM_SUBAGENTS`（`add`＝從外面掛回三個 subagent；`hint`＝只印提示，留給 eca-aos 自己 `subagent add`）。只給演練用的四個：`HM_PATH_PREPEND`（假 claude 的夾）、`HM_GIT_REPO`（查 commit 的 repo）、`HM_FAIL_AT`（跑完這一步就故意失敗）、`HM_SKIP_REBASE`（非空＝`fix` 只列相對指標、不改寫，驗 `verify` 抓得到）。
 
 ## 真跑：外面那個 Claude 照這個做
 
@@ -87,10 +92,12 @@ R=~/.aos/scratch/<線名-日期>; mkdir -p $R/home/repo/aos
 git -C ~/repo/aos archive HEAD | tar -x -C $R/home/repo/aos
 (cd $R/home/repo/aos/proto8 && <清掉 AOS_* 的 bash 腳本> python3 install.py)
 bash ~/repo/aos/wf/tools/home-move-1122/rehearse-prep $R          # 只讀地抄活樹進 $R/home/aos-home，換掉活樹路徑與開機碼、端點只留 fake*、放假 claude
+#   搬家之後 ~/aos-home 只剩 llm：前面加 RP_FROM=~/aos-home.old-1122（從退場的舊樹只讀地抄、不起它；llm 照舊從 ~/aos-home/llm）
 export HM_HOME=$R/home HM_PATH_PREPEND=$R/stub HM_GIT_REPO=~/repo/aos
 bash ~/repo/aos/wf/tools/home-move-1122/home-move start-old       # 起演練用的「舊樹」（eca 那幾列因為開機碼換過會是 stopped，要手動 ctl start）
 bash ~/repo/aos/wf/tools/home-move-1122/home-move all
 HM_FAIL_AT=start-root bash ~/repo/aos/wf/tools/home-move-1122/home-move all   # 先 rollback 回去才能再跑
+HM_SKIP_REBASE=1 bash ~/repo/aos/wf/tools/home-move-1122/home-move all      # 不改寫相對指標：verify（或 reattach）要失敗、自動退回
 ```
 
 假 claude 被叫到只會記一行（`$R/stub/claude-calls.log`），然後一直睡，所以 eca 不會真的開對話。收尾時 `aos-daemon-ctl -d <演練的 stack> shutdown`，tmux 視窗會自己收掉。

@@ -58,12 +58,13 @@ class ToolsOverride(unittest.TestCase):
         self.assertEqual(self.agent("ls").stdout, "clock\tGet the current time.\n")
         self.assertIn("FlagUnknown", self.agent("ls", "-b", ok=False).stderr)
 
-    def test_first_add_creates_override_relative(self):
+    def test_first_add_creates_override_absolute(self):
+        """線 override-path-1122：定義不在 $AOS_HOME 底下＝$override 存絕對路徑（不再相對 stack 那份，stack 搬到別的深度也對）。"""
         before = self.reg.read_bytes()
         r = self.agent("add", "extra")
         self.assertIn("created %s" % self.own, r.stderr)
         data = json.loads(self.own.read_text())
-        self.assertEqual(data["$override"], os.path.relpath(self.reg, self.stack))
+        self.assertEqual(data["$override"], str(self.reg))
         self.assertEqual(data["tools"], {"extra": {"path": os.path.relpath(self.tmp / "extra", self.stack)}})
         self.assertEqual(self.names(), ["clock", "extra"])
         self.assertEqual(self.reg.read_bytes(), before)
@@ -76,6 +77,33 @@ class ToolsOverride(unittest.TestCase):
         self.assertEqual(data["$override"], {"$env": "TC_DEFS", "$path": "/bob/tools.json"})
         self.assertEqual(data["tools"], {"clock": None})
         self.assertEqual(self.names(TC_DEFS=str(self.defn.parent)), [])
+
+    def test_pointer_under_aos_home_is_env_directive(self):
+        """線 override-path-1122：定義在 $AOS_HOME 底下（表上只有絕對路徑）＝$override 存 {"$env": "AOS_HOME", "$path": "/…"}。"""
+        self.agent("rm", "clock", AOS_HOME=str(self.tmp))
+        self.assertEqual(json.loads(self.own.read_text())["$override"], {"$env": "AOS_HOME", "$path": "/defs/bob/tools.json"})
+        self.assertEqual(self.names(AOS_HOME=str(self.tmp)), [])
+
+    def test_stack_moved_to_another_depth_still_lists(self):
+        """線 override-path-1122：stack 整夾搬到不同深度後，aos-tools --file <stack>/tools.json ls 照樣成功（兩種寫法都試）。"""
+        tools_bin = REPO / "proto8" / "bin" / "aos-tools"
+        for home in (None, str(self.tmp)):
+            with self.subTest(aos_home=home):
+                env = {"AOS_HOME": home} if home else {}
+                if self.own.exists():
+                    self.own.unlink()
+                self.agent("add", str(self.tmp / "extra"), **env)   # 給絕對＝存絕對：這裡只看 $override（相對的工具路徑見 docs/03「已知的邊」）
+                moved = self.tmp / "elsewhere" / "deeper" / "still" / "bob"
+                moved.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(self.stack, moved)
+                try:
+                    p = subprocess.run([str(tools_bin), "--file", str(moved / "tools.json"), "ls"], env=clean_env(**env),
+                                       capture_output=True, text=True, timeout=60, cwd=self.tmp)
+                    self.assertEqual(p.returncode, 0, p.stderr)
+                    self.assertNotIn("warning", p.stderr)
+                    self.assertEqual([l.split("\t")[0] for l in p.stdout.splitlines()], ["clock", "extra"])
+                finally:
+                    shutil.rmtree(self.tmp / "elsewhere")
 
     def test_rm_by_path_and_long_shows_null(self):
         """11-10 晚使用者「2.統一」「3.顯示」：rm 收路徑（同 aos-tools rm）；ls -l 列被設成 null 的格與它蓋掉的那支。"""
@@ -133,7 +161,7 @@ class ToolsOverride(unittest.TestCase):
         self.agent("rm", "clock")
         p = subprocess.run([str(BIN), "--daemon", str(self.d), "ctl", "state", "--target", "bob"],
                            env=clean_env(), capture_output=True, text=True, timeout=60)
-        self.assertIn("own: 1 listed, 1 set to null (+extra, null:clock) over %s" % json.dumps(os.path.relpath(self.reg, self.stack)),
+        self.assertIn("own: 1 listed, 1 set to null (+extra, null:clock) over %s" % json.dumps(str(self.reg)),
                       p.stdout + p.stderr)
 
 

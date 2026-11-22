@@ -120,13 +120,21 @@ def aos_tools(a, f, args):
 
 def pointer_for(a, orig, over, rel):
     """第一次建 stack 那份時寫的 $override（使用者 11-10 N2「跟你加 agent 時的寫法走」）：ctl add 給定義時是 $env 指示詞
-    （daemon 表的 as_written.def，只讀）＝原樣接上宣告的相對路徑；其餘（絕對字串在表上分不出原寫法）＝相對 stack 那份的資料夾。"""
+    （daemon 表的 as_written.def，只讀）＝原樣接上宣告的相對路徑；其餘（表上只有解好的絕對路徑，分不出原寫法）不看 stack 在哪：
+    在 $AOS_HOME 底下＝{"$env": "AOS_HOME", "$path": "/…"}，不在＝絕對路徑。以前存「相對 stack 那份的資料夾」，stack 搬到別的深度
+    就指空（線 override-path-1122：eca-aos 搬家後 aos-mcp 起不來）；絕對路徑不靠任何環境變數，只在定義本身搬走時才斷，那時表上那列也得重掛。"""
     aw = (a.row.get("as_written") or {}).get("def") if isinstance(a.row.get("as_written"), dict) else None
     if isinstance(aw, dict) and "$env" in aw and "$ref" not in aw and "$prefix" not in aw:
         p = dict(aw)
         p["$path"] = (aw.get("$path") or "").rstrip("/") + "/" + rel.lstrip("/")
         return p
-    return os.path.relpath(orig, os.path.dirname(os.path.abspath(over)))
+    full = os.path.normpath(os.path.abspath(orig))
+    home = os.environ.get("AOS_HOME")
+    if home:
+        real, root = os.path.realpath(full), os.path.realpath(home)
+        if real.startswith(root.rstrip("/") + "/"):
+            return {"$env": "AOS_HOME", "$path": "/" + os.path.relpath(real, root)}
+    return full
 
 
 def pack_dirs():

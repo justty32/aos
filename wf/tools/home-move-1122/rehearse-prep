@@ -2,6 +2,7 @@
 # rehearse-prep：替 home-move 的演練備一個假家目錄——只讀地抄活樹（cp -a／rsync，不抄 llm 的 .bak-*）、抄本裡的活樹路徑與開機碼換掉、端點只留 fake*、放一支不叫模型的假 claude。
 #
 #   rehearse-prep REHEARSAL_DIR      （REHEARSAL_DIR 要在 ~/.aos/scratch/ 底下、還沒有 home/aos-home）
+#   搬家之後 ~/aos-home 只剩 llm：RP_FROM=~/aos-home.old-1122 從退場的舊樹抄（只讀、不起它），llm 照舊從 RP_LLM（預設 ~/aos-home/llm）抄。
 # 做完印出演練要用的環境變數；起東西、跑 home-move 都由人另外下。先要有 REHEARSAL_DIR/home/repo/aos（git archive 抄出、在它的 proto8 跑過 install.py）。
 # 為什麼要換路徑：抄來的表與 exec.json 記著活樹的絕對路徑（subagent 的 as_written.stack、AOS_NOTIFY_BOX），不換的話演練的 daemon 會去起活樹的 stack、把信寄進活樹。
 # 為什麼要換開機碼：表與 state 窗記著活樹行程的 pid＋開機碼；daemon 本來就會用 /proc/<pid>/environ 認出別棵樹的行程（same_tree），換掉是第二道保險。
@@ -12,16 +13,18 @@ R=${1:?usage: rehearse-prep REHEARSAL_DIR}
 R=$(realpath -m -- "$R")
 case $R in "$HOME"/.aos/scratch/?*) ;; *) echo "rehearse-prep: error: $R is not under ~/.aos/scratch/" >&2; exit 2;; esac
 H=$R/home
-LIVE=$HOME/aos-home
+LIVE=$HOME/aos-home                       # 抄本裡的路徑照這個換（舊樹的檔寫的都是它）
+FROM=$(realpath -m -- "${RP_FROM:-$LIVE}")  # 從哪抄 llm 以外的項目
+LLM=$(realpath -m -- "${RP_LLM:-$LIVE/llm}")
 [ -x "$H/repo/aos/proto8/bin/aos-exec" ] || { echo "rehearse-prep: error: no installed copy at $H/repo/aos/proto8 (git archive + install.py first)" >&2; exit 2; }
 [ -e "$H/aos-home" ] && { echo "rehearse-prep: error: $H/aos-home already exists" >&2; exit 2; }
 mkdir -p "$H/aos-home" "$H/.aos/scratch" "$R/stub" || exit 1
 
 # 1. 只讀地抄（清單同 home-move 的 RETIRE_ITEMS＋llm；兩份 README .bak 不抄，放一行占位，讓頂層清單跟活樹一樣）
-for item in .stack agents env.sh perm README.md root root.log; do cp -a -- "$LIVE/$item" "$H/aos-home/$item" || exit 1; done
-rsync -a --exclude='*.bak-*' -- "$LIVE/llm/" "$H/aos-home/llm/" || exit 1
+for item in .stack agents env.sh perm README.md root root.log; do cp -a -- "$FROM/$item" "$H/aos-home/$item" || exit 1; done
+rsync -a --exclude='*.bak-*' -- "$LLM/" "$H/aos-home/llm/" || exit 1
 for item in README.md.bak-1121c README.md.bak-1121d; do echo "rehearsal placeholder: the live $item is not copied" > "$H/aos-home/$item"; done
-echo "rehearse-prep: copied $(du -sh "$H/aos-home" | cut -f1) of $LIVE into $H/aos-home"
+echo "rehearse-prep: copied $(du -sh "$H/aos-home" | cut -f1) of $FROM (llm: $LLM) into $H/aos-home"
 
 # 2. 抄本裡的活樹路徑、開機碼、舊畫面的收件 socket 換掉（只動抄本）
 python3 -I - "$H/aos-home" "$HOME" "$H" "$(cat /proc/sys/kernel/random/boot_id)" "$R/no-such-socket-dir/" <<'PY'
@@ -52,7 +55,7 @@ for d, _, names in os.walk(top):
 print("rehearse-prep: rewrote live paths / boot id in %d of %d files" % (changed, files))
 PY
 [ $? = 0 ] || exit 1
-left=$(grep -rlF -e "$LIVE/" -e "$HOME/repo/aos" "$H/aos-home" 2>/dev/null | head -5)
+left=$(grep -rlF -e "$LIVE" -e "$HOME/repo/aos" "$H/aos-home" 2>/dev/null | head -5)
 [ -z "$left" ] || { echo "rehearse-prep: error: files still naming the live tree: $left" >&2; exit 1; }
 
 # 3. 抄本的 llm kernel：端點只留 fake*、預設 fake
