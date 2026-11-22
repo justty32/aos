@@ -3,6 +3,7 @@
 # 輸出：使用者偏好全文（wf/workflows/common/user.md 入口＋user/ 底下所有分檔）＋最新一條 compact 交接（wf/HANDOFF.md 第一個「## 」段）＋提醒。
 # HANDOFF.md 沒有條目時，改印 wf/progress.json 的 open 條目（一條兩行：狀態｜標題：現況，下一行細節連結）。從任何 cwd 都能跑。
 # what／next 寫成 {"$ref": "progress/x.md"}（路徑從 wf/ 算）時，印那份 md 的第一行加全文路徑，不印全文。
+# subagent（AOS_PARENT_STACK 不是空的）不貼 HANDOFF／progress（那是上層的），改印一句指向自己的筆記（$AOS_STACK/notes_path）；user.md 照貼。
 root="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 user="$root/wf/workflows/common/user.md"
 handoff="$root/wf/HANDOFF.md"
@@ -66,7 +67,23 @@ echo
 
 entry=""
 [ -f "$handoff" ] && entry=$(first_section "$handoff")
-if [ -n "$entry" ]; then
+if [ -n "${AOS_PARENT_STACK:-}" ]; then
+    # subagent：HANDOFF 與 progress 是上層的，不貼；改指向自己的筆記（$AOS_STACK/notes_path 一行，相對路徑從 $AOS_WS 算）
+    notes=""
+    nf="${AOS_STACK:+$AOS_STACK/notes_path}"
+    [ -n "$nf" ] && [ -f "$nf" ] && notes=$(sed -n '1{s/^[[:space:]]*//;s/[[:space:]]*$//;p;}' "$nf")
+    case "$notes" in
+        ""|/*) ;;
+        *) notes="${AOS_WS:-$root}/$notes" ;;
+    esac
+    echo "===== wf/HANDOFF.md left out: you are a subagent ====="
+    echo "wf/HANDOFF.md (and wf/progress.json) is your parent's handoff, not yours (your parent's stack is $AOS_PARENT_STACK)."
+    if [ -n "$notes" ]; then
+        echo "Your own notes are $notes; read them now, before anything else."
+    else
+        echo "Your own notes are the file your system text names; read them now, before anything else."
+    fi
+elif [ -n "$entry" ]; then
     echo "===== 最新 compact 交接（wf/HANDOFF.md 第一條）====="
     printf '%s\n' "$entry"
 else
