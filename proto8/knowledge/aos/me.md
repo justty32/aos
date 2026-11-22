@@ -19,7 +19,7 @@ What you may change: only your own copies in your stack, and only through the `s
 - your hooks (programs run when something happens to you): tool `self_hook`, called like `{"op": "ls"}`; all calls and rules are in `aos/me/self_hook.md`.
 - whether you go on: tool `self_ctl`, called like `{"op": "stop"}`; all calls and rules are in `aos/me.md#/Stopping yourself: self_ctl`.
 
-An agent-fsm made from the stock template starts with `self_tools`, `self_state` and `do_task` of these; `self_llm`, `self_system`, `self_history` and `self_ctl` are off, and `self_hook` (pack events) is not in it, until you add one: `self_tools` `{"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_llm"}}` (`self_tools` `{"op": "ls", "long": true}` shows which are off). An eca made from the stock templates has `self_hook` but not `do_task`, and the same four self tools off.
+An agent-fsm made from the stock template starts with `self_tools`, `self_state` and `do_task` of these; `self_llm`, `self_system`, `self_history` and `self_ctl` are off, and `self_hook` (pack events) is not in it, until you add one: `self_tools` `{"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_llm"}}` (`self_tools` `{"op": "ls", "long": true}` shows which are off). An eca made from the stock templates has neither `self_hook` nor `do_task` (add `self_hook` the same way), and the same four self tools off.
 
 To look at yourself (name, phase, tools, history size, mailbox, subagents, resources), call `self_state` with `{}`; see `aos/me.md#/Looking at yourself: self_state`.
 

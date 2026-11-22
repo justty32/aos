@@ -45,7 +45,7 @@ A letter in your mailbox does not wake you by itself. Agents made from the stock
 
 Several letters = one message. No new letter = nothing at all: your history does not grow. It never shows a letter's text.
 
-Do not disturb, or another interval (only your own copy changes; your definition stays as it is; a stock agent-fsm adds the tool `self_hook` first, aos/me/self_hook.md):
+Do not disturb, or another interval (only your own copy changes; your definition stays as it is; an agent from the stock templates, agent-fsm or eca, adds the tool `self_hook` first, aos/me/self_hook.md):
 
 - off: `self_hook` `{"op": "rm", "name": "mail_notify"}`. Back on: add it again (next line), or `{"op": "reset"}` (undoes all your hook changes).
 - every 5 minutes instead of every minute: `self_hook` `{"op": "add", "name": "mail_notify", "event": "on_clock", "every_ms": 300000, "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/mail_notify"}, "timeout_ms": 10000, "replace": true}`

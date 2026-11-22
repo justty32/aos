@@ -1,6 +1,6 @@
 # Hooks: run a program of yours when something happens to you
 
-Tool `self_hook` is `aos-agent hook` aimed at you. A hook is a tool folder or an executable that runs when an event happens. It gets the event as one JSON object on stdin. Only your own hook list changes, from the next event. It comes in the events pack: an eca from the stock templates has it; a stock agent-fsm does not, add it first with `self_tools` `{"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_hook"}}`.
+Tool `self_hook` is `aos-agent hook` aimed at you. A hook is a tool folder or an executable that runs when an event happens. It gets the event as one JSON object on stdin. Only your own hook list changes, from the next event. It comes in the events pack, which no stock template has (agent-fsm or eca): add it first with `self_tools` `{"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_hook"}}`.
 
 One op per call:
 
