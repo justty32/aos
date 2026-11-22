@@ -560,7 +560,7 @@
      "_entry": "brain_failed 的 hook handler：把腦拒絕、claude eca／fsm 連續重試與停下的原因寄到 AOS_NOTIFY_BOX。"
     },
     "claude": {
-     "cli.json": "設定（鍵：kind、flags、print_flags、timeout_ms）"
+     "cli.json": "設定（鍵：kind、flags、timeout_ms）"
     },
     "claude/": "透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK）",
     "clock_register": {
