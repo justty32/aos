@@ -12,7 +12,7 @@
     "subagent.md": "Your own subagents: subagent"
    },
    "agents.md": "Other agents: which tool",
-   "body.md": "Two kinds of body",
+   "body.md": "Your body is the program that runs your turns: agent-fsm or eca. What differs in brain, tools, hooks, screen, system text and history, and how to tel…",
    "brain.md": "Asking the brain",
    "cli": {
     "_description.md": "Commands for humans and external agents",
@@ -57,6 +57,7 @@
    },
    "clock.md": "Timers: clock letters to your queue (tool clock_register: every N cycles, once after N cycles, once at a wall-clock time, or cron), or a program on a…",
    "definition.md": "What is in a definition folder",
+   "eca_reading.md": "You are an eca (Claude Code, Codex CLI or pi runs your turns): which pages and sections of this knowledge base are for you, and which you can skip.",
    "errors": {
     "_description.md": "Long sections of aos/errors.md, kept here so that file stays small. Read them through aos/errors.md: aos/errors/common.md.",
     "common.md": "Common error codes"
@@ -121,6 +122,7 @@
     "write.md": "Tool write"
    },
    "tools_def.md": "Making a new tool: tools_def",
+   "troubleshooting.md": "Common failures: one item per symptom, its cause, and how to check. Only failures that were checked against the code or the page that explains them.",
    "user_zone.md": "The user zone: how to ask the user",
    "world.md": "How the pieces fit"
   },

@@ -67,5 +67,11 @@
  },
  "kits.md": {
   "description": "Kits: ready-made system text and tool set for one role (gatherer, reviewer), laid over a new agent-fsm definition; how to use one, its layers, why it cuts tools."
+ },
+ "eca_reading.md": {
+  "description": "You are an eca (claude, codex, pi): which pages and sections are for you, which to read when needed, and which to skip (agent-fsm only)."
+ },
+ "troubleshooting.md": {
+  "description": "Common failures: symptom, cause, how to check (paths with $AOS_HOME, a tool you just added, ClockMissing on a screen, KernelFailed, the overview page's ctl ls failed ...)."
  }
 }
