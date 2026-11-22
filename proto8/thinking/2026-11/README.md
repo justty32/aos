@@ -24,4 +24,4 @@
 | [2026-11-19](19/README.md) | 4 | 公司 WSL 開工環境：aos 裝到 repo 層、LiteLLM 版本待拍板；庚（agent 版 tool_spec）設計稿：`agent.py` 長相、打架規則、五刀範圍，六題待裁；aos-gdb 第一版（乙案）；aos-gdb 第二版（工具前扣住、觀察者） |
 | [2026-11-20](20/README.md) | 2 | two-machines T7 第 9 步回公司那一步跑完、全過，T7 全部跑完；編譯變成整套一個 Python 程式庫的設計稿與施工計劃 |
 | [2026-11-21](21/README.md) | 36 | session_key 實測：加了快取第 2 輪起約 99% 命中，範本要不要改等使用者；知識庫骨架加 md 規劃；知識庫使用感想 |
-| [2026-11-22](22/README.md) | 5 | 工作區與 _stack 規劃：私有地盤 wf/ws 與 repo 裡的 _stack 取代 ~/aos-home，分八條線、三題待決 |
+| [2026-11-22](22/README.md) | 7 | 工作區與 _stack 規劃：私有地盤 wf/ws 與 repo 裡的 _stack 取代 ~/aos-home，分八條線、三題待決 |

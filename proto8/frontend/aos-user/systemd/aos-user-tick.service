@@ -1,0 +1,12 @@
+# aos-user-tick.service - 每分鐘跑一次 aos-user tick（收件檢查、退信、桌面通知、到期提醒）；由 aos-user-tick.timer 叫。
+# 範例單元，repo 裡只放著、沒裝（使用者 11-22 第 2 題選 a：tick 先不裝）。裝法見同夾 README.md 的「段 2」。
+# 學 frontend/systemd/aos-frontend.service：AOS_HOME＝%h/repo/aos/proto8，換成你的；env.sh 把 $AOS_HOME/bin（aos-post）與
+# $AOS_HOME/frontend/bin（aos-user）放上 PATH，notify-send 在 /usr/bin。
+[Unit]
+Description=aos-user tick: check new letters in the user zone, return bad ones, show desktop notices
+
+[Service]
+Type=oneshot
+WorkingDirectory=/
+Environment=AOS_HOME=%h/repo/aos/proto8
+ExecStart=/bin/bash -c '. %h/repo/aos/proto8/env.sh && exec aos-user tick --quiet'

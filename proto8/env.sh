@@ -19,7 +19,7 @@ unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SSE_PORT
 # Clear every AOS_* except AOS_HOME (an agent's shell carries AOS_STACK etc.; root would inherit them — 11-13 15:24 incident).
 for _aos_v in $(env | grep -o '^AOS_[A-Za-z0-9_]*'); do [ "$_aos_v" = AOS_HOME ] || unset "$_aos_v"; done; unset _aos_v
 # Put this home's commands first on PATH: bin/ holds everything install.py built (the C++ commands and the Python entries); nothing goes into ~/.local/bin.
-# frontend/bin is the optional web page plugin (aos-frontend), which install.py leaves alone; it goes on PATH only when that folder is there.
+# frontend/bin is the optional web page plugin (aos-frontend, and aos-user for the user zone), which install.py leaves alone; it goes on PATH only when that folder is there.
 for _aos_d in "$AOS_HOME"/frontend/bin "$AOS_HOME"/bin; do
   if [ -d "$_aos_d" ]; then
     case ":$PATH:" in *":$_aos_d:"*) ;; *) PATH="$_aos_d:$PATH" ;; esac

@@ -2,7 +2,7 @@
 # %h/repo/aos/proto8 and the tree is the repo's own %h/repo/aos/_stack (wf/workflows/dev-env/03-換機.md in the aos repo). Change both to yours.
 # env.sh needs AOS_HOME (it never sets it; a user unit does not read ~/.bashrc), so Environment= gives it; env.sh keeps AOS_HOME and puts
 # $AOS_HOME/bin (aos-agent, aos-post ...) and $AOS_HOME/frontend/bin (aos-frontend) on PATH. It clears every other AOS_*, so AOS_DAEMON is set after it.
-# aos-user is not in proto8: aos-frontend looks for it in $VIEW_TOOLS/aos-user/, else on PATH (add VIEW_TOOLS=... before exec).
+# aos-user comes with the frontend (bin/aos-user links to ../aos-user/), so env.sh puts it on PATH too; $VIEW_TOOLS/aos-user/ overrides.
 [Unit]
 Description=aos-frontend panorama page (127.0.0.1:8767)
 After=default.target

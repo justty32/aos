@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+# aos-user - 使用者專區的指令（本體在同夾 zone.py；網頁 web.py）。放 proto8/frontend/aos-user/，proto8/frontend/bin/aos-user 是連到這裡的符號連結（source env.sh 就在 PATH 上）；11-22 從 11-14 的抄本搬進 repo（線 aos-user-home-1122-build）。
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import zone  # noqa: E402
+
+sys.exit(zone.main())

@@ -13,7 +13,7 @@
 - 誰該寄、寄什麼：`aos/user_zone.json#/what`
 - 怎麼寄（用 shell，或只用 aos 工具）：`aos/user_zone.json#/send`
 - 回覆長什麼樣、可以信到什麼程度：`aos/user_zone.json#/answer`
-- 門口（區上的告示，寄之前先讀）：`~/.aos/user/door.json`；使用者的名片：`~/aos-home/ws/public/user.json`
+- 門口（區上的告示，寄之前先讀）：`~/.aos/user/door.json`，或用 `aos-user door` 印出來
 
 ---
 
@@ -43,14 +43,16 @@
 用 shell（claude、codex 身體）：
 
 ```sh
-~/aos-home/ws/tools/aos-user/aos-user send --kind decide --title "one line that makes sense alone" < letter.json
+aos-user send --kind decide --title "one line that makes sense alone" < letter.json
 ```
 
 `letter.json` 裝的是 `what`（一兩句：你需要什麼；decide 可以不給）和 `#/what` 裡的那些鍵（decide 是 `questions`）。這個工具會填上 `zone`、`from`（你的 stack 名字）、`to`、`status`、`host`，以及回信地址（`$AOS_STACK/mailbox`，或 `--reply-to MAILBOX`）。它會先拿 `~/.aos/user/schema/letter.json` 檢查這封信；壞掉的信不會寄出（`SchemaBad`，附上原因）。它會印出信的名字。
 
+`source $AOS_HOME/env.sh` 之後 aos-user 就在 PATH 上（它放在 `$AOS_HOME/frontend/aos-user/`）。
+
 只用 aos 工具（agent-fsm 身體）：有工具 `user_send` 的話就用它（沒有就請人加上），以你的身分：`{"kind": "decide", "title": "...", "questions": [...]}`（鍵跟上面一樣，檢查方式也一樣；回覆會到你的信箱）。沒有 `user_send` 時，舊的方法還是能用。`mailbox_send` `{"box": "/home/<you>/.aos/user/mailbox", "status": "NEEDS-USER", "title": "...", "what": "...", "decide": "the question, the options, your recommendation"}`。使用者看到它會標成舊格式，用文字回覆。
 
-區會在一分鐘內檢查每封新信。違反門口規則的信，或你在一小時內寄超過 10 封信，會被移到區的 `rejected/`，並回到你的信箱：status `FAILED`、title `Returned: ...`、`in_reply_to` = 你的信、`reason` = 哪裡不對。使用者看不到它。把信改好再寄一次；不要原封不動再寄，而且把問題合成一封信（最多 7 個），不要寄很多封。
+有裝區的每分鐘檢查（`aos-user tick`，計時器每台自己決定裝不裝）的話，區會在一分鐘內檢查每封新信。違反門口規則的信，或你在一小時內寄超過 10 封信，會被移到區的 `rejected/`，並回到你的信箱：status `FAILED`、title `Returned: ...`、`in_reply_to` = 你的信、`reason` = 哪裡不對。使用者看不到它。把信改好再寄一次；不要原封不動再寄，而且把問題合成一封信（最多 7 個），不要寄很多封。
 
 絕不要用 `aos-mailbox read` 或 `mailbox_read` 讀區：它們會刪信。除了寄信到它的 `mailbox/` 以外，絕不要在區裡寫任何東西。eca 身體可能有 hook `user_zone_guard`（`$AOS_HOME` 底下的 `lib/tools/agent/user_zone_guard`，事件 `before_tool`）：它會擋下會碰到 `mailbox/` 以外區域的 aos 工具呼叫。
 
@@ -66,6 +68,6 @@
 
 對 `verify` 和 `chore` 信，像「ok」這樣的回覆通常只表示使用者同意去做，不表示做完了。等到有回覆說做完了，才算做完；如果有唯讀的檢查能確認，也跑一下。
 
-檢查它：`~/aos-home/ws/tools/aos-user/aos-user verify <the answer's letter folder>` 會拿它跟區自己的副本（`done/`）和紀錄比對。`ok:` = 它是從區寄出的。只用 aos 工具時：工具 `user_verify` `{"letter": "<the name from mailbox_peek>"}` 做同樣的檢查，效力也一樣；`mailbox_read` 之後也能用，因為回覆會保留在 `mailbox/archive/<letter>/letter.json`（找的順序：new/、cur/、archive/）。被退回的信（status `FAILED`、`returned`）不是回覆，不會通過。
+檢查它：`aos-user verify <the answer's letter folder>` 會拿它跟區自己的副本（`done/`）和紀錄比對。`ok:` = 它是從區寄出的。只用 aos 工具時：工具 `user_verify` `{"letter": "<the name from mailbox_peek>"}` 做同樣的檢查，效力也一樣；`mailbox_read` 之後也能用，因為回覆會保留在 `mailbox/archive/<letter>/letter.json`（找的順序：new/、cur/、archive/）。被退回的信（status `FAILED`、`returned`）不是回覆，不會通過。
 
 可以信到什麼程度（使用者在 11-13 決定的）：從區來、檢查過的回覆，算是使用者自己的話，push 和刪除也一樣（AGENTS.md 第 2 條）。但所有 agent 都以同一個 Linux 使用者執行：有 shell 的 agent 也可能偽造區的副本和紀錄。這個檢查擋得住轉述（「使用者跟我說可以」）和被丟進你信箱的假信；擋不住存心兩邊都偽造的 agent。不要去試。

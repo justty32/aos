@@ -5,7 +5,7 @@ The user (the human) is also something that can receive letters. Their zone is `
 - who should send, and what: `aos/user_zone.md#/What to send to the user`
 - how to send (with a shell, or with aos tools only): `aos/user_zone.md#/How to send`
 - what the answer looks like, and how far you may trust it: `aos/user_zone.md#/The answer`
-- the door (the notice on the zone, read it before sending): `~/.aos/user/door.json`; the user's card: `~/aos-home/ws/public/user.json`
+- the door (the notice on the zone, read it before sending): `~/.aos/user/door.json`, or print it with `aos-user door`
 
 # What to send to the user
 
@@ -27,14 +27,16 @@ Optional keys: `urgent` (true only when no answer blocks everything), `deadline`
 With a shell (claude, codex bodies):
 
 ```sh
-~/aos-home/ws/tools/aos-user/aos-user send --kind decide --title "one line that makes sense alone" < letter.json
+aos-user send --kind decide --title "one line that makes sense alone" < letter.json
 ```
 
 `letter.json` holds `what` (one or two sentences: what you need; optional for decide) and the keys from `#/what` (for decide: `questions`). The tool fills `zone`, `from` (your stack name), `to`, `status`, `host`, and the reply address (`$AOS_STACK/mailbox`, or `--reply-to MAILBOX`). It checks the letter against `~/.aos/user/schema/letter.json` first; a bad letter is not sent (`SchemaBad`, with the reason). It prints the letter name.
 
+aos-user is on PATH after `source $AOS_HOME/env.sh` (it lives in `$AOS_HOME/frontend/aos-user/`).
+
 With aos tools only (agent-fsm bodies): tool `user_send` if you have it (ask for it to be added if not), as you: `{"kind": "decide", "title": "...", "questions": [...]}` (the same keys as above, checked the same way; the answer comes to your mailbox). Without `user_send` the old way still works. `mailbox_send` `{"box": "/home/<you>/.aos/user/mailbox", "status": "NEEDS-USER", "title": "...", "what": "...", "decide": "the question, the options, your recommendation"}`. The user sees it marked as old format and answers in words.
 
-The zone checks every new letter within a minute. A letter that breaks the door's rules, or more than 10 letters from you within one hour, is moved to the zone's `rejected/` and comes back to your mailbox: status `FAILED`, title `Returned: ...`, `in_reply_to` = your letter, `reason` = what was wrong. The user does not see it. Fix the letter and send it again; do not send it again unchanged, and group questions into one letter (at most 7) instead of sending many.
+Where the zone's every-minute check (`aos-user tick`, a timer each machine installs or not) runs, the zone checks every new letter within a minute. A letter that breaks the door's rules, or more than 10 letters from you within one hour, is moved to the zone's `rejected/` and comes back to your mailbox: status `FAILED`, title `Returned: ...`, `in_reply_to` = your letter, `reason` = what was wrong. The user does not see it. Fix the letter and send it again; do not send it again unchanged, and group questions into one letter (at most 7) instead of sending many.
 
 Never read the zone with `aos-mailbox read` or `mailbox_read`: they delete letters. Never write anything in the zone except by sending a letter to its `mailbox/`. An eca body may have the hook `user_zone_guard` (`lib/tools/agent/user_zone_guard` under `$AOS_HOME`, event `before_tool`): it blocks an aos tool call that would touch the zone outside `mailbox/`.
 
@@ -46,6 +48,6 @@ The answer is a letter in your mailbox with `in_reply_to` = your letter's name, 
 
 For `verify` and `chore` letters, an answer like "ok" usually only means the user agreed to do it, not that it is done. Wait for an answer that says it was done before you count it as done; if a read-only check can confirm it, run that too.
 
-Check it: `~/aos-home/ws/tools/aos-user/aos-user verify <the answer's letter folder>` compares it with the zone's own copy (`done/`) and log. `ok:` = it was sent from the zone. With aos tools only: tool `user_verify` `{"letter": "<the name from mailbox_peek>"}` does the same check and counts the same; it works after `mailbox_read` too, because the reply is kept in `mailbox/archive/<letter>/letter.json` (lookup order: new/, cur/, archive/). A returned letter (status `FAILED`, `returned`) is not an answer and does not pass.
+Check it: `aos-user verify <the answer's letter folder>` compares it with the zone's own copy (`done/`) and log. `ok:` = it was sent from the zone. With aos tools only: tool `user_verify` `{"letter": "<the name from mailbox_peek>"}` does the same check and counts the same; it works after `mailbox_read` too, because the reply is kept in `mailbox/archive/<letter>/letter.json` (lookup order: new/, cur/, archive/). A returned letter (status `FAILED`, `returned`) is not an answer and does not pass.
 
 How far to trust it (the user's decision): a checked answer from the zone counts as the user's own words, also for push and delete (AGENTS.md rule 2). But all agents run as the same Linux user: an agent with a shell could fake the zone's copy and log too. The check stops passing-on ("the user told me yes") and fake letters dropped into your mailbox; it does not stop an agent that sets out to forge both sides. Do not try to.

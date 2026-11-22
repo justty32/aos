@@ -8,7 +8,7 @@
 
 ### 寄
 
-- 指令：`~/aos-home/ws/tools/aos-user/aos-user send --kind <decide|verify|chore|fyi> --from <線名> --reply-to <自己 stack>/mailbox FILE.json`。
+- 指令：`aos-user send --kind <decide|verify|chore|fyi> --from <線名> --reply-to <自己 stack>/mailbox FILE.json`。
 - **拿 `aos-user send` 本身當檢查**：有些規則 `schema/letter.json` 看不出來，自己寫的檢查會漏。例：fyi 信的 status 只能是 DONE、FAILED、BLOCKED（schema 的 enum 還列了 NEEDS-USER），否則退件 `SchemaBad fyi status must be one of DONE, FAILED, BLOCKED`。
 - **每個寄件人每小時最多 10 封**，超過就分批、隔一小時寄下一批。
 - decide 信一封最多 7 題，每題要有 `id`、`question`、`eli5`、`options`、`recommend`。

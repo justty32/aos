@@ -6,6 +6,7 @@
 
 ## 使用者的話
 
+- 11-22（四題的裁定，eca-aos 轉述）：「wf/user是我的地盤，裡面的東西無法保證穩定性。user advice可以搬進去。剩下都按照推薦」→ 四題都選 a；寫的文件和程式都不連到 wf/user 裡的檔。
 - 11-22：eca-aos 推薦先排「aos-user 找新家」，使用者答：「好，去吧」（eca-aos 轉述）。
 - 11-18 晚：頂層建議「照 user-zone-plan 重做 aos-user 並放進 repo」，使用者答：「推，但可能是後天的事情了」（記在 HANDOFF，`e53d6b979`）。
 - 11-14 午：「問我的問題你直接放全景網頁，我現在大多在看那邊」。
@@ -28,4 +29,4 @@ aos-user 的本體 11-18 跟舊樹一起刪了，`~/aos-home.old-1122/` 裡從�
 | [03-推薦與施工步驟](03-推薦與施工步驟.md) | 推薦甲的理由；步驟 0～9（領地清單、要改的每一行、乾淨複本上的驗法、假題目驗全景頁、活樹上要使用者做的、公司那台）；11 條邊緣狀況 |
 | [04-待裁](04-待裁.md) | 要使用者拍板的四題（放哪、tick、專區資料跟不跟著換機、跟 wf/user 的關係與名片），附寄專區用的 JSON；這次替使用者做的八個選擇 |
 
-狀態：等使用者答第 1 題才開工，第 2～4 題可以晚點答。全景頁那邊還要使用者重起（HANDOFF「使用者回家要做的」第 1 項），重起之前「要決定」欄還是空的。
+狀態：11-22 已照 03 施工（線 aos-user-home-1122-build）：aos-user 放進 `proto8/frontend/aos-user/`、`proto8/frontend/bin/aos-user` 連過去，tick 沒裝、systemd 沒碰，`~/.aos/user/` 沒動；乾淨複本上 aos-user 20 支、全景頁 52 支全過（沒有 skipped），暫存專區的假題目 `/api/asks` 讀得到、回信 `aos-user verify` 印 `ok: matches`。還沒做：步驟 5（`user_send`、`user_verify` 的舊找法，等下次有人跑 `install.py` 一起拿掉）、8a 重起全景頁（使用者）、8d 公司那台（`git pull` 後 `command -v aos-user`）。

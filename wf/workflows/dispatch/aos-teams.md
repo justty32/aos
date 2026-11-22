@@ -37,11 +37,10 @@
 ### 2. 問使用者：寄專區，題目會出現在全景頁
 
 ```sh
-~/aos-home/ws/tools/aos-user/aos-user send --kind decide --from ok-x \
+aos-user send --kind decide --from ok-x \
     --reply-to <自己的 stack>/mailbox --title "一句話" 題目.json
 ```
 
-- 上面這支 `aos-user` 的路徑是公司那台舊樹的；家機 `_stack` 這邊目前沒有這支（新家不在 11-22 搬家的範圍，[規劃邊緣狀況 32](../../../proto8/thinking/2026-11/22/工作區與stack-1122/02-規劃.md#邊緣狀況規劃員挖到輸入檔沒寫的)）。
 - 一封最多 7 題，每題 `id`、`question`、`eli5`、`options`（`key`、`label`、`consequence`）、`recommend`；每小時最多 10 封。
 - 回信用 `mailbox_read` 讀（專區回信自動留在 `mailbox/archive/<信名>/`），再跑 `aos-user verify <那個夾>`，看到 `ok: matches` 才算數。push、刪檔的授權一定要驗。更多：[user-zone-mail](../../public/user-zone-mail.md)、知識庫 `aos/user_zone.md`。
 

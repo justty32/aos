@@ -1,0 +1,11 @@
+# aos-user-tick.timer - 每分鐘叫一次 aos-user-tick.service（家機 linger 開著，登出也照跑；桌面通知要有登入的桌面才看得到）。
+[Unit]
+Description=run aos-user tick every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

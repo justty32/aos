@@ -25,7 +25,7 @@ home: --home > $AOS_VIEW_HOME > ~/.aos/view
   config.json   optional: {"say_log": "path", "poll_s": 20, "orders": {"hire": {"to": "name"}}}
 Who is under whom comes from records only: the daemon's subagent record of whoever started an agent, and a
 leader's teams/<team>/aide.json for its aide. No record = a top-level node (no guessing by names or by config).
-aos-user (the user zone) is not part of proto8: $VIEW_TOOLS/aos-user/ when set, else aos-user on PATH.
+aos-user (the user zone) lives in ../aos-user/ (bin/aos-user links to it, so env.sh puts it on PATH); $VIEW_TOOLS/aos-user/ overrides.
   mailbox/      the relay mailbox (aos-post layout); teams send replies here, the page only reads it
   state/        activity.json (when each agent last changed), say.jsonl (default say log),
                 teams/<team>.json (latest report, last beat, latest post), passed/<team>/<id>.json (receipts)
@@ -62,8 +62,8 @@ sys.dont_write_bytecode = True  # never leave a __pycache__ next to aos-user's z
 
 
 def find_aos_user():
-    """aos-user and its zone.py: $VIEW_TOOLS/aos-user/ (tests, demos with stub tools), else aos-user on PATH
-    (zone.py next to the file it resolves to). Not found: the bare name and None (no zone; the page still runs)."""
+    """aos-user and its zone.py: $VIEW_TOOLS/aos-user/ (tests, demos with stub tools) overrides; else aos-user on PATH,
+    which is ../aos-user/ through the bin/aos-user link (zone.py next to the file it resolves to). Not found: the bare name and None (no zone; the page still runs)."""
     tools = os.environ.get("VIEW_TOOLS")
     if tools:
         d = os.path.join(tools, "aos-user")

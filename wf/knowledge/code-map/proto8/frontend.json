@@ -10,8 +10,23 @@
    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
    "tools.json": "The aide has no tools: its whole job is the on_clock hook aide_tick (hookeds.json); the brain is fake and is never asked in phase 1."
   },
+  "aos-user": {
+   "aos-user": "使用者專區的指令（本體在同夾 zone.py；網頁 web.py）。",
+   "systemd": {
+    "aos-user-tick.service": "每分鐘跑一次 aos-user tick（收件檢查、退信、桌面通知、到期提醒）；由 aos-user-tick.timer 叫。",
+    "aos-user-tick.timer": "每分鐘叫一次 aos-user-tick.service（家機 linger 開著，登出也照跑；桌面通知要有登入的桌面才看得到）。"
+   },
+   "tests": {
+    "test_tick.py": "aos-user 段 2 驗收：tick 收件檢查（7 題過、8 題退）、每寄件人每小時上限、退信、通知（含出門／安靜時段只報急件、關掉不報）、到期提醒、退信不繞回專區。",
+    "test_verify_paths.py": "Verify reply files and legacy folders against a temporary zone without aos-post.",
+    "test_zone.py": "aos-user 段 1 驗收（規劃 04 段 1 的 1～7 條＋verify＋網頁的 Host／token／重答）；全部在暫存夾，不碰 ~/.aos/user。"
+   },
+   "web.py": "使用者專區的網頁（aos-user serve）：只綁 127.0.0.1，看信、裁題、回信、看門上公告；邏輯全部呼叫 zone.py，不寫第二份。",
+   "zone.py": "使用者專區的函式庫＋指令列（aos-user 的本體）：init、send、ls、show、answer、reply、ok、door、verify、tick、notify；網頁 web.py 也只呼叫這裡。"
+  },
   "bin": {
-   "aos-frontend": "one local page that shows every agent and proc on the daemon table as a tree,"
+   "aos-frontend": "one local page that shows every agent and proc on the daemon table as a tree,",
+   "aos-user": "→ `../aos-user/aos-user`"
   },
   "systemd": {
    "aos-frontend.service": "Example user unit for the aos-frontend page. Path rule one (11-17): AOS_HOME is the proto8 folder; here it is"
