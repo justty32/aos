@@ -4,7 +4,7 @@
 
 `root/` 是 `~/repo/aos/_stack` 那台根 daemon 的定義：表上只有 `_clock`、`_sweeper`，agent 之後用 `aos-agent ctl add` 掛上去（表上存相對 `_stack` 的路徑，兩台的 repo 都在 `~/repo/aos`，換台照樣對）。llm kernel 與權限站**不在這裡**，各台自己跑、放在 repo 外，由起根的殼 export `AOS_LLM_KERNEL`、`AOS_KERNEL` 指過去（使用者 11-22 決定 E）。
 
-怎麼設殼、怎麼起 llm kernel、怎麼換台，看換機說明書（規劃線 9，寫好後從這裡連過去）；這裡不重寫步驟，只記起根那一行：
+怎麼設殼、怎麼起 llm kernel、怎麼換台，看[換機說明書](../workflows/dev-env/03-換機.md)；這裡不重寫步驟，只記起根那一行：
 
 ```sh
 cd ~/repo/aos && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK aos-exec --stack _stack wf/tree/root
