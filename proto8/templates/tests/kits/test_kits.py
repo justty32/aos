@@ -11,7 +11,7 @@ AGENT_SYSTEM = TEMPLATES / 'agent-fsm' / 'system.txt'
 CJK = re.compile('[⺀-鿿豈-﫿＀-￯　-〿]')
 FORBIDDEN = ['wf/', '/home/', 'aos-home', 'xiaosi', 'repo-aos', 'llm-gpt',
              '127.0.0.1', 'Traditional Chinese']
-SYSTEM_MAX = 3000
+SYSTEM_MAX = 3500   # 原本 3000；wf 那份 gather/system.txt 已 3,180，放寬到 3,500（使用者 11-22：「都先按照推薦」）
 AGENT_SYSTEM_MAX = 1800
 
 STEP2_OLD = ('2. Read <KNOWLEDGE>/aos/_description.md; look up more only when '

@@ -28,7 +28,7 @@ A system text has no include and no variables: it is sent whole on every brain c
 3. role: `kits/roles/gather.txt` or `kits/roles/review.txt`.
 4. task: the brief, sent in the letter that starts the agent; not in system.txt.
 
-general.A.txt has placeholders: `<KNOWLEDGE>` (path of the knowledge folder), `<BOARD>` (how to read a notice board: a command, or a file to read; drop the line if there is none), `<OWN_BOARD>` (how the agent posts who it waits for, or drop the line). The shipped `gather/system.txt` and `review/system.txt` say the brief names the knowledge folder, resolve BOARD to board_read (who = the one waited on, or "user" for the user's notice) and OWN_BOARD to board_wait (who and what when it stops to wait, done = true when the answer comes), and stay within 3,000 characters. If you change a layer, assemble again in the same order.
+general.A.txt has placeholders: `<KNOWLEDGE>` (path of the knowledge folder), `<BOARD>` (how to read a notice board: a command, or a file to read; drop the line if there is none), `<OWN_BOARD>` (how the agent posts who it waits for, or drop the line). The shipped `gather/system.txt` and `review/system.txt` say the brief names the knowledge folder, resolve BOARD to board_read (who = the one waited on, or "user" for the user's notice) and OWN_BOARD to board_wait (who and what when it stops to wait, done = true when the answer comes), and stay within 3,500 characters. If you change a layer, assemble again in the same order.
 
 # Why a kit cuts tools
 
