@@ -126,4 +126,4 @@ print_user_zone() {
 [ -d "$root/wf/user" ] && print_user_zone
 
 echo
-echo "提醒：設計題先讀相關 NORMS／CONCEPTS 再回答；說「已寫進」前先查。開場兩軸（inbox、progress.json）照 AGENTS.md。"
+echo "提醒：設計題先讀相關 NORMS／CONCEPTS 再回答；說「已寫進」前先查。開場三軸（信、progress.json、wf/user）照 AGENTS.md。"

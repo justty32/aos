@@ -29,6 +29,7 @@ run() { env -i PATH="$PATH" HOME="$HOME" GIT_CEILING_DIRECTORIES="$RUN" "$@" sh 
 run > "$OUT" 2>&1
 PASS=0; FAIL=0
 check() { local d="$1"; shift; if "$@"; then PASS=$((PASS+1)); echo "  ok   $d"; else FAIL=$((FAIL+1)); echo "  FAIL $d"; fi; }
+check "closing reminder names three opening axes" grep -qxF -- '提醒：設計題先讀相關 NORMS／CONCEPTS 再回答；說「已寫進」前先查。開場三軸（信、progress.json、wf/user）照 AGENTS.md。' "$OUT"
 check "falls back to progress when HANDOFF has no entry" grep -q 'progress.json 的 open 條目' "$OUT"
 check "plain entry printed as before" grep -qxF -- '- open｜一般條目：短現況' "$OUT"
 check "ref what → first line without '#', plus path" grep -qxF -- '- 等使用者｜長條目：長條目的一句話 (full text: wf/progress/long.md)' "$OUT"
