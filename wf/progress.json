@@ -89,10 +89,10 @@
       "since": "2026-11-18"
     },
     "workspace-stack-alloc": {
-      "title": "_stack 剩的線：線 7、線 8 與題 4（併 rebuild-aos-home、home-cleanup）",
+      "title": "_stack 剩的線：線 8 與題 4（併 rebuild-aos-home、home-cleanup）",
       "status": "open",
       "flow": "",
-      "what": "線 6（家機搬家，`~/aos-home` → `~/repo/aos/_stack`）已完成；剩線 7 改現行文件（`ws-stack-1122-docs` 正在做）、線 8 公司那台起 `_stack`（使用者：公司現有的樹別管）、題 4（公司那台的 llm kernel 也放那台的 `~/aos-home/llm` 嗎？線 8 開工前答）。11-14 要的正規工作區與 stack 分配，由 11-22 的 `_stack` 規劃與線 1～5、9 做掉。併來的 rebuild-aos-home：照步驟單重建 `~/aos-home` 被 11-22 決定 D 蓋過（`~/aos-home` 往後只裝這台的 llm kernel），公司那台走線 8。併來的 home-cleanup：`~/.aos/scratch`（9.1 GB）、`~/.claude/projects`（2.5 GB）、`~/.cache/aos-*` 四夾、`~/.stack` 舊信箱，使用者 11-18 晚選項框「先不清」，`~/.aos/scratch` 用完怎麼收使用者 11-15 說之後自己定；跟搬家退路 `~/aos-home.old-1122/` 什麼時候刪一起等使用者點頭（刪檔要使用者本人說）",
+      "what": "線 6（家機搬家，`~/aos-home` → `~/repo/aos/_stack`）已完成；線 7 改現行文件也已完成（`a7d3e1442`、`74e6370d1`；kits 拼好的 `gather/`、`site.txt` 與 `aos-user` 路徑還沒改，`aos-user` 要先有新家）；剩線 8 公司那台起 `_stack`（使用者：公司現有的樹別管）、題 4（公司那台的 llm kernel 也放那台的 `~/aos-home/llm` 嗎？線 8 開工前答）。11-14 要的正規工作區與 stack 分配，由 11-22 的 `_stack` 規劃與線 1～5、9 做掉。併來的 rebuild-aos-home：照步驟單重建 `~/aos-home` 被 11-22 決定 D 蓋過（`~/aos-home` 往後只裝這台的 llm kernel），公司那台走線 8。併來的 home-cleanup：`~/.aos/scratch`（9.1 GB）、`~/.claude/projects`（2.5 GB）、`~/.cache/aos-*` 四夾、`~/.stack` 舊信箱，使用者 11-18 晚選項框「先不清」，`~/.aos/scratch` 用完怎麼收使用者 11-15 說之後自己定；跟搬家退路 `~/aos-home.old-1122/` 什麼時候刪一起等使用者點頭（刪檔要使用者本人說）",
       "next": "",
       "see": [
         "[_stack 規劃](../proto8/thinking/2026-11/22/工作區與stack-1122/02-規劃.md)",
