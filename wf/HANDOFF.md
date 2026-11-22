@@ -42,7 +42,13 @@
 
 **今天做完的（都沒 push）**：工作區與 `_stack` 全線（線 1～7、9；規劃 `proto8/thinking/2026-11/22/工作區與stack-1122/`；搬家腳本 `wf/tools/home-move-1122/`；換機說明書 `wf/workflows/dev-env/03-換機.md`；換機工具 `wf/tools/stack-commit`）；progress 整理（42→32 條，`$ref` 搬 md 到 `wf/progress/`，`a540a0db7`、`b2013cc84`；`workspace-stack-alloc` 只剩線 8 公司那台＋題 4）；輸入成本調查與 A 實驗（無效，`907ddecc9`、`22501d7af`）；eca 範本瘦身、知識庫日期註記（上午）。Artifact 四頁由 aos 體系外的 tmux session `artifacts` 發佈（kernel 攔截、權限零件、小工作室筆記、公司體制）。
 
-**使用者回家要做的**：1. 關掉／重開停在舊 `~/aos-home` 的終端機分頁，用新的 `AOS_DAEMON` 重起 `aos-frontend serve`（`aos-frontend.service` 已改指 `_stack`；現在活的全景頁 pid 9460 還是舊程式，重開後才會用上 `f3e2581d7` 的新版；先開新殼，`command -v aos-user` 要看到 `~/repo/aos/proto8/frontend/bin/aos-user`，再跑 `AOS_DAEMON=~/repo/aos/_stack aos-frontend serve`）；2. 要真模型時設 `LITELLM_KEY`（`aos-daemon-ctl -d ~/aos-home/.llm-stack shutdown` 後從有金鑰的殼 `home-move start-llm`）；3. 第一次換機 commit（`stack-commit leave`，`_stack` 以外有沒交的檔要加 `--leave-dirty`）與要不要 push（換機 commit 含四隻 eca 的對話紀錄與信）。
+**明天（11-23）在公司從哪裡接**（使用者 11-22 晚原話：「今晚差不多就這樣了，明天去公司繼續。收尾吧」「對話記錄和信件公開這事我覺得沒關係，我反而比較擔心這會不會太大，畢竟很多時候這些對話記錄和信件都只是用來傳遞消息，常理來說應該進gitignore的」「好，就先這樣，因爲aos體系其實還沒穩定下來。push吧」）：
+1. 今晚只 push 程式碼，沒做換機 commit（`stack-commit leave`）。`_stack` 沒有任何檔進 git，家機的 daemon 照樣開著。
+2. 到公司後先 `git pull`，在公司自己的樹 `repo-aos` 上繼續，從這條 HANDOFF 和 `wf/user/待答-1122.md` 接起。新殼用 `command -v aos-user` 確認 PATH 上有 aos-user；`~/.aos/user` 不存在就跑一次 `aos-user init`（見 progress 的 `aos-user-home`）。
+3. 明天要派一件事：查清楚 `_stack` 換台時哪些檔真的要帶，再把不用帶的寫進 `_stack/.gitignore` 和 `wf/tools/stack-commit`（使用者擔心大小、說「應該進gitignore」的那件）。今晚量過：換機 commit 會加 62 個檔、共約 147 KB；最大的是 `history_removed.jsonl`（35 KB），再來是各 agent 的 `history.jsonl`（16 到 32 KB），信箱封存 4 封。要查：`history.jsonl` 跟換台後的 reseed 有沒有關係；`mailbox/archive` 和 `history_removed.jsonl` 能不能不帶；`clock`、`state_flux.json` 這類執行期檔該不該帶。公司那台的線 8（搬進 `_stack`）等這件定了再照新規則做；線 8 的第 4 題（公司那台的 llm kernel 放哪）也還沒答。
+4. 使用者說 aos 體系還沒穩定，所以換機 commit 先不做。
+
+**使用者回家要做的**：1. 關掉／重開停在舊 `~/aos-home` 的終端機分頁，用新的 `AOS_DAEMON` 重起 `aos-frontend serve`（`aos-frontend.service` 已改指 `_stack`；現在活的全景頁 pid 9460 還是舊程式，重開後才會用上 `f3e2581d7` 的新版；先開新殼，`command -v aos-user` 要看到 `~/repo/aos/proto8/frontend/bin/aos-user`，再跑 `AOS_DAEMON=~/repo/aos/_stack aos-frontend serve`）；2. 要真模型時設 `LITELLM_KEY`（`aos-daemon-ctl -d ~/aos-home/.llm-stack shutdown` 後從有金鑰的殼 `home-move start-llm`）；3. 11-22 晚已 push 程式碼；換機 commit 先不做，見「明天在公司從哪裡接」。
 
 **授權（11-22 當場）**：「可以開工，去吧也可以動活樹」「zshrc可以動」「先按推薦做」。push 沒給。刪檔沒給。`install.py` 今天跑過三次（都先講一聲再跑）。
 
