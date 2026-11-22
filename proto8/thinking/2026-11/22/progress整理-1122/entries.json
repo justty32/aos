@@ -1,0 +1,396 @@
+{
+ "contract": "wf-table/1",
+ "source": "proto8/thinking/2026-11/22/progress整理-1122/README.md",
+ "extracted": "2026-11-22",
+ "description": "wf/progress.json 的 open 段 42 條逐條歸類（六類）、建議（關掉／合併／留著／派工）、根據與合併去向；11-22 整理員只建議，沒改 progress。",
+ "columns": [
+  "key",
+  "status",
+  "category",
+  "advice",
+  "reason",
+  "evidence",
+  "merge_or_size"
+ ],
+ "link_columns": [],
+ "rows": [
+  {
+   "key": "rebuild-aos-home",
+   "status": "等使用者",
+   "category": "1 被蓋過或已完成",
+   "advice": "改寫（併進組 1）",
+   "reason": "舊的「照步驟單重建 ~/aos-home」被今天的決定 D 蓋過：_stack 取代 ~/aos-home，~/aos-home 往後只裝這台的 llm kernel；公司 WSL 照「公司現有的樹別管」，要跑 _stack 時走線 8。剩下的事＝線 6 搬家。注意：條目寫「現在 WSL 沒有 aos」，今天使用者說「公司現有的樹沒在用」，兩句對不上，要 eca-aos 核",
+   "evidence": "工作區與stack-1122/01 原話 5、8；02 線 6、線 8",
+   "merge_or_size": "組 1"
+  },
+  {
+   "key": "refactor-tidy-inventory",
+   "status": "open",
+   "category": "2 可合併",
+   "advice": "合併",
+   "reason": "剩兩件：拆 aos-frontend 跟前端大修同一件事（併組 2）；thinking 11-13 起先提取再精簡（Q1）可單獨留著",
+   "evidence": "條目 what",
+   "merge_or_size": "組 2（拆前端）；Q1 留"
+  },
+  {
+   "key": "norms-text",
+   "status": "等使用者",
+   "category": "3 等使用者回答",
+   "advice": "留著（當條文大修的收集點）",
+   "reason": "使用者 11-17「條文這東西以後我會大修」。建議把散在別條的條文加註都收到這裡（組 4），大修時一次看",
+   "evidence": "條目 what",
+   "merge_or_size": "組 4 的主條"
+  },
+  {
+   "key": "wrapup-1115",
+   "status": "暫停",
+   "category": "6 暫停或凍結",
+   "advice": "留著（暫停）",
+   "reason": "guard 使用者裁「先擱著」；第 4 點已併 norms-text；交件.md 在 wf/temp（使用者 11-21 說 wf/temp 之後會清空），清空前要不要搬出來可順便問",
+   "evidence": "條目 what；commit e4198de9d 原話「wf/temp之後會被清空」",
+   "merge_or_size": ""
+  },
+  {
+   "key": "overview-page",
+   "status": "open",
+   "category": "2 可合併",
+   "advice": "合併成「前端大修」一條",
+   "reason": "跟 later-1115 的前端那半、waiting-1121 第 7 項（大修盤點 14 項）、refactor-tidy 的拆 aos-frontend 是同一件。搬家後 ~/aos-home 只剩 llm，VIEW_TOOLS 寫死 ~/aos-home/ws/tools 會更不對。使用者說過「frontend真的應該大修了」；aos-eca-frontend 已掛著沒事",
+   "evidence": "HANDOFF 11-22；frontend-備妥-1121",
+   "merge_or_size": "組 2 的主條"
+  },
+  {
+   "key": "eca-rest",
+   "status": "open",
+   "category": "2 可合併",
+   "advice": "合併",
+   "reason": "design-tails-1113 的「eca 子 agent codex 身」跟這條的 codex 身各項是同一件；使用者兩處都說「先留著／以後再想」",
+   "evidence": "條目 what；design-tails-1113",
+   "merge_or_size": "組 5 的主條"
+  },
+  {
+   "key": "later-1115",
+   "status": "等使用者",
+   "category": "1 被蓋過或已完成",
+   "advice": "關掉（內容分到組 1、組 2）",
+   "reason": "「stack 遷移」被今天整套 _stack 規劃與線 1～5、9 的施工蓋過；aos-frontend 大修、環境變數名、API.md、systemd 規則、全景頁為何常掛都屬前端大修",
+   "evidence": "780056063、ae667c34b、b6a3702e2、139d8dd2b、7b596847f、db7d1b9be",
+   "merge_or_size": "組 1、組 2"
+  },
+  {
+   "key": "small-questions",
+   "status": "等使用者",
+   "category": "1 被蓋過或已完成",
+   "advice": "關掉（A② 併組 6）",
+   "reason": "⑥ eca 範本 Read 白名單已做（6f09d3f93）；只剩「A② gate 設計等使用者開口」（11-14 留底 37 第 ⑧ 點），只剩一個代號、沒有內容，歸權限那組",
+   "evidence": "6f09d3f93；session-log-瘦身留底/04 第 12 行",
+   "merge_or_size": "組 6"
+  },
+  {
+   "key": "codex-trust-company",
+   "status": "等使用者",
+   "category": "5 小尾巴可派工",
+   "advice": "派工（到公司那台時）",
+   "reason": "使用者已裁「清掉」，只剩動手；是改家目錄設定檔的雜活，不屬於「公司現有的樹」（那是 aos 樹），所以「別管」不蓋它",
+   "evidence": "wait-user-rewrite-1114 結案表",
+   "merge_or_size": "約 10 分鐘，sonnet；先備份再刪那幾筆"
+  },
+  {
+   "key": "workspace-stack-alloc",
+   "status": "open",
+   "category": "1 被蓋過或已完成",
+   "advice": "改寫成「_stack 剩的線」",
+   "reason": "使用者 11-14 要的「正規工作區與 stack 分配」今天已規劃三版並施工線 1～5、9；跟 ok-sec、ok-onboard 的接點寫在 02「怎麼接上別的規劃」。progress 裡目前沒有任何一條記線 6（家機搬家，等使用者在場）、線 7（改現行文件）、線 8（公司那台）與題 4",
+   "evidence": "780056063、7304f4e0b、ae667c34b、b6a3702e2、15c23d7b5、139d8dd2b、7b596847f、6dff15cdb、db7d1b9be",
+   "merge_or_size": "組 1 的主條"
+  },
+  {
+   "key": "home-cleanup",
+   "status": "open",
+   "category": "2 可合併",
+   "advice": "合併進組 1",
+   "reason": "線 6 會把舊樹搬進 ~/aos-home.old-1122/ 當退路，以後也要使用者點頭才刪；家目錄清理（~/.aos/scratch 9.1 GB、~/.claude/projects 2.5 GB、~/.cache/aos-*、~/.stack 舊信箱）可以跟「退路什麼時候刪」一起問。條目寫「核不到：要家機」，現在就在家機",
+   "evidence": "02 線 6；使用者 11-18 晚「先不清」",
+   "merge_or_size": "組 1"
+  },
+  {
+   "key": "design-tails-1113",
+   "status": "open",
+   "category": "1 被蓋過或已完成",
+   "advice": "拆開：大半關掉",
+   "reason": "compact_reload 補驗：11-15 起已多次 compact，今天上午 compact 後 HANDOFF 照常讀回，user/02 第 7 行也已寫 hook 會讀回（推測已驗，沒逐次核）→ 關；外部 MCP 三項 11-18 已驗 → 關；codex 身 → 組 5；index 三題在 index_check 11-21 整支重寫後題目可能變了 → 併 waiting-1121 第 2 項；P1 --envs 指 env 檔 → 小尾巴；ops-agent yes/no 由 hook 寄信 → 發想；team-model 跟 skyrim 同步「核不到：要家機」，現在就在家機 → 小尾巴",
+   "evidence": "verify-night-1118；user/02 第 7 行；6c769595d（index_check 重寫）",
+   "merge_or_size": "組 5、小尾巴"
+  },
+  {
+   "key": "old-lines-1112",
+   "status": "open",
+   "category": "1 被蓋過或已完成",
+   "advice": "關掉（剩的想法搬進發想表）",
+   "reason": "B21 daemon 重起退避已做（P12，0b23509a1）；B14 使用者裁留大修＝不做；11-10、11-11 要真模型的補驗：之後樹重建多次、程式大改，驗的對象已不在；eca_tidy SUMMARY 11-14 已判過時。剩 node-pool N2～N10、apply-ideas 序 5、6、_metainfo 第二步（llm_tokens）、i18n 只是想法；B15、B16、B20、B22 留給大修／整理階段",
+   "evidence": "0b23509a1；two-machines/next_todo.json",
+   "merge_or_size": "發想表"
+  },
+  {
+   "key": "arcagi",
+   "status": "暫停",
+   "category": "6 暫停或凍結",
+   "advice": "留著",
+   "reason": "等 aos 大修完",
+   "evidence": "",
+   "merge_or_size": ""
+  },
+  {
+   "key": "arknights-kb",
+   "status": "凍結",
+   "category": "6 暫停或凍結",
+   "advice": "留著",
+   "reason": "凍結到至少 2026-12-14",
+   "evidence": "user.md",
+   "merge_or_size": ""
+  },
+  {
+   "key": "pages-trial-1116",
+   "status": "等使用者",
+   "category": "3 等使用者回答",
+   "advice": "留著",
+   "reason": "等使用者說正式發佈。順手可刪的一句：條目說 proto8/templates/tests/kits/_index.json 一直沒進 git，那檔現在已經不在了",
+   "evidence": "查 ls：檔不存在",
+   "merge_or_size": ""
+  },
+  {
+   "key": "eca-lab-1118",
+   "status": "open",
+   "category": "5 小尾巴可派工",
+   "advice": "派工或關掉（兩條路讓使用者挑）",
+   "reason": "patch 是 11-18 的，之後拿掉 aos-tree-start、eca 範本今天瘦身、hook 換新格式，大概套不上了。使用者說過還會追加題目",
+   "evidence": "交接-各線/eca-lab-1118-未交.patch 還在",
+   "merge_or_size": "先 sonnet 5 分鐘試套 patch；要重寫是 opus 1～2 小時"
+  },
+  {
+   "key": "decisions-1118-night",
+   "status": "等使用者",
+   "category": "1 被蓋過或已完成",
+   "advice": "改寫成一句",
+   "reason": "這條是 11-18 晚裁定的逐字留底，各項已落進別條；還沒了的只剩「litellm 兩台版本要不要統一」與「家機重建」，後者被決定 D 與線 6 蓋過",
+   "evidence": "litellm-1.109.1-實測；01 決定 D",
+   "merge_or_size": "組 1（家機重建）；litellm 一題留在組 3 題目"
+  },
+  {
+   "key": "default-stack",
+   "status": "等使用者",
+   "category": "1 被蓋過或已完成",
+   "advice": "關掉（兩件小事分出去）",
+   "reason": "第 1 點的 install.py 11-21 已跑多次，e8d87d7cd 在活樹驗過省略 -t／-d；「站在 stack 外要 export AOS_DAEMON」已寫進換機說明書。第 2 點 N-63 加註 → 組 4；第 3 點「stack 裡記定義夾／工作區」→ 題目（daemon 表的 as_written 已記，可能不用另記）",
+   "evidence": "e8d87d7cd、628982cac、198719adc、db7d1b9be",
+   "merge_or_size": "組 4、題目"
+  },
+  {
+   "key": "aos-compile",
+   "status": "等使用者",
+   "category": "2 可合併",
+   "advice": "合併成「編譯與 Python 庫：等你親手試」一條",
+   "reason": "跟 aos-pylib、aos-compile-base、aos-gdb-1120、aos-inherit、aos-ns 的下一步都寫「使用者點頭跑 install.py 後親手試」；install.py 11-21 已跑到 fe053b828、今天又跑一次，前提已滿足，只剩使用者試。「工具包靜態／動態連結做成編譯選項」已做（--compile --static|--dynamic）",
+   "evidence": "198719adc；aos-ns 條目（aos-defs-rename2-1119）",
+   "merge_or_size": "組 3 的主條"
+  },
+  {
+   "key": "subuid-1119",
+   "status": "等使用者",
+   "category": "3 等使用者回答",
+   "advice": "留著",
+   "reason": "要使用者 sudo apt install uidmap 並拍板 Q1；是「牆」的零件，跟私有地盤、公司體制的部門牆直接相關",
+   "evidence": "條目 next",
+   "merge_or_size": "組 6"
+  },
+  {
+   "key": "aos-ns",
+   "status": "等使用者",
+   "category": "4 大方向發想",
+   "advice": "留著（併組 3 等試用）",
+   "reason": "命名空間 std、defs.lib 已做第一刀；剩名詞表加不加 std 一列、std 算 C-74 哪層（使用者說是想法不是裁定）",
+   "evidence": "條目 next",
+   "merge_or_size": "組 3"
+  },
+  {
+   "key": "aos-inherit",
+   "status": "open",
+   "category": "4 大方向發想",
+   "advice": "留著（併組 3 等試用）",
+   "reason": "繼承已做第一刀；剩使用者親手試、ag.from_folder 要不要做；defs.load 指向 stack 使用者說「之後再說」。條目還寫 ag.，名字已改 defs.",
+   "evidence": "條目 next；aos-defs-rename-1119",
+   "merge_or_size": "組 3"
+  },
+  {
+   "key": "aos-pylib",
+   "status": "等使用者",
+   "category": "2 可合併",
+   "advice": "合併進組 3",
+   "reason": "下一步同組 3；三個名字題（std 留不留入口頂層、斷點參數名、skip／wait_stopped）併進組 3 的題目",
+   "evidence": "條目 next",
+   "merge_or_size": "組 3"
+  },
+  {
+   "key": "aos-base-audit",
+   "status": "等使用者",
+   "category": "3 等使用者回答",
+   "advice": "留著（條文那半併組 4）",
+   "reason": "三題：N-28 兩句照新行為改不改、退避參數開不開成設定、procs_ctl 宣告的列死掉要不要照宣告再起。第一題是條文，可併組 4",
+   "evidence": "aos-base-fix.md 第 103 行",
+   "merge_or_size": "組 4"
+  },
+  {
+   "key": "aos-htop-1119",
+   "status": "暫停",
+   "category": "6 暫停或凍結",
+   "advice": "留著",
+   "reason": "使用者答「讓它自然長」",
+   "evidence": "",
+   "merge_or_size": ""
+  },
+  {
+   "key": "aos-vs-c",
+   "status": "open",
+   "category": "1 被蓋過或已完成",
+   "advice": "關掉",
+   "reason": "條目自己寫「照使用者，其餘不做；本條沒有待做」",
+   "evidence": "條目 next",
+   "merge_or_size": ""
+  },
+  {
+   "key": "aos-init-kernel",
+   "status": "等使用者",
+   "category": "4 大方向發想",
+   "advice": "改寫",
+   "reason": "「家裡那台照新的 start-api 重建」被決定 D 與線 6 蓋過（家機不再照 start-api 重建）；剩「一串可選件有哪些」是發想，權限件跟組 6 有接點",
+   "evidence": "01 決定 D、E",
+   "merge_or_size": "發想表、組 6"
+  },
+  {
+   "key": "aos-compile-base",
+   "status": "等使用者",
+   "category": "2 可合併",
+   "advice": "合併進組 3",
+   "reason": "九刀都交了，next 欄是一路累加下來的長串，多數前提已過時（install.py 已跑）；剩 kernel 入口替使用者做的九個選擇、C-87 加註（→組 4）、三份共用文件補字（小尾巴）",
+   "evidence": "198719adc",
+   "merge_or_size": "組 3、組 4"
+  },
+  {
+   "key": "aos-gdb-1120",
+   "status": "等使用者",
+   "category": "1 被蓋過或已完成",
+   "advice": "關掉（併組 3）",
+   "reason": "install.py 11-21 已跑；370962554 在活樹用 aos-gdb --def-hooks 列出宣告。剩使用者親手試",
+   "evidence": "370962554、198719adc",
+   "merge_or_size": "組 3"
+  },
+  {
+   "key": "aos-hook-iface",
+   "status": "等使用者",
+   "category": "1 被蓋過或已完成",
+   "advice": "改寫成兩件",
+   "reason": "next 第 1 點活樹換新格式已做（62129fe49 第三次更新）；第 3 點 hook_handle.py、hook_flags.py 已刪（repo 沒有，370962554 清掉活樹那兩份）；第 6 點 fsm-guard 已改 hookeds 格式（README 第 46 行，11-21）。剩：看 02 替你做的選擇、gdb 岔路（before_run／before_compact 要不要改扣住）；第 4 點條文字 → 組 4；第 5 點 compact4 → compact-improve",
+   "evidence": "62129fe49、370962554、wf/public/tools/fsm-guard/README.md",
+   "merge_or_size": "組 4"
+  },
+  {
+   "key": "aos-kres",
+   "status": "等使用者",
+   "category": "4 大方向發想",
+   "advice": "留著",
+   "reason": "資源基底與排程；跟公司體制第 6 題「部門經費」、11-14 部門配額樹有接點",
+   "evidence": "條目 next",
+   "merge_or_size": ""
+  },
+  {
+   "key": "compact-improve",
+   "status": "open",
+   "category": "3 等使用者回答",
+   "advice": "留著",
+   "reason": "第 3 刀 aos-agent history clear-tools、第 5 刀範例 handler 做不做等使用者；「說明字等下次 install.py」已因 11-21 多次 install 過時",
+   "evidence": "198719adc",
+   "merge_or_size": ""
+  },
+  {
+   "key": "agent-fsm-py-folder",
+   "status": "暫停",
+   "category": "6 暫停或凍結",
+   "advice": "留著",
+   "reason": "使用者「程式能跑就別動他」",
+   "evidence": "",
+   "merge_or_size": ""
+  },
+  {
+   "key": "aos-home-browse-1120",
+   "status": "暫停",
+   "category": "1 被蓋過或已完成",
+   "advice": "改寫，併進 agent-fsm-py-folder",
+   "reason": "next 第 1 點九檔已刪（dff53b667 活樹；repo start-api/agents/ann 已沒有 .py）；第 3 點宣告格式使用者 11-21 已審、新格式已施工。只剩第 2 點 start-eca 的 compact_hook 要不要也改成借的",
+   "evidence": "dff53b667、hook-points-格式-使用者審-1121",
+   "merge_or_size": "組 8"
+  },
+  {
+   "key": "prompt-cost-cache",
+   "status": "open",
+   "category": "5 小尾巴可派工",
+   "advice": "派工後關掉",
+   "reason": "主體做完（session_key、工具說明瘦身 −53%）；剩兩處文件尾巴：self_llm 說明補 reasoning_effort、三份範本文件寫的「11 包 40 支」改數字；ann 的 tools.json 與 system.txt 活樹已換（e8d87d7cd、198719adc）",
+   "evidence": "e8d87d7cd、198719adc",
+   "merge_or_size": "約 15 分鐘，sonnet"
+  },
+  {
+   "key": "llm-effort",
+   "status": "等使用者",
+   "category": "1 被蓋過或已完成",
+   "advice": "關掉（請 eca-aos 核一眼）",
+   "reason": "kernel.json 的 reasoning_effort_levels、四包 api 與 reasoning_efforts 11-21 第一次更新已做；ann 的格程式改成動態連結 AOS_HOME（cf5ad9bf6），install 後自然跟上；eca 範本今天加 high（ca8b4666a），eca-aos 與三個 subagent 直接跑範本",
+   "evidence": "e8d87d7cd、cf5ad9bf6、ca8b4666a",
+   "merge_or_size": ""
+  },
+  {
+   "key": "shell-metaphor",
+   "status": "等使用者",
+   "category": "4 大方向發想",
+   "advice": "留著",
+   "reason": "比喻是使用者自己在定的；三題等他。跟筆記調查「使用者體驗那一輪（怎麼聯絡特定 agent）」有接點",
+   "evidence": "條目 next",
+   "merge_or_size": ""
+  },
+  {
+   "key": "kb-md-leftovers",
+   "status": "open",
+   "category": "5 小尾巴可派工",
+   "advice": "拆：wf 那半派工、條文那半併組 4",
+   "reason": "wf/workflows/tidy/README.md 第 4 條、wf/public/整理與拆檔.md、proto8/docs 2 處舊知識庫路徑，改前改後已寫在規劃夾 19；N-62、N-69、C-42 續是條文",
+   "evidence": "知識庫-骨架加md-規劃-1121/19",
+   "merge_or_size": "約 30 分鐘，opus（改規矩條文不派 sonnet）"
+  },
+  {
+   "key": "kb-zh-md-redo",
+   "status": "open",
+   "category": "3 等使用者回答",
+   "advice": "等使用者一句話",
+   "reason": "使用者今天說「kb-zn不用管」，兩種讀法：只是不歸 eca-aos-kb 管，或整件不做了。讀法不同結果不同，不先照哪種做",
+   "evidence": "HANDOFF 11-22",
+   "merge_or_size": ""
+  },
+  {
+   "key": "waiting-1121",
+   "status": "等使用者",
+   "category": "3 等使用者回答",
+   "advice": "改寫",
+   "reason": "第 8 項的「eca 三包要不要瘦」今天已做（a7779de17）；第 7 項前端 14 項 → 組 2；第 4、5、6 項權限 → 組 6；第 2 項併 design-tails 的 index 三題。剩的照原樣等",
+   "evidence": "a7779de17",
+   "merge_or_size": "組 2、組 6"
+  },
+  {
+   "key": "kb-feedback-1121",
+   "status": "open",
+   "category": "3 等使用者回答",
+   "advice": "留著，方向定了派 eca-aos-kb",
+   "reason": "條目寫「改之前先問使用者方向」；HANDOFF 另記「讓其他模型走一遍知識庫找缺口」沒進 progress，同一件。run_json 丟 stderr 已在 overview-page",
+   "evidence": "知識庫-使用感想-1121；HANDOFF 11-22",
+   "merge_or_size": "組 7"
+  }
+ ]
+}
