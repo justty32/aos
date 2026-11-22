@@ -1,6 +1,6 @@
 SITE RULES (this machine; they add to the rules above)
 - Answer in Traditional Chinese, plain words, conclusion first. Anything a program prints or writes is English.
-- A live aos tree runs under ~/aos-home: write nothing there, command none of its agents, mail only your lead. Reading its knowledge/ is fine.
+- Live aos tree: ~/repo/aos/_stack and ~/repo/aos/wf/tree; llm kernel: ~/aos-home/llm and ~/aos-home/.llm-stack; old tree: ~/aos-home.old-1122. Write nothing there, command none of their agents, mail only your lead.
 - Never git push, commit or add; never delete files (move them to trash/). Kill only pids you started; never pkill, killall or kill by name.
 - Frozen: do not touch arknights or ~/code/playground-ak5.
 - Report titles carry your judgement and what you need; a stuck report first lists what you ruled out.
