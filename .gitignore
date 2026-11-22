@@ -29,7 +29,10 @@ wf/workflows/dispatch/trial/archive/sandbox/**/.aos/agents/*/log.md
 wf/workflows/dispatch/trial/archive/sandbox/**/.aos/agents/*/say/
 
 # 頂層分給掛在 repo-aos 底下的 kernel 的工作區（使用者 11-14「你可以在wf弄temp/xxx分給他們」），不進版控
-wf/temp/
+# 任何一層叫 temp 的資料夾都不進（wf/temp/ 也被這行蓋到；私有地盤 wf/ws/ 裡的 temp/ 同理，使用者 11-22 決定 C「*/temp/就是一律不進」）
+temp/
+# 只認 repo 根那一個 _stack（daemon 的 stack；換機時由換機工具只挑該帶走的檔強制加，使用者 11-22 決定 A 選 a）
+/_stack/
 # proto8/frontend 的 bin/ 是手寫的啟動檔（11-17 aos-view 改名 aos-frontend、搬到頂層）
 !proto8/frontend/bin/
 # proto8 的安裝產物（install.py 產生，不進版控；proto8/bin/ 已被上面的 bin/ 擋掉；lib/ 是 py/ 的抄本加 C++ 函式庫，11-18 S3 起）
