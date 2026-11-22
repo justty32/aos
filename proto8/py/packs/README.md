@@ -6,7 +6,7 @@
 
 - **預設掛的 11 包**（範本 `templates/agent-fsm/tools.json` 的 `$override`）：look、change、delete、shell、gadgets、todo、self、mailbox、goal、json、index。
 - **self 包只留兩支**：同一份 `tools.json` 的 `"tools"` 寫 `"self_llm": null, "self_system": null, "self_history": null, "self_ctl": null`（覆蓋層關一支的現成寫法），預設只剩 self_tools、self_state。agent 要用其他幾支就自己 `self_tools {"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_llm"}}`；self_tools 的說明與知識庫 `aos/me.md` 都寫了這句。
-- **改成選掛的 4 包**（範本不掛）：events（clock_register、self_hook）、subagent（subagent、agents_ctl、fork）、def（agent_def、tools_def）、jsonx（jsonx_* 八支）。eca-claude 範本不受影響。
+- **改成選掛的 4 包**（範本不掛）：events（clock_register、self_hook）、subagent（subagent、agents_ctl、fork）、def（agent_def、tools_def）、jsonx（jsonx_* 八支）。eca-claude 範本當時不受影響；11-22 起 eca-claude 也不掛 events、def、jsonx（eca-plugins-trim，使用者「是，就是這個。」），eca-pi 照掛。
 - **要用怎麼加**：做定義的時候，在那份定義的 `tools.json` 的 `"$override"` 串加一項，例如帶隊的加 `{"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"}` 與 `/lib/packs/def.json`；kits 也可以替定義加。agent 執行中用 `self_tools add` 逐支加仍然可以，但不是主要做法（一次只收一支、工具清單一變對話快取就失效、還要多問腦一兩次）。
 - **成本**：每掛一包，每次問腦都多送那包的工具說明與參數；各包字元數見知識庫 `aos/packs.json`。
 
@@ -24,7 +24,7 @@
 | 包 | 檔 | 工具 |
 |---|---|---|
 | json（簡單組） | [json.json](json.json) | json_get、json_ls、json_search、json_len、json_set、json_add、json_del，一次多格的 json_multi_get、json_multi_set——路徑一整串 `檔#/指標`、值照字面、`$ref`／`$env` 當普通物件；agent-fsm、eca-claude 兩個範本都掛 |
-| jsonx（複雜組） | [jsonx.json](jsonx.json) | jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del，一次多格的 jsonx_multi_get、jsonx_multi_set——多 `follow`、`resolve`、`text`、`from`、`check`；eca-claude 範本掛，agent-fsm 範本 11-14 起不掛（選掛，見上；使用者 11-13「eca-1:A*」＝範本掛 jsonx，[eca-tidy-review](../../thinking/2026-11/12/eca-tidy-review.md)；eca 子 agent 的唯讀精簡組 `tools_sub.json` 不掛） |
+| jsonx（複雜組） | [jsonx.json](jsonx.json) | jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del，一次多格的 jsonx_multi_get、jsonx_multi_set——多 `follow`、`resolve`、`text`、`from`、`check`；eca-pi 範本掛，agent-fsm 範本 11-14 起、eca-claude 範本 11-22 起不掛（選掛，見上；使用者 11-13「eca-1:A*」＝範本掛 jsonx，[eca-tidy-review](../../thinking/2026-11/12/eca-tidy-review.md)；eca 子 agent 的唯讀精簡組 `tools_sub.json` 不掛） |
 
 十七支的程式都在 [`py/aos/json.py`](../aos/json.py)（multi 四支在 [`py/aos/json_multi.py`](../aos/json_multi.py)），各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
 

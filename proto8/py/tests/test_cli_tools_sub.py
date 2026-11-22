@@ -145,11 +145,11 @@ class Template(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("aos-tools"), "aos-tools not on PATH")
     def test_main_registries_have_jsonx_sub_does_not(self):
-        """11-13 使用者裁 eca-1「A」：eca-claude 的 tools.json 疊 jsonx 整包（8 支）；子 agent 的 tools_sub.json 不掛。11-14 使用者「tools40: a」（專區回信 01794634835120033687.3399531.2342077）：agent-fsm 範本不再預設掛 jsonx（選掛）。"""
+        """11-13 使用者裁 eca-1「A」：eca-claude 的 tools.json 疊 jsonx 整包（8 支）；子 agent 的 tools_sub.json 不掛。11-14 使用者「tools40: a」（專區回信 01794634835120033687.3399531.2342077）：agent-fsm 範本不再預設掛 jsonx（選掛）。11-22 使用者「是，就是這個。」：eca-claude 也拿掉 jsonx（eca-plugins-trim），現在兩份都不掛。"""
         env = dict(os.environ, AOS_HOME=str(LIB.parent))
         jsonx = sorted(json.loads((LIB / "packs" / "jsonx.json").read_text())["tools"])
         self.assertEqual(len(jsonx), 8)
-        for f, want in ((TEMPLATE / "tools.json", jsonx), (LIB.parent / "templates" / "agent-fsm" / "tools.json", []),
+        for f, want in ((TEMPLATE / "tools.json", []), (LIB.parent / "templates" / "agent-fsm" / "tools.json", []),
                         (TEMPLATE / "tools_sub.json", [])):
             r = subprocess.run(["aos-tools", "--file", str(f), "ls", "--json"], capture_output=True, text=True, env=env, timeout=120)
             self.assertEqual(r.returncode, 0, r.stderr)

@@ -4,7 +4,7 @@
 
 **結論**：抄 `eca-claude` 範本到 `agents/eca_main`，`aos-agent ctl add` 掛上板子，`say`／`listen` 就跟它說上話。它的腦是你機器上的 `claude` 指令本身，不經 llm kernel、不用寫 `agent.py`，所以做完第 02 章就能直接來（板子開著就好）。
 
-eca 是「外部 coding agent」：把 Claude Code（或 codex、pi）這種現成的 coding agent 包成一隻 aos agent。它每收到一批信就叫一次 `claude -p`，回答接進自己的 `history.jsonl`；看檔、改檔、下指令用 Claude Code 自己的工具（Read、Write、Edit、Bash…），aos 另外經 MCP 給它 30 支 aos 工具（信箱、時鐘、json…，在 Claude Code 裡叫 `mcp__aos__…`）。`eca_main` 是這隻的名字＝資料夾名，你想叫別的也行，後面指令裡的 `eca_main` 跟著換。
+eca 是「外部 coding agent」：把 Claude Code（或 codex、pi）這種現成的 coding agent 包成一隻 aos agent。它每收到一批信就叫一次 `claude -p`，回答接進自己的 `history.jsonl`；看檔、改檔、下指令用 Claude Code 自己的工具（Read、Write、Edit、Bash…），aos 另外經 MCP 給它 18 支 aos 工具（信箱、時鐘、json…，在 Claude Code 裡叫 `mcp__aos__…`）。`eca_main` 是這隻的名字＝資料夾名，你想叫別的也行，後面指令裡的 `eca_main` 跟著換。
 
 ## 要先有什麼
 
@@ -82,7 +82,7 @@ aos-agent -d .stack ctl state --target eca_main
 ```
 who       eca_main (def ~/code/aos-tut/agents/eca_main, ws ~/code/aos-tut, stack ~/code/aos-tut/.stack/procs/eca_main)
 state     running (daemon phase running); 0 queued; last answer "pong"
-tools     30 tools (agent_def, clock_register, index_view, json_add, json_del, json_get, …)
+tools     18 tools (index_view, json_add, json_del, json_get, json_len, json_ls, …)
 llm       model=opus
 system    484 bytes from definition; first line "You run as an aos agent: aos hands you the letters in your queue, and your conve…"
 hooks     6 hooks (brain_notify on brain_failed, context_wrap on on_clock, mail_notify on on_clock, screen_linger_start on after_start, screen_linger_stop on after_stop, timer on on_clock)

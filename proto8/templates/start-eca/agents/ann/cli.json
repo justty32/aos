@@ -1,8 +1,8 @@
 {"kind": "claude",
  "flags": ["--tools", "Read,Write,Edit,Glob,Grep,Bash,Agent,Skill", "--permission-mode", "dontAsk", "--allowedTools", "Read,Glob,Grep,Write,Edit,Bash", "--strict-mcp-config"],
- "print_flags": ["--max-budget-usd", "0.5"],
  "tools_sub": "tools_sub.json",
  "timeout_ms": 0,
  "settings": {"hooks": {"PreCompact": [{"hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" pre", "timeout": 60}]}],
                         "PostCompact": [{"hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" post", "timeout": 60}]}],
-                        "SessionStart": [{"matcher": "compact", "hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" start", "timeout": 60}]}]}}}
+                        "SessionStart": [{"matcher": "compact", "hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" start", "timeout": 60}]}]},
+              "skillOverrides": {"anthropic-skills:chrome-browser": "off", "anthropic-skills:docx": "off", "anthropic-skills:pptx": "off", "anthropic-skills:xlsx": "off"}}}
