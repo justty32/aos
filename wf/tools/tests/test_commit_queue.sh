@@ -1,5 +1,5 @@
 #!/bin/bash
-# test_commit_queue.sh — 在 repo 外的暫存 clone 上測 commit_queue.py（兩線同時、別人 staged、索引列合併、claim 擋下、生成器失敗、CAS、半途被殺、生成物、month_set、進度檔 progress.json 的兩個 op、單檔大小門檻與放行名單、--stack-commit 只讓 _stack/ 跳過 .gitignore 檢查）；不碰來源 repo
+# test_commit_queue.sh — 在 repo 外的暫存 clone 上測 commit_queue.py（兩線同時、別人 staged、索引列合併、claim 擋下、生成器失敗、CAS、半途被殺、生成物、month_set、進度檔 progress.json 的兩個 op（含 what／next 寫成 $ref）、單檔大小門檻與放行名單、--stack-commit 只讓 _stack/ 跳過 .gitignore 檢查）；不碰來源 repo
 # 用法：test_commit_queue.sh <來源 repo> <repo 外的暫存夾>   每次在暫存夾下開一個新的 run-<時間> 子夾，不刪任何東西
 set -u
 [ -n "${BASH_VERSION:-}" ] || { echo "not bash" >&2; exit 1; }
@@ -233,11 +233,26 @@ cq submit --line ok-a --msg-file "$(msg t13h m13h)" --op '{"op":"progress_upsert
 check "unknown field → refused ($E)" [ $E = 3 ]
 cq submit --line ok-a --msg-file "$(msg t13i m13i)" --op '{"op":"log_upsert","key":"- **open｜x","text":"- **open｜x**：y"}' > "$RUN/t13i.out" 2>&1; E=$?
 check "old log_upsert op → refused ($E)" [ $E = 3 ]
+cq submit --line ok-a --msg-file "$(msg t13k m13k)" --op '{"op":"progress_upsert","key":"t13k","entry":{"title":"x","status":"open","what":{"$ref":""}}}' > "$RUN/t13k.out" 2>&1; E=$?
+check "what = empty \$ref → refused ($E)" [ $E = 3 ]
+cq submit --line ok-a --msg-file "$(msg t13l m13l)" --op '{"op":"progress_upsert","key":"t13l","entry":{"title":"x","status":"open","what":"x","next":{"$ref":"a.md","x":1}}}' > "$RUN/t13l.out" 2>&1; E=$?
+check "next = \$ref with an extra key → refused ($E)" [ $E = 3 ]
+cq submit --line ok-a --msg-file "$(msg t13m m13m)" --op '{"op":"progress_upsert","key":"t13m","entry":{"title":"x","status":"open","what":"x","flow":{"$ref":"a.md"}}}' > "$RUN/t13m.out" 2>&1; E=$?
+check "flow = \$ref → refused, only what/next take it ($E)" [ $E = 3 ]
 printf ' ' >> wf/progress.json
 cq submit --line ok-a --files wf/progress.json --msg-file "$(msg t13j m13j)" > "$RUN/t13j.out" 2>&1; E=$?
 check "progress.json in --files → refused ($E)" bash -c "[ $E = 3 ] && grep -q 'shared index file' $RUN/t13j.out"
 git checkout -q -- wf/progress.json
 check "main unchanged by the refusals" [ "$(head_)" = "$B" ]
+
+echo "== T13r progress.json: what / next as {\"\$ref\": PATH} accepted and stored as written"
+mkdir -p wf/progress; printf '# t13r 測試條目的一句話\n\n長內文\n' > wf/progress/t13r.md
+cq submit --line ok-a --files wf/progress/t13r.md --msg-file "$(msg t13r m13r)" --op '{"op":"progress_upsert","key":"t13r","entry":{"title":"t13r","status":"open","what":{"$ref":"progress/t13r.md"},"next":{"$ref":"progress/t13r.md#/x"}}}' > "$RUN/t13r.out" 2>&1; E=$?
+check "\$ref upsert ($E)" [ $E = 0 ]
+check "the md is in the same commit" in_commit main wf/progress/t13r.md
+check "what / next kept as {\"\$ref\": ...}" bash -c "git show main:wf/progress.json | python3 -c 'import json,sys;e=json.load(sys.stdin)[\"open\"][\"t13r\"];sys.exit(0 if e[\"what\"]=={\"\$ref\":\"progress/t13r.md\"} and e[\"next\"]=={\"\$ref\":\"progress/t13r.md#/x\"} else 1)'"
+cq submit --line ok-a --msg-file "$(msg t13s m13s)" --op '{"op":"progress_delete","key":"t13r"}' > "$RUN/t13s.out" 2>&1; E=$?
+check "delete the \$ref entry ($E)" bash -c "[ $E = 0 ] && ! pj keys | grep -qx t13r"
 
 echo "== T14 single-file size limit: over the limit refused, big_ok from main lets it in, a lower limit refuses, bad config falls back"
 CFG=wf/tools/commit_queue.json

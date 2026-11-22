@@ -15,6 +15,7 @@
   {"op": "progress_upsert", "key": "short-name", "entry": {"title": "…", "status": "open", "what": "…", "see": ["[x](x.md)"]}}
       wf/progress.json 的 open 那一鍵整條換掉，沒有就加在最後；key 小寫英數與 -；title、status、what 必填，
       status 是 open｜等使用者｜暫停｜凍結；flow、next、see、since 可省（since 省了就沿用舊的，新條用今天）
+      what、next 也可以寫成 {"$ref": "progress/<key>.md"}：大段內文放 md，路徑照 $ref 慣例從 wf/ 算；只查形狀，不查檔在不在
   {"op": "progress_delete", "key": "short-name"}                 刪那一鍵（沒有這鍵只警告）
 路徑：--files／--rm 的相對路徑從 repo 根算（不管 cwd）；--msg-file、--ops-file 從 cwd 算。
 單檔大小：--files 點名的每個檔在工作樹的大小（bytes；符號連結看連結本身）超過門檻，整個申請不收（FAILED RequestBad，exit 3），什麼都不 commit。
@@ -181,6 +182,12 @@ def check_op(op):
     return kind
 
 
+def is_ref(v):
+    """{"$ref": 非空一行字串}，只有這一鍵：what／next 的大段內文搬到 md 時的寫法。"""
+    return (isinstance(v, dict) and set(v) == {"$ref"} and isinstance(v["$ref"], str)
+            and v["$ref"].strip() != "" and "\n" not in v["$ref"])
+
+
 def check_progress_entry(e):
     def bad(msg):
         raise Stop("FAILED", "OpBad", EXIT["invalid"], f"progress_upsert: {msg}")
@@ -190,11 +197,13 @@ def check_progress_entry(e):
     if extra:
         bad(f"unknown fields {extra} (allowed: {', '.join(PROGRESS_FIELDS)})")
     for k in ("title", "status", "what"):
+        if k == "what" and is_ref(e.get(k)):
+            continue
         if not isinstance(e.get(k), str) or not e[k].strip():
             bad(f"entry.{k} missing or empty")
     for k in ("flow", "next", "since"):
-        if k in e and not isinstance(e[k], str):
-            bad(f"entry.{k} must be a string")
+        if k in e and not isinstance(e[k], str) and not (k == "next" and is_ref(e[k])):
+            bad(f"entry.{k} must be a string" + (' or {"$ref": PATH}' if k == "next" else ""))
     if "\n" in e["title"]:
         bad("entry.title must be one line")
     if e["status"] not in PROGRESS_STATUS:
