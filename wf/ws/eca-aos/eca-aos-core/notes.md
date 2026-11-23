@@ -49,3 +49,16 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - `py/aos/json.py` 的 `do_search` 擋 `key == ""`（ArgumentsBad），json_search 與 jsonx_search 共用這支；`value:""` 照字面用不動。兩支的 `_tooldef.json` 的 key 說明補「not empty」。
 - jsonx_* 的工具夾在 `py/tools/aos/`，不在 `base/`。
 - 動到工具說明時，順手跑 `templates/tests/agent-fsm`（250 條，約 4～5 分鐘）與 `py/tests`（762 條，約 3 分鐘）。
+
+### 工具經 aos-tools call 時看到的環境（11-23 第三件第 1 項）
+
+- `AOS_STACK`＝叫方 stack 裡的小格 `<stack>/tools/<名>/`（不先建），`AOS_STACK_IN_CALLER`＝`tools/<名>`；`AOS_CD` 被 aos-exec 換成**工具自己的夾**。所以工具裡拿得到叫方的 stack（`tool_io.caller_stack()`，11-23 新增），拿不到叫方的定義夾。
+- guard 的 `py/tools/agent/guard/scope.py` 早就處理過同一題：`own_stack()` 照 `<stack>/{tools,hookeds}/<名>` 剝小格，`definition()` 去 daemon 表找 stack 裝著 `AOS_STACK` 的那列取 `def`。要再碰「工具怎麼知道 agent 的定義」先看它。
+- ws_write 經 aos-tools 叫的定義夾保護怎麼補，11-23 回 NEEDS-USER（三個做法），還沒定。
+
+### 這次的坑
+
+- 測試的跑法：`py/tests/apps/agent` 232 條約 4 分鐘；`py/tests` 765 條約 3 分鐘。
+- `py/tools/agent/user_send/tests` 的 `test_tool_missing` 在複本 `source env.sh` 之後一定失敗（PATH 上有真的 `aos-user`），改之前就這樣，不是新壞的。
+- 在 Bash 工具裡（zsh）直接寫 `for v in $(compgen -e …)` 不可靠，清 `AOS_*` 一律寫成 `#!/bin/bash` 腳本再跑。
+- 一份文件兩項都要改又要一項一個 commit：先把完整版改在複本，回 repo 時先只套第一項的那幾段交掉，再整份抄回去交第二項。
