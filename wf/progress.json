@@ -426,10 +426,10 @@
       "since": "2026-11-21"
     },
     "aos-user-home": {
-      "title": "aos-user 搬進 repo 之後剩的：重起全景頁、公司那台、user_send／user_verify 的舊找法",
+      "title": "aos-user 搬進 repo 之後剩的：重起全景頁、user_send／user_verify 的舊找法、寄件人沒有 mailbox/ 時 send 失敗",
       "status": "等使用者",
       "flow": "",
-      "what": "11-22 aos-user 已搬進 `proto8/frontend/aos-user/`，`proto8/frontend/bin/aos-user` 連過去（線 aos-user-home-1122-build；使用者四題都選 a：tick 先不裝、systemd 不碰、專區每台一份、不跟 wf/user 對接）。剩三件：① 使用者重起全景頁（關掉 pid 9460 那個分頁，開新殼先 `command -v aos-user` 要看到 `~/repo/aos/proto8/frontend/bin/aos-user`，再 `AOS_DAEMON=~/repo/aos/.stack aos-frontend serve`（11-23 起資料夾改名 `.stack`）），重起前「要決定」欄還是空的；② 公司那台 WSL：`git pull` 後新殼 `command -v aos-user`，沒有 `~/.aos/user` 就 `aos-user init`，跟線 8 一起做；③ `proto8/py/tools/agent/user_send`、`user_verify` 的找法拿掉 `$AOS_WS/tools/aos-user/aos-user` 那條（只留 `$AOS_USER_TOOL`、PATH，註解、usage、測試跟著改），要跑 `install.py`，等下次有人跑時一起做；不做也不影響功能",
+      "what": "11-22 aos-user 已搬進 `proto8/frontend/aos-user/`，`proto8/frontend/bin/aos-user` 連過去（線 aos-user-home-1122-build；使用者四題都選 a：tick 先不裝、systemd 不碰、專區每台一份、不跟 wf/user 對接）。剩這幾件：① 使用者重起全景頁（關掉 pid 9460 那個分頁，開新殼先 `command -v aos-user` 要看到 `~/repo/aos/proto8/frontend/bin/aos-user`，再 `AOS_DAEMON=~/repo/aos/.stack aos-frontend serve`（11-23 起資料夾改名 `.stack`）），重起前「要決定」欄還是空的；② 公司那台 WSL：11-23 建好了（使用者 11-23「然後~/.aos/user看起來還是必要的，開一個claude subagent去弄吧」；`aos-user init` 建出 `~/.aos/user/`，`door`、`ls`、`where` 正常，寄信→回信→verify 整條只在暫存的假專區跑通，真專區一封都還沒收發；tick 的 timer 沒裝、全景頁沒在跑、這台沒有 `notify-send`）；③ `proto8/py/tools/agent/user_send`、`user_verify` 的找法拿掉 `$AOS_WS/tools/aos-user/aos-user` 那條（只留 `$AOS_USER_TOOL`、PATH，註解、usage、測試跟著改），要跑 `install.py`，等下次有人跑時一起做；不做也不影響功能；④ 從沒收過信的 agent，stack 底下沒有 `mailbox/`，`aos-user send` 會報 `MailboxMissing`、信不進專區（11-23 在假 stack 重現；eca-aos 自己那格已用 `aos-post init $AOS_STACK/mailbox` 補上）；知識庫 `aos/user_zone.md` 與 `wf/public/user-zone-mail.md` 都沒寫這一步，要補文件，或讓 `send` 自己建，還沒問使用者",
       "next": "",
       "see": [
         "[aos-user 新家規劃](../proto8/thinking/2026-11/22/aos-user新家-1122/README.md)",

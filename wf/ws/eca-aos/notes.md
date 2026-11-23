@@ -24,6 +24,17 @@
 - 使用者：「我剛剛用aos-agent新開了一個claude eca 互動畫面，然後滑鼠滾輪又不能用了。」「那個eca的位置是在~/aos-home/.stack/proc/mine_arean/proc/main」（實際路徑 `~/aos-home/.stack/procs/mine_arena/procs/main`）。
 - 派了一隻 opus 的 Claude 子 agent 做只讀調查（查舊紀錄、起 tmux 的程式、活的 tmux 選項）；派的時候還不知道是 `mine_arena/main`，任務書寫的是「多半是 eca_main，自己確認」。回來後要對它有沒有查到對的那個畫面。
 
+## 2026-11-23 上午：建這台的使用者專區
+
+- 使用者接著說：「然後~/.aos/user看起來還是必要的，開一個claude subagent去弄吧」。
+- 派了第二隻 opus 的 Claude 子 agent：照 `aos-user init` 建 `~/.aos/user/`、驗 `door`、不寄測試信進真專區；`aos-user tick` 的 timer、全景頁、殼設定檔只查不做，回來報選項。只准寫 `~/.aos/user/` 與 scratch。
+- **建好了**（子 agent 回報，我 `ls`、`aos-user door` 對過）：`~/.aos/user/` 在，`aos-user` 在 PATH（`proto8/frontend/bin/aos-user`）。真專區沒收發過信；整條只在假專區跑通。
+- 我的 stack 原本沒有 `mailbox/`，`aos-user send` 會報 `MailboxMissing`；已跑 `aos-post init $AOS_STACK/mailbox` 補上。
+- **這台要問使用者的題目改回寄專區**（`aos-user send --kind decide`，回信 `aos-user verify`）；`common/user.md` 那句「沒有專區的機器放 wf/user」是通則，照留。
+- 沒做、等使用者說：tick 的 timer（子 agent 推薦先不裝，跟家機 11-22 選的一樣；這台沒有 `notify-send`）；全景頁沒在跑（他要看題目得自己起 `AOS_DAEMON=~/repo/aos/.stack aos-frontend serve`，或用 `aos-user ls`／`show N`／`answer N q1:a`）。
+- 文件漏寫「寄件人自己的 `mailbox/` 要先存在」：`eca-aos-kb` 這台沒掛，沒地方寄，記在 progress `aos-user-home` 第 ④ 件。
+- HANDOFF 那句與 progress `aos-user-home` 已更新。
+
 ## 還開著的（從 HANDOFF 接的）
 
 1. 使用者要細說「把stack一起隨機器搬遷，不是一個好主意」那塊。

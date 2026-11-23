@@ -56,7 +56,7 @@ aos-daemon-ctl -d ~/aos-home/.stack shutdown                                    
 - 真模型與 alt 帳號都還沒走過一輪（progress `company-wsl-1123-verify`）。
 - `sol-high`：kits 寫 `sol-high`，範本 11-21 起是 `sol` 加 reasoning_effort（progress `sol-high-pack`）。
 - `02-模型端點.md`、`01-跨機與外部工具.md` 寫公司用 pinned 那套；今天用根那套，長期怎樣他沒說，**先不改**。
-- `install.py` 結尾印的下一步還叫人抄進 `~/aos-home`；這台 `aos-user init` 沒查。
+- `install.py` 結尾印的下一步還叫人抄進 `~/aos-home`；這台的使用者專區 `~/.aos/user/` 11-23 建好了（eca-aos 派的子 agent 跑 `aos-user init`；真專區還沒收發過信，tick 的 timer 沒裝、全景頁沒在跑，剩項在 progress `aos-user-home`）。
 - `wf/user/待答-1122.md` 第 1、2 題（換機、`_stack` 帶哪些檔）已不適用；那是他的地盤，沒改。
 - Windows 那份 clone 的 `wf/HANDOFF.md` 有一段沒交的舊修改（11-20 artifact 備註，早在 `33b0e59b9` 交過）。push 後那份 pull 會撞，要他自己跑 `git checkout -- wf/HANDOFF.md`。
 
