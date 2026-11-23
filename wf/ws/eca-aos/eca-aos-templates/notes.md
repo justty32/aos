@@ -25,6 +25,7 @@ eca-aos-templates（改 `proto8/templates/` 的 subagent）的筆記：使用者
 - **`--disable-slash-commands` 會讓 `claude -p "/compact"`、`/context` 回「isn't available」**：aos 交給 claude 的 `/compact`（context_wrap）、`/usage` 都靠它，別加（使用者 11-22 也裁不做）。
 - **開互動 claude 驗畫面**：新資料夾會跳信任詢問（按了會寫 `~/.claude.json`），借已信任的暫存工作區；用私用 tmux socket（`tmux -L 名字`），看完 kill-session。
 - **說「拿不回」之前先對事實**（11-23 kits 那句）：關掉 self_tools 等只是拿掉入口，write、edit 收絕對路徑、改得到自己 stack 的 `tools.json`；寫成「沒有工具能…，只靠規矩擋」。kits 的說法要跟知識庫 `aos/kits.md` 對齊。`tests/kits` 只比檔、不必 install，複本裡直接跑（`bin/run_kits.sh`）。
+- **範本文件跟上程式行為時**，說法對齊知識庫那條（例：11-23 `kernel/docs/01-llm-kernel.md` 的 responses 包補 `strict: false`，對齊 `aos/brain.md`）；範本裡腦包強度一律寫 `sol`＋`reasoning_effort`，沒有 `sol-high`（11-23 grep 過 templates 全夾）。
 - **commit-request**：先 `claim --line 線名 檔…`（檔是位置參數，沒有 `--files`）再 `submit`，沒 claim 也交得進但會警告 not claimed。claim 過的檔交完會放，但 `wf/progress.json` 若 claim 了卻沒交到，要自己 `release --line 舊線名`，否則下一條線 claim 被擋。
 - **eca 的 claude 與它的 hook 拿得到哪些環境變數**：`AOS_STACK`、`AOS_WS`、`AOS_PARENT_STACK`（subagent 才有值，指上層的 stack）、`AOS_CLI_DEF`、`AOS_HOME`…；在自己的 Bash 跑 `env | grep ^AOS_` 就看得到，不用碰 daemon。compact_hook 要知道「我是不是 subagent」就看 `AOS_PARENT_STACK`。
 - **compact 之後**：repo 的 `wf/tools/compact_reload.sh` 會貼頂層的 `wf/HANDOFF.md`，那是 eca-aos 的、不是我的；我先讀這份 notes.md（見 [compact 後讀筆記的提案](notes-hook-提案.md)）。
