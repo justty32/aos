@@ -45,6 +45,14 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - 中文檔名：不要直接拿 `git diff --name-only` 的輸出，git 會把中文檔名轉成 `"\346…"` 這種跳脫字串，claim 會拿到錯的路徑、submit 也會失敗（`does not exist`）。改用 `git -c core.quotePath=false diff --name-only`，或手寫路徑。拿錯的 claim 用 `commit-request release --line <線名> <同樣那串路徑>` 放掉（`release --all` 在這裡被權限擋了）。
 - 交之前 `git diff -- 檔` 確認只有自己的字；不 push，不刪檔。
 
+## 前端（aos-user）改了，知識庫跟上
+
+- 要跟上的頁：知識庫 `aos/user_zone.md`（含 `aos/_index.json` 那項的一句話），和 `wf/public/user-zone-mail.md`（中文那份）。事實對 `proto8/frontend/aos-user/zone.py` 與它的 README、`aos-user --help`；只讀的 `aos-user door`、`aos-user announce`（不帶字）可以跑。
+- 沒 shell 的身走 aos 工具 `user_send`（`proto8/py/tools/agent/user_send/_entry`）：它把 `AOS_STACK` 設成叫它的那隻、再呼叫 `aos-user send`，所以 aos-user 的改動多半也套到它；它的 `_tooldef.json` 說明歸核心程式位子，寫錯只回報。
+- 樣板 `DOOR` 改了，真專區的 `door.json` 不會跟著變（`init` 不蓋已有的檔）：知識庫照程式寫，不要照 `aos-user door` 印出的 rules 抄；對不上就回報。
+- 不要寫成全景頁（`aos-frontend`）能做專區網頁才有的事（例：逐題留言），也不要寫成 agent 會自動察覺使用者不在：公告只有「去看就看得到」。
+- 新加一段就開新標題（例 `# The announcement`），舊標題不改名，別頁的連結不會斷；開頭的條列補一行指過去。
+
 ## 要先問方向的工作：只出提案
 
 - progress 條目或任務書寫「改之前先問使用者」，就只出提案，不改 `proto8/knowledge/`。提案放 `proposals/`，示範稿放 `drafts/`，兩者都在我的地盤裡（換台後還要給使用者看，所以不放 `temp/`）。

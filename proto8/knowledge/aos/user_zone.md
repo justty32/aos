@@ -6,6 +6,7 @@ The user (the human) is also something that can receive letters. Their zone is `
 - how to send (with a shell, or with aos tools only): `aos/user_zone.md#/How to send`
 - what the answer looks like, and how far you may trust it: `aos/user_zone.md#/The answer`
 - the door (the notice on the zone, read it before sending): `~/.aos/user/door.json`, or print it with `aos-user door`
+- the user's announcement (for example "napping, back in an hour"), read it when no answer comes: `aos/user_zone.md#/The announcement`
 
 # What to send to the user
 
@@ -32,9 +33,11 @@ aos-user send --kind decide --title "one line that makes sense alone" < letter.j
 
 `letter.json` holds `what` (one or two sentences: what you need; optional for decide) and the keys from `#/what` (for decide: `questions`). The tool fills `zone`, `from` (your stack name), `to`, `status`, `host`, and the reply address (`$AOS_STACK/mailbox`, or `--reply-to MAILBOX`). It checks the letter against `~/.aos/user/schema/letter.json` first; a bad letter is not sent (`SchemaBad`, with the reason). It prints the letter name.
 
+If the reply address is your own `$AOS_STACK/mailbox` and it does not exist yet (you have never received a letter), the tool makes it first (as `aos-post init` does). It says so in one line on stderr: `aos-user: made your reply mailbox ... (aos-post init)`. Any other missing reply mailbox is not made: a `--reply-to` somewhere else, `$AOS_STACK` not set, or your stack folder not there. Then sending fails with `MailboxMissing`; the error line says why and how to fix it.
+
 aos-user is on PATH after `source $AOS_HOME/env.sh` (it lives in `$AOS_HOME/frontend/aos-user/`).
 
-With aos tools only (agent-fsm bodies): tool `user_send` if you have it (ask for it to be added if not), as you: `{"kind": "decide", "title": "...", "questions": [...]}` (the same keys as above, checked the same way; the answer comes to your mailbox). Without `user_send` the old way still works. `mailbox_send` `{"box": "/home/<you>/.aos/user/mailbox", "status": "NEEDS-USER", "title": "...", "what": "...", "decide": "the question, the options, your recommendation"}`. The user sees it marked as old format and answers in words.
+With aos tools only (agent-fsm bodies): tool `user_send` if you have it (ask for it to be added if not), as you: `{"kind": "decide", "title": "...", "questions": [...]}` (the same keys as above, checked the same way; the answer comes to your mailbox, which is made first if it does not exist yet). Without `user_send` the old way still works. `mailbox_send` `{"box": "/home/<you>/.aos/user/mailbox", "status": "NEEDS-USER", "title": "...", "what": "...", "decide": "the question, the options, your recommendation"}`. The user sees it marked as old format and answers in words.
 
 Where the zone's every-minute check (`aos-user tick`, a timer each machine installs or not) runs, the zone checks every new letter within a minute. A letter that breaks the door's rules, or more than 10 letters from you within one hour, is moved to the zone's `rejected/` and comes back to your mailbox: status `FAILED`, title `Returned: ...`, `in_reply_to` = your letter, `reason` = what was wrong. The user does not see it. Fix the letter and send it again; do not send it again unchanged, and group questions into one letter (at most 7) instead of sending many.
 
@@ -42,12 +45,26 @@ Never read the zone with `aos-mailbox read` or `mailbox_read`: they delete lette
 
 # The answer
 
-The user answers with `aos-user answer` / `reply` / `ok` or on the zone web page (127.0.0.1 only). A letter stays waiting until it is answered ("answered = gone").
+The user answers with `aos-user answer` / `reply` / `ok` or on the zone web page (127.0.0.1 only). A letter stays waiting until it is answered ("answered = gone"). With `aos-user answer` and on the zone web page, the user can also write a comment on each question of a decide letter.
 
-The answer is a letter in your mailbox with `in_reply_to` = your letter's name, status `DONE`, the usual fields (`from` = `user`, `title` = `Re: ...`, `what` = the answer in words), and also: `answers` (`[{id, answer, differs}]`; `differs` = not the recommended one; `answer` may be `other` = see `note`), `answer_line` (the same in decide-page form, `q1:a、q2:c*（備註：...）`), `note`, `text`, `via` (`cli` or `web`), `answered_at`, `host`, `letter_hash`, `reply_id`, `auth`.
+The answer is a letter in your mailbox with `in_reply_to` = your letter's name, status `DONE`, the usual fields (`from` = `user`, `title` = `Re: ...`, `what` = the answer in words, with each comment), and also: `answers` (`[{id, answer, differs, comment?}]`; `differs` = not the recommended one; `comment` = the user's words on that one question, only there when the user wrote some; `answer` may be `other` = the user's own answer, in that question's `comment` or in `note`), `answer_line` (the same in decide-page form, `q1:a「comment」、q2:other*「comment」（備註：...）`), `note` (one comment for the whole letter), `text`, `via` (`cli` or `web`), `answered_at`, `host`, `letter_hash`, `reply_id`, `auth`.
+
+Read every question's comment before you act: it can change what the chosen key means (for example "a, but only for the demo").
 
 For `verify` and `chore` letters, an answer like "ok" usually only means the user agreed to do it, not that it is done. Wait for an answer that says it was done before you count it as done; if a read-only check can confirm it, run that too.
 
-Check it: `aos-user verify <the answer's letter folder>` compares it with the zone's own copy (`done/`) and log. `ok:` = it was sent from the zone. With aos tools only: tool `user_verify` `{"letter": "<the name from mailbox_peek>"}` does the same check and counts the same; it works after `mailbox_read` too, because the reply is kept in `mailbox/archive/<letter>/letter.json` (lookup order: new/, cur/, archive/). A returned letter (status `FAILED`, `returned`) is not an answer and does not pass.
+Check it: `aos-user verify <the answer's letter folder>` compares it with the zone's own copy (`done/`) and log. `ok:` = it was sent from the zone. With aos tools only: tool `user_verify` `{"letter": "<the name from mailbox_peek>"}` does the same check (the comments too: the whole reply must match) and counts the same; it works after `mailbox_read` too, because the reply is kept in `mailbox/archive/<letter>/letter.json` (lookup order: new/, cur/, archive/). A returned letter (status `FAILED`, `returned`) is not an answer and does not pass.
 
 How far to trust it (the user's decision): a checked answer from the zone counts as the user's own words, also for push and delete (AGENTS.md rule 2). But all agents run as the same Linux user: an agent with a shell could fake the zone's copy and log too. The check stops passing-on ("the user told me yes") and fake letters dropped into your mailbox; it does not stop an agent that sets out to forge both sides. Do not try to.
+
+# The announcement
+
+The user can put up one announcement for every agent (for example "napping, back in an hour"). A new one replaces the old one.
+
+It is the `announce` key of `~/.aos/user/door.json`: `{"text": "...", "at": "2026-11-23T13:00:00+0800", "until": "2026-11-23T14:00:00+0800"}`. `at` = when it was put up. `until` = when it ends; `null` = until the user takes it down. No `announce` key = no announcement.
+
+Read it with `aos-user announce` (prints `announce:`, `since:`, `until:`; `no announcement` and exit 10 when there is none) or `aos-user door`. Both leave out an announcement whose `until` has passed. If you read `door.json` yourself, you may still find an old one there: compare `until` with the time now; past = no announcement.
+
+Nothing tells you when the user puts one up: you see it only when you read it. When your question gets no answer for a long time, read it before you send again or ask elsewhere. If it says the user is away, wait for the answer: do not send reminders, do not send the letter again.
+
+Only the user puts it up or takes it down (`aos-user announce TEXT [--until T | --for 90m]`, `aos-user announce --clear`, or the zone web page). Do not write it yourself.
