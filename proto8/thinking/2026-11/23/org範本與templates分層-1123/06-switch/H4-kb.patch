@@ -1,0 +1,59 @@
+From cb3f3183eba8f072cc93204b8b6704dbf94aa7a8 Mon Sep 17 00:00:00 2001
+From: justty32 <justty32@gmail.com>
+Date: Mon, 23 Nov 2026 21:28:55 +0800
+Subject: [PATCH 4/6] =?UTF-8?q?=E4=B8=89=E5=88=86=E6=89=8B=E6=94=B9?=
+ =?UTF-8?q?=E5=B1=A4=20H4=20=E7=9F=A5=E8=AD=98=E5=BA=AB=EF=BC=9Aaos/defini?=
+ =?UTF-8?q?tion.md=20=E5=AF=AB=E6=A0=BC=E7=9A=84=E7=A8=8B=E5=BC=8F?=
+ =?UTF-8?q?=E5=9C=A8=20lib/aos/apps/agent=5Ffsm=E3=80=81=E7=AF=84=E6=9C=AC?=
+ =?UTF-8?q?=E5=8F=AA=E6=98=AF=E6=8A=84=E7=9A=84=E4=BE=86=E6=BA=90=E3=80=81?=
+ =?UTF-8?q?=E6=80=8E=E9=BA=BC=E5=B8=B6=E8=87=AA=E5=B7=B1=E7=9A=84=E4=B8=80?=
+ =?UTF-8?q?=E4=BB=BD=EF=BC=9Bpacks.md=20=E7=9A=84=20subagent=20=E5=8C=85?=
+ =?UTF-8?q?=E9=87=8D=E9=87=8F=EF=BC=88agents=5Fctl=20=E8=AA=AA=E6=98=8E?=
+ =?UTF-8?q?=E7=9A=84=E4=BE=8B=E5=AD=90=E8=B7=AF=E5=BE=91=E8=AE=8A=E9=95=B7?=
+ =?UTF-8?q?=EF=BC=89?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+照規劃夾 06c 知識庫位子那段；換路徑字由機械層改好。cli/agent.md 沒有掛範本的例子，沒改。
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ proto8/knowledge/aos/definition.md | 6 +++---
+ proto8/knowledge/aos/packs.md      | 2 +-
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/proto8/knowledge/aos/definition.md b/proto8/knowledge/aos/definition.md
+index 566a8dcbb..0a89df4b2 100644
+--- a/proto8/knowledge/aos/definition.md
++++ b/proto8/knowledge/aos/definition.md
+@@ -24,10 +24,10 @@ A definition is a folder that says what an agent is (its source code). Its `inte
+ Only agent-fsm:
+ 
+ - `body.json`: the body, `aos-loop loop.json`.
+-- `fsm.json`: the four cells `idle` (take letters from the queue), `think` (ask the brain), `wait` (wait for its answer), `act` (run the tool calls).
+-- `idle.py`, `brain.py`, `wait.py`, `act.py`, `llm_settings.py`: the programs of those cells; `atomic_file.py`: the atomic file write that idle and wait share; `cell_common.py`: the first steps brain and act share (reading the history, choosing the tool registry); `compact.py`: how a `/compact` letter is done, with the rules of the `before_compact` / `after_compact` hooks, and how a `/clear` letter empties history (`aos/me/compact.md`).
++- `fsm.json`: the four cells `idle` (take letters from the queue), `think` (ask the brain), `wait` (wait for its answer), `act` (run the tool calls). Each cell's `argv` names its program as `{"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/idle.py"}`.
++- The cell programs are not in the definition: they live in `$AOS_HOME/lib/aos/apps/agent_fsm/`, one copy for every agent-fsm (the template, `fsm=std.fsm()` in an agent.py, the `ann` of the start-api starter all point there; the template is only something to copy). `idle.py`, `brain.py`, `wait.py`, `act.py`, `llm_settings.py`: the programs of those cells; `atomic_file.py`: the atomic file write that idle and wait share; `cell_common.py`: the first steps brain and act share (reading the history, choosing the tool registry); `compact.py`: how a `/compact` letter is done, with the rules of the `before_compact` / `after_compact` hooks, and how a `/clear` letter empties history (`aos/me/compact.md`); `hooks.json`: the hook points the cells fire (the `hooks` of `interfaces.json` points at it).
+ - `subagents.json`: `max_subagents`, how many subagents you may have at once (tool `subagent`).
+-- A definition may carry none of these programs: when its `fsm.json` names them as `{"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/idle.py"}` (the `ann` of the start-api starter does, and so does `fsm=std.fsm()` in an agent.py), the cells run the agent-fsm template's copies under `$AOS_HOME`, and the `hooks` of its `interfaces.json` points at the agent-fsm template's `hooks.json` declaration instead of carrying its own.
++- A definition may carry its own copies instead: copy those nine files into it, write `["python3", "idle.py"]` (a name relative to the definition) in each cell's `argv` and `"hooks.json"` in the `hooks` of `interfaces.json`. Its copies no longer follow `$AOS_HOME`; they still import `aos.*` from `$AOS_HOME/lib`.
+ 
+ Only eca-claude (and eca-pi, the same minus the last two):
+ 
+diff --git a/proto8/knowledge/aos/packs.md b/proto8/knowledge/aos/packs.md
+index 10b34a6ac..96e004f61 100644
+--- a/proto8/knowledge/aos/packs.md
++++ b/proto8/knowledge/aos/packs.md
+@@ -43,7 +43,7 @@ What a pack costs: every pack you have is sent with every question to your brain
+ | json | 9 | 5,906 |
+ | index | 1 | 998 |
+ | events (optional) | 2 | 10,263 |
+-| subagent (optional) | 3 | 11,428 |
++| subagent (optional) | 3 | 11,435 |
+ | def (optional) | 2 | 6,427 |
+ | jsonx (optional) | 8 | 12,011 |
+ | comm (optional) | 5 | 6,120 |
+-- 
+2.56.0
+

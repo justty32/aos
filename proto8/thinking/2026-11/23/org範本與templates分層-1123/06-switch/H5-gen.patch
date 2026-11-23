@@ -1,0 +1,134 @@
+From c990d8c04a2a10c3ed8df8edf52f80642f529e91 Mon Sep 17 00:00:00 2001
+From: justty32 <justty32@gmail.com>
+Date: Mon, 23 Nov 2026 21:29:35 +0800
+Subject: [PATCH 5/6] =?UTF-8?q?=E4=B8=89=E5=88=86=E6=89=8B=E6=94=B9?=
+ =?UTF-8?q?=E5=B1=A4=20H5=20=E7=94=9F=E6=88=90=E8=A8=AD=E5=AE=9A=EF=BC=9Ai?=
+ =?UTF-8?q?ndex=5Fgen.json=20=E5=8A=A0=20agents=E3=80=81daemons=E3=80=81st?=
+ =?UTF-8?q?arts=E3=80=81tools=20=E5=9B=9B=E6=A0=BC=EF=BC=88=E5=8F=AA?=
+ =?UTF-8?q?=E7=9C=8B=E9=A0=82=E5=B1=A4=EF=BC=89=EF=BC=9Bindex=5Fgen=5Fdesc?=
+ =?UTF-8?q?.json=20=E7=B5=A6=E5=9B=9B=E5=80=8B=E9=A1=9E=E5=88=A5=E5=A4=BE?=
+ =?UTF-8?q?=E8=88=87=20py/aos/apps/agent=5Ffsm=20=E5=90=84=E4=B8=80?=
+ =?UTF-8?q?=E5=8F=A5=E3=80=81templates=20=E9=82=A3=E5=8F=A5=E6=94=B9?=
+ =?UTF-8?q?=E5=AF=AB=EF=BC=9Bcodemap=5Fdeps=20=E8=AA=8D=20templates/<?=
+ =?UTF-8?q?=E9=A1=9E=E5=88=A5>/<=E7=AF=84=E6=9C=AC>?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+照規劃夾 06c「eca-aos 自己與按件派的」那張表。
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ wf/tools/codemap_deps.py            |  5 ++++-
+ wf/tools/index_gen.json             | 18 +++++++++++++++++-
+ wf/tools/index_gen_desc.json        |  7 ++++++-
+ wf/tools/tests/test_codemap_deps.py |  4 ++--
+ 4 files changed, 29 insertions(+), 5 deletions(-)
+
+diff --git a/wf/tools/codemap_deps.py b/wf/tools/codemap_deps.py
+index 852faeedf..a1b741180 100644
+--- a/wf/tools/codemap_deps.py
++++ b/wf/tools/codemap_deps.py
+@@ -68,6 +68,9 @@ def is_python(proto, rel):
+     return head.startswith("#!") and "python" in head.splitlines()[0]
+ 
+ 
++TEMPLATE_KINDS = ("agents", "kernels", "orgs", "daemons", "starts", "tools")   # templates 底下的類別夾
++
++
+ def unit_of(rel):
+     """proto8 相對路徑 → (單位路徑, 種類, 單位自己的模組名或 "")；不掃的回 None。"""
+     parts = rel.split("/")
+@@ -82,7 +85,7 @@ def unit_of(rel):
+         return rel, "lib", "aos" if mod == "__init__" else "aos." + mod
+     if parts[:2] == ["py", "tools"] and len(parts) > 3:
+         return "/".join(parts[:4]), "tool", ""
+-    if parts[:2] == ["templates", "kernels"] and len(parts) > 3:
++    if parts[0] == "templates" and len(parts) > 3 and parts[1] in TEMPLATE_KINDS:   # templates/<類別>/<範本>/…（11-24 三分）
+         return "/".join(parts[:3]), "template", ""
+     if parts[0] == "templates" and len(parts) > 2:
+         return "/".join(parts[:2]), "template", ""
+diff --git a/wf/tools/index_gen.json b/wf/tools/index_gen.json
+index c9777e141..4dceace32 100644
+--- a/wf/tools/index_gen.json
++++ b/wf/tools/index_gen.json
+@@ -1,5 +1,5 @@
+ {
+- "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區；templates、kernel 只看頂層與 docs／tests（定義夾會被整夾抄走）、py/packs 與各 bin、各夾的 expect／ws 不放、wf/user 不放（使用者的地盤，agent 不主動寫）、knowledge 不在範圍（那棵樹手寫維護）。",
++ "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區；templates、它的類別夾（agents、kernels、daemons、starts、tools）只看頂層，加 templates 與 kernels 的 docs／tests（定義夾會被整夾抄走）、py/packs 與各 bin、各夾的 expect／ws 不放、wf/user 不放（使用者的地盤，agent 不主動寫）、knowledge 不在範圍（那棵樹手寫維護）。",
+  "more_than": 15,
+  "scopes": [
+   {
+@@ -54,6 +54,22 @@
+    "deep": true,
+    "stage": 2
+   },
++  {
++   "path": "proto8/templates/agents",
++   "stage": 2
++  },
++  {
++   "path": "proto8/templates/daemons",
++   "stage": 2
++  },
++  {
++   "path": "proto8/templates/starts",
++   "stage": 2
++  },
++  {
++   "path": "proto8/templates/tools",
++   "stage": 2
++  },
+   {
+    "path": "proto8/templates/kernels",
+    "stage": 2
+diff --git a/wf/tools/index_gen_desc.json b/wf/tools/index_gen_desc.json
+index 84c897efa..0182c19f8 100644
+--- a/wf/tools/index_gen_desc.json
++++ b/wf/tools/index_gen_desc.json
+@@ -38,6 +38,7 @@
+   "proto8/py/aos/apps/agent/docs/04-搬家": "aos-agent 搬家說明的分檔：六段食譜（回復定義、凍住 image、重建根）、image 保存與不隨搬的邊界、重建 root 與 .env、兩台輪流跑同一批 agent",
+   "proto8/py/aos/apps/agent/docs/04-搬家/04-兩台輪流.md": "搬家分檔：兩台機器輪流跑同一批 agent 的做法（git 搬過去、設環境變數、起根、下班 shutdown），指到外面路徑的三種寫法與 eca、llm kernel、金鑰等注意事項",
+   "proto8/py/aos/apps/clock_register": "aos-clock-register：時鐘登記表的 add／rm／ls，每 N 個 cycle 往一個 aos-post 箱子寄一句，用來定時叫醒 agent",
++  "proto8/py/aos/apps/agent_fsm": "agent-fsm 的四格（idle、think、wait、act）、共用模組與 hook 點宣告；每一隻 agent-fsm 的定義都從 lib/aos/apps/agent_fsm 跑這幾支（11-24 從範本搬來）",
+   "proto8/py/aos/apps/eca": "aos-eca-turn 的 Python 套件：一輪的認領批信、hook、slash 指令、交給 CLI 前後、等回答時又來的信、history 讀寫與換台開場白",
+   "proto8/py/aos/apps/feedback": "aos-feedback 的 Python 套件：旗標解析與顯示、意見的附加寫入與評分者分類規則、從評分與工具帳算 AI 舒適度",
+   "proto8/py/aos/apps/gdb": "aos-gdb 的 Python 套件：接上一隻 agent、開一個已 import aos.gdb 的 Python REPL",
+@@ -339,7 +340,11 @@
+   "proto8/py/aos/py/agent": "aos.py.agent：agent 這個東西的 Python 那一面——把手 a = agent.attach(名)（a.X.Y(...)＝aos-agent --target 名 X Y ...，延伸 a.bp 斷點、a.look 讀 stack 的檔）與寫定義的 defs（轉匯出 aos.agent_spec）",
+   "proto8/py/aos/gdb": "aos-gdb 的 Python 庫（aos.gdb）：對已在跑的 agent 下條件觸發器（一個 hook：工具要跑之前扣住，或事件後暫停）或起觀察者（另一支 proc 輪詢、成立就暫停目標）、列出／拿掉、看為什麼停、檢閱 stack、續",
+   "proto8/py/requirements-optional.txt": "選用的 Python 模組清單（現在只有 jsonschema）：install.py 只檢查有沒有、不 pip，沒有也能跑",
+-  "proto8/templates": "複製出去用的 agent 範本：eca-claude（外部 coding agent）、agent-fsm（aos 自己的 loop／fsm agent），另有 daemon-root、judge-llm 等；開新 agent 或改範本時進去",
++  "proto8/templates": "複製出去用的範本，分六個類別夾：agents（agent 範本與配給包 kits）、kernels、orgs、daemons、starts（起手範本）、tools（工具骨架與裁判比對器），另有 docs 與 tests；開新 agent 或改範本時進去",
++  "proto8/templates/agents": "agent 範本：agent-fsm、agent-python、eca-claude、eca-claude-alt、eca-pi、reviewer，加配給包 kits；cp -r 一份改設定就是另一隻 agent",
++  "proto8/templates/daemons": "daemon 定義的範本：daemon-root（一棵樹的根）、daemon-sub（掛在別台底下的子 daemon）",
++  "proto8/templates/starts": "起手範本：start-api、start-eca，一包抄好一棵能跑的樹（根、llm kernel 或 eca、一隻 agent、薄 env.sh）",
++  "proto8/templates/tools": "工具的範本：tool-python（一支 Python 工具的骨架）、judge-llm（同步問腦的裁判比對器）",
+   "proto8/templates/agents/agent-fsm": "agent-fsm 範本：aos 自己的 loop／fsm agent（四格 think、wait、act、idle，問腦＝寄信給 llm kernel）；要開一隻 aos 原生 agent 時 cp -r 它，改 llm.json、system.txt、tools.json",
+   "proto8/templates/daemons/daemon-root": "daemon-root 範本：根 daemon 定義，表上只有 _clock 時鐘與 _sweeper 清道夫，agent 之後用 aos-agent ctl add 掛；要起一台新的根 daemon 時拿它",
+   "proto8/templates/agents/eca-claude": "eca-claude 範本：把 Claude Code CLI 當成 aos agent 跑（aos-loop 每格叫 aos-eca-turn，一批 queue 一輪、回答接進 history），附 screen 畫面子介面；要開外部 coding agent 時 cp -r 它",
+diff --git a/wf/tools/tests/test_codemap_deps.py b/wf/tools/tests/test_codemap_deps.py
+index 4f3953de3..5b7fa658f 100644
+--- a/wf/tools/tests/test_codemap_deps.py
++++ b/wf/tools/tests/test_codemap_deps.py
+@@ -60,7 +60,7 @@ class CodemapDepsTests(unittest.TestCase):
+                  ('proto8/py/tools/base/echo/_tooldef.json', '{"description": "echo"}'),
+                  ('proto8/py/tools/base/echo/tests/test_echo.py', 'from aos import flags\n'),
+                  ('proto8/py/tools/base/plain/_entry', '#!/bin/sh\n# plain - shell.\n'),
+-                 ('proto8/templates/fsm/act.py', '"""act."""\nfrom aos import tool_io\n'),
++                 ('proto8/templates/agents/fsm/act.py', '"""act."""\nfrom aos import tool_io\n'),
+                  ('proto8/py/tests/test_x.py', 'from aos import flags\n')]
+         for rel, text in files:
+             path = self.root / rel
+@@ -115,7 +115,7 @@ class CodemapDepsTests(unittest.TestCase):
+         self.assertEqual(hello['uses'], 'aos.agentlib.cooldown aos.agentlib.hooks aos.flags aos.tool_io aos.ws')  # 括號跨行、縮排、import 都認；自己的不算
+         self.assertEqual(py['proto8/py/aos/apps/quiet']['uses'], '')                          # 指令每支都列
+         self.assertEqual(py['proto8/py/aos/tool_io.py']['used_by'],
+-                         'proto8/py/aos/agentlib proto8/py/aos/apps/hello proto8/py/aos/flags.py proto8/py/tools/base/echo proto8/templates/fsm')
++                         'proto8/py/aos/agentlib proto8/py/aos/apps/hello proto8/py/aos/flags.py proto8/py/tools/base/echo proto8/templates/agents/fsm')
+         self.assertEqual(py['proto8/py/aos/agentlib']['uses'], 'aos.tool_io')                 # 子套件裡互相 import 不算
+         self.assertEqual(py['proto8/py/tools/base/echo']['uses'], 'aos.tool_io')              # `from aos.tool_io import Error`：Error 不是模組
+         self.assertNotIn('proto8/py/tools/base/plain', py)                                    # shell 工具、沒用到 aos 的工具不列
+-- 
+2.56.0
+

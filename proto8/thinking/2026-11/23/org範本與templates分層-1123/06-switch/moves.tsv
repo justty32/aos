@@ -1,0 +1,24 @@
+# moves for the templates split (06a path table): old<TAB>new, repo-relative; files before folders; read by split.py (R1-R5) and fix_moved_links.py (R2)
+proto8/templates/agent-fsm/idle.py	proto8/py/aos/apps/agent_fsm/idle.py
+proto8/templates/agent-fsm/brain.py	proto8/py/aos/apps/agent_fsm/brain.py
+proto8/templates/agent-fsm/wait.py	proto8/py/aos/apps/agent_fsm/wait.py
+proto8/templates/agent-fsm/act.py	proto8/py/aos/apps/agent_fsm/act.py
+proto8/templates/agent-fsm/compact.py	proto8/py/aos/apps/agent_fsm/compact.py
+proto8/templates/agent-fsm/cell_common.py	proto8/py/aos/apps/agent_fsm/cell_common.py
+proto8/templates/agent-fsm/atomic_file.py	proto8/py/aos/apps/agent_fsm/atomic_file.py
+proto8/templates/agent-fsm/llm_settings.py	proto8/py/aos/apps/agent_fsm/llm_settings.py
+proto8/templates/agent-fsm/hooks.json	proto8/py/aos/apps/agent_fsm/hooks.json
+proto8/templates/agent-fsm	proto8/templates/agents/agent-fsm
+proto8/templates/agent-python	proto8/templates/agents/agent-python
+proto8/templates/eca-claude-alt	proto8/templates/agents/eca-claude-alt
+proto8/templates/eca-claude	proto8/templates/agents/eca-claude
+proto8/templates/eca-pi	proto8/templates/agents/eca-pi
+proto8/templates/reviewer	proto8/templates/agents/reviewer
+proto8/templates/kits	proto8/templates/agents/kits
+proto8/templates/kernel	proto8/templates/kernels
+proto8/templates/daemon-root	proto8/templates/daemons/daemon-root
+proto8/templates/daemon-sub	proto8/templates/daemons/daemon-sub
+proto8/templates/start-api	proto8/templates/starts/start-api
+proto8/templates/start-eca	proto8/templates/starts/start-eca
+proto8/templates/tool-python	proto8/templates/tools/tool-python
+proto8/templates/judge-llm	proto8/templates/tools/judge-llm

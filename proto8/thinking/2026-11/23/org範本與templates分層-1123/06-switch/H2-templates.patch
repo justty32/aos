@@ -1,0 +1,965 @@
+From a117f567236194bcafad5b996daede61b18e70cf Mon Sep 17 00:00:00 2001
+From: justty32 <justty32@gmail.com>
+Date: Mon, 23 Nov 2026 21:28:01 +0800
+Subject: [PATCH 2/6] =?UTF-8?q?=E4=B8=89=E5=88=86=E6=89=8B=E6=94=B9?=
+ =?UTF-8?q?=E5=B1=A4=20H2=20=E7=AF=84=E6=9C=AC=EF=BC=9Aagent-fsm=20?=
+ =?UTF-8?q?=E7=AF=84=E6=9C=AC=E6=94=B9=E6=88=90=E5=8B=95=E6=85=8B=E9=80=A3?=
+ =?UTF-8?q?=E7=B5=90=20lib=20=E7=9A=84=E6=A0=BC=E3=80=81README=20=E8=88=87?=
+ =?UTF-8?q?=20docs/02=20=E5=AF=AB=E6=A0=BC=E5=9C=A8=E5=93=AA=E8=88=87?=
+ =?UTF-8?q?=E6=80=8E=E9=BA=BC=E5=81=9A=E4=B8=80=E4=BB=BD=E9=9D=9C=E6=85=8B?=
+ =?UTF-8?q?=E7=9A=84=E3=80=81ann=20=E8=88=87=20start-api=20=E8=AA=AA?=
+ =?UTF-8?q?=E6=98=8E=E3=80=81test=5Fstart=20=E7=9A=84=E6=8A=84=E6=9C=AC?=
+ =?UTF-8?q?=E5=B0=8D=E7=85=A7=E8=A1=A8=E3=80=81tests/agent-fsm=20=E5=88=86?=
+ =?UTF-8?q?=E5=87=BA=20CELLS=20=E8=88=87=20TEMPLATE=E3=80=81templates/READ?=
+ =?UTF-8?q?ME=20=E7=9A=84=E5=85=AD=E9=A1=9E=E8=A1=A8=E3=80=81=E9=87=8D?=
+ =?UTF-8?q?=E6=8A=84=20daemon-root=20README?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+照規劃夾 06b「範本與兩種定義之後長怎樣」與 06c 範本位子那張表；agent-python 用新程式重新編譯過，輸出跟機械層一樣。
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ proto8/templates/README.md                    | 19 +++++--
+ proto8/templates/agents/agent-fsm/README.md   |  2 +
+ proto8/templates/agents/agent-fsm/fsm.json    |  8 +--
+ .../agents/agent-fsm/interfaces.json          |  2 +-
+ .../templates/agents/agent-python/README.md   |  6 +--
+ proto8/templates/agents/reviewer/README.md    |  2 +-
+ proto8/templates/docs/02-agent-fsm.md         | 33 +++++++-----
+ proto8/templates/starts/start-api/README.md   |  4 +-
+ .../starts/start-api/agents/ann/README.md     | 22 ++++----
+ .../templates/starts/start-api/root/README.md |  2 +-
+ .../starts/start-eca/agents/ann/README.md     | 22 ++++----
+ .../templates/starts/start-eca/root/README.md |  2 +-
+ .../templates/tests/agent-fsm/test_batch3.py  |  9 ++--
+ .../templates/tests/agent-fsm/test_cells.py   |  4 +-
+ .../templates/tests/agent-fsm/test_compact.py |  3 +-
+ .../tests/agent-fsm/test_cooldown.py          |  6 ++-
+ .../tests/agent-fsm/test_do_task_fold.py      |  7 +--
+ .../tests/agent-fsm/test_effort_setting.py    |  6 ++-
+ proto8/templates/tests/agent-fsm/test_fork.py |  7 +--
+ proto8/templates/tests/agent-fsm/test_goal.py |  9 ++--
+ .../tests/agent-fsm/test_home_rule.py         |  9 ++--
+ .../templates/tests/agent-fsm/test_hooks.py   |  5 +-
+ .../tests/agent-fsm/test_integration.py       |  5 +-
+ .../tests/agent-fsm/test_own_system.py        |  7 +--
+ .../tests/agent-fsm/test_own_tools.py         |  5 +-
+ .../tests/agent-fsm/test_reply_match.py       |  5 +-
+ .../tests/agent-fsm/test_same_turn_tools.py   |  5 +-
+ .../tests/agent-fsm/test_selfheal.py          |  5 +-
+ .../templates/tests/judge-llm/test_judge.py   |  4 +-
+ .../templates/tests/reviewer/test_reviewer.py |  4 +-
+ proto8/templates/tests/test_daily.py          | 10 ++--
+ proto8/templates/tests/test_start.py          | 52 +++++++++----------
+ .../tests/tool-python/test_skeleton.py        |  4 +-
+ 33 files changed, 170 insertions(+), 125 deletions(-)
+
+diff --git a/proto8/templates/README.md b/proto8/templates/README.md
+index 617d6f70e..79e76a024 100644
+--- a/proto8/templates/README.md
++++ b/proto8/templates/README.md
+@@ -9,9 +9,22 @@
+ <a id="agent-gus小念頭10-24"></a>
+ 複製出去用的 agent 範本，都用 `aos-agent ctl add` 掛（不給預設、要明寫資料夾）：`eca-claude`（外部 coding agent）、[`eca-claude-alt`](agents/eca-claude-alt/README.md)（同 eca-claude，答話與畫面都用第二個 Claude 帳號 `~/.claude-alt`，11-23）、[`eca-pi`](agents/eca-pi/README.md)（外部 coding agent 的 pi 身，每批一個 `pi --mode rpc`、回答途中收信、有畫面）、[`agent-fsm`](#agent-fsm)（aos 自己的 loop／fsm agent；問腦＝寄信給 [llm-kernel](kernels/docs/01-llm-kernel.md)）。兩個範本對外同形（`_entry`＝aos-loop、queue／history／ctl／state、同一份 `tools.json`、`--prompt` 開場白），對照表在 [thinking 11-04 loop-fsm-agent 02](../thinking/2026-11/04/loop-fsm-agent/02-跟-eca-對照.md)。
+ 
+-**開一棵新樹就抄起手範本**（使用者 11-17 裁 L-10 A，11-18 S6 做）：[`start-api`](starts/start-api/README.md)（根＋llm kernel＋一隻 agent-fsm，假腦先試）、[`start-eca`](starts/start-eca/README.md)（根＋一隻 eca-claude），`cp -r $AOS_HOME/templates/starts/start-api ~/aos-home && cd ~/aos-home && source env.sh` 就能起；包裡的 `env.sh` 是薄的一份（`AOS_HOME` 沒設報錯，有就轉去 `$AOS_HOME/env.sh`），其餘是下面各範本的逐字抄本（`tests/test_start.py` 逐檔比對，改了原範本要同步抄過去）；只有 `start-api/agents/ann` 不帶 agent-fsm 的格程式，`fsm.json` 動態連結 `$AOS_HOME/templates/agents/agent-fsm/` 那四支（11-21，使用者 11-20「起手範本確實該改成要借的」，[紀錄](../thinking/2026-11/21/起手範本-動態連結-1121.md)）。
++**六個類別夾**（11-24 起；使用者 11-23 答「1.c」照原話三分、追問「1.a」歸不進三類的再開三類，[規劃](../thinking/2026-11/23/org範本與templates分層-1123/06a-目標目錄.md)）：範本自己的名字不變，只是多一層類別夾。
+ 
+-**開一隻新 agent 就 `cp -r`**（templates-cp，使用者 11-10「copy-out能刪就刪」）：`cp -r $AOS_HOME/templates/範本名 目的資料夾`（kernel 範本是 `$AOS_HOME/templates/kernels/名`，11-17 從 proto8 頂層的 `kernel/` 併進來）。範本裡指到範本外、落在 proto8 的路徑（`tools.json` 的工具、reviewer 借 agent-fsm 的格、kernel 範本的 `exec`）一律寫成 `{"$env": "AOS_HOME", "$path": "/…"}`，範本裡沒有捷徑，所以抄到哪都能跑；只要這台有 `AOS_HOME`＝放 lib、templates、knowledge 的那個資料夾的絕對路徑，可以是 proto8 本身或它的抄本（使用者 11-13「em-Q1:B」）。給法三選一：殼裡 `export AOS_HOME=…`；或把根 `.env` 裡那行註解換成 `AOS_HOME=/絕對路徑`；或寫 `AOS_HOME=${AOS_WS}/../aos/proto8` 這種相對起根位置的（使用者 11-10 午「要用相對位置、絕對位置、環境變數指定都可」）。會被 `aos-exec` 直接起的根範本（[`daemon-root/`](daemons/daemon-root/README.md)、kernel 的四份）自帶 `.env`，最後一行 `AOS_HOME=${AOS_HOME}`＝沒設就在起根當下報 `DotenvBad … .env line N`。範本裡的 `tests/`、`README.md` 會一起抄過去，`tests/` 可以刪。細節在 [02-agent-fsm](docs/02-agent-fsm.md)；「`defs/` 本身就是根入口」的根 daemon 範本是 [`daemon-root/`](daemons/daemon-root/README.md)（名字只是例子）；掛在別的 daemon 底下的子 daemon 範本是 [`daemon-sub/`](daemons/daemon-sub/README.md)（不帶 `_clock`、跟著根的鐘走，`.env` 只留 `AOS_HOME`；`aos-daemon-ctl -d <上層 stack> add --auto-restart -n <名> -w <ws> <子定義>` 掛上去，11-23）。
++| 夾 | 裝什麼 |
++|---|---|
++| `agents/` | agent 範本：`agent-fsm`、`agent-python`、`eca-claude`、`eca-claude-alt`、`eca-pi`、`reviewer`，加配給包 `kits` |
++| [`kernels/`](kernels/README.md) | 掛在 daemon 上的 kernel 範本：`llm-kernel`、`daemon-kernel`、`procs-kernel`、`llm-team`、`kernel-python` |
++| [`orgs/`](orgs/README.md) | 一份專案的分工文件 |
++| `daemons/` | daemon 定義：`daemon-root`（根）、`daemon-sub`（子） |
++| `starts/` | 起手範本：`start-api`、`start-eca`（一包抄好一棵樹） |
++| `tools/` | 工具的範本：`tool-python`（骨架）、`judge-llm`（裁判比對器） |
++
++`docs/`、`tests/` 留在頂層；`tests/` 底下照舊一個範本一夾（`tests/agent-fsm/` 測的是 `agents/agent-fsm`），不跟著分類。agent-fsm 的格程式不在範本裡，在 `$AOS_HOME/lib/aos/apps/agent_fsm/`（原始碼 [py/aos/apps/agent_fsm](../py/aos/apps/agent_fsm/README.md)；使用者 11-23「3.a」）。`agent_def new` 的 `template` 照收範本名（例 `agent-fsm`），自己去 `agents/` 找（使用者 11-23「2.a」）。
++
++**開一棵新樹就抄起手範本**（使用者 11-17 裁 L-10 A，11-18 S6 做）：[`start-api`](starts/start-api/README.md)（根＋llm kernel＋一隻 agent-fsm，假腦先試）、[`start-eca`](starts/start-eca/README.md)（根＋一隻 eca-claude），`cp -r $AOS_HOME/templates/starts/start-api ~/aos-home && cd ~/aos-home && source env.sh` 就能起；包裡的 `env.sh` 是薄的一份（`AOS_HOME` 沒設報錯，有就轉去 `$AOS_HOME/env.sh`），其餘是下面各範本的逐字抄本（`tests/test_start.py` 逐檔比對，改了原範本要同步抄過去）；`start-api/agents/ann` 跟 agent-fsm 範本一樣不帶格程式，`fsm.json` 動態連結 `$AOS_HOME/lib/aos/apps/agent_fsm/` 那四支（11-21，使用者 11-20「起手範本確實該改成要借的」，[紀錄](../thinking/2026-11/21/起手範本-動態連結-1121.md)）。
++
++**開一隻新 agent 就 `cp -r`**（templates-cp，使用者 11-10「copy-out能刪就刪」）：`cp -r $AOS_HOME/templates/類別/範本名 目的資料夾`（例 `$AOS_HOME/templates/agents/agent-fsm`；kernel 範本是 `$AOS_HOME/templates/kernels/名`，11-17 從 proto8 頂層的 `kernel/` 併進來）。範本裡指到範本外、落在 proto8 的路徑（`tools.json` 的工具、agent-fsm 與 reviewer 的格、kernel 範本的 `exec`）一律寫成 `{"$env": "AOS_HOME", "$path": "/…"}`，範本裡沒有捷徑，所以抄到哪都能跑；只要這台有 `AOS_HOME`＝放 lib、templates、knowledge 的那個資料夾的絕對路徑，可以是 proto8 本身或它的抄本（使用者 11-13「em-Q1:B」）。給法三選一：殼裡 `export AOS_HOME=…`；或把根 `.env` 裡那行註解換成 `AOS_HOME=/絕對路徑`；或寫 `AOS_HOME=${AOS_WS}/../aos/proto8` 這種相對起根位置的（使用者 11-10 午「要用相對位置、絕對位置、環境變數指定都可」）。會被 `aos-exec` 直接起的根範本（[`daemon-root/`](daemons/daemon-root/README.md)、kernel 的四份）自帶 `.env`，最後一行 `AOS_HOME=${AOS_HOME}`＝沒設就在起根當下報 `DotenvBad … .env line N`。範本裡的 `tests/`、`README.md` 會一起抄過去，`tests/` 可以刪。細節在 [02-agent-fsm](docs/02-agent-fsm.md)；「`defs/` 本身就是根入口」的根 daemon 範本是 [`daemon-root/`](daemons/daemon-root/README.md)（名字只是例子）；掛在別的 daemon 底下的子 daemon 範本是 [`daemon-sub/`](daemons/daemon-sub/README.md)（不帶 `_clock`、跟著根的鐘走，`.env` 只留 `AOS_HOME`；`aos-daemon-ctl -d <上層 stack> add --auto-restart -n <名> -w <ws> <子定義>` 掛上去，11-23）。
+ 
+ **範本不帶測試**（使用者 11-10「啊？範本不該有tests。有的話就跟着抄。」，[tonight-rulings](../thinking/2026-11/10/tonight-rulings/README.md) 題 5）：範本資料夾裡抄到哪就帶到哪，所以測試一律放 [`tests/`](tests/)——`tests/agent-fsm/`、`tests/reviewer/`、`tests/judge-llm/` 各測一個範本，`tests/` 底下直接放的 `test_daily.py`、`test_paths_move.py` 跨範本。跑法：`python3 -m unittest discover -s proto8/templates/tests/agent-fsm`（資料夾名有 `-`，不能從 `tests/` 一次 discover 下去）。`cp -r` 與 `agent_def new` 也是整夾抄。
+ 
+@@ -19,7 +32,7 @@
+ 
+ [`tool-python`](tools/tool-python/README.md) 不是 agent 範本，是**一支工具的骨架**（[tools-def](../thinking/2026-11/10/tools-def/README.md)）：`_entry.json`（`python3 tool.py`）＋`tool.py`（用 [`aos.py.fn`](../py/aos/py/fn.py) 寫的加法：`@fn.tool` 標一個函數、最後一行 `fn.main(add)`；11-20 起，線 aos-pylib-k1-1120）＋產出來的 `_tooldef.json`、`_metainfo.json`＋給 AI 看的英文 README。腦用 `tools_def new` 複製它、只改 `tool.py` 的下半段；人可以直接 `cp -r`，改完跑 `python3 tool.py --compile`（11-19 起跟 `agent.py` 同一套旗標：`--compile` 編譯＋寫、`--dry-run` 只印不寫，線 aos-defs-rename3-1119）。測試在 `tests/tool-python/`。
+ 
+-[`agent-python`](agents/agent-python/README.md) 是**用一支 `agent.py` 寫的 agent 定義**（線 compile-geng-s1-1119，設計稿 [aos-compile-庚](../thinking/2026-11/19/aos-compile-庚/README.md)；使用者 11-18「讓我不必在那邊mkdir半天」）：`agent.py`（用 [`py/aos/agent_spec.py`](../py/aos/agent_spec.py) 宣告說明、system、工具包、腦設定，狀態機動態連結 agent-fsm 的四格（執行時才去那邊拿））＋它編譯出來的 `_entry`、`body.json`、`loop.json`、`fsm.json`、`interfaces.json`、`tools.json`、`llm.json`、`system.txt`、`hookeds.json`（被勾清單）、`_metainfo.json`＋英文 README。`agent_def new` 用 `"template": "agent-python"` 複製、或 `cp -r`，改 `agent.py` 後跑 `python3 agent.py --compile`，再 `aos-agent ctl add`。重新編譯＝宣告到的檔整份蓋掉（使用者 11-19「好比C語言和.o之間的關係」），`_metainfo.json` 只設自己的鍵、`README.md` 不在才寫。先只給人用（知識庫沒寫）。第三刀（線 geng3-1119）加了 `hooks`（含靜態連結範本那組，命名空間第一刀起叫 `std.hooks()`）、`files`（原樣吐）、不給 `fsm` 的模式（先複製 eca-claude／eca-pi，`agent.py` 只填 system、工具、腦設定、hook 這幾份內容檔，骨架不碰）；骨架本身沒變。命名空間第一刀（線 aos-ns-cut1-1119）把 `ag.pack`／`ag.stock_fsm`／`ag.stock_hooks` 換成庫 `std` 的 `std.pack`／`std.fsm`／`std.hooks`、加 `defs.lib`（別的庫，工具自動帶 `庫名_`），包改成編譯時展開：骨架的 `tools.json` 從三行 `$override` 變成 look、mailbox、json 三包的工具一支支列出（[紀錄](../thinking/2026-11/19/aos-ns-第一刀.md)）。測試在 [`py/tests/test_agent_spec.py`](../py/tests/test_agent_spec.py)（含「骨架裡的編譯產物跟 `agent.py` 當場重新編譯一字不差」「reviewer 寫成一支 `agent.py` 跟手寫的等價」）。寫定義的名字 11-19 起叫 `defs`：`agent.py` 開頭 `from aos.py.agent import defs`、其後 `defs.main`／`defs.tool`／`defs.load`…（使用者 11-19「就 aos.py.agent.defs 吧」，線 aos-defs-rename-1119，[aos-pylib-1119/07](../thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)；實作檔仍是 `py/aos/agent_spec*.py`，只改名與 import，編出的檔一字不變）。 11-19 起用語照編譯器：指令 `--compile`（編譯＋寫）／`--dry-run`（只印不寫），Python 裡是物件自己的 `.dry_run()`（算出、不寫）／`.compile(夾)`（算完寫進夾）（使用者 11-19「要，可以參考那些程式語言的類似的功能的名字」，線 aos-defs-rename2-1119，[aos-pylib-1119/07](../thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)）。 工具包怎麼進 `tools.json` 是編譯選項（使用者 11-19「或者說，用選項吧，gcc那樣」、「預設靜態 (Recommended)」，[aos-ns-1119/07](../thinking/2026-11/19/aos-ns-1119/07-使用者裁定.md) 末節）：`--compile`＝`--static`（預設，複製進來）、`--compile --dynamic`（寫 `$override` 指包、執行時才讀），逐包 `std.pack(名, link="dynamic")`；要改名的包（別的庫預設帶前綴）、`defs.load` 的 `tools` 只能靜態，整支 --dynamic 時改靜態並 warning。 11-19 起兩個名字照 C 改：`defs.no`→`defs.drop`（從繼承來的工具裡拿掉一支）、`defs.by_hand`→`defs.extern`（11-20 第 4 刀起換意思：那一欄編成一個連結指到你手寫的檔，見骨架 README 的「extern」，別濫用）；`defs.load` 不改（使用者 11-19 選項框選「改 defs.drop」「留 defs.load」「改 defs.extern」，線 aos-defs-rename3-1119，[aos-pylib-1119/07](../thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)）。 11-19 下午起骨架帶空的 `hooks={}`（使用者選項框「骨架 agent 掛不了斷點（因為骨架沒宣告 hook）。要怎麼修？」選「骨架帶一行空的 HOOKS」；更新早上的「骨架不帶 hook 組」：仍不帶任何現成的 hook 組，只宣告一個空的）：編譯產物多一份被勾清單（11-21 起叫 `hookeds.json`，只有 `description`），`interfaces.json` 多最外層的 `hooks`、`hookeds` 兩鍵、`loop.json` 多 `on_start`／`on_stop` 兩行（照 `hooks` 一向的編法），用骨架起的 agent 不改任何東西就能下斷點（`aos-gdb`）、`aos-agent hook add`（線 aos-bpfix-1119，[紀錄](../thinking/2026-11/19/aos-gdb-動詞-1119.md) 末節）。 `agent.py` 寫成一個物件（編譯程式庫第 2 刀，線 aos-pylib-k2-1120）：`agent = defs.Agent("說明", system=…, tools=[…], llm={…}, fsm=std.fsm(), hooks={})`，最後一行 `defs.main(agent)`；欄位名全小寫、說明以外只收關鍵字。物件的 `.dry_run()` 只算、`.compile(夾)` 寫進夾，所以建置腳本可以不叫 `defs.main`、一支編好幾個夾；`defs.fsm(...)` 回的狀態機也能單獨 `.compile(夾)`（只寫 `fsm.json`）。`defs.load` 回底的那隻 Agent（`base.tools`、`base.hooks`…），底的工具改名用 `base.pack(prefix=…)`。
++[`agent-python`](agents/agent-python/README.md) 是**用一支 `agent.py` 寫的 agent 定義**（線 compile-geng-s1-1119，設計稿 [aos-compile-庚](../thinking/2026-11/19/aos-compile-庚/README.md)；使用者 11-18「讓我不必在那邊mkdir半天」）：`agent.py`（用 [`py/aos/agent_spec.py`](../py/aos/agent_spec.py) 宣告說明、system、工具包、腦設定，狀態機動態連結 agent-fsm 的四格（執行時才去 `$AOS_HOME/lib/aos/apps/agent_fsm/` 拿））＋它編譯出來的 `_entry`、`body.json`、`loop.json`、`fsm.json`、`interfaces.json`、`tools.json`、`llm.json`、`system.txt`、`hookeds.json`（被勾清單）、`_metainfo.json`＋英文 README。`agent_def new` 用 `"template": "agent-python"` 複製、或 `cp -r`，改 `agent.py` 後跑 `python3 agent.py --compile`，再 `aos-agent ctl add`。重新編譯＝宣告到的檔整份蓋掉（使用者 11-19「好比C語言和.o之間的關係」），`_metainfo.json` 只設自己的鍵、`README.md` 不在才寫。先只給人用（知識庫沒寫）。第三刀（線 geng3-1119）加了 `hooks`（含靜態連結範本那組，命名空間第一刀起叫 `std.hooks()`）、`files`（原樣吐）、不給 `fsm` 的模式（先複製 eca-claude／eca-pi，`agent.py` 只填 system、工具、腦設定、hook 這幾份內容檔，骨架不碰）；骨架本身沒變。命名空間第一刀（線 aos-ns-cut1-1119）把 `ag.pack`／`ag.stock_fsm`／`ag.stock_hooks` 換成庫 `std` 的 `std.pack`／`std.fsm`／`std.hooks`、加 `defs.lib`（別的庫，工具自動帶 `庫名_`），包改成編譯時展開：骨架的 `tools.json` 從三行 `$override` 變成 look、mailbox、json 三包的工具一支支列出（[紀錄](../thinking/2026-11/19/aos-ns-第一刀.md)）。測試在 [`py/tests/test_agent_spec.py`](../py/tests/test_agent_spec.py)（含「骨架裡的編譯產物跟 `agent.py` 當場重新編譯一字不差」「reviewer 寫成一支 `agent.py` 跟手寫的等價」）。寫定義的名字 11-19 起叫 `defs`：`agent.py` 開頭 `from aos.py.agent import defs`、其後 `defs.main`／`defs.tool`／`defs.load`…（使用者 11-19「就 aos.py.agent.defs 吧」，線 aos-defs-rename-1119，[aos-pylib-1119/07](../thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)；實作檔仍是 `py/aos/agent_spec*.py`，只改名與 import，編出的檔一字不變）。 11-19 起用語照編譯器：指令 `--compile`（編譯＋寫）／`--dry-run`（只印不寫），Python 裡是物件自己的 `.dry_run()`（算出、不寫）／`.compile(夾)`（算完寫進夾）（使用者 11-19「要，可以參考那些程式語言的類似的功能的名字」，線 aos-defs-rename2-1119，[aos-pylib-1119/07](../thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)）。 工具包怎麼進 `tools.json` 是編譯選項（使用者 11-19「或者說，用選項吧，gcc那樣」、「預設靜態 (Recommended)」，[aos-ns-1119/07](../thinking/2026-11/19/aos-ns-1119/07-使用者裁定.md) 末節）：`--compile`＝`--static`（預設，複製進來）、`--compile --dynamic`（寫 `$override` 指包、執行時才讀），逐包 `std.pack(名, link="dynamic")`；要改名的包（別的庫預設帶前綴）、`defs.load` 的 `tools` 只能靜態，整支 --dynamic 時改靜態並 warning。 11-19 起兩個名字照 C 改：`defs.no`→`defs.drop`（從繼承來的工具裡拿掉一支）、`defs.by_hand`→`defs.extern`（11-20 第 4 刀起換意思：那一欄編成一個連結指到你手寫的檔，見骨架 README 的「extern」，別濫用）；`defs.load` 不改（使用者 11-19 選項框選「改 defs.drop」「留 defs.load」「改 defs.extern」，線 aos-defs-rename3-1119，[aos-pylib-1119/07](../thinking/2026-11/19/aos-pylib-1119/07-使用者裁定.md)）。 11-19 下午起骨架帶空的 `hooks={}`（使用者選項框「骨架 agent 掛不了斷點（因為骨架沒宣告 hook）。要怎麼修？」選「骨架帶一行空的 HOOKS」；更新早上的「骨架不帶 hook 組」：仍不帶任何現成的 hook 組，只宣告一個空的）：編譯產物多一份被勾清單（11-21 起叫 `hookeds.json`，只有 `description`），`interfaces.json` 多最外層的 `hooks`、`hookeds` 兩鍵、`loop.json` 多 `on_start`／`on_stop` 兩行（照 `hooks` 一向的編法），用骨架起的 agent 不改任何東西就能下斷點（`aos-gdb`）、`aos-agent hook add`（線 aos-bpfix-1119，[紀錄](../thinking/2026-11/19/aos-gdb-動詞-1119.md) 末節）。 `agent.py` 寫成一個物件（編譯程式庫第 2 刀，線 aos-pylib-k2-1120）：`agent = defs.Agent("說明", system=…, tools=[…], llm={…}, fsm=std.fsm(), hooks={})`，最後一行 `defs.main(agent)`；欄位名全小寫、說明以外只收關鍵字。物件的 `.dry_run()` 只算、`.compile(夾)` 寫進夾，所以建置腳本可以不叫 `defs.main`、一支編好幾個夾；`defs.fsm(...)` 回的狀態機也能單獨 `.compile(夾)`（只寫 `fsm.json`）。`defs.load` 回底的那隻 Agent（`base.tools`、`base.hooks`…），底的工具改名用 `base.pack(prefix=…)`。
+ 
+ [`judge-llm`](tools/judge-llm/README.md) 是同步呼叫 llm kernel 的裁判比對器，供 measure 的 `compare` 使用；複製後改 `judge.json` 與 `prompt.txt` 就能換模型與規則。
+ 
+diff --git a/proto8/templates/agents/agent-fsm/README.md b/proto8/templates/agents/agent-fsm/README.md
+index 62c4d44ee..92ed6cbfe 100644
+--- a/proto8/templates/agents/agent-fsm/README.md
++++ b/proto8/templates/agents/agent-fsm/README.md
+@@ -2,6 +2,8 @@ Run an aos agent with loop and FSM cells.
+ 
+ 用 `cp -r $AOS_HOME/templates/agents/agent-fsm <目的資料夾>` 複製本範本（指回 proto8 的路徑都寫成 `{"$env": "AOS_HOME", …}`、沒有捷徑，抄到哪都能跑，這台要有 `AOS_HOME`），再修改 `llm.json`、`system.txt` 與 `tools.json`，即可建立另一隻 agent；入口、四格運作與完整用法見 [agent-fsm 說明](../../docs/02-agent-fsm.md)。
+ 
++**格的程式不在這個夾**（11-24 起，使用者 11-23「3.a」）：四格（idle、think、wait、act）與它們共用的模組、hook 點宣告 `hooks.json` 在 `$AOS_HOME/lib/aos/apps/agent_fsm/`（原始碼 [py/aos/apps/agent_fsm](../../../py/aos/apps/agent_fsm/README.md)），`fsm.json` 每格的 `argv` 與 `interfaces.json` 的 `hooks` 用 `{"$env": "AOS_HOME", …}` 指過去（動態連結），範本只是給人抄的來源。要整份靜態的（自己改某一格）：從 `$AOS_HOME/lib/aos/apps/agent_fsm/` 抄那九個檔進來，`fsm.json` 的 `argv` 改成相對檔名（`["python3", "idle.py"]`），`interfaces.json` 的 `hooks` 第二項改成 `"hooks.json"`；只改一格也一樣（那支加它 import 的共用檔）。
++
+ 寄之前 `AOS_LLM_KERNEL` 沒設或只有空白＝觸發 `brain_failed` 後以 `LlmKernelMissing` 停下、不記冷卻、保留請求，要帶變數重掛；有設但 kernel 資料夾不在仍照 `SendFailed` 冷卻等待，wait 格等腦回信不設期限：寄出後每滿 10 分鐘在 stderr 印一行 `agent-fsm: warning: no reply from the brain for N minutes to letter <名>: <原因>; still waiting`、照樣等（原因＝信在 kernel 的哪一格：`requests/new/` 還在排隊沒開始、`cur/` kernel 正在跑〔附那封的 `stderr.txt` 路徑〕、或 `AOS_LLM_KERNEL` 沒設／不是資料夾；kernel 沒在跑由同一拍 `aos-llm recv` 那行說，two-machines B10）（提醒到第幾次記在 stack 的 `think/wait_warned.txt`）。
+ 
+ - `think/brain_wait.json`：寄出成功時原子記下信名 `letter` 與 kernel 絕對路徑 `kernel`，供 `listen`／`say` 提示；只採信與 `think/pending.txt` 相同的信，不必刪除。
+diff --git a/proto8/templates/agents/agent-fsm/fsm.json b/proto8/templates/agents/agent-fsm/fsm.json
+index 010dea26c..9a024fb4b 100644
+--- a/proto8/templates/agents/agent-fsm/fsm.json
++++ b/proto8/templates/agents/agent-fsm/fsm.json
+@@ -1,11 +1,11 @@
+ {"_entry": ["aos-fsm", {"$env": "AOS_CF"}],
+  "start": "idle",
+  "states": {
+-   "idle":  {"exec": {"argv": ["python3", "idle.py"]},
++   "idle":  {"exec": {"argv": ["python3", {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/idle.py"}]},
+              "next": {"0": "think", "10": "idle"}},
+-   "think": {"exec": {"argv": ["python3", "brain.py"]},
++   "think": {"exec": {"argv": ["python3", {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/brain.py"}]},
+              "next": {"0": "wait", "10": "idle"}},
+-   "wait":  {"exec": {"argv": ["python3", "wait.py"]},
++   "wait":  {"exec": {"argv": ["python3", {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/wait.py"}]},
+              "next": {"0": "act", "10": "wait", "11": "think"}},
+-   "act":   {"exec": {"argv": ["python3", "act.py"], "timeout_ms": 0},
++   "act":   {"exec": {"argv": ["python3", {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/act.py"}], "timeout_ms": 0},
+              "next": {"0": "think", "10": "idle"}}}}
+diff --git a/proto8/templates/agents/agent-fsm/interfaces.json b/proto8/templates/agents/agent-fsm/interfaces.json
+index 82b502e6a..776fc9ea7 100644
+--- a/proto8/templates/agents/agent-fsm/interfaces.json
++++ b/proto8/templates/agents/agent-fsm/interfaces.json
+@@ -1 +1 @@
+-{"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model", "reasoning_effort", "temperature", "top_p", "max_tokens", "seed", "presence_penalty", "frequency_penalty", "stop"], "history": "history.jsonl", "system": "system.txt"}, "hooks": [{"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}, "hooks.json"], "hookeds": "hookeds.json", "aos-observed": {"file": "observed.jsonl"}}
++{"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model", "reasoning_effort", "temperature", "top_p", "max_tokens", "seed", "presence_penalty", "frequency_penalty", "stop"], "history": "history.jsonl", "system": "system.txt"}, "hooks": [{"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}, {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/hooks.json"}], "hookeds": "hookeds.json", "aos-observed": {"file": "observed.jsonl"}}
+diff --git a/proto8/templates/agents/agent-python/README.md b/proto8/templates/agents/agent-python/README.md
+index 8ca82febb..6b59fcc5c 100644
+--- a/proto8/templates/agents/agent-python/README.md
++++ b/proto8/templates/agents/agent-python/README.md
+@@ -80,11 +80,11 @@ defs.main(agent)
+   - `std.pack(...)` and the `.pack(...)` of a library also take `prefix="..."` (put before every tool name), `rename={"read": "cat"}` (the name of one tool, instead of prefix + its name) and `exclude=["grep"]` (leave tools out).
+   - When two packs give the same name and the tools are not exactly the same, `--compile` stops with `SpecBad` instead of letting one hide the other. Use `prefix=`, `rename=`, `exclude=`, or pick one with `defs.tool(name, ...)`.
+ - `llm`: a dict. `{}` = the llm kernel's default brain; `{"model": "luna"}` picks a brain pack of the kernel. Other keys must be in `llm_keys` (`temperature`, `max_tokens`, ...).
+-- `fsm`: `std.fsm()` borrows the four cells of the `agent-fsm` template (`idle`, `think`, `wait`, `act`; the cell programs stay in `$AOS_HOME/templates/agents/agent-fsm/`). Your own machine:
++- `fsm`: `std.fsm()` borrows the four cells of agent-fsm (`idle`, `think`, `wait`, `act`; the cell programs are in `$AOS_HOME/lib/aos/apps/agent_fsm/`). Your own machine:
+ 
+   ```python
+   def cell(name):
+-      return ["python3", defs.home("/templates/agents/agent-fsm/%s.py" % name)]
++      return ["python3", defs.home("/lib/aos/apps/agent_fsm/%s.py" % name)]
+ 
+   cells = defs.fsm("idle", [
+       defs.state("idle",  cell("idle"),  {0: "think", 10: "idle"}),
+@@ -102,7 +102,7 @@ defs.main(agent)
+   - `interfaces`: laid over the default `interfaces.json`, like `{"aos-observed": {"file": "observed.jsonl"}, "aos-agent": {"history": None}}` (`None` removes a default key);
+   - `hooks`: writes `hookeds.json`, adds `"hookeds": "hookeds.json"` (and the `"hooks"` declarations) to `interfaces.json` and the `on_start` / `on_stop` lines (they fire `after_start` / `after_stop` with `aos-hook fire -q --stop-on-nonzero --def $AOS_CD`) to `loop.json`; `on_before_run` / `on_after_run` are written only when a hook here listens to `before_run` / `after_run` (one added later with `aos-agent hook add` needs a recompile and a restart). Write it as
+     - a dict `{hook name: entry}`, the entries as in any `hookeds.json` (`event`, `handler`, `timeout_ms`, `condition`, `every_ms`, `config`, ...);
+-    - `std.hooks()`: the hooks of the `agent-fsm` template (`std.hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/<template>/hookeds.json` and copied in, so recompiling follows a changed template;
++    - `std.hooks()`: the hooks of the `agent-fsm` template (`std.hooks("eca-claude")` / `("eca-pi")` for those); they are read from `$AOS_HOME/templates/agents/<template>/hookeds.json` and copied in, so recompiling follows a changed template;
+     - a Python function marked `@fn.hook("event", ...)` (see "Functions as tools and hooks" below);
+     - a list of those, laid one over the other (a later entry with the same name wins, `None` drops one): `hooks=[std.hooks(), {"timer": None, "mine": {...}}]`; but two hook groups (`std.hooks(...)` of two templates, the `hooks` of `defs.load`) that give one name with different entries are `SpecBad` unless a dict of yours after them names it;
+     - or `defs.extern("../shared/hookeds.json")`: `hookeds.json` becomes a link (see "extern" below; the whole field, not an item of the list).
+diff --git a/proto8/templates/agents/reviewer/README.md b/proto8/templates/agents/reviewer/README.md
+index 583c62936..261c7a2e6 100644
+--- a/proto8/templates/agents/reviewer/README.md
++++ b/proto8/templates/agents/reviewer/README.md
+@@ -8,7 +8,7 @@ flowchart LR
+   J --> D[已降級或沒有目標：結束]
+ ```
+ 
+-審視者重用相鄰 `agent-fsm/` 的格；算術、試跑、換上與盯梢都交給 [`review_round`](../../../py/tools/aos/review_round/README.md)。agent 只在 `prescribe` 時用 `json_set` 把一到三條處方寫進 `review.json#/prescriptions`；工具清單登記 review_round、watch、promote、rollback、measure 與 `json_get`、`json_ls`、`json_set`、`json_del`、read、ls（11-12 json-tools D21）。
++審視者重用 agent-fsm 的格（`$AOS_HOME/lib/aos/apps/agent_fsm/`）；算術、試跑、換上與盯梢都交給 [`review_round`](../../../py/tools/aos/review_round/README.md)。agent 只在 `prescribe` 時用 `json_set` 把一到三條處方寫進 `review.json#/prescriptions`；工具清單登記 review_round、watch、promote、rollback、measure 與 `json_get`、`json_ls`、`json_set`、`json_del`、read、ls（11-12 json-tools D21）。
+ 
+ ```sh
+ python3 -m unittest discover -s proto8/templates/tests/reviewer -p 'test_*.py'
+diff --git a/proto8/templates/docs/02-agent-fsm.md b/proto8/templates/docs/02-agent-fsm.md
+index d0824b6f9..c2a41d1e9 100644
+--- a/proto8/templates/docs/02-agent-fsm.md
++++ b/proto8/templates/docs/02-agent-fsm.md
+@@ -2,7 +2,7 @@
+ 
+ ## loop／fsm agent 範本 agent-fsm
+ 
+-aos 體系自己的 agent：**一隻＝一個範本資料夾**，複製一份、改 `llm.json`／`system.txt`／`tools.json` 就是另一隻（四支格的程式也放在範本裡，每隻複製；使用者 11-04「放範本裡，每隻複製」）。`body.json` 讓 aos-loop 跑 `loop.json`，loop 每次跑 `fsm.json` 的一格；`_entry` 是「把自己掛上 daemon」（下面）；格是範本裡四支純標準庫的 Python。設計與代定：[thinking 11-04 loop-fsm-agent](../../thinking/2026-11/04/loop-fsm-agent/README.md)；問腦＝寄信給 llm kernel：[think-as-function 03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md)；條文 P-11、P-19、P-35 的 11-04 註。
++aos 體系自己的 agent：**一隻＝一個範本資料夾**，複製一份、改 `llm.json`／`system.txt`／`tools.json` 就是另一隻（四支格的程式 11-24 起不在範本裡，在 `$AOS_HOME/lib/aos/apps/agent_fsm/`，每一隻都從那裡跑＝動態連結；使用者 11-23「3.a」。以前是「放範本裡，每隻複製」，使用者 11-04；要整份靜態的做法見範本 README）。`body.json` 讓 aos-loop 跑 `loop.json`，loop 每次跑 `fsm.json` 的一格；`_entry` 是「把自己掛上 daemon」（下面）；格是 `lib/aos/apps/agent_fsm/` 裡四支 Python（原始碼 [py/aos/apps/agent_fsm](../../py/aos/apps/agent_fsm/README.md)）。設計與代定：[thinking 11-04 loop-fsm-agent](../../thinking/2026-11/04/loop-fsm-agent/README.md)；問腦＝寄信給 llm kernel：[think-as-function 03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md)；條文 P-11、P-19、P-35 的 11-04 註。
+ 
+ **複製出 repo**（templates-cp，使用者「copy-out能刪就刪」）：開一隻新 agent 就 `cp -r`：
+ 
+@@ -23,7 +23,7 @@ cp -r $AOS_HOME/templates/agents/agent-fsm bob
+ 
+ 換台不用跑任何重建指令：備好 `AOS_HOME` 就直接起。`aos-agent tools add` 照使用者給的寫法存（絕對存絕對、相對存相對覆蓋層），要寫環境變數指示詞用 `aos-tools add --path-json`（[aos-tools](../../py/aos/apps/tools/README.md)）。[`templates/tests/test_paths_move.py`](../tests/test_paths_move.py) 在 /tmp 跑三種給法各一輪「`cp -r` 起→問一題→shutdown→git 搬到另一個 HOME 與前綴（A 的 proto8 刪掉）→B 直接起→接著答」，加一輪同機改 `AOS_HOME`。
+ 
+-四支格找共用模組依序看自己的資料夾、`$AOS_HOME/lib`（11-17 路徑規則一：不往上找旁邊的夾；共用模組在 lib 頂層）；沒設 `AOS_HOME` 又缺模組＝`agent-fsm: error: HomeMissing …`、退 1，所以定義抄到哪都起得來，只要 `AOS_HOME` 有傳下來；介面宣告讀法共用 `py/aos/declared_files.py`。範本的 `tests/`、`README.md` 會一起抄過去，`tests/` 可以刪。
++四支格找共用模組依序看自己的資料夾（`lib/aos/apps/agent_fsm/`，靜態連結的定義就是定義夾）、`$AOS_HOME/lib`（11-17 路徑規則一：不往上找旁邊的夾；共用模組在 lib 頂層）；沒設 `AOS_HOME` 又缺模組＝`agent-fsm: error: HomeMissing …`、退 1，所以定義抄到哪都起得來，只要 `AOS_HOME` 有傳下來；介面宣告讀法共用 `py/aos/declared_files.py`。範本的 `tests/`、`README.md` 會一起抄過去，`tests/` 可以刪。
+ 
+ 改完整包（定義＋工作區＋llm kernel）`cp -a`／git 到別處照樣起得來：daemon 表存相對路徑、指到 proto8 的照 `AOS_HOME` 解，`AOS_LLM_KERNEL` 照根 `.env` 的預設（`${AOS_WS}/../llms/stacks/llm`）或在殼裡換成新位置。
+ 
+@@ -34,6 +34,19 @@ agent-fsm/
+   loop.json    {"exec": "fsm.json", "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json", "on_start": …, "on_stop": …}（on_start／on_stop＝`aos-hook fire -q --stop-on-nonzero --def $AOS_CD` 發 after_start／after_stop；before_run／after_run 預設不接，要掛照 on_start 的樣子加 on_before_run／on_after_run 再重起）（沒有 max：常駐，靠 ctl 的 stop 收工）
+   fsm.json     四格：idle {"0": "think", "10": "idle"}、think（brain.py；system 照 interfaces.json 宣告的 system.txt）{"0": "wait", "10": "idle"}、
+                wait {"0": "act", "10": "wait", "11": "think"}、act（timeout_ms: 0＝不限時，11-15 起；以前 1800000）{"0": "think", "10": "idle"}；start: idle
++  system.txt   system 訊息（interfaces.json 宣告 "system": "system.txt"，self-system；$AOS_STACK/system.txt 在就整份用那份〔aos-agent system set／self_system〕；每格從檔讀、不存進 history；內容是英文）
++  tools.json   aos-tools 登記檔：幾乎只剩 `"$override"` 一串 [py/packs](../../py/packs/README.md) 十一包——通用四包 look、change、delete、shell（17 支，預設全開），再加 gadgets（peek_clock、peek_now_time、math、do_task）、todo（todo）、self（預設只開 self_tools、self_state；self_llm、self_system、self_history、self_ctl 四支在 `tools.json` 用覆蓋層 `"名": null` 關掉，要用就 `self_tools add` 或改 `tools.json` 把那列拿掉）、mailbox（mailbox_peek／read／send）、goal（goal）、json（json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set）、index（index_view），共 36 支（使用者「照包砍」「2.都開吧」；11-14「tools40: a」；11-21「self 只留兩支」，原 40 支）；選掛四包 events（clock_register、self_hook）、subagent（subagent、agents_ctl、fork）、def（agent_def、tools_def）、jsonx（jsonx_* 八支）範本不掛，要用的定義在做的時候往自己 `tools.json` 的 `"$override"` 加一項（例 `{"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"}`），不靠 agent 執行中 `self_tools add`；關法見範本 README；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
++  llm.json     腦設定：{}＝用 kernel 的預設代號；model＝kernel 的 endpoint 包代號（例 "smart-high"；寄信時填進 body 的 endpoint 欄，真正的模型名固定在包上）；
++               另認與快取無關的調整鍵 temperature、top_p、max_tokens、seed、presence_penalty、frequency_penalty、stop（放進 request；包的 fixed 照舊蓋過）；
++               認哪些鍵寫在 interfaces.json 的 llm_keys（aos-agent llm set 對著提醒）
++  interfaces.json  {"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json", "llm_keys": [model 與七個調整鍵], "history": "history.jsonl", "system": "system.txt"}, "hooks": [{"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}, {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/hooks.json"}], "hookeds": "hookeds.json", "aos-observed": {"file": "observed.jsonl"}}（沒有 screen；hooks＝hook 點的宣告〔只是參考〕，hookeds＝被勾清單）
++  subagents.json  工具 subagent 的配額設定 {"max_subagents": 4}（這隻最多同時生幾隻；stack 裡的 subagents.json 只放改過的鍵＝這隻的覆蓋；誰是我生的另記在 stack 的 tools/subagent/subagents.json）
++```
++
++四格與共用模組（範本裡沒有，在 `$AOS_HOME/lib/aos/apps/agent_fsm/`；`fsm.json` 每格的 `argv` 與 `interfaces.json` 的 `hooks` 第二項用 `{"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/…"}` 指過去）：
++
++```
++lib/aos/apps/agent_fsm/
+   idle.py      收信：$AOS_STACK/queue/ 全部收進 history.jsonl（接進去就 aos-post done）；有好信退 0、沒有退 10；[--prompt FILE] 開場白；
+                沒信、腦停下來（最後一則是沒有 tool_calls 的 assistant）、$AOS_STACK/goal.json 是 active＝接一則 [aos] goal: … 退 0（goal）
+   brain.py     組請求、不碰網路：history（＋system、tools）→ $AOS_STACK/think/request.json（llm kernel 請求信的 body）；退 0；沒事做退 10
+@@ -43,13 +56,9 @@ agent-fsm/
+   act.py       跑工具：逐個 aos-tools call，照 metainfo 限時；失敗附 stderr 尾，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
+   atomic_file.py  idle、wait 共用的寫檔（先寫暫存再改名；寫不成＝那格的 WriteFailed）
+   cell_common.py  四格共用的開頭幾步：on_clock 看時鐘（四格）；讀 history.jsonl、決定用哪份工具登記檔（brain、act）；錯誤交那格的 die
+-  system.txt   system 訊息（interfaces.json 宣告 "system": "system.txt"，self-system；$AOS_STACK/system.txt 在就整份用那份〔aos-agent system set／self_system〕；每格從檔讀、不存進 history；內容是英文）
+-  tools.json   aos-tools 登記檔：幾乎只剩 `"$override"` 一串 [py/packs](../../py/packs/README.md) 十一包——通用四包 look、change、delete、shell（17 支，預設全開），再加 gadgets（peek_clock、peek_now_time、math、do_task）、todo（todo）、self（預設只開 self_tools、self_state；self_llm、self_system、self_history、self_ctl 四支在 `tools.json` 用覆蓋層 `"名": null` 關掉，要用就 `self_tools add` 或改 `tools.json` 把那列拿掉）、mailbox（mailbox_peek／read／send）、goal（goal）、json（json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set）、index（index_view），共 36 支（使用者「照包砍」「2.都開吧」；11-14「tools40: a」；11-21「self 只留兩支」，原 40 支）；選掛四包 events（clock_register、self_hook）、subagent（subagent、agents_ctl、fork）、def（agent_def、tools_def）、jsonx（jsonx_* 八支）範本不掛，要用的定義在做的時候往自己 `tools.json` 的 `"$override"` 加一項（例 `{"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"}`），不靠 agent 執行中 `self_tools add`；關法見範本 README；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
+-  llm.json     腦設定：{}＝用 kernel 的預設代號；model＝kernel 的 endpoint 包代號（例 "smart-high"；寄信時填進 body 的 endpoint 欄，真正的模型名固定在包上）；
+-               另認與快取無關的調整鍵 temperature、top_p、max_tokens、seed、presence_penalty、frequency_penalty、stop（放進 request；包的 fixed 照舊蓋過）；
+-               認哪些鍵寫在 interfaces.json 的 llm_keys（aos-agent llm set 對著提醒）
+-  interfaces.json  {"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json", "llm_keys": [model 與七個調整鍵], "history": "history.jsonl", "system": "system.txt"}, "hooks": [{"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}, "hooks.json"], "hookeds": "hookeds.json", "aos-observed": {"file": "observed.jsonl"}}（沒有 screen；hooks＝hook 點的宣告〔只是參考〕，hookeds＝被勾清單）
+-  subagents.json  工具 subagent 的配額設定 {"max_subagents": 4}（這隻最多同時生幾隻；stack 裡的 subagents.json 只放改過的鍵＝這隻的覆蓋；誰是我生的另記在 stack 的 tools/subagent/subagents.json）
++  compact.py   /compact 與 /clear（idle、brain、wait 用；before_compact／after_compact 的規矩也在這支）
++  llm_settings.py  腦設定（llm.json 疊 stack 那份）轉成請求信的 body（brain、wait 用；defs check 也照它查）
++  hooks.json   這幾格會發哪些 hook 點（宣告，只是參考）
+ ```
+ 
+ **自稱**：範本 `_metainfo.json` 的 `summary` 與 README 首行一致，`cost.time_ms: 30000` 是估時、`resource: ["llm"]` 是資源；範本本身未宣告頂層 `timeout_ms`。
+@@ -84,7 +93,7 @@ aos-agent ctl resume         # ctl 下也有 stop／start、sleep／wake（同
+ - **goal**（[thinking goal](../../thinking/2026-11/11/goal/README.md)，使用者「當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他」）：`$AOS_STACK/goal.json` 是 active、idle 收不到信、history 最後一則是沒有 `tool_calls` 的 assistant＝idle 直接接一則 user `[aos] goal: <目標> (reminder N of LIMIT. …)` 進 history、退 0 去 think（不走 queue、不觸發 before_queue／after_queue；信永遠優先）。上次提醒之後腦叫過 `goal` 以外的工具＝計數歸零；連續 LIMIT 次（預設 10）沒進展＝最後丟一則 `[aos] goal: reminder limit N reached; goal paused …`、goal 改 paused。腦自己用工具 `goal`（get／set／done／pause／resume），人與父 agent 用 `aos-agent goal`；暫停中來信不自動 resume；只有 agent 自己暫停、history 最後 262144 bytes 仍找得到最近的 goal 工具呼叫且之後有新訊息、答完又停下時，idle 才補一次 `[aos] goal: paused …` 提示讓腦選 resume／done／繼續等，碰到既有 goal 提醒或 summary 就不補，外面或 aos 設的暫停與 goal.json 都不動。
+ - **思考中來的信**答完回 idle 才收、跟那批一起答（使用者 11-04「等答完回 idle 再收」）；一般信通常留在 `queue/new/`，輪中收 `/compact` 時可能一起認領到 `cur/`，但不交給腦，仍等 idle。`/compact` 是例外：工具結果齊了就能在輪中壓縮，見「context 快滿與 /compact」。
+ - **暫停時改 history**：`pause` 之後用 `aos-agent history -t 名字 ls／rm／summarize／set` 改（self-family；原文搬到 stack 裡 `history_removed.jsonl`；直接改 `history.jsonl` 也行），要它重答就把 `stage.txt` 寫成 `think` 再 `resume`；不 pause 也能改：還沒寄出去的請求，wait 看到 history 比 request 新就退 11 重組；已經寄出去的不追，回信照樣接在改過的 history 後面。agent 自己改用 `self_history`（正在進行的這一步鎖著）；brain 每次從頭讀，改了就生效（寫新請求時順手刪 `think/pending.txt`，wait 重寄）。最後一則已是答案時 brain 不組請求、退 10 回 idle。
+-- **hook**（[self-family/hook](../../thinking/2026-11/10/self-family/hook/README.md)）：`interfaces.json` 最外層 `"hookeds": "hookeds.json"`（被勾清單），定義那份疊 stack 那份（同名蓋過、null 關掉），每次事件重讀；`"hooks"` 指 hook 點的宣告（範本的 `hooks.json`＋aos-loop 的 `loop_hooks.json`），只是參考。四格的觸發點：idle＝`before_queue`（好信進 history 之前，可改 `content`／攔下丟掉）、`after_queue`；think（brain）＝`tool_added`（工具清單多了名字）；act＝`before_tool`（可改 `arguments`／攔下不跑）、`after_tool`（可改 `content`）；wait＝`brain_failed`（`BrainFailed`／`SendFailed`／`ReplyBad`／`BudgetMissing`）；`/compact`＝`before_compact`、`after_compact`（規矩在 `compact.py`，見「context 快滿與 /compact」的「壓縮前後的 hook」）。時鐘（[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）：每格最開頭 hook 遙控器 `H.clock_tick()`（`agentlib/hook_clock.py`）判 `on_clock`（時鐘走到了才起 handler）；起來／停下＝loop.json 的 `on_start`／`on_stop` 叫 `aos-hook fire --def` 發 `after_start`／`after_stop`（handler 的碼原樣交給 aos-loop，非 0＝agent 停）；after_stop 的事件只有共通三欄，handler 讀環境變數 `AOS_LOOP_CODE`、`AOS_LOOP_SIGNAL`、`AOS_LOOP_CAUSE`（為什麼停：`stop`／`sleep`／`remove`／`shutdown`／`stuck`／`signal`／`max`／`body_exit`／`error`，舊版 aos-loop 沒給＝空；`cause` 跟表上的 `reason` 不同，`reason` 是給人看的一句話；撞限額沒有獨立的值，看表上的 `limit_hit`；`error` 只是停止的分類，不是錯誤代號；值表見 [aos-loop 01](../../cpp/aos-loop/docs/01-用法.md)）。`hookeds.json` 預設一格 `timer`（`on_clock`、`every_ms` 300000、handler `py/tools/agent/hook_noop` 什麼都不做）當掛點，另一格 `mail_notify`（`every_ms` 60000＝每 1 分鐘、handler `py/tools/agent/mail_notify`：有沒通知過的新信才往 queue 寄一則 `[aos] new_mail: …`；起來那次〔`first`〕照已通知記錄比：睡著時新到的提醒一次、全新起來〔沒有 `notified.json`，且 agent stack 的 `history.jsonl` 不在或是空的〕只記成已知；跑過的 stack〔有非空 history〕當睡醒，在等的提醒一次，[backlog-rulings](../../thinking/2026-11/11/backlog-rulings.md)；`timeout_ms` 10000〔0＝不限時〕）：history 不多任何一則，要叫腦就換成往 `queue/` 寄信的 handler（同名蓋過）；不要就 `aos-agent hook rm timer`。hook 失敗（退 0／10 以外、逾時、起不來、stdout 不合）：能攔的點（`before_queue`、`before_tool`）＝那格 `agent-fsm: error: HookFailed …` 退 1、停下等人；其他點（含 `before_compact`）＝一行 warning；清單壞＝`HooksBad`。人用 `aos-agent hook`、agent 自己用 `self_hook`；全文 [aos-agent docs/06](../../py/aos/apps/agent/docs/06-hook.md)。
++- **hook**（[self-family/hook](../../thinking/2026-11/10/self-family/hook/README.md)）：`interfaces.json` 最外層 `"hookeds": "hookeds.json"`（被勾清單），定義那份疊 stack 那份（同名蓋過、null 關掉），每次事件重讀；`"hooks"` 指 hook 點的宣告（`lib/aos/apps/agent_fsm/hooks.json`＋aos-loop 的 `loop_hooks.json`），只是參考。四格的觸發點：idle＝`before_queue`（好信進 history 之前，可改 `content`／攔下丟掉）、`after_queue`；think（brain）＝`tool_added`（工具清單多了名字）；act＝`before_tool`（可改 `arguments`／攔下不跑）、`after_tool`（可改 `content`）；wait＝`brain_failed`（`BrainFailed`／`SendFailed`／`ReplyBad`／`BudgetMissing`）；`/compact`＝`before_compact`、`after_compact`（規矩在 `compact.py`，見「context 快滿與 /compact」的「壓縮前後的 hook」）。時鐘（[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）：每格最開頭 hook 遙控器 `H.clock_tick()`（`agentlib/hook_clock.py`）判 `on_clock`（時鐘走到了才起 handler）；起來／停下＝loop.json 的 `on_start`／`on_stop` 叫 `aos-hook fire --def` 發 `after_start`／`after_stop`（handler 的碼原樣交給 aos-loop，非 0＝agent 停）；after_stop 的事件只有共通三欄，handler 讀環境變數 `AOS_LOOP_CODE`、`AOS_LOOP_SIGNAL`、`AOS_LOOP_CAUSE`（為什麼停：`stop`／`sleep`／`remove`／`shutdown`／`stuck`／`signal`／`max`／`body_exit`／`error`，舊版 aos-loop 沒給＝空；`cause` 跟表上的 `reason` 不同，`reason` 是給人看的一句話；撞限額沒有獨立的值，看表上的 `limit_hit`；`error` 只是停止的分類，不是錯誤代號；值表見 [aos-loop 01](../../cpp/aos-loop/docs/01-用法.md)）。`hookeds.json` 預設一格 `timer`（`on_clock`、`every_ms` 300000、handler `py/tools/agent/hook_noop` 什麼都不做）當掛點，另一格 `mail_notify`（`every_ms` 60000＝每 1 分鐘、handler `py/tools/agent/mail_notify`：有沒通知過的新信才往 queue 寄一則 `[aos] new_mail: …`；起來那次〔`first`〕照已通知記錄比：睡著時新到的提醒一次、全新起來〔沒有 `notified.json`，且 agent stack 的 `history.jsonl` 不在或是空的〕只記成已知；跑過的 stack〔有非空 history〕當睡醒，在等的提醒一次，[backlog-rulings](../../thinking/2026-11/11/backlog-rulings.md)；`timeout_ms` 10000〔0＝不限時〕）：history 不多任何一則，要叫腦就換成往 `queue/` 寄信的 handler（同名蓋過）；不要就 `aos-agent hook rm timer`。hook 失敗（退 0／10 以外、逾時、起不來、stdout 不合）：能攔的點（`before_queue`、`before_tool`）＝那格 `agent-fsm: error: HookFailed …` 退 1、停下等人；其他點（含 `before_compact`）＝一行 warning；清單壞＝`HooksBad`。人用 `aos-agent hook`、agent 自己用 `self_hook`；全文 [aos-agent docs/06](../../py/aos/apps/agent/docs/06-hook.md)。
+ - **image 醒在 wait 格**：有 `think/pending.txt` 就繼續收原回信，即使 `think/request.json` 不在也不重寄；沒 pending 且 request 不在＝wait 退 11，沿既有 FSM 轉移回 think，brain 從 history＋目前定義／覆蓋層重組，再到 wait 寄出。image 可以擋 `think/request.json`；`pending.txt`、`think/reply/new/`／`cur/` 仍必須帶走。
+ - **kernel 停著**：信留在 kernel 信箱的 `new/`，`stage.txt` 停在 `async`、每拍退 10 一直等；kernel 起來就接著答。kernel 回錯（`EndpointFailed`…；`BudgetMissing` 例外，見下一段「額度拒絕」）＝wait 退 1、stderr 先是 aos-llm 的 `aos-llm: error: 代號 原因`、再一行 wait 自己的 `agent-fsm: error: BrainFailed aos-llm recv exited 1 (its reason is above)`，loop 停下等人；修好再起，wait 看到沒 pending、`request.json` 還在＝重寄；寄之前比對 `request.json` 的 endpoint 跟現在的 llm.json（定義疊 stack），對不上（人改了或刪了 llm.json）＝退 11 回 think、brain 重組再寄（edge-agent）。
+ - **wait 自己認的三種殘留**（TS）：① 有 pending 而 `think/reply/` 缺 `tmp`／`new`／`cur`（clone 後空資料夾不在 git）＝recv 前先 `aos-post init`；② recv 說還沒回、`AOS_LLM_KERNEL` 解得到資料夾（相對＝從 `$AOS_DAEMON` 算，同 aos-llm）而那封信不在 `<kernel>/requests/new/`、`cur/`＝再收一次，還是沒有＝刪 `pending.txt`、印 `agent-fsm: warning: the letter <名> is no longer queued at the llm kernel <路徑>; sending the request again`、下一拍重寄（kernel 那邊只讀不寫；`AOS_LLM_KERNEL` 沒設或解不到＝照樣等）；③ 正要寄時 `request.json` 的 messages 最後一則跟 `history.jsonl` 最後一則不一樣（JSON 正規化後比；請求是從比較舊的 history 組的，例 `git reset` 後留下的）＝退 11 回 think 重組、不寄。另外平常每拍用 `aos-llm recv --quiet`（不印「為什麼還沒回」，免得每拍一行），只有要印 10 分鐘提醒的那一拍不帶，讓 aos-llm 把原因印在提醒那行前面。
+@@ -168,7 +177,7 @@ hook 格如下（pack 沒有 `context` 時可在 config 補 `"window": 272000`
+ 
+ ### 壓縮前後的 hook
+ 
+-11-21 compact 第 4 刀（[紀錄](../../thinking/2026-11/21/compact-第4刀-1121.md)；使用者「2.都開」：調、補、換都開；「compact這塊，反正各agent有需要的，可以自訂自己的compact程式和流程」）。宣告在範本的 `hooks.json`，規矩寫在 `compact.py`（引擎只負責叫 handler）；範本預設一個都不掛，用 `aos-agent hook add --event before_compact …`／`self_hook` 掛。
++11-21 compact 第 4 刀（[紀錄](../../thinking/2026-11/21/compact-第4刀-1121.md)；使用者「2.都開」：調、補、換都開；「compact這塊，反正各agent有需要的，可以自訂自己的compact程式和流程」）。宣告在 `lib/aos/apps/agent_fsm/hooks.json`，規矩寫在同夾的 `compact.py`（引擎只負責叫 handler）；範本預設一個都不掛，用 `aos-agent hook add --event before_compact …`／`self_hook` 掛。
+ 
+ | 點 | 什麼時候 | 事件欄位 | 能做的 |
+ |---|---|---|---|
+@@ -188,7 +197,7 @@ hook 格如下（pack 沒有 `context` 時可在 config 補 `"window": 272000`
+ 
+ ### 舊 agent 怎麼換上
+ 
+-由管理該 agent 的人操作，不用重掛：先 pause（或確認 idle），在那棵樹用的 proto8 跑過 `install.py`（11-21 起 `compact.py` 要 lib 裡的 `aos/agentlib/tool_clear.py`，沒有它 idle 一收 `/compact` 就停），再把新範本的 `compact.py`、`idle.py`、`brain.py`、`wait.py` **四檔換進定義夾**（11-21 第 4 刀動了 `compact.py`、`idle.py`、`brain.py`，用 lib 裡已有的 `aos.hook_run`、`agent_hooks`，不必為它多跑 `install.py`；要宣告的話 `hooks.json` 一起換）；若那份定義改過這些檔，先比對。同一定義的其他 agent 也會一起換上。再把上面的 hook 格加到該 agent stack 的 `hookeds.json#/context_wrap`（希望整份定義都有才改定義 hookeds.json），pack 尚無 context 時在 config 補 window，最後 resume，用 `context_wrap --reading <stack>` 核對。**先換檔、後掛 hook**：舊 body 會把 `/compact` 當普通文字。
++由管理該 agent 的人操作，不用重掛：先 pause（或確認 idle），在那棵樹用的 proto8 跑過 `install.py`（11-21 起 `compact.py` 要 lib 裡的 `aos/agentlib/tool_clear.py`，沒有它 idle 一收 `/compact` 就停），（靜態連結、自己帶格的定義）再把 `$AOS_HOME/lib/aos/apps/agent_fsm/` 的 `compact.py`、`idle.py`、`brain.py`、`wait.py` **四檔換進定義夾**（11-21 第 4 刀動了 `compact.py`、`idle.py`、`brain.py`，用 lib 裡已有的 `aos.hook_run`、`agent_hooks`，不必為它多跑 `install.py`；要宣告的話 `hooks.json` 一起換）；若那份定義改過這些檔，先比對。同一定義的其他 agent 也會一起換上。再把上面的 hook 格加到該 agent stack 的 `hookeds.json#/context_wrap`（希望整份定義都有才改定義 hookeds.json），pack 尚無 context 時在 config 補 window，最後 resume，用 `context_wrap --reading <stack>` 核對。**先換檔、後掛 hook**：舊 body 會把 `/compact` 當普通文字。
+ 
+ repo 的這些更新不會自行換掉既有樹；共用 `context_use`／`context_wrap`、範本、docs、知識庫要先抄進該樹才生效，kernel 的 pack 也要有 context 或另給 window。活樹換檔須由有權管理的人取得同意後做，不是 agent 自己改別人的 stack。
+ 
+diff --git a/proto8/templates/starts/start-api/README.md b/proto8/templates/starts/start-api/README.md
+index ffb595ac8..d8d053ecc 100644
+--- a/proto8/templates/starts/start-api/README.md
++++ b/proto8/templates/starts/start-api/README.md
+@@ -49,7 +49,7 @@ aos-daemon-ctl -d .stack stop ann && aos-daemon-ctl -d .stack start ann   # 3. a
+ | `root/` | 根 daemon 的定義：最小核心（板子、時鐘、清道夫） | [daemon-root](../../daemons/daemon-root/README.md) | `.env` 的 `AOS_LLM_KERNEL` 指 `${AOS_STACK}/procs/llm`（掛在根上的那一列） |
+ | `llm/` | llm kernel 的定義，`add` 之後是根上的一列 `llm` | [kernel/llm-kernel](../../kernels/docs/01-llm-kernel.md) | 沒有 |
+ | `perm/` | 權限站（選裝，出廠沒掛） | [kernel/procs-kernel](../../kernels/README.md) | `kernel.json` 是 `{}` |
+-| `agents/ann/` | 一隻 agent | [agent-fsm](../../docs/02-agent-fsm.md) | `llm.json` 是 `{"model": "fake"}`（假腦，先試流程）；要真模型就換成 `llm/kernel.json` 的 `endpoints` 裡的名字。多一個 `.env`：只有一行註解掉的 `AOS_KERNEL`（開權限件用）。**不帶格程式**（11-21）：`fsm.json` 四格動態連結 `$AOS_HOME/templates/agents/agent-fsm/` 的 `idle.py`…（跟 `agent.py` 的 `std.fsm()` 編出來的一字不差），`interfaces.json` 的 `hooks`（宣告，只是參考）指 `$AOS_HOME/lib/aos/apps/agent_fsm/hooks.json`；所以沒有那八支 `.py` 與宣告 `hooks.json`（被勾清單 `hookeds.json` 照樣在），`README.md` 在原樣後面多一段說明怎麼改某一格（[ann 的 README](agents/ann/README.md#起手範本這一隻格程式動態連結11-21)） |
++| `agents/ann/` | 一隻 agent | [agent-fsm](../../docs/02-agent-fsm.md) | `llm.json` 是 `{"model": "fake"}`（假腦，先試流程）；要真模型就換成 `llm/kernel.json` 的 `endpoints` 裡的名字。多一個 `.env`：只有一行註解掉的 `AOS_KERNEL`（開權限件用）。**不帶格程式**（11-21；11-24 起範本本身也一樣）：`fsm.json` 四格動態連結 `$AOS_HOME/lib/aos/apps/agent_fsm/` 的 `idle.py`…（跟 `agent.py` 的 `std.fsm()` 編出來的一字不差），`interfaces.json` 的 `hooks`（宣告，只是參考）指 `$AOS_HOME/lib/aos/apps/agent_fsm/hooks.json`；所以沒有那八支 `.py` 與宣告 `hooks.json`（被勾清單 `hookeds.json` 照樣在），`README.md` 在原樣後面多一段說明怎麼改某一格（[ann 的 README](agents/ann/README.md#起手範本這一隻格程式動態連結11-21)） |
+ 
+ 跑起來後樹裡多出 `.stack/`：根的 stack；llm kernel 的在 `.stack/procs/llm/`，agent 的在 `.stack/procs/ann/`，開了權限站的話站的在 `.stack/procs/perm/`。
+ 
+@@ -57,6 +57,6 @@ aos-daemon-ctl -d .stack stop ann && aos-daemon-ctl -d .stack start ann   # 3. a
+ 
+ ## 維護
+ 
+-`root/`、`llm/`、`perm/`、`agents/ann/` 是原範本的逐字抄本，只差上表那幾處（`agents/ann/` 另外不帶格程式，執行時從 `$AOS_HOME` 拿）；改了原範本要同步抄過來，[templates/tests/test_start.py](../../tests/test_start.py) 會逐檔比對、不一樣就紅。`env.sh` 兩包是同一份。
++`root/`、`llm/`、`perm/`、`agents/ann/` 是原範本的逐字抄本，只差上表那幾處（`agents/ann/` 跟範本一樣不帶格程式，執行時從 `$AOS_HOME/lib` 拿）；改了原範本要同步抄過來，[templates/tests/test_start.py](../../tests/test_start.py) 會逐檔比對、不一樣就紅。`env.sh` 兩包是同一份。
+ 
+ repo 更新後，已經抄出去的樹哪些要重抄（`env.sh` 幾乎不用；各格的程式、接線檔可能要）見 [14-更新與重新複製](../../../thinking/2026-11/17/cpp-py-改名/14-更新與重新複製.md)。
+diff --git a/proto8/templates/starts/start-api/agents/ann/README.md b/proto8/templates/starts/start-api/agents/ann/README.md
+index 3e3d54222..86bb38cda 100644
+--- a/proto8/templates/starts/start-api/agents/ann/README.md
++++ b/proto8/templates/starts/start-api/agents/ann/README.md
+@@ -1,6 +1,8 @@
+ Run an aos agent with loop and FSM cells.
+ 
+-用 `cp -r $AOS_HOME/templates/agents/agent-fsm <目的資料夾>` 複製本範本（指回 proto8 的路徑都寫成 `{"$env": "AOS_HOME", …}`、沒有捷徑，抄到哪都能跑，這台要有 `AOS_HOME`），再修改 `llm.json`、`system.txt` 與 `tools.json`，即可建立另一隻 agent；入口、四格運作與完整用法見 [agent-fsm 說明](../docs/02-agent-fsm.md)。
++用 `cp -r $AOS_HOME/templates/agents/agent-fsm <目的資料夾>` 複製本範本（指回 proto8 的路徑都寫成 `{"$env": "AOS_HOME", …}`、沒有捷徑，抄到哪都能跑，這台要有 `AOS_HOME`），再修改 `llm.json`、`system.txt` 與 `tools.json`，即可建立另一隻 agent；入口、四格運作與完整用法見 [agent-fsm 說明](../../docs/02-agent-fsm.md)。
++
++**格的程式不在這個夾**（11-24 起，使用者 11-23「3.a」）：四格（idle、think、wait、act）與它們共用的模組、hook 點宣告 `hooks.json` 在 `$AOS_HOME/lib/aos/apps/agent_fsm/`（原始碼 [py/aos/apps/agent_fsm](../../../py/aos/apps/agent_fsm/README.md)），`fsm.json` 每格的 `argv` 與 `interfaces.json` 的 `hooks` 用 `{"$env": "AOS_HOME", …}` 指過去（動態連結），範本只是給人抄的來源。要整份靜態的（自己改某一格）：從 `$AOS_HOME/lib/aos/apps/agent_fsm/` 抄那九個檔進來，`fsm.json` 的 `argv` 改成相對檔名（`["python3", "idle.py"]`），`interfaces.json` 的 `hooks` 第二項改成 `"hooks.json"`；只改一格也一樣（那支加它 import 的共用檔）。
+ 
+ 寄之前 `AOS_LLM_KERNEL` 沒設或只有空白＝觸發 `brain_failed` 後以 `LlmKernelMissing` 停下、不記冷卻、保留請求，要帶變數重掛；有設但 kernel 資料夾不在仍照 `SendFailed` 冷卻等待，wait 格等腦回信不設期限：寄出後每滿 10 分鐘在 stderr 印一行 `agent-fsm: warning: no reply from the brain for N minutes to letter <名>: <原因>; still waiting`、照樣等（原因＝信在 kernel 的哪一格：`requests/new/` 還在排隊沒開始、`cur/` kernel 正在跑〔附那封的 `stderr.txt` 路徑〕、或 `AOS_LLM_KERNEL` 沒設／不是資料夾；kernel 沒在跑由同一拍 `aos-llm recv` 那行說，two-machines B10）（提醒到第幾次記在 stack 的 `think/wait_warned.txt`）。
+ 
+@@ -9,37 +11,37 @@ Run an aos agent with loop and FSM cells.
+ kernel 回 `BudgetMissing`＝額度拒絕、不停下：先觸發 `brain_failed`（`name = BudgetMissing`、`reason` 原樣帶 kernel 的 `error.msg`，條件只有 `BrainFailed` 的 hook 不再匹配），再記 `cooldown.json`（同代號、30 秒起加倍到 30 分鐘，之後每 30 分鐘）、印一行 `agent-fsm: warning: BudgetMissing <msg>; waiting, the same request is sent again when the cooldown ends`、退 10 留在 wait；冷卻中不寄、到期重寄同一份 `request.json`，不寫 `observed.jsonl`、不加 assistant 訊息。好的回信接進 history 後清冷卻；只有因 endpoint／調整鍵改變而退 11 回 think 重組時，也會先清 `BudgetMissing` 冷卻（清不掉只 warning），其他代號與其他重組原因不清。recv 退非 0 時，其他 kernel 錯誤、stdout 不是 JSON 或沒有 error 物件，仍走原本 `BrainFailed`、退 1；冷卻檢查通過、正要寄出時，若 `priority.deadline` 可解為有限 epoch 秒數或帶時區的 ISO 時間，且已過或 5 秒內到期，wait 只印 warning、不寄出，退 11 回 think 重組，不觸發 `brain_failed`、不改 `request.json`／`cooldown.json`；解不開的 priority 仍交 kernel 判斷（出廠 brain.py 目前不寫 deadline）。
+ kernel 的 `error` 若多帶結構化欄位（`window`＝`hour`／`day`／`all`、`resets_at`＝下一個視窗起點，ISO 8601 帶時區，`all` 是 null；舊 kernel 只有 `code`／`msg`，行為不變）：`resets_at` 在未來＝冷卻到 `resets_at` ＋ 5 秒（不早於現在＋30 秒，`cooldown.fail_until`，`failures` 照樣加 1）；`resets_at` 剛過不到 60 秒＝現在＋30 秒；解不開、沒帶時區、更舊或沒有＝照上面的間隔表。`window` 是 `all`（永不重置）＝不重試：先觸發 `brain_failed`，再印 `agent-fsm: error: BudgetMissing <msg> (window all: it never resets; raise the budget, then start me again)`、退 1，不記冷卻、`request.json` 留著，加了額度再起＝重寄同一份。`brain_failed` 事件另帶 `error` 欄＝解到的 kernel error 物件（每種 kernel 回錯都有，沒解到就沒有這欄）；範本的 `brain_notify` 讀它：有 `resets_at` 時標題寫「waiting until <本機 HH:MM>」、說明到時自己重試；`all` 時標題寫「stopped」、說明額度不會重置、加額度再起 agent。注意：開了 `auto_restart` 的列碰到 `all` 退 1，daemon 會重起它，重寄的請求立刻又被拒（不耗 token），靠 daemon 的重起退避擋著；subagent 沒有 `auto_restart`。
+ 
+-**預設 11 包、36 支，通用工具四包全開**（tool-packs，使用者「1.預設開到第四包，想要安全就自行限制」；11-14「tools40: a」拿掉四包；11-21 使用者選項框「self 只留兩支」，40 → 36 支，見 [tool-desc-瘦身-1121/04](../../thinking/2026-11/21/tool-desc-瘦身-1121/04-使用者已答.md)）：`tools.json` 的 `"$override"` 疊上 [py/packs](../../py/packs/README.md) 的四份清單——1 看（read、ls、view、stat、grep、glob）、2 改（write、edit、copy、move、mkdir）、3 刪（trash、remove）、4 殼（shell、run_python）——加 json 包（json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set；[json-tools](../../thinking/2026-11/12/json-tools/README.md)），再加五包 agent 工具：小工具 gadgets（peek_clock、peek_now_time、math、do_task）、待辦 todo（todo）、自我管理 self（預設只開 self_tools、self_state；self_llm、self_system、self_history、self_ctl 四支在 `tools.json` 用覆蓋層 `"名": null` 關掉，要用就 `self_tools add`〔path_json 例 `{"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_history"}`〕或改 `tools.json` 把那列拿掉）、信箱 mailbox（mailbox_*）、目標 goal（goal），再加 index 包（index_view：透過 index 看節點、只看不改；[index-tools](../../thinking/2026-11/12/index-tools/README.md)），共 36 支。**選掛四包**（範本不掛）：事件 events（clock_register、self_hook）、子 agent subagent（subagent、agents_ctl、fork）、定義 def（agent_def、tools_def）、jsonx（複雜組 jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del、jsonx_multi_get、jsonx_multi_set，認 `$ref`／`$env`；eca-claude 範本照掛）；要用的定義在做的時候往自己 `tools.json` 的 `"$override"` 加一項（例 `{"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"}`），不靠 agent 執行中 `self_tools add`（[py/packs](../../py/packs/README.md)）。這些檔案工具不擋工作區外的路徑（相對從 `$AOS_WS` 算、絕對照用），能不能動看 Linux 權限。`aos-tools --file tools.json ls -l` 的 FROM 欄看得出每支來自哪一包。**要收緊**：整包關＝從定義 `tools.json` 的 `$override` 那串拿掉那一包（例四包只留 look 就是唯讀；拿掉 subagent 就不能生子 agent），其他包不受影響；只關這一隻的某幾支＝`aos-agent tools rm shell`、`aos-agent tools rm run_python`（一次一支，寫進這隻自己那份、`"名": null`，定義不動）；`aos-agent tools reset` 回定義。
++**預設 11 包、36 支，通用工具四包全開**（tool-packs，使用者「1.預設開到第四包，想要安全就自行限制」；11-14「tools40: a」拿掉四包；11-21 使用者選項框「self 只留兩支」，40 → 36 支，見 [tool-desc-瘦身-1121/04](../../../thinking/2026-11/21/tool-desc-瘦身-1121/04-使用者已答.md)）：`tools.json` 的 `"$override"` 疊上 [py/packs](../../../py/packs/README.md) 的四份清單——1 看（read、ls、view、stat、grep、glob）、2 改（write、edit、copy、move、mkdir）、3 刪（trash、remove）、4 殼（shell、run_python）——加 json 包（json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set；[json-tools](../../../thinking/2026-11/12/json-tools/README.md)），再加五包 agent 工具：小工具 gadgets（peek_clock、peek_now_time、math、do_task）、待辦 todo（todo）、自我管理 self（預設只開 self_tools、self_state；self_llm、self_system、self_history、self_ctl 四支在 `tools.json` 用覆蓋層 `"名": null` 關掉，要用就 `self_tools add`〔path_json 例 `{"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_history"}`〕或改 `tools.json` 把那列拿掉）、信箱 mailbox（mailbox_*）、目標 goal（goal），再加 index 包（index_view：透過 index 看節點、只看不改；[index-tools](../../../thinking/2026-11/12/index-tools/README.md)），共 36 支。**選掛四包**（範本不掛）：事件 events（clock_register、self_hook）、子 agent subagent（subagent、agents_ctl、fork）、定義 def（agent_def、tools_def）、jsonx（複雜組 jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del、jsonx_multi_get、jsonx_multi_set，認 `$ref`／`$env`；eca-claude 範本照掛）；要用的定義在做的時候往自己 `tools.json` 的 `"$override"` 加一項（例 `{"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"}`），不靠 agent 執行中 `self_tools add`（[py/packs](../../../py/packs/README.md)）。這些檔案工具不擋工作區外的路徑（相對從 `$AOS_WS` 算、絕對照用），能不能動看 Linux 權限。`aos-tools --file tools.json ls -l` 的 FROM 欄看得出每支來自哪一包。**要收緊**：整包關＝從定義 `tools.json` 的 `$override` 那串拿掉那一包（例四包只留 look 就是唯讀；拿掉 subagent 就不能生子 agent），其他包不受影響；只關這一隻的某幾支＝`aos-agent tools rm shell`、`aos-agent tools rm run_python`（一次一支，寫進這隻自己那份、`"名": null`，定義不動）；`aos-agent tools reset` 回定義。
+ 
+ goal 暫停中來信不自動 resume；只有 agent 自己暫停、history 尾段仍找得到最近的 goal 工具呼叫且之後有新訊息、答完又停下時，idle 才補一次 `[aos] goal: paused …` 提示，讓腦選 resume／done／繼續等，碰到既有 goal 提醒或 summary 就不補，外面或 aos 設的暫停與 goal.json 都不動。
+ 
+ `interfaces.json` 宣告身體、工具與腦設定的位置。`_metainfo.json` 宣告估時 `cost.time_ms` 與 `llm` 資源，未設定逾時。
+ 
+-**context 快滿與 /compact**：新範本預設掛 `context_wrap`（`on_clock`、每 5 秒、`config {"percent": 35, "wrap": false}`），用 `observed.jsonl` 最近一次有效 `think` 的 `usage.prompt_tokens` ÷ kernel 發布的 pack `context` 量用量；hook 的 `config.window` 可蓋過視窗，兩邊都沒有就不觸發。過門檻直接寄 `/compact`，收尾併進摘要；人也能寄 `/compact`：body 先把舊的工具輸出換成一行佔位（最後 3 則、最後一組、短於 300 字的不清，原文進 `history_removed.jsonl`），再叫腦在自己的對話裡寫摘要，那次不帶工具，之前的對話換成一則摘要，沒答的信原文留著，摺掉的原文在 `history_removed.jsonl`，摘要另存 `<stack>/handoff.md`。做到一半也收得到，等工具結果齊了才壓、壓完接著做；可摺的不到 4 則（例：剛壓完又來一封）就不問腦、不摺，當成正常做完：回一句 `compact not needed: …`，信記成答完、不寫警告。壓縮前後各有一個 hook 點（11-21 第 4 刀）：`before_compact`（可攔下、改給腦的指示、不清工具輸出、直接交一份摘要＝不叫腦）、`after_compact`（摘要寫進 history 之前，可改摘要、交一段補回的字，接在摘要後面、不多叫一次腦）；範本一個都不掛，各家要自己的 compact 方式就掛在這兩點，規矩見 [壓縮前後的 hook](../docs/02-agent-fsm.md#壓縮前後的-hook)。改門檻要改 hook 格的 `config.percent`（`self_hook add` 帶不了 config）；關掉用 `self_hook` `{"op":"rm","name":"context_wrap"}`，或 stack 的同名 hook 格寫 `null`（`self_hook` 要選掛 events 包）。`context_wrap --reading <stack>` 可看讀數或讀不到的原因；完整行為、資料格式、限制與舊 agent 換檔順序見 [context 快滿與 /compact](../docs/02-agent-fsm.md#context-快滿與-compact)。
++**context 快滿與 /compact**：新範本預設掛 `context_wrap`（`on_clock`、每 5 秒、`config {"percent": 35, "wrap": false}`），用 `observed.jsonl` 最近一次有效 `think` 的 `usage.prompt_tokens` ÷ kernel 發布的 pack `context` 量用量；hook 的 `config.window` 可蓋過視窗，兩邊都沒有就不觸發。過門檻直接寄 `/compact`，收尾併進摘要；人也能寄 `/compact`：body 先把舊的工具輸出換成一行佔位（最後 3 則、最後一組、短於 300 字的不清，原文進 `history_removed.jsonl`），再叫腦在自己的對話裡寫摘要，那次不帶工具，之前的對話換成一則摘要，沒答的信原文留著，摺掉的原文在 `history_removed.jsonl`，摘要另存 `<stack>/handoff.md`。做到一半也收得到，等工具結果齊了才壓、壓完接著做；可摺的不到 4 則（例：剛壓完又來一封）就不問腦、不摺，當成正常做完：回一句 `compact not needed: …`，信記成答完、不寫警告。壓縮前後各有一個 hook 點（11-21 第 4 刀）：`before_compact`（可攔下、改給腦的指示、不清工具輸出、直接交一份摘要＝不叫腦）、`after_compact`（摘要寫進 history 之前，可改摘要、交一段補回的字，接在摘要後面、不多叫一次腦）；範本一個都不掛，各家要自己的 compact 方式就掛在這兩點，規矩見 [壓縮前後的 hook](../../docs/02-agent-fsm.md#壓縮前後的-hook)。改門檻要改 hook 格的 `config.percent`（`self_hook add` 帶不了 config）；關掉用 `self_hook` `{"op":"rm","name":"context_wrap"}`，或 stack 的同名 hook 格寫 `null`（`self_hook` 要選掛 events 包）。`context_wrap --reading <stack>` 可看讀數或讀不到的原因；完整行為、資料格式、限制與舊 agent 換檔順序見 [context 快滿與 /compact](../../docs/02-agent-fsm.md#context-快滿與-compact)。
+ 
+-**/clear**（11-21，照 eca）：寄一封剛好是 `/clear` 的信＝不叫腦，history 全部搬進 `history_removed.jsonl`、只留這一問一答（回 `[aos] slash: /clear: N messages moved …`），下一封信從乾淨的對話開始；一定自己一批（前面的信先答），goal、todo、`handoff.md` 不動。見 [寄 /clear](../docs/02-agent-fsm.md#寄-clear清空對話重來)。
++**/clear**（11-21，照 eca）：寄一封剛好是 `/clear` 的信＝不叫腦，history 全部搬進 `history_removed.jsonl`、只留這一問一答（回 `[aos] slash: /clear: N messages moved …`），下一封信從乾淨的對話開始；一定自己一批（前面的信先答），goal、todo、`handoff.md` 不動。見 [寄 /clear](../../docs/02-agent-fsm.md#寄-clear清空對話重來)。
+ 
+ 
+-**hook 預設**（[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）：`loop.json` 的 `on_start`／`on_stop` 叫 `aos-hook fire -q --stop-on-nonzero --def $AOS_CD` 發 `after_start`／`after_stop`（handler 的碼原樣交給 aos-loop，非 0＝agent 停；after_stop 的 handler 讀環境變數 `AOS_LOOP_CODE`、`AOS_LOOP_SIGNAL`、`AOS_LOOP_CAUSE`（為什麼停：`stop`／`sleep`／`remove`／`shutdown`／`stuck`／`signal`／`max`／`body_exit`／`error`，舊版 aos-loop 沒給＝空；`cause` 跟表上的 `reason` 不同，`reason` 是給人看的一句話；撞限額沒有獨立的值，看表上的 `limit_hit`；`error` 只是停止的分類，不是錯誤代號；值表見 [aos-loop 01](../../cpp/aos-loop/docs/01-用法.md)））；`before_run`／`after_run`（每一格前後）預設不接，要掛就照 `on_start` 的樣子在 `loop.json` 加 `on_before_run`／`on_after_run` 再重起；`hookeds.json`（被勾清單；`interfaces.json` 最外層 `"hookeds"` 指它，`"hooks"` 指 hook 點的宣告 `hooks.json` 與 aos-loop 的 `loop_hooks.json`，只是參考）帶一格 `timer`（`on_clock`、每 300000 ms、handler `py/tools/agent/hook_noop` 什麼都不做；每次起來、睡醒會先跑一次，之後每 5 分鐘）；另一格 `mail_notify`（`on_clock`、每 60000 ms＝每 1 分鐘、handler `py/tools/agent/mail_notify`：看自己的信箱，有沒通知過的新信才往 `queue/` 寄一則 `[aos] new_mail: N new letters from A, B. …`、多封合成一句、沒新信不動 history；睡醒時照已通知記錄比：睡前提醒過的不再提、睡著時新到的提醒一次；全新起來（沒有 `notified.json`，且 agent stack 的 `history.jsonl` 不在或是空的）時在等的只記成已知；跑過的 stack（有非空 history）當睡醒，在等的提醒一次；使用者「用on_clock」「預設開」「合成一句」，[mail-notify](../../thinking/2026-11/11/mail-notify.md)；間隔與起來那次：使用者「每 1 分鐘」「只提醒新到的」「睡著時新到的要提」，[backlog-rulings](../../thinking/2026-11/11/backlog-rulings.md)），history 不多任何一則。要定時叫醒腦＝同名換成往 `queue/` 寄信的 handler；不要＝`aos-agent hook -t 名 rm timer`。用法 [aos-agent docs/06](../../py/aos/apps/agent/docs/06-hook.md)。
++**hook 預設**（[clock-hook](../../../thinking/2026-11/11/clock-hook/README.md)）：`loop.json` 的 `on_start`／`on_stop` 叫 `aos-hook fire -q --stop-on-nonzero --def $AOS_CD` 發 `after_start`／`after_stop`（handler 的碼原樣交給 aos-loop，非 0＝agent 停；after_stop 的 handler 讀環境變數 `AOS_LOOP_CODE`、`AOS_LOOP_SIGNAL`、`AOS_LOOP_CAUSE`（為什麼停：`stop`／`sleep`／`remove`／`shutdown`／`stuck`／`signal`／`max`／`body_exit`／`error`，舊版 aos-loop 沒給＝空；`cause` 跟表上的 `reason` 不同，`reason` 是給人看的一句話；撞限額沒有獨立的值，看表上的 `limit_hit`；`error` 只是停止的分類，不是錯誤代號；值表見 [aos-loop 01](../../../cpp/aos-loop/docs/01-用法.md)））；`before_run`／`after_run`（每一格前後）預設不接，要掛就照 `on_start` 的樣子在 `loop.json` 加 `on_before_run`／`on_after_run` 再重起；`hookeds.json`（被勾清單；`interfaces.json` 最外層 `"hookeds"` 指它，`"hooks"` 指 hook 點的宣告 `hooks.json` 與 aos-loop 的 `loop_hooks.json`，只是參考）帶一格 `timer`（`on_clock`、每 300000 ms、handler `py/tools/agent/hook_noop` 什麼都不做；每次起來、睡醒會先跑一次，之後每 5 分鐘）；另一格 `mail_notify`（`on_clock`、每 60000 ms＝每 1 分鐘、handler `py/tools/agent/mail_notify`：看自己的信箱，有沒通知過的新信才往 `queue/` 寄一則 `[aos] new_mail: N new letters from A, B. …`、多封合成一句、沒新信不動 history；睡醒時照已通知記錄比：睡前提醒過的不再提、睡著時新到的提醒一次；全新起來（沒有 `notified.json`，且 agent stack 的 `history.jsonl` 不在或是空的）時在等的只記成已知；跑過的 stack（有非空 history）當睡醒，在等的提醒一次；使用者「用on_clock」「預設開」「合成一句」，[mail-notify](../../../thinking/2026-11/11/mail-notify.md)；間隔與起來那次：使用者「每 1 分鐘」「只提醒新到的」「睡著時新到的要提」，[backlog-rulings](../../../thinking/2026-11/11/backlog-rulings.md)），history 不多任何一則。要定時叫醒腦＝同名換成往 `queue/` 寄信的 handler；不要＝`aos-agent hook -t 名 rm timer`。用法 [aos-agent docs/06](../../../py/aos/apps/agent/docs/06-hook.md)。
+ 
+ ## 起手範本這一隻：格程式動態連結（11-21）
+ 
+-上面是 agent-fsm 範本的說明原樣；這一隻跟它只差一件事：**四格的程式不在這夾裡，執行時才去 `$AOS_HOME/templates/agents/agent-fsm/` 拿**（動態連結；使用者 11-20 晚「這些範本的.py，感覺都是一些基礎的東西，感覺沒有要覆蓋的話，就應該可以從env:AOS_HOME裏面直接取，這樣ann底下會很乾淨。」、「起手範本確實該改成要借的」）。用的是現成的兩種寫法，跟 `agent.py` 裡 `fsm=std.fsm()` 編出來的一樣：
++上面是 agent-fsm 範本的說明原樣。這一隻的格程式也不在這夾裡，執行時才去 `$AOS_HOME/lib/aos/apps/agent_fsm/` 拿（動態連結；使用者 11-20 晚「這些範本的.py，感覺都是一些基礎的東西，感覺沒有要覆蓋的話，就應該可以從env:AOS_HOME裏面直接取，這樣ann底下會很乾淨。」、「起手範本確實該改成要借的」；11-24 起 agent-fsm 範本自己也這樣）。跟範本不同的只有三件：`llm.json` 是假腦、`fsm.json` 是 `agent.py` 裡 `fsm=std.fsm()` 編出來的樣子、多一份 `.env`。
+ 
+ - `fsm.json`：四格的 `argv` 寫 `["python3", {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/idle.py"}]` 這種（內容跟 `templates/agents/agent-python/fsm.json` 一字不差）。格靠 `AOS_CD` 讀這夾的設定（`interfaces.json`、`llm.json`、`tools.json`、`hookeds.json`…），程式放哪不影響。
+-- `interfaces.json`：`hooks`（hook 點的宣告，只是參考）寫 `[{"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}, {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/hooks.json"}]`，指 aos 帶的那兩份，這夾不帶自己的宣告；`hookeds` 寫 `"hookeds.json"`（這夾的被勾清單）。
++- `interfaces.json`：跟範本一字不差；`hooks`（hook 點的宣告，只是參考）寫 `[{"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}, {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/hooks.json"}]`，指 aos 帶的那兩份，這夾不帶自己的宣告；`hookeds` 寫 `"hookeds.json"`（這夾的被勾清單）。
+ 
+-所以這夾只剩設定與你會改的東西：`_entry`、`.env`、`body.json`、`loop.json`、`fsm.json`、`interfaces.json`、`llm.json`、`system.txt`、`tools.json`、`hookeds.json`、`subagents.json`、`_metainfo.json`、`README.md`。`$AOS_HOME` 那份格程式隨 repo 更新（`templates/` 不經 `install.py`，`git pull` 完就是新的；格 import 的 `$AOS_HOME/lib` 照舊要重跑 `install.py`），這隻下一格就用新的，不用重新複製。
++所以這夾只剩設定與你會改的東西：`_entry`、`.env`、`body.json`、`loop.json`、`fsm.json`、`interfaces.json`、`llm.json`、`system.txt`、`tools.json`、`hookeds.json`、`subagents.json`、`_metainfo.json`、`README.md`。`$AOS_HOME` 那份格程式隨 repo 更新（格在 `lib/`，`git pull` 之後要重跑 `install.py`），這隻下一格就用新的，不用重新複製。
+ 
+ **想改某一格的程式**（例 `wait`）：把那支和它 import 的共用檔一起靜態連結進這夾，再把 `fsm.json` 那一格指過去。
+ 
+ ```sh
+-cp $AOS_HOME/templates/agents/agent-fsm/{wait,atomic_file,cell_common,compact,llm_settings}.py agents/ann/   # 在樹根打
++cp $AOS_HOME/lib/aos/apps/agent_fsm/{wait,atomic_file,cell_common,compact,llm_settings}.py agents/ann/   # 在樹根打
+ # agents/ann/fsm.json：states.wait.exec.argv 改成 ["python3", "wait.py"]（相對路徑＝這夾），其餘三格不動
+ ```
+ 
+ `fsm.json` 每一格都重讀，存檔後下一格就照新的跑，不用重起（11-21 暫存樹實測：指過去、指回來都不重起就生效）。
+ 
+ - 共用檔要一起靜態連結進來，因為格是照自己所在的資料夾找 `cell_common` 這些：idle 用 `atomic_file`、`cell_common`、`compact`；think（`brain.py`）用 `cell_common`、`compact`、`llm_settings`；wait 用 `atomic_file`、`cell_common`、`compact`、`llm_settings`；act 用 `cell_common`。
+-- 靜態連結進來的就不再跟著 `$AOS_HOME` 更新；其餘的格照舊用 `$AOS_HOME` 那份。兩邊的共用檔（例 `compact.py`）版本可能岔開，要整套自己管就四格都靜態連結進來、都指過來（＝跟 agent-fsm 範本一樣整份帶著）。
++- 靜態連結進來的就不再跟著 `$AOS_HOME` 更新；其餘的格照舊用 `$AOS_HOME` 那份。兩邊的共用檔（例 `compact.py`）版本可能岔開，要整套自己管就四格都靜態連結進來、都指過來（＝整份靜態，做法見上面範本說明「格的程式不在這個夾」那段）。
+ - 改了格、多發了新的 hook 點：宣告只是參考，不改也照樣發得出去、掛得上；想讓人看得到，把 `$AOS_HOME/lib/aos/apps/agent_fsm/hooks.json` 靜態連結進來加那個點，`interfaces.json` 的 `hooks` 裡那個指示詞換成 `"hooks.json"`。
+diff --git a/proto8/templates/starts/start-api/root/README.md b/proto8/templates/starts/start-api/root/README.md
+index cf8f635e4..17c37ac74 100644
+--- a/proto8/templates/starts/start-api/root/README.md
++++ b/proto8/templates/starts/start-api/root/README.md
+@@ -1,6 +1,6 @@
+ # daemon-root：根 daemon 定義（只帶時鐘與清道夫，agent 之後再掛）
+ 
+-← [templates](../README.md)
++← [templates](../../README.md)
+ 
+ 給「一個定義資料夾本身就是根入口」的用法：起它＝起一台根 daemon，表上只有 `_clock`（每秒寫 `$AOS_STACK/clock`，`.env` 把 `AOS_CLOCK` 指過去，子項照繼承聽這個鐘）與 `_sweeper`（每 10 分鐘清這台自己的 stderr 封存、寫 `sweeper_report.json`）；agent 不寫進 `daemon.json`，由 `aos-agent ctl add` 經 `procs_requests` 掛上、記在 stack 的表裡。
+ 
+diff --git a/proto8/templates/starts/start-eca/agents/ann/README.md b/proto8/templates/starts/start-eca/agents/ann/README.md
+index e882ce0ed..ddafd11dc 100644
+--- a/proto8/templates/starts/start-eca/agents/ann/README.md
++++ b/proto8/templates/starts/start-eca/agents/ann/README.md
+@@ -1,18 +1,18 @@
+ Run Claude Code as an aos agent: one turn per queue batch, answers appended to history.
+ 
+-用 `cp -r $AOS_HOME/templates/agents/eca-claude <目的資料夾>` 複製本範本（指回 proto8 的路徑都寫成 `{"$env": "AOS_HOME", …}`、沒有捷徑，抄到哪都能跑，這台要有 `AOS_HOME`；要真的 `claude` 指令在 PATH 上），再修改 `cli.json`（怎麼叫 CLI）、`llm.json`（`model`、思考程度 `reasoning_effort`）與 `tools.json`，即可建立另一隻外部 coding agent；各檔的用途、實例＝定義 × 工作區、畫面與完整用法見 [eca-claude 說明](../docs/01-eca-claude.md)。
++用 `cp -r $AOS_HOME/templates/agents/eca-claude <目的資料夾>` 複製本範本（指回 proto8 的路徑都寫成 `{"$env": "AOS_HOME", …}`、沒有捷徑，抄到哪都能跑，這台要有 `AOS_HOME`；要真的 `claude` 指令在 PATH 上），再修改 `cli.json`（怎麼叫 CLI）、`llm.json`（`model`、思考程度 `reasoning_effort`）與 `tools.json`，即可建立另一隻外部 coding agent；各檔的用途、實例＝定義 × 工作區、畫面與完整用法見 [eca-claude 說明](../../docs/01-eca-claude.md)。
+ 
+ `_entry` 起 `aos-loop`，`loop.json` 每格叫 `aos-eca-turn`：從 stack 的 `queue/` 認領一批、交給 claude CLI，回答接進 `history.jsonl`；queue 空就退 0、隔 300 毫秒再來。`screen/` 是給 `aos-agent open／close／watch` 的畫面子介面。
+ 
+-**五包、共 18 支（11-22 起拿掉 events、def、jsonx 三包共 12 支，使用者 11-22「是，就是這個。」；要用時 `self_tools add` 加回，例如 `{"op":"add","path_json":{"$env":"AOS_HOME","$path":"/lib/tools/agent/self_hook"}}`）（self 包比照 agent-fsm 只開 self_tools、self_state，11-21）；檔案與指令交給 CLI 自己的工具**（[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）：`tools.json` 的 `"$override"` 疊三包 agent 工具（[py/packs](../../py/packs/README.md)：gadgets〔peek_clock、peek_now_time、math；do_task 只給 agent-fsm，寫 `"do_task": null`〕、self、mailbox）與 json 包（json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set；[json-tools](../../thinking/2026-11/12/json-tools/01-規劃.md) D20）（jsonx 包〔認 `$ref`／`$env` 的 jsonx_* 八支〕使用者 11-13「eca-1:A*」掛上、11-22 拿掉；子 agent 的 `tools_sub.json` 本來就不掛）、index 包（index_view；[index-tools](../../thinking/2026-11/12/index-tools/README.md)），`tools` 裡關掉 `do_task` 與 self_llm、self_system、self_history、self_ctl 四格（比照 agent-fsm，使用者 11-21 對 agent-fsm 選「self 只留兩支」；要用 `self_tools add` 加回），經 aos-mcp 給 CLI（工具名 `mcp__aos__peek_now_time`…）。**比 agent-fsm 少通用四包（look、change、delete〔含 trash〕、shell）與 subagent、goal、todo 三包**：11-11 晚使用者「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「eca這塊，放寬claude，codex拿掉唯讀沙盒。」「可以先定這樣，然後trash也拿掉。」；11-11 晚「subagent相關的工具都還是別給eca吧，eca本身就有他自己的了，甚至更順手。」「eca基本都有goal，所以goal不用給eca。todo也不用。」（人下的 `aos-agent goal --target <eca>` 與 aos-eca-turn 丟提醒那段照留，是隊長代定，見 [playground 04](../../thinking/2026-11/11/playground/04-修與第二輪實測.md)；def 包〔agent_def、tools_def〕當時也留著，11-22 拿掉）。所以 `cli.json` 開 claude 內建的 `Read,Write,Edit,Glob,Grep,Bash`（另加 `Agent,Skill`，見下段），`--permission-mode dontAsk` 加 `--allowedTools Read,Glob,Grep,Write,Edit,Bash`（這六支不問就准、不限工作區，其他沒准的照 dontAsk 拒絕；不加全繞過權限的旗標）。codex 版把 `cli.json` 換成 `kind: codex`、`-c sandbox_mode="workspace-write" -c approval_policy="never"`（codex 用自己的指令在工作區讀寫；寫法見 [eca-claude 說明](../docs/01-eca-claude.md)）。關一包＝從那串拿掉那一項；只關一支用 `aos-agent tools rm math`。
++**五包、共 18 支（11-22 起拿掉 events、def、jsonx 三包共 12 支，使用者 11-22「是，就是這個。」；要用時 `self_tools add` 加回，例如 `{"op":"add","path_json":{"$env":"AOS_HOME","$path":"/lib/tools/agent/self_hook"}}`）（self 包比照 agent-fsm 只開 self_tools、self_state，11-21）；檔案與指令交給 CLI 自己的工具**（[thinking 11-12 eca-file-tools](../../../thinking/2026-11/12/eca-file-tools.md)）：`tools.json` 的 `"$override"` 疊三包 agent 工具（[py/packs](../../../py/packs/README.md)：gadgets〔peek_clock、peek_now_time、math；do_task 只給 agent-fsm，寫 `"do_task": null`〕、self、mailbox）與 json 包（json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set；[json-tools](../../../thinking/2026-11/12/json-tools/01-規劃.md) D20）（jsonx 包〔認 `$ref`／`$env` 的 jsonx_* 八支〕使用者 11-13「eca-1:A*」掛上、11-22 拿掉；子 agent 的 `tools_sub.json` 本來就不掛）、index 包（index_view；[index-tools](../../../thinking/2026-11/12/index-tools/README.md)），`tools` 裡關掉 `do_task` 與 self_llm、self_system、self_history、self_ctl 四格（比照 agent-fsm，使用者 11-21 對 agent-fsm 選「self 只留兩支」；要用 `self_tools add` 加回），經 aos-mcp 給 CLI（工具名 `mcp__aos__peek_now_time`…）。**比 agent-fsm 少通用四包（look、change、delete〔含 trash〕、shell）與 subagent、goal、todo 三包**：11-11 晚使用者「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「eca這塊，放寬claude，codex拿掉唯讀沙盒。」「可以先定這樣，然後trash也拿掉。」；11-11 晚「subagent相關的工具都還是別給eca吧，eca本身就有他自己的了，甚至更順手。」「eca基本都有goal，所以goal不用給eca。todo也不用。」（人下的 `aos-agent goal --target <eca>` 與 aos-eca-turn 丟提醒那段照留，是隊長代定，見 [playground 04](../../../thinking/2026-11/11/playground/04-修與第二輪實測.md)；def 包〔agent_def、tools_def〕當時也留著，11-22 拿掉）。所以 `cli.json` 開 claude 內建的 `Read,Write,Edit,Glob,Grep,Bash`（另加 `Agent,Skill`，見下段），`--permission-mode dontAsk` 加 `--allowedTools Read,Glob,Grep,Write,Edit,Bash`（這六支不問就准、不限工作區，其他沒准的照 dontAsk 拒絕；不加全繞過權限的旗標）。codex 版把 `cli.json` 換成 `kind: codex`、`-c sandbox_mode="workspace-write" -c approval_policy="never"`（codex 用自己的指令在工作區讀寫；寫法見 [eca-claude 說明](../../docs/01-eca-claude.md)）。關一包＝從那串拿掉那一項；只關一支用 `aos-agent tools rm math`。
+ 
+-**子 agent 與 skill（[thinking eca-task-subagent](../../thinking/2026-11/12/eca-task-subagent.md)）**：使用者「claude code cli自己本身有Task工具，可以的話幫我加入claude eca範本和定義中(Skill也加上)」「將aos mcp切成幾個，一個是給主agent用的，另一個是比較少功能的，給子agent用的」。`cli.json` 的 `--tools` 多 `Agent`（子 agent；舊名 `Task` 還認）與 `Skill`，dontAsk 下不用另外列進 `--allowedTools`。`cli.json` 的 `"tools_sub": "tools_sub.json"`＝**子 agent 那台**：claude 的子 agent 預設會繼承主對話全部 MCP 工具（含 `mcp__aos__*` 18 支），寫了這格就改成——內建的 `general-purpose` 子 agent 看不到 `mcp__aos__*`，改拿另一隻 aos-mcp 接 `tools_sub.json` 的 `mcp__aos_sub__*`（代定只放不改東西的九支：peek_clock、peek_now_time、math、json_get、json_ls、json_search、json_len、json_multi_get、index_view）；主對話看不到 `aos_sub`；其他類型的子 agent（Explore、Plan、外掛或你自己定義的）還看得到 `mcp__aos__*`，但一叫就被擋（回一句說明）。要子 agent 多一支＝改 `tools_sub.json`（格式同 `tools.json`）；不要切＝拿掉 `tools_sub` 那格（子 agent 照 CLI 預設繼承全部）；不要子 agent 或 skill＝從 `--tools` 拿掉 `Agent`／`Skill`。skill 是 claude 自己找的：工作區的 `.claude/skills/`、你帳號的 `~/.claude/skills/` 與外掛。codex 身不認 `tools_sub`（寫了＝`CfgBad`）。
++**子 agent 與 skill（[thinking eca-task-subagent](../../../thinking/2026-11/12/eca-task-subagent.md)）**：使用者「claude code cli自己本身有Task工具，可以的話幫我加入claude eca範本和定義中(Skill也加上)」「將aos mcp切成幾個，一個是給主agent用的，另一個是比較少功能的，給子agent用的」。`cli.json` 的 `--tools` 多 `Agent`（子 agent；舊名 `Task` 還認）與 `Skill`，dontAsk 下不用另外列進 `--allowedTools`。`cli.json` 的 `"tools_sub": "tools_sub.json"`＝**子 agent 那台**：claude 的子 agent 預設會繼承主對話全部 MCP 工具（含 `mcp__aos__*` 18 支），寫了這格就改成——內建的 `general-purpose` 子 agent 看不到 `mcp__aos__*`，改拿另一隻 aos-mcp 接 `tools_sub.json` 的 `mcp__aos_sub__*`（代定只放不改東西的九支：peek_clock、peek_now_time、math、json_get、json_ls、json_search、json_len、json_multi_get、index_view）；主對話看不到 `aos_sub`；其他類型的子 agent（Explore、Plan、外掛或你自己定義的）還看得到 `mcp__aos__*`，但一叫就被擋（回一句說明）。要子 agent 多一支＝改 `tools_sub.json`（格式同 `tools.json`）；不要切＝拿掉 `tools_sub` 那格（子 agent 照 CLI 預設繼承全部）；不要子 agent 或 skill＝從 `--tools` 拿掉 `Agent`／`Skill`。skill 是 claude 自己找的：工作區的 `.claude/skills/`、你帳號的 `~/.claude/skills/` 與外掛。codex 身不認 `tools_sub`（寫了＝`CfgBad`）。
+ 
+-**範本關掉的外掛與 skill（11-22）**：`cli.json` 的 `flags` 多 `--setting-sources project,local`（不讀使用者的 `~/.claude/settings.json`：外掛與 claude.ai 同步的 skill 都不載；副作用是使用者那層的 `effortLevel`、`autoCompactWindow` 也不算），`settings` 另用 `skillOverrides` 關 15 支同步 skill、`enabledPlugins` 關 8 個外掛（保險，現在被前一條蓋掉）。使用者 11-22「啊對，外掛和skills也交給他，請他調查，這個我確實也想要拿掉」「a~d都關。」；只影響這份定義的 eca，每次呼叫約少 4.3k token。開畫面時另有內建的 claude-in-chrome 與 easel（`cc-plugin-easel@builtin`）兩台 MCP，`--strict-mcp-config` 擋不住：`flags` 加 `--no-chrome`、`enabledPlugins` 加 `cc-plugin-easel@builtin: false`（使用者 11-22「mcp那個幫我全關。」）。`--disable-slash-commands` 會讓 aos 交給 claude 的 `/compact`、`/usage` 失效，使用者 11-22 裁不做（「d不做。副作用不補。」）；思考程度改寫在 `llm.json`（`reasoning_effort: high`，使用者「llm.json那邊加上思考程度:high」），autoCompactWindow 不補、由 `context_wrap` 管。細節與實測見 [eca-claude 說明](../docs/01-eca-claude.md)。
++**範本關掉的外掛與 skill（11-22）**：`cli.json` 的 `flags` 多 `--setting-sources project,local`（不讀使用者的 `~/.claude/settings.json`：外掛與 claude.ai 同步的 skill 都不載；副作用是使用者那層的 `effortLevel`、`autoCompactWindow` 也不算），`settings` 另用 `skillOverrides` 關 15 支同步 skill、`enabledPlugins` 關 8 個外掛（保險，現在被前一條蓋掉）。使用者 11-22「啊對，外掛和skills也交給他，請他調查，這個我確實也想要拿掉」「a~d都關。」；只影響這份定義的 eca，每次呼叫約少 4.3k token。開畫面時另有內建的 claude-in-chrome 與 easel（`cc-plugin-easel@builtin`）兩台 MCP，`--strict-mcp-config` 擋不住：`flags` 加 `--no-chrome`、`enabledPlugins` 加 `cc-plugin-easel@builtin: false`（使用者 11-22「mcp那個幫我全關。」）。`--disable-slash-commands` 會讓 aos 交給 claude 的 `/compact`、`/usage` 失效，使用者 11-22 裁不做（「d不做。副作用不補。」）；思考程度改寫在 `llm.json`（`reasoning_effort: high`，使用者「llm.json那邊加上思考程度:high」），autoCompactWindow 不補、由 `context_wrap` 管。細節與實測見 [eca-claude 說明](../../docs/01-eca-claude.md)。
+ 
+ **畫面用全螢幕畫法（11-23）**：`settings` 多一項 `"tui": "fullscreen"`。`--setting-sources` 讓使用者那層的 `tui` 不算，主帳號的畫面會退回舊式畫法、不跟終端要滑鼠，滑鼠滾輪沒人接（第二帳號預設就是全螢幕，原因沒查到）；寫在這裡就不看帳號（使用者 11-23 聽完三個修法選「1」）。
+ 
+-**權限與擋 CLI 自己的工具**（[thinking 11-13 ops-agent-six-suggestions](../../thinking/2026-11/13/ops-agent-six-suggestions.md) 第 1 點）：範本是 `--permission-mode dontAsk` 加 `--allowedTools Read,Glob,Grep,Write,Edit,Bash`——Bash、Write、Edit **沒有任何人按確認**，全面開放；Read、Glob、Grep 也在白名單上，工作區外的路徑一樣讀得到（使用者 11-21 夜）。aos 的 hook（`hookeds.json` 的 `before_tool`／`after_tool`）只看得到 aos 自己的工具，看不到 CLI 自己的。**要擋 CLI 自己的工具，用 CLI 自己的 hook**：aos 起的 claude 照讀工作區的 `.claude/settings.json`（[P-43](../../docs/CONVENTION/02-題目stack停錯腦/03-P-43-本文.md)「照吃、不隔離」），它的 hook 跟 aos 加的並存。給腦看的完整說明在知識庫 `aos/cli/eca.md#/Guarding the CLI's own tools (claude)`（[knowledge/aos/cli/eca.md](../../knowledge/aos/cli/eca.md)）。範本本身不帶任何這種 hook；下面是想擋的人可以照抄的最小例子（11-13 實測過：claude 2.1.323、haiku）。
++**權限與擋 CLI 自己的工具**（[thinking 11-13 ops-agent-six-suggestions](../../../thinking/2026-11/13/ops-agent-six-suggestions.md) 第 1 點）：範本是 `--permission-mode dontAsk` 加 `--allowedTools Read,Glob,Grep,Write,Edit,Bash`——Bash、Write、Edit **沒有任何人按確認**，全面開放；Read、Glob、Grep 也在白名單上，工作區外的路徑一樣讀得到（使用者 11-21 夜）。aos 的 hook（`hookeds.json` 的 `before_tool`／`after_tool`）只看得到 aos 自己的工具，看不到 CLI 自己的。**要擋 CLI 自己的工具，用 CLI 自己的 hook**：aos 起的 claude 照讀工作區的 `.claude/settings.json`（[P-43](../../../docs/CONVENTION/02-題目stack停錯腦/03-P-43-本文.md)「照吃、不隔離」），它的 hook 跟 aos 加的並存。給腦看的完整說明在知識庫 `aos/cli/eca.md#/Guarding the CLI's own tools (claude)`（[knowledge/aos/cli/eca.md](../../../knowledge/aos/cli/eca.md)）。範本本身不帶任何這種 hook；下面是想擋的人可以照抄的最小例子（11-13 實測過：claude 2.1.323、haiku）。
+ 
+ 工作區 `.claude/settings.json`（路徑寫絕對路徑）：
+ 
+@@ -42,20 +42,20 @@ hook 什麼都不印＝照跑、不問人；印 `deny`＝不跑、腦收到理
+ "settings": {"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/host_gate.py\""}]}]}}
+ ```
+ 
+-`flags` 裡不要自己寫 `--settings`（＝`CfgBad`）。細節在 [eca-claude 說明](../docs/01-eca-claude.md)。
++`flags` 裡不要自己寫 `--settings`（＝`CfgBad`）。細節在 [eca-claude 說明](../../docs/01-eca-claude.md)。
+ 
+-**接外部 MCP server**：`cli.json` 加 `"mcp_servers": ["mcp/<名>.json"]`，一台一份 server 檔（http 或 stdio），寫法見 [eca-claude 說明的「接外部 MCP server」](../docs/01-eca-claude.md#接外部-mcp-server11-12-external-mcp)；token 放 server 檔的 `env_file`，不要用 `ctl add --envs`。
++**接外部 MCP server**：`cli.json` 加 `"mcp_servers": ["mcp/<名>.json"]`，一台一份 server 檔（http 或 stdio），寫法見 [eca-claude 說明的「接外部 MCP server」](../../docs/01-eca-claude.md#接外部-mcp-server11-12-external-mcp)；token 放 server 檔的 `env_file`，不要用 `ctl add --envs`。
+ 
+ `interfaces.json` 宣告畫面、工具、腦設定、history 與 hook 的位置。`_metainfo.json` 宣告估時 `cost.time_ms`（一輪約一分鐘，粗估）與 `llm` 資源，未設定逾時（一輪的上限在 `cli.json` 的 `timeout_ms` 與 `loop.json` 的 `timeout_ms`，範本兩個都是 0＝不限時，11-15 起；一輪很久沒動靜只寫 `$AOS_STACK/quiet.json` 標記、不殺）。
+ 
+ 
+-**沒開畫面時中途收信（`live_mail`，預設關）**（[wake-1114](../../thinking/2026-11/14/wake-1114.md)）：`cli.json` 寫 `"live_mail": true`，沒開畫面時 claude 照樣一輪一個 `claude -p`，但 stdin 改用 stream-json、先不關：這一輪還在跑時 queue 又來的信，一封一行寫進去，模型在下一個工具空檔就讀到（不用等整輪講完），回答併進這一輪那一則。一輪最多中途投 5 封、起來 300 秒後不再投，用 `"live_mail_cap": {"letters": N, "seconds": N}` 改；剩的留給下一輪。冷卻剛到期那一輪不投。正在跑的前景指令要等它做完，長指令請讓 CLI 用背景跑。畫面開著時照舊走收件 socket；codex 不走這條。
++**沒開畫面時中途收信（`live_mail`，預設關）**（[wake-1114](../../../thinking/2026-11/14/wake-1114.md)）：`cli.json` 寫 `"live_mail": true`，沒開畫面時 claude 照樣一輪一個 `claude -p`，但 stdin 改用 stream-json、先不關：這一輪還在跑時 queue 又來的信，一封一行寫進去，模型在下一個工具空檔就讀到（不用等整輪講完），回答併進這一輪那一則。一輪最多中途投 5 封、起來 300 秒後不再投，用 `"live_mail_cap": {"letters": N, "seconds": N}` 改；剩的留給下一輪。冷卻剛到期那一輪不投。正在跑的前景指令要等它做完，長指令請讓 CLI 用背景跑。畫面開著時照舊走收件 socket；codex 不走這條。
+ 
+ **畫面延後關**：`screen_linger_start` 是第一格 after_start hook，撤掉舊到期單；`screen_linger_stop` 在 after_stop 排關畫面（兩格 timeout_ms=4000；handler 退 1＝loop 停，跟別的 loop 點 hook 一樣）。定義 cli.json 的 `screen_close_after_s` 非負整數秒，預設 600，0 當場關；停下時讀一次，已排的不因改設定而變。有人正在看也照關，start／wake 撤單；兩格在 stack 的 hookeds.json 設 null＝不自動關。依本機 state.json／proc 身分保護新 loop，不需要 daemon；SIGKILL／OOM 或停著才開畫面沒有 after_stop，第一批沒有後援。`aos-agent ctl stop` 不當場關畫面，全靠這兩格；stack 複本把兩格設 null（或缺了）＝停下後畫面一直開著，要關就 `aos-agent close`。
+ 
+-**hook 預設**（[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）：`loop.json` 的 `on_start`／`on_stop` 叫 `aos-hook fire -q --stop-on-nonzero --def $AOS_CD` 發 `after_start`／`after_stop`（handler 的碼原樣交給 aos-loop，非 0＝agent 停）；`before_run`／`after_run`（每一輪前後）預設不接；`hookeds.json`（被勾清單；`interfaces.json` 最外層 `"hookeds"` 指它，`"hooks"` 指 aos 帶的三份宣告，只是參考）帶一格 `timer`（`on_clock`、每 300000 ms、handler `py/tools/agent/hook_noop` 什麼都不做；每次起來、睡醒會先跑一次，之後每 5 分鐘）；另一格 `mail_notify`（`on_clock`、每 60000 ms＝每 1 分鐘、handler `py/tools/agent/mail_notify`：看自己的信箱，有沒通知過的新信才往 `queue/` 寄一則 `[aos] new_mail: N new letters from A, B. …`、多封合成一句、沒新信不動 history；睡醒時照已通知記錄比：睡前提醒過的不再提、睡著時新到的提醒一次；全新起來（沒有 `notified.json`，且 agent stack 的 `history.jsonl` 不在或是空的）時在等的只記成已知；跑過的 stack（有非空 history）當睡醒，在等的提醒一次；使用者「用on_clock」「預設開」「合成一句」，[mail-notify](../../thinking/2026-11/11/mail-notify.md)；間隔與起來那次：使用者「每 1 分鐘」「只提醒新到的」「睡著時新到的要提」，[backlog-rulings](../../thinking/2026-11/11/backlog-rulings.md)），history 不多任何一則。要定時叫醒腦＝同名換成往 `queue/` 寄信的 handler；不要＝`aos-agent hook -t 名 rm timer`。用法 [aos-agent docs/06](../../py/aos/apps/agent/docs/06-hook.md)。
++**hook 預設**（[clock-hook](../../../thinking/2026-11/11/clock-hook/README.md)）：`loop.json` 的 `on_start`／`on_stop` 叫 `aos-hook fire -q --stop-on-nonzero --def $AOS_CD` 發 `after_start`／`after_stop`（handler 的碼原樣交給 aos-loop，非 0＝agent 停）；`before_run`／`after_run`（每一輪前後）預設不接；`hookeds.json`（被勾清單；`interfaces.json` 最外層 `"hookeds"` 指它，`"hooks"` 指 aos 帶的三份宣告，只是參考）帶一格 `timer`（`on_clock`、每 300000 ms、handler `py/tools/agent/hook_noop` 什麼都不做；每次起來、睡醒會先跑一次，之後每 5 分鐘）；另一格 `mail_notify`（`on_clock`、每 60000 ms＝每 1 分鐘、handler `py/tools/agent/mail_notify`：看自己的信箱，有沒通知過的新信才往 `queue/` 寄一則 `[aos] new_mail: N new letters from A, B. …`、多封合成一句、沒新信不動 history；睡醒時照已通知記錄比：睡前提醒過的不再提、睡著時新到的提醒一次；全新起來（沒有 `notified.json`，且 agent stack 的 `history.jsonl` 不在或是空的）時在等的只記成已知；跑過的 stack（有非空 history）當睡醒，在等的提醒一次；使用者「用on_clock」「預設開」「合成一句」，[mail-notify](../../../thinking/2026-11/11/mail-notify.md)；間隔與起來那次：使用者「每 1 分鐘」「只提醒新到的」「睡著時新到的要提」，[backlog-rulings](../../../thinking/2026-11/11/backlog-rulings.md)），history 不多任何一則。要定時叫醒腦＝同名換成往 `queue/` 寄信的 handler；不要＝`aos-agent hook -t 名 rm timer`。用法 [aos-agent docs/06](../../../py/aos/apps/agent/docs/06-hook.md)。
+ 
+-**快滿了先收尾再 compact（`context_wrap`，預設開，門檻 35%）**（使用者 11-15：「最好弄個hook，當context到達一定程度的時候跟agent說整理收尾，然後跑compact。」「3.我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook。」「門檻用35%」）：`hookeds.json` 的 `context_wrap` 格（`on_clock`、每 5000 ms、handler `py/tools/agent/context_wrap`）讀 `aos.agentlib.context_use`（`py/aos/agentlib/context_use.py`）給的用量（最後答完那輪、最後一次呼叫的三種 input token 加總 ÷ context 視窗；claude 身從小格的 `live.jsonl` 讀，讀不到的腦就不動）。到門檻：先往 `queue/` 寄一封 `[aos] context_wrap: … Wrap up now …`（叫它把手上的事與還開著的事寫進交接，沒有交接檔就寫 `<stack>/handoff.md`，寫完回一句 wrap-up done）；這封答完、queue 也空了，再寄一封只有 `/compact` 的信（aos-eca-turn 讓 `/compact` 那封一定自己一批）；壓完要等到後面某輪的讀數低於門檻才會再看。狀態在 `<stack>/hookeds/context_wrap/state.json`。改門檻＝改這格的 `config.percent`（或在 stack 那份 `hookeds.json` 寫同名格蓋過；`self_hook add` 帶 `config` 加 `replace: true` 也行，self_hook 不在範本工具裡、先 `self_tools add` 加回）；不要＝`aos-agent hook -t 名 rm context_wrap`。範本另附 `compact_hook`（Claude Code 自己的 hook 用）：`PreCompact` 印摘要要留什麼、`SessionStart`（matcher `compact`）壓完提醒讀回交接、有 `$AOS_STACK/handoff.md` 就附上；自動壓縮也會跑到它們。**11-21 起它也發 aos 的兩個 hook 點**（使用者「compact的機制不管，但可以試試看提供相應的hook點」）：`PreCompact` 時發 `before_compact`（能改給 CLI 的摘要指示 `instructions`、交一段壓完要接進對話的 `restore`、退 10 攔下不壓），`PostCompact` 時發 `after_compact`（只告知，帶 Claude Code 寫好的 `summary`）；壓縮本身還是 Claude Code 的，細節見 [templates/docs/01「壓縮前後的 hook 點」](../docs/01-eca-claude.md)。範本的 `cli.json` 預設就帶這三個 hook（使用者 11-15「1.開。」；11-13 起範本不帶權限之類的 CLI 設定，壓縮前後的 hook 是唯一例外，測試 `test_shipped_templates_carry_only_compact_hooks` 守著），內容是：
++**快滿了先收尾再 compact（`context_wrap`，預設開，門檻 35%）**（使用者 11-15：「最好弄個hook，當context到達一定程度的時候跟agent說整理收尾，然後跑compact。」「3.我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook。」「門檻用35%」）：`hookeds.json` 的 `context_wrap` 格（`on_clock`、每 5000 ms、handler `py/tools/agent/context_wrap`）讀 `aos.agentlib.context_use`（`py/aos/agentlib/context_use.py`）給的用量（最後答完那輪、最後一次呼叫的三種 input token 加總 ÷ context 視窗；claude 身從小格的 `live.jsonl` 讀，讀不到的腦就不動）。到門檻：先往 `queue/` 寄一封 `[aos] context_wrap: … Wrap up now …`（叫它把手上的事與還開著的事寫進交接，沒有交接檔就寫 `<stack>/handoff.md`，寫完回一句 wrap-up done）；這封答完、queue 也空了，再寄一封只有 `/compact` 的信（aos-eca-turn 讓 `/compact` 那封一定自己一批）；壓完要等到後面某輪的讀數低於門檻才會再看。狀態在 `<stack>/hookeds/context_wrap/state.json`。改門檻＝改這格的 `config.percent`（或在 stack 那份 `hookeds.json` 寫同名格蓋過；`self_hook add` 帶 `config` 加 `replace: true` 也行，self_hook 不在範本工具裡、先 `self_tools add` 加回）；不要＝`aos-agent hook -t 名 rm context_wrap`。範本另附 `compact_hook`（Claude Code 自己的 hook 用）：`PreCompact` 印摘要要留什麼、`SessionStart`（matcher `compact`）壓完提醒讀回交接、有 `$AOS_STACK/handoff.md` 就附上；自動壓縮也會跑到它們。**11-21 起它也發 aos 的兩個 hook 點**（使用者「compact的機制不管，但可以試試看提供相應的hook點」）：`PreCompact` 時發 `before_compact`（能改給 CLI 的摘要指示 `instructions`、交一段壓完要接進對話的 `restore`、退 10 攔下不壓），`PostCompact` 時發 `after_compact`（只告知，帶 Claude Code 寫好的 `summary`）；壓縮本身還是 Claude Code 的，細節見 [templates/docs/01「壓縮前後的 hook 點」](../../docs/01-eca-claude.md)。範本的 `cli.json` 預設就帶這三個 hook（使用者 11-15「1.開。」；11-13 起範本不帶權限之類的 CLI 設定，壓縮前後的 hook 是唯一例外，測試 `test_shipped_templates_carry_only_compact_hooks` 守著），內容是：
+ 
+ ```json
+ "settings": {"hooks": {"PreCompact": [{"hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" pre", "timeout": 60}]}],
+@@ -65,4 +65,4 @@ hook 什麼都不印＝照跑、不問人；印 `deny`＝不跑、腦收到理
+ 
+ 手動也可以：寄一封內容只有 `/compact`（或 `/compact 指示`）的信，例 `aos-agent say -t 名 /compact`。
+ 
+-**壓完先讀自己的筆記**（11-22，使用者「我人還在外面玩，總之先按推薦做」）：stack 裡放一個 `notes_path`（一行路徑，絕對或相對 `AOS_WS`），`compact_hook start` 就不叫它讀「工作區規矩說的交接檔」，改叫它先讀那份筆記；subagent 另外會被告知頂層交接不是它的。沒放＝照舊。見 [eca-claude 說明](../docs/01-eca-claude.md)。
++**壓完先讀自己的筆記**（11-22，使用者「我人還在外面玩，總之先按推薦做」）：stack 裡放一個 `notes_path`（一行路徑，絕對或相對 `AOS_WS`），`compact_hook start` 就不叫它讀「工作區規矩說的交接檔」，改叫它先讀那份筆記；subagent 另外會被告知頂層交接不是它的。沒放＝照舊。見 [eca-claude 說明](../../docs/01-eca-claude.md)。
+diff --git a/proto8/templates/starts/start-eca/root/README.md b/proto8/templates/starts/start-eca/root/README.md
+index cf8f635e4..17c37ac74 100644
+--- a/proto8/templates/starts/start-eca/root/README.md
++++ b/proto8/templates/starts/start-eca/root/README.md
+@@ -1,6 +1,6 @@
+ # daemon-root：根 daemon 定義（只帶時鐘與清道夫，agent 之後再掛）
+ 
+-← [templates](../README.md)
++← [templates](../../README.md)
+ 
+ 給「一個定義資料夾本身就是根入口」的用法：起它＝起一台根 daemon，表上只有 `_clock`（每秒寫 `$AOS_STACK/clock`，`.env` 把 `AOS_CLOCK` 指過去，子項照繼承聽這個鐘）與 `_sweeper`（每 10 分鐘清這台自己的 stderr 封存、寫 `sweeper_report.json`）；agent 不寫進 `daemon.json`，由 `aos-agent ctl add` 經 `procs_requests` 掛上、記在 stack 的表裡。
+ 
+diff --git a/proto8/templates/tests/agent-fsm/test_batch3.py b/proto8/templates/tests/agent-fsm/test_batch3.py
+index a5f22aea8..19167f0fa 100644
+--- a/proto8/templates/tests/agent-fsm/test_batch3.py
++++ b/proto8/templates/tests/agent-fsm/test_batch3.py
+@@ -8,8 +8,9 @@ import tempfile
+ import time
+ import unittest
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
+ 
+ 
+ def write(path, value):
+@@ -35,12 +36,12 @@ class Batch3Integration(unittest.TestCase):
+             bins = [str(PROTO / 'bin')]
+             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
+             env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'py')])
+-            env.update(AOS_STACK=str(daemon_stack), AOS_CD=str(root), AOS_WS=str(root),
++            env.update(AOS_STACK=str(daemon_stack), AOS_CD=str(root), AOS_WS=str(root), AOS_HOME=str(PROTO),
+                        AOS_DAEMON=str(daemon_stack), AOS_LLM_KERNEL=str(kernel_stack))
+ 
+             def definition(name, endpoint, tools):
+                 target = root / name
+-                shutil.copytree(CELLS, target, ignore=shutil.ignore_patterns('tests', '__pycache__'))
++                shutil.copytree(TEMPLATE, target, ignore=shutil.ignore_patterns('tests', '__pycache__'))
+                 write(target / 'llm.json', {'model': endpoint})
+                 write(target / 'tools.json', {'tools': tools})
+                 write(target / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10,
+diff --git a/proto8/templates/tests/agent-fsm/test_cells.py b/proto8/templates/tests/agent-fsm/test_cells.py
+index 00e457d07..4e9775b89 100644
+--- a/proto8/templates/tests/agent-fsm/test_cells.py
++++ b/proto8/templates/tests/agent-fsm/test_cells.py
+@@ -9,7 +9,9 @@ import time
+ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
+ CALL = {'id': 'one', 'type': 'function',
+         'function': {'name': 'echo', 'arguments': '{"text":"雪"}'}}
+ 
+diff --git a/proto8/templates/tests/agent-fsm/test_compact.py b/proto8/templates/tests/agent-fsm/test_compact.py
+index 4d4b42120..b4ff7dc4d 100644
+--- a/proto8/templates/tests/agent-fsm/test_compact.py
++++ b/proto8/templates/tests/agent-fsm/test_compact.py
+@@ -14,6 +14,7 @@ from unittest import mock
+ import test_reply_match as reply_tests
+ 
+ CELLS = reply_tests.CELLS
++TEMPLATE = reply_tests.TEMPLATE
+ PROTO = reply_tests.PROTO
+ sys.dont_write_bytecode = True
+ sys.path[:0] = [str(CELLS), str(PROTO / "py")]
+@@ -318,7 +319,7 @@ class CompactDaemon(unittest.TestCase):
+         daemon, kernel, definition = root / "daemon", root / "kernel", root / "definition"
+         daemon.mkdir()
+         kernel.mkdir()
+-        shutil.copytree(CELLS, definition, ignore=shutil.ignore_patterns("__pycache__"))
++        shutil.copytree(TEMPLATE, definition, ignore=shutil.ignore_patterns("__pycache__"))
+ 
+         def write(path, value):
+             path.write_text(json.dumps(value), encoding="utf-8")
+diff --git a/proto8/templates/tests/agent-fsm/test_cooldown.py b/proto8/templates/tests/agent-fsm/test_cooldown.py
+index 706a42d70..d08ee51ae 100644
+--- a/proto8/templates/tests/agent-fsm/test_cooldown.py
++++ b/proto8/templates/tests/agent-fsm/test_cooldown.py
+@@ -10,8 +10,10 @@ import time
+ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
+-sys.path.insert(0, str(CELLS.parents[1] / 'py'))
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
++sys.path.insert(0, str(PROTO / 'py'))
+ from aos.agentlib import cooldown  # noqa: E402
+ 
+ 
+diff --git a/proto8/templates/tests/agent-fsm/test_do_task_fold.py b/proto8/templates/tests/agent-fsm/test_do_task_fold.py
+index 9c3ff2f8f..e18ab8e72 100644
+--- a/proto8/templates/tests/agent-fsm/test_do_task_fold.py
++++ b/proto8/templates/tests/agent-fsm/test_do_task_fold.py
+@@ -8,8 +8,9 @@ import tempfile
+ import time
+ import unittest
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
+ DO, PEEK = str(PROTO / 'py/tools/agent/do_task'), str(PROTO / 'py/tools/base/peek_now_time')
+ 
+ 
+@@ -64,7 +65,7 @@ class DoTaskFold(unittest.TestCase):
+         cls.env = env
+         for name in SCRIPTS:                         # 每個情境一份定義：範本原樣，工具換成 do_task＋peek_now_time，腦＝那個情境的劇本
+             d = root / ('def_' + name)
+-            shutil.copytree(CELLS, d, ignore=shutil.ignore_patterns('tests', '__pycache__'))
++            shutil.copytree(TEMPLATE, d, ignore=shutil.ignore_patterns('tests', '__pycache__'))
+             write(d / 'llm.json', {'model': name})
+             write(d / 'tools.json', {'tools': {'do_task': {'path': DO}, 'peek_now_time': {'path': PEEK}}})
+             write(d / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10, 'ctl': 'ctl.json', 'state': 'state.json',
+diff --git a/proto8/templates/tests/agent-fsm/test_effort_setting.py b/proto8/templates/tests/agent-fsm/test_effort_setting.py
+index 19c382d02..078e20346 100644
+--- a/proto8/templates/tests/agent-fsm/test_effort_setting.py
++++ b/proto8/templates/tests/agent-fsm/test_effort_setting.py
+@@ -3,7 +3,9 @@ import importlib.util
+ from pathlib import Path
+ import unittest
+ 
+-CELLS = Path(__file__).resolve().parents[2] / "agent-fsm"
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / "py" / "aos" / "apps" / "agent_fsm"   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / "templates" / "agents" / "agent-fsm"   # 範本本身（給人抄的定義）
+ _spec = importlib.util.spec_from_file_location("llm_settings_effort", CELLS / "llm_settings.py")
+ llm_settings = importlib.util.module_from_spec(_spec)
+ _spec.loader.exec_module(llm_settings)
+@@ -29,7 +31,7 @@ class ReasoningEffort(unittest.TestCase):
+     def test_is_a_known_key(self):
+         self.assertIn("reasoning_effort", llm_settings.KEYS)
+         self.assertNotIn("effort", llm_settings.KEYS)
+-        self.assertIn('"reasoning_effort"', (CELLS / "interfaces.json").read_text())
++        self.assertIn('"reasoning_effort"', (TEMPLATE / "interfaces.json").read_text())
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/proto8/templates/tests/agent-fsm/test_fork.py b/proto8/templates/tests/agent-fsm/test_fork.py
+index 510d7b075..a04e4e438 100644
+--- a/proto8/templates/tests/agent-fsm/test_fork.py
++++ b/proto8/templates/tests/agent-fsm/test_fork.py
+@@ -8,8 +8,9 @@ import tempfile
+ import time
+ import unittest
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
+ SECRET = 'plum-42'
+ 
+ 
+@@ -54,7 +55,7 @@ class Fork(unittest.TestCase):
+             defs = {}
+             for model in ('plain', 'kept'):             # 兩份定義：範本原樣（hookeds.json 照帶），工具只有 fork，腦各一份劇本
+                 own = root / ('def_' + model)
+-                shutil.copytree(CELLS, own, ignore=shutil.ignore_patterns('tests', '__pycache__'))
++                shutil.copytree(TEMPLATE, own, ignore=shutil.ignore_patterns('tests', '__pycache__'))
+                 write(own / 'llm.json', {'model': model})
+                 write(own / 'tools.json', {'tools': {'fork': {'path': str(PROTO / 'py/tools/agent/fork')}}})
+                 write(own / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10, 'ctl': 'ctl.json', 'state': 'state.json',
+diff --git a/proto8/templates/tests/agent-fsm/test_goal.py b/proto8/templates/tests/agent-fsm/test_goal.py
+index afccc1523..0a2818890 100644
+--- a/proto8/templates/tests/agent-fsm/test_goal.py
++++ b/proto8/templates/tests/agent-fsm/test_goal.py
+@@ -11,8 +11,9 @@ import tempfile
+ import time
+ import unittest
+ 
+-CELLS = Path(__file__).resolve().parents[2] / "agent-fsm"   # 範本本身
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / "py" / "aos" / "apps" / "agent_fsm"   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / "templates" / "agents" / "agent-fsm"   # 範本本身（給人抄的定義）
+ GOAL_TOOL = PROTO / "py" / "tools" / "agent" / "goal"
+ NOTE = "[aos] goal: "
+ _spec = importlib.util.spec_from_file_location("goal_state", PROTO / "py" / "aos" / "agentlib" / "goal_state.py")
+@@ -35,7 +36,7 @@ class Base(unittest.TestCase):
+         if not os.environ.get("KEEP"):
+             self.addCleanup(shutil.rmtree, self.root, True)
+         self.defn, self.d, self.ws, self.kernel = (self.root / n for n in ("def", "d", "ws", "kernel"))
+-        shutil.copytree(CELLS, self.defn, ignore=shutil.ignore_patterns("__pycache__"))
++        shutil.copytree(TEMPLATE, self.defn, ignore=shutil.ignore_patterns("__pycache__"))
+         (self.defn / "hookeds.json").write_text('{}')         # 不要範本的 on_clock 鉤子攪局
+         (self.defn / "llm.json").write_text('{"model": "fake"}')
+         (self.defn / "tools.json").write_text(json.dumps({"tools": {
+@@ -69,7 +70,7 @@ class Base(unittest.TestCase):
+         return [m["content"] for m in self.history() if m.get("role") == "user" and str(m.get("content")).startswith(NOTE)]
+ 
+     def idle(self, code, *args):
+-        r = subprocess.run([sys.executable, str(self.defn / "idle.py"), *args], env=self.env, capture_output=True, text=True,
++        r = subprocess.run([sys.executable, str(CELLS / "idle.py"), *args], env=self.env, capture_output=True, text=True,
+                            timeout=30)
+         self.assertEqual(r.returncode, code, r.stderr)
+         return r
+diff --git a/proto8/templates/tests/agent-fsm/test_home_rule.py b/proto8/templates/tests/agent-fsm/test_home_rule.py
+index c7f1df9d7..e77a59d2f 100644
+--- a/proto8/templates/tests/agent-fsm/test_home_rule.py
++++ b/proto8/templates/tests/agent-fsm/test_home_rule.py
+@@ -11,8 +11,9 @@ import unittest
+ 
+ sys.dont_write_bytecode = True
+ PROTO = Path(__file__).resolve().parents[3]
+-CASES = (("agent-fsm", "idle.py"), ("agent-fsm", "brain.py"), ("agent-fsm", "wait.py"), ("agent-fsm", "act.py"),
+-         ("tool-python", "tool.py"), ("judge-llm", "_entry"))
++CELLS = "py/aos/apps/agent_fsm"   # 11-24 起 agent-fsm 的格在這裡（不在範本裡）
++CASES = ((CELLS, "idle.py"), (CELLS, "brain.py"), (CELLS, "wait.py"), (CELLS, "act.py"),
++         ("templates/tools/tool-python", "tool.py"), ("templates/tools/judge-llm", "_entry"))
+ 
+ 
+ class HomeRule(unittest.TestCase):
+@@ -20,7 +21,7 @@ class HomeRule(unittest.TestCase):
+     def setUpClass(cls):
+         cls.tmp = Path(tempfile.mkdtemp(prefix="home-rule-"))
+         for name in {c[0] for c in CASES}:
+-            shutil.copytree(PROTO / "templates" / name, cls.tmp / name, ignore=shutil.ignore_patterns("__pycache__", "tests"))
++            shutil.copytree(PROTO / name, cls.tmp / Path(name).name, ignore=shutil.ignore_patterns("__pycache__", "tests"))
+ 
+     @classmethod
+     def tearDownClass(cls):
+@@ -31,7 +32,7 @@ class HomeRule(unittest.TestCase):
+         env.update(PYTHONNOUSERSITE="1", PYTHONDONTWRITEBYTECODE="1")
+         if home:
+             env["AOS_HOME"] = str(PROTO)
+-        return subprocess.run([sys.executable, str(self.tmp / folder / program), "--help"], cwd=str(self.tmp),
++        return subprocess.run([sys.executable, str(self.tmp / Path(folder).name / program), "--help"], cwd=str(self.tmp),
+                               env=env, capture_output=True, text=True, timeout=60)
+ 
+     def test_with_home_runs(self):
+diff --git a/proto8/templates/tests/agent-fsm/test_hooks.py b/proto8/templates/tests/agent-fsm/test_hooks.py
+index 4d586364c..79fadbcb3 100644
+--- a/proto8/templates/tests/agent-fsm/test_hooks.py
++++ b/proto8/templates/tests/agent-fsm/test_hooks.py
+@@ -12,8 +12,9 @@ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ from unittest import mock
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
+ sys.path.insert(0, str(PROTO / "py"))
+ from aos.agentlib import hooks  # noqa: E402
+ 
+diff --git a/proto8/templates/tests/agent-fsm/test_integration.py b/proto8/templates/tests/agent-fsm/test_integration.py
+index afe29eb8c..c2a5079c4 100644
+--- a/proto8/templates/tests/agent-fsm/test_integration.py
++++ b/proto8/templates/tests/agent-fsm/test_integration.py
+@@ -9,8 +9,9 @@ import time
+ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
+ 
+ 
+ class KernelIntegration(unittest.TestCase):
+diff --git a/proto8/templates/tests/agent-fsm/test_own_system.py b/proto8/templates/tests/agent-fsm/test_own_system.py
+index 2a83c61f0..66dbbd3ca 100644
+--- a/proto8/templates/tests/agent-fsm/test_own_system.py
++++ b/proto8/templates/tests/agent-fsm/test_own_system.py
+@@ -9,8 +9,9 @@ import tempfile
+ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
+ TOOL = PROTO / "py" / "tools" / "agent" / "self_system" / "_entry"
+ 
+ 
+@@ -20,7 +21,7 @@ class OwnSystem(unittest.TestCase):
+         self.defn, self.d, kernel, self.ws = self.root / "def", self.root / "d", self.root / "k", self.root / "ws"
+         for x in (self.defn, self.d, kernel, self.ws):
+             x.mkdir()
+-        decl = json.loads((CELLS / "interfaces.json").read_text())["aos-agent"]
++        decl = json.loads((TEMPLATE / "interfaces.json").read_text())["aos-agent"]
+         self.assertEqual(decl["system"], "system.txt")                   # the template declares it
+         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"llm": "llm.json", "system": decl["system"]}}))
+         (self.defn / "llm.json").write_text('{"model":"fake"}')
+diff --git a/proto8/templates/tests/agent-fsm/test_own_tools.py b/proto8/templates/tests/agent-fsm/test_own_tools.py
+index 101ac8501..7cddd5309 100644
+--- a/proto8/templates/tests/agent-fsm/test_own_tools.py
++++ b/proto8/templates/tests/agent-fsm/test_own_tools.py
+@@ -9,8 +9,9 @@ import tempfile
+ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
+ CLOCK = PROTO / "py" / "tools" / "base" / "peek_now_time"
+ 
+ 
+diff --git a/proto8/templates/tests/agent-fsm/test_reply_match.py b/proto8/templates/tests/agent-fsm/test_reply_match.py
+index ee3125ec3..d2485e1e0 100644
+--- a/proto8/templates/tests/agent-fsm/test_reply_match.py
++++ b/proto8/templates/tests/agent-fsm/test_reply_match.py
+@@ -10,8 +10,9 @@ import time
+ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ 
+-CELLS = Path(__file__).resolve().parents[2] / "agent-fsm"   # 範本本身
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / "py" / "aos" / "apps" / "agent_fsm"   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / "templates" / "agents" / "agent-fsm"   # 範本本身（給人抄的定義）
+ sys.path.insert(0, str(PROTO / "py"))
+ from aos.agentlib import cooldown  # noqa: E402
+ CALL = {"id": "c1", "type": "function", "function": {"name": "echo", "arguments": "{}"}}
+diff --git a/proto8/templates/tests/agent-fsm/test_same_turn_tools.py b/proto8/templates/tests/agent-fsm/test_same_turn_tools.py
+index 302df7396..8e515359d 100644
+--- a/proto8/templates/tests/agent-fsm/test_same_turn_tools.py
++++ b/proto8/templates/tests/agent-fsm/test_same_turn_tools.py
+@@ -9,8 +9,9 @@ import tempfile
+ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
+ CLOCK = PROTO / "py" / "tools" / "base" / "peek_now_time"
+ GROW = '''import json, sys
+ reg = sys.argv[1]
+diff --git a/proto8/templates/tests/agent-fsm/test_selfheal.py b/proto8/templates/tests/agent-fsm/test_selfheal.py
+index 77cb2c743..2750910fb 100644
+--- a/proto8/templates/tests/agent-fsm/test_selfheal.py
++++ b/proto8/templates/tests/agent-fsm/test_selfheal.py
+@@ -9,8 +9,9 @@ import time
+ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ 
+-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
+-PROTO = CELLS.parents[1]
++PROTO = Path(__file__).resolve().parents[3]
++CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
++TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
+ sys.path.insert(0, str(PROTO / 'py'))
+ from aos.agentlib import cooldown  # noqa: E402
+ 
+diff --git a/proto8/templates/tests/judge-llm/test_judge.py b/proto8/templates/tests/judge-llm/test_judge.py
+index f927592f0..b3032155c 100644
+--- a/proto8/templates/tests/judge-llm/test_judge.py
++++ b/proto8/templates/tests/judge-llm/test_judge.py
+@@ -11,8 +11,8 @@ import time
+ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ 
+-HERE = Path(__file__).resolve().parents[2] / 'judge-llm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
+-PROTO = HERE.parents[1]
++HERE = Path(__file__).resolve().parents[2] / 'tools' / 'judge-llm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
++PROTO = HERE.parents[2]
+ loader = importlib.machinery.SourceFileLoader('judge_entry', str(HERE / '_entry'))
+ spec = importlib.util.spec_from_loader(loader.name, loader)
+ module = importlib.util.module_from_spec(spec)
+diff --git a/proto8/templates/tests/reviewer/test_reviewer.py b/proto8/templates/tests/reviewer/test_reviewer.py
+index cf438c4b6..6f9cc7ff3 100644
+--- a/proto8/templates/tests/reviewer/test_reviewer.py
++++ b/proto8/templates/tests/reviewer/test_reviewer.py
+@@ -8,8 +8,8 @@ import tempfile
+ import time
+ import unittest
+ 
+-REVIEWER = Path(__file__).resolve().parents[2] / 'reviewer'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
+-PROTO = REVIEWER.parents[1]
++REVIEWER = Path(__file__).resolve().parents[2] / 'agents' / 'reviewer'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
++PROTO = REVIEWER.parents[2]
+ 
+ 
+ def write(path, value):
+diff --git a/proto8/templates/tests/test_daily.py b/proto8/templates/tests/test_daily.py
+index 7aa90660d..5d7646160 100644
+--- a/proto8/templates/tests/test_daily.py
++++ b/proto8/templates/tests/test_daily.py
+@@ -191,7 +191,7 @@ class Machine:
+         return r
+ 
+     def cp_template(self, name, dest, cwd):
+-        """照 README 的用法：cp -r $AOS_HOME/templates/名 目的地（kernel 範本＝templates/kernels/名）。"""
++        """照 README 的用法：cp -r $AOS_HOME/templates/類別/名 目的地（name 是 templates 底下的相對路徑，例 agents/agent-fsm）。"""
+         src = self.proto / "templates" / name
+         return self.run("cp", "-r", src, dest, cwd=cwd)
+ 
+@@ -377,7 +377,7 @@ class Daily(unittest.TestCase):
+                                              ' "idempotent": true, "deterministic": true, "interrupt": "safe",'
+                                              ' "parallel": true, "cost": {"time_ms": 10}, "timeout_ms": 5000}\n')
+         # llms：llm kernel，端點只留假腦（fake＝先叫 peek_now_time；fake-greet＝先叫 another 的 greet）
+-        m.cp_template("kernel/llm-kernel", "def", cwd=h.llms)
++        m.cp_template("kernels/llm-kernel", "def", cwd=h.llms)
+         kj = h.llms / "def" / "kernel.json"
+         k = json.loads(kj.read_text())
+         fake = k["endpoints"]["fake"]
+@@ -390,10 +390,10 @@ class Daily(unittest.TestCase):
+         defs_cwd = h.outside if self.defs_out else h.something
+         root_def = "defs" if self.defs_out else self.root_def
+         adir = "defs" if self.defs_out else self.agent_dir
+-        m.cp_template("daemon-root", root_def, cwd=defs_cwd)
++        m.cp_template("daemons/daemon-root", root_def, cwd=defs_cwd)
+         (defs_cwd / adir).mkdir(exist_ok=True)
+-        m.cp_template("agent-fsm", adir + "/fsm", cwd=defs_cwd)
+-        m.cp_template("eca-claude", adir + "/eca", cwd=defs_cwd)
++        m.cp_template("agents/agent-fsm", adir + "/fsm", cwd=defs_cwd)
++        m.cp_template("agents/eca-claude", adir + "/eca", cwd=defs_cwd)
+         if self.defs_out:
+             self.new_project(m, h.outside / "defs", "defs")
+         fsm = defs_cwd / adir / "fsm"
+diff --git a/proto8/templates/tests/test_start.py b/proto8/templates/tests/test_start.py
+index 6055ee808..1e0655e27 100644
+--- a/proto8/templates/tests/test_start.py
++++ b/proto8/templates/tests/test_start.py
+@@ -2,8 +2,10 @@
+ # 起手範本（使用者 11-17 L-10 A）裡的 root/、llm/、perm/、agents/ann/ 是 daemon-root、kernel/llm-kernel、kernel/procs-kernel、agent-fsm、eca-claude 的抄本：
+ # 原範本改了沒同步抄過來，這支就紅（逐檔比內容與執行位）。樹裡 env.sh 的行為（AOS_HOME 沒設報錯、轉去家裡那份）在
+ # py/tests/test_env_sh.py 驗。只讀檔、不起任何行程。
+-# 11-21 起 start-api 的 ann 不帶格程式：fsm.json 四格與 hook 宣告（11-21 起叫 hooks.json）動態連結 $AOS_HOME/templates/agents/agent-fsm 那份（使用者 11-20「起手範本確實該改成要借的」，
++# 11-21 起 start-api 的 ann 不帶格程式：fsm.json 四格與 hook 宣告（11-21 起叫 hooks.json）動態連結（使用者 11-20「起手範本確實該改成要借的」，
+ #   紀錄 thinking/2026-11/21/起手範本-動態連結-1121.md）；README 是 agent-fsm 那份原樣再接一段。
++# 11-24 templates 三分：範本分進類別夾（starts/、daemons/、kernels/、agents/），格程式搬到 $AOS_HOME/lib/aos/apps/agent_fsm，
++#   agent-fsm 範本自己也動態連結，ann 跟它的差別只剩 llm.json、fsm.json（std.fsm() 編出來的樣子）、README 與多一份 .env。
+ import filecmp
+ import json
+ import os
+@@ -15,19 +17,20 @@ TEMPLATES = Path(__file__).resolve().parents[1]
+ # starter -> [(folder in the starter, template it copies, files allowed to differ)]
+ # 11-20 llm kernel 改成掛在根上的一列 llm/（使用者「掛同一塊板子」），加選裝不開的權限站 perm/（使用者「加一份選裝、預設不開」）。
+ STARTERS = {
+-    "start-api": [("root", "daemon-root", {".env"}),
+-                  ("llm", "kernel/llm-kernel", set()),
+-                  ("perm", "kernel/procs-kernel", {"kernel.json"}),
+-                  ("agents/ann", "agent-fsm", {"llm.json", "fsm.json", "interfaces.json", "README.md"})],
+-    "start-eca": [("root", "daemon-root", {".env"}),
+-                  ("agents/ann", "eca-claude", set())],
++    "starts/start-api": [("root", "daemons/daemon-root", {".env"}),
++                         ("llm", "kernels/llm-kernel", set()),
++                         ("perm", "kernels/procs-kernel", {"kernel.json"}),
++                         ("agents/ann", "agents/agent-fsm", {"llm.json", "fsm.json", "README.md"})],
++    "starts/start-eca": [("root", "daemons/daemon-root", {".env"}),
++                         ("agents/ann", "agents/eca-claude", set())],
+ }
+-EXTRA = {("start-api", "agents/ann"): {".env"}}   # files a copy has on top of its template
++EXTRA = {("starts/start-api", "agents/ann"): {".env"}}   # files a copy has on top of its template
+ CELLS = ("idle.py", "brain.py", "wait.py", "act.py")
+ SHARED = ("atomic_file.py", "cell_common.py", "compact.py", "llm_settings.py")
+-# files of the template a copy links dynamically instead of carrying; leftovers may still sit there, but nothing may name them
+-LINKED = {("start-api", "agents/ann"): set(CELLS + SHARED + ("hooks.json",))}
+-LLM_LINE = {"start-api": "AOS_LLM_KERNEL=${AOS_STACK}/procs/llm\n", "start-eca": "AOS_LLM_KERNEL=${AOS_WS}/llms/stacks/llm\n"}
++# files ann links dynamically from $AOS_HOME/lib/aos/apps/agent_fsm instead of carrying: nothing in ann may name them
++LINKED = set(CELLS + SHARED + ("hooks.json",))
++LLM_LINE = {"starts/start-api": "AOS_LLM_KERNEL=${AOS_STACK}/procs/llm\n",
++            "starts/start-eca": "AOS_LLM_KERNEL=${AOS_WS}/llms/stacks/llm\n"}
+ TOP = {"README.md", "env.sh"}           # the only files directly in a starter, besides the folders above
+ 
+ 
+@@ -47,10 +50,9 @@ class StartTest(unittest.TestCase):
+             for sub, src, differ in parts:
+                 with self.subTest(starter=starter, folder=sub):
+                     a, b = TEMPLATES / src, TEMPLATES / starter / sub
+-                    linked = LINKED.get((starter, sub), set())
+-                    self.assertEqual(files(b) - linked, files(a) - linked | EXTRA.get((starter, sub), set()),
++                    self.assertEqual(files(b), files(a) | EXTRA.get((starter, sub), set()),
+                                      "%s/%s has other files than %s: copy it again" % (starter, sub, src))
+-                    for rel in sorted(files(a) - differ - linked):
++                    for rel in sorted(files(a) - differ):
+                         self.assertTrue(filecmp.cmp(a / rel, b / rel, shallow=False),
+                                         "%s/%s/%s differs from %s/%s: copy it again" % (starter, sub, rel, src, rel))
+                         self.assertEqual(os.access(a / rel, os.X_OK), os.access(b / rel, os.X_OK),
+@@ -60,25 +62,23 @@ class StartTest(unittest.TestCase):
+                                          "%s/%s/%s is listed as changed but equals %s/%s" % (starter, sub, rel, src, rel))
+ 
+     def test_ann_links_the_cells(self):
+-        ann, fsm = TEMPLATES / "starts" / "start-api/agents/ann", TEMPLATES / "agents" / "agent-fsm"
++        ann, fsm = TEMPLATES / "starts" / "start-api" / "agents" / "ann", TEMPLATES / "agents" / "agent-fsm"
+         self.assertEqual((ann / "fsm.json").read_bytes(), (TEMPLATES / "agents" / "agent-python/fsm.json").read_bytes(),
+                          "start-api/agents/ann/fsm.json must be what std.fsm() compiles (templates/agents/agent-python/fsm.json)")
+         states = json.loads((ann / "fsm.json").read_text(encoding="utf-8"))["states"]
+         self.assertEqual(sorted(s["exec"]["argv"][1]["$path"] for s in states.values()),
+-                         sorted("/templates/agents/agent-fsm/" + c for c in CELLS))
++                         sorted("/lib/aos/apps/agent_fsm/" + c for c in CELLS))
+         for s in states.values():
+             prog = s["exec"]["argv"][1]
+             self.assertEqual(prog["$env"], "AOS_HOME")
+-            self.assertTrue((TEMPLATES.parent / prog["$path"].lstrip("/")).is_file(), prog)
+-        want = json.loads((fsm / "interfaces.json").read_text(encoding="utf-8"))
+-        want["hooks"] = [h if h != "hooks.json" else {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/hooks.json"}
+-                         for h in want["hooks"]]
+-        self.assertEqual(json.loads((ann / "interfaces.json").read_text(encoding="utf-8")), want)
++            self.assertTrue((TEMPLATES.parent / "py" / prog["$path"][len("/lib/"):]).is_file(), prog)   # the source of lib/
++        self.assertEqual((ann / "interfaces.json").read_bytes(), (fsm / "interfaces.json").read_bytes())
+         self.assertTrue((ann / "README.md").read_bytes().startswith((fsm / "README.md").read_bytes()),
+                         "start-api/agents/ann/README.md must start with templates/agents/agent-fsm/README.md as it is")
+-        for rel in sorted(files(ann) - LINKED[("start-api", "agents/ann")] - {"README.md"}):
++        self.assertFalse(files(ann) & LINKED, "ann carries cell programs it should link")
++        for rel in sorted(files(ann) - {"README.md"}):
+             text = (ann / rel).read_text(encoding="utf-8")
+-            for name in sorted(LINKED[("start-api", "agents/ann")]):
++            for name in sorted(LINKED):
+                 self.assertNotIn('"%s"' % name, text, "%s names %s, which ann does not carry" % (rel, name))
+ 
+     def test_nothing_else_at_the_top(self):
+@@ -100,9 +100,9 @@ class StartTest(unittest.TestCase):
+             self.assertIn(LLM_LINE[starter], env)
+             self.assertNotRegex(env, r"(?m)^AOS_KERNEL=")                 # the llm kernel would inherit it (start-api README)
+             self.assertTrue(env.endswith("AOS_HOME=${AOS_HOME}\n"))      # still the required-AOS_HOME check (daemon-root README)
+-        self.assertEqual((TEMPLATES / "starts" / "start-api/agents/ann/llm.json").read_text(encoding="utf-8").strip(), '{"model": "fake"}')
+-        self.assertEqual((TEMPLATES / "starts" / "start-api/perm/kernel.json").read_text(encoding="utf-8").strip(), "{}")
+-        ann_env = (TEMPLATES / "starts" / "start-api/agents/ann/.env").read_text(encoding="utf-8")
++        self.assertEqual((TEMPLATES / "starts/start-api/agents/ann/llm.json").read_text(encoding="utf-8").strip(), '{"model": "fake"}')
++        self.assertEqual((TEMPLATES / "starts/start-api/perm/kernel.json").read_text(encoding="utf-8").strip(), "{}")
++        ann_env = (TEMPLATES / "starts/start-api/agents/ann/.env").read_text(encoding="utf-8")
+         self.assertIn("\n# AOS_KERNEL=${AOS_DAEMON}/procs/perm/requests\n", ann_env)   # optional, off by default
+         self.assertNotRegex(ann_env, r"(?m)^AOS_")
+ 
+diff --git a/proto8/templates/tests/tool-python/test_skeleton.py b/proto8/templates/tests/tool-python/test_skeleton.py
+index 7afeb576a..24a92ad1d 100644
+--- a/proto8/templates/tests/tool-python/test_skeleton.py
++++ b/proto8/templates/tests/tool-python/test_skeleton.py
+@@ -10,8 +10,8 @@ import unittest
+ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
+ 
+ sys.dont_write_bytecode = True
+-SKEL = Path(__file__).resolve().parents[2] / "tool-python"
+-PROTO = SKEL.parents[1]
++SKEL = Path(__file__).resolve().parents[2] / "tools" / "tool-python"
++PROTO = SKEL.parents[2]
+ 
+ 
+ class Skeleton(unittest.TestCase):
+-- 
+2.56.0
+

@@ -1,0 +1,77 @@
+From be8b36f568c431aa10b5ae4e1168010a772664c3 Mon Sep 17 00:00:00 2001
+From: justty32 <justty32@gmail.com>
+Date: Mon, 23 Nov 2026 21:30:08 +0800
+Subject: [PATCH 6/6] =?UTF-8?q?=E4=B8=89=E5=88=86=E6=89=8B=E6=94=B9?=
+ =?UTF-8?q?=E5=B1=A4=20H6=20=E6=96=87=E4=BB=B6=E8=88=87=E5=85=B1=E7=94=A8?=
+ =?UTF-8?q?=E5=B7=A5=E5=85=B7=EF=BC=9Aproto8/README=20=E8=88=87=20testing.?=
+ =?UTF-8?q?md=20=E5=AF=AB=E6=A0=BC=E5=9C=A8=20py/aos/apps/agent=5Ffsm?=
+ =?UTF-8?q?=E3=80=81=E8=A6=81=20install.py=EF=BC=9Bwf/public=20=E7=9A=84?=
+ =?UTF-8?q?=20fsm-guard=20=E6=B8=AC=E8=A9=A6=E6=94=B9=E8=B7=91=20lib=20?=
+ =?UTF-8?q?=E8=A3=A1=E7=9A=84=20act=20=E6=A0=BC?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+照規劃夾 06c「eca-aos 自己與按件派的」；其餘 wf 文件的換路徑字由機械層改好，dev-env/03 換機那份讀過一遍、指令照用。
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ proto8/README.md                              | 2 +-
+ wf/public/tools/fsm-guard/tests/test_guard.py | 7 +++++--
+ wf/workflows/testing.md                       | 2 +-
+ 3 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/proto8/README.md b/proto8/README.md
+index 52dc552e2..4f8cb0b3a 100644
+--- a/proto8/README.md
++++ b/proto8/README.md
+@@ -45,7 +45,7 @@
+ - **[CONCEPTS.md](docs/CONCEPTS.md)**：概念——aos 怎麼看世界（C-01～C-92）。
+ - **[NORMS.md](docs/NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；程式符合規範但不強制。底在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62：六個環境變數、`aos-exec XXX`、找入口、`#/` 尋址）。
+ - **[CONVENTION.md](docs/CONVENTION.md)**：aos agent 慣例（P-05～P-48）——我們自己人寫 agent 時照抄的標準形狀，不要求別人守。
+-- **[templates/](templates/README.md)**：`eca-claude`（外部 coding agent 範本）與 `agent-fsm`（aos 自己的 loop／fsm agent 範本，idle／think／wait／act 四格），都用 `aos-agent ctl add` 掛（宣告在 `interfaces.json`）；`agent-fsm` 的 think 組請求、wait 經 [templates/kernels/](templates/kernels/README.md) 的 llm-kernel 寄信與收回信。
++- **[templates/](templates/README.md)**：`eca-claude`（外部 coding agent 範本）與 `agent-fsm`（aos 自己的 loop／fsm agent 範本，idle／think／wait／act 四格；格的程式在 `py/aos/apps/agent_fsm/`，裝好在 `lib/`，範本只是給人抄的定義），都用 `aos-agent ctl add` 掛（宣告在 `interfaces.json`）；`agent-fsm` 的 think 組請求、wait 經 [templates/kernels/](templates/kernels/README.md) 的 llm-kernel 寄信與收回信。
+ - **[templates/kernels/](templates/kernels/README.md)**：llm-kernel 的啟動與問腦用法、daemon-kernel／procs-kernel 的框架站接法。
+ - **10-24 一天的嘗試**（使用者「我隨便說，你隨便做，反正只是嘗試」；代定都可翻案，一覽在 [session log 10-24](../wf/session_logs/2026-10-parts/12-10-24.md#2026-10-24)）：[lib/](py/README.md)（工具＝函式庫）、給人用的 say／listen（在 [aos-agent](py/aos/apps/agent/README.md) 裡）、[aos-mcp](py/aos/apps/mcp/README.md)、[aos-grow](py/aos/apps/grow/README.md)（函數成長）、[langs/](archive/langs/README.md)（Janet、Lua 寫 aos；11-17 封存）、[aos-sandbox](py/aos/apps/sandbox/README.md)（Linux 權限與沙箱）。
+ - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
+diff --git a/wf/public/tools/fsm-guard/tests/test_guard.py b/wf/public/tools/fsm-guard/tests/test_guard.py
+index a8c665597..65a0fd757 100644
+--- a/wf/public/tools/fsm-guard/tests/test_guard.py
++++ b/wf/public/tools/fsm-guard/tests/test_guard.py
+@@ -506,7 +506,10 @@ class OldRules(Base):
+ PROTO = os.path.normpath(os.path.join(HERE, "..", "..", "..", "..", "..", "proto8"))   # this repo's proto8 (installed: lib/ bin/)
+ 
+ 
+-@unittest.skipUnless(os.path.isfile(os.path.join(PROTO, "templates", "agents", "agent-fsm", "act.py"))
++CELLS = os.path.join(PROTO, "lib", "aos", "apps", "agent_fsm")   # the agent-fsm cells, installed (11-24: no longer in the template)
++
++
++@unittest.skipUnless(os.path.isfile(os.path.join(CELLS, "act.py"))
+                      and os.path.isdir(os.path.join(PROTO, "lib", "aos")), "needs an installed proto8 next to wf/")
+ class Mounted(unittest.TestCase):
+     """Mount the guard as the README says (hookeds.json of a definition, wrapper + defs/shared/guard) and run the real act cell."""
+@@ -552,7 +555,7 @@ class Mounted(unittest.TestCase):
+         hist = os.path.join(self.stack, "history.jsonl")
+         with open(hist, "w") as f:
+             f.write(json.dumps({"role": "user", "content": "hi"}) + "\n" + json.dumps({"role": "assistant", "tool_calls": [call]}) + "\n")
+-        p = subprocess.run([sys.executable, os.path.join(self.defn, "act.py")], env=self.env, capture_output=True, text=True, timeout=60)
++        p = subprocess.run([sys.executable, os.path.join(CELLS, "act.py")], env=self.env, capture_output=True, text=True, timeout=60)
+         self.assertEqual(p.returncode, code, p.stderr)
+         with open(hist) as f:
+             last = [json.loads(l) for l in f if l.strip()][-1]
+diff --git a/wf/workflows/testing.md b/wf/workflows/testing.md
+index bb71fa755..a1c7938fc 100644
+--- a/wf/workflows/testing.md
++++ b/wf/workflows/testing.md
+@@ -41,7 +41,7 @@
+ - **`wf/tools/tests`**：`python3 -m unittest` 跑 53 支。`test_commit_queue.sh` 不在 unittest 裡，另外跑：`bash wf/tools/tests/test_commit_queue.sh <來源 repo> <暫存夾>`；要有當天的 `proto8/thinking/<年-月>/<日>/README.md`（沒有就 SKIP、退 1），git 身分要寫在 `.gitconfig`（它不吃 `GIT_AUTHOR_*` 環境變數）。
+ - **`check.py` 腳本**：`templates/tests/image-move-check`、`templates/kernels/tests/kernel-chain-check` 不是 unittest，discover 會顯示 0 支；直接跑 `python3 proto8/templates/tests/image-move-check/check.py`、`python3 proto8/templates/kernels/tests/kernel-chain-check/check.py`（成功退 0；用已裝的 aos 指令，不 build、不安裝）。
+ 
+-Python 的原始碼在 `proto8/py/`（套件 `py/aos/`、指令本體 `py/aos/apps/<名>/`、工具 `py/tools/{base,aos,agent}/`；11-18 S3～S5 從 `lib/`、`cmd/` 搬來），`install.py` 把它抄成 `proto8/lib/`、照 `py/entries.json` 在 `proto8/bin/` 生指令入口；`proto8/templates/`（含 kernel 範本 `templates/kernels/`）不用裝、原地就是成品。要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/bin/` 放進 PATH（`source $AOS_HOME/env.sh` 一次放好；舊的 `cmd/install.sh` 11-18 S5 收掉了）。
++Python 的原始碼在 `proto8/py/`（套件 `py/aos/`、指令本體 `py/aos/apps/<名>/`、工具 `py/tools/{base,aos,agent}/`；11-18 S3～S5 從 `lib/`、`cmd/` 搬來），`install.py` 把它抄成 `proto8/lib/`、照 `py/entries.json` 在 `proto8/bin/` 生指令入口；`proto8/templates/`（含 kernel 範本 `templates/kernels/`）不用裝、原地就是成品；agent-fsm 的格 11-24 起不在範本裡，在 `py/aos/apps/agent_fsm/`，跟其他 Python 一樣要 `install.py` 裝進 `lib/` 才生效。要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/bin/` 放進 PATH（`source $AOS_HOME/env.sh` 一次放好；舊的 `cmd/install.sh` 11-18 S5 收掉了）。
+ 
+ ## 不碰跑著的樹
+ 
+-- 
+2.56.0
+
