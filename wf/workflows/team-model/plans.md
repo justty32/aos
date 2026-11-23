@@ -2,7 +2,7 @@
 
 本頁由 [`../team-model.md`](../team-model.md) 拆出。**隨每月帳單與錢包變動改這頁，只寫現況**；project-owned，kernel 升級不覆蓋。
 
-- **現況**：Claude、GPT 各一個 200 美元方案（未核實），兩套體系同時可用。試水溫結果見 [probe-2026-10-09](probe-2026-10-09.json)；隊形（11-14 起）是 opus 或 fable 的 eca 帶 sol 隊員（agent-fsm，走本地 LiteLLM 的 pack `sol-high`），不走 codex CLI、蒐集和施工不用 terra，sol 走不通由 Claude 子 agent 補位，見 [dispatch/aos-teams](../dispatch/aos-teams.md)。
+- **現況**：Claude、GPT 各一個 200 美元方案（未核實），兩套體系同時可用。試水溫結果見 [probe-2026-10-09](probe-2026-10-09.json)；隊形（11-14 起）是 opus 或 fable 的 eca 帶 sol 隊員（agent-fsm，走本地 LiteLLM 的 sol；11-21 起 `llm.json` 是 `sol` 加 `reasoning_effort` high，以前是 pack `sol-high`），不走 codex CLI、蒐集和施工不用 terra，sol 走不通由 Claude 子 agent 補位，見 [dispatch/aos-teams](../dispatch/aos-teams.md)。
 
 ## 若退掉 GPT
 

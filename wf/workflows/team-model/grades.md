@@ -17,7 +17,7 @@
 | C | gpt-terra（`gpt-5.6-terra`）、Sonnet | 待細分 |
 | D | gpt-luna（`gpt-5.6-luna`）| 待細分 |
 | E、F… | （預留）| 之後 DeepSeek 之類可以更低 |
-| A | `gpt-6.1-sol` | 使用者 10-09 確認；試水溫唯二全中（另一個是 astra）；**gpt 系一般工作一律用它**（本專案走 agent-fsm 的 pack `sol-high`，不走 codex CLI） |
+| A | `gpt-6.1-sol` | 使用者 10-09 確認；試水溫唯二全中（另一個是 astra）；**gpt 系一般工作一律用它**（本專案走 agent-fsm，`llm.json` 是 `sol` 加 `reasoning_effort` high，不走 codex CLI） |
 | A | `gpt-6-astra` | 使用者 10-09 確認；**只派圖像、創意類**（使用者 11-06，見表下）|
 | B | `gpt-6-sol` | 使用者 10-09 確認 |
 | C | `gpt-reserve`、`gpt-5.5` | 使用者 10-09 確認 |

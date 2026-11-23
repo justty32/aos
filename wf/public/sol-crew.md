@@ -4,7 +4,7 @@
 
 ## 任務書怎麼寫、怎麼分工
 
-opus eca 隊長掛 agent-fsm sol（LiteLLM sol-high）蒐集事實或寫碼時：
+opus eca 隊長掛 agent-fsm sol（LiteLLM 的 `sol`，`reasoning_effort` high）蒐集事實或寫碼時：
 
 1. **一張單只做一件事，寫清楚能改哪些檔**。兩隻並行各管各的檔，互不干擾。
 2. **事實和設計分開**：先派一隻唯讀 sol 寫 facts.md（附檔名、行號）；設計由隊長（或 fable）定；寫碼再另派。
@@ -35,7 +35,7 @@ sol 的 shell 有 guard，擋字面含 `rm`、`kill`、`aos-*` 等的指令。gu
 
 ## 掛法的幾個坑
 
-- **沒帶 `AOS_LLM_KERNEL`**：第一個 brain call 就 `LlmKernelMissing`。定義的 `.env` 要有它（[kits/gather](../workflows/dispatch/kits/README.md) 的 `.env` 已帶），或 `subagent add` 的 `envs` 帶 `{"AOS_LLM_KERNEL": "<llm-gpt 的 stack>"}`。
+- **沒帶 `AOS_LLM_KERNEL`**：第一個 brain call 就 `LlmKernelMissing`。改成 `~/aos-home` 一套的機器（公司那台 11-23 起），這個值由上層 daemon 那一列傳下來，[kits/gather](../workflows/dispatch/kits/README.md) 的 `.env` 不用抄；還沒改的機器才要定義的 `.env` 帶它，或 `subagent add` 的 `envs` 帶 `{"AOS_LLM_KERNEL": "<llm kernel 的 stack>"}`（見 [03-換機](../workflows/dev-env/03-換機.md)）。
 - **要開 headless Chrome 的隊員不能設 `mem_mb`**：AS 上限讓 Chrome 起不來，改用 `limits {"files":4096}`。
 - **停下來的訊息措辭會改變行為**：hook 訊息寫 `Stop and report this as BLOCKED`，sol 就把整份工作丟掉。要接進流程的訊息，接線前拿真 sol 試一次。
 - **借別線的假 agent 腳本先看信的格式**：例 `aos-agent say` 的信是 `{"body":{"role","content"}}`，照 `m["content"]` 讀會 `KeyError`。
@@ -54,15 +54,15 @@ sol 的 shell 有 guard，擋字面含 `rm`、`kill`、`aos-*` 等的指令。gu
 - 建議範圍 mem_mb 1024～2048、files 256～4096（預設 `{"mem_mb":1024,"files":256}`），`procs` 別設。
 - subagent 的父程序是 daemon、不是掛它的 eca：對 eca 下 prlimit 不會傳下去，要在 add 時帶 `limits`。對跑著的 aos-loop 下 prlimit 馬上生效，之後每格新起的子程序都繼承。
 - 腦額度：每隻 sol 一份 llm kernel 的 `budget.senders`，key 是 sol 的 stack 路徑；用光被拒 `BudgetMissing`。窗是 `all`（永不重置）時直接 BLOCKED 停下，要調高額度再叫起來（窗怎麼分見知識庫 `aos/brain.md#/Priority and budgets`）。
-- **暫存 llm kernel 的日額會讓整隊一起停**：自己暫存樹起的 kernel，sol-high 有每日 `max_calls`（例 600），幾隻 sol 同一天用完就全部 `BudgetMissing … reached in this window (day)`。kernel 每輪重讀 kernel.json，改了數字 `ctl start` 就能繼續，不用重起 kernel；正在答的那則會丟掉，要重新 say 一次。
+- **暫存 llm kernel 的日額會讓整隊一起停**：自己暫存樹起的 kernel，sol 那包端點（11-14 那時叫 sol-high）有每日 `max_calls`（例 600），幾隻 sol 同一天用完就全部 `BudgetMissing … reached in this window (day)`。kernel 每輪重讀 kernel.json，改了數字 `ctl start` 就能繼續，不用重起 kernel；正在答的那則會丟掉，要重新 say 一次。
 
 ## sol 排隊很慢：小題隊長自己讀，大盤點或大施工改派 Claude 子 agent
 
-llm-gpt 的 sol-high 名額全體共用（只有兩三個），十幾條線同時派 sol 時，開工半小時只寫幾百位元組、蒐集員近一小時沒交稿都會發生。
+llm kernel 的 sol 名額全體共用（11-14 那時是舊樹 llm-gpt 的 sol-high，只有兩三個），十幾條線同時派 sol 時，開工半小時只寫幾百位元組、蒐集員近一小時沒交稿都會發生。
 
 1. 先判斷是不是卡住：看 sol 的 history，只有十幾行、沒有改動，就是在排隊。
 2. 小題目不必等蒐集：隊長自己讀關鍵六七個檔把設計寫出來，把蒐集員停掉、名額讓給施工員。
-3. 大量對程式的盤點、大施工：經部長同意改派 Claude 子 agent，任務書照用同一份（通常一小時內交回），也要守額度時段；sol 留給範圍小、路徑明確的題。原來的 sol 用 `subagent rm` 收（只是下表，stack 留著）。
+3. 大量對程式的盤點、大施工：經 eca-aos 同意改派 Claude 子 agent，任務書照用同一份（通常一小時內交回），也要守額度時段；sol 留給範圍小、路徑明確的題。原來的 sol 用 `subagent rm` 收（只是下表，stack 留著）。
 4. 任務書也有責任：一張單塞八段題目、先要它讀六份必讀，會更慢（照上面「任務書」）。
 
 ## 縮工具清單之前先量它佔提示的幾成；快取命中低先看 session id

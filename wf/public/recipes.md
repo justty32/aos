@@ -9,8 +9,8 @@
 <!-- wf-nav -->
 | 要做的事 | 做法（一行）與細節 |
 |---|---|
-| 掛一隻 gpt 的 agent-fsm 隊員 | `agent_def new` 範本 agent-fsm（`llm.json` 是 `{"model":"sol-high"}`，`.env` 或 `envs` 帶 `AOS_LLM_KERNEL`）→ `subagent add` 帶 `limits`。[aos-teams 第 3 件](../workflows/dispatch/aos-teams.md)、[skyrim-agentctl 03](../../proto8/thinking/2026-11/14/skyrim-agentctl/03-隊形心得.md) |
-| 派蒐集員或審稿員 | 範本 agent-fsm 蓋上 `kits/gather/` 的 system、tools、llm、.env；沒有 shell；任務書不附必讀清單（聽說）。[kits](../workflows/dispatch/kits/README.md)、[card](../workflows/dispatch/kits/card.md) |
+| 掛一隻 gpt 的 agent-fsm 隊員 | `agent_def new` 範本 agent-fsm（`llm.json` 是 `{"model":"sol","reasoning_effort":"high"}`；`AOS_LLM_KERNEL` 由上層 daemon 那一列傳下來，只有還沒改成 `~/aos-home` 一套的機器才用 `.env` 或 `envs` 帶）→ `subagent add` 帶 `limits`。[aos-teams 第 3 件](../workflows/dispatch/aos-teams.md)、[skyrim-agentctl 03](../../proto8/thinking/2026-11/14/skyrim-agentctl/03-隊形心得.md) |
+| 派蒐集員或審稿員 | 範本 agent-fsm 蓋上 `kits/gather/` 的 system、tools、llm（`.env` 不用抄）；沒有 shell；任務書寫知識庫的絕對路徑、不附必讀清單（聽說）。[kits](../workflows/dispatch/kits/README.md)、[card](../workflows/dispatch/kits/card.md) |
 | 命名、資源上限 | `<eca名>-<角色>-<編號>`；add 帶 `limits`，sol 預設 `{"mem_mb":1024,"files":256}`、`procs` 別設。[07](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)、[sol-crew「rlimit」](sol-crew.md#rlimit-實測與腦額度) |
 | 讓隊員一路做到完 | 定義掛 `goal`；任務書寫「第一步 goal set；輸出檔寫完才可以用純文字回答」。skyrim-agentctl 03「摩擦」 |
 | 唯讀蒐集的隊員擋寫檔 | 不給 shell 與刪除包；`write`／`edit` 加 `before_tool` hook 只准寫指定夾（exit 10＝擋）。skyrim-agentctl 03「實際的隊形」 |
@@ -21,7 +21,7 @@
 | 給 sol 寫任務書 | 一張單一件事、寫明可改的檔；事實與設計分開；「讀完同一回合就動手」；施工員寫死五句。[sol-crew](sol-crew.md) |
 | 施工的 sol 要不要給必讀清單 | system 放清單、末行自報；蒐集員、審稿員不用給（使用者 11-14 裁按角色分）。[sol-crew「必讀清單」](sol-crew.md) |
 | sol 被 guard 擋了唯讀查詢 | 不叫它改字面繞；隊長代跑、結果寫成檔叫它讀。[sol-crew「guard」](sol-crew.md) |
-| sol 開工半小時幾乎沒動 | history 只有十幾行＝在排隊；小題自己讀，大題經部長同意改派 Claude 子 agent。[sol-crew「排隊」](sol-crew.md) |
+| sol 開工半小時幾乎沒動 | history 只有十幾行＝在排隊；小題自己讀，大題經 eca-aos 同意改派 Claude 子 agent。[sol-crew「排隊」](sol-crew.md) |
 | 派 Claude 子 agent 做長事 | 前景跑、寫 `progress.md`、可寫路徑只一個絕對路徑（/tmp 也不行）、結果放最後一則回答。[claude子agent](claude子agent.md) |
 
 ## 交件與驗收
@@ -59,7 +59,7 @@
 | 量文件好不好查 | 請沒看過的 agent 從入口只跟連結走十來題，記走不走得到與讀了多少。[改文件與知識庫](改文件與知識庫.md) |
 | 給外人看的文件、要公開的檔 | doc-run 照字實跑、scan 掃個人值、截圖加 `--virtual-time-budget`。[發佈前檢查](發佈前檢查.md) |
 | 派小修、蓋到舊裁定 | 先 `git log <基底>..HEAD -- <檔>`；會蓋掉使用者舊裁定先找原文，找不到寄 decide。[設計與查證](設計與查證.md) |
-| 看活樹、查祕密 | 路徑先列給部長點名；值不落地、只印檔名。[活樹旁邊](活樹旁邊.md) |
+| 看活樹、查祕密 | 路徑先列給 eca-aos 點名；值不落地、只印檔名。[活樹旁邊](活樹旁邊.md) |
 | 寫紀錄或訂截止時刻 | `peek_now_time {"local": true}`；信的 `sent_at` 是 UTC。[等隊員與讀信](等隊員與讀信.md) |
 | 寫定義、換定義 | eca 關自動記憶；換定義用 `ctl set-def`（subagent 掛的不行）。[定義與換定義](定義與換定義.md) |
 | 帶 gate 的樹、獨佔資源上鎖 | 主導每輪做短、下屬 `KernelFailed` 等十幾秒重試；遊戲、桌面由主導點名給鎖。[gate與鎖](gate與鎖.md) |

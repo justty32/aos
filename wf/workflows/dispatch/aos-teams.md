@@ -8,7 +8,7 @@
 
 - **頂層 agent 叫 `eca-aos`**（`repo-aos` 是 daemon 表上那一列的名字）**，只當調度者**：只跟使用者交流、派工、收件，不親自做內容；**可以親手做的只有三樣**：活狀態（progress、HANDOFF、筆記）、把使用者的話抄進規矩、`wf/org`，其餘照派（11-23 第 7 題）；收線＝讀隊長附的證據逐條對、不重跑，真要獨立驗證就派一條便宜的線去跑；想順手做小事時先問能不能一句話交給別人（使用者 08-30「頂層不要做太多事」、09-24「你不要自己做事，盡量交給 agent」）。**工作室沒有部長**（11-23 第 6 題）：放行與回報的對象是 eca-aos，回報寄誰仍以任務書為準。（11-14 公司那台舊樹的隊形是頂層底下分幾個部、各一位 fable 部長，線的回報與 commit 放行找部長；那是當時的安排，現在不用。）
 - **現在是固定的位子加按件派**：kb、templates、core、frontend 幾個位子全是 eca claude，有活才掛，沒掛時由 eca-aos 派 Claude 子 agent 讀角色卡與筆記代班；不屬於任何位子的事按件派（見 [wf/org](../../org/README.md)）。以前「一條線＝一隻 opus 或 fable 的 eca、名字 `ok-<線名>`」是舊隊形，要再用得使用者說。不管位子還是按件派的 eca：工作區 11-22 起是 repo 根 `~/repo/aos`，自己的草稿、任務書、定義夾放私有地盤 `wf/ws/<上層>/<名字>/`，不進 git 的放地盤裡的 `temp/`，見 [wf/ws](../../ws/README.md)；掛在頂層的 kernel_gate 底下，自己也可以開 gate、在底下掛隊員。
-- **打雜工＝sol 的 agent-fsm**（腦走本地 LiteLLM，pack `sol-high`）：蒐集、逐條核對、不必判斷的雜活，以及照對照表改名、搬檔、套格式這類機械式施工；**寫程式與重要的施工用 Claude**（使用者 11-23「蒐集算打雜，但施工這塊，如果是重要的部分，那確實還是得用claude」「尤其是寫程式」；第 4 題）。打雜工用到才掛，掛不起來才由 sonnet 的 Claude 子 agent 補位（第 5 題）。**不用 terra、不走 codex**（使用者 11-14「不要terra，盡量用sol，把sol作爲sonnet來用」「不要走codex」）。分工見 [wf/org](../../org/README.md)。
+- **打雜工＝sol 的 agent-fsm**（腦走本地 LiteLLM，`llm.json` 是 `{"model": "sol", "reasoning_effort": "high"}`）：蒐集、逐條核對、不必判斷的雜活，以及照對照表改名、搬檔、套格式這類機械式施工；**寫程式與重要的施工用 Claude**（使用者 11-23「蒐集算打雜，但施工這塊，如果是重要的部分，那確實還是得用claude」「尤其是寫程式」；第 4 題）。打雜工用到才掛，掛不起來才由 sonnet 的 Claude 子 agent 補位（第 5 題）。**不用 terra、不走 codex**（使用者 11-14「不要terra，盡量用sol，把sol作爲sonnet來用」「不要走codex」）。分工見 [wf/org](../../org/README.md)。
 - **gpt 系不做設計決策**（使用者 11-07，長期；原話在 [03](aos-teams/03-使用者原話.md)）：11-07 定的是能做照已定圖紙寫碼、寫文件、雜活、網頁施工（內容題目由隊長定），11-23 起再收窄成上一條的打雜（寫程式與重要的施工用 Claude）；審查只挑實作錯、與圖紙不符。設計、架構、判斷設計對錯由 opus／fable 做，寫進任務書。
 - **「簡單工作」的界線**（使用者 11-06 確認：「1.對。2.是。」）：雜活、純文字小改、查找盤點、跑指令收結果才算簡單，才給 sonnet（補位時）。**碰程式碼邏輯、改寫使用者的概念／規範條文不算簡單**，不給 sonnet（使用者 09-30「不要 sonnet」「就 opus」；見 [common/user「子 agent 模型」](../common/user.md)）。
 - **一般 agent 再派子 agent，模型隨意**（使用者 11-06 第 1 句）；sol 隊員一張單只做一件事，要多人由派工的人多掛幾隻。
@@ -46,9 +46,9 @@ aos-user send --kind decide --from ok-x \
 
 ### 3. 掛 sol 隊員
 
-`subagent` 這支工具不是每隻 eca 都有：現成的 eca 範本只掛到 `agent_def`（def 包），線用的定義（公司那台舊樹 `~/aos-home/agents/` 的 `opus-kernel`、`fable-kernel`；家機 11-22 起新做的定義放 `wf/tree/` 或上層的地盤 `wf/ws/…`，兩處現在都還沒有這兩份）才多掛了 `subagent`、`kernel_gate` 兩包。`self_state {"parts":["tools"]}` 看得到自己有沒有。
+`subagent` 這支工具不是每隻 eca 都有：現成的 eca 範本只掛到 `agent_def`（def 包）。公司那台 11-23 的現況：eca-aos 用 `self_tools add` 自己加了 `subagent` 與 `agent_def` 兩支（`{"$env":"AOS_HOME","$path":"/lib/tools/agent/subagent"}`，`agent_def` 同理）。以前線用的定義（公司那台舊樹 `~/aos-home/agents/` 的 `opus-kernel`、`fable-kernel`）多掛了 `subagent`、`kernel_gate` 兩包，那個夾 11-23 已經不在；家機 11-22 起新做的定義放 `wf/tree/` 或上層的地盤 `wf/ws/…`，兩處現在都還沒有這兩份。`self_state {"parts":["tools"]}` 看得到自己有沒有。
 
-1. `agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}`，把 [kits/gather/](kits/README.md) 的 `system.txt`、`tools.json`、`llm.json`、`.env` 蓋過去，`agent_def check`。
+1. `agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}`，把 [kits/gather/](kits/README.md) 的 `system.txt`、`tools.json`、`llm.json` 蓋過去，`agent_def check`（`.env` 不用抄，`AOS_LLM_KERNEL` 由上層 daemon 那一列傳下來，見 [kits/card](kits/card.md) 第 1 步）。任務書寫知識庫的絕對路徑（card 第 3 步）。
 2. `subagent {"op":"add","def":"defs/gather","name":"ok-x-sol-1","ws":"wf/ws/<上層>/<你的名字>/temp/ok-x-sol-1","limits":{"mem_mb":1024,"files":256}}`（`ws` 從你的工作區算；11-22 起 eca 的工作區是 repo 根，照舊寫 agent 名會落在 repo 根底下，所以放進你自己地盤的 `temp/<agent 名>/`——11-23 提案，沒試過；`procs` 別設；開檔的鍵是 `files`）。
 3. 任務書一張單只做一件事：唯一目標、可讀可寫的路徑、交付物、完成條件；寫明「讀完同一回合就動手」。
 4. 驗收讀它的 `out/`，逐條對證據；它不 commit。收隊 `subagent rm`（stack 留著）。完整步驟：[kits/card](kits/card.md)、心得 [sol-crew](../../public/sol-crew.md)。
