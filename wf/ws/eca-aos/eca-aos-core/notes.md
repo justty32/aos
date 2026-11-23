@@ -62,3 +62,11 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - `py/tools/agent/user_send/tests` 的 `test_tool_missing` 在複本 `source env.sh` 之後一定失敗（PATH 上有真的 `aos-user`），改之前就這樣，不是新壞的。
 - 在 Bash 工具裡（zsh）直接寫 `for v in $(compgen -e …)` 不可靠，清 `AOS_*` 一律寫成 `#!/bin/bash` 腳本再跑。
 - 一份文件兩項都要改又要一項一個 commit：先把完整版改在複本，回 repo 時先只套第一項的那幾段交掉，再整份抄回去交第二項。
+
+### 讀 daemon 表找定義夾：py/aos/daemon_table.py（11-23 第四件）
+
+- guard 的 scope.py 與 ws_write 共用 `aos.daemon_table`（`table_rows`、`definition(env, stack=)`、`TableError`）。scope.py 用兩支薄包裝把 `TableError` 轉成 `ScopeError`，guard 的測試照舊改 `scope.time.sleep`、看 `scope.TABLE_RETRY_S`。
+- scope.py 找 aos 套件時自己插 `sys.path`、import 完自己拿掉：guard.py 與 test_scope 都是「插第 0 格、import scope、pop(0)」，插在第 0 格不拿掉會被它們 pop 錯格。
+- 真 daemon 的暫存樹做法：`AOS_STACK=$T/d/ aos-daemon daemon.json &`、等 `$T/d/state.json`、`AOS_DAEMON=$T/d aos-agent ctl add --name me <定義>`（不用 llm kernel，agent 起來閒著），收工 `aos-daemon-ctl -d $T/d shutdown`。腳本 `~/.aos/scratch/eca-aos-core-1123/repro4.sh`。
+- 讀表一次約 0.2 ms（一列）；經 aos-tools 整次呼叫 125～155 ms，差異在雜訊裡。
+- user_send 的 `test_tool_missing` 11-23 修好（PATH 去掉放著 aos-user 的夾），上一節那條坑已不成立。

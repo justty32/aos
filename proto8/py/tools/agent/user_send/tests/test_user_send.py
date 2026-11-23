@@ -89,7 +89,10 @@ class UserSend(unittest.TestCase):
 
     def test_tool_missing(self):
         os.remove(self.tmp / "bin" / "aos-user")
-        r = self.run_tool({"kind": "fyi", "title": "done", "what": "x"})
+        # 11-23: drop every PATH folder that holds an aos-user (a clean copy with env.sh sourced has the real one in bin/)
+        path = os.pathsep.join(d for d in self.env["PATH"].split(os.pathsep)
+                               if not os.access(os.path.join(d or ".", "aos-user"), os.X_OK))
+        r = self.run_tool({"kind": "fyi", "title": "done", "what": "x"}, PATH=path)
         self.assertEqual(r.returncode, 1)
         self.assertIn("user_send: error: ToolMissing aos-user not found", r.stdout)
 
