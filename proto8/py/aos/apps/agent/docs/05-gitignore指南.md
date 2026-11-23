@@ -115,7 +115,7 @@ git diff --name-only HEAD -- "$STACK"                                           
 - 被忽略的檔不受 git 保護：`git clean -fdx` 會把整個 stack 刪掉；`git stash -u` 不收它；`git pull`、`checkout` 帶來同名的檔時會直接蓋過本機還沒交的版本。所以離開前先交，到了之後 pull 前後各比一次再起。
 - 一個 repo 同時只能有一台在跑這個 stack；兩台都跑過再合，只能整份挑一邊。
 
-aos 這個 repo 11-22～11-23 這樣放過（根 `.gitignore` 的 `/_stack/`；換台工具 `wf/tools/stack-commit` 把上面幾步包成 `leave`／`arrive`，並多查 daemon 有沒有停、llm kernel 還有沒有沒回的信、有沒有金鑰樣式）。11-23 起改成只忽略、不帶走：repo 根的 `/.stack/` 整個不進 git，每台各有各的 stack，換台工具退場（使用者 11-23「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」）。這種放法沒有跑過下一段那五種測試樹。
+aos 這個 repo 11-22～11-23 這樣放過（根 `.gitignore` 的 `/_stack/`；換台工具 `wf/tools/stack-commit` 把上面幾步包成 `leave`／`arrive`，並多查 daemon 有沒有停、llm kernel 還有沒有沒回的信、有沒有金鑰樣式）。11-23 起改成只忽略、不帶走：repo 根的 `/.stack/` 整個不進 git，每台各有各的 stack，換台工具退場（使用者 11-23「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」），同天已刪（使用者 11-23「換機工具那幾個檔、幾份 .bak-1123* 備份。 <- 都刪掉。」）。這種放法沒有跑過下一段那五種測試樹。
 
 A、B 兩種擺法已用五種獨立 git 測試樹驗過：原名、改名、多定義與巢狀 stack、外置 stack、外置定義。A 保留測試中的所有持久檔、定義與專案檔；B 保留 `.env`、`tmp/`、`state.json`，同時重現上述漏擋與 `stderr.txt` 撞名。這是 git 規則測試，daemon 真正跑動與 clone 接續另無專用回歸工具（原 `extras/gitignore-check` 已於 11-13 刪除）。
 

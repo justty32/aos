@@ -16,13 +16,13 @@
 
 **使用者換 session 前的話（逐字）**：「把樹停掉，我自己開。然後你這邊收尾，我要換session了。順便告訴我怎麼起樹」。
 
-**授權（11-23 當場）**：派工照「普通工作交給opus，簡單工作或雜活交給sonnet」「agent做事前都要讀過wf/規矩，簡單工作或雜活除外」「agent可以再派子agent，模型隨意」。**push 還沒給**：他說「我今天五點下班，下班前再統一push」，要他本人再說一次才推。刪檔沒給（換機工具他說「先留著」）。頂層是 Windows 上的 Claude Code，不在 aos 樹裡；實際工作在 WSL 的 `~/repo/aos`，Windows 那份 clone 不動。
+**授權（11-23 當場）**：派工照「普通工作交給opus，簡單工作或雜活交給sonnet」「agent做事前都要讀過wf/規矩，簡單工作或雜活除外」「agent可以再派子agent，模型隨意」。**push 還沒給**：他說「我今天五點下班，下班前再統一push」，要他本人再說一次才推。刪檔只給了換機工具與殼設定備份（「換機工具那幾個檔、幾份 .bak-1123* 備份。 <- 都刪掉。」，已刪）。頂層是 Windows 上的 Claude Code，不在 aos 樹裡；實際工作在 WSL 的 `~/repo/aos`，Windows 那份 clone 不動。
 
 **這台現況**（線 `two-trees-1123` 改過）：
 - 一棵樹，根在 `~/aos-home`（根定義 `~/aos-home/root/`、stack `~/aos-home/.stack`，普通 Claude 設定檔），表上四列：`_clock`、`_sweeper`、`llm`、`repo-aos`。
 - `llm`：llm kernel，定義 `~/aos-home/llm`、stack `~/aos-home/.stack/procs/llm`（＝`AOS_LLM_KERNEL`），端點指 `localhost:4000/v1`（多加了一包 `sol-high`）。
 - `repo-aos`：repo 那棵（子 daemon），定義 `wf/tree/root`（沒改）、stack 照舊 `~/repo/aos/.stack`，這一列帶 `CLAUDE_CONFIG_DIR="$HOME/.claude-alt"`（第二個帳號，他已登入）與 `AOS_LLM_KERNEL`。底下掛了 `eca-aos`（範本 `eca-claude`，筆記 `wf/ws/eca-aos/notes.md`），**從沒開過畫面、沒問過話**。
-- 全停了，沒有 aos 行程。登入殼是 zsh（`~/.zshrc`、`~/.bashrc` 都有 aos 段；`AOS_LLM_KERNEL` 改指新路徑，備份 `.bak-1123c`）。舊的 `~/aos-home/.llm-stack/` 不用了，沒刪。
+- 全停了，沒有 aos 行程。登入殼是 zsh（`~/.zshrc`、`~/.bashrc` 都有 aos 段；`AOS_LLM_KERNEL` 改指新路徑；`.bak-1123*` 備份 11-23 已刪）。舊的 `~/aos-home/.llm-stack/` 不用了，沒刪。
 - LiteLLM 用他自己開的 `~/repo/llm_proxy` 根那套（1.87.5、不用 key），不是 pinned；**4000 埠一直沒在聽，真模型沒驗過**。
 
 **要改成兩棵樹**（使用者換 session 前又說，逐字）：「應該說，我預期會有兩棵樹，一棵是這台的，在~/aos-home，底下掛著llm kernel。另一棵是repo aos的，啟動的時候會是CLAUDE_CONFIG_DIR=alt AOS_LLM_KERNEL=...」接著又補（逐字）：「家機那塊確實也要變成~/aos-home一套，底下是llm_kernel，不過repo aos這個樹會變成~/aos-home底下的一個proc。這台WSL也可以這樣嗎？」——**可以，已照這樣建好**（線 `two-trees-1123`）：先在暫存樹試通，再動真的；試起過一次（三層的表都 running、fake 回 `FAKE ANSWER to: hello, nested tree`、eca-aos 拿到 alt 帳號與新的 `AOS_LLM_KERNEL`、`~/aos-home` 的根與 llm kernel 沒有 `CLAUDE_CONFIG_DIR`），停、再起、再停也都對。家機還是舊樣子，步驟在 [03-換機「家機照做」](workflows/dev-env/03-換機.md#家機照做從舊樣子改成同一套做一次)。
@@ -41,7 +41,7 @@ aos-daemon-ctl -d ~/aos-home/.stack shutdown                                    
 **今天做完的（都沒 push，WSL 的 main 比 origin 多這些）**：
 - `7bf52abd1` 新範本 `proto8/templates/eca-claude-alt`（第二帳號版 eca-claude，可選，活樹沒用它）。
 - `1a1de1921` `03-換機.md`：起根那行帶 `CLAUDE_CONFIG_DIR`，範本可選。
-- `dfb94ecd2` `_stack` 改名 `.stack`、git 忽略、換機那套退場；`03-換機.md` 改寫成[每台怎麼設、怎麼起樹](workflows/dev-env/03-換機.md)；換機工具標退場、沒刪。
+- `dfb94ecd2` `_stack` 改名 `.stack`、git 忽略、換機那套退場；`03-換機.md` 改寫成[每台怎麼設、怎麼起樹](workflows/dev-env/03-換機.md)；換機工具標退場；11-23 已刪（使用者原話見上）。
 - `34446887a` progress 兩條；`27ed65ae6` 全景頁 systemd 範本路徑改 `.stack`。
 - 收尾線 `wrapup-1123-am`：本條、當天紀錄、中文版 `agents.md` 跟上、progress 兩條新的。
 
@@ -56,7 +56,7 @@ aos-daemon-ctl -d ~/aos-home/.stack shutdown                                    
 - 真模型與 alt 帳號都還沒走過一輪（progress `company-wsl-1123-verify`）。
 - `sol-high`：kits 寫 `sol-high`，範本 11-21 起是 `sol` 加 reasoning_effort（progress `sol-high-pack`）。
 - `02-模型端點.md`、`01-跨機與外部工具.md` 寫公司用 pinned 那套；今天用根那套，長期怎樣他沒說，**先不改**。
-- `install.py` 結尾印的下一步還叫人抄進 `~/aos-home`；這台 `aos-user init` 沒查；`commit_queue.py` 的 `--stack-commit` 配套沒收。
+- `install.py` 結尾印的下一步還叫人抄進 `~/aos-home`；這台 `aos-user init` 沒查。
 - `wf/user/待答-1122.md` 第 1、2 題（換機、`_stack` 帶哪些檔）已不適用；那是他的地盤，沒改。
 - Windows 那份 clone 的 `wf/HANDOFF.md` 有一段沒交的舊修改（11-20 artifact 備註，早在 `33b0e59b9` 交過）。push 後那份 pull 會撞，要他自己跑 `git checkout -- wf/HANDOFF.md`。
 

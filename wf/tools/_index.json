@@ -35,9 +35,6 @@
  "fmt-vars.json": {
   "description": "設定（鍵：contract、vars、namespaces）"
  },
- "home-move-1122": {
-  "description": "home-move-1122"
- },
  "index_check.py": {
   "description": "查 aos 的夾 index（`_index.json`，沒有才看 `_index.md`）寫得對不對：形狀、列的東西在不在、`index` 欄指不指得到、子夾的 index 有沒有連過去。"
  },
@@ -76,12 +73,6 @@
  },
  "quiet_tick.py": {
   "description": "on_clock hook（每 60 秒）：清淨時段結束後，quiet/deferred.jsonl 有東西就合成一則「[aos] quiet_over: …」寄進 agent 的 queue、清空。"
- },
- "stack-commit": {
-  "description": "11-23 起退場：stack 不再跟著 git 搬（使用者「直接變成.stack，然後把它git ignore，就這樣。"
- },
- "stack_commit.py": {
-  "description": "11-23 起退場：stack 不再跟著 git 搬（使用者「直接變成.stack，然後把它git ignore，就這樣。"
  },
  "tabledb.py": {
   "description": "同質列表資料檔（.json / .csv）的統一 CRUD 與連結解析。"
