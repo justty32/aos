@@ -28,9 +28,14 @@ def _text_parts(content, kind):
 
 
 def _tool(tool):
-    """chat 的 {"type": "function", "function": {...}} → Responses 的 {"type": "function", "name", ...}；其他種類原樣。"""
+    """chat 的 {"type": "function", "function": {...}} → Responses 的 {"type": "function", "name", ...}；其他種類原樣。
+    沒寫 strict 的 function tool 補 "strict": false：Responses 沒帶 strict 就當 true，把每個屬性都改成必填、
+    模型只好把選填參數硬填上（11-23 線 eca-aos-core-1123 對 LiteLLM 的 chatgpt 後端實測：回顯 strict true、
+    required 列滿全部屬性；帶 false 就只給要的參數）。chat completions 的 strict 預設本來就是 false，補上才跟它一致。"""
     if isinstance(tool, dict) and tool.get("type") == "function" and isinstance(tool.get("function"), dict):
-        return dict({"type": "function"}, **tool["function"])
+        tool = dict({"type": "function"}, **tool["function"])
+    if isinstance(tool, dict) and tool.get("type") == "function" and "strict" not in tool:
+        tool = dict(tool, strict=False)
     return tool
 
 

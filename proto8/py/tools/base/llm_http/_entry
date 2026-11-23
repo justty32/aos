@@ -18,7 +18,8 @@ usage: llm_http [--key-env NAME] < ARGUMENTS.json   (a tool: run it with aos-exe
 Endpoint function: POST the request to an OpenAI-compatible {url}/chat/completions
 and print {"message", "usage", "model"} trimmed from the reply.
 endpoint.api "responses" sends it to {url}/responses instead (converted from the chat
-shape; the reply and usage are converted back). reasoning_effort (top level of stdin,
+shape; the reply and usage are converted back; a function tool without strict is sent
+with strict false, so optional parameters stay optional). reasoning_effort (top level of stdin,
 set by the llm kernel) is the request's reasoning_effort parameter with "chat", and a
 configuration_update item at the end of the input with "responses" (keeps the prompt cache).
 With --key-env NAME, read the Bearer key from this process's environment variable NAME;

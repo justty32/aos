@@ -59,12 +59,23 @@ class Convert(unittest.TestCase):
             {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "and now"},
                                                             {"type": "input_image", "image_url": "data:x"}]},
             {"type": "configuration_update", "reasoning": {"effort": "high"}}])
-        self.assertEqual(out["tools"], [{"type": "function", "name": "peek", "parameters": {"type": "object"}}])
+        self.assertEqual(out["tools"], [{"type": "function", "name": "peek", "parameters": {"type": "object"},
+                                         "strict": False}])
         self.assertEqual(out["tool_choice"], {"type": "function", "name": "peek"})
         self.assertEqual(out["max_output_tokens"], 5)
         self.assertEqual((out["model"], out["temperature"], out["litellm_session_id"]), ("m", 0.2, "s"))
         for key in ("messages", "max_tokens", "reasoning"):
             self.assertNotIn(key, out)
+
+    def test_function_tools_without_strict_get_strict_false(self):
+        params = {"type": "object", "properties": {"query": {"type": "string"}, "limit": {"type": "integer"}}}
+        out = responses_api.body({"messages": [], "tools": [
+            {"type": "function", "function": {"name": "a", "parameters": params}},
+            {"type": "function", "function": {"name": "b", "parameters": params, "strict": True}},
+            {"type": "function", "name": "c", "parameters": params},
+            {"type": "web_search"}]})
+        self.assertEqual([tool.get("strict", "absent") for tool in out["tools"]], [False, True, False, "absent"])
+        self.assertEqual(out["tools"][0]["parameters"], params)           # parameters untouched: no required added
 
     def test_without_effort_there_is_no_update_item_and_the_prefix_is_the_same(self):
         request = {"messages": [{"role": "user", "content": "hi"}]}
