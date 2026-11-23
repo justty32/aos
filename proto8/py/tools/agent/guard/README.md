@@ -14,7 +14,7 @@ It checks: file-tool paths against the write scope (below) and the path rules (`
 
 Derived from fsm-guard (commit 313ce20ec): same checks and the same tests (they hold the bypasses found in the review rounds), with neutral messages and one source for the write scope.
 
-Files: `_entry` (the hook handler; `_entry --scope` prints the write scope), `guard.py` (the checks, importable), `scope.py` (the write scope, importable; `python3 scope.py` prints it), `tests/`.
+Files: `_entry` (the hook handler; `_entry --scope` prints the write scope), `guard.py` (the checks, importable), `scope.py` (the write scope, importable; `python3 scope.py` prints it; it reads the daemon table through `aos/daemon_table.py` in the aos package, the same code ws_write uses to find the caller's definition), `tests/`.
 
 ## Tools it knows
 

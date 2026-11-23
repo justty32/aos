@@ -236,6 +236,13 @@
   },
   {
    "kind": "lib",
+   "module": "aos.daemon_table",
+   "unit": "proto8/py/aos/daemon_table.py",
+   "used_by": "proto8/py/tools/agent/guard proto8/py/tools/base/ws_write",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
    "module": "aos.declared_files",
    "unit": "proto8/py/aos/declared_files.py",
    "used_by": "proto8/py/aos/agent_spec_parts.py proto8/py/aos/agentlib proto8/py/aos/apps/agent proto8/py/tools/agent/agent_def proto8/py/tools/aos/shell_report proto8/templates/agent-fsm",
@@ -611,6 +618,13 @@
    "unit": "proto8/py/tools/agent/goal",
    "used_by": "",
    "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/guard",
+   "used_by": "",
+   "uses": "aos.daemon_table"
   },
   {
    "kind": "tool",
@@ -1107,7 +1121,7 @@
    "module": "",
    "unit": "proto8/py/tools/base/ws_write",
    "used_by": "",
-   "uses": "aos.tool_io"
+   "uses": "aos.daemon_table aos.tool_io"
   },
   {
    "kind": "template",

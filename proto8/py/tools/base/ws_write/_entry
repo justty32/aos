@@ -7,11 +7,13 @@ import tempfile
 HELP = """\
 usage: ws_write < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Write text only inside $AOS_WS: create (default), append, or replace.
-Paths inside $AOS_STACK or $AOS_CD, inside the folder that holds $AOS_STACK (other agents' stacks;
-not checked when that folder is the workspace or above it), or inside any .stack folder are refused
-even when they are inside the workspace. Called through aos-tools, $AOS_STACK here is the caller's
-stack (the tool's own cell minus $AOS_STACK_IN_CALLER), not the cell; $AOS_CD is then this tool's
-folder, so the caller's definition folder is not checked.
+Paths inside $AOS_STACK or $AOS_CD, inside the agent's definition folder (the def of the row on the
+daemon table $AOS_DAEMON whose stack is $AOS_STACK), inside the folder that holds $AOS_STACK (other
+agents' stacks; not checked when that folder is the workspace or above it), or inside any .stack folder
+are refused even when they are inside the workspace. Called through aos-tools, $AOS_STACK here is the
+caller's stack (the tool's own cell minus $AOS_STACK_IN_CALLER), not the cell, and $AOS_CD is this
+tool's folder: the caller's definition is found only through the daemon table, so without $AOS_DAEMON,
+without a table or without a row for that stack it is not checked. A table that cannot be read = TableBad.
 Content is limited to 262144 UTF-8 bytes; missing parent folders are created.
 Result on stdout. On error: one line "ws_write: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -24,7 +26,7 @@ while _lib != os.path.dirname(_lib):
     _lib = os.path.dirname(_lib)
 sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")) else [])
 try:
-    from aos import tool_io
+    from aos import daemon_table, tool_io
 except ModuleNotFoundError as error:
     if error.name != "aos":
         raise
@@ -57,6 +59,13 @@ _stack = tool_io.caller_stack()
 for _var, _own in (("AOS_STACK", _stack), ("AOS_CD", os.environ.get("AOS_CD"))):   # the workspace may contain them: never write there
     if _own and _inside(path, os.path.realpath(_own)):
         die("PathBad", "%s is inside $%s (the agent's own stack or definition)" % (args["path"], _var))
+try:                                                # the definition: the def of the daemon table row whose stack is ours
+    _def = daemon_table.definition(stack=_stack) if _stack else None   # (same lookup as the guard's write scope)
+except daemon_table.TableError as error:
+    die(error.code, error.why)
+if _def and _inside(path, _def):
+    die("PathBad", "%s is inside the agent's own definition (%s, the def of its row on the daemon table)"
+        % (args["path"], tool_io.place(_def)))
 if _stack:                                          # other agents' stacks: the folder that holds the own stack, and any .stack folder
     _procs = os.path.dirname(os.path.realpath(_stack))
     _real_ws = os.path.realpath(ws)

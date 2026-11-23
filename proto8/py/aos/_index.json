@@ -40,6 +40,9 @@
  "daemon_ctl": {
   "description": "aos-daemon-ctl 的共用本體（aos-agent 也 import）：找 daemon 與讀狀態表、掛子信、寄信等回信、控制與停 daemon、poke 門鈴、問表檔位址"
  },
+ "daemon_table.py": {
+  "description": "read a daemon's procs_state.json from the files alone (no letter to the daemon or kernel): its rows as (stack, def), and the definition folder of the…"
+ },
  "declared_files.py": {
   "description": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。"
  },

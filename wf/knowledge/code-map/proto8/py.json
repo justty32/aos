@@ -204,6 +204,7 @@
     "state_path.py": "daemon_ctl 狀態位址：設了 AOS_KERNEL 先寄查詢信問表檔在哪（問不到＝KernelFailed）、沒設照舊找 daemon；讀表吃表檔路徑，相對路徑照表檔所在夾解成絕對。",
     "table.py": "daemon_ctl 名單：尋找 daemon、解析狀態表、自檢子項與篩選已有 stack 的久未修改列。"
    },
+   "daemon_table.py": "read a daemon's procs_state.json from the files alone (no letter to the daemon or kernel): its rows as (stack, def), and the definition folder of the…",
    "declared_files.py": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。",
    "directive_value.py": "把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。",
    "env_file.py": "Read the shared dotenv subset without changing the process environment.",

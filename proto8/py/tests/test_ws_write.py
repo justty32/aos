@@ -104,6 +104,40 @@ class WorkspaceWriteTest(unittest.TestCase):
         ok = self.call(env=env, path="state/notes.md", content="ok")
         self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
 
+    def daemon_with_me(self, table=None):
+        """ws/state = a daemon stack whose table has me (stack procs/me, def ws/defs/me); env as aos-tools call gives it."""
+        daemon = self.ws / "state"
+        (daemon / "procs" / "me").mkdir(parents=True)
+        (self.ws / "defs" / "me").mkdir(parents=True)
+        (daemon / "procs_state.json").write_text(table if table is not None else json.dumps({"procs": {
+            "me": {"stack": "procs/me", "def": "../defs/me"}, "other": {"stack": "procs/other", "def": None}}}))
+        return dict(self.env, AOS_DAEMON=str(daemon) + "/", AOS_STACK=str(daemon / "procs" / "me" / "tools" / "ws_write") + "/",
+                    AOS_STACK_IN_CALLER="tools/ws_write", AOS_CD=str(self.root / "lib" / "ws_write"))
+
+    def test_through_aos_tools_the_definition_comes_from_the_daemon_table(self):
+        env = self.daemon_with_me()                          # 11-23 (user "1.補。"): $AOS_CD is the tool's folder here
+        for target in ("defs/me/system.txt", "defs/me/sub/tools.json"):
+            with self.subTest(target=target):
+                line = self.error("PathBad", env=env, path=target, content="no")
+                self.assertIn("inside the agent's own definition (defs/me, the def of its row on the daemon table)", line)
+                self.assertFalse((self.ws / target).exists())
+        self.ok("wrote 2 bytes to ok/fine.md", env=env, path="ok/fine.md", content="ok")
+        self.ok("wrote 2 bytes to defs/other.md", env=env, path="defs/other.md", content="ok")   # next to it is fine
+
+    def test_without_a_daemon_the_definition_is_not_checked(self):
+        env = self.daemon_with_me()
+        env.pop("AOS_DAEMON")                                # no daemon: nothing names the definition (documented)
+        self.ok("wrote 2 bytes to defs/me/system.txt", env=env, path="defs/me/system.txt", content="ok")
+        (self.ws / "state" / "procs_state.json").write_text(json.dumps({"procs": {}}))
+        env["AOS_DAEMON"] = str(self.ws / "state")           # a table without my row: not checked either
+        self.ok("appended 2 bytes to defs/me/system.txt", env=env, path="defs/me/system.txt", content="ok", mode="append")
+
+    def test_a_broken_daemon_table_is_table_bad(self):
+        env = self.daemon_with_me(table="{broken")
+        line = self.error("TableBad", env=env, path="ok/fine.md", content="no")
+        self.assertIn("procs_state.json of AOS_DAEMON", line)
+        self.assertFalse((self.ws / "ok").exists())
+
     def test_through_aos_tools_the_callers_stack_is_guarded(self):
         procs = self.ws / "state" / "procs"                  # 11-23: AOS_STACK is only the tool's cell under aos-tools call
         (procs / "me").mkdir(parents=True)

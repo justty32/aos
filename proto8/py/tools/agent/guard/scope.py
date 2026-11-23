@@ -6,6 +6,16 @@
 # anything else that needs the same list (for example a shell sandbox): python3 scope.py, or _entry --scope, prints it as JSON.
 import json, os, sys, time
 
+_lib = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))   # the aos package sits in py/ or lib/ above tools/
+while _lib != os.path.dirname(_lib) and not os.path.isfile(os.path.join(_lib, "aos", "__init__.py")):
+    _lib = os.path.dirname(_lib)
+sys.path.insert(0, _lib)
+try:
+    from aos import daemon_table   # the table reading (11-23: moved to py/aos so ws_write uses the same copy)
+finally:
+    sys.path.remove(_lib)          # leave sys.path as the importer had it (guard.py pops its own entry after importing us)
+from aos.daemon_table import STATE_FILE, TABLE_RETRY_S, environ, expand, under, daemon_folder   # noqa: E402,F401
+
 HELP = """usage: scope.py   (or: _entry --scope)
 Print the write scope of the calling agent as one JSON object on stdout and exit 0:
   {"version": 1,
@@ -60,9 +70,8 @@ DEF_MARKER = "interfaces.json"     # a folder holding this file is an agent defi
 #   `aos/cli/mcp.md#/Serving a registry`  "stack = --stack > $AOS_STACK > WS/.stack/"; aos/cli/parts/exec.md#
 #   "ws=/tmp/w stack=/tmp/w/.stack/"; aos/cli/_description.md#  the daemon defaults to "./.stack".
 # The marker of a daemon stack is procs_state.json (its table; the knowledge pages do not name the file: it is
-# the file read_table below and aos-agent ctl read, py/docs/05-commands/03-aos-daemon-ctl.md; its procs_requests key is the
+# the file aos/daemon_table.py and aos-agent ctl read, py/docs/05-commands/03-aos-daemon-ctl.md; its procs_requests key is the
 # ctl mailbox of aos/cli/parts/daemon.md#).
-STATE_FILE = "procs_state.json"
 STACK_PART = ".stack"
 
 
@@ -70,19 +79,6 @@ class ScopeError(Exception):
     def __init__(self, code, why):
         Exception.__init__(self, "%s %s" % (code, why))
         self.code, self.why = code, why
-
-
-def environ(env):
-    return os.environ if env is None else env
-
-
-def expand(p, env=None):
-    """"~" and "~/..." are the home folder (HOME from env); "~user" is left as written. Only for environment
-    and config entries: tools do not expand ~ in their arguments (the guard refuses such arguments)."""
-    if p == "~" or p.startswith("~/"):
-        home = environ(env).get("HOME") or os.path.expanduser("~")
-        return home + p[1:]
-    return p
 
 
 def resolve(p, ws, env=None, home=True):
@@ -96,10 +92,6 @@ def resolve(p, ws, env=None, home=True):
             raise ScopeError("WsMissing", "AOS_WS is not set, so the relative path %s cannot be placed" % raw)
         p = os.path.join(ws, p)
     return os.path.realpath(p)
-
-
-def under(path, roots):
-    return any(path == r or path.startswith(r.rstrip("/") + "/") for r in roots)
 
 
 def own_stack(env=None):
@@ -149,92 +141,20 @@ def deny_parts(cfg):
     return list(cfg.get("deny_parts", [".git"]))
 
 
-TABLE_RETRY_S = 0.05   # one more read after this pause, as daemon_ctl does (the main file and its shards are separate files)
-
-
-def _table_once(daemon):
-    with open(os.path.join(daemon, STATE_FILE), encoding="utf-8") as f:
-        procs = json.load(f).get("procs")
-    if isinstance(procs, dict) and isinstance(procs.get("$ref"), list):
-        out = {}
-        for ref in procs["$ref"]:
-            with open(os.path.join(daemon, ref), encoding="utf-8") as f:
-                out.update(json.load(f))
-        procs = out
-    if not isinstance(procs, dict):
-        raise ValueError("procs is not an object")
-    for row in procs.values():
-        # the daemon writes every row as an object with "stack" a non-empty string and "def" a string or null
-        # (directives go into "as_written"); anything else is a broken table, not a row to skip
-        if not isinstance(row, dict) or not isinstance(row.get("stack"), str) or not row["stack"] \
-                or not (row.get("def") is None or isinstance(row.get("def"), str)):
-            raise ValueError("a row has no stack string, or a def that is not a string or null")
-    return procs
-
-
-def read_table(daemon):
-    """The procs of a daemon's procs_state.json (shards {"$ref": [...]} joined); None when the file does not
-    exist (no daemon table: not started yet, or procs_state off). A file that exists but cannot be read or has a
-    broken row is read once more after a short pause; still bad = ScopeError TableBad (the caller blocks)."""
-    if not os.path.isfile(os.path.join(daemon, STATE_FILE)):
-        return None
-    for attempt in range(2):
-        try:
-            return _table_once(daemon)
-        except (OSError, ValueError, AttributeError, TypeError) as e:
-            if attempt:
-                raise ScopeError("TableBad", "the daemon table (%s of AOS_DAEMON) cannot be read: %s"
-                                 % (STATE_FILE, getattr(e, "strerror", None) or e))
-            time.sleep(TABLE_RETRY_S)
-
-
-def daemon_folder(env=None):
-    """realpath(AOS_DAEMON) (a relative value counts from AOS_WS, as the tools run there); None when unset or
-    when it is relative and AOS_WS is not set."""
-    e = environ(env)
-    d = e.get("AOS_DAEMON", "")
-    if not d:
-        return None
-    try:
-        return resolve(d, e.get("AOS_WS", ""), env)
-    except ScopeError:
-        return None
-
-
 def table_rows(env=None):
-    """[(stack, def)] for every row of the daemon table, each resolved (relative values count from the daemon
-    folder; a "#..." tail is cut); a null def is None. [] when AOS_DAEMON is unset or the table file does not
-    exist; a table file that cannot be read = ScopeError TableBad (read_table).
-    The table is read directly even when AOS_KERNEL is set: the file is there either way."""
-    daemon = daemon_folder(env)
-    if not daemon:
-        return []
-    procs = read_table(daemon)
-    if procs is None:
-        return []
-    rows = []
-    for row in procs.values():
-        got = []
-        for k in ("stack", "def"):
-            v = row.get(k)
-            v = v.split("#", 1)[0] if isinstance(v, str) else ""
-            got.append(os.path.realpath(os.path.join(daemon, v)) if v else None)
-        rows.append(tuple(got))
-    return rows
+    """daemon_table.table_rows (rows of the daemon table, [] without one); a broken table = ScopeError TableBad."""
+    try:
+        return daemon_table.table_rows(env)
+    except daemon_table.TableError as e:
+        raise ScopeError(e.code, e.why)
 
 
 def definition(env=None):
-    """The agent's definition folder: the "def" of the daemon table row whose stack holds AOS_STACK (the deepest
-    one, as aos-agent ctl who does). None when there is no daemon, no table, no row or no def."""
-    raw = environ(env).get("AOS_STACK", "")
-    if not raw:
-        return None
-    me = os.path.realpath(raw)
-    best, depth = None, -1
-    for st, d in table_rows(env):
-        if st and d and under(me, [st]) and len(st) > depth:
-            best, depth = d, len(st)
-    return best
+    """daemon_table.definition: the def of the table row whose stack holds AOS_STACK; None without one."""
+    try:
+        return daemon_table.definition(env)
+    except daemon_table.TableError as e:
+        raise ScopeError(e.code, e.why)
 
 
 def proc_stack(real):
