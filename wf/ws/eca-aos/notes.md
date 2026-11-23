@@ -199,3 +199,8 @@
 - **活樹 `_clock` 拿掉了**（15:01，`aos-daemon-ctl -d ~/repo/aos/.stack rm _clock`）：表上剩 `_sweeper`、`eca-aos`、kb、templates、core；`~/repo/aos/.stack/clock` 停在 15:01:08，根的鐘照走。
 - **全面 strict 格式不做**（使用者定）。
 - core 的 `json_search` 修完後還要再裝一次：他這句「現在跑」只算這一次，到時再問。
+- 寄給 mine_paper/main 一封後續（DONE `01795417310852511748.1369103.2529271`）：strict 修好裝上了、`json_search` 不要給 `key:""`。
+- **kb 位子第二件 DONE**（信 `01795417319648538654.1369906.2530151`，commit `9c80bad55`）：`aos/brain.md` 加一條（responses 的 pack 補 `strict:false`）、`aos/troubleshooting.md` 新標題「# The brain」記一條症狀（查法：grep lib 裡有沒有 `strict=False`）。它發現 lib 那支 mtime 是 14:53、以為有人先裝過：其實是 install.py 抄檔保留 mtime，ctime 是 15:01:05（我裝的）。回了它一封說明。
+- 此時：kb、templates 閒著；core 在做 `json_search`。
+- **core 位子第二件 DONE**（信 `01795418407179406444.1535835.2638904`，commit `733a5fecc`，我對過 diff）：`py/aos/json.py` 的 `do_search` 對 `key:""` 報 ArgumentsBad（`json_search`、`jsonx_search` 共用）；兩支 `_tooldef.json` 的 key 說明補「not empty」；測試加兩條；乾淨複本測試全過。**還沒裝**，要再問使用者一次 `install.py`。轉給 kb（REQUEST，改 `aos/tools/json_search.md` 第 5 行）。
+- 15:20：三個位子都交過兩件。core、templates 閒著，kb 在做最後一句。
