@@ -45,7 +45,7 @@
 **還在跑、回來要收的**
 1. `eca-aos-templates`：`daemon-root/README.md` 加指到 `daemon-sub` 的一句、兩份起手範本抄本跟上（工作樹已有它改的三份 README，等它自己交件、回 DONE）。之後要轉給它：`templates/kits/gather/tools.json`（review 那份相同）description 寫「cannot lift its own limits」說得比事實強。
 2. `eca-aos-core`：gpt 腦把選填參數當必填那件——先用最小的真模型呼叫實證 strict，成立才在 llm_http 補 `"strict": false` 並交件；**不跑 `install.py`**，它回信後我要問使用者什麼時候裝（裝＝換掉活樹的 `lib/`）。
-3. 一隻 Claude 子 agent（opus，背景）：拿掉 `wf/tree/root` 的 `_clock`（使用者「可以拿，不用馬上重啟」）。工作樹已有它改的 `wf/tree/root/*`、`wf/tree/README.md`；它不 commit，回來我看 diff 再交。**家機的坑**：這份定義進 git，家機現在還是把它單獨當根起、鐘靠這一列；所以家機 pull 之後要先做 03-換機「家機照做」再起樹（見下）。
+3. 拿掉 `wf/tree/root` 的 `_clock`（使用者「可以拿，不用馬上重啟」）：**定義與文件已交**（`wf/tree/root/*`、`wf/tree/README.md`、03-換機）。**活樹上那一列還在跑**：daemon 只在起來時讀一次 `daemon.json`，表上已有的列重起也會接回，要另外下 `aos-daemon-ctl -d ~/repo/aos/.stack rm _clock` 才會走（不用重起；這是對活樹下的指令，問過使用者才做）。暫存樹留在 `~/.aos/scratch/tree-noclock-1123/`。還沒跟上的文件（把 `wf/tree/root` 叫「根定義」或寫家機單獨起）：aos-teams/06 第 8、28 行、`wf/public/活樹旁邊.md` 第 5 行、`aos-teams.md` 第 62 行。
 4. `mine_arena/main` 的第二封信（六題「請 aos 考慮」）：事實部分已回（PROGRESS），**方向部分等使用者來談**，談完回它一封 DONE。使用者說過會親自找我談「上層怎麼約束下屬」與「agent 之間的資源分配」。
 
 **今天交了什麼**（都沒 push；每個的來龍去脈在筆記）：範本 `cli.json` 加 `"tui": "fullscreen"`（滾輪）；`wf/org` 與舊文件對齊；`aos-user` 的 send 自建信箱、逐題留言、公告；知識庫與 `wf/public` 跟上；新範本 `daemon-sub`；kb 位子自己交的 `74bedc157`。
@@ -57,7 +57,7 @@
 
 **家機 pull 之後要做的**
 1. 先停舊樹、改名（還叫 `_stack` 的話）：`aos-daemon-ctl -d ~/repo/aos/_stack shutdown`；`mv ~/repo/aos/_stack ~/repo/aos/.stack`；殼設定檔裡的 `repo/aos/_stack` 改成 `repo/aos/.stack`。
-2. **不要再單獨起 `wf/tree/root`**（11-23 起它不帶鐘，單獨起整棵樹沒有時鐘）：照 [03-換機「家機照做」](workflows/dev-env/03-換機.md#家機照做從舊樣子改成同一套做一次)改成 `~/aos-home` 那一套（根底下掛 llm kernel 與 repo 這棵）再起。
+2. **不要再單獨起 `wf/tree/root`**（11-23 起它不帶鐘，單獨起整棵樹沒有時鐘）：照 [03-換機「家機照做」](workflows/dev-env/03-換機.md#家機照做從舊樣子改成同一套做一次)改成 `~/aos-home` 那一套（根底下掛 llm kernel 與 repo 這棵）再起。 掛好之後下一次 `aos-daemon-ctl -d ~/repo/aos/.stack rm _clock`（舊表上的 `_clock` 列不會自己消失）。
 3. 全景頁若是 systemd 起的，unit 裡的 `_stack` 也要改。
 
 **坑**

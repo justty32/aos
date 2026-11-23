@@ -1,21 +1,7 @@
 {
-  "description": "Root daemon: owns the clock and the sweeper; agents join through procs_requests",
+  "description": "Sub-daemon of the repo's .stack: one row under the ~/aos-home root; no clock row (it follows the root's AOS_CLOCK), only its own sweeper; agents join through procs_requests",
   "procs_requests": "procs_requests",
   "procs": {
-    "_clock": {
-      "exec": {
-        "argv": [
-          "aos-clock",
-          {
-            "$env": "AOS_DAEMON",
-            "$path": "clock"
-          }
-        ]
-      },
-      "interval_ms": 1000,
-      "auto_restart": true,
-      "stuck_after_ms": 10000
-    },
     "_sweeper": {
       "exec": {
         "argv": [

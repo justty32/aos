@@ -41,7 +41,7 @@
   "index": "tools/_index.json"
  },
  "tree": {
-  "description": "wf/tree：`.stack` 那棵樹的根定義（只帶時鐘與清道夫）"
+  "description": "wf/tree：`.stack` 那棵樹的定義（子 daemon，不帶時鐘，只帶清道夫）"
  },
  "user": {
   "description": "wf/user：使用者專屬區"

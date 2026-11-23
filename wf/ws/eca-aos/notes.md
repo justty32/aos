@@ -175,3 +175,12 @@
 - 他說（逐字）：「你這邊我想compact」。HANDOFF 換成新的一條（eca-aos 寫的），progress 加 `findings-1123`、更新 `aos-user-home`。
 - **compact 後先做**：讀這份筆記最後幾節與 HANDOFF → `subagent ls`、`mailbox_peek`（templates、core 的 DONE 可能已到）→ `git status`（工作樹可能有：templates 位子改的三份 README 它自己會交；`wf/tree/*` 是那隻背景子 agent 改的，等它回報後我看 diff 交；它回報的通知若在 compact 後才到，照常處理）→ 五點前問使用者 push。
 - 還欠使用者的回報：templates 與 core 的結果、`wf/tree/root` 拿鐘的 diff 與「重啟前活樹會怎樣」、core 做完後 `install.py` 什麼時候跑。
+
+## 2026-11-23 14:55：compact 之後，拿鐘那隻回來
+
+- 子 agent 回報、我看過 diff 交了：`wf/tree/root/{daemon.json,.env,_entry}`（拿掉 `_clock` 列與 `AOS_CLOCK`，設定逐鍵等於範本 `daemon-sub`）、`wf/tree/README.md`、`03-換機.md`。暫存樹 `~/.aos/scratch/tree-noclock-1123/` 實跑過，留著沒刪。
+- **重點：光改定義、重起，活樹的 `_clock` 都不會消失**（`procs_state.json` 上的列會被接回）。要下 `aos-daemon-ctl -d ~/repo/aos/.stack rm _clock`，不用重起。這是對活樹下的指令，**還沒做，等使用者說**。拿掉後 `~/repo/aos/.stack/clock` 留著不再更新。
+- 單獨起這份定義：起得來、不警告、agent 拿不到 `AOS_CLOCK`；起過舊定義的 stack 還會看到鐘檔在走（最容易看錯）。臨時要單獨起改起範本 `daemon-root`。「沒有 `AOS_CLOCK` 就不跑 on_clock」是推論，沒掛真 agent 驗。
+- 沒跟上的文件（歸誰還沒派）：aos-teams/06 第 8、28 行、`wf/public/活樹旁邊.md` 第 5 行、`aos-teams.md` 第 62 行。
+- 子 agent 多 `ls` 了一次 `~/aos-home/.stack`（我只准 repo 那份），唯讀。
+- 此時 templates、core 兩個位子還沒回信；工作樹剩的未交檔是它們的。

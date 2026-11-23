@@ -1,1 +1,1 @@
-{"description": "Start the root daemon with stdout logs", "argv": ["aos-daemon", "--enable-logs", "daemon.json"]}
+{"description": "Start the repo's sub-daemon with stdout logs; the ~/aos-home root starts it as row repo-aos of its table", "argv": ["aos-daemon", "--enable-logs", "daemon.json"]}
