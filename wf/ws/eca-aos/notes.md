@@ -296,3 +296,4 @@
 - 他說（逐字）：「我會關機下班...」→ 今晚不會有任何準備工作。我原本說「你下班後我派位子做補丁」做不到，已照實告訴他：補丁與預演要明早開機後才做，切換會落在備好之後。
 - HANDOFF 那條已改成明早的順序。16:55 push 照他的話做；關機前樹要先停（`aos-daemon-ctl -d ~/aos-home/.stack shutdown`，他自己下）。
 - **明早開工先做**：讀這節與 HANDOFF → `git status`、`subagent ls`（睡著的位子會醒）→ 問三題 → 照 `06d`、`06e` 派工（設一個整合的人，只有它在 clone 裡下 git）。
+- **16:55 push 做了**（他 16:03「2.4:55推上去」的那一次授權）：`git push origin main`，`d5e9a39e4..6c42a21a7`，49 個 commit；推完 `origin/main..main` 是 0。這次授權到此用完，之後的 commit 要他再說才推。這一行筆記是推完才寫的，本地會比 origin 多 1 個 commit。
