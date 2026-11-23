@@ -476,7 +476,7 @@
       "status": "open",
       "flow": "",
       "what": "11-23 查出的 aos 問題，當天修掉的：gpt 腦把選填參數當必填（llm_http 補 strict:false，a30197e52）；json_search 的 key:\"\" 報錯（733a5fecc）；ws_write 經 aos-tools 擋得到自己的 stack 與定義夾（8e14a5e38、9ce053bfa）；ctl state 的 resources 行分清每行程上限與整隻用量（a69d96ae7）；mem_mb 的提醒（4226bd3a5）；09-份額的 systemd 句（259e8afa9）；self_llm、self_system 不算任意執行（0093988b0）；配給包說太強的句子與 CONVENTION 連結。公司機 11-23 共裝了四次 install.py（最後一次 16:30），**家機 pull 後要自己跑一次**。還開著的：① 全面改成 strict 格式——使用者「不要做嚴格」，不做；tool_io 把空字串當沒給——core 判斷先不做。② 其他九支標 arbitrary_exec: true 的工具沒審。③ mine_arena 第二輪提的六題（最小定義模板、取消與 scope 的 helper、任務級資源入口、沙箱配 Chromium、隔離等級、寄件人與工具版本驗證）：事實已回，要不要做等使用者來談。④ 沒有涵蓋整棵樹的組織文件；樹上有三隻同名的 main（mine_arena、mine_paper、mine_mecha）加 guanyu/forum/main。⑤ 斷連結：AGENTS.md:3 與 user/01:50 指到 repo 根已不在的 archive/，aos-teams.md 與 07 檔頭寫「本夾 archive/」也不在（打雜工 eca-aos-sol-2 查的），怎麼修已問使用者、還沒答。",
-      "next": "家機 pull 後跑 install.py；③⑤等使用者",
+      "next": "家機 install.py 已跑（11-23 20:37）。③ 方向已定，移到 progress `mine-arena-dir-1123`。⑤ 斷連結：使用者 11-23 晚「先去把連結拿掉」，b51f8745c、36f8984a4、b1cf2f60c 改了 AGENTS.md、user/01、refactor／advices README、py/docs/03、根 README、impl_cpp/README、session_logs 描述；aos-teams.md 與 07 檔頭的「本夾 archive/」是純文字、還沒改",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)",
         "[wf/org](org/README.md)"
@@ -492,6 +492,17 @@
       "see": [
         "[規劃夾](../proto8/thinking/2026-11/23/org範本與templates分層-1123/README.md)",
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-23"
+    },
+    "mine-arena-dir-1123": {
+      "title": "mine_arena 六題的方向（使用者 11-23 晚定）＋回它一封 DONE",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-23 晚在家機跟 main 談：隔離等級「甲，先只防失誤」（不做抗惡意）；main 照這一級推薦六題怎麼排，他答「可以」。定案：⑤ 做——知識庫寫明 aos 只承諾防失誤、不是隔離（歸 kb）；① 做——驗證過的最小定義範本（唯讀分析、限定路徑寫入）加「工具有沒有漏包」的檢查（歸 templates＋core）；③ 只做回報那半——有效限制、peak、OOM 看得到，鎖／排隊等准入先不做（歸 core）；② 做、排在 ①③ 後——工具死掉時 scope 收乾淨才放資源（歸 core）；④ 不由 aos 做——mine_arena 自己的場景，它們跑通可收成範例；⑥ 寄件人驗證與代辦授權先不做（屬抗惡意）、工具版本識別之後再說。排在 templates 三分切換之後。\n要回 mine_arena/main 的 DONE（它在公司那台，回信寄 /home/guanyu/aos-home/.stack/procs/mine_arena/procs/main/mailbox，in_reply_to＝第二封信 01795414583613126499.1008727.2256547）大意：使用者定了 aos 的隔離只承諾防失誤、不做抗惡意；六題：⑤ 知識庫會寫明這一級；① 會做最小定義範本與漏包檢查；③ 先做可觀測（有效限制、peak、OOM），准入（鎖、排隊）暫不做，你們的 flock＋systemd-run 繼續用；② 之後做；④ 不由 aos 做，你們跑通的配置歡迎交回當範例；⑥ 寄件人驗證、代辦授權不做，工具版本識別之後再說。上層約束下屬照你們回顧的結論走（專用最小定義、工具包 sandbox），是防失誤、不是隔離。",
+      "next": "11-24 公司：eca-aos 照上面寄 DONE 給 mine_arena/main → 三分切換完後派位子：kb 寫 ⑤、templates＋core 做 ①、core 做 ③ 回報半、再 ②",
+      "see": [
+        "[eca-aos 筆記 mine_arena 兩封信](ws/eca-aos/notes.md)"
       ],
       "since": "2026-11-23"
     }
