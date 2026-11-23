@@ -482,6 +482,18 @@
         "[wf/org](org/README.md)"
       ],
       "since": "2026-11-23"
+    },
+    "org-template-1123": {
+      "title": "org 範本與 templates 分層（使用者 11-23 要的）",
+      "status": "等使用者",
+      "flow": "",
+      "what": "使用者 11-23「wf/org這塊，去看看…arena_cheater, mine/paper_readings, mine/mecha_srpg，去總結一下，弄進template。template這邊你看看，是不是考慮把它分成templates/agents, templates/kernels, templates/orgs」。fable 規劃完：四樣本總結、org 範本初稿 13 檔（英文，在規劃夾 draft/orgs/）、分層三個選項與搬動代價盤點、五題。推薦：只新增 templates/orgs/；一副骨架加 CHOICES.md；不附現成定義；英文；現有 org 不跟著改。五題已問使用者，他答了才派範本位子施工（施工清單在規劃夾 05）。",
+      "next": "等使用者答五題 → 範本位子把 draft 搬進 proto8/templates/、寫測試 → kb 位子補知識庫",
+      "see": [
+        "[規劃夾](../proto8/thinking/2026-11/23/org範本與templates分層-1123/README.md)",
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-23"
     }
   }
 }

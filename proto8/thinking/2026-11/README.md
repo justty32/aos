@@ -25,4 +25,4 @@
 | [2026-11-20](20/README.md) | 2 | two-machines T7 第 9 步回公司那一步跑完、全過，T7 全部跑完；編譯變成整套一個 Python 程式庫的設計稿與施工計劃 |
 | [2026-11-21](21/README.md) | 36 | session_key 實測：加了快取第 2 輪起約 99% 命中，範本要不要改等使用者；知識庫骨架加 md 規劃；知識庫使用感想 |
 | [2026-11-22](22/README.md) | 8 | 工作區與 _stack 規劃：私有地盤 wf/ws 與 repo 裡的 _stack 取代 ~/aos-home，分八條線、三題待決 |
-| [2026-11-23](23/README.md) | 1 | 公司 WSL 重建、repo aos 的樹用第二個 Claude 帳號、_stack 改名 .stack 不跟機器搬、換機那套退場；要改成兩棵樹 |
+| [2026-11-23](23/README.md) | 2 | 公司 WSL 重建、repo aos 的樹用第二個 Claude 帳號、_stack 改名 .stack 不跟機器搬、換機那套退場；要改成兩棵樹；org 範本與 templates 分層的規劃（五題等使用者） |
