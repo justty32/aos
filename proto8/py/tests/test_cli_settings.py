@@ -143,6 +143,8 @@ class Settings(unittest.TestCase):
         # （使用者 11-15 對「eca 範本要不要預設開 Claude 那兩個 hook」答「1.開。」；11-21 多 PostCompact，發 aos 的 after_compact）。
         # 11-22 再加 skillOverrides、enabledPlugins：只准關掉帳號同步來的 skill 與使用者的外掛（使用者「啊對，外掛和skills也交給他，請他調查，這個我確實也想要拿掉」、
         # 「a~d都關。」，eca-plugins-trim）。
+        # 11-23 再加 tui，只准 "fullscreen"：--setting-sources 讓使用者那層的 tui 不算，主帳號的畫面退回舊式畫法、滑鼠滾輪沒人接
+        # （使用者 11-23 聽完三個修法選「1」＝範本 settings 加 "tui": "fullscreen"）。
         proto = LIB.parent
         for path in sorted(list(proto.glob("templates/*/cli.json")) + list(proto.glob("py/tools/agent/*/cli.json"))):
             with self.subTest(path=str(path)):
@@ -150,7 +152,8 @@ class Settings(unittest.TestCase):
                 if "settings" not in cfg:
                     continue
                 self.assertIn("hooks", cfg["settings"])
-                self.assertLessEqual(set(cfg["settings"]), {"hooks", "skillOverrides", "enabledPlugins"})
+                self.assertLessEqual(set(cfg["settings"]), {"hooks", "skillOverrides", "enabledPlugins", "tui"})
+                self.assertEqual(cfg["settings"].get("tui", "fullscreen"), "fullscreen")
                 for name, value in cfg["settings"].get("skillOverrides", {}).items():
                     self.assertEqual(value, "off", name)
                 for name, value in cfg["settings"].get("enabledPlugins", {}).items():

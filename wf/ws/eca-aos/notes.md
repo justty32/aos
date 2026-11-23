@@ -24,6 +24,11 @@
 - 使用者：「我剛剛用aos-agent新開了一個claude eca 互動畫面，然後滑鼠滾輪又不能用了。」「那個eca的位置是在~/aos-home/.stack/proc/mine_arean/proc/main」（實際路徑 `~/aos-home/.stack/procs/mine_arena/procs/main`）。
 - 派了一隻 opus 的 Claude 子 agent 做只讀調查（查舊紀錄、起 tmux 的程式、活的 tmux 選項）；派的時候還不知道是 `mine_arena/main`，任務書寫的是「多半是 eca_main，自己確認」。回來後要對它有沒有查到對的那個畫面。
 
+- **結果（12:15 回來，關鍵幾項我自己對過）**：不是 tmux 的問題。範本 `proto8/templates/eca-claude/cli.json` 的 flags 從 11-22 的 `9d738cc77` 起帶 `--setting-sources project,local`，claude 不讀 `~/.claude/settings.json`；主帳號那份的 `"tui": "fullscreen"` 被跳過，主帳號預設是舊式畫法，不跟終端要滑鼠，滾輪沒人接。第二帳號 `~/.claude-alt` 沒設也是全螢幕（原因不明，推測是帳號層級的開關）。`mine_arena/main` 11:50 用主帳號開（壞），11:58 用第二帳號重開（好）；根 daemon 那棵不帶 `CLAUDE_CONFIG_DIR`，所以不特別帶就是主帳號。
+- 修法選項：① 範本 `cli.json` 的 `settings` 加 `"tui": "fullscreen"`（推薦；子 agent 在暫存 tmux 用 `--settings '{"tui":"fullscreen"}'` 驗過會變全螢幕、能捲）；② `cli_screen.py` 的 `TMUX_CONF` 加 `set -g mouse on`（要 `install.py`，會搶滑鼠選字，沒實測）；③ 都做。使用者 11-23 選「1」：三份 `cli.json`（`eca-claude`、`eca-claude-alt`、`start-eca/agents/ann`）的 `settings` 加了 `"tui": "fullscreen"`，`test_cli_settings.py` 放行這一鍵，兩份 README 與 `templates/docs/01-eca-claude.md` 補了說明；在乾淨複本跑 `test_cli_settings`、`test_eca_claude_alt`、`test_start` 都過，`claude -p` 帶這項照常回答。**還沒在真的畫面驗**：要使用者用主帳號重開一個畫面試滾輪。
+- 沒找到「上次」的紀錄（repo、git log、兩個帳號的對話都搜過）。
+- 子 agent 留下的：`~/.claude/.claude.json`（998 bytes，12:04，實驗時帶 `CLAUDE_CONFIG_DIR=~/.claude` 生出來的，平常不會被讀）、`~/.claude/backups/` 一份 84 bytes、兩個帳號 `projects/-home-guanyu-repo-aos/` 可能多幾段短對話；scratch 在 `…/scratchpad/wheel/`。刪不刪要使用者說。
+
 ## 2026-11-23 上午：建這台的使用者專區
 
 - 使用者接著說：「然後~/.aos/user看起來還是必要的，開一個claude subagent去弄吧」。
