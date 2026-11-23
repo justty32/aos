@@ -1,0 +1,1 @@
+{"description": "Start this sub-daemon with stdout logs; the daemon above starts it as one row of its table", "argv": ["aos-daemon", "--enable-logs", "daemon.json"]}

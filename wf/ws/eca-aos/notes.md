@@ -107,3 +107,39 @@
 - 沒做、要記的：全景頁 `aos-frontend` 的 `do_answer` 只送 `id:key`，全景頁上不能逐題留言；`proto8/py/tools/agent/user_send/_tooldef.json` 的說明寫死 `answers = [{id, answer, differs}]`，要補 `comment`（改 `py/` 要 `install.py`，歸 core）；這台真專區的 `~/.aos/user/door.json` 是舊樣板，少了 `announce` 規則那句與 `comment` 的說明，`init` 不會蓋掉已有的檔——功能不受影響，只是 agent 讀 door 看不到這兩句說明。
 - **kb 代班回來，我看過 diff 交了**：知識庫 `aos/user_zone.md`（send 自建信箱、每題的 `comment`、新標題 `# The announcement`）、`aos/_index.json` 那項的一句話、`wf/public/user-zone-mail.md` 三條、kb 筆記多一節「前端（aos-user）改了，知識庫跟上」。progress `aos-user-home` 更新成現在剩的。
 - 這一串（專區三件）到此收完。還開著、等使用者說的只有：真專區的 `door.json` 要不要刷新成新樣板；全景頁要不要也做逐題留言；他自己用一次公告與逐題留言。
+
+## 2026-11-23 下午：mine_arena 的 main 第二封信（第二輪實驗結果加六題）
+
+- 信 `01795414583613126499.1008727.2256547`（留底在我 stack 的 `mailbox/archive/`），回信寄 `/home/guanyu/aos-home/.stack/procs/mine_arena/procs/main/mailbox`。它說不急，使用者之後會親自找我談。回顧在 `/mnt/c/code/mine/arena_cheater/wf/notes/investigations/org-retro-2/`，它們把我上一封整理成同夾上一層的 `aos-permissions.md`。
+- 它們做了什麼：兩支受控工具 `arena_verify`、`arena_e2e`，都拿同一把 flock、每步包一個 `systemd-run --user --scope --collect`（MemoryMax=4G、CPUQuota=400%、TasksMax=256）；qa 開了一隻受限的 agent-fsm 下屬（拿掉寫入類工具與 `mailbox_send`，只加 `arena_e2e`），結果符合我上一封說的（入口拿掉而已、ws 不是 ACL）；下屬跑 e2e 遇到 Rolldown `EAGAIN`，原因沒斷定。
+- 它們的結論：工具是「半硬」的（防失誤、不是隔離）；真要限制得用專用最小定義、每支工具包 sandbox、stack 不可寫、mailbox 收窄；資源分「准入（同時幾件）」與「配額（一件多少）」兩層，上層要有總額與可觀測性。
+- 六題（都是「請 aos 考慮」，方向題，等使用者）：① 已驗證的最小定義模板（唯讀分析、限定路徑寫入）與「工具有沒有漏包」的完整性檢查 ② 取消與 scope 的共用 helper、工具死掉時由外層保證 scope 停了才放資源 ③ 任務級的資源入口（鎖、scope、總額、排隊，回報有效限制、peak、OOM）④ aos-sandbox＋systemd scope＋Chromium＋loopback 的實證配置 ⑤ 同 uid、drvfs 下能承諾的隔離等級，抗惡意要什麼 ⑥ 寄件人驗證、代辦授權、工具版本識別。
+- 我做了：回一封 PROGRESS（`01795414669737898711.1016888.2265160`：收到、方向題等使用者、先查事實）；派一隻 opus 只讀查六題的事實部分與 EAGAIN 對應哪些 rlimit。回來後：對過關鍵幾項 → 寄一封只講事實的信給 main（DONE 留到方向也回完？事實信用 PROGRESS，方向定了再 DONE）→ 跟使用者報。
+- 使用者答那三件（逐字）：「1.幫我刷新。2.不用。3.之後再說」→ ① **真專區的 `door.json` 刷新了**（14:18）：用 `zone.py` 的 `DOOR` 樣板與它自己的 `write_json` 重寫，保留 `mode`（normal；當時沒有 `announce`），只有 `rules`、`answers` 兩鍵變了；舊檔備份在這個 session 的 scratchpad（`door.json.before-refresh-1123`，暫存、會被清）。`aos-user door` 現在印得出 announce 規則與 `comment?`。② 全景頁不做逐題留言。③ 他自己試用之後再說。progress `aos-user-home` 裡「舊樣板」「全景頁不能逐題留言」兩項下次改 progress 時拿掉。
+
+## 2026-11-23 下午：eca_main 來信，要一個子 daemon 範本
+
+- 信 `01795414917950453293.1043538.2289981`（留底在我 stack 的 `mailbox/archive/`），寄件人根 daemon 上的 `eca_main`（使用者的中心 agent；鐵律 2：它派來的普通工作算使用者的授權，push、刪檔不算）。回信寄 `/home/guanyu/aos-home/.stack/procs/eca_main/mailbox`，做完回 DONE 附範本路徑。
+- 要求：`proto8/templates` 多一個「普通（子）daemon」範本＝`daemon-root` 拿掉 `_clock` 列、`.env` 只留 `AOS_HOME`（`AOS_CLOCK`、`AOS_LLM_KERNEL` 由上層傳下來）；附 README（掛法、不帶鐘的原因、ws／stack 怎麼選）；`templates/_index.json`、README、知識庫相關處一併更新。它今天手動做了兩台：`~/aos-home/guanyu`、`/mnt/c/code/mine/arena_cheater/wf/aos/defs/daemon`（只讀參考）。
+- 附帶提的（不在請求內）：`wf/tree/root` 是子 daemon 卻帶 `_clock` 列，`AOS_CLOCK` 會被根傳下來的值蓋掉，那個 `_clock` 寫的檔應該沒人讀。**我沒動**（活樹的定義），讓代班只讀查了回報，之後問使用者。
+- 派了一隻 opus 代班範本位子：新夾名我定 `daemon-sub`；要在 `~/.aos/scratch/daemon-sub-1123/` 實際起一次（根加子 daemon，不叫模型）再收掉；知識庫只給句子不改。回來後：看 diff → 交件 → 派 kb 代班補知識庫 → 回 eca_main DONE → 跟使用者報（含 `wf/tree/root` 那個 `_clock` 要不要拿）。
+- **六題的事實查回來，寄了一封只講事實的信給 main**（PROGRESS，`01795415441284837697.1095975.2342314`）。我自己對過的：`limits.cpp`（`mem_mb`＝`RLIMIT_AS`＋`RLIMIT_DATA`）、`ws_write/_entry` 第 47～59 行。重點：
+  - **更正上一封兩處**：`ws_write` 經 aos-tools 呼叫時 `$AOS_STACK` 是工具小格、`$AOS_CD` 是工具夾，實際只擋 `<stack>/tools/` 底下；stack 在 ws 裡又不在 `.stack` 底下時 `tools.json` 寫得進去（讀程式的推論，沒實跑）——**這是 aos 自己的洞，還沒記進 progress／advices**。沙箱五個上限鍵寫任何一個都要 s6。
+  - `EAGAIN` 最可疑的是 `mem_mb`（位址空間上限 2 GiB，rlimit 繼承進 scope 裡的 Node；推論、沒重現）。
+  - ① 沒有現成的唯讀分析／限定路徑寫入定義；配給包留著 write、edit、mailbox；`shell_report` 是最接近的檢查但只看宣告。② act 逾時收整群，act 被 SIGKILL 時工具成孤兒；沒有「scope 停了才放資源」的保證。③ `ctl state` 把 rlimit 與整棵樹的 RSS 印同一行；沒讀 `memory.peak`。④ 沒有瀏覽器加沙箱的任何紀錄。⑤ 只承諾防失誤；`/mnt/c` 是 9p、沒有 metadata，權限位元無意義。⑥ 寄件人驗證有規劃沒施工；代辦授權、工具版本識別都沒有。
+  - 文件對不上現況的：`cpp/aos-daemon/docs/09-份額.md` 第 73 行附近寫「公司 WSL 無 systemd」，這台有；知識庫 `kernel.md:15` 寫 sender 是寄件人的 stack，程式是 `$AOS_WS` 優先；`kits.md` 一處寫「cannot give itself back a tool」跟同頁承認的限制對不上；`self_llm`、`self_system` 的 `_metainfo` 標 `arbitrary_exec: true` 原因不明。**都還沒處理。**
+  - 子 agent 超出範圍的唯讀動作：讀了 main 信箱留底裡我上一封信、mine_arena daemon 的表與 state、`/proc/<pid>/limits`、下屬 history 片段、用 `grep -c` 數 qa 的環境有沒有 `AOS_KERNEL`（沒印值）。信裡照實告訴 main 了。以後任務書寫死：別的樹的 stack、信箱、`/proc/*/environ` 一律不讀。
+- 方向的部分（六題要不要做）仍等使用者；到時回 main 一封 DONE。
+
+## 2026-11-23 下午：mine_paper/main 的入門請教（已回 DONE）
+
+- 信 `01795415607328186527.1122869.2358919`，寄件人 `mine_paper` daemon 上的 `main`（agent-fsm，工作區 `/mnt/c/code/mine/paper_readings`，eca_main 代使用者掛的）。回信 `01795415722299609440.1141508.2370416`。
+- 根 daemon 的表現在是：`_clock`、`_sweeper`、`llm`、`repo-aos`、`eca_main`、`mine_arena`、`guanyu`（子 daemon，工作區 `/mnt/c/code/guanyu`，底下 `ops`）、`mine_paper`。樹上有兩隻 `main`（mine_arena、mine_paper），通知只顯示「from main」，要看信的 sender 路徑分。
+- 我答的：樹上有誰與找誰（aos 的事找我、任務與跨 daemon 找 eca_main、它的角色我不知道）；mail_notify 每 60 秒在 idle 也會叫醒它；沒有 `.aos-source.json` 是因為 AOS_HOME 就是 repo 本身，版本看 git HEAD；`index_view` 只給 `path`。
+- **要帶回的兩件 aos 的事（還沒處理）**：
+  1. agent-fsm（gpt 腦）看到的 `index_view` schema 把選填的 `index`、`key` 變成必填，傳空字串又被實作擋（`ArgumentsBad`）。工具定義沒有 `required`；我推測是端點的嚴格函式呼叫格式把全部參數變必填（沒確認）。選填字串參數的工具可能都中。歸 core。
+  2. 知識庫 `_description.md` 的「No such file means a copy of unknown version」沒講到 AOS_HOME 就是 repo 本身的情形。歸 kb。
+- **子 daemon 範本回來，我看過 `daemon.json`、`.env`、README 交了**：`proto8/templates/daemon-sub/`（`daemon-root` 拿掉 `_clock` 列、`.env` 只留 `AOS_HOME`、`_entry` 與 `daemon.json` 的說明句改寫、README 新寫）＋ `tests/test_daemon_sub.py`（新立一條「除了這幾處逐鍵等於 daemon-root」的約束）。代班在 `~/.aos/scratch/daemon-sub-1123/` 實際起過：子 daemon 表上只有 `_sweeper`、`AOS_CLOCK` 是根的檔、cycle 跟著走，收掉後 `pgrep` 對得上。沒驗：底下掛 eca、「對子 daemon 自己下 shutdown 會被重起」。
+- 沒做、留著的：`daemon-root/README.md` 加一句指到 `daemon-sub`（一改就得連 `start-api/root`、`start-eca/root` 兩份逐字抄本一起重抄，歸 templates 位子）；知識庫三句（`world.md:27`、`kernel.md:15`「do not remove their rows」跟子 daemon 不帶鐘列衝突、`cli/clock.md:3`）歸 kb；`proto8/docs/CONVENTION.md:12`「子 daemon 範本預設不帶」可加連結。
+- `wf/tree/root` 的 `_clock`：它在寫 `~/repo/aos/.stack/clock`、還在走，但沒人讀（我的三個 `on_clock.json` 記的都是 `~/aos-home/.stack/clock`）。沒動，等使用者說要不要拿掉（拿掉要改 `wf/tree/root/daemon.json` 與 `.env` 並重起 repo-aos 那一列）。
+- 使用者問（逐字）：「就是說，你自己的組織架構有起來了嗎？這麼多的需求，可以試試看」→ 照實答：還沒，位子只在紙上、都是代班。他說可以試 → **現在試著把位子真的掛起來**（我要先用 `self_tools` 加 `subagent` 包；先掛有現成活的 kb、templates，core 等 index_view 那隻調查回來）。

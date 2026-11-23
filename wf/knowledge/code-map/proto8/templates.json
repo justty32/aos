@@ -40,6 +40,11 @@
    "_entry": "Start the root daemon with stdout logs",
    "daemon.json": "Root daemon: owns the clock and the sweeper; agents join through procs_requests"
   },
+  "daemon-sub": {
+   ".env": "defaults for this sub-daemon (a value the daemon above already passed down wins); every agent under it inherits them.",
+   "_entry": "Start this sub-daemon with stdout logs; the daemon above starts it as one row of its table",
+   "daemon.json": "Sub-daemon: hangs under another daemon; no clock row (it follows the root's AOS_CLOCK), only its own sweeper; agents join through procs_requests"
+  },
   "eca-claude": {
    "cli.json": "設定（鍵：kind、flags、tools_sub、timeout_ms、settings）",
    "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
@@ -299,6 +304,7 @@
     "endpoint.py": "Return fake reviewer tool calls using the actual previous review_round result.",
     "test_reviewer.py": "Verify real reviewer, review scripts and shared FSM cells through local fake endpoints."
    },
+   "test_daemon_sub.py": "daemon-sub stays daemon-root without the clock: same files, the same _entry argv and sweeper row, no _clock row, and a .env that sets only AOS_HOME.",
    "test_daily.py": "Acceptance (/tmp, fake brain, fake claude): the user's daily routine across two machines - git clone/pull, one aos-exec line, work, aos-daemon-ctl sh…",
    "test_eca_claude_alt.py": "eca-claude-alt stays a verbatim copy of eca-claude except its README, and carries the same CLAUDE_CONFIG_DIR line in .env and screen/.env.",
    "test_eca_compact_hook.py": "Test the eca-claude template's compact_hook as Claude Code runs it (11-21 top-1121-ecaeffort): pre fires before_compact (change the instructions, giv…",

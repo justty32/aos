@@ -11,6 +11,9 @@
  "daemon-root": {
   "description": "daemon-root 範本：根 daemon 定義，表上只有 _clock 時鐘與 _sweeper 清道夫，agent 之後用 aos-agent ctl add 掛；要起一台新的根 daemon 時拿它"
  },
+ "daemon-sub": {
+  "description": "daemon-sub：子 daemon 定義（掛在別的 daemon 底下，不帶時鐘，只帶清道夫）"
+ },
  "docs": {
   "description": "templates 的說明文件"
  },

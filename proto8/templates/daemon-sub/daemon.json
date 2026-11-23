@@ -1,0 +1,3 @@
+{"description": "Sub-daemon: hangs under another daemon; no clock row (it follows the root's AOS_CLOCK), only its own sweeper; agents join through procs_requests", "procs_requests": "procs_requests", "procs": {
+  "_sweeper": {"exec": {"argv": ["aos-sweeper", "--retention-days", "7", "--report", {"$env": "AOS_STACK", "$path": "sweeper_report.json"}]}, "interval_ms": 600000, "auto_restart": true, "stuck_after_ms": 600000}
+}}
