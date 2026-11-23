@@ -281,3 +281,9 @@
 - 做法：派 fable 寫施工設計（規劃夾 06：目標目錄、lib 裡放哪、程式怎麼找、補丁怎麼做怎麼套、切換步驟與回退），再派位子在乾淨複本裡做成補丁；明早他說停才切。今天不搬任何現有範本夾。
 - kb 位子 `1a6709c41`（packs.md 的 ws-write 句、每包字數表四列重量）。它提一處沒寫進知識庫的例外（「別人的 stack」其實是放自己 stack 的那層，且那層是工作區本身或之上時不查），我判斷先不寫。
 - 派了 fable 寫三分的施工設計（規劃夾 `06*`）。16:35 把 HANDOFF「還在跑」整段換新、progress `findings-1123`、`org-template-1123` 更新，趕在 16:55 push 前交。
+
+## 2026-11-23 16:40：org 範本交進來了
+
+- **範本位子 `fd871a355`**（信 `01795423184347232682.2276642.3116621`）：`proto8/templates/orgs/` 13 檔＋`tests/orgs/test_orgs.py`＋`templates/README.md` 一段＋`wf/tools/index_gen_desc.json` 兩行（tests/kits、tests/orgs；跨範圍那一檔我放行，因為單獨交會被生成器擋：desc 有了但夾不在）。它試抄兩次、改了 README 的步驟；乾淨複本 tests/orgs 7、tests/kits 8、test_start＋test_daemon_sub 9 都過。
+- 我做的後續：`wf/org/README.md` 加一行指到範本（5a）；派 sonnet 補 `index_gen_desc.json` 的 `proto8/templates/orgs` 一句（現在 `_index.json` 裡 orgs 的說明只有夾名）；轉 kb 寫知識庫那頁（REQUEST `01795423206359047396.2280145.3118822`，規劃夾 05 第 7、8 步）。
+- commit-request 的坑：`index_gen_desc.json` 的鍵指到 repo 裡還不存在的夾會擋（DescMissing … not in the repo），新夾與它的說明要同一批交。

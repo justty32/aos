@@ -344,6 +344,7 @@
   "proto8/templates/daemon-root": "daemon-root 範本：根 daemon 定義，表上只有 _clock 時鐘與 _sweeper 清道夫，agent 之後用 aos-agent ctl add 掛；要起一台新的根 daemon 時拿它",
   "proto8/templates/eca-claude": "eca-claude 範本：把 Claude Code CLI 當成 aos agent 跑（aos-loop 每格叫 aos-eca-turn，一批 queue 一輪、回答接進 history），附 screen 畫面子介面；要開外部 coding agent 時 cp -r 它",
   "proto8/templates/judge-llm": "judge-llm 範本：同步問一次腦比對 expect 與 got、回 score／diff／why 並記裁判帳，給 measure 的 check.json 用；要換裁判模型或規則時抄它改 judge.json、prompt.txt",
+  "proto8/templates/orgs": "org 範本：一份專案的分工文件（誰負責什麼、做完交給誰），cp -r basic 進專案的 wf/org；骨架、九題選擇、選用件，全英文",
   "proto8/templates/reviewer": "reviewer 範本：重用 agent-fsm 的格，靠 review_round 依量測審視定義、試降級，並把 fix／split 處方寫進 review.json；要對 agent 定義做審視與開處方時拿它",
   "proto8/templates/start-api": "起手範本（API 版）：一包抄好一棵能跑的樹——根（daemon-root）、llm kernel、一隻假腦的 agent-fsm、樹裡轉去 $AOS_HOME/env.sh 的薄 env.sh；cp -r 一行就能起（11-18 S6）",
   "proto8/templates/start-eca": "起手範本（eca 版）：一包抄好一棵樹——根（daemon-root）、一隻 Claude Code 當腦的 eca-claude、樹裡轉去 $AOS_HOME/env.sh 的薄 env.sh；cp -r 一行就能起（11-18 S6）",
