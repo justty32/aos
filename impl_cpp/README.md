@@ -2,7 +2,7 @@ impl_cpp：使用者 11-09 起親手重寫 aos 核心的 C++23 實作；這份�
 
 # impl_cpp
 
-骨架取自 [`archive/aos-v1/`](../archive/aos-v1/)（一個 CMake 專案、`common/`、「一個零件一夾」的小專案模式），但**自成一體**：不 include proto8 或 archive 的任何檔，這一夾自己看得懂。核心程式由使用者自己寫。現在有兩個零件：驗 build 鏈用的樣板 `core/hello/`，和從 aos-v1 原封不動搬來的執行器 `core/inst/`（aos-v1 的 `core/exec`＋`core/wire` 的 Inst 解析，連它的 Catch2 測試；跟現行 proto8 aos-inst 差在哪看 [core/inst/差異.md](core/inst/差異.md)，要不要補由你決定）。
+骨架取自 `archive/aos-v1/`（11-17 已刪，見 git 歷史 c97d6ade8）（一個 CMake 專案、`common/`、「一個零件一夾」的小專案模式），但**自成一體**：不 include proto8 或 archive 的任何檔，這一夾自己看得懂。核心程式由使用者自己寫。現在有兩個零件：驗 build 鏈用的樣板 `core/hello/`，和從 aos-v1 原封不動搬來的執行器 `core/inst/`（aos-v1 的 `core/exec`＋`core/wire` 的 Inst 解析，連它的 Catch2 測試；跟現行 proto8 aos-inst 差在哪看 [core/inst/差異.md](core/inst/差異.md)，要不要補由你決定）。
 
 ## 一次建好、跑起來
 

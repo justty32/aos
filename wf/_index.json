@@ -34,7 +34,7 @@
   "index": "public/_index.json"
  },
  "session_logs": {
-  "description": "wf 的每日工作日誌：當月一天一檔放月份夾、已結束月份收成月摘要（2026-08、09、10.md），原檔封存在 archive/；要查某天做了什麼、定了什麼時進去"
+  "description": "wf 的每日工作日誌：當月一天一檔放月份夾、已結束月份收成月摘要（2026-08、09、10.md），原檔 11-17 已刪、見 git 歷史 c97d6ade8；要查某天做了什麼、定了什麼時進去"
  },
  "tools": {
   "description": "wf 工作流的腳本：index_gen（_index.json 與 code map 逐檔表；codemap_lib 是它的檔頭一句話認法函式庫）、tabledb 資料表讀寫、進度看板 progress_board、離線待裁頁 decide_page、連結修補等；要跑生成器或檢查時進去",
