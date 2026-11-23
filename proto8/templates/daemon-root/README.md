@@ -38,4 +38,4 @@ aos-daemon-ctl -d stacks/root ls        # _clock、_sweeper、ann 都是 running
 - **下班**：`aos-daemon-ctl -d stacks/root shutdown`（子項全睡下、記在表上），再 `git` 推。
 - **換台**：`git` 拉過去、照上面設好環境變數後直接 `aos-exec --stack stacks/root defs`，睡下的 `ann` 自己醒、接著跑，不用其他指令。
 - **指到 proto8 的路徑**：範本一律寫成 `{"$env": "AOS_HOME", "$path": …}`，每台設一次 `AOS_HOME=<這台 proto8 的絕對路徑>`即可；也可在 `defs/.env` 寫 `AOS_HOME=/絕對路徑`（兩台同位置）或 `AOS_HOME=${AOS_WS}/../aos/proto8`（兩台同樣相對擺法），換台都不用跑額外指令。本範本自己沒有指進 repo 的路徑。
-- 子 daemon（領班、llm daemon）不帶鐘列，只帶自己的 `_sweeper`；鐘只在根。
+- 子 daemon（領班、llm daemon）不帶鐘列，只帶自己的 `_sweeper`；鐘只在根。要在這台底下再開一台子 daemon，抄 `$AOS_HOME/templates/daemon-sub`（不帶 `_clock`，`.env` 只留 `AOS_HOME`；掛法在它的 README），不要抄這份。
