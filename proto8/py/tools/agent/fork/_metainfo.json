@@ -9,7 +9,7 @@
   "deterministic": false,
   "interrupt": "unsafe",
   "parallel": false,
-  "arbitrary_exec": true,
+  "arbitrary_exec": false,
   "cost": {
     "time_ms": 30000
   },
