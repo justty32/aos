@@ -1,5 +1,6 @@
 """Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not available."""
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -32,7 +33,7 @@ class State(unittest.TestCase):
         self.stack = self.d / "procs" / "bob"
         self.stack.mkdir(parents=True)
         (self.d / "procs_state.json").write_text(json.dumps({"procs": {
-            "bob": {"phase": "paused", "stack": "procs/bob", "ws": "../ws", "def": str(self.defn), "limits": {"memory_max": "1G"}},
+            "bob": {"phase": "paused", "stack": "procs/bob", "ws": "../ws", "def": str(self.defn), "limits": {"mem_mb": 1024, "cpu_s": 60, "mem_total_mb": 2048, "procs": 64, "memory_max": "1G"}},
             "kid": {"phase": "running", "stack": "procs/kid", "ws": "../ws"}}}))
         (self.stack / "llm.json").write_text(json.dumps({"model": "m2"}))
         (self.stack / "history.jsonl").write_text("".join(json.dumps(m) + "\n" for m in (
@@ -63,11 +64,21 @@ class State(unittest.TestCase):
         self.assertIn("assistant 1, user 2", row["history"])
         self.assertNotIn(" 0 bytes", row["history"])
         self.assertEqual(row["subagents"], "1/2 subagents (kid running)")
-        self.assertIn("limits memory_max=1G; no running process", row["resources"])
+        self.assertIn("limits each process: mem_mb=1024 cpu_s=60, whole agent: mem_total_mb=2048, "
+                      "whole uid: procs=64, memory_max=1G; no running process", row["resources"])
         self.assertIn("not running", row["time"])
         self.assertTrue(row["hooks"].startswith("not available ("), row["hooks"])   # 沒宣告 hooks
         self.assertTrue(row["system"].startswith("not available ("), row["system"])   # 沒宣告 system
         self.assertIn("0 letters waiting", row["mailbox"])
+
+    def test_resources_say_what_each_number_counts(self):
+        """11-23：每行程的上限與整隻的用量分得出來；換成 sub:N 時 procs 只數這隻自己的。"""
+        table = json.loads((self.d / "procs_state.json").read_text())
+        table["procs"]["bob"].update(pid=os.getpid(), limits={"mem_mb": 512, "procs": 8, "user": "sub:5"})
+        (self.d / "procs_state.json").write_text(json.dumps(table))
+        line = self.state("resources").stdout.splitlines()[1]
+        self.assertTrue(line.startswith("limits each process: mem_mb=512, whole agent: procs=8, user=sub:5; whole agent uses memory "), line)
+        self.assertRegex(line, r"cpu [0-9.]+ s, [0-9]+ processes$")
 
     def test_picked_parts_and_all(self):
         out = self.state("history", "llm").stdout

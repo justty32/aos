@@ -28,7 +28,8 @@ parts:
   history    how many messages and bytes; the last ones (aos-agent history ls)
   mailbox    letters waiting in its mailbox (aos-mailbox peek)
   subagents  agents it started with subagent, and its quota
-  resources  limits on the daemon table; memory, cpu time and processes in use
+  resources  limits on the daemon table, by what each one counts (each process, the
+             uid, the whole agent); memory, cpu time and processes the whole agent uses
   time       now, and how long it has been up
 
 flags:
@@ -263,6 +264,24 @@ def proc_use(pids):
     return rss, cpu, n
 
 
+EACH_PROCESS = ("mem_mb", "cpu_s", "file_mb", "files")   # rlimit：每個行程各自的上限（aos-daemon docs/09）
+WHOLE_AGENT = ("mem_total_mb", "procs_total")             # cgroup：整列連子孫的總量
+
+
+def show_resource_limits(lim):
+    """limits 照「數的是什麼」分組（11-23 線 eca-aos-core-1123：以前跟整棵樹的用量排在一起，讀起來像總額對總額）。
+    procs＝RLIMIT_NPROC，數整個 uid；換成 sub:N 才只數這隻自己的。其他鍵（user、不認得的）照原樣接在最後。"""
+    if not isinstance(lim, dict):
+        return show_limits(lim)
+    sub = str(lim.get("user", "")).startswith("sub:")
+    groups = {"each process: ": [], "whole agent: ": [], "whole uid: ": [], "": []}
+    for k, v in lim.items():
+        where = ("each process: " if k in EACH_PROCESS else "whole agent: " if k in WHOLE_AGENT
+                 else ("whole agent: " if sub else "whole uid: ") if k == "procs" else "")
+        groups[where].append("%s=%s" % (k, v))
+    return ", ".join(label + " ".join(items) for label, items in groups.items() if items)
+
+
 def part_resources(a):
     lim = a.row.get("limits")
     pid = a.row.get("pid")
@@ -270,10 +289,10 @@ def part_resources(a):
     if isinstance(pid, int) and os.path.isdir("/proc/%d" % pid):
         rss, cpu, n = proc_use(tree(pid))
         j.update(memory_bytes=rss, cpu_seconds=round(cpu, 2), processes=n)
-        use = "memory %.1f MiB, cpu %.1f s, %d processes" % (rss / 1048576, cpu, n)
+        use = "whole agent uses memory %.1f MiB, cpu %.1f s, %d processes" % (rss / 1048576, cpu, n)
     else:
         use = "no running process"
-    one = "limits %s; %s" % (show_limits(lim) if lim else "none", use)
+    one = "limits %s; %s" % (show_resource_limits(lim) if lim else "none", use)
     return one, one, j
 
 
