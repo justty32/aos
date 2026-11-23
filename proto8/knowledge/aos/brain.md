@@ -13,6 +13,8 @@ Endpoint packs: the llm kernel owns a table of named packs, for example `smart-h
 - Which packs exist: the command `aos-llm ls` prints them with speed and cost; `aos-llm ls --json` also shows the `reasoning_efforts` each one accepts.
 - Reasoning effort (how hard the model thinks): `"reasoning_effort": "high"` in the letter, next to `endpoint`. It is for the llm kernel, not the same as a `reasoning_effort` you put inside `request` (that one goes to the model service as is). A pack that lists `reasoning_efforts` accepts those names; an effort it does not list is `RequestBad`; a pack without the list ignores the key. In your brain settings it is the key `reasoning_effort`. The template packs keep the prompt cache when you change it.
 
+- Tools in `request.tools`: a pack with `"api": "responses"` (the gpt packs of the `start-api` template) converts them to the Responses API's shape, and sends a function tool that does not say `strict` with `"strict": false`. Without it the Responses API treats the tool as strict and makes every parameter required. A tool that says `strict` is sent as written.
+
 Priority and budgets: `aos/brain.md#/Priority and budgets`. Error codes: `aos/brain.md#/Brain error codes`.
 
 # Priority and budgets

@@ -31,6 +31,10 @@ Key points:
 - **`BudgetMissing ... max_calls N reached in this window`.** Cause: the brain budget of this window is used up. Check: the error's `resets_at` says when the next window starts (`aos/brain.md#/Priority and budgets`).
 - **`SubagentSlotMissing`.** Cause: your subagent quota is full; nothing was started. Check: `rm` a subagent you no longer need, or say the limit is reached (`aos/agents/subagent.md`).
 
+# The brain
+
+- **A gpt brain fills optional tool parameters it does not need, often with empty strings (for example `index_view` with `"index": ""`), and the tool refuses or answers something else.** Cause: the pack uses `"api": "responses"`, and the installed llm_http is an older one that sends function tools without `"strict": false`; the Responses API then makes every parameter required. Check: `grep -n 'strict=False' $AOS_HOME/lib/tools/base/llm_http/responses_api.py`; no line = the old llm_http, ask a person to run `python3 install.py` in `$AOS_HOME` (`aos/brain.md`).
+
 # The overview page (aos-frontend)
 
 - **The page shows `aos-agent ctl ls --json failed`.** Cause: `$AOS_HOME/frontend/bin/aos-frontend` reads the daemon table with `aos-agent ctl ls --json`, run from `/` with the environment the page was started with. Without `AOS_DAEMON` there, or without `aos-agent` on its PATH (the tree's `env.sh` not sourced), the call fails, and the page does not show the command's own error. Check: in the shell that started the page, `echo $AOS_DAEMON` and `command -v aos-agent`; start it again after `source env.sh` with `AOS_DAEMON` set. The systemd unit `$AOS_HOME/frontend/systemd/aos-frontend.service` sets both itself.
