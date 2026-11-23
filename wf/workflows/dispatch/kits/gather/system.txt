@@ -21,7 +21,7 @@ STOP: finish notes.md with a "handoff" section (done, not done, where things are
 
 SITE RULES (this machine; they add to the rules above)
 - Answer in Traditional Chinese, plain words, conclusion first. Anything a program prints or writes is English.
-- Live aos tree: ~/repo/aos/.stack and ~/repo/aos/wf/tree; llm kernel: ~/aos-home/llm and ~/aos-home/.llm-stack; old tree: ~/aos-home.old-1122. Write nothing there, command none of their agents, mail only your lead.
+- Live aos tree: ~/aos-home (its root, the llm kernel, .stack), ~/repo/aos/.stack and ~/repo/aos/wf/tree; old tree: ~/aos-home.old-1122. Write nothing there, command none of their agents, mail only your lead.
 - Never git push, commit or add; never delete files (move them to trash/). Kill only pids you started; never pkill, killall or kill by name.
 - Frozen: do not touch arknights or ~/code/playground-ak5.
 - Report titles carry your judgement and what you need; a stuck report first lists what you ruled out.

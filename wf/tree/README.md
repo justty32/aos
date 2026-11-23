@@ -2,15 +2,15 @@
 
 ← [wf](../)｜規劃：[02-規劃 線 5](../../proto8/thinking/2026-11/22/工作區與stack-1122/02-規劃.md#線-5根那份小定義進-repo)
 
-`root/` 是 `~/repo/aos/.stack` 那台根 daemon 的定義：表上只有 `_clock`、`_sweeper`，agent 之後用 `aos-agent ctl add` 掛上去（表上存相對 `.stack` 的路徑）。`.stack` 被 git 忽略、每台各有各的，不跟著 git 搬（使用者 11-23）；這份定義跟著 git 走，兩台起的根都用它。llm kernel 與權限站**不在這裡**，各台自己跑、放在 repo 外，由起根的殼 export `AOS_LLM_KERNEL`、`AOS_KERNEL` 指過去（使用者 11-22 決定 E）。
+`root/` 是 `~/repo/aos/.stack` 那台根 daemon 的定義：表上只有 `_clock`、`_sweeper`，agent 之後用 `aos-agent ctl add` 掛上去（表上存相對 `.stack` 的路徑）。`.stack` 被 git 忽略、每台各有各的，不跟著 git 搬（使用者 11-23）；這份定義跟著 git 走，兩台起的都用它。llm kernel 與權限站**不在這裡**，各台自己跑、放在 repo 外（使用者 11-22 決定 E）。
 
-怎麼設殼、怎麼起 llm kernel，看[每台設定說明書](../workflows/dev-env/03-換機.md)；這裡不重寫步驟，只記起根那一行（公司那台另帶 `CLAUDE_CONFIG_DIR`，見說明書）：
+**11-23 起，這份定義是 `~/aos-home` 那棵樹底下的一台子 daemon**（表上那列叫 `repo-aos`，stack 仍是 `~/repo/aos/.stack`）：使用者 11-23「repo aos這個樹會變成~/aos-home底下的一個proc」。`AOS_LLM_KERNEL`（公司那台另有 `CLAUDE_CONFIG_DIR`）記在那一列的環境值裡，子 daemon 傳給底下每一隻；這份定義沒改。公司那台 11-23 已這樣建好，家機還沒改。起樹只起 `~/aos-home` 的根，怎麼掛、怎麼起停，看[每台設定說明書](../workflows/dev-env/03-換機.md)：
 
 ```sh
-cd ~/repo/aos && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK aos-exec --stack .stack wf/tree/root
+cd ~/aos-home && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK -u AOS_KERNEL -u AOS_LLM_KERNEL aos-exec --stack .stack root
 ```
 
-`AOS_HOME`、`AOS_LLM_KERNEL`（與有權限站時的 `AOS_KERNEL`）要在這個殼裡已經 export，根會傳給底下每一隻；改了 export 要 shutdown 根再從新殼起才生效。
+還沒改成這套的那台（家機 11-23），照舊在殼裡 export 好 `AOS_LLM_KERNEL` 後單獨起：`cd ~/repo/aos && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK aos-exec --stack .stack wf/tree/root`。已經掛在 `~/aos-home` 底下的那台別這樣起（會 `DaemonExists`，或在上面的根沒開時起成一台沒帶 alt 帳號的獨立根）。
 
 ## 跟範本 `proto8/templates/daemon-root` 的差異
 

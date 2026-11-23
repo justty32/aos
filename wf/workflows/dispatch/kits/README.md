@@ -14,7 +14,7 @@
 | 任務層 | 任務書 | 隊長 | — |
 | 隊長流程 | [card.md](card.md) | 頂層 | wf 專用，隊員不讀 |
 
-`gather/system.txt` 是照下面的順序手工拼好的：版本戳、通用層、站台層、gpt 層、角色層。`<KNOWLEDGE>`、`<BOARD>` 換成 site.json 的值，`<OWN_BOARD>` 留空。11-22 重拼後合計 3,180 字元。A 級上限是 3,500 字元：計劃原本訂 3,000，但這份 11-22 重拼前就有 3,093，所以放寬（eca-aos 推薦「上限放寬到 3,500」，使用者 11-22 答：「都先按照推薦」）。產品版 proto8/templates/kits/ 的上限是同一個數字，寫在它的 README 和 tests/kits/test_kits.py 的 `SYSTEM_MAX`。
+`gather/system.txt` 是照下面的順序手工拼好的：版本戳、通用層、站台層、gpt 層、角色層。`<KNOWLEDGE>`、`<BOARD>` 換成 site.json 的值，`<OWN_BOARD>` 留空。11-22 重拼後合計 3,180 字元，11-23 改站台層那行後 3,173。A 級上限是 3,500 字元：計劃原本訂 3,000，但這份 11-22 重拼前就有 3,093，所以放寬（eca-aos 推薦「上限放寬到 3,500」，使用者 11-22 答：「都先按照推薦」）。產品版 proto8/templates/kits/ 的上限是同一個數字，寫在它的 README 和 tests/kits/test_kits.py 的 `SYSTEM_MAX`。
 
 改了任何一層，就照同樣的順序重拼，第一行的日期也要換。
 

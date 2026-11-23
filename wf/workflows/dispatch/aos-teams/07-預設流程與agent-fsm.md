@@ -28,7 +28,7 @@
 - **是什麼**：在 aos 體系裡開一隻 agent-fsm 身的 agent（aos 自己的四格迴圈 idle、think、wait、act），腦是寄信給 llm kernel。不叫 codex CLI，也不用 eca 身。
 - **腦**：家機本地的 LiteLLM proxy `http://127.0.0.1:4000`（OpenAI 相容）。配給包 `kits/gather/` 裡的兩個檔決定走哪裡：
   - `llm.json` 內容是 `{"model": "sol-high"}`。`model` 填的是 **endpoint pack 名**，pack 由 llm kernel 擁有（知識庫 `aos/brain.md`）。
-  - `.env` 內容是 `AOS_LLM_KERNEL=${HOME}/aos-home/ws/.stack/procs/llm-gpt`，把信指到公司那台舊樹的 llm-gpt 這個 kernel。家機 11-22 起 llm kernel 自己一台、stack 是 `~/aos-home/.llm-stack`（[換機說明書](../../dev-env/03-換機.md)），包裡這行還沒跟著改，在家機用要先改成它。
+  - `.env` 內容是 `AOS_LLM_KERNEL=${HOME}/aos-home/ws/.stack/procs/llm-gpt`，把信指到公司那台舊樹的 llm-gpt 這個 kernel。家機 11-22 起 llm kernel 自己一台、stack 是 `~/aos-home/.llm-stack`（[換機說明書](../../dev-env/03-換機.md)），包裡這行還沒跟著改，在家機用要先改成它。公司那台 11-23 起是 `~/aos-home/.stack/procs/llm`（llm kernel 掛在 `~/aos-home` 的根底下），在那台用改成這個。
 - **蒐集和施工不用 terra**，只用 sol；terra 只用在使用者點名的地方（例如全景頁的小幫手）。
 - **怎麼掛、怎麼驗收**：步驟在 [kits/card](../kits/card.md)，包的內容與已知限制在 [kits](../kits/README.md)，帶 sol 的心得在 [sol-crew](../../../public/sol-crew.md)。蒐集員、審稿員用「看」包，不抄別線的 system.txt（使用者 11-14「都按照推薦」，[onboard-1114](../../../../proto8/thinking/2026-11/14/onboard-1114.md)）。
 - **自己掛 kernel 或 agent 不用先問**（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）：掛在暫存樹（`~/.aos/scratch/<線名-日期>/`，使用者 11-15 裁「4.a」）的 aos 裡，自己記 pid、收尾收乾淨，活樹照舊不動。
@@ -87,6 +87,6 @@
 
 **11-22 新定（家機搬進 repo 裡的 stack 之後；11-23 起那個資料夾叫 `.stack`）**：使用者 11-22「然後工作區仍然就是~/repo/aos」「現在就是讓他們有自己的私有地盤這樣」（[01-決定與調查](../../../../proto8/thinking/2026-11/22/工作區與stack-1122/01-決定與調查.md)）。
 
-- 兩台的樹都是 `~/repo/aos/.stack`（根定義 `wf/tree/root/`；被 git 忽略、每台各有各的，使用者 11-23）。家機頂層是住在裡面的 eca-aos，底下掛三個 subagent；公司那台 11-23 起樹，表上先只有 eca-aos。上面四條是公司那台舊樹（`~/aos-home`）的做法。
+- 兩台的樹都是 `~/repo/aos/.stack`（根定義 `wf/tree/root/`；被 git 忽略、每台各有各的，使用者 11-23）。家機頂層是住在裡面的 eca-aos，底下掛三個 subagent；公司那台 11-23 起樹，表上先只有 eca-aos；11-23 起那台的 `.stack` 是 `~/aos-home` 根底下的子 daemon（列 `repo-aos`），家機照說明書跟上。上面四條是公司那台舊樹（`~/aos-home`）的做法。
 - 線與隊員的工作區一律是 repo 根 `~/repo/aos`；草稿、任務書、自己做的定義夾放私有地盤 `wf/ws/<上層>/<名>/`（照掛的層級嵌套），不進 git 的放地盤裡的 `temp/`（[wf/ws](../../../ws/README.md)）。
-- 新做的定義放 `wf/tree/` 或地盤裡，不放 `~/aos-home`（家機那裡只剩 llm kernel）。
+- 新做的定義放 `wf/tree/` 或地盤裡，不放 `~/aos-home`（那裡只放這台的根定義、llm kernel 與根的 stack）。

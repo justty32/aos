@@ -18,15 +18,25 @@
 
 **授權（11-23 當場）**：派工照「普通工作交給opus，簡單工作或雜活交給sonnet」「agent做事前都要讀過wf/規矩，簡單工作或雜活除外」「agent可以再派子agent，模型隨意」。**push 還沒給**：他說「我今天五點下班，下班前再統一push」，要他本人再說一次才推。刪檔沒給（換機工具他說「先留著」）。頂層是 Windows 上的 Claude Code，不在 aos 樹裡；實際工作在 WSL 的 `~/repo/aos`，Windows 那份 clone 不動。
 
-**這台現況**：
-- llm kernel：定義 `~/aos-home/llm`、stack `~/aos-home/.llm-stack`，端點指 `localhost:4000/v1`（多加了一包 `sol-high`）。用普通 Claude 設定檔。
-- 根：daemon `~/repo/aos/.stack`，根定義 `wf/tree/root`，帶 `CLAUDE_CONFIG_DIR="$HOME/.claude-alt"`（第二個帳號，他已登入）。底下掛了 `eca-aos`（範本 `eca-claude`，筆記 `wf/ws/eca-aos/notes.md`），**從沒開過畫面、沒問過話**。
-- 兩台都 shutdown 了，沒有 aos 行程。登入殼是 zsh（`~/.zshrc`、`~/.bashrc` 都加了 aos 段，備份 `.bak-1123`）。
+**這台現況**（線 `two-trees-1123` 改過）：
+- 一棵樹，根在 `~/aos-home`（根定義 `~/aos-home/root/`、stack `~/aos-home/.stack`，普通 Claude 設定檔），表上四列：`_clock`、`_sweeper`、`llm`、`repo-aos`。
+- `llm`：llm kernel，定義 `~/aos-home/llm`、stack `~/aos-home/.stack/procs/llm`（＝`AOS_LLM_KERNEL`），端點指 `localhost:4000/v1`（多加了一包 `sol-high`）。
+- `repo-aos`：repo 那棵（子 daemon），定義 `wf/tree/root`（沒改）、stack 照舊 `~/repo/aos/.stack`，這一列帶 `CLAUDE_CONFIG_DIR="$HOME/.claude-alt"`（第二個帳號，他已登入）與 `AOS_LLM_KERNEL`。底下掛了 `eca-aos`（範本 `eca-claude`，筆記 `wf/ws/eca-aos/notes.md`），**從沒開過畫面、沒問過話**。
+- 全停了，沒有 aos 行程。登入殼是 zsh（`~/.zshrc`、`~/.bashrc` 都有 aos 段；`AOS_LLM_KERNEL` 改指新路徑，備份 `.bak-1123c`）。舊的 `~/aos-home/.llm-stack/` 不用了，沒刪。
 - LiteLLM 用他自己開的 `~/repo/llm_proxy` 根那套（1.87.5、不用 key），不是 pinned；**4000 埠一直沒在聽，真模型沒驗過**。
 
-**要改成兩棵樹**（使用者換 session 前又說，逐字）：「應該說，我預期會有兩棵樹，一棵是這台的，在~/aos-home，底下掛著llm kernel。另一棵是repo aos的，啟動的時候會是CLAUDE_CONFIG_DIR=alt AOS_LLM_KERNEL=...」也就是 `~/aos-home` 要是一棵真的樹（有根 daemon，llm kernel 掛在它底下），不是現在這樣 llm kernel 自己一台。
+**要改成兩棵樹**（使用者換 session 前又說，逐字）：「應該說，我預期會有兩棵樹，一棵是這台的，在~/aos-home，底下掛著llm kernel。另一棵是repo aos的，啟動的時候會是CLAUDE_CONFIG_DIR=alt AOS_LLM_KERNEL=...」接著又補（逐字）：「家機那塊確實也要變成~/aos-home一套，底下是llm_kernel，不過repo aos這個樹會變成~/aos-home底下的一個proc。這台WSL也可以這樣嗎？」——**可以，已照這樣建好**（線 `two-trees-1123`）：先在暫存樹試通，再動真的；試起過一次（三層的表都 running、fake 回 `FAKE ANSWER to: hello, nested tree`、eca-aos 拿到 alt 帳號與新的 `AOS_LLM_KERNEL`、`~/aos-home` 的根與 llm kernel 沒有 `CLAUDE_CONFIG_DIR`），停、再起、再停也都對。家機還是舊樣子，步驟在 [03-換機「家機照做」](workflows/dev-env/03-換機.md#家機照做從舊樣子改成同一套做一次)。
 
-**這台怎麼起樹**：看 [03-換機](workflows/dev-env/03-換機.md)；`~/aos-home` 正由線 `two-trees-1123` 改成一棵樹（根底下掛 llm kernel），做完那條線會回來補這段。開 `eca-aos` 畫面的殼要帶跟根一樣的 `CLAUDE_CONFIG_DIR`。
+**這台怎麼起樹**（細節 [03-換機「起樹、停樹」](workflows/dev-env/03-換機.md#起樹停樹)；tmux session `aos` 的 `root` 視窗試過，`llm` 視窗用不到了）：
+
+```sh
+cd ~/aos-home && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK -u AOS_KERNEL -u AOS_LLM_KERNEL aos-exec --stack .stack root   # 起（前景，一行全起）
+aos-daemon-ctl -d ~/aos-home/.stack ls; aos-daemon-ctl -d ~/repo/aos/.stack ls                                           # 核對：4 列、3 列都 running
+CLAUDE_CONFIG_DIR="$HOME/.claude-alt" aos-agent -t eca-aos open                                                          # 開 eca-aos 畫面（另一個視窗）
+aos-daemon-ctl -d ~/aos-home/.stack shutdown                                                                              # 停（一行全停）；pgrep -af aos-daemon 沒輸出＝停乾淨
+```
+
+只停 repo 那棵用 `aos-daemon-ctl -d ~/aos-home/.stack stop repo-aos`；對 `~/repo/aos/.stack` 下 `shutdown` 會被上面的根馬上再起來。
 
 **今天做完的（都沒 push，WSL 的 main 比 origin 多這些）**：
 - `7bf52abd1` 新範本 `proto8/templates/eca-claude-alt`（第二帳號版 eca-claude，可選，活樹沒用它）。
@@ -40,7 +50,7 @@
 - LiteLLM「就用我剛開的」。
 - repo aos 的樹用第二帳號，「~/aos-home的這個root daemon仍然是用普通設定檔」；做法「還是用環境變數起活樹，會更靈活」。
 - 「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」換機工具「先留著」。
-- 兩棵樹：`~/aos-home` 一棵（底下掛 llm kernel），repo aos 一棵（起的時候帶 `CLAUDE_CONFIG_DIR` 與 `AOS_LLM_KERNEL`）。線 `two-trees-1123` 在做。
+- 樹：`~/aos-home` 一棵（普通設定檔），底下掛 llm kernel 與 repo aos 那棵（那一列帶 `CLAUDE_CONFIG_DIR` 與 `AOS_LLM_KERNEL`）；家機也要改成同一套。公司這台線 `two-trees-1123` 做完。
 
 **還開著的**：
 - 真模型與 alt 帳號都還沒走過一輪（progress `company-wsl-1123-verify`）。
