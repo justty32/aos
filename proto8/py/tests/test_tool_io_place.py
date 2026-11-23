@@ -83,6 +83,20 @@ class Place(unittest.TestCase):
         with self.env(AOS_STACK=self.stack, AOS_STACK_IN_CALLER="tools/todo/"):             # 結尾多一個 / 照樣認
             self.assertEqual(tool_io.place(str(self.stack / "todo.json")), "$AOS_STACK/tools/todo/todo.json")
 
+    def test_caller_stack(self):
+        """11-23：經 aos-tools call 被叫＝去掉小格那段；沒給、對不上＝AOS_STACK 本身；沒設＝None。"""
+        caller = str(self.stack.parent.parent)
+        with self.env(AOS_STACK=str(self.stack) + "/", AOS_STACK_IN_CALLER="tools/todo"):
+            self.assertEqual(tool_io.caller_stack(), caller)
+        for bad in (None, "tools/other", "../todo"):
+            kw = {} if bad is None else {"AOS_STACK_IN_CALLER": bad}
+            with self.subTest(bad=bad), self.env(AOS_STACK=self.stack, **kw):
+                self.assertEqual(tool_io.caller_stack(), str(self.stack))
+        with self.env():
+            self.assertIsNone(tool_io.caller_stack())
+        with self.env(AOS_STACK=""):
+            self.assertIsNone(tool_io.caller_stack())
+
     def test_os_reason_drops_the_file_name(self):
         try:
             open(str(self.tmp / "no" / "such"))

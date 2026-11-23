@@ -7,8 +7,11 @@ import tempfile
 HELP = """\
 usage: ws_write < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Write text only inside $AOS_WS: create (default), append, or replace.
-Paths inside $AOS_STACK or $AOS_CD, inside the folder that holds $AOS_STACK (other agents' stacks),
-or inside any .stack folder are refused even when they are inside the workspace.
+Paths inside $AOS_STACK or $AOS_CD, inside the folder that holds $AOS_STACK (other agents' stacks;
+not checked when that folder is the workspace or above it), or inside any .stack folder are refused
+even when they are inside the workspace. Called through aos-tools, $AOS_STACK here is the caller's
+stack (the tool's own cell minus $AOS_STACK_IN_CALLER), not the cell; $AOS_CD is then this tool's
+folder, so the caller's definition folder is not checked.
 Content is limited to 262144 UTF-8 bytes; missing parent folders are created.
 Result on stdout. On error: one line "ws_write: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -44,17 +47,21 @@ except (OSError, ValueError) as error:
     die("PathBad", "%s: %s" % (args["path"], error))
 if path == ws or not path.startswith(ws.rstrip(os.sep) + os.sep):
     die("PathBad", "%s is outside the workspace" % args["path"])
-for _var in ("AOS_STACK", "AOS_CD"):                # the workspace may contain the agent's own stack or definition: never write there
-    _own = os.environ.get(_var)
-    if _own:
-        _own = os.path.realpath(_own)
-        if path == _own or path.startswith(_own.rstrip(os.sep) + os.sep):
-            die("PathBad", "%s is inside $%s (the agent's own stack or definition)" % (args["path"], _var))
-_stack = os.environ.get("AOS_STACK")               # other agents' stacks: the folder that holds the own stack, and any .stack folder
-if _stack:
+def _inside(p, root):
+    return p == root or p.startswith(root.rstrip(os.sep) + os.sep)
+
+
+# The agent's own stack: through aos-tools call $AOS_STACK is only this tool's cell in it, so take the caller's
+# stack (tool_io.caller_stack); run directly, $AOS_STACK is the agent's own.
+_stack = tool_io.caller_stack()
+for _var, _own in (("AOS_STACK", _stack), ("AOS_CD", os.environ.get("AOS_CD"))):   # the workspace may contain them: never write there
+    if _own and _inside(path, os.path.realpath(_own)):
+        die("PathBad", "%s is inside $%s (the agent's own stack or definition)" % (args["path"], _var))
+if _stack:                                          # other agents' stacks: the folder that holds the own stack, and any .stack folder
     _procs = os.path.dirname(os.path.realpath(_stack))
-    if path == _procs or path.startswith(_procs.rstrip(os.sep) + os.sep):
-        die("PathBad", "%s is inside the folder of agent stacks (%s)" % (args["path"], os.path.relpath(_procs, ws)))
+    _real_ws = os.path.realpath(ws)
+    if not _inside(_real_ws, _procs) and _inside(path, _procs):   # that folder is the workspace or above it: it says nothing, skip
+        die("PathBad", "%s is inside the folder of agent stacks (%s)" % (args["path"], os.path.relpath(_procs, _real_ws)))
 if ".stack" in os.path.relpath(path, ws).split(os.sep):
     die("PathBad", "%s is inside a .stack folder (agent and daemon state)" % args["path"])
 if os.path.isdir(path):

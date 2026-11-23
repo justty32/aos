@@ -104,6 +104,29 @@ class WorkspaceWriteTest(unittest.TestCase):
         ok = self.call(env=env, path="state/notes.md", content="ok")
         self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
 
+    def test_through_aos_tools_the_callers_stack_is_guarded(self):
+        procs = self.ws / "state" / "procs"                  # 11-23: AOS_STACK is only the tool's cell under aos-tools call
+        (procs / "me").mkdir(parents=True)
+        (procs / "other").mkdir()
+        env = dict(self.env, AOS_STACK=str(procs / "me" / "tools" / "ws_write") + "/", AOS_STACK_IN_CALLER="tools/ws_write")
+        for target, says in (("state/procs/me/tools.json", "inside $AOS_STACK"),
+                             ("state/procs/me/tools/ws_write/x", "inside $AOS_STACK"),
+                             ("state/procs/other/tools.json", "folder of agent stacks (state/procs)")):
+            with self.subTest(target=target):
+                line = self.error("PathBad", env=env, path=target, content="no")
+                self.assertIn(says, line)
+                self.assertFalse((self.ws / target).exists())
+        self.ok("wrote 2 bytes to state/notes.md", env=env, path="state/notes.md", content="ok")
+        env["AOS_STACK_IN_CALLER"] = "tools/other"           # does not match the cell: the cell itself is the stack
+        self.ok("wrote 2 bytes to state/procs/me/tools.json", env=env, path="state/procs/me/tools.json", content="ok")
+
+    def test_stack_right_under_the_workspace_does_not_refuse_everything(self):
+        stack = self.ws / "st"
+        stack.mkdir()
+        env = dict(self.env, AOS_STACK=str(stack / "tools" / "ws_write"), AOS_STACK_IN_CALLER="tools/ws_write")
+        self.error("PathBad", env=env, path="st/tools.json", content="no")
+        self.ok("wrote 2 bytes to notes.md", env=env, path="notes.md", content="ok")
+
     def test_missing_content_is_arguments_bad(self):
         self.error("ArgumentsBad", path="x.md")
         self.assertFalse((self.ws / "x.md").exists())

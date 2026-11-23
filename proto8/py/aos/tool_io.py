@@ -292,6 +292,18 @@ def _stack_in_caller():
     return "/".join(parts) if os.path.abspath(stack).endswith(os.sep + os.sep.join(parts)) else None
 
 
+def caller_stack():
+    """叫方（agent）的 stack，絕對路徑；$AOS_STACK 沒設或空＝None。經 aos-tools call 被叫時 $AOS_STACK 是叫方 stack 裡的小格，
+    $AOS_STACK_IN_CALLER 對得上（_stack_in_caller）就去掉那段、回叫方的 stack；沒給或對不上＝$AOS_STACK 本身（直接跑時就是叫方的）。
+    11-23 線 eca-aos-core-1123：ws_write 以前拿小格當「自己的 stack」，只擋得到 <stack>/tools/ 底下。"""
+    stack = os.environ.get("AOS_STACK")
+    if not stack:
+        return None
+    stack = os.path.abspath(stack)
+    cell = _stack_in_caller()
+    return stack[:-len(cell) - 1] if cell else stack
+
+
 def os_reason(e):
     """OSError 的原因不帶檔名（str(e) 會把程式開的那個絕對路徑再印一次）：有 strerror 用它，否則 str(e)。"""
     return getattr(e, "strerror", None) or str(e)
