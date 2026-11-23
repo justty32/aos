@@ -90,14 +90,14 @@
       "since": "2026-11-18"
     },
     "workspace-stack-alloc": {
-      "title": "_stack 剩的線：線 8 與題 4（併 rebuild-aos-home、home-cleanup）",
-      "status": "open",
+      "title": "_stack 那串收尾：線 8、題 4 已結，換機那套 11-23 退場；剩 home-cleanup 等使用者點頭",
+      "status": "等使用者",
       "flow": "",
-      "what": "線 6（家機搬家，`~/aos-home` → `~/repo/aos/_stack`）已完成；線 7 改現行文件也已完成（`a7d3e1442`、`74e6370d1`；kits（`wf/workflows/dispatch/kits/`）的 `site.txt`、`gather/.env` 改成新位置、`gather/system.txt` 照原本的層序重拼（線 kits-reassemble-1122）；aos-user 11-22 已搬進 `proto8/frontend/aos-user/`，`source env.sh` 就在 PATH 上，現行文件裡的 aos-user 路徑一起改了（線 aos-user-home-1122-build），前端照 PATH 找得到（`f3e2581d7`），活的全景頁重起後生效）；剩線 8 公司那台起 `_stack`（使用者：公司現有的樹別管）、題 4（公司那台的 llm kernel 也放那台的 `~/aos-home/llm` 嗎？線 8 開工前答）。11-14 要的正規工作區與 stack 分配，由 11-22 的 `_stack` 規劃與線 1～5、9 做掉。併來的 rebuild-aos-home：照步驟單重建 `~/aos-home` 被 11-22 決定 D 蓋過（`~/aos-home` 往後只裝這台的 llm kernel），公司那台走線 8。併來的 home-cleanup：`~/.aos/scratch`（9.1 GB）、`~/.claude/projects`（2.5 GB）、`~/.cache/aos-*` 四夾、`~/.stack` 舊信箱，使用者 11-18 晚選項框「先不清」，`~/.aos/scratch` 用完怎麼收使用者 11-15 說之後自己定；跟搬家退路 `~/aos-home.old-1122/` 什麼時候刪一起等使用者點頭（刪檔要使用者本人說）",
-      "next": "",
+      "what": "線 6（家機搬家）、線 7（改現行文件）11-22 已完成。11-23：公司那台已起樹，題 4 使用者定「這台的llm kernel放~/aos-home/llm」，線 8 做完；同天使用者把 stack 改名 `.stack`、讓 git 忽略、不跟著機器搬（「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」，線 dot-stack-1123），換機 commit 不做了，工具 `wf/tools/stack-commit`、`wf/tools/home-move-1122/` 留著等使用者決定刪不刪。11-14 要的正規工作區與 stack 分配由 11-22 的規劃與線 1～5、9 做掉；併來的 rebuild-aos-home 被 11-22 決定 D 蓋過（`~/aos-home` 往後只裝這台的 llm kernel）。剩：併來的 home-cleanup：`~/.aos/scratch`（9.1 GB）、`~/.claude/projects`（2.5 GB）、`~/.cache/aos-*` 四夾、`~/.stack` 舊信箱，使用者 11-18 晚選項框「先不清」，`~/.aos/scratch` 用完怎麼收使用者 11-15 說之後自己定；跟搬家退路 `~/aos-home.old-1122/` 什麼時候刪一起等使用者點頭（刪檔要使用者本人說）",
+      "next": "家機 pull 之後停根、`mv _stack .stack`、改殼設定檔的 `AOS_DAEMON` 再起根（步驟在每台設定說明書「從舊名 _stack 改過來」）；home-cleanup 等使用者點頭",
       "see": [
         "[_stack 規劃](../proto8/thinking/2026-11/22/工作區與stack-1122/02-規劃.md)",
-        "[換機說明書](workflows/dev-env/03-換機.md)",
+        "[每台設定說明書](workflows/dev-env/03-換機.md)",
         "[留底 38](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t38)",
         "[progress 整理-1122](../proto8/thinking/2026-11/22/progress整理-1122/README.md)"
       ],
@@ -429,7 +429,7 @@
       "title": "aos-user 搬進 repo 之後剩的：重起全景頁、公司那台、user_send／user_verify 的舊找法",
       "status": "等使用者",
       "flow": "",
-      "what": "11-22 aos-user 已搬進 `proto8/frontend/aos-user/`，`proto8/frontend/bin/aos-user` 連過去（線 aos-user-home-1122-build；使用者四題都選 a：tick 先不裝、systemd 不碰、專區每台一份、不跟 wf/user 對接）。剩三件：① 使用者重起全景頁（關掉 pid 9460 那個分頁，開新殼先 `command -v aos-user` 要看到 `~/repo/aos/proto8/frontend/bin/aos-user`，再 `AOS_DAEMON=~/repo/aos/_stack aos-frontend serve`），重起前「要決定」欄還是空的；② 公司那台 WSL：`git pull` 後新殼 `command -v aos-user`，沒有 `~/.aos/user` 就 `aos-user init`，跟線 8 一起做；③ `proto8/py/tools/agent/user_send`、`user_verify` 的找法拿掉 `$AOS_WS/tools/aos-user/aos-user` 那條（只留 `$AOS_USER_TOOL`、PATH，註解、usage、測試跟著改），要跑 `install.py`，等下次有人跑時一起做；不做也不影響功能",
+      "what": "11-22 aos-user 已搬進 `proto8/frontend/aos-user/`，`proto8/frontend/bin/aos-user` 連過去（線 aos-user-home-1122-build；使用者四題都選 a：tick 先不裝、systemd 不碰、專區每台一份、不跟 wf/user 對接）。剩三件：① 使用者重起全景頁（關掉 pid 9460 那個分頁，開新殼先 `command -v aos-user` 要看到 `~/repo/aos/proto8/frontend/bin/aos-user`，再 `AOS_DAEMON=~/repo/aos/.stack aos-frontend serve`（11-23 起資料夾改名 `.stack`）），重起前「要決定」欄還是空的；② 公司那台 WSL：`git pull` 後新殼 `command -v aos-user`，沒有 `~/.aos/user` 就 `aos-user init`，跟線 8 一起做；③ `proto8/py/tools/agent/user_send`、`user_verify` 的找法拿掉 `$AOS_WS/tools/aos-user/aos-user` 那條（只留 `$AOS_USER_TOOL`、PATH，註解、usage、測試跟著改），要跑 `install.py`，等下次有人跑時一起做；不做也不影響功能",
       "next": "",
       "see": [
         "[aos-user 新家規劃](../proto8/thinking/2026-11/22/aos-user新家-1122/README.md)",
