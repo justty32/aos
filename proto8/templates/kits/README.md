@@ -72,10 +72,11 @@ Tool descriptions are the biggest fixed cost of every brain call: they are sent 
 
 Cutting tools saves far more than cutting the system text. board_read and board_wait were added after this measurement (now 26 tools).
 
-The gather tool set (26 tools) keeps reading, write/edit/mkdir, gadgets, todo, mailbox, board_read and board_wait (from the comm pack; board_set, board_clear and board_ls are turned off), goal, read-only json, index and self_state. It leaves out shell, delete, events, subagent, def, jsonx and kernel_gate. self_tools, self_system, self_llm, self_history and self_ctl are turned off, so the agent cannot lift its own limits.
+The gather tool set (26 tools) keeps reading, write/edit/mkdir, gadgets, todo, mailbox, board_read and board_wait (from the comm pack; board_set, board_clear and board_ls are turned off), goal, read-only json, index and self_state. It leaves out shell, delete, events, subagent, def, jsonx and kernel_gate. self_tools, self_system, self_llm, self_history and self_ctl are turned off, so the agent has no tool for lifting its own limits. It still has write and edit, which take absolute paths, so it can reach the `tools.json` in its own stack; only the rules keep it from editing that file by hand.
 
 ## Known limits
 
 - Writing only inside the workspace is a convention in the system text; no hook enforces it yet.
+- Turning off the self tools does not lock the tool set: write and edit can still change the `tools.json` in the agent's own stack.
 - board_read and board_wait run the `aos-comm` command, so it must be on PATH (`source "$AOS_HOME/env.sh"` puts `$AOS_HOME/bin` there); without it those two calls fail and the rest of the kit still works.
 - Only tier A general text and two roles exist so far.
