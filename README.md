@@ -18,7 +18,7 @@ repo 根沒有 CMake：08～09 月那一代單一執行檔 `aos`（根目錄 CMa
 ```
 proto8/     現役本體（程式、條文、討論紀錄；一覽在 proto8/README）
 wf/         分層工作流文件（開發流程用，給 agent 看）
-archive/    封存：舊原型 proto～proto7-2、甲代 aos-v1
+archive/    封存：舊原型 proto～proto7-2、甲代 aos-v1（11-17 已刪，見 git 歷史 c97d6ade8）
 AGENTS.md   agent 的最頂層入口（CLAUDE.md 指向它）
 ```
 
