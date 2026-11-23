@@ -1,0 +1,50 @@
+{
+ "01-M與H.md": {
+  "description": "01 M 與 H"
+ },
+ "02-測試與預演交件.md": {
+  "description": "02 測試與預演交件"
+ },
+ "03-還沒解的問題.md": {
+  "description": "03 還沒解的問題"
+ },
+ "H1-core.patch": {
+  "description": "H1：templates 三分手改層，核心程式（py/cpp）那部分的 format-patch，明早在重跑 split.py 後的 main 上 git am"
+ },
+ "H2-templates.patch": {
+  "description": "H2：templates 三分手改層，範本那部分的 format-patch（agent-fsm 改指 lib、各範本說明與測試、templates/README 六類表），明早接在 H1 後 git am"
+ },
+ "H3-frontend.patch": {
+  "description": "H3：templates 三分手改層，前端那部分的 format-patch（aide-def 測試的 AOS_HOME 改從 proto8 算），明早接在 H2 後 git am"
+ },
+ "H4-kb.patch": {
+  "description": "H4：templates 三分手改層，知識庫那部分的 format-patch（definition.md、packs.md 寫格的程式在 lib），明早接在 H3 後 git am"
+ },
+ "H5-gen.patch": {
+  "description": "H5：templates 三分手改層，生成設定那部分的 format-patch（index_gen.json、index_gen_desc.json、codemap_deps.py），明早接在 H4 後 git am"
+ },
+ "H6-docs.patch": {
+  "description": "H6：templates 三分手改層，文件與共用工具那部分的 format-patch（proto8/README、testing.md、wf/public 的 fsm-guard 測試），明早接在 H5 後 git am"
+ },
+ "README.md": {
+  "description": "06-switch：三分的補丁怎麼重做、測了什麼"
+ },
+ "moves.tsv": {
+  "description": "old<TAB>new, repo-relative; files before folders; read by split.py (R1-R5) and fix_moved_links.py (R2)"
+ },
+ "rehearsal.md": {
+  "description": "改表預演（11-23 晚，家機）"
+ },
+ "run_all.sh": {
+  "description": "copy one commit of a repo with git archive, install it there with every AOS_* unset, run every test folder one by one, write a summary."
+ },
+ "run_frontend.sh": {
+  "description": "run proto8/frontend/tests through its own run.sh (it wants no AOS_* at all) inside a tree run_all.sh already installed."
+ },
+ "split.py": {
+  "description": "one-off tool for the templates split (06c rules R1-R5): moves folders, fixes md links, rewrites path strings in a repo copy; rerunnable."
+ },
+ "stack_paths.py": {
+  "description": "一次性的改表工具（templates 三分切換用，規格在 06f）：照 06a 對照表把一棵樹每台 daemon 的 stack（與 --defs 給的定義夾）裡的舊範本路徑換成新路徑；預設只列不改，--apply 先備份、記清冊、改完重新解析 JSON 並數命中為 0，--restore 照清冊…"
+ }
+}

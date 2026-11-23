@@ -22,7 +22,7 @@
   "proto8/py/tests/apps/eca": "aos-eca-turn、aos-eca-screen 的測試（本體在 py/aos/apps/eca；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/feedback": "aos-feedback 的測試（本體在 py/aos/apps/feedback；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/hook": "aos-hook 的測試（本體在 py/aos/apps/hook；經 bin/ 的入口當子行程跑，handler 是真的 sh 與 python3、經 aos-exec）",
-  "proto8/py/tests/apps/json_view":"aos-json-view 的測試（本體在 py/aos/apps/json_view；多半經 bin/ 的入口當子行程跑）",
+  "proto8/py/tests/apps/json_view": "aos-json-view 的測試（本體在 py/aos/apps/json_view；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/mailbox": "aos-mailbox 的測試（本體在 py/aos/apps/mailbox；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/mcp": "aos-mcp 的測試（本體在 py/aos/apps/mcp；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/mcp_import": "aos-mcp-import 的測試（本體在 py/aos/apps/mcp_import；多半經 bin/ 的入口當子行程跑）",
@@ -720,6 +720,12 @@
   "wf/public": "公用知識庫：所有 agent 可讀可投稿，頂層管；tools/ 放公用小工具",
   "wf/advices": "對 aos 本身的意見庫：各隊做事時對 aos 的改進意見，頂層派 Claude 子 agent 審與整理、按主題歸檔建索引；之後改進 aos 從這裡找參考",
   "proto8/frontend": "選配的網頁外掛：全景頁 aos-frontend，把一棵樹的 agent、信、看板做成網頁給使用者看與回覆；含後端、v2 前端原始碼（dist 不進 git，要在有 Node 的機器建）、aide 定義的差異檔、systemd 範例與測試；11-17 從 cmd/aos-view 搬來改名；執行檔在 bin/aos-frontend，source env.sh 後直接打 aos-frontend",
-  "proto8/thinking/2026-11/17": "11-17 的討論與規劃：公司樹換版、proto8 收成八夾、路徑規則（只認一個家）、wf 整理規劃、待裁網頁的題號對照與答案、重建步驟單、SESSION-LOG 瘦身留底"
+  "proto8/thinking/2026-11/17": "11-17 的討論與規劃：公司樹換版、proto8 收成八夾、路徑規則（只認一個家）、wf 整理規劃、待裁網頁的題號對照與答案、重建步驟單、SESSION-LOG 瘦身留底",
+  "proto8/thinking/2026-11/23/org範本與templates分層-1123/06-switch/H1-core.patch": "H1：templates 三分手改層，核心程式（py/cpp）那部分的 format-patch，明早在重跑 split.py 後的 main 上 git am",
+  "proto8/thinking/2026-11/23/org範本與templates分層-1123/06-switch/H2-templates.patch": "H2：templates 三分手改層，範本那部分的 format-patch（agent-fsm 改指 lib、各範本說明與測試、templates/README 六類表），明早接在 H1 後 git am",
+  "proto8/thinking/2026-11/23/org範本與templates分層-1123/06-switch/H3-frontend.patch": "H3：templates 三分手改層，前端那部分的 format-patch（aide-def 測試的 AOS_HOME 改從 proto8 算），明早接在 H2 後 git am",
+  "proto8/thinking/2026-11/23/org範本與templates分層-1123/06-switch/H4-kb.patch": "H4：templates 三分手改層，知識庫那部分的 format-patch（definition.md、packs.md 寫格的程式在 lib），明早接在 H3 後 git am",
+  "proto8/thinking/2026-11/23/org範本與templates分層-1123/06-switch/H5-gen.patch": "H5：templates 三分手改層，生成設定那部分的 format-patch（index_gen.json、index_gen_desc.json、codemap_deps.py），明早接在 H4 後 git am",
+  "proto8/thinking/2026-11/23/org範本與templates分層-1123/06-switch/H6-docs.patch": "H6：templates 三分手改層，文件與共用工具那部分的 format-patch（proto8/README、testing.md、wf/public 的 fsm-guard 測試），明早接在 H5 後 git am"
  }
 }
