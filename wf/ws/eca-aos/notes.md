@@ -28,6 +28,8 @@
 - 修法選項：① 範本 `cli.json` 的 `settings` 加 `"tui": "fullscreen"`（推薦；子 agent 在暫存 tmux 用 `--settings '{"tui":"fullscreen"}'` 驗過會變全螢幕、能捲）；② `cli_screen.py` 的 `TMUX_CONF` 加 `set -g mouse on`（要 `install.py`，會搶滑鼠選字，沒實測）；③ 都做。使用者 11-23 選「1」：三份 `cli.json`（`eca-claude`、`eca-claude-alt`、`start-eca/agents/ann`）的 `settings` 加了 `"tui": "fullscreen"`，`test_cli_settings.py` 放行這一鍵，兩份 README 與 `templates/docs/01-eca-claude.md` 補了說明；在乾淨複本跑 `test_cli_settings`、`test_eca_claude_alt`、`test_start` 都過，`claude -p` 帶這項照常回答。**還沒在真的畫面驗**：要使用者用主帳號重開一個畫面試滾輪。
 - 沒找到「上次」的紀錄（repo、git log、兩個帳號的對話都搜過）。
 - 子 agent 留下的：`~/.claude/.claude.json`（998 bytes，12:04，實驗時帶 `CLAUDE_CONFIG_DIR=~/.claude` 生出來的，平常不會被讀）、`~/.claude/backups/` 一份 84 bytes、兩個帳號 `projects/-home-guanyu-repo-aos/` 可能多幾段短對話；scratch 在 `…/scratchpad/wheel/`。刪不刪要使用者說。
+- **痕跡刪了**（使用者 11-23「滾輪可以用了，那幾個痕跡刪掉吧」）：`~/.claude/.claude.json`、那份 84 bytes 的備份、六段實驗對話（主帳號 4、第二帳號 2，在 `projects/-home-guanyu-repo-aos/`）與它們的 `session-env/` 夾。兩份 `history.jsonl` 裡六行 `!seq 1 300` 沒動（活著的畫面一直在寫那兩個檔）。子 agent 說「沒叫模型」不對：六段對話各跑了一小輪模型（讀 AGENTS.md，一段還跑了唯讀的 ls／cat／git status），沒寫任何檔。
+- 滾輪：使用者 11-23 回報「滾輪可以用了」，真畫面驗過。
 
 ## 2026-11-23 上午：建這台的使用者專區
 
