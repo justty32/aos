@@ -8,12 +8,21 @@
 
 用到才掛、做完就收；不佔位子，沒有地盤與筆記。
 
-**現況：還沒有。** 公司 WSL 11-23 沒掛過；四關打通之前，這台的蒐集與雜活實際是 sonnet 的 Claude 子 agent 在做（第 5 題）。要先過四關：
+**現況：公司 WSL 11-23 下午第一次掛起來、做完一張蒐集單。** `eca-aos` 掛了 `eca-aos-sol-1`（agent-fsm 範本蓋上 wf 配給包 `gather`，腦 `sol` 加 `reasoning_effort: high`），派它盤點三組檔裡的「部長」：15:45 送任務書、15:55 回 DONE，24 處、11 個檔，跟 eca-aos 自己數的一樣。細節在 [eca-aos 筆記](../../ws/eca-aos/notes.md)。
 
-1. 真模型端點要通（progress `company-wsl-1123-verify`：4000 埠沒在聽、真模型沒驗過）。
-2. 端點包的名字要對上（progress `sol-high-pack`：配給包寫 `sol-high`，llm kernel 範本是 `sol` 加 reasoning_effort）。
-3. 配給包 `.env` 的 `AOS_LLM_KERNEL` 要改指這台的 llm kernel（[aos-teams/07](../../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)「sol 走 agent-fsm」）。
-4. 掛的人要有 `subagent`、`agent_def` 兩支工具；`eca-aos` 現在沒有（[它的筆記](../../ws/eca-aos/notes.md)列的工具包裡沒有這兩包）。
+之前卡的四關現在的樣子：
+
+1. 真模型端點：通（核心程式位子 11-23 實測 4000 埠有在聽、gpt 有回話）。
+2. 端點包的名字：配給包改成 `sol` 加 `reasoning_effort`（`e66a68095`），跟 llm kernel 範本一致。
+3. `AOS_LLM_KERNEL`：不用抄配給包的 `.env`，由掛的人那邊（上層 daemon 那一列）傳下來。
+4. 掛的人要有 `subagent`、`agent_def` 兩支工具：`eca-aos` 用 `self_tools add` 自己加了（`{"$env":"AOS_HOME","$path":"/lib/tools/agent/subagent"}`，`agent_def` 同理）。
+
+實際掛一次學到的：
+
+- 一張小蒐集單約 10 分鐘（高強度的 gpt 每問一次腦一到三分鐘），比 sonnet 的 Claude 子 agent 慢；適合不急、可以放著跑的單。
+- 任務書要寫知識庫的絕對路徑（配給包的 system 只說「任務書給的知識庫」）。
+- 它佔掛的人一個 `max_subagents` 名額；位子睡著也佔名額，四格滿了要先 `rm` 一隻。
+- 工作區放 `wf/ws/eca-aos/temp/<agent 名>/`（不進 git）可行；定義放 `wf/ws/eca-aos/temp/defs/`。
 
 ## 職責
 
@@ -36,7 +45,7 @@
 
 - **可以讀**：任務書點名的路徑、知識庫。
 - **可以寫**：只有自己的工作區。這條只靠配給包的 system 文字，沒有 hook 擋（kits「已知限制」）；包裡關掉了改自己的工具，但那仍不是牆。
-- **工作區放哪（沒定、沒試過）**〔提案〕：aos-teams 第 3 件寫「`ws` 從你的工作區算，落在 `<線夾>/<agent 名>`」，那是線各有一個線夾時的寫法；11-22 起 eca 的工作區是 repo 根。提案：放掛的人地盤的 `temp/<agent 名>/`（不進 git），要留的結果由掛的人搬出來。
+- **工作區放哪**〔提案，11-23 試過可行〕：放掛的人地盤的 `temp/<agent 名>/`（不進 git），要留的結果由掛的人搬出來。
 - 活樹、git、刪檔的禁令在配給包的站台層 `site.txt`。
 
 ## 交接

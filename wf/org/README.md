@@ -56,7 +56,7 @@ eca-aos 拿 fable 的第一版問了七題，使用者 11-23 答（逐字）：
 | 範本 [templates](templates/README.md) | `eca-aos-templates` | 專改 `proto8/templates/` 的定義 | 掛著、睡著（同上） |
 | 核心程式 [core](core/README.md) | `eca-aos-core` | 專管 `proto8/py/`、`proto8/cpp/`（第 3 題） | 掛著、睡著（同上）；11-23 新開 |
 | 前端 [frontend](frontend/README.md) | `aos-eca-frontend` | 專管 `proto8/frontend/`（第 2 題） | 沒掛，前端大修開工才掛 |
-| 打雜工 [chore](chore/README.md) | 用到才掛 | 蒐集、核對、機械式施工 | 還沒有：真模型端點沒驗 |
+| 打雜工 [chore](chore/README.md) | 用到才掛 | 蒐集、核對、機械式施工 | 11-23 下午第一次掛起來做完一張蒐集單；平常不掛 |
 
 除了打雜工（agent-fsm＋gpt）全是 eca claude，地盤在 `wf/ws/eca-aos/<名>/`。「位子」「負責人」「代班」這些叫法跟著七題的題目用，使用者照推薦答了，算接受（eca-aos 的判斷）。`eca-aos-core` 這個名字是 eca-aos 取的；`aos-eca-frontend` 要不要改名使用者沒定。
 

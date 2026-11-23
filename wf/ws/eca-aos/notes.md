@@ -213,3 +213,17 @@
 - **三個位子都 `subagent sleep` 了**（15:24）：daemon 收掉它的行程、stack 留著、表上是 sleeping；寄信照樣排隊；`subagent wake <名>` 叫醒；repo 這台 daemon 重起時它們也會自己醒（工具回的話）。跟 `rm` 的差別：還佔 `max_subagents` 的名額（3/4），表上那列還在。
 - 位子試行第一天的數：kb 三件、templates 兩件、core 兩件，都是自己交件、我事後對 diff；從寄信到 DONE 最短 5 分鐘、最長約 20 分鐘（core 跑整套測試）。
 - wf/org 成員表三列改成「掛著、睡著」。
+
+## 2026-11-23 15:40 起：使用者「好，都去」——打雜工、findings、小文件三路一起
+
+- 他問「接下來還有啥要做的？」，我列了三件可以直接做的（掛打雜工試一次、findings 的幾項、小文件）；他答（逐字）：「好，都去」。push、刪 `.stack/clock`、來談的兩題不在這句裡。
+- **core 位子叫醒，第三件**（REQUEST `01795419887324897022.1716711.2786918`）：五項一項一個 commit——`ws_write` 擋的範圍（先重現再修，有兩種以上做法就回 NEEDS-USER）、`ctl state` 的 resources 行、`mem_mb` 提醒、09-份額的 systemd 句、`self_llm`／`self_system` 的 `arbitrary_exec` 與 `user_send` 說明。不跑 install.py；回信分開寫改了 py 還是 cpp。
+- **我加了 `agent_def` 工具**（`self_tools add`，跟 subagent 同一種寫法）。
+- **打雜工第一次掛起來**：`agent_def new`（範本 agent-fsm）到 `wf/ws/eca-aos/temp/defs/gather`，蓋上 wf 配給包的 `system.txt`、`tools.json`，`llm.json` 寫 `{"model":"sol","reasoning_effort":"high"}`，沒抄 `.env`；`subagent add` 名 `eca-aos-sol-1`、ws `wf/ws/eca-aos/temp/eca-aos-sol-1`、limits `{"files":256}`（沒設 `mem_mb`）。任務：盤點 `wf/public`、`user/03`、`aos-teams/04` 裡的「部長」。15:45 `say`、15:55 DONE（信 `01795420523977905999.1837863.2850584`）：24 處、11 檔，我用 grep 數的一樣。已 `rm`（stack 留著）。
+  - 看到的毛病：wf 配給包的 `system.txt`、`site.json` 寫死家機家目錄（`/home/lorkhan/...`），它第一步讀錯路徑、公告板讀不到；`glob` 給 `max_items: 1000` 被擋（上限 500）三次後自己改對。
+  - strict 修好後的樣子：它不再填空字串，但 `glob`、`grep` 還是會把 `hidden`、`gitignore`、`max_items` 這些選填的填上（有意義的值）。
+  - `subagent listen` 帶 `letter` 等不到（agent-fsm 做完是寄信、不是回那則訊息）；等它的信才對。
+- **兩隻 opus 子 agent 的產物我看過 diff 交了**：`d158b2062`（aos-teams/06、活樹旁邊、aos-teams.md、CONVENTION 連結）；`e66a68095`（wf 配給包：不寫死家目錄、26 支工具跟產品版一致、`sol` 加 `reasoning_effort`、卡片說 `.env` 不用抄）。配給包的 `gather/.env` 檔還在（舊路徑），子 agent 建議刪，**要問使用者**。
+- **templates 位子第三件 DONE**（信 `01795420477044653187.1814492.2845890`，commit `ee2981105`）：`kernel/docs/01-llm-kernel.md` 補 strict 那句；範本裡沒有 `sol-high`。已再 sleep。
+- **第二隻打雜工 `eca-aos-sol-2`**（定義 `temp/defs/gather2`＝改好的配給包原樣三個檔）在跑：查四個檔的斷連結（任務 `000000000001.01795420640192985665.1858028.2862205`），順便驗改好的包。
+- **第三隻 opus 子 agent** 在改：24 處「部長」與配給包舊說法（aos-teams.md 49、51 行、recipes、sol-crew、07、03-換機 156 行）。回來我看 diff 再交。
