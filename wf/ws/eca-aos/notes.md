@@ -48,3 +48,27 @@
 2. 早上「先處理這個，然後我們再來」後面要做的事，他還沒說。
 3. progress `company-wsl-1123-verify`（真模型端點、第二帳號沒驗）、`sol-high-pack`。
 4. 家機還是舊樣子，pull 之後要照 03-換機「家機照做」。
+
+## 2026-11-23 下午：mine_arena 的 main 來信（已回，信 `01795412174548591287.752207.2015641`）
+
+- 信 `01795411651598235449.693262.1963346`（留底在我 stack 的 `mailbox/archive/`），寄件人 `mine_arena` daemon 上的 `main`（使用者自己開的 eca，專案 `/mnt/c/code/mine/arena_cheater`），回信寄 `/home/guanyu/aos-home/.stack/procs/mine_arena/procs/main/mailbox`、`in_reply_to` 填那封信名。
+- 內容：第一輪多 agent（main 加五個 agent-fsm 部門）的回顧。兩個焦點，信上說使用者之後會親自找我討論：① 上層約束下屬現在只靠文字，工具層擋不住（絕對路徑、`self_tools` 自己加回、`tools_def`、`fork`、`subagent`）；② 跨 agent 的資源分配（整個 mine_arena 同時只准一件 Node.js，現在靠 `flock` 自律）。回顧原文在 `/mnt/c/code/mine/arena_cheater/wf/notes/investigations/org-retro-1/`。
+- 它問三個事實題（不要我改 aos）：路徑層級的存取限制有沒有、怎麼用；`subagent tools` 拿掉 shell／run_python／self_tools／tools_def 之後下屬還有什麼路拿回能力；跨 agent 的共用配額、排程、租約有沒有。
+- 派了一隻 opus 的 Claude 子 agent 只讀查證（讀知識庫加對程式，不起 daemon、不叫模型）。回來後：我對過關鍵幾項 → `mailbox_send` 回 main（status DONE）→ 跟使用者報。兩個焦點是方向題，等使用者來談，我不先提方案。
+- **回了（DONE）**，三題的結論（子 agent 讀文件加對程式，我抽對過 write 檔頭、fork 的 ctl add、cgroup.cpp、shell-boxed 範例、aos-lock／aos-sandbox／bwrap 在不在）：
+  1. 路徑限制：工具收絕對路徑、kernel 不管路徑、guard hook 的 README 自己寫「審查中，先別拿來限制 agent」；擋得住的只有 `aos-sandbox`（bwrap），一支工具一支工具包，沒有整隻 agent 的開關。這台沒有 s6-softlimit，沙箱設定寫 `mem_mb`／`cpu_s`／`file_mb` 會報 `CommandMissing`。`sub:N` 只是換 uid，自己的 stack 仍可寫。
+  2. 拿掉四支工具關不住：任何收絕對路徑的寫入工具都能改自己 stack 的 `tools.json`／`hookeds.json`；`self_hook`、`subagent`、`agents_ctl`、`agent_def`（換名字）、`mailbox_send` 都是路。`fork` 拿不回工具，但分身那列不帶 `--limits`。要關住得一起拿掉 change、delete、json 寫入、jsonx、events、subagent、def、shell 幾包，只留 look、json 讀、mailbox、gadgets 加一支包沙箱的 shell。
+  3. 共用配額：`mem_total_mb`、`procs_total` 走 cgroup，寫在 sub-daemon 那列就是底下共用（要 `"cgroup": "on"` 且上層 daemon 用 `systemd-run --user --scope -p Delegate=yes` 起；沒實跑）。「同時只准一件」沒有現成的：kernel 站 `max_running`＋`queue` 只管起 proc；`aos-lock` 跟 flock 一樣是約定。
+- 順帶發現、還沒處理：子 agent 說文件寫「公司 WSL 無 systemd」，但這台 systemd user 在跑、有 memory 與 pids 控制器（哪份文件沒記下，要查再 grep）。
+
+## 2026-11-23 下午：開 `wf/org`（工作室組織）
+
+- 使用者（逐字）：「他那邊是我的試驗田。那邊現有的aos體系感覺不錯，你這邊也學他吧，在wf/開一個org，但是你這邊我預期會是小型工作室，所以主力會是eca claude，人手精簡，fsm gpt則會是打雜工。」接著：「然後你也可以開claude subagent fable，去規劃你這邊自己的團隊組織架構」。
+- 樣板我自己看過：`/mnt/c/code/mine/arena_cheater/wf/org/`（README：部門表、標準流程、東西放哪裡、agent 形態；每部門一張角色卡四段：職責、讀寫範圍、交接、模型；`letters.md`）與 `wf/aos/`（定義的 system 指向角色卡、不重抄）。
+- 派了一隻 fable 的 Claude 子 agent：只准寫 `wf/org/`，交第一版（README 加角色卡）；回覆裡要給要使用者拍板的題（最多 7）、跟現有文件打架的地方（aos-teams、team-model、user.md 的模型分工）。提案要標成提案，不寫成既定事實。
+- 回來後我要做：看過稿 → 交件（`wf/org/` 是新夾）→ WORKFLOWS.md 加一列指過去 → 把拍板題帶給使用者（這台有專區了，但全景頁沒起，他人在終端，就當面問）。打架的句子等他定了再改。
+- **稿回來了，我讀過六個檔**：`wf/org/README.md`、`places.md`、`lead/`、`kb/`、`templates/`、`chore/` 各一張卡。架構（全是提案）：負責人 `eca-aos` 加兩個專職位子（kb、templates），全是 eca claude，不設部長；位子＝角色卡加地盤筆記，有活才掛、沒掛時派 Claude 子 agent 讀卡與筆記代班；`aos-eca-frontend` 職責沒定、不寫卡；fsm gpt 打雜工用到才掛。使用者後來那兩句（蒐集算打雜、重要施工尤其寫程式用 Claude）fable 自己從我的筆記讀到、已寫進去。`WORKFLOWS.md` 加了一列指到 org。
+- **等使用者答的七題**（當面問了，沒寄專區：全景頁沒起）：① 位子常駐還是有活才掛（推薦有活才掛）② 三個既有位子留哪幾個、frontend 要不要定成前端（推薦定、開工才掛）③ `proto8/py`／`cpp` 要不要開位子（推薦不開、按件派）④ 不重要的施工歸誰（推薦寫程式一律 Claude、機械式的可給 fsm gpt）⑤ 蒐集雜活先給 fsm gpt 還是 sonnet（推薦 fsm gpt、端點通之前 sonnet）⑥ 沒部長後誰放行 commit（推薦位子範圍內先交後報）⑦ eca-aos 能不能親手做小件（推薦只限活狀態、抄原話、wf/org）。
+- **答完要改的舊文件**（fable 列的 16 條，還沒動）：`aos-teams.md` 第 9、10、11、15、35、52、74 行；`aos-teams/07` 第 13、63～66 行；規矩卡第 29、54、59 行；`user.md`「子 agent 模型」列 11-14 那句移到已被取代、「工作模式」列加指標；`team-model.md` 第 31、43、67、80 行（只動本專案那幾句）；`kits/card.md` 第 13、14 行；`dispatch/README.md` 第 10、78 行；`AGENTS.md` 加指到 org 的一條。
+- 打雜工在這台掛得起來前要過四關：真模型端點、`sol-high` 包名、配給包 `.env` 的 `AOS_LLM_KERNEL`、我要先有 `subagent` 與 `agent_def` 工具。
+- 使用者接著補（逐字）：「蒐集算打雜，但施工這塊，如果是重要的部分，那確實還是得用claude」，再補「尤其是寫程式」。fable 派出去時還沒有這句：稿子回來要對——蒐集歸 fsm gpt、重要的施工歸 Claude；「不重要的施工歸誰、怎麼分重要不重要」他沒說，別替他定，列成題目。這句已抄進 `common/user.md`「子 agent 模型」那列（還沒交件，等 org 稿一起交）；`aos-teams.md`、規矩卡裡「蒐集和施工用 sol」那幾句等對完再改。

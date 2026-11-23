@@ -20,6 +20,9 @@
  "knowledge": {
   "description": "wf 的機讀知識：code map（proto8 程式地圖冊）等生成或手寫的 json"
  },
+ "org": {
+  "description": "wf/org：工作室的分工（誰負責什麼、做完交給誰）"
+ },
  "progress": {
   "description": "progress 條目的大段內文：wf/progress.json 裡寫成 {\"$ref\": \"progress/.md\"} 的 what／next，一條一檔、檔名＝條目鍵"
  },

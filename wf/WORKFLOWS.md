@@ -50,6 +50,7 @@
 | 「寄信給 X」「請別資料夾的 agent 做 Y」「回報做完了 / 卡住了」 | **inbox（寄信）** | [workflows/inbox.json](workflows/inbox.json)（信的格式與 STATUS 在它的 `local/letter_format`）|
 | 「把這件事切成幾條線派出去」「開一隊去做」「寫交接書」「收線」 | **dispatch** | [workflows/dispatch/README.md](workflows/dispatch/README.md) |
 | 「派 agent 時要它讀什麼規矩」 | **規矩卡**（使用者 11-17 待裁網頁 wf-6 a） | [workflows/common/rules-card.md](workflows/common/rules-card.md) |
+| 「這件事歸誰」「做完交給誰」「要開／收一個位子」「掛打雜工」 | **org**（eca-aos 這邊的工作室分工；11-23 第一版，標〔提案〕的等使用者定） | [org/README.md](org/README.md) |
 | 「要開團隊」「這層派哪級模型」「怎麼分角色」 | **team-model** | [workflows/team-model.md](workflows/team-model.md) |
 | 「我要用螢幕 / 鍵鼠」「誰在佔著主工作樹」「誰在佔資源」 | **resources** | [workflows/resources.md](workflows/resources.md) |
 
