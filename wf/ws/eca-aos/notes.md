@@ -250,3 +250,11 @@
 - 它另外報：`user_send` 的 `test_tool_missing` 在乾淨複本上本來就失敗（PATH 上有真的 `aos-user`），沒修、沒派。其他標 `arbitrary_exec: true` 的九支這次沒審。
 - 轉出去：kb（REQUEST `01795421362622202106.1981094.2934448`：me.md 的 resources、subagent.md 等的 mem_mb、任意執行那兩支；packs.md 等使用者選了再改）；一隻 sonnet 子 agent 改 `proto8/docs/tutorial/05`、`05b` 兩行範例輸出。
 - 還要問使用者：第三次 `install.py`。
+
+## 2026-11-23 16:13：使用者「1.補。2.想跑就跑，隨便跑」
+
+- 他說（逐字）：「1.補。2.想跑就跑，隨便跑」。
+- **1＝ws_write 的定義夾要補**。他沒指定 A／B／C；core 與我都推薦 A，照 A 派（REQUEST `01795421790093089237.2051565.2977195`：guard 的 `scope.py` `definition()` 搬到 py/aos 共用、沒 daemon 照舊不擋、量一下成本；順手修 `user_send` 的 `test_tool_missing`）。若他其實想要 B／C，改起來是 core 一件事。
+- **2＝`install.py` 常設許可**：之後我自己判斷就跑，不逐次問。寫進 HANDOFF 授權段與 `wf/org/lead` 角色卡（我的讀法：只限 install.py；位子仍不自己跑）。
+- **第三次 `install.py` 跑了**（16:14，exit 0，裝前 `py/`、`cpp/` 乾淨）。生效的證據：我的 `self_state` resources 行已是新樣子（`limits none; whole agent uses …`）、`subagent` 工具說明多了 mem_mb 那句。
+- kb 位子 `9bebd15bb`（me.md、subagent.md、cli/sandbox.md、cli/agent.md）已交；`packs.md` 的 ws-write 那句等 core 第四件回來再轉。kb 現在醒著等。

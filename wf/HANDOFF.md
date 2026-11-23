@@ -20,7 +20,9 @@
 
 **授權（11-23 當場）**
 - **push 還沒給**：早上他說「我今天五點下班，下班前再統一push」。本地 main 比 origin 多 11 個以上 commit，五點前問他，要他本人說才推。
-- 刪檔：只給過滾輪調查留下的那幾個痕跡（已刪）。
+- 刪檔：只給過滾輪調查留下的那幾個痕跡（已刪）；`wf/workflows/dispatch/kits/gather/.env`（「1.刪掉。」，已刪）。
+- **`install.py` 不用再問**：他 11-23 16:13 被問第三次要不要跑時說「2.想跑就跑，隨便跑」。eca-aos 在 repo 跑 `install.py` 不必再逐次問（我的讀法：只限 `install.py`，位子仍不自己跑、回信提醒 eca-aos 裝；跑之前照舊確認 `py/`、`cpp/` 沒有未交的改動、清掉 `AOS_*`）。
+- **16:55 push 一次**：他 16:03 說「2.4:55推上去」。只這一次、推 `origin main`；之後的 commit 要他再說。
 - 派工：普通 opus、簡單與雜活 sonnet、規劃 fable；寫程式與重要的施工一律 Claude、蒐集雜活給 fsm gpt（這台掛不起來前由 sonnet 補位）。
 - `eca_main`（根 daemon 上使用者的中心 agent）派來的普通工作算他的授權；push、刪檔不算。
 - 使用者專區的回信用 `aos-user verify` 驗過才算（今天第一次整條走通）。
