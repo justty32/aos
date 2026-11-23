@@ -6,7 +6,7 @@
   "deterministic": false,
   "interrupt": "safe",
   "parallel": false,
-  "arbitrary_exec": true,
+  "arbitrary_exec": false,
   "cost": {
     "time_ms": 500
   },
