@@ -91,6 +91,8 @@ class JsonToolsTest(unittest.TestCase):
         self.assertEqual(self.ok("json_search", path="cfg.json", key="next", value="act"), "cfg.json#/states/think/next\tstring\t3 chars\t5 bytes")
         self.assertIn("[more]", self.ok("json_search", path="cfg.json", key="next", limit=1))
         self.err("json_search", "ArgumentsBad", path="cfg.json")
+        self.err("json_search", "ArgumentsBad", path="cfg.json", key="")              # 11-23：空的 key 不再靜靜答 [no match]
+        self.err("json_search", "ArgumentsBad", path="cfg.json", key="", value="b")
 
     # 簡單組：寫
     def test_set(self):

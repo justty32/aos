@@ -9,7 +9,7 @@
    },
    "key": {
     "type": "string",
-    "description": "key name to find"
+    "description": "key name to find; not empty (leave it out to search by value only)"
    },
    "value": {
     "description": "exact JSON value to find"

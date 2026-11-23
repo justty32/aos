@@ -185,6 +185,8 @@ def do_search(args, t, flags=()):
         die("ArgumentsBad", "up does not work with follow or resolve")
     if not isinstance(args.get("key", ""), str):
         die("ArgumentsBad", "key must be a string")
+    if args.get("key") == "":                           # 11-23：gpt 腦把選填的 key 填成 ""，以前靜靜回 [no match]
+        die("ArgumentsBad", "key must not be empty; leave key out to search by value only")
     argv = (["search"] + list(flags) + (["--key", args["key"]] if "key" in args else [])
             + (["--value", compact(args["value"])] if "value" in args else [])
             + (["--contains"] if args.get("contains") else []) + (["--up"] if args.get("up") else [])

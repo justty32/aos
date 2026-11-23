@@ -42,3 +42,10 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - 驗：乾淨複本 `install.py` 後跑 llm_http 48 條、kernel_llm 89 條、`py/tests` 762 條全過；再用複本的 llm_http（`e2e.sh`）真打一次，模型只給 query。
 - **還沒 install.py 進活樹**：活樹那份 lib/ 照舊會讓 gpt 腦把選填參數填滿，要等 eca-aos 問使用者裝。
 - 坑：`zsh` 下 `grep --include=*.md` 會被 glob 吃掉（no matches found），用 Grep 工具或加引號。
+- 坑：`commit-request claim/submit` 的檔名在 zsh 裡用 `$F` 傳不會拆字，整串變成一個「檔名」被 claim 住；用陣列 `"${F[@]}"` 或直接寫開。claim 錯了用 `release --line <線> "<那整串>"` 收掉，`claims` 確認空了。
+
+### json_search 的 key:"" 改成報錯（11-23 線 eca-aos-core-1123 第二件）
+
+- `py/aos/json.py` 的 `do_search` 擋 `key == ""`（ArgumentsBad），json_search 與 jsonx_search 共用這支；`value:""` 照字面用不動。兩支的 `_tooldef.json` 的 key 說明補「not empty」。
+- jsonx_* 的工具夾在 `py/tools/aos/`，不在 `base/`。
+- 動到工具說明時，順手跑 `templates/tests/agent-fsm`（250 條，約 4～5 分鐘）與 `py/tests`（762 條，約 3 分鐘）。
