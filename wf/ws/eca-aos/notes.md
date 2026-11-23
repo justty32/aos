@@ -97,3 +97,11 @@
 - 我先定的形狀（任務書會寫、回報時攤給使用者）：
   - 逐題留言：`q3:a` 照舊；`q3:a:留言` 選了再留言；`q3:我覺得這個不錯`（不是選項代號的一段話）＝那題答 `other`、留言就是那段話；看起來像代號（1～8 個英數字）卻不是選項的，照舊報錯，免得打錯字變成留言。回信的 `answers` 每題多一格留言。
   - 公告：`aos-user announce "話"`（可帶到幾點為止）、`aos-user announce` 看、`aos-user announce --clear` 收；寫進 `door.json`，`aos-user door` 印得出來，過期不顯示。
+- **`send` 那件交了**（`1ec57ee19`）：回信地址的實際路徑等於寄件人自己的 `$AOS_STACK/mailbox` 而還沒建時先 `aos-post init`（有沒有明寫 `--reply-to` 都算，因為 `user_send` 與 `wf/public` 教的都是明寫）；別處、`$AOS_STACK` 沒設或夾不在照舊報 `MailboxMissing`。測試 23 條過（假專區、假 stack）；真 agent 在活樹上沒驗。`user_send` 走同一條路，不用改 `py/`。
+- 要轉給 kb 的句子（還沒轉，等公告那隻回來一起）：
+  - 知識庫 `aos/user_zone.md` 第 33 行那段之後：`If that reply mailbox is your own $AOS_STACK/mailbox and does not exist yet (you have never received a letter), the tool makes it first (aos-post init) and says so on stderr; any other missing reply mailbox is not made, and sending fails with MailboxMissing.`
+  - `wf/public/user-zone-mail.md` 第 11 行之後：`- 從沒收過信、stack 底下還沒有 mailbox/ 也能直接寄：回信地址是自己的 $AOS_STACK/mailbox 時，aos-user send 會先替你建好（stderr 印一行 made your reply mailbox）；指到別處的信箱不在，照舊報 MailboxMissing。`
+- 前端位子筆記該記的一條（已交代下一隻代班寫進去）：信裡的 `reply_to` 是相對專區信箱的路徑（如 `../../agent/mailbox`），比對前要先換算。
+- **逐題留言加公告**：派了第四隻 opus（代班前端位子），在乾淨複本改好測好再寫回，不 commit；網頁那半驗不了就不做。回來要：看 diff、交件、派一隻 opus 代班 kb 補知識庫與 `wf/public`（三件一起）、更新 progress `aos-user-home`、跟使用者報新指令怎麼打。
+- **逐題留言加公告回來了，我看過 `parse_token` 並在真專區跑過只讀的四條（where、ls、door、announce）**：`q3:a:留言`、`q3:一段話`（＝other）、`q3:other:留言`；像代號（1～8 英數字）卻不是選項的報錯，所以純英文短留言如 `q3:good` 要寫 `q3:other:good`。回信 `answers` 有留言的題多一格 `comment`。公告：`aos-user announce 話 [--until T | --for 90m]`、`aos-user announce`、`aos-user announce --clear`，存 `door.json` 的 `announce`（`text`、`at`、`until`），過期不顯示（檔裡那格要等下次改寫 door 或 tick 才拿掉）；`ls` 最後提醒一行。網頁（`aos-user serve`）也加了留言格與公告卡，只用測試驗過、沒用瀏覽器看。測試 33 條過（假專區）。
+- 沒做、要記的：全景頁 `aos-frontend` 的 `do_answer` 只送 `id:key`，全景頁上不能逐題留言；`proto8/py/tools/agent/user_send/_tooldef.json` 的說明寫死 `answers = [{id, answer, differs}]`，要補 `comment`（改 `py/` 要 `install.py`，歸 core）；這台真專區的 `~/.aos/user/door.json` 是舊樣板，少了 `announce` 規則那句與 `comment` 的說明，`init` 不會蓋掉已有的檔——功能不受影響，只是 agent 讀 door 看不到這兩句說明。

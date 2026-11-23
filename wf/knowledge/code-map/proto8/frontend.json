@@ -19,10 +19,10 @@
    "tests": {
     "test_tick.py": "aos-user 段 2 驗收：tick 收件檢查（7 題過、8 題退）、每寄件人每小時上限、退信、通知（含出門／安靜時段只報急件、關掉不報）、到期提醒、退信不繞回專區。",
     "test_verify_paths.py": "Verify reply files and legacy folders against a temporary zone without aos-post.",
-    "test_zone.py": "aos-user 段 1 驗收（規劃 04 段 1 的 1～7 條＋verify＋網頁的 Host／token／重答）；全部在暫存夾，不碰 ~/.aos/user。"
+    "test_zone.py": "aos-user 段 1 驗收（規劃 04 段 1 的 1～7 條＋verify＋網頁的 Host／token／重答）＋逐題留言與公告（11-23）；全部在暫存夾，不碰 ~/.aos/user。"
    },
-   "web.py": "使用者專區的網頁（aos-user serve）：只綁 127.0.0.1，看信、裁題、回信、看門上公告；邏輯全部呼叫 zone.py，不寫第二份。",
-   "zone.py": "使用者專區的函式庫＋指令列（aos-user 的本體）：init、send、ls、show、answer、reply、ok、door、verify、tick、notify；網頁 web.py 也只呼叫這裡。"
+   "web.py": "使用者專區的網頁（aos-user serve）：只綁 127.0.0.1，看信、裁題（每題可留言）、回信、看門上公告、發／收公告；邏輯全部呼叫 zone.py，不寫第二份。",
+   "zone.py": "使用者專區的函式庫＋指令列（aos-user 的本體）：init、send、ls、show、answer、reply、ok、door、announce、verify、tick、notify；網頁 web.py 也只呼叫這裡。"
   },
   "bin": {
    "aos-frontend": "one local page that shows every agent and proc on the daemon table as a tree,",

@@ -1,4 +1,4 @@
-# web.py - 使用者專區的網頁（aos-user serve）：只綁 127.0.0.1，看信、裁題、回信、看門上公告；邏輯全部呼叫 zone.py，不寫第二份。
+# web.py - 使用者專區的網頁（aos-user serve）：只綁 127.0.0.1，看信、裁題（每題可留言）、回信、看門上公告、發／收公告；邏輯全部呼叫 zone.py，不寫第二份。
 # 安全：Host 只收 127.0.0.1／localhost＋本埠；POST 要帶 web/token（GET 時放進 cookie 與表單，兩者都要對）；有 Origin 就要是本機。
 # 同一個 Linux 帳號的 agent 一樣連得到本機網頁，所以「網頁回的」不比指令列回的更可信（規劃 02 第 5 節）。
 import html
@@ -25,8 +25,8 @@ nav{display:flex;gap:16px;align-items:baseline;margin-bottom:12px;flex-wrap:wrap
 .mute{color:var(--mute);font-size:14px}.urgent{color:var(--warn);font-weight:600}
 .opt{display:block;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0;cursor:pointer}
 .opt:has(input:checked){border-color:var(--accent);outline:2px solid var(--accent)}
-.rec{color:var(--rec);font-weight:600}textarea{width:100%;min-height:70px;font:inherit;padding:8px;border-radius:8px;
-border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.rec{color:var(--rec);font-weight:600}textarea,input[type=text]{width:100%;min-height:70px;font:inherit;padding:8px;border-radius:8px;
+border:1px solid var(--line);background:var(--bg);color:var(--ink)}input[type=text],textarea.one{min-height:0}
 button{font:inherit;padding:8px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--bg);cursor:pointer}
 button.ghost{background:transparent;color:var(--accent)}details{margin-top:6px}summary{cursor:pointer;color:var(--mute)}
 pre{white-space:pre-wrap;word-break:break-word;background:var(--bg);padding:8px;border-radius:8px;font-size:13px}
@@ -75,6 +75,13 @@ def list_page(zone, msg=""):
     ws = Z.waiting(zone)
     rows = [m.row(i, s) for i, (m, s) in enumerate(ws, 1)]
     out = [("<p class=msg>%s</p>" % esc(msg)) if msg else ""]
+    try:
+        ann = Z.announce_get(zone)
+    except Z.Fail:
+        ann = None
+    if ann:
+        out.append("<p class=msg>你的公告掛著%s：%s　<a href='/door'>改或收掉</a></p>" % (
+            ("（到 %s）" % esc(ann["until"])) if ann["until"] else "（沒有結束時間）", esc(ann["text"])))
     lost = Z.lost_letters(zone)
     if lost:
         out.append("<p class='msg urgent'>有 %d 封看過的信不見了（可能被 aos-mailbox read 刪了）：%s</p>" % (len(lost), esc(", ".join(lost))))
@@ -107,6 +114,7 @@ def letter_page(zone, name, token):
     b = x.body
     draft = Z.load_draft(zone, x.name) or {}
     dans = {a["id"]: a["answer"] for a in draft.get("answers", []) if isinstance(a, dict)}
+    dcom = {a["id"]: a.get("comment", "") for a in draft.get("answers", []) if isinstance(a, dict)}
     out = ["<div class=card>%s%s<h2 style='margin:4px 0'>%s</h2><div class=mute>%s 寄%s%s</div>" % (
         badge(x.kind), "<span class=urgent>急 </span>" if x.urgent else "", esc(b.get("title") or x.name),
         esc(b.get("from") or "?"), (" · 期限 " + esc(b["deadline"])) if b.get("deadline") else "",
@@ -126,13 +134,15 @@ def letter_page(zone, name, token):
     qs = x.questions()
     for q in qs:
         out.append("<div class=card><b>%s</b><p class=mute>%s</p>" % (esc(q.get("question")), esc(q.get("eli5"))))
-        for o in q["options"] + [{"key": "other", "label": "都不要，我寫（寫在下面意見欄）"}]:
+        for o in q["options"] + [{"key": "other", "label": "都不要，我自己寫（寫在這題的留言格）"}]:
             rec = o["key"] == q.get("recommend")
             chk = " checked" if dans.get(q["id"]) == o["key"] else ""
             out.append("<label class=opt><input type=radio name='q_%s' value='%s' data-rec='%s'%s> <b>%s</b> %s%s%s</label>" % (
                 esc(q["id"]), esc(o["key"]), "1" if rec else "", chk, esc(o["key"]), esc(o.get("label")),
                 (" <span class=mute>→ %s</span>" % esc(o["consequence"])) if o.get("consequence") else "",
                 " <span class=rec>★推薦</span>" if rec else ""))
+        out.append("<textarea class=one name='c_%s' placeholder='這題的留言（可空；只寫留言沒選＝都不要，我自己寫）'>%s</textarea>" % (
+            esc(q["id"]), esc(dcom.get(q["id"], ""))))
         det = []
         for k, zh in (("why", "推薦理由"), ("details", "細節"), ("source_path", "出處")):
             if q.get(k):
@@ -142,7 +152,7 @@ def letter_page(zone, name, token):
         out.append("</div>")
     out.append("<div class=card>")
     if qs:
-        out.append("<p><b>意見（可空）</b></p><textarea name=note>%s</textarea>" % esc(draft.get("note", "")))
+        out.append("<p><b>整封的意見（可空）</b></p><textarea name=note>%s</textarea>" % esc(draft.get("note", "")))
         out.append("<p class=mute>會送出這一行：<span class=line id=preview>（還沒選）</span></p>")
         out.append("<button name=action value=answer>送出</button> <button class=ghost name=action value=draft>存草稿</button>")
         if b.get("risk") != "irreversible":
@@ -162,7 +172,8 @@ def letter_page(zone, name, token):
     out.append("""<script>
 const recs=%s;
 function line(){const f=document.forms[0];const ps=[];for(const [id,rec] of recs){const c=f.querySelector('input[name="q_'+id+'"]:checked');
-if(c)ps.push(id+':'+c.value+(c.value!==rec?'*':''));}let s=ps.join('、');const n=(f.note&&f.note.value.trim())||'';
+const t=f.querySelector('textarea[name="c_'+id+'"]');const m=(t&&t.value.trim())||'';const v=c?c.value:(m?'other':'');
+if(v)ps.push(id+':'+v+(v!==rec?'*':'')+(m?'「'+m+'」':''));}let s=ps.join('、');const n=(f.note&&f.note.value.trim())||'';
 if(n)s+='（備註：'+n.replace(/\\n/g,' / ')+'）';const p=document.getElementById('preview');if(p)p.textContent=s||'（還沒選）';}
 function allRec(){if(!confirm('沒選的題都照推薦？'))return;const f=document.forms[0];for(const [id,rec] of recs){
 if(!f.querySelector('input[name="q_'+id+'"]:checked')){const r=f.querySelector('input[name="q_'+id+'"][value="'+rec+'"]');if(r)r.checked=true;}}line();}
@@ -181,8 +192,23 @@ def done_page(zone):
     return page("已回", "".join(out))
 
 
-def door_page(zone, token):
-    d = Z.door_get(zone)
+def announce_card(zone, token):
+    a = Z.announce_get(zone)
+    now = ("<p>現在掛著：<b>%s</b></p><p class=mute>%s 貼的 · %s</p>" % (
+        esc(a["text"]), esc(a["at"]), ("到 %s 為止" % esc(a["until"])) if a["until"] else "沒有結束時間，收掉才消失")
+           if a else "<p class=mute>現在沒有公告。</p>")
+    clear = ("<form method=post action='/announce'><input type=hidden name=token value='%s'>"
+             "<button class=ghost name=action value=clear>收掉公告</button></form>" % esc(token)) if a else ""
+    return ("<div class=card><b>你的公告</b>（給各 agent 看的一句話，例如去睡午覺、幾點回來；一次一則，新的蓋掉舊的；過了時間就不算）%s"
+            "<form method=post action='/announce'><input type=hidden name=token value='%s'>"
+            "<input type=text name=text placeholder='我去睡午覺，一小時後回來'>"
+            "<p class=mute>多久（可空，例 90m、2h、1d）<input type=text name=for placeholder='90m'>"
+            "或到什麼時候（可空，例 2026-11-23T15:00）<input type=text name=until placeholder='2026-11-23T15:00'></p>"
+            "<button name=action value=set>貼上</button></form>%s</div>" % (now, esc(token), clear))
+
+
+def door_page(zone, token, msg=""):
+    d = Z.door_view(zone)
     mode = d.get("mode")
     rules = "".join("<li>%s</li>" % esc(r) for r in d.get("rules", []))
     body = ("<div class=card><p>門上公告是貼給寄信的 agent 看的：收哪幾種信、題目要帶選項與推薦。</p>"
@@ -192,7 +218,7 @@ def door_page(zone, token):
             % ("在家（normal）" if mode != "away" else "出門（away）", esc(token), "away" if mode != "away" else "normal",
                "出門" if mode != "away" else "在家", esc("、".join(KIND_ZH.get(k, k) for k in d.get("accept", []))),
                rules, esc(json.dumps(d, ensure_ascii=False, indent=1))))
-    return page("門上公告", body)
+    return page("門上公告", (("<p class=msg>%s</p>" % esc(msg)) if msg else "") + announce_card(zone, token) + body)
 
 
 def make_handler(zone, port):
@@ -250,7 +276,7 @@ def make_handler(zone, port):
                 elif path == "/done":
                     self.send(200, done_page(zone), extra=ck)
                 elif path == "/door":
-                    self.send(200, door_page(zone, t), extra=ck)
+                    self.send(200, door_page(zone, t, (q.get("msg") or [""])[0]), extra=ck)
                 elif path == "/api/ls":
                     ws = Z.waiting(zone)
                     self.send(200, json.dumps([m.row(i, s) for i, (m, s) in enumerate(ws, 1)], ensure_ascii=False),
@@ -283,14 +309,27 @@ def make_handler(zone, port):
                 if path == "/door":
                     Z.door_mode(zone, f.get("mode", ""))
                     return self.redirect("/door")
+                if path == "/announce":
+                    if f.get("action") == "clear":
+                        Z.announce_clear(zone)
+                        return self.redirect("/door?msg=" + urllib.parse.quote("公告收掉了"))
+                    Z.announce_set(zone, f.get("text", ""), until=f.get("until", "").strip() or None,
+                                   for_=f.get("for", "").strip() or None)
+                    return self.redirect("/door?msg=" + urllib.parse.quote("公告貼上了"))
                 if path != "/answer":
                     return self.send(404, "no\n", "text/plain")
                 name, act = f.get("letter", ""), f.get("action", "")
                 note, text = f.get("note", "").strip(), f.get("text", "").strip()
-                answers = ["%s:%s" % (k[2:], v) for k, v in f.items() if k.startswith("q_") and v]
+                picked = {}                   # qid → [代號, 留言]；只寫留言沒選＝other（代號明寫，不靠猜）
+                for k, v in f.items():
+                    if k[:2] in ("q_", "c_") and v.strip():
+                        picked.setdefault(k[2:], ["", ""])[0 if k[0] == "q" else 1] = v.strip()
+                picked = {qid: [key or "other", com] for qid, (key, com) in picked.items()}
+                answers = ["%s:%s%s" % (qid, key, ":" + com if com else "") for qid, (key, com) in picked.items()]
                 if act == "draft":
                     m, _ = Z.pick(zone, name)
-                    Z.save_draft(zone, m, {"answers": [{"id": a.split(":")[0], "answer": a.split(":")[1]} for a in answers],
+                    Z.save_draft(zone, m, {"answers": [dict({"id": qid, "answer": key}, **({"comment": com} if com else {}))
+                                                       for qid, (key, com) in picked.items()],
                                            "note": note, "text": text})
                     return self.redirect("/l/" + urllib.parse.quote(name))
                 if act == "answer":
@@ -306,8 +345,9 @@ def make_handler(zone, port):
             except Z.Fail as e:
                 if e.code == "LetterMissing":
                     return self.send(409, page("已回過", "<p class=msg>這封已經回過或不在了。</p><a href='/'>回待辦</a>"))
-                self.send(400, page("沒送出", "<p class=msg>%s</p><p><a href='/l/%s'>回去改</a></p>" % (
-                    esc("%s %s" % (e.code, e)), urllib.parse.quote(f.get("letter", "")))))
+                back = "/door" if path == "/announce" else "/l/" + urllib.parse.quote(f.get("letter", ""))
+                self.send(400, page("沒送出", "<p class=msg>%s</p><p><a href='%s'>回去改</a></p>" % (
+                    esc("%s %s" % (e.code, e)), esc(back))))
 
         def redirect(self, to):
             self.send_response(303)

@@ -1,4 +1,4 @@
-# test_zone.py - aos-user 段 1 驗收（規劃 04 段 1 的 1～7 條＋verify＋網頁的 Host／token／重答）；全部在暫存夾，不碰 ~/.aos/user。
+# test_zone.py - aos-user 段 1 驗收（規劃 04 段 1 的 1～7 條＋verify＋網頁的 Host／token／重答）＋逐題留言與公告（11-23）；全部在暫存夾，不碰 ~/.aos/user。
 # 跑法（先清掉 AOS_* 環境）：python3 -m unittest discover -s $AOS_HOME/frontend/aos-user/tests -v
 import json
 import os
@@ -233,6 +233,182 @@ class T(unittest.TestCase):
         finally:
             srv.shutdown()
             srv.server_close()
+
+    # ---- 逐題留言（11-23 使用者「我不能自己留言？比如q3:"我覺得這個不錯"這樣」）----
+
+    def answer_body(self):
+        got = self.agent_new()
+        self.assertEqual(len(got), 1)
+        return got[0]["body"]
+
+    def test_11_comment_three_ways(self):
+        """q1:a:留言＝選 a 並留言；q2:一段話＝other；q3:other:留言；留言可有冒號、空白、中文；--note 並存。"""
+        name = self.send(DECIDE3)
+        self.run_("answer", "1", "q1:a:這個不錯: 真的", "q2:我覺得這個不錯", "q3:other:a: b c", "--note", "整封")
+        b = self.answer_body()
+        self.assertEqual(b["answers"], [
+            {"id": "q1", "answer": "a", "differs": False, "comment": "這個不錯: 真的"},
+            {"id": "q2", "answer": "other", "differs": True, "comment": "我覺得這個不錯"},
+            {"id": "q3", "answer": "other", "differs": True, "comment": "a: b c"}])
+        self.assertEqual(b["answer_line"], "q1:a「這個不錯: 真的」、q2:other*「我覺得這個不錯」、q3:other*「a: b c」（備註：整封）")
+        self.assertIn('comment: "我覺得這個不錯"', b["what"])
+        self.assertEqual(b["note"], "整封")
+        self.assertEqual(self.agent_new()[0]["in_reply_to"], name)
+
+    def test_12_plain_keys_have_no_comment(self):
+        """沒留言的題沒有 comment 這一格；q:c* 與 q:c*:留言 照舊算 differs。"""
+        self.send(DECIDE)
+        self.run_("answer", "1", "q1:a", "q2:b*:slower is fine")
+        b = self.answer_body()
+        self.assertNotIn("comment", b["answers"][0])
+        self.assertEqual(b["answers"][1], {"id": "q2", "answer": "b", "differs": True, "comment": "slower is fine"})
+        self.assertEqual(b["answer_line"], "q1:a、q2:b*「slower is fine」")
+
+    def test_13_code_like_but_not_an_option(self):
+        """像代號卻不是選項：報錯、教 other:TEXT、什麼都沒寄（免得打錯字被當成留言）。"""
+        name = self.send(DECIDE)
+        for bad in ("q1:d", "q1:d*", "q1:zz:hello", "q1:", "q9:a", "nokey"):
+            p = self.run_("answer", "1", bad, "q2:a", ok=False)
+            self.assertEqual(p.returncode, 1, bad)
+            self.assertIn("ArgumentsBad", p.stderr, bad)
+        p = self.run_("answer", "1", "q1:d", "q2:a", ok=False)
+        self.assertIn("q1:other:TEXT", p.stderr)
+        self.assertEqual(self.agent_new(), [])
+        self.assertTrue(os.path.isdir(os.path.join(self.zone, "mailbox", "cur", name)))
+
+    def test_14_comment_verify_and_tamper(self):
+        """留言是回信的一部分：verify 通過；改了留言就不過。"""
+        self.send(DECIDE)
+        self.run_("answer", "1", "q1:b:no cron for now", "q2:a")
+        d = os.path.join(self.agent, "mailbox", "new")
+        letter = os.path.join(d, os.listdir(d)[0])
+        self.assertIn("ok:", self.run_("verify", letter).stdout)
+        lj = os.path.join(letter, "letter.json")
+        with open(lj) as f:
+            x = json.load(f)
+        x["body"]["answers"][0]["comment"] = "yes cron"
+        with open(lj, "w") as f:
+            json.dump(x, f)
+        p = self.run_("verify", letter, ok=False)
+        self.assertIn("VerifyBad", p.stderr)
+        self.assertIn("answers", p.stderr)
+
+    def test_15_draft_keeps_comment(self):
+        name = self.send(DECIDE)
+        p = self.run_("answer", "1", "q1:我再想想", ok=False)
+        self.assertIn("AnswerMissing", p.stderr)
+        with open(os.path.join(self.zone, "drafts", name + ".json")) as f:
+            dr = json.load(f)
+        self.assertEqual(dr["answers"], [{"id": "q1", "answer": "other", "differs": True, "comment": "我再想想"}])
+
+    def test_16_web_comment_and_announce(self):
+        import web
+        port = 18769
+        srv = web.ThreadingHTTPServer(("127.0.0.1", port), web.make_handler(self.zone, port))
+        th = threading.Thread(target=srv.serve_forever, daemon=True)
+        th.start()
+        try:
+            name = self.send(DECIDE)
+            base = "http://127.0.0.1:%d" % port
+            tok = open(os.path.join(self.zone, "web", "token")).read().strip()
+            h = {"Cookie": "zt=" + tok}
+
+            def post(path, data):
+                return urllib.request.urlopen(urllib.request.Request(base + path, data=urllib.parse.urlencode(
+                    dict(data, token=tok)).encode(), headers=h)).read().decode()
+            post("/answer", {"letter": name, "action": "draft", "q_q1": "a", "c_q1": "ok: fine", "c_q2": "own words"})
+            with open(os.path.join(self.zone, "drafts", name + ".json")) as f:
+                dr = json.load(f)
+            self.assertEqual(dr["answers"], [{"id": "q1", "answer": "a", "comment": "ok: fine"},
+                                             {"id": "q2", "answer": "other", "comment": "own words"}])
+            page = urllib.request.urlopen(base + "/l/" + name).read().decode()
+            self.assertIn("name='c_q1' placeholder=", page)
+            self.assertIn(">ok: fine</textarea>", page)
+            post("/answer", {"letter": name, "action": "answer", "q_q1": "a", "c_q1": "ok: fine", "c_q2": "1m"})
+            b = self.answer_body()
+            self.assertEqual(b["answer_line"], "q1:a「ok: fine」、q2:other*「1m」")   # 只寫留言＝other，留言像代號也不會被當代號
+            self.assertEqual(b["via"], "web")
+            post("/announce", {"action": "set", "text": "lunch", "for": "90m"})
+            self.assertEqual(self.door()["announce"]["text"], "lunch")
+            self.assertIn("lunch", urllib.request.urlopen(base + "/").read().decode())
+            self.assertIn("lunch", urllib.request.urlopen(base + "/door").read().decode())
+            post("/announce", {"action": "clear"})
+            self.assertNotIn("announce", self.door())
+        finally:
+            srv.shutdown()
+            srv.server_close()
+
+    # ---- 公告（11-23 使用者「aos-user annouce "我去睡午覺，一小時後回來"」）----
+
+    def door(self):
+        with open(os.path.join(self.zone, "door.json")) as f:
+            return json.load(f)
+
+    def test_20_announce_show_set_replace_clear(self):
+        p = self.run_("announce")
+        self.assertEqual((p.returncode, p.stdout.strip()), (10, "no announcement"))
+        self.run_("announce", "我去睡午覺，一小時後回來")
+        a = self.door()["announce"]
+        self.assertEqual((a["text"], a["until"]), ("我去睡午覺，一小時後回來", None))
+        self.assertIn("announce: 我去睡午覺", self.run_("announce").stdout)
+        self.run_("announce", "back", "at", "three")           # 新的蓋掉舊的；多個字併成一句
+        self.assertEqual(self.door()["announce"]["text"], "back at three")
+        self.assertIn("back at three", json.loads(self.run_("door").stdout)["announce"]["text"])
+        self.assertIn("announcement taken down", self.run_("announce", "--clear").stdout)
+        self.assertNotIn("announce", self.door())
+        self.assertIn("no announcement to take down", self.run_("announce", "--clear").stdout)
+        for bad in (("--clear", "x"), ("--until", "2026-01-01"), ("x", "--for", "5x"), ("x", "--for", "0m"),
+                    ("x", "--until", "2020-01-01"), ("x", "--until", "soon"), ("x", "--for", "1h", "--until", "2099-01-01")):
+            p = self.run_("announce", *bad, ok=False)
+            self.assertEqual(p.returncode, 1, bad)
+            self.assertIn("ArgumentsBad", p.stderr, bad)
+
+    def test_21_announce_until_and_for(self):
+        self.run_("announce", "away", "--until", "2099-11-23T15:00")
+        self.assertTrue(self.door()["announce"]["until"].startswith("2099-11-23T15:00:00"))
+        self.run_("announce", "nap", "--for", "90m")
+        a = self.door()["announce"]
+        left = (Z.parse_deadline(a["until"]) - Z.parse_deadline(a["at"])).total_seconds()
+        self.assertTrue(5390 <= left <= 5410, left)
+        self.run_("announce", "trip", "--until", "2099-12-01")        # 只寫日期＝那天結束
+        self.assertTrue(self.door()["announce"]["until"].startswith("2099-12-02T00:00:00"))
+
+    def test_22_announce_expired_is_gone(self):
+        """過期的：announce、door、ls 都不再出現（檔不動）；tick 時從門上拿掉。"""
+        d = self.door()
+        d["announce"] = {"text": "old nap", "at": "2020-01-01T10:00:00+0000", "until": "2020-01-01T11:00:00+0000"}
+        with open(os.path.join(self.zone, "door.json"), "w") as f:
+            json.dump(d, f)
+        self.assertEqual(self.run_("announce").returncode, 10)
+        self.assertNotIn("announce", json.loads(self.run_("door").stdout))
+        self.assertNotIn("announcement", self.run_("ls").stdout)
+        self.assertIn("announce", self.door())
+        Z.tick(self.zone, notifier=lambda *a: None)
+        self.assertNotIn("announce", self.door())
+        self.assertEqual(self.door()["mode"], "normal")
+
+    def test_23_announce_keeps_mode_and_ls_reminds(self):
+        self.run_("door", "--mode", "away")
+        before = self.door()
+        self.run_("announce", "out until five", "--for", "2h")
+        after = self.door()
+        self.assertEqual(after["mode"], "away")
+        self.assertEqual({k: v for k, v in after.items() if k != "announce"}, before)
+        self.run_("door", "--mode", "normal")                   # 切模式不動公告
+        self.assertEqual(self.door()["announce"]["text"], "out until five")
+        self.assertIn("your announcement is up", self.run_("ls").stdout)
+        self.send(DECIDE)
+        out = self.run_("ls").stdout.strip().splitlines()
+        self.assertIn("aos-user announce --clear", out[-1])
+        self.assertEqual(len(json.loads(self.run_("ls", "--json").stdout)), 1)   # --json 不多印
+        self.run_("announce", "--clear")
+        self.assertEqual(self.door(), dict(before, mode="normal"))
+
+
+DECIDE3 = {"what": "three questions", "questions": DECIDE["questions"] + [
+    {"id": "q3", "question": "Name?", "eli5": "What to call it. Short is better.",
+     "options": [{"key": "a", "label": "tick"}, {"key": "b", "label": "beat"}, {"key": "c", "label": "pulse"}],
+     "recommend": "b"}]}
 
 
 if __name__ == "__main__":

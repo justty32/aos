@@ -41,4 +41,8 @@ aos-eca-frontend 的工作筆記：使用者給這份工作的規矩（逐字附
 - 頁上的樹（11-22 起）只看兩種紀錄：daemon 的 subagent 紀錄、隊長的 `aide.json`；沒紀錄的平鋪在最上層。測試的 fixture（`VIEW_LS_FIXTURE`）每列可帶 `"subagents": [...]` 來造上下級。
 - 施工流程：`git archive` 抄到 `~/.aos/scratch/<線名>/repo`、在那份跑 `install.py`、改那份、跑 `tests/run.sh`（設 `VIEW_TEST_TMP`；要跑 test_phase1 就設 `VIEW_TOOLS`＝抄來的 aos-user 夾，`~/.aos/scratch/top-1121-frontend/tools/` 有一份）；再用 `templates/start-api` 起暫存樹，掛 agent 後以「冒充那隻 agent 的環境」跑 `aos-tools call subagent` 造 subagent，起前端用 18767／18768（避開 8767／8768），最後才用「寫暫存檔再 mv」換進 repo。
 - 起前端的 `serve.pid` 若是 setsid 那層，真正的行程 pid 在 serve 印的那行 `pid N`；收尾要殺那個。
+- **aos-user 的施工（11-23 代班，逐題留言＋公告）**：`git archive HEAD proto8/frontend | tar -x -C <scratch>` 抄一份就能跑 aos-user 全部測試，不用 `install.py`；跑測試的 bash 腳本先 unset 全部 `AOS_*`、設假的 `AOS_STACK`／`AOS_USER_ZONE`、`TMPDIR` 指到 scratch、PATH 前面放 repo 的 `proto8/bin`（要 `aos-post`、`aos-mailbox`），`python3 -m unittest discover -s tests`。寫回前 `git diff --quiet HEAD -- 檔`、寫回用同目錄暫存檔再 `mv`、`cmp`，然後跑只讀的 `aos-user where`／`ls`／`door`／`announce`（`ls` 沒信退 10、`announce` 沒公告退 10 都正常）；煙霧測試設 `PYTHONDONTWRITEBYTECODE=1`，免得動到 repo 裡的 `__pycache__`。
+- 網頁沒有瀏覽器也驗得了一半：`test_zone.py` 的 `test_10_web`／`test_16_web_comment_and_announce` 在行程裡起 `web.make_handler`，用 urllib 帶 cookie＋表單 token 送 POST；頁上的 script 抽出來用 `node --check` 驗語法。畫面長相沒驗過。
+- 專區的 `door.json`、`schema/letter.json` 是 `init` 照 `zone.py` 的 `DOOR`／`SCHEMA` 產的，**已有的不蓋**；改了樣板，已建好的專區不會跟上（要不要動真專區的檔，問 eca-aos）。`door.json` 只有 `door --mode` 與 `announce` 會改寫，兩者都是讀整份、改一鍵、原子寫回，其他鍵不動。
+- 全景頁（`aos-frontend` 的 `do_answer`）替使用者答題時只送 `id:key`，不知道逐題留言；`answer` 的寫法要相容這種舊寫法。
 - 大修盤點 14 項在 [frontend-備妥-1121](../../../../proto8/thinking/2026-11/21/frontend-備妥-1121.md)；部門怎麼認的提案在 [部門來源-提案-1122](部門來源-提案-1122.md)。

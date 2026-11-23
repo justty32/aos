@@ -1,4 +1,4 @@
-# zone.py - 使用者專區的函式庫＋指令列（aos-user 的本體）：init、send、ls、show、answer、reply、ok、door、verify、tick、notify；網頁 web.py 也只呼叫這裡。
+# zone.py - 使用者專區的函式庫＋指令列（aos-user 的本體）：init、send、ls、show、answer、reply、ok、door、announce、verify、tick、notify；網頁 web.py 也只呼叫這裡。
 # 規劃：~/repo/aos/proto8/thinking/2026-11/13/user-zone-plan.md（段 1、段 2）。專區＝使用者的 stack，mailbox/ 是標準 aos-post 信箱。
 # 「回了才消」：看＝new/→cur/；只有回信寄出成功才把信從 cur/ 搬到 done/<月>/<信名>/（原信＋reply.json）。從不呼叫會刪信的 read。
 # 段 2（11-13 晚「專區第二階段可以開始了」）：tick＝收件檢查（schema、每寄件人每小時上限）→不合的搬 rejected/<信名>/＋reason.txt 並退信；
@@ -71,10 +71,12 @@ DOOR = {
         "deadline is a date or a local time: 2026-11-15 or 2026-11-15T18:00",
         "at most 10 letters from one sender in one hour (max_per_hour in config.json)",
         "a letter that breaks these rules is moved to rejected/ and returned to its reply_to (status FAILED, with the reason)",
+        "announce (only when the user put one up): {text, at, until}, a note from the user to every agent, "
+        "e.g. away until a time; read it when no answer comes; it no longer counts once until has passed (until null = until taken down)",
     ],
     "urgent": "urgent=true only when no answer blocks everything",
     "mode": "normal",
-    "answers": "a reply comes back to your reply_to with in_reply_to set; body has the 8 standard fields plus zone, answers, letter_hash, reply_id, via; check it with: aos-user verify <reply letter folder>",
+    "answers": "a reply comes back to your reply_to with in_reply_to set; body has the 8 standard fields plus zone, answers ([{id, answer, differs, comment?}]; comment = the user's words on that question, only when given), answer_line, note, letter_hash, reply_id, via; check it with: aos-user verify <reply letter folder>",
 }
 
 SCHEMA = {
@@ -521,24 +523,48 @@ def letter_hash(x):
         return None
 
 
+TOKEN_KEY = re.compile(r"^([A-Za-z0-9]{1,8})(\*?)$")
+TOKEN_KEY_TEXT = re.compile(r"^([A-Za-z0-9]{1,8})(\*?):(.*)$", re.S)
+
+
+def parse_token(t, qs):
+    """一題的答：'q1:a'、'q1:c*'、'q1:a:留言'、'q1:other:留言'、'q1:一段話'（＝other，留言就是那段話）。
+    11-23 使用者「我不能自己留言？比如q3:"我覺得這個不錯"這樣」：冒號後面整段像代號（1～8 英數字，可帶 *）、
+    或第一段像代號又接著冒號的，那段一定要是這題的選項（或 other），不然報錯，免得打錯字被當成留言。回傳 (qid, key, star, comment)。"""
+    qid, sep, rest = t.partition(":")
+    if not sep or not qid:
+        raise Fail("ArgumentsBad", "answer %r: write id:key, id:key:COMMENT or id:COMMENT "
+                                   "(add * after the key when it is not the recommended one)" % t)
+    if qid not in qs:
+        raise Fail("ArgumentsBad", "no question %s in this letter (questions: %s)" % (qid, ", ".join(qs)))
+    keys = [o["key"] for o in qs[qid]["options"]] + ["other"]
+    m = TOKEN_KEY.match(rest) or TOKEN_KEY_TEXT.match(rest)
+    if m:
+        key, star = m.group(1), m.group(2)
+        comment = m.group(3).strip() if m.re is TOKEN_KEY_TEXT else ""
+        if key not in keys:
+            raise Fail("ArgumentsBad", "question %s: %s is not an option (%s); to leave a comment instead, "
+                                       "write %s:other:TEXT" % (qid, key, ", ".join(keys), qid))
+        return qid, key, star, comment
+    comment = rest.strip()
+    if not comment:
+        raise Fail("ArgumentsBad", "answer %r: nothing after the colon (write %s:KEY or %s:COMMENT)" % (t, qid, qid))
+    return qid, "other", "", comment
+
+
 def parse_answers(x, tokens, all_recommend=False):
-    """tokens＝['q1:a', 'q2:c*', 'q3:other']；回傳 answers 與警告。全部題都要答。"""
+    """tokens＝['q1:a', 'q2:c*', 'q3:other', 'q4:a:留言', 'q5:一段話']；回傳 answers 與警告。全部題都要答。
+    有留言的題多一格 comment（沒留言就沒有這一格）。"""
     qs = {q["id"]: q for q in x.questions()}
     got, warns = {}, []
     for t in tokens:
-        m = re.match(r"^([^:]+):([A-Za-z0-9]+)(\*?)$", t)
-        if not m:
-            raise Fail("ArgumentsBad", "answer %r: write id:key (add * when it is not the recommended one)" % t)
-        qid, key, star = m.groups()
-        if qid not in qs:
-            raise Fail("ArgumentsBad", "no question %s in this letter (questions: %s)" % (qid, ", ".join(qs)))
-        keys = [o["key"] for o in qs[qid]["options"]] + ["other"]
-        if key not in keys:
-            raise Fail("ArgumentsBad", "question %s: %s is not an option (%s)" % (qid, key, ", ".join(keys)))
+        qid, key, star, comment = parse_token(t, qs)
         differs = key != qs[qid]["recommend"]
         if star and not differs:
             warns.append("%s:%s is the recommended one; the * is ignored" % (qid, key))
         got[qid] = {"id": qid, "answer": key, "differs": differs}
+        if comment:
+            got[qid]["comment"] = comment
     if all_recommend:
         for qid, q in qs.items():
             if qid not in got:
@@ -550,8 +576,9 @@ def parse_answers(x, tokens, all_recommend=False):
 
 
 def answer_line(x, answers, note):
-    """跟 decide-page 同寫法的一行：id:代號、id:代號*（備註：…）。"""
-    parts = ["%s:%s%s" % (a["id"], a["answer"], "*" if a["differs"] else "") for a in answers]
+    """跟 decide-page 同寫法的一行：id:代號、id:代號*「這題的留言」（備註：…）。"""
+    parts = ["%s:%s%s%s" % (a["id"], a["answer"], "*" if a["differs"] else "",
+                            "「%s」" % a["comment"].replace("\n", " / ") if a.get("comment") else "") for a in answers]
     s = "、".join(parts)
     if note:
         s += "（備註：%s）" % note.replace("\n", " / ")
@@ -564,9 +591,12 @@ def human_what(x, answers, note, text):
         bits = []
         for a in answers:
             q = qs.get(a["id"], {})
-            lab = {o["key"]: o.get("label", "") for o in q.get("options", [])}.get(a["answer"], "other (see note)")
-            bits.append("%s: %s (%s)%s" % (a["id"], a["answer"], lab,
-                                           ", not the recommended one" if a["differs"] else ", as recommended"))
+            c = a.get("comment")
+            lab = {o["key"]: o.get("label", "") for o in q.get("options", [])}.get(
+                a["answer"], "own answer, see the comment" if c else "other (see note)")
+            bits.append("%s: %s (%s)%s%s" % (a["id"], a["answer"], lab,
+                                             ", not the recommended one" if a["differs"] else ", as recommended",
+                                             ", comment: %s" % json.dumps(c, ensure_ascii=False) if c else ""))
         s = "; ".join(bits)
         if note:
             s += ". Note: " + note
@@ -708,9 +738,97 @@ def door_mode(zone, mode):
         raise Fail("ArgumentsBad", "mode must be normal or away")
     d = door_get(zone)
     d["mode"] = mode
+    _drop_stale(d)
     write_json(os.path.join(zone, "door.json"), d)
     log(zone, "door", mode=mode)
     return d
+
+
+# ---- 公告（11-23 使用者「aos-user annouce "我去睡午覺，一小時後回來"，然後各agent可能發現使用者很久沒回應，就會來看這個。」）----
+# 放在 door.json 的 announce 鍵 {text, at, until}：agent 照規矩讀門就看得到。一次一則，新的蓋掉舊的；until＝null 是一直掛著。
+# 過了 until 就當作沒有：讀的地方（door、announce、ls、網頁）都不顯示；檔裡那一格等下次寫門（announce、door --mode、tick）時清掉。
+
+def parse_for(s):
+    """'90m'、'2h'、'1d' → timedelta；認不得＝None。"""
+    m = re.match(r"^\s*(\d{1,5})\s*([mhd])\s*$", s or "")
+    if not m or int(m.group(1)) == 0:
+        return None
+    return datetime.timedelta(**{{"m": "minutes", "h": "hours", "d": "days"}[m.group(2)]: int(m.group(1))})
+
+
+def _stale(a, now=None):
+    """這則公告是不是已過期（或壞掉）。"""
+    if not isinstance(a, dict) or not isinstance(a.get("text"), str) or not a["text"].strip():
+        return True
+    if a.get("until") is None:
+        return False
+    end = parse_deadline(a["until"])
+    return end is None or (now or datetime.datetime.now()) >= end
+
+
+def _drop_stale(d, now=None):
+    """門上的公告過期了就拿掉；回傳有沒有拿。"""
+    if "announce" in d and _stale(d["announce"], now):
+        del d["announce"]
+        return True
+    return False
+
+
+def announce_get(zone, now=None):
+    """現在掛著的公告 {text, at, until}，沒有（或過期）＝None。"""
+    a = door_get(zone).get("announce")
+    return None if _stale(a, now) else a
+
+
+def door_view(zone, now=None):
+    """給人看的門：過期的公告不出現（檔不動）。"""
+    d = door_get(zone)
+    _drop_stale(d, now)
+    return d
+
+
+def announce_set(zone, text, until=None, for_=None, now=None):
+    """發一則公告（蓋掉舊的）。until＝deadline 的寫法；for_＝'90m'／'2h'／'1d'。兩個都沒＝一直掛著。"""
+    text = (text or "").strip()
+    if not text:
+        raise Fail("ArgumentsBad", "the announcement needs some text")
+    if until and for_:
+        raise Fail("ArgumentsBad", "give --until or --for, not both")
+    now = now or datetime.datetime.now()
+    end = None
+    if until:
+        end = parse_deadline(until)
+        if end is None:
+            raise Fail("ArgumentsBad", "--until must be a date or a local time: 2026-11-15 or 2026-11-15T18:00")
+    elif for_:
+        dt = parse_for(for_)
+        if dt is None:
+            raise Fail("ArgumentsBad", "--for must be minutes, hours or days: 90m, 2h, 1d")
+        end = now + dt
+    if end is not None and end <= now:
+        raise Fail("ArgumentsBad", "--until %s has already passed" % until)
+    d = door_get(zone)
+    a = {"text": text, "at": now.astimezone().strftime("%Y-%m-%dT%H:%M:%S%z"),
+         "until": end.replace(microsecond=0).astimezone().strftime("%Y-%m-%dT%H:%M:%S%z") if end else None}
+    d["announce"] = a
+    write_json(os.path.join(zone, "door.json"), d)
+    log(zone, "announce", text=text, until=a["until"])
+    return a
+
+
+def announce_clear(zone):
+    """收掉公告；回傳收掉的那則（過期的也算收掉）或 None。"""
+    d = door_get(zone)
+    a = d.pop("announce", None)
+    if a is not None:
+        write_json(os.path.join(zone, "door.json"), d)
+        log(zone, "announce_clear")
+    return a
+
+
+def announce_lines(a):
+    return ["announce: %s" % a["text"], "since: %s" % a.get("at"),
+            "until: %s" % (a["until"] or "no end time (until cleared: aos-user announce --clear)")]
 
 
 # ---- 段 2：收件檢查、退信、通知、到期提醒（aos-user tick，systemd --user 計時器每分鐘跑）---------------
@@ -891,7 +1009,12 @@ def tick(zone, now=None, notifier=None):
                 told.update(ln.get("letters") or [])
             elif ln.get("ev") == "reminded":
                 reminded.add((ln.get("letter"), ln.get("stage")))
-        mode = (load(os.path.join(zone, "door.json")) or {}).get("mode", "normal")
+        door = load(os.path.join(zone, "door.json"))
+        door = door if isinstance(door, dict) else {}
+        if _drop_stale(door, now):        # 過期的公告順手從門上拿掉
+            write_json(os.path.join(zone, "door.json"), door)
+            log(zone, "announce_expired")
+        mode = door.get("mode", "normal")
         quiet = mode == "away" or in_quiet(cfg["quiet_hours"], now)
         ok_now = lambda x: x.urgent or not quiet  # noqa: E731
         if cfg["notify"]:
@@ -961,10 +1084,16 @@ for the user:
   ls [--json] [--done]          what waits for you (urgent first); --done: answered ones
   show N                        read letter N (number from ls, or its name); it moves from new/ to cur/
   answer N q1:a q2:c* [--note TEXT] [--all-recommend]
-                                answer a decide letter (* = not the recommended one, as in decide-page)
+                                answer a decide letter (* = not the recommended one, as in decide-page);
+                                a comment on one question: q1:a:TEXT (key a and a comment), q1:TEXT (your own
+                                answer, = other), q1:other:TEXT; --note is one comment for the whole letter
   reply N TEXT                  answer in your own words (verify, trial, chore, old-format letters)
   ok N                          put away a fyi letter (no reply is sent)
   door [--mode normal|away]     show the door (the notice for senders), or switch mode
+  announce [TEXT [--until T | --for 90m]] [--clear]
+                                put up one notice for the agents (on the door; a new one replaces the old one),
+                                until T (2026-11-23T15:00) or for 90m / 2h / 1d, else until cleared;
+                                no TEXT: show it; --clear: take it down
   serve [--port 8766]           the web page, bound to 127.0.0.1 only
   ls --rejected [--json]        letters that broke the door's rules (returned to their senders)
   notify [on|off|test]          desktop notices on/off (config.json), or show one test notice
@@ -1103,8 +1232,16 @@ def main(argv=None):
             if js:
                 print(json.dumps(rows, ensure_ascii=False))
                 return 0
+            try:
+                ann = announce_get(zone)
+            except Fail:                  # 沒 door.json：清單照印，不提醒
+                ann = None
+            tail = ("(your announcement is up%s: %s; take it down with: aos-user announce --clear)" % (
+                " until " + ann["until"] if ann["until"] else "", ann["text"].replace("\n", " / "))) if ann else None
             if not rows:
                 print("nothing waiting")
+                if tail:
+                    print(tail)
                 return 10
             for r in rows:
                 flags = ("!" if r["urgent"] else " ") + ("*" if r["where"] == "new" else " ")
@@ -1120,6 +1257,8 @@ def main(argv=None):
                 print("%2d %s %-6s %-14s %s%s" % (r["n"], flags, r["kind"], (r["from"] or "?")[:14], r["title"],
                                                   ("  [" + ", ".join(extra) + "]") if extra else ""))
             print("(! urgent, * not seen yet)")
+            if tail:
+                print(tail)
         elif sub == "show":
             if len(rest) != 1:
                 raise Fail("ArgumentsBad", "usage: aos-user show N")
@@ -1155,8 +1294,31 @@ def main(argv=None):
                 print("put away %s" % r["letter"])
         elif sub == "door":
             mode = take_flag(rest, "--mode")
-            d = door_mode(zone, mode) if mode else door_get(zone)
+            d = door_mode(zone, mode) if mode else door_view(zone)
             print(json.dumps(d, ensure_ascii=False, indent=1))
+        elif sub == "announce":
+            clear = take_flag(rest, "--clear", False)
+            until = take_flag(rest, "--until")
+            for_ = take_flag(rest, "--for")
+            bad = [a for a in rest if a.startswith("--")]
+            if bad:
+                raise Fail("FlagUnknown", "unknown flag %s (usage: aos-user announce [TEXT [--until T | --for 90m]] [--clear])"
+                           % bad[0])
+            if clear:
+                if rest or until or for_:
+                    raise Fail("ArgumentsBad", "usage: aos-user announce --clear (nothing else)")
+                print("announcement taken down" if announce_clear(zone) is not None else "no announcement to take down")
+            elif rest:
+                a = announce_set(zone, " ".join(rest), until=until, for_=for_)
+                print("\n".join(announce_lines(a)))
+            else:
+                if until or for_:
+                    raise Fail("ArgumentsBad", "--until and --for go with the text: aos-user announce TEXT --for 90m")
+                a = announce_get(zone)
+                if a is None:
+                    print("no announcement")
+                    return 10
+                print("\n".join(announce_lines(a)))
         elif sub == "verify":
             if len(rest) != 1:
                 raise Fail("ArgumentsBad", "usage: aos-user verify REPLY_LETTER_FOLDER")

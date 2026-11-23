@@ -8,9 +8,11 @@
 aos-user ls                          # 在等你的，急件在上（! 急、* 沒看過）
 aos-user show 1                      # 看第 1 封（信從 new/ 移到 cur/）
 aos-user answer 1 q1:a 'q2:c*' --note "…"   # 裁；* ＝不照推薦（同 decide-page；zsh 裡帶 * 的要加引號）
+aos-user answer 1 'q1:a:這個不錯' 'q2:我覺得都不好'   # 每題留言：選 a 並留言；只寫一段話＝那題答 other
 aos-user answer 1 --all-recommend    # 沒寫的題都照推薦（不可逆的信不吃這招）
 aos-user reply 2 "一段話"             # 驗／試／做、舊格式的信
 aos-user ok 3                        # 純告知：收起來，不回信
+aos-user announce "我去睡午覺，一小時後回來" --for 1h   # 公告給各 agent（貼在 door.json；不帶字＝看，--clear＝收）
 aos-user serve                       # 網頁 http://127.0.0.1:8766/（只綁本機）
 aos-user notify on                   # 桌面通知開（off 關；test 跳一則試試）
 aos-user ls --rejected               # 不合規矩、被退回寄件人的信
@@ -47,22 +49,23 @@ journalctl --user -u aos-user-tick -n 20     # 看它做了什麼（沒事時不
 | `send --kind K [--title] [--from] [--reply-to] [--urgent] [--deadline] [FILE\|-]` | agent 寄信；先照 schema 驗，不合 `SchemaBad`、不寄。回信地址＝`--reply-to`，沒給＝`$AOS_STACK/mailbox`；回信地址是寄件人自己的 `$AOS_STACK/mailbox` 而還沒建（從沒收過信的 agent）時，先照 `aos-post init` 建好再寄，stderr 印一行 `made your reply mailbox …`（11-23 使用者選 b）。`--reply-to` 指到別處、`$AOS_STACK` 沒設或那個夾不在：不建，照舊 `MailboxMissing`，錯誤句後面寫怎麼修；建不起來＝一行錯誤（代號照 aos-post 轉）、不寄 |
 | `ls [--json] [--done]` | 待辦／已回；`--json` 每列 `n letter where format kind from title questions deadline urgent risk host sent_at same bad`；沒待辦退 10 |
 | `show N` | 看一封；同 `dedupe_key` 的一起移進 `cur/` |
-| `answer N id:key… [--note] [--all-recommend]` | 裁；每題都要答，少了＝`AnswerMissing`、存草稿 |
+| `answer N id:key… [--note] [--all-recommend]` | 裁；每題都要答，少了＝`AnswerMissing`、存草稿（連留言）。每題可留言（11-23）：`q3:a:留言`＝選 a 並留言、`q3:一段話`＝那題答 `other`、留言就是那段話、`q3:other:留言` 也行；留言可有冒號、空白、中文。冒號後整段像代號（1～8 英數字，可帶 `*`），或第一段像代號又接冒號的，那段一定要是這題的選項，不然 `ArgumentsBad`（免得打錯字變成留言）。`--note` 是整封一格，照舊並存 |
 | `reply N TEXT` | 自由回話 |
 | `ok N` | fyi（或舊格式信）收起來，不回 |
-| `door [--mode normal\|away]` | 看門上公告／切出門模式 |
+| `door [--mode normal\|away]` | 看門上公告／切出門模式（過期的 `announce` 不印） |
+| `announce [TEXT [--until T\|--for 90m]] [--clear]` | 公告（11-23）：寫進 `door.json` 的 `announce` 鍵 `{text, at, until}`，agent 照規矩讀門就看得到；一次一則，新的蓋掉舊的，不動 `mode` 等其他鍵。`--until` 照 deadline 寫法（只寫日期＝那天結束）、`--for` 收 `90m`／`2h`／`1d`，都沒給＝一直掛著。過了時間就當作沒有（`door`、`announce`、`ls`、網頁都不顯示），檔裡那格等下次寫門（`announce`、`door --mode`、`tick`）時拿掉。不帶字＝印現在的（沒有＝`no announcement`、退 10）；`--clear`＝收掉。掛著時 `ls` 最後提醒一行 |
 | `ls --rejected [--json]` | 被退的信與理由 |
 | `notify [on\|off\|test]` | 桌面通知開關（寫 `config.json`）、跳一則試試 |
 | `tick [--json] [--quiet]` | 收件檢查＋退信＋通知＋到期提醒（計時器每分鐘跑；`--quiet` 沒事不印） |
 | `verify 回信資料夾` | 收信方驗回信：寄件人是專區、跟 `done/` 的 `reply.json` 逐欄一樣、log 有同一筆 |
-| `serve [--port]` | 網頁 |
+| `serve [--port]` | 網頁（11-23 起每題多一格留言；「門上公告」頁可貼、收公告，待辦頁頂端提醒公告掛著） |
 
-錯誤：`aos-user: error: 代號 原因`，退 1。代號：`ZoneMissing SchemaBad ArgumentsBad LetterMissing AnswerMissing ReplyToMissing MailboxMissing VerifyBad MoveFailed ToolMissing NotifyFailed CommandUnknown`（aos-post 的代號照轉）。
+錯誤：`aos-user: error: 代號 原因`，退 1。代號：`ZoneMissing SchemaBad ArgumentsBad LetterMissing AnswerMissing ReplyToMissing MailboxMissing VerifyBad MoveFailed ToolMissing NotifyFailed FlagUnknown CommandUnknown`（aos-post 的代號照轉）。
 </details>
 
 <details><summary>回信長什麼樣、怎麼回到原寄件人</summary>
 
-回信用 `aos-post send --in-reply-to <原信名> <原信 reply_to>` 寄出，寄件人身分＝專區（`AOS_STACK` 設成專區、拿掉 `AOS_WS`／`AOS_CF`／`AOS_CLOCK`）。body：八個標準欄（`from=user to status=DONE title="Re: …" what outputs not_done decide`）＋ `zone answers answer_line note text via answered_at host letter_hash reply_id auth`。寄成功才把原信從 `cur/` 搬到 `done/<年-月>/<信名>/`，並寫 `reply.json`（回信副本＋`sent_as`、`sent_to`）。寄不出去（對方信箱沒了）：信留在 `cur/`、答案存 `drafts/`。
+回信用 `aos-post send --in-reply-to <原信名> <原信 reply_to>` 寄出，寄件人身分＝專區（`AOS_STACK` 設成專區、拿掉 `AOS_WS`／`AOS_CF`／`AOS_CLOCK`）。body：八個標準欄（`from=user to status=DONE title="Re: …" what outputs not_done decide`）＋ `zone answers answer_line note text via answered_at host letter_hash reply_id auth`。`answers` 每題 `{id, answer, differs}`，那題有留言才多一格 `comment`（11-23）；`answer_line` 寫成 `q1:a「留言」、q2:other*「留言」（備註：…）`，`what` 也帶每題的留言。留言是回信的一部分，`verify` 照樣逐欄比。寄成功才把原信從 `cur/` 搬到 `done/<年-月>/<信名>/`，並寫 `reply.json`（回信副本＋`sent_as`、`sent_to`）。寄不出去（對方信箱沒了）：信留在 `cur/`、答案存 `drafts/`。
 </details>
 
 <details><summary>網頁的安全</summary>
