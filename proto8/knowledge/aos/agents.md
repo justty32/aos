@@ -36,7 +36,7 @@ Tool `agent_def` makes agent definitions. A definition is a folder (`system.txt`
 
 One op per call:
 
-- copy a stock template: `{"op": "new", "template": "agent-fsm", "path": "defs/helper"}` (`template` = the name of a folder under `$AOS_HOME/templates`; stock agent templates: `agent-fsm`, `eca-claude`, `eca-pi`, `reviewer`; a wrong name is `DefMissing` and the reason lists the templates there)
+- copy a stock template: `{"op": "new", "template": "agent-fsm", "path": "defs/helper"}` (`template` = the name of a folder under `$AOS_HOME/templates`; stock agent templates: `agent-fsm`, `eca-claude`, `eca-claude-alt` (eca-claude on a second Claude account, `~/.claude-alt`), `eca-pi`, `reviewer`; a wrong name is `DefMissing` and the reason lists the templates there)
 - copy any other definition folder: `{"op": "new", "from": "defs/helper", "path": "defs/helper2"}`
 - check: `{"op": "check", "path": "defs/helper"}` (prints `{"problems": [...]}`; an empty list = OK. A link in the folder that points to nothing (a moved or deleted `defs.extern` target) is one problem, and the other checks of that definition wait until it is fixed. Besides the files it checks that every tool path and every program the states, loop and hooks run exist, and that brain settings have the right types (`temperature: "hot"` is a problem); what it could not check here, like a variable that is not set, comes in `"warnings"`. It does not check the model name. Compiling with `agent.py --compile` checks none of this: run check after compiling)
 - change its tools: `{"op": "tools", "path": "defs/helper", "args": {"op": "add", "path": "tools/math"}}` (`args` = what `self_tools` takes: ls, get, add, rm)

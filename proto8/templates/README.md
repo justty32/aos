@@ -7,7 +7,7 @@
 <a id="agent-meg記憶庫10-24"></a>
 <a id="talkagent-之間寄信10-24"></a>
 <a id="agent-gus小念頭10-24"></a>
-複製出去用的 agent 範本，都用 `aos-agent ctl add` 掛（不給預設、要明寫資料夾）：`eca-claude`（外部 coding agent）、[`eca-pi`](eca-pi/README.md)（外部 coding agent 的 pi 身，每批一個 `pi --mode rpc`、回答途中收信、有畫面）、[`agent-fsm`](#agent-fsm)（aos 自己的 loop／fsm agent；問腦＝寄信給 [llm-kernel](kernel/docs/01-llm-kernel.md)）。兩個範本對外同形（`_entry`＝aos-loop、queue／history／ctl／state、同一份 `tools.json`、`--prompt` 開場白），對照表在 [thinking 11-04 loop-fsm-agent 02](../thinking/2026-11/04/loop-fsm-agent/02-跟-eca-對照.md)。
+複製出去用的 agent 範本，都用 `aos-agent ctl add` 掛（不給預設、要明寫資料夾）：`eca-claude`（外部 coding agent）、[`eca-claude-alt`](eca-claude-alt/README.md)（同 eca-claude，答話與畫面都用第二個 Claude 帳號 `~/.claude-alt`，11-23）、[`eca-pi`](eca-pi/README.md)（外部 coding agent 的 pi 身，每批一個 `pi --mode rpc`、回答途中收信、有畫面）、[`agent-fsm`](#agent-fsm)（aos 自己的 loop／fsm agent；問腦＝寄信給 [llm-kernel](kernel/docs/01-llm-kernel.md)）。兩個範本對外同形（`_entry`＝aos-loop、queue／history／ctl／state、同一份 `tools.json`、`--prompt` 開場白），對照表在 [thinking 11-04 loop-fsm-agent 02](../thinking/2026-11/04/loop-fsm-agent/02-跟-eca-對照.md)。
 
 **開一棵新樹就抄起手範本**（使用者 11-17 裁 L-10 A，11-18 S6 做）：[`start-api`](start-api/README.md)（根＋llm kernel＋一隻 agent-fsm，假腦先試）、[`start-eca`](start-eca/README.md)（根＋一隻 eca-claude），`cp -r $AOS_HOME/templates/start-api ~/aos-home && cd ~/aos-home && source env.sh` 就能起；包裡的 `env.sh` 是薄的一份（`AOS_HOME` 沒設報錯，有就轉去 `$AOS_HOME/env.sh`），其餘是下面各範本的逐字抄本（`tests/test_start.py` 逐檔比對，改了原範本要同步抄過去）；只有 `start-api/agents/ann` 不帶 agent-fsm 的格程式，`fsm.json` 動態連結 `$AOS_HOME/templates/agent-fsm/` 那四支（11-21，使用者 11-20「起手範本確實該改成要借的」，[紀錄](../thinking/2026-11/21/起手範本-動態連結-1121.md)）。
 
