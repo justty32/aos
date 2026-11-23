@@ -1,5 +1,5 @@
 # Example user unit for the aos-frontend page. Path rule one (11-17): AOS_HOME is the proto8 folder; here it is
-# %h/repo/aos/proto8 and the tree is the repo's own %h/repo/aos/_stack (wf/workflows/dev-env/03-換機.md in the aos repo). Change both to yours.
+# %h/repo/aos/proto8 and the tree is the repo's own %h/repo/aos/.stack (wf/workflows/dev-env/03-換機.md in the aos repo). Change both to yours.
 # env.sh needs AOS_HOME (it never sets it; a user unit does not read ~/.bashrc), so Environment= gives it; env.sh keeps AOS_HOME and puts
 # $AOS_HOME/bin (aos-agent, aos-post ...) and $AOS_HOME/frontend/bin (aos-frontend) on PATH. It clears every other AOS_*, so AOS_DAEMON is set after it.
 # aos-user comes with the frontend (bin/aos-user links to ../aos-user/), so env.sh puts it on PATH too; $VIEW_TOOLS/aos-user/ overrides.
@@ -11,7 +11,7 @@ After=default.target
 Type=simple
 WorkingDirectory=/
 Environment=AOS_HOME=%h/repo/aos/proto8
-ExecStart=/bin/bash -c '. %h/repo/aos/proto8/env.sh && AOS_DAEMON=%h/repo/aos/_stack/ exec aos-frontend serve'
+ExecStart=/bin/bash -c '. %h/repo/aos/proto8/env.sh && AOS_DAEMON=%h/repo/aos/.stack/ exec aos-frontend serve'
 Restart=on-failure
 RestartSec=5
 
