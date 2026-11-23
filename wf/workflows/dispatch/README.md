@@ -7,7 +7,7 @@
 **何時用**：一件工作大到要同時開幾條線，或要派給別資料夾／別機器的 agent 做。
 **何時不用**：一兩個檔的小改（開線的交接成本大過收益）；需求還沒定、要跟使用者來回確認方向；只是要問一件事或送一則情報 → [inbox](../inbox.json)。
 
-**本專案的隊形**（頂層只調度；一條線＝一隻 opus 或 fable 的 eca，隊員是 sol 的 agent-fsm；commit、問使用者、掛隊員的實際指令與活樹旁的硬規則）→ [aos-teams](aos-teams.md)。
+**本專案的隊形**（頂層 eca-aos 只調度；固定的位子加按件派，全是 Claude，打雜工是 sol 的 agent-fsm，誰負責什麼見 [wf/org](../../org/README.md)；commit、問使用者、掛隊員的實際指令與活樹旁的硬規則）→ [aos-teams](aos-teams.md)。
 
 ## Done when
 
@@ -75,7 +75,7 @@
 | 檔案 | 內容 |
 |------|------|
 | [CLAIMS.md](CLAIMS.md) | 領地登記三張表：現役的線、保留給調度者的目錄、收線歷史（附完成證據） |
-| [aos-teams.md](aos-teams.md) | 本專案的隊形（短卡）：頂層只調度、線是 opus／fable 的 eca、隊員是 sol 的 agent-fsm；五件常做的事的實際指令（commit、問使用者、掛隊員、等隊員、活樹旁）（分檔在 `aos-teams/`）|
+| [aos-teams.md](aos-teams.md) | 本專案的隊形（短卡）：頂層 eca-aos 只調度、固定的位子加按件派、打雜工是 sol 的 agent-fsm；五件常做的事的實際指令（commit、問使用者、掛隊員、等隊員、活樹旁）（分檔在 `aos-teams/`）|
 | [driving-cli-agents.md](driving-cli-agents.md) | 怎麼啟動、驅動、監看一條外部 CLI agent 線，以及收線七步 |
 | [wf/public 派線與任務書](../../public/派線與任務書.md) | 派線踩過的坑（坑都在 wf/public）：預掃範圍、線推翻交接書、交接書自相矛盾、任務書 checklist、舊東西怎麼用、截止點；整檔改寫、合併後才刪分支、worktree 起點舊、共用工作樹在 [共用工作樹與git](../../public/共用工作樹與git.md) |
 

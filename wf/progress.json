@@ -458,6 +458,18 @@
         "[公司WSL重建與stack改名-1123](../proto8/thinking/2026-11/23/公司WSL重建與stack改名-1123.md)"
       ],
       "since": "2026-11-23"
+    },
+    "org-1123": {
+      "title": "wf/org 工作室分工 11-23 定案後的尾巴",
+      "status": "open",
+      "flow": "",
+      "what": "11-23 使用者答七題（1、2、4～7 照推薦，第 3 題改成開 py／cpp 的核心程式位子），`wf/org` 已定稿、舊文件十個檔已對齊。剩：① 打雜工在公司 WSL 掛得起來前的四關（真模型端點、`sol-high` 包名、配給包 `.env` 的 `AOS_LLM_KERNEL`、eca-aos 要先有 `subagent` 與 `agent_def` 工具），打通前蒐集雜活實際由 sonnet 的 Claude 子 agent 做；② `wf/public/`（recipes、活樹旁邊、改文件與知識庫、patch-and-commit、sol-crew、等隊員與讀信、README）、`common/user/03`、`aos-teams/04` 還寫「部長」，沒改；③ 規矩卡 9206 bytes，超過它自己說的 8 KB（改之前 8919），要砍哪些沒定；④ `aos-teams.md` 與 07 檔頭說舊隊形原文在「本夾 `archive/`」，那個夾不在；`AGENTS.md` 的 `archive/README.md`、`user/01` 的 proto7-2 連結原本就是斷的；⑤ 位子的定義夾一份都還沒做（kb、templates、core、frontend 現在都靠 eca-aos 派 Claude 子 agent 代班），每次真的要掛人照鐵律 2 先問使用者；⑥ `wf/org` 裡還標〔提案〕的幾條（子 agent 不算成員、位子之間直接寄信、任務書與回信多要求的兩件、各卡的模型級別與交接表）使用者沒看過。",
+      "next": "",
+      "see": [
+        "[wf/org](org/README.md)",
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-23"
     }
   }
 }

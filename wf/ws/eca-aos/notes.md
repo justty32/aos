@@ -72,3 +72,18 @@
 - **答完要改的舊文件**（fable 列的 16 條，還沒動）：`aos-teams.md` 第 9、10、11、15、35、52、74 行；`aos-teams/07` 第 13、63～66 行；規矩卡第 29、54、59 行；`user.md`「子 agent 模型」列 11-14 那句移到已被取代、「工作模式」列加指標；`team-model.md` 第 31、43、67、80 行（只動本專案那幾句）；`kits/card.md` 第 13、14 行；`dispatch/README.md` 第 10、78 行；`AGENTS.md` 加指到 org 的一條。
 - 打雜工在這台掛得起來前要過四關：真模型端點、`sol-high` 包名、配給包 `.env` 的 `AOS_LLM_KERNEL`、我要先有 `subagent` 與 `agent_def` 工具。
 - 使用者接著補（逐字）：「蒐集算打雜，但施工這塊，如果是重要的部分，那確實還是得用claude」，再補「尤其是寫程式」。fable 派出去時還沒有這句：稿子回來要對——蒐集歸 fsm gpt、重要的施工歸 Claude；「不重要的施工歸誰、怎麼分重要不重要」他沒說，別替他定，列成題目。這句已抄進 `common/user.md`「子 agent 模型」那列（還沒交件，等 org 稿一起交）；`aos-teams.md`、規矩卡裡「蒐集和施工用 sol」那幾句等對完再改。
+
+## 2026-11-23 下午：使用者答七題、叫我用專區
+
+- 使用者（逐字）：「都按照推薦。但py/cpp可以開了，這是aos本體程式庫，是重要對象。舊文件可以更新了。公司體制這塊放著，我就是拿來看看，當參考。對了，~/.aos/user好了嗎？可以用一下」。
+- 七題結果：① 有活才掛 ② `aos-eca-frontend` 定成 `proto8/frontend/` 的位子、大修開工才掛 ③ **開** py／cpp 的核心程式位子（他改的，不是推薦）④ 寫程式一律 Claude，機械式施工可給 fsm gpt ⑤ 蒐集雜活先 fsm gpt、掛不起來 sonnet 補位 ⑥ 位子範圍內先交後報，跨範圍等先問我 ⑦ 我只親手做活狀態、抄原話進規矩、`wf/org`，其餘照派。公司體制七題：放著當參考，不追。
+- 派了兩隻 opus 的 Claude 子 agent（都不 commit，回來我看 diff 再交）：
+  - A：`wf/org/` 從提案改成已定，新開 `core/`、`frontend/` 兩張卡，建地盤 `wf/ws/eca-aos/eca-aos-core/`（名字 `eca-aos-core` 是我取的），改 `wf/ws` 兩份 README 與 frontend 地盤 README 第一行。
+  - B：改舊文件（`aos-teams.md`、`aos-teams/07`、`03-使用者原話`、規矩卡、`user.md` 與 `user/01`、`team-model.md`、`kits/card.md`、`dispatch/README.md`、`AGENTS.md`）；被取代的使用者原話收進留底，不刪。
+- **專區第一封真信**：`01795412855625216943.823276.2083748`（decide，三題：q1 tick 的 timer 裝不裝〔推薦 a 不裝〕、q2 `MailboxMissing` 怎麼補〔推薦 b 改程式讓 send 自己建〕、q3 六行輸入歷史清不清〔推薦 a 不清〕）。`aos-user ls` 看得到。回信會進我的 mailbox，要 `mailbox_read` 後跑 `aos-user verify <留底夾>` 看到 `ok: matches` 才算數。
+
+- **專區整條走通了**：使用者用 `aos-user answer` 回了（q1:a 不裝 timer、q2:b 改程式讓 send 自己建信箱、q3:a 六行不清），回信 `01795413060186315333.845299.2104205`，`aos-user verify` 印 `ok: matches`（reply_id `64c0e59b2a3266ff`）。
+- q2:b 派了第三隻 opus（代班前端位子）：改 `proto8/frontend/aos-user` 的 `send`，只在回信地址是預設的自己 stack 的 `mailbox/` 時自動建；先在乾淨複本改好測好再寫回（frontend 存檔活樹就在用）；不 commit。回來要：看 diff、交件、把它給的那一句轉進知識庫 `aos/user_zone.md` 與 `wf/public/user-zone-mail.md`（派代班）、更新 progress `aos-user-home`。
+- 使用者問「只能選 abcde 嗎、不能逐題留言嗎」：現在不能逐題寫，`answer` 只收 `id:代號`；可以 `--note`（整封一格）或那題答 `other` 加 `--note`（`zone.py` 的 `parse_answers`）。要不要加「逐題留言」等他說。
+- A、B 兩隻回來了，我看過 diff：A 改 `wf/org` 六檔、新開 `core/`、`frontend/` 兩張卡與地盤 `eca-aos-core/`、改 `wf/ws` 三份 README；B 改舊文件十個檔（被取代的原話收進 `aos-teams/03` 與 `user/01` 的留底）。我只改了一處：lead 卡「要查的也派一隻唯讀的」改成「一兩下查得到的自己答、要跨檔讀的才派」。
+- **沒處理的尾巴**（記進 progress `org-1123`）：規矩卡 9206 bytes 超過 8 KB（改之前就 8919）；`wf/public/` 七個檔、`user/03`、`aos-teams/04` 還寫「部長」；`aos-teams.md` 與 07 檔頭說舊原文在「本夾 `archive/`」但那個夾不在；`AGENTS.md`、`user/01` 各有一條原本就斷的連結；打雜工四關；「有活才掛」每次掛人要不要再問使用者（現在照鐵律 2 每次問）。

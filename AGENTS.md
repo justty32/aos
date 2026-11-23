@@ -18,6 +18,7 @@ aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](
 - **被派出去的 agent**（簡單工作與雜活除外）→ 先讀知識庫入口，再讀 [規矩卡](wf/workflows/common/rules-card.md)（規矩的濃縮，原文為準；使用者 11-17 待裁網頁 wf-6 a）；碰原始碼再讀 conventions，當線隊長再讀下一條。
 - **被派來當一條線、或要派隊員／交 commit／回報** → 先讀短卡 [dispatch/aos-teams](wf/workflows/dispatch/aos-teams.md)（現行隊形與流程，細節再進 07）。
 - **要開 agent 團隊、決定各層派哪級模型** → [team-model](wf/workflows/team-model.md)。
+- **這件事歸誰、做完交給誰、有哪些位子** → [wf/org](wf/org/README.md)（使用者 11-23「在wf/開一個org」）。
 - 使用者偏好與確認邊界 → [common/user.md](wf/workflows/common/user.md)。
 - **不寫 Claude Code 自動記憶**（使用者 2026-09-30 定）：值得留下的東西一律寫進 `wf/` 對應的檔，記憶資料夾只留一句指回這裡。
 

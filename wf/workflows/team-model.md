@@ -18,7 +18,7 @@
 
 職責四件：接收指令、開 agent 團隊、傳達指令、**協調使用者自己也會用到的資源**（CPU、硬碟、網路）。**資源授權的源頭是使用者**——頂層只是代為分配，**不能自己創造授權**。
 
-模型：**通常 Opus 就夠了**——頂層只是轉達與調度，某些情況下 Sonnet 也可以；skyrim 那邊頂層是 Opus，aos 頂層多為 Opus（頭腦風暴時換 Fable），都**只派隊、不親做內容**（鐵律 5：方向性的留給使用者）。頂層**比領導笨是正常的**：計畫不在頂層做。
+模型：**通常 Opus 就夠了**——頂層只是轉達與調度，某些情況下 Sonnet 也可以；skyrim 那邊頂層是 Opus，aos 頂層多為 Opus（頭腦風暴時換 Fable），都**只派隊、不親做內容**（鐵律 5：方向性的留給使用者；aos 頂層 eca-aos 11-23 起可以親手做活狀態、抄使用者的話進規矩、`wf/org` 三樣，見 [wf/org](../org/README.md)）。頂層**比領導笨是正常的**：計畫不在頂層做。
 
 對使用者說話要**適合使用者理解**：初次出現的東西先用白話講一句。**預設不必翻譯**；只有使用者說今天不想動腦才逐項翻，翻譯本身吃太多 context 時，改成直接指出**該先看哪些檔**。
 
@@ -28,7 +28,7 @@
 
 ### 團隊領導（＝計畫制定者）
 
-職責：把目標拆成計畫、寫交接書、派工、監看、核驗、收線。本專案的領導＝**一條線**，一隻 Opus 或 Fable 的 eca（掛在頂層底下，帶 sol 隊員，見下方「工人」）：寫任務書、派工、審 diff、逐條對證據驗收。交件走 `wf/tools/commit-request`，不自己 `git commit`；**不 push**，push 要使用者點頭（鐵律 2）。回報寄任務書指定的對象（11-14 起是各部的 Fable 部長）。做法見 [dispatch/aos-teams](dispatch/aos-teams.md)。
+職責：把目標拆成計畫、寫交接書、派工、監看、核驗、收線。本專案（11-23 起是 eca-aos 的小型工作室）的領導＝**一個位子或按件派的那一隻**，都是 Claude 的 eca 或子 agent（位子 kb、templates、core、frontend 有活才掛，見 [wf/org](../org/README.md)；要用打雜工就自己掛，見下方「工人」）：寫任務書、派工、審 diff、逐條對證據驗收。交件走 `wf/tools/commit-request`，不自己 `git commit`；**不 push**，push 要使用者點頭（鐵律 2）。回報寄任務書指定的對象（工作室沒有部長，是 eca-aos）。做法見 [dispatch/aos-teams](dispatch/aos-teams.md)。
 
 模型：**依任務難度是 Fable 或 Opus**。負擔重（計畫＋指揮＋匯報），所以 **Opus 是最低標準**；**若「制定計畫」被分出去給某個成員，領導只剩指揮與匯報，Sonnet 也可以。**本專案預設是 Opus 帶隊、架構規劃分給 Fable、Opus 再深化（流程見 [aos-teams](dispatch/aos-teams.md)「要規劃就走正統流程」）。
 
@@ -40,9 +40,9 @@
 
 依任務難度／內容，加上**使用者給的 headcount**，開不同聰明程度的 agent。gpt-sol、gpt-terra、gpt-luna 這類便宜 AI **通常在這層大量使用**；工人**不 commit**。
 
-**本專案**：工人＝**sol 的 agent-fsm**（aos 樹裡的 agent，腦走本地 LiteLLM），蒐集、照圖紙寫碼、寫文件、雜活都先給它；**蒐集和施工不用 terra、不走 codex CLI**（使用者 11-14）。sol 走不通才由 Claude 子 agent 補位（普通 opus、簡單 sonnet）。開工前讀什麼按角色分（純蒐集的 sol 只讀知識庫入口加站台層）。細節與使用者原話見 [dispatch/aos-teams](dispatch/aos-teams.md)。
+**本專案**：工人＝**sol 的 agent-fsm 當打雜工**（aos 樹裡的 agent，腦走本地 LiteLLM），蒐集、逐條核對、不必判斷的雜活與機械式施工（照對照表改名、搬檔、套格式）先給它，掛不起來才由 sonnet 的 Claude 子 agent 補位；**寫程式與重要的施工用 Claude**（使用者 11-23「蒐集算打雜，但施工這塊，如果是重要的部分，那確實還是得用claude」「尤其是寫程式」，分工見 [wf/org](../org/README.md)）；**不用 terra、不走 codex CLI**（使用者 11-14）。開工前讀什麼按角色分（純蒐集的 sol 只讀知識庫入口加站台層）。細節與使用者原話見 [dispatch/aos-teams](dispatch/aos-teams.md)。
 
-gpt-sol 自己再開 terra／luna 是**它那層的事**——它在那層就是領導，不算「領導不建議 gpt-sol」的例外；我們只在任務書寫明分工與資源，不替它逐條派。（本專案現在不這樣用：sol 隊員一張單只做一件事，要多人就由線多掛幾隻。）
+gpt-sol 自己再開 terra／luna 是**它那層的事**——它在那層就是領導，不算「領導不建議 gpt-sol」的例外；我們只在任務書寫明分工與資源，不替它逐條派。（本專案現在不這樣用：sol 打雜工一張單只做一件事，要多人就由派工的人多掛幾隻。）
 
 ## 二、聰明度分級（總分）
 
@@ -57,14 +57,14 @@ Claude 系列消耗與聰明度成正比、GPT 系列整體往下移兩級，所
 1. **任務難度／內容**——決定聰明度下限。
 2. **使用者給的 headcount**——外生的上限，**不自己加碼**。
 3. **token 消耗速度**——所以工人層大量用便宜模型，貴的留給真的需要的那幾件。
-4. **溝通方便與否**——跨體系（GPT ↔ Claude）即使有 inbox 仍有成本，所以**領導層不建議 gpt-sol**。另外（使用者 11-07，長期）**gpt 系不參與軟體設計決策與架構規劃**，只照圖紙寫碼、寫文件、做雜活，見 [aos-teams](dispatch/aos-teams.md)「gpt 系不做設計決策」。
+4. **溝通方便與否**——跨體系（GPT ↔ Claude）即使有 inbox 仍有成本，所以**領導層不建議 gpt-sol**。另外（使用者 11-07，長期）**gpt 系不參與軟體設計決策與架構規劃**，只照圖紙寫碼、寫文件、做雜活，見 [aos-teams](dispatch/aos-teams.md)「gpt 系不做設計決策」；本專案 11-23 起寫程式與重要的施工也改用 Claude，gpt 只打雜（[wf/org](../org/README.md)）。
 5. **管理上限**——**開太多領導不好管**；寧可少開領導、把量壓在工人層。
 6. **時程**——用「產出速度 × 繞圈數 × 模型癖好」反推每段派誰、排多久，算法見 [speed](team-model/speed.md)。
-7. **機器負擔**——codex、claude 這類 CLI agent 都是 nodejs 做的，跑在使用者自己也在用的機器上，**同時開的 CLI 程序數是外生上限**。量往隊員的子 agent 壓、不往程序數壓；頂層稍微監看負載，超門檻才叫各隊收斂。本專案的 sol 隊員是 agent-fsm、不是 CLI 程序，佔 CLI 程序的只有各線的 eca 與另開的 Claude；公司那台的全機上限與門檻見 [aos-teams/01](dispatch/aos-teams/01-公司WSL.md)。
+7. **機器負擔**——codex、claude 這類 CLI agent 都是 nodejs 做的，跑在使用者自己也在用的機器上，**同時開的 CLI 程序數是外生上限**。量往隊員的子 agent 壓、不往程序數壓；頂層稍微監看負載，超門檻才叫各隊收斂。本專案的 sol 隊員是 agent-fsm、不是 CLI 程序，佔 CLI 程序的只有各位子與按件派的 eca、另開的 Claude；公司那台的全機上限與門檻見 [aos-teams/01](dispatch/aos-teams/01-公司WSL.md)。
 
 ## 五、方案與時間軸
 
-隨帳單與錢包變動，替代表與連帶效果拆到 [plans](team-model/plans.md)。現況 Claude、GPT 兩套都在用，工人層用 sol（走本地 LiteLLM 的 agent-fsm）。
+隨帳單與錢包變動，替代表與連帶效果拆到 [plans](team-model/plans.md)。現況 Claude、GPT 兩套都在用；本專案的打雜工用 sol（走本地 LiteLLM 的 agent-fsm），寫程式用 Claude。
 
 ## 六、context 管理
 
@@ -77,7 +77,7 @@ Claude 系列消耗與聰明度成正比、GPT 系列整體往下移兩級，所
 - **頂層**平時不掛醒鐘；只有 `NEEDS-USER`、`FAILED`、領導的 `DONE`、資源／鎖請求該吵醒它。
 - **領導**對自己團隊送來的 STATUS **全醒**；上呈時重寫標題、帶自己的判斷，不是原文轉貼。
 - **工人**沒有醒鐘，**每完成一個工作步驟輪詢一次**，延遲上限就是一個工作步驟。
-- **本專案**：線的回報寄任務書指定的對象（11-14 起是各部部長），不直接吵頂層；要使用者拍板的題目寄使用者專區。標題怎麼寫見 [aos-teams](dispatch/aos-teams.md)「回報、經驗、意見」。
+- **本專案**：回報寄任務書指定的對象（工作室是 eca-aos，沒有部長；見 [wf/org](../org/README.md)）；要使用者拍板的題目寄使用者專區。標題怎麼寫見 [aos-teams](dispatch/aos-teams.md)「回報、經驗、意見」。
 
 （原本的醒鐘細則 `inbox/wake-policy.md` 11-13 隨 inbox 腳本刪掉；同一棵 aos 樹裡的新信由 aos 信箱的 hook 通知，見 aos 知識庫 `aos/mailbox.md` 的 `check`。）
 

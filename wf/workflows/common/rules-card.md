@@ -26,14 +26,14 @@
 - **他沒回答的邊緣狀況**：不追問、不列待辦。
 - **proto8 一律當成沒有舊版**：不寫遷移、不做舊格式相容、不留舊名提示。
 - **不寫 Claude Code 自動記憶**：值得留的寫進 `wf/` 對應的檔。
-- **子 agent 模型**：普通工作 opus、簡單與雜活 sonnet、高難度規劃 fable；改寫使用者的概念／規範條文不算簡單，不派 sonnet。蒐集和施工用 sol（agent-fsm），不走 codex、不用 terra。
+- **子 agent 模型**：普通工作 opus、簡單與雜活 sonnet、高難度規劃 fable；改寫使用者的概念／規範條文不算簡單，不派 sonnet。蒐集與雜活用 sol（agent-fsm）；寫程式與重要的施工用 Claude（使用者 11-23）；不走 codex、不用 terra。
 - **需求不清時先發想**，不急著出計劃、架構、待裁題（[user/03](user/03-討論紀錄與規劃.md#需求不清時先發想不急著規劃2026-11-14-定)）。
 - **arknights 凍結到至少 2026-12-14**：不開線、不碰 `~/code/playground-ak5`。
 - **額度緊時**停下、告訴使用者，不自己換帳號。
 
 ## 交件（[aos-teams 第 1 件](../dispatch/aos-teams.md#五件常做的事)、[07「commit」](../dispatch/aos-teams/07-預設流程與agent-fsm.md#commit)）
 
-`~/repo/aos/wf/tools/commit-request claim --line <線名> 檔…`，交件 `submit --line <線名> --files 檔… --msg-file 訊息檔`；日索引、月索引、`wf/progress.json` 用 `--op`，不交整檔；交之前 `git diff -- 檔` 確認只有自己的字；**不 push**。誰放行照任務書（11-14 起是部長）。
+`~/repo/aos/wf/tools/commit-request claim --line <線名> 檔…`，交件 `submit --line <線名> --files 檔… --msg-file 訊息檔`；日索引、月索引、`wf/progress.json` 用 `--op`，不交整檔；交之前 `git diff -- 檔` 確認只有自己的字；**不 push**。誰放行照任務書，沒寫照 [wf/org](../../org/README.md)（沒有部長；跨範圍、`--rm`、`install.py`、動活樹先問 eca-aos）。
 
 ## 活樹旁九條硬規則（[06](../dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#任務書必貼的硬規則)，全文照貼進任務書；純改文件的線貼第 1、7 條）
 
@@ -51,12 +51,12 @@
 
 ## 回報怎麼寫（[07「寄信怎麼寫」](../dispatch/aos-teams/07-預設流程與agent-fsm.md#寄信怎麼寫)）
 
-寄任務書指定的對象（11-14 起是各部部長）。
+寄任務書指定的對象（工作室是 eca-aos）。
 
 1. **標題寫你的判斷**，不轉貼隊員原話（「線 X 做完，Y 已 commit（雜湊）」「線 X 卡在 Z，已試過 A、B」）。
 2. **標題或第一句標明要什麼**：`NEEDS-USER`（要使用者裁）、`BLOCKED`（要資源或放行）、`PROGRESS`／`DONE`（報備）。
 3. **卡住或出錯的信，正文先寫已經排除的可能。**
-4. 查出一個知識庫沒寫的故障（症狀、原因、怎麼查都確認過）時，寄信給 eca-aos-kb，請它補進 proto8/knowledge/aos/troubleshooting.md；信裡寫明症狀、原因、怎麼查，以及你查證的依據（程式位置或重現步驟）。（11-22 使用者「總之先按推薦做」，eca-aos-kb 提案）
+4. 查出一個知識庫沒寫的故障（症狀、原因、怎麼查都確認過）時，寄信給 eca-aos-kb（kb 位子沒掛時寄 eca-aos），請它補進 proto8/knowledge/aos/troubleshooting.md；信裡寫明症狀、原因、怎麼查，以及你查證的依據（程式位置或重現步驟）。（11-22 使用者「總之先按推薦做」，eca-aos-kb 提案）
 
 要使用者拍板的題目另外寄專區。
 
@@ -68,6 +68,7 @@
 ## 要更多去哪查
 
 - 碰程式 → [conventions](conventions.md)。
+- 歸誰、交給誰、有哪些位子 → [wf/org](../../org/README.md)（使用者 11-23）。
 - 當線隊長、要派隊員 → [aos-teams](../dispatch/aos-teams.md)（細節 [07](../dispatch/aos-teams/07-預設流程與agent-fsm.md)）。
 - 坑與做法 → [wf/public](../../public/README.md)（先看 [recipes](../../public/recipes.md)）。
 - 鐵律與使用者偏好的原文 → [AGENTS.md](../../../AGENTS.md)、[user.md](user.md) 與 `user/01～03`。
