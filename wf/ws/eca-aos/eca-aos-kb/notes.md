@@ -79,7 +79,7 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - **任務書的草稿要對**：負責人給的句子是草稿，每句對過程式或範本才寫；草稿沒提到但同一句有別的錯（例：kernel.md 同一列的 sender）一起改。
 - **`.aos-source.json` 只有 `archive/` 裡的程式寫**（`archive/aos-home/copy_tree.py`、`archive/tree-swap/`）；`install.py` 不寫。`$AOS_HOME` 通常就是 repo 的 proto8，版本＝git HEAD 加未 commit 的改動。
 - 範本 README 有掛法時，知識庫 `aos/cli/parts/daemon.md` 那類「怎麼起」的頁補一行指到範本，細節留在範本 README。
-- 程式改了還沒 install.py：知識庫照 `py/` 寫；troubleshooting 的「怎麼查」寫成看 `$AOS_HOME/lib/` 裡實作的一行 grep，裝舊版的人對得上（例：`grep -n 'strict=False' …/llm_http/responses_api.py`）。先 `diff py/… lib/…` 看這台裝了沒。
+- 程式改了還沒 install.py：知識庫照 `py/` 寫；troubleshooting 的「怎麼查」寫成看 `$AOS_HOME/lib/` 裡實作的一行 grep，裝舊版的人對得上（例：`grep -n 'strict=False' …/llm_http/responses_api.py`）。先 `diff py/… lib/…` 看這台裝了沒；install.py 抄檔保留原檔 mtime，要看時間就看 ctime（`stat -c %z`），不要看 mtime。
 - 腦的 pack 怎麼送：`"api": "responses"` 的 pack（start-api 的 gpt 那四個）由 `endpoints/litellm` 叫 `lib/tools/base/llm_http`；換形狀的程式在 `responses_api.py`。
 - 範本、程式裡同樣說得比事實強的句子（例：`templates/kits/gather/tools.json` 的 description）只回報，不改。
 

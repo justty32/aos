@@ -45,6 +45,6 @@ The json tools that read (json_get, json_ls, json_len, json_search, json_multi_g
 - `PointerBad`: nothing before `#`, or the pointer after `#` does not start with `/`.
 - `PointerMissing`: no such key or array item; the reason names the level that lacks it (`cfg.json has no zzz`). Look one level up with `json_ls`. A `$ref`/`$env` object on the way is not gone through; the reason says so (use `jsonx_get` with `follow`).
 - `FileMissing`: no such file. `FileBad`: a folder, not readable, or not valid JSON.
-- `ArgumentsBad`: also `max_bytes`, `limit` or `depth` not a positive integer, `key` not a string, a negative `offset`, json_search with neither `key` nor `value`.
+- `ArgumentsBad`: also `max_bytes`, `limit` or `depth` not a positive integer, `key` not a string, a negative `offset`, json_search with neither `key` nor `value`, or with an empty `key`.
 - `LaunchFailed`: the helper `aos-json` could not start (a setup problem: report it). `CommandFailed`: `aos-json` failed without a reason line.
 - `WsMissing`: `aos/errors/common.md#/Codes from file work`. Wrong or unknown keys (`ArgumentsBad`): `aos/errors/common.md#/Codes about what you gave`.

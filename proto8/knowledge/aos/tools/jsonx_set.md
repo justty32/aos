@@ -19,7 +19,7 @@ Path: `aos/tools/json_get.md#/JSON tools: the path`. Errors: `aos/tools/jsonx_se
 
 The codes in `aos/tools/json_get.md#/json_get, json_ls, json_search: errors` and `aos/tools/json_set.md#/json_set, json_add, json_del: errors` apply (`KeyExists` only in jsonx_add). Also:
 
-- `ArgumentsBad`: not exactly one of `value`, `text`, `from` (set, add; in a multi_set item, that item's `[error]` line); `up` with `follow` or `resolve` (search).
+- `ArgumentsBad`: not exactly one of `value`, `text`, `from` (set, add; in a multi_set item, that item's `[error]` line); `up` with `follow` or `resolve`, or an empty `key` (search).
 - `TextBad`: `text` is not JSON; the reason has the parse error.
 - `FollowMissing` (set, add, del only; reading without `follow` gives `PointerMissing`): a `$ref`/`$env` object on the way; give `"follow": true`, or point at the directive itself to replace it.
 - `DirectiveBad`: a `$ref` cannot be read, points nowhere or goes in a circle; with `resolve`, a `$env` is not set.
