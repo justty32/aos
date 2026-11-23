@@ -74,5 +74,5 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 ### arbitrary_exec 怎麼標（11-23 晚線 arbexec-1123，d20cc7d34、19d8ef838）
 
 - 判準在 C-22：工具本身直接執行、或登記叫的人給的東西才標 true；經由寫檔間接達成的不算（write、edit、json_set 這類不標；使用者 11-23 晚「可以」）。讀這旗標的只有 `py/tools/aos/shell_report/report.py`（`arbitrary_exec is True`、沒 `sandbox`＝open）。
-- 標 true 的現在有：shell、run_python、self_tools、tools_def、agents_ctl、subagent、agent_def、measure、review_round、promote；fork、screen_linger、do_task、self_llm、self_system 是 false。`py/tools/aos/` 那幾支的 `_metainfo.json` 是單行緊湊寫法，照原樣接在 `"parallel":false` 後面。
+- 標 true 的現在有：shell、run_python、self_tools、self_hook、tools_def、agents_ctl、subagent、agent_def、measure、review_round、promote；fork、screen_linger、do_task、self_llm、self_system 是 false。`py/tools/aos/` 那幾支的 `_metainfo.json` 是單行緊湊寫法，照原樣接在 `"parallel":false` 後面。
 - 跑法：`~/.aos/scratch/arbexec-1123/setup.sh`（git archive HEAD＋改動、複本 install.py）、`test.sh`（清 `AOS_*`，六支工具測試＋`py/tests/apps/tools` 124＋`py/tests` 768，全部約 3 分鐘）。
