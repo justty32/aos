@@ -36,7 +36,8 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 
 - 整個知識庫只留這一份量測數字：agent 靠它判斷「加這包划不划算」。kits.md 不另外寫數字，指向 `aos/packs.md#/Tool packs`。
 - 不寫量測日期，也不寫某個範本的總字數。
-- 工具說明有改動就重量：`python3 -I wf/ws/eca-aos/eca-aos-kb/measure_packs.py /home/lorkhan/repo/aos/proto8`，印出「包 TAB 支數 TAB 字數」，照著換表上的數字。
+- 工具說明有改動就重量：`python3 -I wf/ws/eca-aos/eca-aos-kb/measure_packs.py $AOS_HOME`（家機 `/home/lorkhan/repo/aos/proto8`、公司 WSL `/home/guanyu/repo/aos/proto8`），印出「包 TAB 支數 TAB 字數」，照著換表上的數字。
+- core 改了 `_tooldef.json` 的說明（不只加工具）也會動字數：跟上 core 的信時順手量一次，不用等人叫。
 - 量之前先確認 `py/` 和 `lib/` 的 `_tooldef.json`、`packs/*.json` 一樣（`cmp`），不一樣就是還沒跑 install.py，回報，不要自己跑。
 
 ## 交件

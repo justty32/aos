@@ -25,7 +25,7 @@ Your tools come in packs. Which packs you have, what each tool does in one sente
 
 Your tools are registered pack by pack: each pack is one tool list in $AOS_HOME/lib/packs/<pack>.json, and a definition's tools.json stacks the packs it wants with "$override". agent-fsm has eleven packs (look, change, delete, shell, gadgets, todo, self, mailbox, goal, json, index) with four self tools turned off: 36 tools. Of the self pack only self_tools and self_state are on; add self_llm, self_system, self_history or self_ctl yourself when you need one: self_tools {"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_llm"}}. Four more packs are optional, in no stock template (agent-fsm or eca): events, subagent, def and jsonx. The kits (aos/kits.md) also use the comm pack (boards: what you are doing, whom you wait for). eca-claude has five (gadgets, self, mailbox, json, index; no look, change, delete, shell, subagent, goal or todo pack: its CLI has its own file tools, shell, helpers, goals and todo lists; no events, def or jsonx pack) and turns off do_task (agent-fsm only) and the same four self tools as agent-fsm (self_llm, self_system, self_history, self_ctl): 18 tools; eca-pi has the same list. On an eca, add a tool of events, def or jsonx yourself when you need it, one at a time: self_tools {"op": "add", "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/self_hook"}} (clock_register, agent_def and tools_def are in /lib/tools/agent/ too; the jsonx tools in /lib/tools/aos/, like /lib/tools/aos/jsonx_get). The subagents of an eca (tools_sub.json) get no jsonx. One more pack, kernel_gate, is in no stock definition: add its tool yourself with self_tools (`aos/kernel.md#/Being a kernel yourself: kernel_gate`).
 
-One more optional pack, ws-write (tool ws_write), writes text files only inside your own workspace (create, append, replace; 262144 bytes per call; paths inside your own stack or definition, other agents' stacks or any .stack folder are refused). It is in no stock definition; a definition adds lib/packs/ws-write.json to its "$override".
+One more optional pack, ws-write (tool ws_write), writes text files only inside your own workspace (create, append, replace; 262144 bytes per call; paths inside your own stack, other agents' stacks or any .stack folder are refused (`PathBad`); so is your own definition folder, which ws_write finds on the daemon table (without a daemon, or without your row on the table, it cannot tell and does not check); an unreadable daemon table is `TableBad`). It is in no stock definition; a definition adds lib/packs/ws-write.json to its "$override".
 
 What a pack costs: every pack you have is sent with every question to your brain (each tool's name, description and parameters). Characters per pack, as sent:
 
@@ -40,14 +40,14 @@ What a pack costs: every pack you have is sent with every question to your brain
 | self | 6 | 5,439 |
 | mailbox | 3 | 2,367 |
 | goal | 1 | 865 |
-| json | 9 | 5,856 |
+| json | 9 | 5,906 |
 | index | 1 | 998 |
 | events (optional) | 2 | 10,263 |
-| subagent (optional) | 3 | 10,940 |
+| subagent (optional) | 3 | 11,428 |
 | def (optional) | 2 | 6,427 |
-| jsonx (optional) | 8 | 11,961 |
+| jsonx (optional) | 8 | 12,011 |
 | comm (optional) | 5 | 6,120 |
-| ws-write (optional) | 1 | 1,067 |
+| ws-write (optional) | 1 | 1,200 |
 | kernel_gate (optional) | 1 | 1,442 |
 
 How to add a pack: whoever makes the definition adds one item to "$override" in its tools.json, for example {"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"}; a kit can add it too (aos/kits.md). Add it when the definition is made, not while the agent runs: self_tools add takes one tool at a time, and every change to your tool list makes the brain lose the cached start of your conversation.
