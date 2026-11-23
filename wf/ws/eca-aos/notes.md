@@ -143,3 +143,35 @@
 - 沒做、留著的：`daemon-root/README.md` 加一句指到 `daemon-sub`（一改就得連 `start-api/root`、`start-eca/root` 兩份逐字抄本一起重抄，歸 templates 位子）；知識庫三句（`world.md:27`、`kernel.md:15`「do not remove their rows」跟子 daemon 不帶鐘列衝突、`cli/clock.md:3`）歸 kb；`proto8/docs/CONVENTION.md:12`「子 daemon 範本預設不帶」可加連結。
 - `wf/tree/root` 的 `_clock`：它在寫 `~/repo/aos/.stack/clock`、還在走，但沒人讀（我的三個 `on_clock.json` 記的都是 `~/aos-home/.stack/clock`）。沒動，等使用者說要不要拿掉（拿掉要改 `wf/tree/root/daemon.json` 與 `.env` 並重起 repo-aos 那一列）。
 - 使用者問（逐字）：「就是說，你自己的組織架構有起來了嗎？這麼多的需求，可以試試看」→ 照實答：還沒，位子只在紙上、都是代班。他說可以試 → **現在試著把位子真的掛起來**（我要先用 `self_tools` 加 `subagent` 包；先掛有現成活的 kb、templates，core 等 index_view 那隻調查回來）。
+
+## 2026-11-23 下午：位子真的掛起來（試行）
+
+- 回了 eca_main DONE（`01795415979386957490.1174570.2396125`）：範本在 `$AOS_HOME/templates/daemon-sub`，commit `704fd5fd4`。
+- **我加了 `subagent` 工具**：`self_tools {"op":"add","path_json":{"$env":"AOS_HOME","$path":"/lib/tools/agent/subagent"}}`（寫在我 stack 的 `tools.json`）。
+- **掛了第一個位子 `eca-aos-kb`**（14:40）：`subagent add`，`def_json` 直接指範本 `$AOS_HOME/templates/eca-claude`（沒另做定義夾），工作區 repo 根，stack `~/repo/aos/.stack/procs/eca-aos-kb`，沒開 auto_restart。之後兩步：`subagent system set`（範本那兩段英文＋「你是知識庫位子，開工先讀 AGENTS.md、wf/org/README.md、角色卡、筆記；工作從信件來、回終局狀態」＋筆記那段）；在它的 stack 寫 `notes_path`（一行 `wf/ws/eca-aos/eca-aos-kb/notes.md`，照 wf/ws 規矩 4）。
+- 寄了第一件工作（REQUEST，`01795416041428836100.1182691.2402329`，線名叫它用 `eca-aos-kb-1123`）：知識庫補四處——`daemon-sub`（world.md、kernel.md、cli/clock.md）、kernel.md 的 sender 那句、`_description.md` 的版本句、`kits.md` 自相矛盾的一句。它的 mail_notify 每 60 秒看一次信箱。
+- 看它：`subagent state`／`ls`；它的 DONE 會進我的信箱。收掉：`subagent rm`（stack 留著）。
+- 接著要掛的：`eca-aos-templates`（活：`daemon-root/README.md` 加指路句並重抄 `start-api/root`、`start-eca/root`）、`eca-aos-core`（等 index_view 那隻代班回來；活：照使用者選的修法修、`ws_write` 的洞、`user_send/_tooldef.json` 補 `comment`、09-份額「公司 WSL 無 systemd」那句）。frontend 不掛。每多一隻就是一個用第二帳號額度的 `claude -p`。
+- **第二個位子 `eca-aos-templates` 也掛了**（14:43，同樣三步：`subagent add` 指範本 `eca-claude`、`subagent system set`、寫 `notes_path`）。第一件工作（REQUEST，`01795416077579775099.1187949.2405944`，線名 `eca-aos-templates-1123`）：`daemon-root/README.md` 加指到 `daemon-sub` 的一句、`start-api/root` 與 `start-eca/root` 的 README 一起重抄、乾淨複本跑範本測試。
+- 寄信給沒收過信的 agent 不用先建信箱：我 `mailbox_send` 之後 kb 的 stack 自己多了 `mailbox/`。
+- 現在 `subagent ls`：`eca-aos-kb`、`eca-aos-templates` 都 running，2/4。等它們的 DONE 進我的信箱（aos 通知中心會叫我）。它們自己交件（第 6 題），我事後對。
+- mine_paper/main 又來一封（`01795416051473980262.1184076.2403333`）：使用者授權它開一隻一次性的 eca claude fable 做組織規劃，問 model 值是不是 `fable`。我實測兩個帳號各一句 `claude -p --model fable`（都回了，模型 `claude-fable-5-2`），回了 DONE（`01795416148109652337.1198889.2412997`）：就是 `fable`、沒有特定定義要求、可以 `subagent llm set`、做完記得 rm。這兩句測試花了使用者主帳號與第二帳號各一次 fable 的最小呼叫。
+
+## 2026-11-23 下午：拿掉 `wf/tree/root` 的 `_clock`
+
+- 使用者（逐字）：「可以拿，不用馬上重啟」。
+- 派了一隻 opus 的 Claude 子 agent（按件派，沒有位子管 `wf/tree`）：改 `wf/tree/root` 的 `daemon.json`（拿掉 `_clock`）、`.env`（拿掉 `AOS_CLOCK` 那行）、`_entry` 說明句；改 `wf/tree/README.md` 與 `03-換機.md`；暫存樹起兩次（掛成子 daemon、單獨起）；查活的 daemon 會不會不重啟就重讀 `daemon.json`。不 commit、不重啟、不碰活樹。
+- **我看到的坑（已寫進任務書，要跟使用者講）**：這份定義進 git，家機也用它，而家機現在還是把 `wf/tree/root` 單獨當根起、鐘就靠這個 `_clock`。拿掉後家機 pull 下來若照舊單獨起，整棵樹沒有鐘（mail_notify、context_wrap 不跑）。所以家機 pull 之後要先做 03-換機「家機照做」。`wf/HANDOFF.md`「家機 pull 之後要做的」那段的最後一行就是舊的單獨起法，**回來後我要改 HANDOFF**。
+
+## 2026-11-23 下午：位子的第一輪結果
+
+- **kb 位子整條走通**：14:41 寄信 → 它讀信、讀卡與筆記、改六頁、自己用 commit-request 交（`74bedc157`，線 `eca-aos-kb-1123`）→ 14:46 回 DONE（信 `01795416361954263248.1227791.2434381`）。它還糾正了我的草稿：信的 sender 有兩條路——`aos-post` 本身與 `aos-agent ctl`／`aos-daemon-ctl` 的起停信是 `$AOS_WS` 優先；`aos-mailbox` 與 `mailbox_*` 工具、腦請求是 stack。多改了 `cli/parts/daemon.md` 一行。它報的範本錯：`templates/kits/gather/tools.json`（review 那份相同）的 description 寫「so the agent cannot lift its own limits」說得比事實強，歸 templates 位子（還沒轉）。
+- **index_view 的調查回來**（代班 core）：aos 這側沒有把參數變必填（抓了實際送出的 HTTP body，`strict` 沒出現）；推測是 Responses API 沒帶 `strict` 時預設 strict（沒實證）。36 支 agent-fsm 工具裡 24 支有選填參數；`json_search` 給 `key:""` 會靜靜答錯。修法選項：① llm_http 補 `"strict": false`（推薦）② tool_io 把空字串當沒給 ③ 改寫成 strict 格式（方向題）④ 只修 index_view。
+- **掛了第三個位子 `eca-aos-core`**（同樣三步），第一件工作（REQUEST，`01795416400090648972.1234991.2438195`，線名 `eca-aos-core-1123`）：先用最小的真模型呼叫實證 strict，成立才做選項 ①、交件，**不跑 install.py**（做完回信，我去問使用者什麼時候裝）；②③與 json_search 只列不做。我看 127.0.0.1:4000 沒在聽，叫它以 llm kernel 的設定為準、打不到就回 BLOCKED。
+- 現在 3/4：kb（閒）、templates（在做，工作樹已有它改的三份 README）、core（剛掛）。
+
+## 2026-11-23 14:50：使用者要 compact
+
+- 他說（逐字）：「你這邊我想compact」。HANDOFF 換成新的一條（eca-aos 寫的），progress 加 `findings-1123`、更新 `aos-user-home`。
+- **compact 後先做**：讀這份筆記最後幾節與 HANDOFF → `subagent ls`、`mailbox_peek`（templates、core 的 DONE 可能已到）→ `git status`（工作樹可能有：templates 位子改的三份 README 它自己會交；`wf/tree/*` 是那隻背景子 agent 改的，等它回報後我看 diff 交；它回報的通知若在 compact 後才到，照常處理）→ 五點前問使用者 push。
+- 還欠使用者的回報：templates 與 core 的結果、`wf/tree/root` 拿鐘的 diff 與「重啟前活樹會怎樣」、core 做完後 `install.py` 什麼時候跑。
