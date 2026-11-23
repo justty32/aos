@@ -27,6 +27,8 @@
 
 [`kits`](kits/README.md) 不是範本，是**派 agent-fsm 時按角色用的配給包**：每包有拼好的 system 文字和一份 tools.json，蓋到 `agent_def new` 建出的 agent-fsm 定義上就能用（蒐集員 gather、審稿員 review）；人從 shell 掛 agent 時用 `aos-agent ctl add --kit <包夾>`（或 `ctl set-def --kit`），寫成那隻在 stack 裡自己那份、定義夾不動。檔案一律英文、中立；測試在 `tests/kits/`，給 agent 看的說明在知識庫 `aos/kits.md`。
 
+[`orgs`](orgs/README.md) 不是 agent 範本，是**一份專案的分工文件**（誰負責什麼、做完交給誰）：`cp -r $AOS_HOME/templates/orgs/basic <專案>/wf/org`，答 `CHOICES.md` 九題、填佔位詞、每個位子抄一張角色卡；不附 agent 定義，只附一段指向角色卡的系統文字（`basic/extras/system.seat.txt`）。檔案一律英文、中立；測試在 `tests/orgs/`（使用者 11-23 答「1.c,2.a,3.a,4.a,5.a」，[規劃](../thinking/2026-11/23/org範本與templates分層-1123/README.md)）。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../wf/STRUCTURE.md) 按 `##` 標題拆開；本檔留前言與表，各段逐字在下列分檔。

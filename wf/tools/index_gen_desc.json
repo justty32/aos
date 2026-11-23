@@ -349,6 +349,8 @@
   "proto8/templates/start-eca": "起手範本（eca 版）：一包抄好一棵樹——根（daemon-root）、一隻 Claude Code 當腦的 eca-claude、樹裡轉去 $AOS_HOME/env.sh 的薄 env.sh；cp -r 一行就能起（11-18 S6）",
   "proto8/templates/tests/agent-fsm": "agent-fsm 範本的測試：四格、hooks 與 on_clock、cooldown、自癒、fork、do_task、goal、自己的 tools／system、mail_notify，多數用假腦或真 daemon 實跑",
   "proto8/templates/tests/judge-llm": "judge-llm 範本的測試：回信正規化、截斷、kernel 失敗與 measure 記裁判成本，附給測試用的假 endpoint.py",
+  "proto8/templates/tests/kits": "kits 配給包的測試：英文、中立、description 放第一個鍵、每包有 system.txt 與 tools.json、system.txt 等於各層照順序拼起來、gather 與 review 的 tools.json 一字不差",
+  "proto8/templates/tests/orgs": "orgs 範本的測試：英文、中立、每檔不超過 8 KB、.md 第一行一句話、連結指得到（選用件照搬到定位後算）、大寫佔位詞對得上 orgs/README 的表、CHOICE 標記對得上九題",
   "proto8/templates/tests/reviewer": "reviewer 範本的測試：用假 endpoint.py 回 review_round 工具呼叫，實跑 reviewer、審視腳本與共用的 fsm 格",
   "proto8/templates/tests/tool-python": "tool-python 骨架的測試：重新編譯的 _tooldef.json／_metainfo.json 跟提交的逐 byte 相同、跟 tool.py 一致，抄到 repo 外只靠 AOS_HOME 或旁邊放 aos 套件也能跑",
   "proto8/templates/tool-python": "tool-python：一支工具的骨架（不是 agent 範本），tool.py 用 aos.py.fn 寫（@fn.tool＋fn.main）、編譯出 _tooldef.json 與 _metainfo.json；要做一支新的 Python 工具時用 tools_def new 或 cp -r 它",

@@ -35,6 +35,9 @@
  "kits": {
   "description": "kits"
  },
+ "orgs": {
+  "description": "orgs"
+ },
  "reviewer": {
   "description": "reviewer 範本：重用 agent-fsm 的格，靠 review_round 依量測審視定義、試降級，並把 fix／split 處方寫進 review.json；要對 agent 定義做審視與開處方時拿它"
  },
@@ -45,7 +48,8 @@
   "description": "起手範本（eca 版）：一包抄好一棵樹——根（daemon-root）、一隻 Claude Code 當腦的 eca-claude、樹裡轉去 $AOS_HOME/env.sh 的薄 env.sh；cp -r 一行就能起（11-18 S6）"
  },
  "tests": {
-  "description": "templates 的測試"
+  "description": "templates 的測試",
+  "index": "tests/_index.json"
  },
  "tool-python": {
   "description": "tool-python：一支工具的骨架（不是 agent 範本），tool.py 用 aos.py.fn 寫（@fn.tool＋fn.main）、編譯出 _tooldef.json 與 _metainfo.json；要做一支新的 Python 工具時用 tools_def new 或 cp -r 它"

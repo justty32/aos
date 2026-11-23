@@ -174,6 +174,14 @@
     "review.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）"
    }
   },
+  "orgs": {
+   "basic": {
+    "extras": {
+     "site.txt": "",
+     "system.seat.txt": ""
+    }
+   }
+  },
   "reviewer": {
    "body.json": "Run the reviewer loop with shared agent FSM cells.",
    "fsm.json": "Reuse agent-fsm cells while reading configuration from the reviewer definition.",
@@ -299,6 +307,9 @@
    },
    "kits": {
     "test_kits.py": "Check the public kits folder (templates/kits): English only, no site-specific wording, valid JSON with a description first, each kit folder holding s…"
+   },
+   "orgs": {
+    "test_orgs.py": "Check the org templates (templates/orgs): English only, no site-specific names, each file at most 8 KB, every .md starting with a describing line, re…"
    },
    "reviewer": {
     "endpoint.py": "Return fake reviewer tool calls using the actual previous review_round result.",

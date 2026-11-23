@@ -1,0 +1,51 @@
+{
+ "agent-fsm": {
+  "description": "agent-fsm 範本的測試：四格、hooks 與 on_clock、cooldown、自癒、fork、do_task、goal、自己的 tools／system、mail_notify，多數用假腦或真 daemon 實跑",
+  "index": "agent-fsm/_index.json"
+ },
+ "image-move-check": {
+  "description": "image-move-check — 自建假腦試驗場，驗證整棵 daemon 休眠搬家後可醒來。"
+ },
+ "judge-llm": {
+  "description": "judge-llm 範本的測試：回信正規化、截斷、kernel 失敗與 measure 記裁判成本，附給測試用的假 endpoint.py"
+ },
+ "kits": {
+  "description": "kits 配給包的測試：英文、中立、description 放第一個鍵、每包有 system.txt 與 tools.json、system.txt 等於各層照順序拼起來、gather 與 review 的 tools.json 一字不差"
+ },
+ "orgs": {
+  "description": "orgs 範本的測試：英文、中立、每檔不超過 8 KB、.md 第一行一句話、連結指得到（選用件照搬到定位後算）、大寫佔位詞對得上 orgs/README 的表、CHOICE 標記對得上九題"
+ },
+ "reviewer": {
+  "description": "reviewer 範本的測試：用假 endpoint.py 回 review_round 工具呼叫，實跑 reviewer、審視腳本與共用的 fsm 格"
+ },
+ "test_daemon_sub.py": {
+  "description": "daemon-sub stays daemon-root without the clock: same files, the same _entry argv and sweeper row, no _clock row, and a .env that sets only AOS_HOME."
+ },
+ "test_daily.py": {
+  "description": "Acceptance (/tmp, fake brain, fake claude): the user's daily routine across two machines - git clone/pull, one aos-exec line, work, aos-daemon-ctl sh…"
+ },
+ "test_eca_claude_alt.py": {
+  "description": "eca-claude-alt stays a verbatim copy of eca-claude except its README, and carries the same CLAUDE_CONFIG_DIR line in .env and screen/.env."
+ },
+ "test_eca_compact_hook.py": {
+  "description": "Test the eca-claude template's compact_hook as Claude Code runs it (11-21 top-1121-ecaeffort): pre fires before_compact (change the instructions, giv…"
+ },
+ "test_eca_pi.py": {
+  "description": "驗 eca-pi 範本（11-18）：cli.json 讀得過、kind pi、畫面子介面同 eca-claude、工具登記檔跟 eca-claude 同一份、hook 格都驗得過。"
+ },
+ "test_fake_slow.py": {
+  "description": "the demo endpoint function fake_slow (templates/kernel/llm-kernel) finds lib/tools/base/llm_fake and passes its answer back."
+ },
+ "test_paths_move.py": {
+  "description": "Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to anothe…"
+ },
+ "test_screen_linger.py": {
+  "description": "驗 eca 範本的延後關畫面 hook 兩格存在、驗格成功且啟動撤單排第一。"
+ },
+ "test_start.py": {
+  "description": "the two starter templates (start-api, start-eca) stay verbatim copies of the templates they were made from, except the few files their README names a…"
+ },
+ "tool-python": {
+  "description": "tool-python 骨架的測試：重新編譯的 _tooldef.json／_metainfo.json 跟提交的逐 byte 相同、跟 tool.py 一致，抄到 repo 外只靠 AOS_HOME 或旁邊放 aos 套件也能跑"
+ }
+}
