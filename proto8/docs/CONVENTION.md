@@ -9,7 +9,7 @@
 **[一、aos 保證的；二、佈局](CONVENTION/01-保證佈局入口/01-一-aos-保證的與二-佈局.md)**（[命名](CONVENTION/00-前言-命名-實作.md)）
 - **P-01～P-04** aos 保證的底（六個環境變數、`aos-exec` 命令列、它只做的那幾件事、退 1 的情形）已升成規範：P-01＝N-57、P-02＝N-58、P-03＝N-59、P-04＝N-60；找入口（N-61）、`#/`（N-62）沒有 P 號。條號只留給別處引用。
 - **佈局** 一個 agent＝一個資料夾程式：狀態表一律寫在 `fsm.json`，每格是一個資料夾程式或一張單子（P-09），範本的格是單子、叫範本裡的一支程式；stack 裡（直接 aos-exec 時預設 `$AOS_WS/.stack/`，掛 daemon 見 P-18）有 `stage.txt` 記 fsm 停在哪格、`queue/`、`history.jsonl`、`think/`、工具小格 `tools/<登記名>/`；stack 樹就是呼叫樹；fsm 不寫 trace。
-- **時鐘** 只放在根 daemon（daemon.json 的 `procs` 一列跑 `aos-clock`，根的 `.env` 設 `AOS_CLOCK`）；子 daemon 範本預設不帶、聽外層的鐘（有特殊需求的由人手動加），aos-daemon 程式不認時鐘。
+- **時鐘** 只放在根 daemon（daemon.json 的 `procs` 一列跑 `aos-clock`，根的 `.env` 設 `AOS_CLOCK`）；子 daemon 範本（[`templates/daemon-sub/`](../templates/daemon-sub/README.md)）預設不帶、聽外層的鐘（有特殊需求的由人手動加），aos-daemon 程式不認時鐘。
 - **命名** loop.json 與 fsm 格要跑的東西都叫 `exec`；時間點叫 `<發生了什麼>_at`，計數說「次」；純文字檔帶 `.txt`；指示詞的檔內位置寫在 `#` 右邊；入口預設名 `_entry`，不認得的 key 一律忽略，`_` 開頭沒有特別意思。
 
 ## 入口、loop、fsm
