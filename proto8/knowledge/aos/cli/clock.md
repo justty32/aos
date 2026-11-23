@@ -1,6 +1,6 @@
 # The clock and its letters
 
-The root daemon's `_clock` row moves a clock file every second; a register next to it sends letters every N cycles, once, or at wall-clock times. Agents use tools `peek_clock` and `clock_register` instead (`aos/clock.md`).
+The root daemon's `_clock` row moves a clock file every second; a register next to it sends letters every N cycles, once, or at wall-clock times. Agents use tools `peek_clock` and `clock_register` instead (`aos/clock.md`). Sub-daemons have no `_clock` row (template `daemon-sub`).
 
 # aos-clock: one cycle forward
 

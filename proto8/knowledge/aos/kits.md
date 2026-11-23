@@ -34,9 +34,10 @@ general.A.txt has placeholders: `<KNOWLEDGE>` (path of the knowledge folder), `<
 
 Every tool's definition is sent on every brain call, so the tool list is the biggest fixed cost, larger than the system text. Characters per pack: `aos/packs.md#/Tool packs`.
 
-The gather tool set keeps look, change (only write, edit, mkdir), gadgets (without do_task), todo, mailbox, comm (only board_read and board_wait; board_set, board_clear and board_ls are turned off), goal, json (read only), index and self_state. It leaves out shell, delete, events, subagent, def, jsonx and kernel_gate. self_tools, self_system, self_llm, self_history and self_ctl are turned off, so the agent cannot give itself back a tool or rewrite its own rules. How a single tool is turned off: aos/packs.md.
+The gather tool set keeps look, change (only write, edit, mkdir), gadgets (without do_task), todo, mailbox, comm (only board_read and board_wait; board_set, board_clear and board_ls are turned off), goal, json (read only), index and self_state. It leaves out shell, delete, events, subagent, def, jsonx and kernel_gate. self_tools, self_system, self_llm, self_history and self_ctl are turned off, so the agent has no tool for giving itself back a tool or rewriting its own rules. It still has write and edit, which take absolute paths, so it can reach the `tools.json` in its own stack; only the rules keep it from editing that file by hand (`aos/me.md#/What is in your stack`). How a single tool is turned off: aos/packs.md.
 
 # What a kit does not enforce yet
 
 - Writing only in the workspace is a rule in the system text; file tools themselves do not stop a path outside it, and no hook enforces it yet.
+- Turning off the self tools does not lock the tool set: write and edit can still change the `tools.json` in the agent's own stack.
 - Only a tier A general text and two roles (gatherer, reviewer) exist. A small model may skip parts of the start and stop rules (notes.md, the handoff).

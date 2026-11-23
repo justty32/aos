@@ -73,6 +73,14 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 
 - `grep` 的結果太長時，會被截斷在一行的前段，句尾的「before this was fixed」就看不到了。c7bc08dae 因此漏掉了 `aos/body.md` 第 19 行。搜尋時用 `grep -o '.{0,40}關鍵字.{0,40}'`，只印關鍵字周圍，逐筆看完。
 
+## 對事實時的坑（2026-11-23 第一件掛 daemon 的工作學到的）
+
+- **信封 sender 不只一種**：aos-post 本身用 `aos::identity()`（`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd，`cpp/aos-util/src/proc.cpp`）；aos-mailbox 與 mailbox_* 工具先清掉 `AOS_WS`、設 `AOS_STACK`（`py/aos/apps/mailbox/__init__.py` 的 `post`），所以是 stack；腦請求走 `stack_identity()`（`cpp/aos-llm/src/send/send.cpp`）＝stack；`aos-agent ctl`、`aos-daemon-ctl` 走 `py/aos/ws.py run_post`、不動環境＝`$AOS_WS` 優先。寫「sender 是誰」先分是哪條路寄的。
+- **任務書的草稿要對**：負責人給的句子是草稿，每句對過程式或範本才寫；草稿沒提到但同一句有別的錯（例：kernel.md 同一列的 sender）一起改。
+- **`.aos-source.json` 只有 `archive/` 裡的程式寫**（`archive/aos-home/copy_tree.py`、`archive/tree-swap/`）；`install.py` 不寫。`$AOS_HOME` 通常就是 repo 的 proto8，版本＝git HEAD 加未 commit 的改動。
+- 範本 README 有掛法時，知識庫 `aos/cli/parts/daemon.md` 那類「怎麼起」的頁補一行指到範本，細節留在範本 README。
+- 範本、程式裡同樣說得比事實強的句子（例：`templates/kits/gather/tools.json` 的 description）只回報，不改。
+
 ## 範圍與回報
 
 - 只改 `proto8/knowledge/`。發現範本、程式、`wf/` 寫錯（例：py/packs/README.md 寫錯 eca-pi 掛哪幾包）就回報 eca-aos，不自己改。

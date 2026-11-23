@@ -24,7 +24,7 @@ Facts that follow from the model:
 
 ## Time
 
-- The tree has a clock like a board's crystal: when `AOS_CLOCK` is set, it names a file holding one integer, the current cycle. The root daemon advances it with an ordinary `_clock` row in its `procs`; sub-daemons normally have no clock row and follow the root's clock.
+- The tree has a clock like a board's crystal: when `AOS_CLOCK` is set, it names a file holding one integer, the current cycle. The root daemon advances it with an ordinary `_clock` row in its `procs`; sub-daemons normally have no clock row and follow the root's clock. To start one, copy `$AOS_HOME/templates/daemon-sub` (no `_clock` row; its `.env` sets only `AOS_HOME`, so `AOS_CLOCK` and `AOS_LLM_KERNEL` come from the daemon above).
 - Between procs, write waits in cycles: `subagent` ask takes `timeout_cycles` instead of `timeout_s` (give one, not both). With a clock, a wait ends after that many cycles; if the clock is paused or the tree sleeps, time does not pass and the wait does not expire.
 - No clock (`AOS_CLOCK` not set): cycles fall back to wall time, 1 cycle = `AOS_CLOCK_INTERVAL` ms (default 1000). This is for waits; an `on_clock` hook needs a clock and does not run without one.
 - Waits for people, for outside services and for Linux processes stay in seconds or milliseconds.
