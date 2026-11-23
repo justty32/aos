@@ -24,7 +24,7 @@
 
 - **工具**：look、change 只留 write／edit／mkdir、gadgets、todo、mailbox、comm 只留 board_read／board_wait（board_set、board_clear、board_ls 關掉）、goal、json 只留讀的、index、self 只留 self_state，共 26 支，跟產品版（proto8/templates/kits/gather/）的清單相同（11-23 對齊）。board_read、board_wait 要 PATH 上有 aos-comm（公司那台 11-23 有：`proto8/bin/aos-comm`、`proto8/lib/packs/comm.json`）；沒有的話只有這兩支會失敗，其他照常。
 - **沒給的**（看包沒有 shell；要 shell 得另外掛 shell 包，掛了才有）：shell、delete、events、subagent、def、jsonx、kernel_gate；self_tools、self_system 這類改自己的工具也關掉了，所以它沒有工具能解除自己的限制；但 write、edit 還在、收絕對路徑，改得到自己 stack 裡的 `tools.json`，只靠規矩擋（跟產品版 README 的 Known limits 同一個說法）。
-- **腦**：`llm.json` 是 `{"model": "sol", "reasoning_effort": "high"}`（llm kernel 範本 11-21 起沒有 `sol-high`，改成 `sol` 加 `reasoning_effort`），走的 llm kernel 由 `AOS_LLM_KERNEL` 決定。`gather/.env` 不用抄：`AOS_LLM_KERNEL` 由掛的人那邊（上層 daemon 那一列）傳下來；只有還沒改成 `~/aos-home` 一套的機器才需要（見 [03-換機](../../dev-env/03-換機.md)）。
+- **腦**：`llm.json` 是 `{"model": "sol", "reasoning_effort": "high"}`（llm kernel 範本 11-21 起沒有 `sol-high`，改成 `sol` 加 `reasoning_effort`），走的 llm kernel 由 `AOS_LLM_KERNEL` 決定。`gather/` 裡沒有 `.env`（11-23 刪了）：`AOS_LLM_KERNEL` 由掛的人那邊（上層 daemon 那一列）傳下來；還沒改成 `~/aos-home` 一套的機器，掛的人在 `subagent add` 的 `envs` 帶，或自己在定義夾放一份 `.env`（見 [03-換機](../../dev-env/03-換機.md)）。
 - **固定成本**（每次問腦都會送，11-14 實測字元數）：
 
 | | 工具說明 | system |

@@ -28,7 +28,7 @@
 - **是什麼**：在 aos 體系裡開一隻 agent-fsm 身的 agent（aos 自己的四格迴圈 idle、think、wait、act），腦是寄信給 llm kernel。不叫 codex CLI，也不用 eca 身。
 - **腦**：家機本地的 LiteLLM proxy `http://127.0.0.1:4000`（OpenAI 相容）。配給包 `kits/gather/` 的 `llm.json` 決定走哪包，`AOS_LLM_KERNEL` 決定寄給哪個 llm kernel：
   - `llm.json` 內容是 `{"model": "sol", "reasoning_effort": "high"}`（llm kernel 範本 11-21 起沒有 `sol-high`）。`model` 填的是 **endpoint pack 名**，pack 由 llm kernel 擁有（知識庫 `aos/brain.md`）。
-  - `AOS_LLM_KERNEL` 由掛的人那邊（上層 daemon 那一列）傳下來，包裡的 `.env` 不用抄（[kits/card](../kits/card.md) 第 1 步）：公司那台 11-23 起是 `~/aos-home/.stack/procs/llm`（llm kernel 掛在 `~/aos-home` 的根底下）。只有還沒改成 `~/aos-home` 一套的機器才要自己帶（11-23 是家機，llm kernel 自己一台、stack 是 `~/aos-home/.llm-stack`，見[換機說明書](../../dev-env/03-換機.md)）。
+  - `AOS_LLM_KERNEL` 由掛的人那邊（上層 daemon 那一列）傳下來，包裡沒有 `.env`（11-23 刪了；[kits/card](../kits/card.md) 第 1 步）：公司那台 11-23 起是 `~/aos-home/.stack/procs/llm`（llm kernel 掛在 `~/aos-home` 的根底下）。還沒改成 `~/aos-home` 一套的機器，掛的人在 `subagent add` 的 `envs` 帶，或自己在定義夾放 `.env`（11-23 是家機，llm kernel 自己一台、stack 是 `~/aos-home/.llm-stack`，見[換機說明書](../../dev-env/03-換機.md)）。
 - **蒐集和施工不用 terra**，只用 sol；terra 只用在使用者點名的地方（例如全景頁的小幫手）。
 - **怎麼掛、怎麼驗收**：步驟在 [kits/card](../kits/card.md)，包的內容與已知限制在 [kits](../kits/README.md)，帶 sol 的心得在 [sol-crew](../../../public/sol-crew.md)。蒐集員、審稿員用「看」包，不抄別線的 system.txt（使用者 11-14「都按照推薦」，[onboard-1114](../../../../proto8/thinking/2026-11/14/onboard-1114.md)）。
 - **自己掛 kernel 或 agent 不用先問**（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）：掛在暫存樹（`~/.aos/scratch/<線名-日期>/`，使用者 11-15 裁「4.a」）的 aos 裡，自己記 pid、收尾收乾淨，活樹照舊不動。

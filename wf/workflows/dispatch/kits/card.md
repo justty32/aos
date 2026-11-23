@@ -2,7 +2,7 @@
 
 ← [kits](README.md)｜只給隊長看，隊員不讀。規矩改了就改這張卡和日期；隊員要守的禁令在 `site.txt`，不放這裡。
 
-1. **做定義**：`agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}`，再把 `wf/workflows/dispatch/kits/gather/` 裡的 `system.txt`、`tools.json`、`llm.json` 蓋過去，然後跑 `agent_def check`。同一條線的隊員共用這一份定義。`.env` 不用抄：`AOS_LLM_KERNEL` 由掛的人那邊（上層 daemon 那一列）傳下來，公司那台 11-23 不抄也掛得起來；只有還沒改成 `~/aos-home` 一套的機器才需要（見 [03-換機](../../dev-env/03-換機.md)）。
+1. **做定義**：`agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}`，再把 `wf/workflows/dispatch/kits/gather/` 裡的 `system.txt`、`tools.json`、`llm.json` 蓋過去，然後跑 `agent_def check`。同一條線的隊員共用這一份定義。包裡沒有 `.env`（11-23 刪了）：`AOS_LLM_KERNEL` 由掛的人那邊（上層 daemon 那一列）傳下來；還沒改成 `~/aos-home` 一套的機器，掛的人在 `subagent add` 的 `envs` 帶 `AOS_LLM_KERNEL=<那台 llm kernel 的 stack>`，或自己在定義夾放一份 `.env`（見 [03-換機](../../dev-env/03-換機.md)）。
 2. **掛隊員**：
    - `subagent add`，name 用 `<你的名字>-<角色>-<編號>`，ws 填 `wf/ws/<上層>/<你的名字>/temp/<agent 名>`（從你的工作區算；11-22 起 eca 的工作區是 repo 根，只填 agent 名會落在 repo 根底下；跟短卡同一種寫法，11-23 提案，沒試過）。
    - limits 帶 `{"mem_mb":1024,"files":256}`，`procs` 別設。

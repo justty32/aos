@@ -9,8 +9,8 @@
 <!-- wf-nav -->
 | 要做的事 | 做法（一行）與細節 |
 |---|---|
-| 掛一隻 gpt 的 agent-fsm 隊員 | `agent_def new` 範本 agent-fsm（`llm.json` 是 `{"model":"sol","reasoning_effort":"high"}`；`AOS_LLM_KERNEL` 由上層 daemon 那一列傳下來，只有還沒改成 `~/aos-home` 一套的機器才用 `.env` 或 `envs` 帶）→ `subagent add` 帶 `limits`。[aos-teams 第 3 件](../workflows/dispatch/aos-teams.md)、[skyrim-agentctl 03](../../proto8/thinking/2026-11/14/skyrim-agentctl/03-隊形心得.md) |
-| 派蒐集員或審稿員 | 範本 agent-fsm 蓋上 `kits/gather/` 的 system、tools、llm（`.env` 不用抄）；沒有 shell；任務書寫知識庫的絕對路徑、不附必讀清單（聽說）。[kits](../workflows/dispatch/kits/README.md)、[card](../workflows/dispatch/kits/card.md) |
+| 掛一隻 gpt 的 agent-fsm 隊員 | `agent_def new` 範本 agent-fsm（`llm.json` 是 `{"model":"sol","reasoning_effort":"high"}`；`AOS_LLM_KERNEL` 由上層 daemon 那一列傳下來，還沒改成 `~/aos-home` 一套的機器，掛的人用 `envs` 帶或自己在定義夾放 `.env`）→ `subagent add` 帶 `limits`。[aos-teams 第 3 件](../workflows/dispatch/aos-teams.md)、[skyrim-agentctl 03](../../proto8/thinking/2026-11/14/skyrim-agentctl/03-隊形心得.md) |
+| 派蒐集員或審稿員 | 範本 agent-fsm 蓋上 `kits/gather/` 的 system、tools、llm（包裡沒有 `.env`）；沒有 shell；任務書寫知識庫的絕對路徑、不附必讀清單（聽說）。[kits](../workflows/dispatch/kits/README.md)、[card](../workflows/dispatch/kits/card.md) |
 | 命名、資源上限 | `<eca名>-<角色>-<編號>`；add 帶 `limits`，sol 預設 `{"mem_mb":1024,"files":256}`、`procs` 別設。[07](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)、[sol-crew「rlimit」](sol-crew.md#rlimit-實測與腦額度) |
 | 讓隊員一路做到完 | 定義掛 `goal`；任務書寫「第一步 goal set；輸出檔寫完才可以用純文字回答」。skyrim-agentctl 03「摩擦」 |
 | 唯讀蒐集的隊員擋寫檔 | 不給 shell 與刪除包；`write`／`edit` 加 `before_tool` hook 只准寫指定夾（exit 10＝擋）。skyrim-agentctl 03「實際的隊形」 |

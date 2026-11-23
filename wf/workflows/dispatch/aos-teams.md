@@ -48,7 +48,7 @@ aos-user send --kind decide --from ok-x \
 
 `subagent` 這支工具不是每隻 eca 都有：現成的 eca 範本只掛到 `agent_def`（def 包）。公司那台 11-23 的現況：eca-aos 用 `self_tools add` 自己加了 `subagent` 與 `agent_def` 兩支（`{"$env":"AOS_HOME","$path":"/lib/tools/agent/subagent"}`，`agent_def` 同理）。以前線用的定義（公司那台舊樹 `~/aos-home/agents/` 的 `opus-kernel`、`fable-kernel`）多掛了 `subagent`、`kernel_gate` 兩包，那個夾 11-23 已經不在；家機 11-22 起新做的定義放 `wf/tree/` 或上層的地盤 `wf/ws/…`，兩處現在都還沒有這兩份。`self_state {"parts":["tools"]}` 看得到自己有沒有。
 
-1. `agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}`，把 [kits/gather/](kits/README.md) 的 `system.txt`、`tools.json`、`llm.json` 蓋過去，`agent_def check`（`.env` 不用抄，`AOS_LLM_KERNEL` 由上層 daemon 那一列傳下來，見 [kits/card](kits/card.md) 第 1 步）。任務書寫知識庫的絕對路徑（card 第 3 步）。
+1. `agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}`，把 [kits/gather/](kits/README.md) 的 `system.txt`、`tools.json`、`llm.json` 蓋過去，`agent_def check`（包裡沒有 `.env`，`AOS_LLM_KERNEL` 由上層 daemon 那一列傳下來，見 [kits/card](kits/card.md) 第 1 步）。任務書寫知識庫的絕對路徑（card 第 3 步）。
 2. `subagent {"op":"add","def":"defs/gather","name":"ok-x-sol-1","ws":"wf/ws/<上層>/<你的名字>/temp/ok-x-sol-1","limits":{"mem_mb":1024,"files":256}}`（`ws` 從你的工作區算；11-22 起 eca 的工作區是 repo 根，照舊寫 agent 名會落在 repo 根底下，所以放進你自己地盤的 `temp/<agent 名>/`——11-23 提案，沒試過；`procs` 別設；開檔的鍵是 `files`）。
 3. 任務書一張單只做一件事：唯一目標、可讀可寫的路徑、交付物、完成條件；寫明「讀完同一回合就動手」。
 4. 驗收讀它的 `out/`，逐條對證據；它不 commit。收隊 `subagent rm`（stack 留著）。完整步驟：[kits/card](kits/card.md)、心得 [sol-crew](../../public/sol-crew.md)。

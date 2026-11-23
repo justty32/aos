@@ -35,7 +35,7 @@ sol 的 shell 有 guard，擋字面含 `rm`、`kill`、`aos-*` 等的指令。gu
 
 ## 掛法的幾個坑
 
-- **沒帶 `AOS_LLM_KERNEL`**：第一個 brain call 就 `LlmKernelMissing`。改成 `~/aos-home` 一套的機器（公司那台 11-23 起），這個值由上層 daemon 那一列傳下來，[kits/gather](../workflows/dispatch/kits/README.md) 的 `.env` 不用抄；還沒改的機器才要定義的 `.env` 帶它，或 `subagent add` 的 `envs` 帶 `{"AOS_LLM_KERNEL": "<llm kernel 的 stack>"}`（見 [03-換機](../workflows/dev-env/03-換機.md)）。
+- **沒帶 `AOS_LLM_KERNEL`**：第一個 brain call 就 `LlmKernelMissing`。改成 `~/aos-home` 一套的機器（公司那台 11-23 起），這個值由上層 daemon 那一列傳下來，[kits/gather](../workflows/dispatch/kits/README.md) 裡沒有 `.env`（11-23 刪了）；還沒改的機器，掛的人自己在定義夾放一份 `.env` 帶它，或 `subagent add` 的 `envs` 帶 `{"AOS_LLM_KERNEL": "<llm kernel 的 stack>"}`（見 [03-換機](../workflows/dev-env/03-換機.md)）。
 - **要開 headless Chrome 的隊員不能設 `mem_mb`**：AS 上限讓 Chrome 起不來，改用 `limits {"files":4096}`。
 - **停下來的訊息措辭會改變行為**：hook 訊息寫 `Stop and report this as BLOCKED`，sol 就把整份工作丟掉。要接進流程的訊息，接線前拿真 sol 試一次。
 - **借別線的假 agent 腳本先看信的格式**：例 `aos-agent say` 的信是 `{"body":{"role","content"}}`，照 `m["content"]` 讀會 `KeyError`。

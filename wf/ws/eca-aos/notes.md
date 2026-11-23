@@ -227,3 +227,11 @@
 - **templates 位子第三件 DONE**（信 `01795420477044653187.1814492.2845890`，commit `ee2981105`）：`kernel/docs/01-llm-kernel.md` 補 strict 那句；範本裡沒有 `sol-high`。已再 sleep。
 - **第二隻打雜工 `eca-aos-sol-2`**（定義 `temp/defs/gather2`＝改好的配給包原樣三個檔）在跑：查四個檔的斷連結（任務 `000000000001.01795420640192985665.1858028.2862205`），順便驗改好的包。
 - **第三隻 opus 子 agent** 在改：24 處「部長」與配給包舊說法（aos-teams.md 49、51 行、recipes、sol-crew、07、03-換機 156 行）。回來我看 diff 再交。
+
+## 2026-11-23 16:05：使用者「1.刪掉。2.4:55推上去」
+
+- 他說（逐字）：「1.刪掉。2.4:55推上去」。
+- **刪了 `wf/workflows/dispatch/kits/gather/.env`**（commit `c39a2a65d`；commit-request 的 `--rm` 要自己先 `rm` 掉檔才收）。派了一隻 opus 子 agent 改七處還提到這個檔的句子，回來我看 diff 交。
+- **16:55 push**：這是他本人給的授權，只這一次、推 `origin main`。我開了一個背景等待（到 16:55 會叫我）；若它提早結束（逾時）就重開一個。推之前 `git status` 要乾淨、看一下 `git log origin/main..main` 的數；推完報雜湊範圍。16:55 之後才交的 commit 不在這次授權裡。
+- 同時還在跑：core 位子第三件（五項）、打雜工 `eca-aos-sol-2`（斷連結）。
+- 之前交的：`1f742a69e`（24 處「部長」與配給包舊說法，16 檔）、`b0faad720`（打雜工角色卡）。
