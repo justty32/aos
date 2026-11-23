@@ -46,9 +46,12 @@
 - **三個位子是真的掛著的 eca**（`subagent` 工具掛的，定義直接指範本 `eca-claude`，各自 stack 有 `system.txt` 與 `notes_path`）：`subagent ls` 看、`mailbox_send {to: 名}` 派工、它們的 DONE 進我的信箱。每隻都吃第二帳號的額度。沒開 auto_restart。
 
 **還在跑、回來要收的**（16:35 更新）
-1. **org 範本**（使用者「去總結一下，弄進template」；五題答「1.c,2.a,3.a,4.a,5.a」）：`eca-aos-templates` 在把規劃夾的初稿搬成 `proto8/templates/orgs/`（信 `01795422618877715679.2180326.3060074`）。它回來後我要做：`wf/tools/index_gen.json`、`index_gen_desc.json` 加 orgs 一格；派 kb 寫知識庫那頁；`wf/org/README.md` 加一行「範本在哪」。
-2. **templates 三分**（1c，加追問四件「1.a,2.a,3.a,4.可以，明天早上切」）：六類 `agents`／`kernels`／`orgs`／`daemons`／`starts`／`tools`，`kits` 放 `agents/` 底下；`agent_def new` 照收光名字；`agent-fsm` 執行期用的東西搬進 `lib/`。**工作樹裡今天一個範本夾都不能搬**（工作樹就是活樹的 `AOS_HOME`）。一隻 fable 子 agent 在寫施工設計（規劃夾 `06*`），回來後派位子在乾淨複本做成補丁。**11-24 早上使用者說停才切換，每一步要他本人授權**。盤點結果與細節在 progress `org-template-1123` 與筆記「16:33」。
-3. 三個位子：kb 醒著（閒）、templates 醒著（在做 orgs）、core 睡著。打雜工兩隻都 `rm` 了（stack 留著）。
+1. **org 範本做完了**（使用者「去總結一下，弄進template」；五題答「1.c,2.a,3.a,4.a,5.a」）：`proto8/templates/orgs/`（`fd871a355`）、`wf/org` 入口一行與索引（`284f5e5ec`）、知識庫 `aos/orgs.md`（`8236c07f2`）。
+2. **templates 三分**（1c，加追問四件「1.a,2.a,3.a,4.可以，明天早上切」）：六類 `agents`／`kernels`／`orgs`／`daemons`／`starts`／`tools`，`kits` 放 `agents/` 底下；`agent_def new` 照收光名字；`agent-fsm` 執行期的九個檔搬進 `py/aos/apps/agent_fsm/`。**工作樹裡一個範本夾都不能先搬**（工作樹就是活樹的 `AOS_HOME`）。施工設計已交（規劃夾 `06`～`06f`，`7fe875cfa`；明早的清單是 `06e-切換步驟.md`），**全部只是讀程式寫的，沒有一步實跑過**。
+   - **使用者 16:52 說「我會關機下班...」**：所以今晚什麼都不會做。**11-24 早上開機後的順序**：起樹 → 我讀筆記與這條 → 問他三題（下面）→ 派位子在 `~/.aos/scratch/tri-split-1123/` 的 clone 上做補丁與兩支切換腳本、暫存樹預演改表（這段要幾個小時，他說的「早上切」實際會落在備好之後）→ 他說停才切，每一步要他本人授權。
+   - **還沒答的三題**：① 直接拿範本夾當定義的 13 列只改路徑（推薦），還是各樹抄一份；② 別的專案的 6 份定義（arena_cheater 五、ops-notes 一）切換腳本直接改檔可不可以（推薦可以）；③ 明早誰在樹外打指令（他本人，或他開一個樹外的 Claude Code 視窗）。另有規劃員替他做的五個小選擇，已列給他看、他還沒說話。
+   - 盤點結果與細節在 progress `org-template-1123` 與筆記「16:33」。
+3. 三個位子 16:44 都 sleep 了（org 範本做完：`fd871a355`、`284f5e5ec`、`8236c07f2`）；**daemon 重起時睡著的位子會自己醒**，明早起樹後它們會各起一個 claude 行程，閒著不叫模型。打雜工兩隻都 `rm` 了（stack 留著）。
 4. `mine_arena/main` 的第二封信（六題「請 aos 考慮」）：事實部分已回（PROGRESS），**方向部分等使用者來談**，談完回它一封 DONE。使用者說過會親自找我談「上層怎麼約束下屬」與「agent 之間的資源分配」。
 5. 問了使用者還沒答的：`AGENTS.md:3`、`user/01:50` 等處指到已不在的 `archive/`，連結拿掉還是把 `archive/` 放回來。
 6. 活樹：`wf/tree/root` 的 `_clock` 已 `rm`（15:01）；`install.py` 今天裝了四次（最後 16:30），`lib/` 等於 HEAD 的 `py/`。

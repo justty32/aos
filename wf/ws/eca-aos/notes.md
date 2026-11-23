@@ -289,3 +289,10 @@
 - commit-request 的坑：`index_gen_desc.json` 的鍵指到 repo 裡還不存在的夾會擋（DescMissing … not in the repo），新夾與它的說明要同一批交。
 - **kb 位子 `8236c07f2`**（信 `01795423370317372268.2306002.3135218`）：新頁 `aos/orgs.md`（英文；怎麼抄只列大綱、正本指到 `templates/orgs/README.md`）、`aos/_index.json` 一列（我用 index_view 看得到）、`kits.md` 站台層那句、`eca_reading.md` 加一行、`knowledge/wf/layers.md` 加一段。它提醒：`aos/kits.md` 寫死了 `templates/kits/`、`agent-fsm/`，明天分層要再對。
 - **org 範本這件（使用者「去總結一下，弄進template」）到此做完**：規劃 `272845ad2`、範本 `fd871a355`、入口與索引 `284f5e5ec`、知識庫 `8236c07f2`。三個位子 16:44 都 sleep 了。剩 templates 三分（明早切），等 fable 的施工設計。
+
+## 2026-11-23 16:52：使用者要關機下班
+
+- 施工設計交了（`7fe875cfa`，規劃夾 `06`～`06f`；`draft/` 補了一行 README，因為規劃夾超過 15 項、生成器要每個子夾有一句話）。三題與五個小選擇已列給他，**還沒答**。
+- 他說（逐字）：「我會關機下班...」→ 今晚不會有任何準備工作。我原本說「你下班後我派位子做補丁」做不到，已照實告訴他：補丁與預演要明早開機後才做，切換會落在備好之後。
+- HANDOFF 那條已改成明早的順序。16:55 push 照他的話做；關機前樹要先停（`aos-daemon-ctl -d ~/aos-home/.stack shutdown`，他自己下）。
+- **明早開工先做**：讀這節與 HANDOFF → `git status`、`subagent ls`（睡著的位子會醒）→ 問三題 → 照 `06d`、`06e` 派工（設一個整合的人，只有它在 clone 裡下 git）。
