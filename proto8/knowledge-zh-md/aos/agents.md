@@ -1,6 +1,6 @@
 # `knowledge/aos/agents.md` 的中文映照版，給人看；正本是 `knowledge/` 那份
 
-> 正本：`proto8/knowledge/aos/agents.md`，跟到正本 commit `76381cb2a`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/agents.md#/…` 對的就是它。改請改正本，再照 [README](../README.md) 的做法跟上這份。
+> 正本：`proto8/knowledge/aos/agents.md`，跟到正本 commit `7bf52abd1`（正本這頁最後一次改動）。英文譯成繁體中文，鍵名、指令、路徑、程式碼、錯誤代號照原樣；每個標題前一行的粗體 `#/…` 是那一節在正本裡的尋址，別頁寫的 `aos/agents.md#/…` 對的就是它。改請改正本，再照 [README](../README.md) 的做法跟上這份。
 
 ---
 
@@ -48,7 +48,7 @@
 
 一次呼叫一個 op：
 
-- 抄一份內建範本：`{"op": "new", "template": "agent-fsm", "path": "defs/helper"}`（`template` = `$AOS_HOME/templates` 底下某個資料夾的名字；內建的 agent 範本：`agent-fsm`、`eca-claude`、`eca-pi`、`reviewer`；名字錯是 `DefMissing`，理由會列出那裡有的範本）
+- 抄一份內建範本：`{"op": "new", "template": "agent-fsm", "path": "defs/helper"}`（`template` = `$AOS_HOME/templates` 底下某個資料夾的名字；內建的 agent 範本：`agent-fsm`、`eca-claude`、`eca-claude-alt`（用第二個 Claude 帳號 `~/.claude-alt` 的 eca-claude）、`eca-pi`、`reviewer`；名字錯是 `DefMissing`，理由會列出那裡有的範本）
 - 抄任何其他定義夾：`{"op": "new", "from": "defs/helper", "path": "defs/helper2"}`
 - 檢查：`{"op": "check", "path": "defs/helper"}`（印出 `{"problems": [...]}`；空清單 = 沒問題。資料夾裡指向不存在東西的連結（被移走或刪掉的 `defs.extern` 目標）算一個問題，那個定義的其他檢查要等它修好才做。除了檔案，它還檢查每個工具路徑、以及 states、loop 和 hooks 要跑的每個程式都存在，還有腦的設定型別對（`temperature: "hot"` 是問題）；它在這裡沒辦法檢查的，像沒設的變數，放在 `"warnings"`。它不檢查模型名稱。用 `agent.py --compile` 編譯完全不做這些檢查：編譯後要跑 check）
 - 改它的工具：`{"op": "tools", "path": "defs/helper", "args": {"op": "add", "path": "tools/math"}}`（`args` = `self_tools` 收的東西：ls、get、add、rm）
