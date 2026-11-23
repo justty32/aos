@@ -87,3 +87,13 @@
 - 使用者問「只能選 abcde 嗎、不能逐題留言嗎」：現在不能逐題寫，`answer` 只收 `id:代號`；可以 `--note`（整封一格）或那題答 `other` 加 `--note`（`zone.py` 的 `parse_answers`）。要不要加「逐題留言」等他說。
 - A、B 兩隻回來了，我看過 diff：A 改 `wf/org` 六檔、新開 `core/`、`frontend/` 兩張卡與地盤 `eca-aos-core/`、改 `wf/ws` 三份 README；B 改舊文件十個檔（被取代的原話收進 `aos-teams/03` 與 `user/01` 的留底）。我只改了一處：lead 卡「要查的也派一隻唯讀的」改成「一兩下查得到的自己答、要跨檔讀的才派」。
 - **沒處理的尾巴**（記進 progress `org-1123`）：規矩卡 9206 bytes 超過 8 KB（改之前就 8919）；`wf/public/` 七個檔、`user/03`、`aos-teams/04` 還寫「部長」；`aos-teams.md` 與 07 檔頭說舊原文在「本夾 `archive/`」但那個夾不在；`AGENTS.md`、`user/01` 各有一條原本就斷的連結；打雜工四關；「有活才掛」每次掛人要不要再問使用者（現在照鐵律 2 每次問）。
+
+## 2026-11-23 下午：公告功能（還沒做，排在 send 那件後面）
+
+- 使用者（逐字）：「好，可以繼續規進。還有，aos-user有公告版功能嗎？就是我可以aos-user annouce "我去睡午覺，一小時後回來"，然後各agent可能發現使用者很久沒回應，就會來看這個。」
+- 現況我查過（`proto8/frontend/aos-user/zone.py`）：沒有公告。最接近的是 `aos-user door --mode away`，只是把 `door.json` 的 `mode` 設成 away、讓 tick 不跳桌面通知，不能帶一句話也沒有時間。
+- 我跟他說的打算：等代班前端位子那隻（改 `send`）回來交件後，再派一隻做原型——`aos-user announce "話"` 寫進 `door.json`（agent 本來就被要求寄信前讀它，`aos-user door` 印得出來），帶寫的時間；我先替他定的三個預設：可以帶「到幾點為止」、過了就不再顯示；`aos-user announce --clear` 收掉；知識庫 `aos/user_zone.md` 加一句「等不到回信先看 door」。他沒反對就照做，有意見照他的。兩隻不能同時改同一個檔，所以要排隊。
+- 使用者接著說：「都幫我做一做」→ 逐題留言與公告兩個都做。排法：等改 `send` 那隻（代班前端位子，還在跑）回來、我看過交件之後，再派一隻 opus 代班前端位子一次做兩個功能（三件都改 `proto8/frontend/aos-user/` 同幾個檔，不能同時）；之後派一隻 opus 代班 kb，把三件事在知識庫 `aos/user_zone.md` 與 `wf/public/user-zone-mail.md` 要補的句子一次補上。
+- 我先定的形狀（任務書會寫、回報時攤給使用者）：
+  - 逐題留言：`q3:a` 照舊；`q3:a:留言` 選了再留言；`q3:我覺得這個不錯`（不是選項代號的一段話）＝那題答 `other`、留言就是那段話；看起來像代號（1～8 個英數字）卻不是選項的，照舊報錯，免得打錯字變成留言。回信的 `answers` 每題多一格留言。
+  - 公告：`aos-user announce "話"`（可帶到幾點為止）、`aos-user announce` 看、`aos-user announce --clear` 收；寫進 `door.json`，`aos-user door` 印得出來，過期不顯示。

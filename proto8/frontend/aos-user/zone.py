@@ -303,8 +303,8 @@ def post(args, body, env=None):
     exe = shutil.which("aos-post")
     if not exe:
         raise Fail("ToolMissing", "aos-post is not on PATH")
-    p = subprocess.run([exe] + args, input=json.dumps(body, ensure_ascii=False), capture_output=True,
-                       text=True, env=env, timeout=30)
+    p = subprocess.run([exe] + args, input="" if body is None else json.dumps(body, ensure_ascii=False),
+                       capture_output=True, text=True, env=env, timeout=30)
     if p.returncode != 0:
         line = (p.stderr.strip().splitlines() or ["aos-post failed"])[-1]
         m = re.match(r"^aos-post: error: (\S+) (.*)$", line)
@@ -312,8 +312,44 @@ def post(args, body, env=None):
     return p.stdout.strip()
 
 
+def _is_box(d):
+    return all(os.path.isdir(os.path.join(d, s)) for s in ("tmp", "new", "cur"))
+
+
+def _own_box(zone, reply_to):
+    """reply_to 是不是寄件人自己的 $AOS_STACK/mailbox、而且可以替他建：回 (可建, 不建的理由)。
+    可建＝$AOS_STACK 有設、那個夾在、reply_to 就是它底下的 mailbox、不在專區裡面。"""
+    st = os.environ.get("AOS_STACK", "")
+    if not st:
+        return False, "$AOS_STACK is not set"
+    own = os.path.realpath(os.path.join(st, "mailbox"))
+    if os.path.realpath(reply_to) != own:
+        return False, "it is not your own $AOS_STACK/mailbox"
+    if not os.path.isdir(st):
+        return False, "your $AOS_STACK %s is not a folder; no stack is made for you" % st
+    z = os.path.realpath(zone)
+    if own == z or own.startswith(z + os.sep):
+        return False, "it is inside the user zone"
+    return True, ""
+
+
+def ensure_reply_box(zone, reply_to):
+    """11-23 使用者選 b：回信信箱是寄件人自己的 $AOS_STACK/mailbox 而還沒建（從沒收過信的 agent）時，先照 aos-post init 建好。
+    別處的信箱、$AOS_STACK 沒設或夾不在：不建，交給 aos-post send 照舊報 MailboxMissing。回傳 True＝這次建了。"""
+    if _is_box(reply_to):
+        return False
+    ok, _ = _own_box(zone, reply_to)
+    if not ok:
+        return False
+    try:
+        post(["init", reply_to], None)
+    except Fail as e:
+        raise Fail(e.code, "cannot make your reply mailbox %s: %s (nothing was sent)" % (reply_to, e))
+    return True
+
+
 def send(zone, body, reply_to=None):
-    """agent 寄一封進專區：驗格式 → aos-post send --reply-to。回傳信名。"""
+    """agent 寄一封進專區：驗格式 → 自己的回信信箱沒建就建 → aos-post send --reply-to。回傳信名。"""
     check_letter(body)
     need_zone(zone)
     if not reply_to:
@@ -323,8 +359,18 @@ def send(zone, body, reply_to=None):
         raise Fail("ArgumentsBad", "no place for the answer: give --reply-to MAILBOX (or set $AOS_STACK)")
     args = ["send"]
     if reply_to:
-        args += ["--reply-to", os.path.abspath(os.path.expanduser(reply_to))]
-    return post(args + [box(zone)], body)
+        reply_to = os.path.abspath(os.path.expanduser(reply_to))
+        if ensure_reply_box(zone, reply_to):
+            sys.stderr.write("%s: made your reply mailbox %s (aos-post init)\n" % (PROG, reply_to))
+        args += ["--reply-to", reply_to]
+    try:
+        return post(args + [box(zone)], body)
+    except Fail as e:
+        if e.code == "MailboxMissing" and reply_to and not _is_box(reply_to):
+            why = _own_box(zone, reply_to)[1] or "it could not be made"
+            fix = "" if why.endswith("no stack is made for you") else "; to use it: aos-post init %s" % reply_to
+            raise Fail(e.code, "%s (reply mailbox not made: %s%s)" % (e, why, fix))
+        raise
 
 
 # ---- 讀信 --------------------------------------------------------------------
@@ -927,6 +973,7 @@ for the user:
 for agents:
   send --kind KIND [--title T] [--from NAME] [--reply-to MAILBOX] [--urgent] [--deadline D] [FILE|-]
                                 send a letter; the body JSON comes from FILE or stdin; checked against schema/letter.json
+                                answers go to --reply-to, else $AOS_STACK/mailbox (made if your stack has none yet)
   verify REPLY_LETTER_FOLDER    check that a reply really came from this zone (level 1)
 setup:
   init                          make the zone (keeps files that exist)

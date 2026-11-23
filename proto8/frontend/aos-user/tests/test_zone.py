@@ -93,6 +93,56 @@ class T(unittest.TestCase):
         self.assertTrue(os.path.isdir(os.path.join(self.zone, "mailbox", "cur", name)))
         self.assertTrue(os.path.exists(os.path.join(self.zone, "drafts", name + ".json")))
 
+    def test_4b_own_reply_box_made(self):
+        """11-23 使用者選 b：從沒收過信的 agent（stack 沒 mailbox/）第一次 send，自己的回信信箱先建好再寄。"""
+        own = os.path.join(self.agent, "mailbox")
+        shutil.rmtree(own)
+        p = self.run_("send", "--kind", "decide", "--title", "first letter", stdin=json.dumps(DECIDE), agent=True)
+        name = p.stdout.strip()
+        self.assertIn("made your reply mailbox", p.stderr)
+        for s in ("tmp", "new", "cur"):
+            self.assertTrue(os.path.isdir(os.path.join(own, s)))
+        lt = json.load(open(os.path.join(self.zone, "mailbox", "new", name, "letter.json")))
+        self.assertEqual(os.path.normpath(os.path.join(self.zone, "mailbox", lt["reply_to"])), own)  # aos-post 存相對專區信箱的路徑
+        self.run_("answer", "1", "--all-recommend")
+        self.assertEqual(self.agent_new()[0]["in_reply_to"], name)
+        p = self.run_("send", "--kind", "decide", "--title", "again", "--reply-to", own,   # 明寫自己的也算
+                      stdin=json.dumps(DECIDE), agent=True)
+        self.assertNotIn("made your reply mailbox", p.stderr)
+
+    def test_4c_other_reply_box_not_made(self):
+        """--reply-to 指到別處、$AOS_STACK 夾不在、$AOS_STACK 沒設：都不建，照舊 MailboxMissing，什麼都沒寄。"""
+        other = os.path.join(self.root, "someone", "mailbox")
+        p = self.run_("send", "--kind", "decide", "--title", "x", "--reply-to", other,
+                      stdin=json.dumps(DECIDE), agent=True, ok=False)
+        self.assertEqual(p.returncode, 1)
+        self.assertIn("MailboxMissing", p.stderr)
+        self.assertIn("aos-post init " + other, p.stderr)
+        self.assertFalse(os.path.exists(os.path.join(self.root, "someone")))
+        shutil.rmtree(self.agent)
+        p = self.run_("send", "--kind", "decide", "--title", "x", stdin=json.dumps(DECIDE), agent=True, ok=False)
+        self.assertIn("MailboxMissing", p.stderr)
+        self.assertIn("no stack is made for you", p.stderr)
+        self.assertFalse(os.path.exists(self.agent))
+        mine = os.path.join(self.root, "mine", "mailbox")
+        p = self.run_("send", "--kind", "decide", "--title", "x", "--reply-to", mine,
+                      stdin=json.dumps(DECIDE), ok=False)
+        self.assertIn("$AOS_STACK is not set", p.stderr)
+        self.assertFalse(os.path.exists(os.path.join(self.root, "mine")))
+        self.assertEqual(os.listdir(os.path.join(self.zone, "mailbox", "new")), [])
+
+    def test_4d_own_reply_box_cannot_be_made(self):
+        """自己的回信信箱建不起來（mailbox 是個一般檔）：一行錯誤、什麼都沒寄。"""
+        own = os.path.join(self.agent, "mailbox")
+        shutil.rmtree(own)
+        with open(own, "w") as f:
+            f.write("not a folder")
+        p = self.run_("send", "--kind", "decide", "--title", "x", stdin=json.dumps(DECIDE), agent=True, ok=False)
+        self.assertEqual(p.returncode, 1)
+        self.assertIn("cannot make your reply mailbox", p.stderr)
+        self.assertEqual(len(p.stderr.strip().splitlines()), 1)
+        self.assertEqual(os.listdir(os.path.join(self.zone, "mailbox", "new")), [])
+
     def test_5_old_format(self):
         env = dict(self.env)
         subprocess.run(["aos-mailbox", "-s", self.agent, "send", "--box", os.path.join(self.zone, "mailbox"),

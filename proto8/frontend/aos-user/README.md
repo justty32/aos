@@ -44,7 +44,7 @@ journalctl --user -u aos-user-tick -n 20     # 看它做了什麼（沒事時不
 |---|---|
 | `init` | 建專區（已有的檔不蓋）：`mailbox/{tmp,new,cur}`、`done/`、`rejected/`、`drafts/`、`door.json`、`schema/letter.json`、`config.json`、`log.jsonl`、`web/token`（0600） |
 | `where` | 印專區路徑（`--zone` ＞ `$AOS_USER_ZONE` ＞ `~/.aos/user`） |
-| `send --kind K [--title] [--from] [--reply-to] [--urgent] [--deadline] [FILE\|-]` | agent 寄信；先照 schema 驗，不合 `SchemaBad`、不寄 |
+| `send --kind K [--title] [--from] [--reply-to] [--urgent] [--deadline] [FILE\|-]` | agent 寄信；先照 schema 驗，不合 `SchemaBad`、不寄。回信地址＝`--reply-to`，沒給＝`$AOS_STACK/mailbox`；回信地址是寄件人自己的 `$AOS_STACK/mailbox` 而還沒建（從沒收過信的 agent）時，先照 `aos-post init` 建好再寄，stderr 印一行 `made your reply mailbox …`（11-23 使用者選 b）。`--reply-to` 指到別處、`$AOS_STACK` 沒設或那個夾不在：不建，照舊 `MailboxMissing`，錯誤句後面寫怎麼修；建不起來＝一行錯誤（代號照 aos-post 轉）、不寄 |
 | `ls [--json] [--done]` | 待辦／已回；`--json` 每列 `n letter where format kind from title questions deadline urgent risk host sent_at same bad`；沒待辦退 10 |
 | `show N` | 看一封；同 `dedupe_key` 的一起移進 `cur/` |
 | `answer N id:key… [--note] [--all-recommend]` | 裁；每題都要答，少了＝`AnswerMissing`、存草稿 |
