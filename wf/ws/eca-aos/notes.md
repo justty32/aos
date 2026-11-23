@@ -235,3 +235,18 @@
 - **16:55 push**：這是他本人給的授權，只這一次、推 `origin main`。我開了一個背景等待（到 16:55 會叫我）；若它提早結束（逾時）就重開一個。推之前 `git status` 要乾淨、看一下 `git log origin/main..main` 的數；推完報雜湊範圍。16:55 之後才交的 commit 不在這次授權裡。
 - 同時還在跑：core 位子第三件（五項）、打雜工 `eca-aos-sol-2`（斷連結）。
 - 之前交的：`1f742a69e`（24 處「部長」與配給包舊說法，16 檔）、`b0faad720`（打雜工角色卡）。
+
+## 2026-11-23 16:10：使用者要 org 範本，並請我評估 templates 分層
+
+- 他說（逐字）：「對了，wf/org這塊，去看看/mnt/c/code/mine/arena_cheater, mine/paper_readings, mine/mecha_srpg，去總結一下，弄進template。template這邊你看看，是不是考慮把它分成templates/agents, templates/kernels, templates/orgs」。
+- 我的讀法：① 四個樣本（三個專案加這個 repo 的 `wf/org`）總結成一個 org 範本放進 `proto8/templates/`＝去做；② templates 分成 agents／kernels／orgs＝請我評估給建議，他拍板。
+- 我先看到的：`mecha_srpg` 實際叫 `/mnt/c/code/mine/mecha-srpg`，有 `wf/` 但沒看到 `wf/org`。分層的最大代價：程式寫死 `templates/agent-fsm/...`（`agent_spec_lib.py`、`agent_spec_parts.py`）、活樹上每隻 agent 的定義路徑是 `$AOS_HOME/templates/eca-claude` 這種（我這棵三隻位子就是），搬了全斷。
+- 派了一隻 fable 子 agent 規劃（只讀、只寫 `proto8/thinking/2026-11/23/org範本與templates分層-1123/`）：01 四樣本總結、02 org 範本設計與 `draft/` 初稿、03 分層的盤點與選項、04 給使用者的題目（最多五題）、05 施工清單。回來後：我看過 → 交規劃夾（日索引用 `--op day_upsert`）→ 把 04 的題目拿去問使用者 → 他答了再派範本位子施工。
+
+## 2026-11-23 16:10：core 位子第三件回來（NEEDS-USER 一題）
+
+- 信 `01795421334788879677.1976354.2931664`。五項都交了（都改 py 或文件，**C++ 原始碼沒動**；還沒裝）：`8e14a5e38`（ws_write：`tool_io.caller_stack()`，經 aos-tools 叫時擋得到自己與別人的 stack；重現成立）、`a69d96ae7`（`ctl state` 的 resources 行分組）、`4226bd3a5`（mem_mb 提醒）、`259e8afa9`（09-份額的 systemd 改成各台自己查）、`0093988b0`（`self_llm`、`self_system` 的 `arbitrary_exec` 改 false；`user_send` 說明補 comment）、`a2db91729`（它的筆記）。
+- **要使用者選的一題**：ws_write 經 aos-tools 叫時要不要也擋 agent 自己的定義夾。A 照 guard 的 `scope.py` 讀 daemon 表（core 傾向；每次寫多讀一次表、沒 daemon 時查不到）；B aos-tools 多傳一個環境變數（便宜、契約多一條、叫方的 `AOS_CD` 不一定是定義夾）；C 不補、文件照實寫（定義夾交給 guard hook）。
+- 它另外報：`user_send` 的 `test_tool_missing` 在乾淨複本上本來就失敗（PATH 上有真的 `aos-user`），沒修、沒派。其他標 `arbitrary_exec: true` 的九支這次沒審。
+- 轉出去：kb（REQUEST `01795421362622202106.1981094.2934448`：me.md 的 resources、subagent.md 等的 mem_mb、任意執行那兩支；packs.md 等使用者選了再改）；一隻 sonnet 子 agent 改 `proto8/docs/tutorial/05`、`05b` 兩行範例輸出。
+- 還要問使用者：第三次 `install.py`。

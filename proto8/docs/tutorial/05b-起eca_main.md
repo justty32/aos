@@ -89,7 +89,7 @@ hooks     6 hooks (brain_notify on brain_failed, context_wrap on on_clock, mail_
 history   2 messages, 255 bytes (assistant 1, user 1)
 mailbox   0 letters waiting
 subagents 0/4 subagents
-resources limits none; memory 2.8 MiB, cpu 0.0 s, 1 processes
+resources limits none; whole agent uses memory 2.8 MiB, cpu 0.0 s, 1 processes
 time      now 2026-11-21T15:08:33+0800; up 0h00m14s
 ```
 
