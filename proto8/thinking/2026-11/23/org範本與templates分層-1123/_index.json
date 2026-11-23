@@ -1,0 +1,59 @@
+{
+ "01-四個樣本的總結.md": {
+  "description": "01 四個樣本的總結"
+ },
+ "01a-樣本-arena_cheater.md": {
+  "description": "樣本一：arena_cheater（多部門生產線）"
+ },
+ "01b-樣本-paper_readings.md": {
+  "description": "樣本二：paper_readings（按需角色）"
+ },
+ "01c-樣本-mecha-srpg.md": {
+  "description": "樣本三：mecha-srpg（沒有 org，上一代的「線」）"
+ },
+ "01d-樣本-aos.md": {
+  "description": "樣本四：aos 這個 repo（小型工作室）"
+ },
+ "02-org範本的設計.md": {
+  "description": "02 org 範本的設計"
+ },
+ "03-templates分層.md": {
+  "description": "03 templates 要不要分成 agents／kernels／orgs"
+ },
+ "03a-搬動代價的盤點.md": {
+  "description": "03a 搬動代價的盤點"
+ },
+ "04-要問使用者的題目.md": {
+  "description": "04 要問使用者的題目"
+ },
+ "05-施工清單.md": {
+  "description": "05 施工清單"
+ },
+ "06-三分的施工設計.md": {
+  "description": "06 三分的施工設計"
+ },
+ "06a-目標目錄.md": {
+  "description": "06a 目標目錄"
+ },
+ "06b-執行期的東西搬進lib.md": {
+  "description": "06b 執行期的東西搬進 `lib/`"
+ },
+ "06c-要改的每一處與分工.md": {
+  "description": "06c 要改的每一處與分工"
+ },
+ "06d-補丁怎麼做怎麼套.md": {
+  "description": "06d 補丁怎麼做、怎麼套"
+ },
+ "06e-切換步驟.md": {
+  "description": "06e 切換步驟（11-24 早上）"
+ },
+ "06f-改表的做法與家機.md": {
+  "description": "06f 改表的做法與家機"
+ },
+ "README.md": {
+  "description": "org 範本與 templates 分層（11-23 規劃）"
+ },
+ "draft": {
+  "description": "規劃夾的初稿區：org 範本的英文初稿（`orgs/`），11-23 已由範本位子搬成 `proto8/templates/orgs/`（commit fd871a355），這裡留作對照、不再改。"
+ }
+}

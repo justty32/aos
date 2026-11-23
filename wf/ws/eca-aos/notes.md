@@ -287,3 +287,5 @@
 - **範本位子 `fd871a355`**（信 `01795423184347232682.2276642.3116621`）：`proto8/templates/orgs/` 13 檔＋`tests/orgs/test_orgs.py`＋`templates/README.md` 一段＋`wf/tools/index_gen_desc.json` 兩行（tests/kits、tests/orgs；跨範圍那一檔我放行，因為單獨交會被生成器擋：desc 有了但夾不在）。它試抄兩次、改了 README 的步驟；乾淨複本 tests/orgs 7、tests/kits 8、test_start＋test_daemon_sub 9 都過。
 - 我做的後續：`wf/org/README.md` 加一行指到範本（5a）；派 sonnet 補 `index_gen_desc.json` 的 `proto8/templates/orgs` 一句（現在 `_index.json` 裡 orgs 的說明只有夾名）；轉 kb 寫知識庫那頁（REQUEST `01795423206359047396.2280145.3118822`，規劃夾 05 第 7、8 步）。
 - commit-request 的坑：`index_gen_desc.json` 的鍵指到 repo 裡還不存在的夾會擋（DescMissing … not in the repo），新夾與它的說明要同一批交。
+- **kb 位子 `8236c07f2`**（信 `01795423370317372268.2306002.3135218`）：新頁 `aos/orgs.md`（英文；怎麼抄只列大綱、正本指到 `templates/orgs/README.md`）、`aos/_index.json` 一列（我用 index_view 看得到）、`kits.md` 站台層那句、`eca_reading.md` 加一行、`knowledge/wf/layers.md` 加一段。它提醒：`aos/kits.md` 寫死了 `templates/kits/`、`agent-fsm/`，明天分層要再對。
+- **org 範本這件（使用者「去總結一下，弄進template」）到此做完**：規劃 `272845ad2`、範本 `fd871a355`、入口與索引 `284f5e5ec`、知識庫 `8236c07f2`。三個位子 16:44 都 sleep 了。剩 templates 三分（明早切），等 fable 的施工設計。
