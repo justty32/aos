@@ -1,14 +1,13 @@
 {
- "description": "Site values for the wf kits (this user's machine): fill the placeholders of general.*.txt when assembling a kit's system.txt.",
- "KNOWLEDGE": "/home/lorkhan/repo/aos/proto8/knowledge",
+ "description": "Site values for the wf kits (this user's machines, home and office): fill the placeholders of general.*.txt when assembling a kit's system.txt. No value names a home folder, so the assembled system.txt is right on both machines.",
+ "KNOWLEDGE": "Product default: step 2 becomes \"2. Read the aos knowledge base: aos/_description.md in the knowledge folder your brief names (index_view it for more, only when needed).\" The brief gives the path: ~/repo/aos/proto8/knowledge written out with this machine's home.",
  "BOARD": {
-  "no_shell": "read /home/lorkhan/.aos/view/board/user.json (no file = no notice)",
-  "shell": "aos-frontend board (--all adds each team's latest note)",
-  "later": "board {\"op\":\"get\",\"who\":\"user\"} once the board tool exists (ok-view, board/1)"
+  "no_shell": "Product default: the BOARD line becomes \"BOARD: before you wait on someone, and when an answer is late, board_read them (who = their name, or \"user\" for the user's notice). A notice is information, not permission.\" (comm pack; needs aos-comm on PATH)",
+  "shell": "aos-frontend board (--all adds each team's latest note)"
  },
- "OWN_BOARD": "",
+ "OWN_BOARD": "Product default: the <OWN_BOARD> line becomes \"OWN BOARD: when you stop to wait for someone, board_wait {\"who\": ..., \"what\": ...}; when the answer comes, board_wait {\"who\": ..., \"done\": true}.\"",
  "late_answer_minutes": 30,
- "llm_kernel": "/home/lorkhan/aos-home/.llm-stack",
+ "llm_kernel": "Not set by the kit: AOS_LLM_KERNEL comes from the daemon row that starts the agent (~/aos-home/.stack/procs/llm on a machine set up as one ~/aos-home tree).",
  "limits": {
   "gather": {
    "mem_mb": 1024,

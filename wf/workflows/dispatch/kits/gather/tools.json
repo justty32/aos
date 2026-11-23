@@ -1,5 +1,5 @@
 {
- "description": "Kit gather (also reviewer): read, write only notes/out/trash by convention, mail, goal; no shell, delete, events, subagent, def, jsonx, kernel_gate; self keeps only self_state, so the agent cannot lift its own limits.",
+ "description": "Kit gather (also reviewer): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only board_read and board_wait; no shell, delete, events, subagent, def, jsonx or kernel_gate; self keeps only self_state, so the agent has no tool for lifting its own limits; write and edit still take absolute paths and can reach the tools.json in its own stack, so only the rules keep it from editing that file by hand.",
  "$override": [
   {
    "$env": "AOS_HOME",
@@ -27,6 +27,10 @@
   },
   {
    "$env": "AOS_HOME",
+   "$path": "/lib/packs/comm.json"
+  },
+  {
+   "$env": "AOS_HOME",
    "$path": "/lib/packs/goal.json"
   },
   {
@@ -50,6 +54,9 @@
   "json_set": null,
   "json_add": null,
   "json_del": null,
-  "json_multi_set": null
+  "json_multi_set": null,
+  "board_set": null,
+  "board_clear": null,
+  "board_ls": null
  }
 }
