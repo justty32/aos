@@ -73,5 +73,8 @@
  },
  "troubleshooting.md": {
   "description": "Common failures: symptom, cause, how to check (paths with $AOS_HOME, a tool you just added, ClockMissing on a screen, KernelFailed, the overview page's ctl ls failed ...)."
+ },
+ "orgs.md": {
+  "description": "Orgs: the documents in a workspace's wf/org/ that say which seats exist, who owns what and who gets the work next; when to use one, the org template and its nine choices, and how it relates to kits."
  }
 }

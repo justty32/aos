@@ -82,6 +82,8 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - 範本 README 有掛法時，知識庫 `aos/cli/parts/daemon.md` 那類「怎麼起」的頁補一行指到範本，細節留在範本 README。
 - 程式改了還沒 install.py：知識庫照 `py/` 寫；troubleshooting 的「怎麼查」寫成看 `$AOS_HOME/lib/` 裡實作的一行 grep，裝舊版的人對得上（例：`grep -n 'strict=False' …/llm_http/responses_api.py`）。先 `diff py/… lib/…` 看這台裝了沒；install.py 抄檔保留原檔 mtime，要看時間就看 ctime（`stat -c %z`），不要看 mtime。
 - 腦的 pack 怎麼送：`"api": "responses"` 的 pack（start-api 的 gpt 那四個）由 `endpoints/litellm` 叫 `lib/tools/base/llm_http`；換形狀的程式在 `responses_api.py`。
+- 新開一頁：照「改一頁時」的格式寫；做法以範本 README 為正本，知識庫只寫大綱並指過去。md 錨點先用 `json_ls` 看真正的路徑（範本 README 的 `## How to use` 在 `# orgs` 底下，是 `#/orgs/How to use`）。`_index.json` 用 json_add 加一列，再用 `index_view` 看得到。eca 用得上的頁，`aos/eca_reading.md` 也加一行。
+- templates/ 會重新分層（2026-11-24 起，kits 搬進 agents/）：`aos/orgs.md` 只寫死 `templates/orgs/…`，別的範本指 `templates/README.md`；`aos/kits.md` 還寫著 `templates/kits/`，搬的時候要對。
 - 範本、程式裡同樣說得比事實強的句子（例：`templates/kits/gather/tools.json` 的 description）只回報，不改。
 
 ## 範圍與回報

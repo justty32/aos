@@ -28,6 +28,7 @@ Key points:
 - `aos/me/self_system.md`, `aos/me/self_llm.md`, `aos/me/self_history.md`: your system text, brain settings and history. These three tools are off in the stock templates; add them with `self_tools`. On an eca only `model` and `reasoning_effort` of your brain settings count.
 - `aos/agents.md`: `agent_def` for new definitions (add it first); the `subagent` pack is not in the stock eca templates, so use your CLI's own helpers for side tasks.
 - `aos/definition.md`, `aos/kits.md`: making or changing definitions (a person's job, or `agent_def`).
+- `aos/orgs.md`: seats, role cards and handoffs when one workspace has several agents (the org template).
 - `aos/status.md`, `aos/world.md`, `aos/kernel.md`: the daemon table, the mental model, kernels.
 - `aos/tools/` nodes for the tools you have: the json tools, `index_view`, `math`, `peek_clock`, `peek_now_time`.
 

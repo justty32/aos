@@ -24,7 +24,7 @@ A person attaching an agent from a shell does not copy: `aos-agent ctl add --kit
 A system text has no include and no variables: it is sent whole on every brain call, so it is assembled once, when the definition is made, top to bottom:
 
 1. general: `kits/general.A.txt` (tier A = strong general models): start (self_state, read the knowledge base, goal set), workspace folder (notes.md, out/, trash/), work, report (one mailbox_send to the lead), stuck, notice board, stop.
-2. site (optional, not shipped): your own rules (who to report to, language, local don'ts, where the notice board is). Put it between general and role.
+2. site (optional, not in the shipped kits): your own rules (who to report to, language, local don'ts, where the notice board is). Put it between general and role. A workspace with an org takes it from `$AOS_HOME/templates/orgs/basic/extras/site.txt`: make a kit of your own (copy the kit folder) and put the filled text into its `system.txt` just before the role part (`aos/orgs.md#/Orgs and kits`).
 3. role: `kits/roles/gather.txt` or `kits/roles/review.txt`.
 4. task: the brief, sent in the letter that starts the agent; not in system.txt.
 
