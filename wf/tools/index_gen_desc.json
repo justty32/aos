@@ -7,7 +7,7 @@
   "AGENTS.md": "給 agent 的最頂層入口：開場先掃哪三處、鐵律、分層原則、要做事／看結構／碰程式各往哪走；每個 session 先讀這份",
   "CLAUDE.md": "Claude Code 的入口，只有一句：去讀 AGENTS.md",
   "README.md": "給人讀的專案總覽：aos 是什麼、怎麼建置與安裝、各資料夾放什麼",
-  "_stack": "aos 那棵樹的 stack（根 daemon 與底下各 agent 的狀態、信箱、對話紀錄）：根 .gitignore 忽略它，只有換台時由 wf/tools/stack-commit 挑該帶走的檔交件；怎麼起、怎麼換台看 wf/workflows/dev-env/03-換機.md",
+  ".stack": "aos 那棵樹的 stack（根 daemon 與底下各 agent 的狀態、信箱、對話紀錄）：根 .gitignore 忽略它，每台各有各的、不進 git、不跟著機器搬（使用者 11-23）；怎麼起看 wf/workflows/dev-env/03-換機.md",
   "impl_cpp": "使用者 11-09 起親手重寫 aos 核心的 C++23 實作（一個零件一夾在 core/）；核心程式由使用者自己寫，agent 只動開發環境，怎麼建、跑、測、除錯看它的 README",
   "proto8": "現役本體（第八版原型）：C／C++ 基礎層 cpp、Python 原始碼 py（人打的指令、共用模組、腦叫的工具）、選配的網頁外掛 frontend、agent 與 kernel 範本 templates、出廠內容 knowledge、條文 docs、討論紀錄 thinking，加 install.py、env.sh；要找程式、條文或某次討論從這裡往下走",
   "proto8/archive": "封存：不再維護、留著參考的東西（langs、tree-swap、aos-home）；不測、連結壞了不修",

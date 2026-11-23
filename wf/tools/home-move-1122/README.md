@@ -1,4 +1,4 @@
-家機搬家（線 6）的一次性工具：`home-move` 分段把 eca-aos 與三個 subagent 從舊樹 `~/aos-home/.stack` 搬到 `~/repo/aos/_stack`，出錯自動退回；`rehearse-prep` 替演練備一個假家目錄。
+11-23 起退場：stack 不再跟著 git 搬（使用者「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」），留著等使用者決定刪不刪。原本是家機搬家（線 6）的一次性工具：`home-move` 分段把 eca-aos 與三個 subagent 從舊樹 `~/aos-home/.stack` 搬到 `~/repo/aos/_stack`，出錯自動退回；`rehearse-prep` 替演練備一個假家目錄。
 
 # home-move-1122
 

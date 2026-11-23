@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# home-move：線 6（家機搬家，11-22）的一次性工具——把 eca-aos 與三個 subagent 從舊樹 ~/aos-home/.stack 搬到 ~/repo/aos/_stack，分段可單獨跑，all 照順序跑、任何一步失敗自動 rollback。
+# home-move：11-23 起退場：stack 不再跟著 git 搬（使用者「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」），留著等使用者決定刪不刪。原本是線 6（家機搬家，11-22）的一次性工具——把 eca-aos 與三個 subagent 從舊樹 ~/aos-home/.stack 搬到 ~/repo/aos/_stack，分段可單獨跑，all 照順序跑、任何一步失敗自動 rollback。
 #
 # 用法、每段做什麼、真跑時外面那個 Claude 的完整步驟：同夾 README.md。規劃：proto8/thinking/2026-11/22/工作區與stack-1122/02-規劃.md「線 6」。
 #   home-move check|stop-old|copy|fix|retire-old|start-llm|start-root|reattach|verify|rollback|start-old|screen|probe|all|status

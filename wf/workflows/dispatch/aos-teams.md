@@ -57,11 +57,12 @@ aos-user send --kind decide --from ok-x \
 
 `subagent say` 之後就結束這一回合；用 `clock_register {"op":"add","name":"…","at":"+10m","text":"…"}` 叫醒自己再看，或等它寄來的信。`subagent listen` 預設不限時一直等（11-15 起，以前 600 秒），別讓它卡著這一回合：帶 `"timeout_s": 60`，或用 `"last": 1` 只看最後一則不等。
 
-### 5. 活樹旁邊：`~/repo/aos/_stack` 有使用者正在用的樹
+### 5. 活樹旁邊：`~/repo/aos/.stack` 有使用者正在用的樹
 
-- 活樹＝家機 11-22 起是 `~/repo/aos/_stack`（根定義 `wf/tree/root/`）；這台的 `~/aos-home` 只剩 llm kernel，舊樹退路在 `~/aos-home.old-1122/`；公司那台線 8 起 `_stack` 之前照舊是 `~/aos-home`（[06「現況」](aos-teams/06-公司WSL活樹與任務書硬規則.md#現況)）。
-- 活樹不碰（06 第 1 條）：不寫活樹底下任何檔（家機連同 `~/aos-home`、`~/aos-home.old-1122/`）、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）；唯讀查看只限任務書點名的，與 06 第 9 條的核對。
-- 不在共用工作樹跑 `git stash`、`git reset --hard`、`git checkout -- .`、`git clean -fdx`（06 第 7 條）：`_stack` 被根 `.gitignore` 忽略，`git clean -fdx` 會連活樹一起刪。
+- 活樹＝兩台都是 `~/repo/aos/.stack`（根定義 `wf/tree/root/`；被 git 忽略、每台各有各的，不跟著 git 搬，使用者 11-23）；`~/aos-home` 放這台的 llm kernel，家機的舊樹退路在 `~/aos-home.old-1122/`，公司那台 `~/aos-home` 其他東西是使用者說別管的舊樹（[06「現況」](aos-teams/06-公司WSL活樹與任務書硬規則.md#現況)）。
+- 活樹不碰（06 第 1 條）：不寫活樹底下任何檔（連同 `~/aos-home`、`~/aos-home.old-1122/`）、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）；唯讀查看只限任務書點名的，與 06 第 9 條的核對。
+- 不在共用工作樹跑 `git stash`、`git reset --hard`、`git checkout -- .`、`git clean -fdx`（06 第 7 條）：`.stack` 被根 `.gitignore` 忽略，`git clean -fdx` 會連活樹一起刪。
+- 清掉 `AOS_*` 之後，`aos-daemon-ctl`、`aos-mailbox` 這類指令不帶 `-d` 會找 cwd 的 `./.stack`：站在 `~/repo/aos` 下指令＝打到活樹。暫存樹的指令一律帶 `-d <暫存樹 stack 的絕對路徑>`。
 - 你的 shell 帶著活樹的 `AOS_*`：跑任何 aos 指令或測試，一律經一支 bash 腳本（不是 bash 就拒絕 → 逐一 unset `AOS_*` → 還有殘留就拒絕 → exec）。shell 是 zsh，要分詞的寫法包 `bash -c`。
 - 不把整份環境變數寫進檔、log 或信（`env`、`printenv`、`/proc/*/environ` 都不行，裡面有 API key）；要看只列變數名或只列 `AOS_*`。
 - 不刪檔（連自己的暫存也不刪）。收行程只准兩種（06 第 4 條）：`aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`，或 kill 自己記下的 pid（kill 前 `readlink /proc/<pid>/cwd`）；禁 `pkill`、`killall` 與任何按名字收行程的寫法。

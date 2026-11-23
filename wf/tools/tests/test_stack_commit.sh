@@ -1,5 +1,5 @@
 #!/bin/bash
-# test_stack_commit.sh — 在 repo 外的暫存 clone 上測換機工具 stack_commit.py（daemon 沒停就拒、_stack 外髒檔、llm kernel 還沒回的信、金鑰樣式、只挑該帶走的檔、第二次沒東西、改／刪／加、index_gen 照綠、arrive 清執行期檔與查殼、pull 會蓋掉被忽略的檔）；不碰來源 repo
+# test_stack_commit.sh — 11-23 起退場：stack 不再跟著 git 搬（使用者「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」），留著等使用者決定刪不刪。原本在 repo 外的暫存 clone 上測換機工具 stack_commit.py（daemon 沒停就拒、_stack 外髒檔、llm kernel 還沒回的信、金鑰樣式、只挑該帶走的檔、第二次沒東西、改／刪／加、index_gen 照綠、arrive 清執行期檔與查殼、pull 會蓋掉被忽略的檔）；不碰來源 repo
 # 用法：test_stack_commit.sh <來源 repo> <repo 外的暫存夾>   每次在暫存夾下開一個新的 run-<時間> 子夾，不刪任何東西；殼裡要先清掉 AOS_*（有 aos-exec 就用真的 daemon，沒有就用一支握鎖的小行程代替）
 set -u
 [ -n "${BASH_VERSION:-}" ] || { echo "not bash" >&2; exit 1; }

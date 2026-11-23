@@ -1,13 +1,13 @@
-# wf/tree：`_stack` 那棵樹的根定義（只帶時鐘與清道夫）
+# wf/tree：`.stack` 那棵樹的根定義（只帶時鐘與清道夫）
 
 ← [wf](../)｜規劃：[02-規劃 線 5](../../proto8/thinking/2026-11/22/工作區與stack-1122/02-規劃.md#線-5根那份小定義進-repo)
 
-`root/` 是 `~/repo/aos/_stack` 那台根 daemon 的定義：表上只有 `_clock`、`_sweeper`，agent 之後用 `aos-agent ctl add` 掛上去（表上存相對 `_stack` 的路徑，兩台的 repo 都在 `~/repo/aos`，換台照樣對）。llm kernel 與權限站**不在這裡**，各台自己跑、放在 repo 外，由起根的殼 export `AOS_LLM_KERNEL`、`AOS_KERNEL` 指過去（使用者 11-22 決定 E）。
+`root/` 是 `~/repo/aos/.stack` 那台根 daemon 的定義：表上只有 `_clock`、`_sweeper`，agent 之後用 `aos-agent ctl add` 掛上去（表上存相對 `.stack` 的路徑）。`.stack` 被 git 忽略、每台各有各的，不跟著 git 搬（使用者 11-23）；這份定義跟著 git 走，兩台起的根都用它。llm kernel 與權限站**不在這裡**，各台自己跑、放在 repo 外，由起根的殼 export `AOS_LLM_KERNEL`、`AOS_KERNEL` 指過去（使用者 11-22 決定 E）。
 
-怎麼設殼、怎麼起 llm kernel、怎麼換台，看[換機說明書](../workflows/dev-env/03-換機.md)；這裡不重寫步驟，只記起根那一行：
+怎麼設殼、怎麼起 llm kernel，看[每台設定說明書](../workflows/dev-env/03-換機.md)；這裡不重寫步驟，只記起根那一行（公司那台另帶 `CLAUDE_CONFIG_DIR`，見說明書）：
 
 ```sh
-cd ~/repo/aos && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK aos-exec --stack _stack wf/tree/root
+cd ~/repo/aos && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK aos-exec --stack .stack wf/tree/root
 ```
 
 `AOS_HOME`、`AOS_LLM_KERNEL`（與有權限站時的 `AOS_KERNEL`）要在這個殼裡已經 export，根會傳給底下每一隻；改了 export 要 shutdown 根再從新殼起才生效。
@@ -20,4 +20,4 @@ cd ~/repo/aos && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK aos-exec --stack _s
 
 ## 忘了 export 之後怎麼救
 
-agent 連續三次一起來就退出，表上會變成 `stopped`（原因欄只寫 `RunFailed … not restarting again`，代號要看它的 `stderr.txt`）。補上 export、shutdown 根再起之後，它**不會自己醒**，要再下一次 `aos-agent -d _stack ctl start <名>`；起來後先前排隊的問題會照樣答。
+agent 連續三次一起來就退出，表上會變成 `stopped`（原因欄只寫 `RunFailed … not restarting again`，代號要看它的 `stderr.txt`）。補上 export、shutdown 根再起之後，它**不會自己醒**，要再下一次 `aos-agent -d .stack ctl start <名>`；起來後先前排隊的問題會照樣答。

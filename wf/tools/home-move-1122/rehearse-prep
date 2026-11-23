@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rehearse-prep：替 home-move 的演練備一個假家目錄——只讀地抄活樹（cp -a／rsync，不抄 llm 的 .bak-*）、抄本裡的活樹路徑與開機碼換掉、端點只留 fake*、放一支不叫模型的假 claude。
+# rehearse-prep：11-23 起退場：stack 不再跟著 git 搬（使用者「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」），留著等使用者決定刪不刪。原本替 home-move 的演練備一個假家目錄——只讀地抄活樹（cp -a／rsync，不抄 llm 的 .bak-*）、抄本裡的活樹路徑與開機碼換掉、端點只留 fake*、放一支不叫模型的假 claude。
 #
 #   rehearse-prep REHEARSAL_DIR      （REHEARSAL_DIR 要在 ~/.aos/scratch/ 底下、還沒有 home/aos-home）
 #   搬家之後 ~/aos-home 只剩 llm：RP_FROM=~/aos-home.old-1122 從退場的舊樹抄（只讀、不起它），llm 照舊從 RP_LLM（預設 ~/aos-home/llm）抄。

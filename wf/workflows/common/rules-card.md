@@ -37,7 +37,7 @@
 
 ## 活樹旁九條硬規則（[06](../dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#任務書必貼的硬規則)，全文照貼進任務書；純改文件的線貼第 1、7 條）
 
-1. 活樹不碰（`_stack`、`wf/tree/`、`~/aos-home`、`~/aos-home.old-1122/` 不寫、不下令、不寄信）。
+1. 活樹不碰（`.stack`、`wf/tree/`、`~/aos-home`、`~/aos-home.old-1122/` 不寫、不下令、不寄信）。
 2. 先清環境：aos 指令與測試一律經 bash 腳本 unset 所有 `AOS_*`。
 3. 暫存樹起在 `~/.aos/scratch/<線名-日期>/`。
 4. 收行程只准兩種（shutdown 自己的 stack、kill 自己記的 pid）；禁 `pkill`、`killall`。

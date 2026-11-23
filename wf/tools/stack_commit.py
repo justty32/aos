@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""stack_commit — 換機工具 stack-commit 的本體：離站（leave）確認 _stack 的 daemon 已停、llm kernel 沒有 _stack 還沒回的信，只挑該帶走的檔經 commit-request 交一個 commit；到站（arrive）檢查能不能安全起樹與殼裡的 AOS_HOME／AOS_DAEMON／AOS_LLM_KERNEL。
+"""stack_commit — 11-23 起退場：stack 不再跟著 git 搬（使用者「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」），留著等使用者決定刪不刪。原本是換機工具 stack-commit 的本體：離站（leave）確認 _stack 的 daemon 已停、llm kernel 沒有 _stack 還沒回的信，只挑該帶走的檔經 commit-request 交一個 commit；到站（arrive）檢查能不能安全起樹與殼裡的 AOS_HOME／AOS_DAEMON／AOS_LLM_KERNEL。
 
   stack-commit leave  [--leave-dirty] [--ignore-llm] [--secret-ok F]… [--dry-run] [--line L] [--wait S] [--repo R] [--cache C]
   stack-commit arrive [--no-clean] [--dry-run] [--repo R]
