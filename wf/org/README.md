@@ -52,9 +52,9 @@ eca-aos 拿 fable 的第一版問了七題，使用者 11-23 答（逐字）：
 | 位子 | 誰 | 一句話 | 現況 |
 |---|---|---|---|
 | 負責人 [lead](lead/README.md) | `eca-aos` | 使用者的窗口；派工、驗收、管交件與活狀態 | 掛著 |
-| 知識庫 [kb](kb/README.md) | `eca-aos-kb` | 專管 `proto8/knowledge/` | 沒掛，有活才掛 |
-| 範本 [templates](templates/README.md) | `eca-aos-templates` | 專改 `proto8/templates/` 的定義 | 沒掛，有活才掛 |
-| 核心程式 [core](core/README.md) | `eca-aos-core` | 專管 `proto8/py/`、`proto8/cpp/`（第 3 題） | 沒掛，有活才掛；11-23 新開 |
+| 知識庫 [kb](kb/README.md) | `eca-aos-kb` | 專管 `proto8/knowledge/` | 掛著、睡著（11-23 下午掛，做完兩件後 sleep；`subagent wake` 叫醒） |
+| 範本 [templates](templates/README.md) | `eca-aos-templates` | 專改 `proto8/templates/` 的定義 | 掛著、睡著（同上） |
+| 核心程式 [core](core/README.md) | `eca-aos-core` | 專管 `proto8/py/`、`proto8/cpp/`（第 3 題） | 掛著、睡著（同上）；11-23 新開 |
 | 前端 [frontend](frontend/README.md) | `aos-eca-frontend` | 專管 `proto8/frontend/`（第 2 題） | 沒掛，前端大修開工才掛 |
 | 打雜工 [chore](chore/README.md) | 用到才掛 | 蒐集、核對、機械式施工 | 還沒有：真模型端點沒驗 |
 

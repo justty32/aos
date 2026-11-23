@@ -40,11 +40,12 @@
 **組織（[wf/org](org/README.md)，使用者 11-23 答七題定案）**
 - 負責人 `eca-aos`；位子 kb（`proto8/knowledge`）、templates（`proto8/templates`）、core（`proto8/py`、`cpp`）、frontend（`proto8/frontend`，大修開工才掛）；打雜工是 sol 的 agent-fsm，這台還掛不起來。
 - 我只親手寫三樣：活狀態（progress、HANDOFF、筆記）、抄他的話進規矩、`wf/org`；其餘照派。位子在自己範圍內先交後報。
+- **三個位子 15:24 起都在睡（`subagent sleep`，使用者「可以讓他們sleep？」）**：行程收掉、stack 與筆記留著、信照樣排隊；要用時 `subagent wake <名>`，repo 這台 daemon 重起時也會自己醒。
 - **三個位子是真的掛著的 eca**（`subagent` 工具掛的，定義直接指範本 `eca-claude`，各自 stack 有 `system.txt` 與 `notes_path`）：`subagent ls` 看、`mailbox_send {to: 名}` 派工、它們的 DONE 進我的信箱。每隻都吃第二帳號的額度。沒開 auto_restart。
 
 **還在跑、回來要收的**
 1. `eca-aos-templates`：兩件都交了（`26a1da529`、`2274b93bf`），閒著。沒派的尾巴：`proto8/docs/CONVENTION.md:12` 可加連結到 `daemon-sub`；`wf/workflows/dispatch/kits/gather/tools.json` 還有舊句「cannot lift its own limits」；`templates/kernel/docs/01-llm-kernel.md` 第 26 行可補 strict 一句。
-2. `eca-aos-core`：strict 實證成立、修了（`a30197e52`），**15:00 已在公司機跑 `install.py`**（使用者「現在跑」）。第二件在做：`json_search` 的 `key:""` 擋掉報錯；交了之後要再裝一次，**再問使用者**。全面 strict 格式使用者說「不要做嚴格」。`eca-aos-kb` 在補知識庫的 strict 那句。
+2. `eca-aos-core`：兩件都交了、都裝了（`a30197e52` 補 `strict:false`；`733a5fecc` `json_search` 的 `key:""` 報錯；公司機 15:01、15:23 各跑一次 `install.py`，使用者「現在跑」「1.好」）。全面 strict 格式使用者說「不要做嚴格」。`eca-aos-kb` 知識庫跟上了（`9c80bad55`、`b6b8c4222`）。
 3. 拿掉 `wf/tree/root` 的 `_clock`：定義與文件已交（`79fd8f1a1`），**公司機活樹那一列 15:01 已 `rm`**（使用者「_clock可以下」；表上剩 `_sweeper` 與四隻 agent，根的鐘照走，`~/repo/aos/.stack/clock` 留著不再更新）。暫存樹留在 `~/.aos/scratch/tree-noclock-1123/`。還沒跟上的文件：aos-teams/06 現況段與硬規則第 9 條（daemon 台數也舊了）、`wf/public/活樹旁邊.md` 第 5 行、`aos-teams.md` 第 62 行；想等家機改完一起改。
 4. `mine_arena/main` 的第二封信（六題「請 aos 考慮」）：事實部分已回（PROGRESS），**方向部分等使用者來談**，談完回它一封 DONE。使用者說過會親自找我談「上層怎麼約束下屬」與「agent 之間的資源分配」。
 

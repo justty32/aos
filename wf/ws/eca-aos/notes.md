@@ -204,3 +204,12 @@
 - 此時：kb、templates 閒著；core 在做 `json_search`。
 - **core 位子第二件 DONE**（信 `01795418407179406444.1535835.2638904`，commit `733a5fecc`，我對過 diff）：`py/aos/json.py` 的 `do_search` 對 `key:""` 報 ArgumentsBad（`json_search`、`jsonx_search` 共用）；兩支 `_tooldef.json` 的 key 說明補「not empty」；測試加兩條；乾淨複本測試全過。**還沒裝**，要再問使用者一次 `install.py`。轉給 kb（REQUEST，改 `aos/tools/json_search.md` 第 5 行）。
 - 15:20：三個位子都交過兩件。core、templates 閒著，kb 在做最後一句。
+
+## 2026-11-23 15:23：第二次裝、三個位子睡下
+
+- 使用者（逐字）：「1.好。3.可以讓他們sleep？」（1＝第二次 `install.py`；他打 3，指的是我問的第 2 點「三隻要不要收掉」）。
+- **第二次 `install.py` 跑了**（15:23，exit 0，裝前 `py/`、`cpp/` 乾淨；`lib/aos/json.py` 等於 `py/` 那份）。
+- **kb 位子第三件 DONE**（信 `01795418539697195361.1554605.2652155`，commit `b6b8c4222`）：`aos/tools/json_search.md`、`json_get.md`、`jsonx_set.md` 各一句，加 mtime／ctime 那條筆記。
+- **三個位子都 `subagent sleep` 了**（15:24）：daemon 收掉它的行程、stack 留著、表上是 sleeping；寄信照樣排隊；`subagent wake <名>` 叫醒；repo 這台 daemon 重起時它們也會自己醒（工具回的話）。跟 `rm` 的差別：還佔 `max_subagents` 的名額（3/4），表上那列還在。
+- 位子試行第一天的數：kb 三件、templates 兩件、core 兩件，都是自己交件、我事後對 diff；從寄信到 DONE 最短 5 分鐘、最長約 20 分鐘（core 跑整套測試）。
+- wf/org 成員表三列改成「掛著、睡著」。
