@@ -12,7 +12,7 @@ wf/advices 入口：AI 對 aos 本身的意見精簡版的導航、怎麼投新�
 
 ## 有什麼
 
-本夾頂層只放這三個檔，每個小於 8 KB（子夾 `feedback/` 是 aos-feedback 的資料）。每條一兩句，括號是出處。做掉一條就刪那條。原本 99 條的全文與各批整理紀錄 11-17 隨各 archive 刪掉了（看 git 歷史）；[archive/](archive/README.md) 現在只放 11-17 從頂層搬來的 salvage。
+本夾頂層只放這三個檔，每個小於 8 KB（子夾 `feedback/` 是 aos-feedback 的資料）。每條一兩句，括號是出處。做掉一條就刪那條。原本 99 條的全文與各批整理紀錄 11-17 隨各 archive 刪掉了（看 git 歷史）；`archive/` 現在只放 11-17 從頂層搬來的 salvage（這夾 11-17 也刪了，見 git 歷史 b01a893de）。
 
 | 檔 | 收什麼 |
 |---|---|

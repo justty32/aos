@@ -25,7 +25,7 @@
 |------|------|
 | [moving-things.md](moving-things.md) | 搬檔／改目錄名／拆 repo：六類會斷的東西與驗證程序 |
 | [reports/](reports/) | 各輪重構與審查的舊報告，一輪一夾；11-17 起凍結，新的報告寫進當天的 `proto8/thinking/<月>/<日>/`（使用者 11-17 待裁網頁 wf-5ii 選 a） |
-| [archive/](archive/README.md) | 封存（索引在它的 README） |
+| `archive/` | 封存（索引在它的 README；11-17 已刪，見 git 歷史 c97d6ade8） |
 
 ## 交接
 
