@@ -190,3 +190,12 @@
 - **core 位子第一件 DONE**（信 `01795417138932198477.1345573.2512079`，commit `a30197e52`，我對過 diff）：真模型兩次最小請求實證——Responses 不帶 `strict` 後端回顯 strict true、required 列滿；帶 false 就只給要的參數。`responses_api.py` 的 `_tool()` 對沒寫 strict 的 function tool 補 `strict:false`；乾淨複本測試全過。**沒跑 install.py，要問使用者。** 它查時 127.0.0.1:4000 有在聽（litellm），gpt 包都指那裡。
 - 轉出去的：core 第二件（REQUEST `01795417165379814479.1349261.2514724`：`json_search` 的 `key:""` 擋掉報 ArgumentsBad）；kb（REQUEST `01795417172350544852.1350171.2515421`：知識庫補 strict 那句與 troubleshooting）。還沒轉：templates 的 `kernel/docs/01-llm-kernel.md` 第 26 行（core 說不改也不會錯）。
 - 要帶給使用者的方向題：工具 schema 要不要全面改成 strict 格式（36 支都要改寫、選填改 `["string","null"]`、開放物件寫不了；好處是後端保證合 schema）。core 與我都不建議現在做。
+- **templates 位子第二件 DONE**（信 `01795417162036636152.1348777.2514390`，commit `2274b93bf`，我對過：兩份 tools.json 相同、`proto8/templates/kits` 裡沒有舊句了）。它提醒：`wf/workflows/dispatch/kits/gather/tools.json` 還有舊句「cannot lift its own limits」（那份跟產品版本來就不同，不歸它），還沒派。templates 位子現在閒著。
+
+## 2026-11-23 15:00：使用者三個答案，裝了、拿了
+
+- 他說（逐字）：「現在跑。_clock可以下。不要做嚴格」。
+- **`install.py` 跑了**（15:00，`cd proto8 && python3 install.py`，殼裡先 unset 全部 `AOS_*`；exit 0；裝之前 `git status -- py cpp` 是乾淨的，所以 lib 等於 HEAD）。`lib/tools/base/llm_http/responses_api.py` 與 `py/` 那份相同。**沒驗**：沒有真的叫一隻 gpt 腦的 agent-fsm 看 `index_view` 還填不填空字串（core 在乾淨複本上真打過一次）。
+- **活樹 `_clock` 拿掉了**（15:01，`aos-daemon-ctl -d ~/repo/aos/.stack rm _clock`）：表上剩 `_sweeper`、`eca-aos`、kb、templates、core；`~/repo/aos/.stack/clock` 停在 15:01:08，根的鐘照走。
+- **全面 strict 格式不做**（使用者定）。
+- core 的 `json_search` 修完後還要再裝一次：他這句「現在跑」只算這一次，到時再問。
