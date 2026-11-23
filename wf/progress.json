@@ -436,6 +436,28 @@
         "[施工步驟 5、8](../proto8/thinking/2026-11/22/aos-user新家-1122/03-推薦與施工步驟.md)"
       ],
       "since": "2026-11-22"
+    },
+    "company-wsl-1123-verify": {
+      "title": "公司 WSL 11-23 重建後沒驗到的：真模型端點、第二帳號的 claude",
+      "status": "open",
+      "flow": "",
+      "what": "LiteLLM 用使用者自己開的 ~/repo/llm_proxy 根那套（1.87.5、不用 key），行程在，但 11-23 幾次唯讀看 4000 埠都沒在聽，真模型端點沒驗。repo aos 的根帶 CLAUDE_CONFIG_DIR=~/.claude-alt，eca-aos 掛著但沒開過畫面、沒問過話，真的 claude 與第二帳號沒走過一輪。~/aos-home 改成一棵樹由線 two-trees-1123 做",
+      "next": "使用者起樹後：看 4000 埠在不在聽、開 eca-aos 畫面（帶同一個 CLAUDE_CONFIG_DIR）問一句",
+      "see": [
+        "[公司WSL重建與stack改名-1123](../proto8/thinking/2026-11/23/公司WSL重建與stack改名-1123.md)"
+      ],
+      "since": "2026-11-23"
+    },
+    "sol-high-pack": {
+      "title": "端點包 sol-high 對不上：kits 寫 sol-high，llm kernel 範本 11-21 起是 sol 加 reasoning_effort",
+      "status": "open",
+      "flow": "",
+      "what": "公司機 11-23 為了對上配給包 kits，在 ~/aos-home/llm 多加了一包 sol-high，repo 沒改。要嘛 kits 改用 sol、要嘛範本補回 sol-high，還沒人定",
+      "next": "",
+      "see": [
+        "[公司WSL重建與stack改名-1123](../proto8/thinking/2026-11/23/公司WSL重建與stack改名-1123.md)"
+      ],
+      "since": "2026-11-23"
     }
   }
 }

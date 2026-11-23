@@ -12,53 +12,59 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-22 傍晚（家機，使用者在外面玩、用 Remote Control）——搬家已完成：eca-aos 住 `~/repo/aos/_stack`；小工作室四件、wf/user、aos-user 新家、kits、zh-md 都做完了
+## 2026-11-23 上午（公司機）——公司 WSL 重建好了、stack 改名 `.stack` 不跟機器搬；樹現在是停的，使用者自己開
 
-**使用者 compact 前的話（逐字）**：「我人還在外面玩，總之先按推薦做」「你這邊抓個斷點，我幫你compact」。
+**使用者換 session 前的話（逐字）**：「把樹停掉，我自己開。然後你這邊收尾，我要換session了。順便告訴我怎麼起樹」。
 
-**我是誰／在哪**：`eca-aos`，stack `~/repo/aos/_stack/procs/eca-aos`（14:12 從 `~/aos-home/.stack` 搬來），daemon `~/repo/aos/_stack`，根定義 `wf/tree/root/`；llm kernel 獨立跑（定義 `~/aos-home/llm`、stack `~/aos-home/.llm-stack`，沒有 `LITELLM_KEY`，真模型的 agent-fsm 會失敗）；舊樹在 `~/aos-home.old-1122/`（退路，不刪、不起）。`~/.zshrc` 已改（備份 `~/.zshrc.bak-1122`）。我的 `tools.json` 的 `$override` 已改成 `$env AOS_HOME`；程式也修了（`89caf5117`，已 install）。底下三個 subagent（3/4）：`eca-aos-templates`、`eca-aos-kb`、`aos-eca-frontend`，系統文字都加了「讀自己的 notes.md」一段（frontend 新設了職責段：管 `proto8/frontend/`、職責未正式定）；`notes_path` 已寫在三格 stack（內容 `wf/ws/eca-aos/<名>/notes.md`，相對 AOS_WS）。
+**授權（11-23 當場）**：派工照「普通工作交給opus，簡單工作或雜活交給sonnet」「agent做事前都要讀過wf/規矩，簡單工作或雜活除外」「agent可以再派子agent，模型隨意」。**push 還沒給**：他說「我今天五點下班，下班前再統一push」，要他本人再說一次才推。刪檔沒給（換機工具他說「先留著」）。頂層是 Windows 上的 Claude Code，不在 aos 樹裡；實際工作在 WSL 的 `~/repo/aos`，Windows 那份 clone 不動。
 
-**照推薦施工的四件（都已完成，都沒 push）**：
-- `eca-aos-templates`：線 `eca-aos-templates-1122-notes-hook-a`，已完成（`774fec243`）。範本 `templates/eca-claude/compact_hook` 壓完叫 subagent 先讀自己的筆記（stack 的 notes_path），ann 抄本一起改了。
-- `eca-aos-kb`：線 `eca-aos-kb-1122-feedback-apply`，已完成（`65bb2891f`）。body.md 換新寫法，新增 `eca_reading.md`、`troubleshooting.md`。它要加的規矩句已由線 `wf-rule-kb-troubleshoot-1122` 加進規矩卡「回報怎麼寫」第 4 條（`919104d50`）。
-- `aos-eca-frontend`：線 `aos-eca-frontend-1122-parents-b`，已完成（`f3e2581d7`）。全景頁上層只信 subagent 紀錄加 aide.json，拿掉設定檔 parents／名字前綴／parent_rules 三種猜法，孤兒平鋪最上層，拿掉寫死的 repo-aos 與 `~/aos-home/ws/tools`。活的全景頁（pid 9460）還是舊程式，見下面「使用者回家要做的」第 1 項。
-- Claude Code 背景 subagent 線 `notes-reload-1122`：已完成（`e5903dc7a`）。`wf/tools/compact_reload.sh` 在 subagent 裡不貼頂層 HANDOFF，改指向自己的 notes_path；`wf/ws/README.md` 地盤規矩第 4 條已補。
+**這台現況**：
+- llm kernel：定義 `~/aos-home/llm`、stack `~/aos-home/.llm-stack`，端點指 `localhost:4000/v1`（多加了一包 `sol-high`）。用普通 Claude 設定檔。
+- 根：daemon `~/repo/aos/.stack`，根定義 `wf/tree/root`，帶 `CLAUDE_CONFIG_DIR="$HOME/.claude-alt"`（第二個帳號，他已登入）。底下掛了 `eca-aos`（範本 `eca-claude`，筆記 `wf/ws/eca-aos/notes.md`），**從沒開過畫面、沒問過話**。
+- 兩台都 shutdown 了，沒有 aos 行程。登入殼是 zsh（`~/.zshrc`、`~/.bashrc` 都加了 aos 段，備份 `.bak-1123`）。
+- LiteLLM 用他自己開的 `~/repo/llm_proxy` 根那套（1.87.5、不用 key），不是 pinned；**4000 埠一直沒在聽，真模型沒驗過**。
 
-**847b38c28 之後做完的（都沒 push）**：
-- **wf/user 使用者專屬區**：`e27106c40` 開區＋規劃（[使用者專區-1122](../proto8/thinking/2026-11/22/使用者專區-1122/)）；`152ef2b10` 施工，使用者原話「wf/user是我的地盤，裡面的東西無法保證穩定性。user advice可以搬進去。剩下都按照推薦」——不穩定那條進 [common/user.md](workflows/common/user.md)、新增 `private/`（不進 git）、user-advice `git mv` 到 `wf/user/advice/`、開場改三軸（`compact_reload` 印 wf/user 變動的檔名，讀到哪記在 `wf/ws/eca-aos/user-seen.json`）、index_gen 跳過 wf/user；`cd42a8370` compact_reload 最後那行提醒也改三軸。
-- **aos-user 新家**：`cd2164274` 規劃（[aos-user新家-1122](../proto8/thinking/2026-11/22/aos-user新家-1122/)）；`e3baf7f72` 施工，四題都 a：程式在 `proto8/frontend/aos-user/`，`bin/aos-user` 是相對 symlink、source env.sh 就在 PATH；tick 沒裝、systemd 沒碰；progress 新開 `aos-user-home`。
-- **progress 整理**：`24589f675` 結 3 條、改寫 10 條，剩 29 條（之後 `aos-user-home`、`kb-zh-md-redo` 狀態又變）。`99011908a`、`7e0d8f43a` 出待答清單 `wf/user/待答-1122.md`（11-22 檔名）；第 55 行問「kb-zn不用管」的意思已有答案：指 eca-aos-kb 不用管中文版，跟後來「要中文版跟上」不衝突。
-- **kits 重組**：`34aba891b`，`wf/workflows/dispatch/kits/` 的 site.txt、gather/.env、gather/system.txt 改成新位置。
-- **index_view.md 前後矛盾已修**：`677e79b50`，[`proto8/knowledge/aos/tools/index_view.md`](../proto8/knowledge/aos/tools/index_view.md) 照程式改成 index 項目可以是純字串，舊的「必須是物件」說法已拿掉；中文版沒跟，等使用者定同步做法（見等使用者第 1 題）。
-- **knowledge-zh-md 跟上英文正本**：`f16babeb4`，158 頁＋14 份 README 跟上 HEAD（使用者原話「可以的話我是希望knowledge zh md能夠跟上最新的」）。使用者也同意 `e3baf7f72` 對 zh-md 的改動留著；早上那句「不要動 zh-md」已不適用。
-- **kits 對齊**：`d9c9e2d79`，`system.txt` 上限放寬到 3,500；產品版 `general.A.txt` 改成跟 wf 版一字不差；兩個產品包重拼；test_kits 8 過。
-- **zh-md 規矩與譯法**：`eb97fd28f`，收工時查中文版過期頁，有就派 opus 補，規矩寫在 `wf/workflows/common/user/02-交接與收工.md`「收工」那節；index_view、kits 兩頁補上；stock template 統一譯成「內建範本」；progress 的 `kb-zh-md-redo` 結掉。
+**要改成兩棵樹**（使用者換 session 前又說，逐字）：「應該說，我預期會有兩棵樹，一棵是這台的，在~/aos-home，底下掛著llm kernel。另一棵是repo aos的，啟動的時候會是CLAUDE_CONFIG_DIR=alt AOS_LLM_KERNEL=...」也就是 `~/aos-home` 要是一棵真的樹（有根 daemon，llm kernel 掛在它底下），不是現在這樣 llm kernel 自己一台。
 
-**等使用者（新）**：四題 11-22 都照推薦定了（使用者「都先按照推薦」），見上面兩筆。
+**這台怎麼起樹**：看 [03-換機](workflows/dev-env/03-換機.md)；`~/aos-home` 正由線 `two-trees-1123` 改成一棵樹（根底下掛 llm kernel），做完那條線會回來補這段。開 `eca-aos` 畫面的殼要帶跟根一樣的 `CLAUDE_CONFIG_DIR`。
 
-**在跑**：（無）
+**今天做完的（都沒 push，WSL 的 main 比 origin 多這些）**：
+- `7bf52abd1` 新範本 `proto8/templates/eca-claude-alt`（第二帳號版 eca-claude，可選，活樹沒用它）。
+- `1a1de1921` `03-換機.md`：起根那行帶 `CLAUDE_CONFIG_DIR`，範本可選。
+- `dfb94ecd2` `_stack` 改名 `.stack`、git 忽略、換機那套退場；`03-換機.md` 改寫成[每台怎麼設、怎麼起樹](workflows/dev-env/03-換機.md)；換機工具標退場、沒刪。
+- `34446887a` progress 兩條；`27ed65ae6` 全景頁 systemd 範本路徑改 `.stack`。
+- 收尾線 `wrapup-1123-am`：本條、當天紀錄、中文版 `agents.md` 跟上、progress 兩條新的。
 
-**使用者照推薦定的（11 題）**：kb 1c、2c＋2a、3c、4c；frontend 乙現在做丙以後接、孤兒平鋪 a、aide.json 先留 a；compact 提醒 A、只印路徑、A＋b、notes_path 由上層寫 a。沒按推薦做的：公司體制 7 題（`proto8/thinking/2026-11/22/公司體制-1122/03-要問的.md`，第 1 題是使用者的想法、沒推薦）、筆記調查 5 題（`筆記調查-1122/`，多半已被上面蓋過）。
+**定了什麼**（紀錄 [公司WSL重建與stack改名-1123](../proto8/thinking/2026-11/23/公司WSL重建與stack改名-1123.md)）：
+- 「這台的llm kernel放~/aos-home/llm」。
+- LiteLLM「就用我剛開的」。
+- repo aos 的樹用第二帳號，「~/aos-home的這個root daemon仍然是用普通設定檔」；做法「還是用環境變數起活樹，會更靈活」。
+- 「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」換機工具「先留著」。
+- 兩棵樹：`~/aos-home` 一棵（底下掛 llm kernel），repo aos 一棵（起的時候帶 `CLAUDE_CONFIG_DIR` 與 `AOS_LLM_KERNEL`）。線 `two-trees-1123` 在做。
 
-**今天做完的（都沒 push）**：工作區與 `_stack` 全線（線 1～7、9；規劃 `proto8/thinking/2026-11/22/工作區與stack-1122/`；搬家腳本 `wf/tools/home-move-1122/`；換機說明書 `wf/workflows/dev-env/03-換機.md`；換機工具 `wf/tools/stack-commit`）；progress 整理（42→32 條，`$ref` 搬 md 到 `wf/progress/`，`a540a0db7`、`b2013cc84`；`workspace-stack-alloc` 只剩線 8 公司那台＋題 4）；輸入成本調查與 A 實驗（無效，`907ddecc9`、`22501d7af`）；eca 範本瘦身、知識庫日期註記（上午）。Artifact 四頁由 aos 體系外的 tmux session `artifacts` 發佈（kernel 攔截、權限零件、小工作室筆記、公司體制）。
+**還開著的**：
+- 真模型與 alt 帳號都還沒走過一輪（progress `company-wsl-1123-verify`）。
+- `sol-high`：kits 寫 `sol-high`，範本 11-21 起是 `sol` 加 reasoning_effort（progress `sol-high-pack`）。
+- `02-模型端點.md`、`01-跨機與外部工具.md` 寫公司用 pinned 那套；今天用根那套，長期怎樣他沒說，**先不改**。
+- `install.py` 結尾印的下一步還叫人抄進 `~/aos-home`；這台 `aos-user init` 沒查；`commit_queue.py` 的 `--stack-commit` 配套沒收。
+- `wf/user/待答-1122.md` 第 1、2 題（換機、`_stack` 帶哪些檔）已不適用；那是他的地盤，沒改。
+- Windows 那份 clone 的 `wf/HANDOFF.md` 有一段沒交的舊修改（11-20 artifact 備註，早在 `33b0e59b9` 交過）。push 後那份 pull 會撞，要他自己跑 `git checkout -- wf/HANDOFF.md`。
 
-**明天（11-23）在公司從哪裡接**（使用者 11-22 晚原話：「今晚差不多就這樣了，明天去公司繼續。收尾吧」「對話記錄和信件公開這事我覺得沒關係，我反而比較擔心這會不會太大，畢竟很多時候這些對話記錄和信件都只是用來傳遞消息，常理來說應該進gitignore的」「好，就先這樣，因爲aos體系其實還沒穩定下來。push吧」）：
-1. 今晚只 push 程式碼，沒做換機 commit（`stack-commit leave`）。`_stack` 沒有任何檔進 git，家機的 daemon 照樣開著。
-2. 到公司後先 `git pull`，在公司自己的樹 `repo-aos` 上繼續，從這條 HANDOFF 和 `wf/user/待答-1122.md` 接起。新殼用 `command -v aos-user` 確認 PATH 上有 aos-user；`~/.aos/user` 不存在就跑一次 `aos-user init`（見 progress 的 `aos-user-home`）。
-3. 明天要派一件事：查清楚 `_stack` 換台時哪些檔真的要帶，再把不用帶的寫進 `_stack/.gitignore` 和 `wf/tools/stack-commit`（使用者擔心大小、說「應該進gitignore」的那件）。今晚量過：換機 commit 會加 62 個檔、共約 147 KB；最大的是 `history_removed.jsonl`（35 KB），再來是各 agent 的 `history.jsonl`（16 到 32 KB），信箱封存 4 封。要查：`history.jsonl` 跟換台後的 reseed 有沒有關係；`mailbox/archive` 和 `history_removed.jsonl` 能不能不帶；`clock`、`state_flux.json` 這類執行期檔該不該帶。公司那台的線 8（搬進 `_stack`）等這件定了再照新規則做；線 8 的第 4 題（公司那台的 llm kernel 放哪）也還沒答。
-4. 使用者說 aos 體系還沒穩定，所以換機 commit 先不做。
+**家機 pull 之後要做的**（照貼；細節在 03-換機「從舊名 `_stack` 改過來」）：
+```sh
+aos-daemon-ctl -d ~/repo/aos/_stack shutdown
+mv ~/repo/aos/_stack ~/repo/aos/.stack
+sed -i.bak-1123b 's#repo/aos/_stack#repo/aos/.stack#' ~/.zshrc
+cd ~/repo/aos && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK aos-exec --stack .stack wf/tree/root
+```
+全景頁若是 systemd 起的，`~/.config/systemd/user/aos-frontend.service` 裡的 `_stack` 也要改，再重啟。
 
-**使用者回家要做的**：1. 關掉／重開停在舊 `~/aos-home` 的終端機分頁，用新的 `AOS_DAEMON` 重起 `aos-frontend serve`（`aos-frontend.service` 已改指 `_stack`；現在活的全景頁 pid 9460 還是舊程式，重開後才會用上 `f3e2581d7` 的新版；先開新殼，`command -v aos-user` 要看到 `~/repo/aos/proto8/frontend/bin/aos-user`，再跑 `AOS_DAEMON=~/repo/aos/_stack aos-frontend serve`）；2. 要真模型時設 `LITELLM_KEY`（`aos-daemon-ctl -d ~/aos-home/.llm-stack shutdown` 後從有金鑰的殼 `home-move start-llm`）；3. 11-22 晚已 push 程式碼；換機 commit 先不做，見「明天在公司從哪裡接」。
-
-**授權（11-22 當場）**：「可以開工，去吧也可以動活樹」「zshrc可以動」「先按推薦做」。push 沒給。刪檔沒給。`install.py` 今天跑過三次（都先講一聲再跑）。
-
-**先記著、不追的**：專區信數對不上——11-18 交接寫 3 封，現在 0 封，log 最後一筆 11-16。
-
-**一般 tmux 裡還開著的兩個 aos 體系外 claude**：`artifacts`（cwd `~/.aos/scratch/artifacts-1122/`）、`home-move-run`（搬家執行員，已做完、閒著）。用 `env -i PATH=/usr/bin tmux …` 操作。
+**下一個 session 從哪接**：
+1. 他會細說「把stack一起隨機器搬遷，不是一個好主意」那塊（「這塊之後我會細說」）。
+2. 早上「先處理這個，然後我們再來」後面要做的事，他還沒說。
+3. 下班前（五點）問他要不要 push。
 
 **坑**：
-- Agent 工具派的背景 subagent 叫不停、它起的行程不會自己收；子 agent 用不了 aos 信箱，回報在它最後一則訊息。
-- 不要在 repo 跑 `git stash`、`reset --hard`、`checkout -- .`、`clean -fdx`（`_stack` 被忽略，會被倒回或刪光）。
-- Remote Control 裡 `/mcp` 要寫 `/mcp reconnect all`。我不能替自己下斜線指令，要使用者打。
-- 一句話兩種讀法先標出讀法；語音輸入錯字照錄附讀法；沒查過的講明是推測。
-- 乾淨複本先跑 `install.py`；中文檔名 claim 給真路徑；`ls` 是 `eza`，背景指令會卡。
+- 開畫面的殼要帶跟根一樣的 `CLAUDE_CONFIG_DIR`；`env.json` 不記這個變數。
+- 不要在 repo 跑 `git stash`、`reset --hard`、`checkout -- .`、`clean -fdx`（`.stack` 被忽略，會被倒回或刪光）。
+- 中文檔名 claim 給真路徑。
