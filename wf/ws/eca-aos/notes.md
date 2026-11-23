@@ -184,3 +184,9 @@
 - 沒跟上的文件（歸誰還沒派）：aos-teams/06 第 8、28 行、`wf/public/活樹旁邊.md` 第 5 行、`aos-teams.md` 第 62 行。
 - 子 agent 多 `ls` 了一次 `~/aos-home/.stack`（我只准 repo 那份），唯讀。
 - 此時 templates、core 兩個位子還沒回信；工作樹剩的未交檔是它們的。
+- **templates 位子第一件 DONE**（信 `01795417019569430407.1328691.2500143`，commit `26a1da529`）：`daemon-root/README.md` 加指到 `daemon-sub` 的一句、兩份起手範本抄本重抄（`diff -r` 只剩 `.env` 不同，我對過）；乾淨複本跑過全部範本測試。它沒先 claim 就 submit（有警告、照樣成功）。它提：`proto8/docs/CONVENTION.md:12`「子 daemon 範本預設不帶」可加連結指到 `daemon-sub`，條文不歸它，還沒派。
+- **轉給它第二件**（REQUEST `01795417035081079563.1331124.2501694`）：`kits/gather|review/tools.json` 的「cannot lift its own limits」改成符合事實、只改說明文字、tests/kits 過了再交。
+- core 位子此時工作樹已有 `py/tools/base/llm_http/responses_api.py` 與它的測試在改，還沒回信。
+- **core 位子第一件 DONE**（信 `01795417138932198477.1345573.2512079`，commit `a30197e52`，我對過 diff）：真模型兩次最小請求實證——Responses 不帶 `strict` 後端回顯 strict true、required 列滿；帶 false 就只給要的參數。`responses_api.py` 的 `_tool()` 對沒寫 strict 的 function tool 補 `strict:false`；乾淨複本測試全過。**沒跑 install.py，要問使用者。** 它查時 127.0.0.1:4000 有在聽（litellm），gpt 包都指那裡。
+- 轉出去的：core 第二件（REQUEST `01795417165379814479.1349261.2514724`：`json_search` 的 `key:""` 擋掉報 ArgumentsBad）；kb（REQUEST `01795417172350544852.1350171.2515421`：知識庫補 strict 那句與 troubleshooting）。還沒轉：templates 的 `kernel/docs/01-llm-kernel.md` 第 26 行（core 說不改也不會錯）。
+- 要帶給使用者的方向題：工具 schema 要不要全面改成 strict 格式（36 支都要改寫、選填改 `["string","null"]`、開放物件寫不了；好處是後端保證合 schema）。core 與我都不建議現在做。
