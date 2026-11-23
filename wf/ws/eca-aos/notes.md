@@ -258,3 +258,26 @@
 - **2＝`install.py` 常設許可**：之後我自己判斷就跑，不逐次問。寫進 HANDOFF 授權段與 `wf/org/lead` 角色卡（我的讀法：只限 install.py；位子仍不自己跑）。
 - **第三次 `install.py` 跑了**（16:14，exit 0，裝前 `py/`、`cpp/` 乾淨）。生效的證據：我的 `self_state` resources 行已是新樣子（`limits none; whole agent uses …`）、`subagent` 工具說明多了 mem_mb 那句。
 - kb 位子 `9bebd15bb`（me.md、subagent.md、cli/sandbox.md、cli/agent.md）已交；`packs.md` 的 ws-write 那句等 core 第四件回來再轉。kb 現在醒著等。
+
+## 2026-11-23 16:25：規劃回來、五題寄專區；第二隻打雜工交卷
+
+- **fable 的規劃夾交了**（`272845ad2`，27 檔）：`proto8/thinking/2026-11/23/org範本與templates分層-1123/`。結論：三個有 org 的專案骨架相同（入口、四段角色卡、寫信規矩、只跟使用者說話的協調者、定義只指向角色卡），差別是九個獨立的選擇；`mecha-srpg` 沒有 `wf/org`、沒用 aos。推薦：只新增 `templates/orgs/`、一副骨架加 `CHOICES.md`、不附定義、英文、現有 org 不改。初稿 13 檔在規劃夾 `draft/orgs/`。progress 新條 `org-template-1123`（等使用者）。
+- **五題寄了使用者專區**（decide，信 `01795422306985215876.2125572.3028884`），也在畫面上列給他。他答了（專區回信要 `aos-user verify`，或他在畫面上直接說）→ 派範本位子照規劃夾 05 施工。
+- 分層代價的實數：這棵樹表上四列（eca-aos 加三個位子）定義記成 `$AOS_HOME/templates/eca-claude`；arena_cheater 七份定義 14 個檔指著 `templates/agent-fsm/`；程式六處寫死（其中 `agent_def`、`refs_check.py`、`aos-frontend` 用 join 拼，grep 抓不到）；三類只收得下 14 個範本夾裡的 7 個。
+- **第二隻打雜工 `eca-aos-sol-2` DONE**（信 `01795422269886385382.2119091.3025174`，16:04 送、16:24 回，20 分鐘）：四個檔 118 個相對連結，斷 2 個——`AGENTS.md:3` 的 `archive/README.md`、`user/01:50` 的 `archive/proto7-2/notes/decisions-2026-10-09.md`（repo 根沒有 `archive/`，我 `ls` 對過）。改好的配給包可用：26 支工具、沒有讀錯路徑。已 `rm`。兩個斷連結怎麼修還沒派（`AGENTS.md` 是鐵律檔、`user/01` 是偏好檔，要逐字看）。
+
+## 2026-11-23 16:27：使用者答五題「1.c,2.a,3.a,4.a,5.a」
+
+- 他答（逐字）：「1.c,2.a,3.a,4.a,5.a」。**第 1 題選了 c（不是推薦的 a）**：照原話三分，agent 範本搬進 `templates/agents/`。2a 一副骨架加 CHOICES、3a 不附定義、4a 英文、5a 現有 org 不改（只在 `wf/org` 入口加一行「範本在哪」）。專區那封同題的信（`01795422306985215876.2125572.3028884`）他是在畫面上答的，專區那邊還掛著，之後他若也在專區答、以畫面上這句為準並對一下是否一致。
+- **org 範本落地已派**：範本位子叫醒，第四件（REQUEST `01795422618877715679.2180326.3060074`）＝規劃夾 05 第 1～5 步，新夾直接放 `proto8/templates/orgs/`，不搬任何現有範本。它回來後我做第 6 步（`wf/tools/index_gen.json`、`index_gen_desc.json` 加 orgs 一格）、轉 kb 寫知識庫那頁、`wf/org/README.md` 加一行（5a）。
+- **丙（三分）還不能動手**，要先問使用者三件：① 歸不進三類的七夾（`daemon-root`、`daemon-sub`、`start-api`、`start-eca`、`tool-python`、`judge-llm`、`kits`）去哪；② `agent_def new` 的 `template` 還收不收光名字；③ 什麼時候停樹切換、可不可以唯讀看別棵樹的表來盤點。另一題順帶問：要不要趁這次把 `agent-fsm` 執行期用的格程式與 hook 宣告搬出 `templates/`（搬到 `lib/`），以後範本怎麼搬都不會斷活樹。
+- **為什麼不能邊做邊交**：repo 的工作樹就是活樹的 `AOS_HOME`，範本夾一搬（連沒 commit 的搬動都算），我自己和每隻 agent 的定義路徑當下就斷。做法只能是：在 `git archive` 的乾淨複本裡把整批改好、測過、做成一個補丁，等各棵樹都停的時段一次套上、改表、再起。
+- **core 位子第四件 DONE**（信 `01795422576718164849.2171845.3055858`）：`9ce053bfa`（ws_write 經 aos-tools 也擋定義夾，新模組 `py/aos/daemon_table.py`，guard 的 scope.py 共用；讀表一次約 0.2 ms，整次呼叫看不出差別）、`07f639035`（`user_send` 那條測試不再看環境）。**16:30 第四次 `install.py` 跑了**（常設許可；exit 0，裝前 py／cpp 乾淨）。core 已 sleep。轉 kb 改 `packs.md` 那句（REQUEST `01795422637298356013.2183323.3061916`）。
+
+## 2026-11-23 16:33：三分的四個答案「1.a,2.a,3.a,4.可以，明天早上切」
+
+- 他答（逐字）：「1.a,2.a,3.a,4.可以，明天早上切」。＝ ① 七個歸不進的夾再開三類：`daemons/`（daemon-root、daemon-sub）、`starts/`（start-api、start-eca）、`tools/`（tool-python、judge-llm），`kits` 放 `agents/` 底下，共六類；② `agent_def new` 照收光名字（`agent-fsm`），程式自己去 `agents/` 找；③ 趁這次把 `agent-fsm` 執行期用的格程式與 hook 宣告搬進 `lib/`；④ 可以唯讀看別棵樹的表（只看定義路徑），**切換在 11-24 早上**，由他說停。
+- **盤點（16:34，我自己跑的，只讀各表的 def 欄）**：整棵樹表上指 `proto8/templates/` 的有 13 列——repo 這棵 4（eca-aos、kb、templates、core，都是 `eca-claude`）；根上 `eca_main`（eca-claude）；`mine_arena/main`（eca-claude）；`guanyu` 底下 `ops`、`mese`、`ops-field`、`ops-data`、`forum/main`（都 eca-claude）；`mine_paper/main`、`mine_mecha/main`（agent-fsm）。專案自己的定義夾另有 8 份：arena_cheater 的 dev、qa、design、review、integration；paper_readings 的 drafter、checker；`/mnt/c/code/guanyu/ops-notes/wf/org/patrol/def`——它們裡面有沒有動態連結到 `templates/agent-fsm/` 要逐份看（規劃說 arena 七份定義 14 個檔有）。根表比早上多了 `mine_mecha`、`guanyu/forum`。
+- 做法：派 fable 寫施工設計（規劃夾 06：目標目錄、lib 裡放哪、程式怎麼找、補丁怎麼做怎麼套、切換步驟與回退），再派位子在乾淨複本裡做成補丁；明早他說停才切。今天不搬任何現有範本夾。
+- kb 位子 `1a6709c41`（packs.md 的 ws-write 句、每包字數表四列重量）。它提一處沒寫進知識庫的例外（「別人的 stack」其實是放自己 stack 的那層，且那層是工作區本身或之上時不查），我判斷先不寫。
+- 派了 fable 寫三分的施工設計（規劃夾 `06*`）。16:35 把 HANDOFF「還在跑」整段換新、progress `findings-1123`、`org-template-1123` 更新，趕在 16:55 push 前交。

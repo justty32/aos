@@ -475,8 +475,8 @@
       "title": "11-23 查出、還沒修的 aos 問題（等派位子或等使用者）",
       "status": "open",
       "flow": "",
-      "what": "① gpt 腦的 agent-fsm 把選填參數當必填：**修了、裝了**（llm_http 補 `strict:false`，`a30197e52`）；`json_search` 傳 `key:\"\"` 改成報 ArgumentsBad（`733a5fecc`）；公司機 11-23 15:01、15:23 各跑一次 `install.py`，**家機 pull 後要自己跑一次**。沒驗：沒有真的叫一隻 gpt 腦的 agent-fsm 在活樹上看。tool_io 把空字串當沒給：core 判斷先不做。全面改寫成 strict 格式：使用者 11-23「不要做嚴格」，不做。② `ws_write` 經 aos-tools 呼叫時擋的是工具自己的小格與工具夾，不是 agent 的 stack 與定義（`py/tools/base/ws_write/_entry` 47～59 行；讀程式的推論、沒實跑），歸 core。③ `aos-agent ctl state` 的 resources 把每行程的 rlimit 與整棵樹的 RSS 印在同一行，看起來像總額；`mem_mb` 是位址空間上限（`RLIMIT_AS`＋`RLIMIT_DATA`），不適合限 Node、Chromium，文件沒提醒。④ 文件對不上現況：`cpp/aos-daemon/docs/09-份額.md` 寫「公司 WSL 無 systemd」（這台有）；`templates/kits/gather/tools.json` 與 review 那份的 description 寫「cannot lift its own limits」說得太強；`self_llm`、`self_system` 的 `_metainfo` 標 `arbitrary_exec: true` 原因不明；`proto8/docs/CONVENTION.md` 第 12 行附近可加指到 `daemon-sub` 的連結。⑤ mine_arena 第二輪提的六題（最小定義模板、取消與 scope 的 helper、任務級資源入口、沙箱配 Chromium、隔離等級、寄件人與工具版本驗證）：事實已回，要不要做等使用者來談。⑥ 沒有涵蓋整棵樹的組織文件（mine_paper/main 問過）；樹上兩隻同名的 `main`。",
-      "next": "家機 pull 後跑 install.py；②以後的幾項等派 core 位子（睡著，wake 就能接）",
+      "what": "11-23 查出的 aos 問題，當天修掉的：gpt 腦把選填參數當必填（llm_http 補 strict:false，a30197e52）；json_search 的 key:\"\" 報錯（733a5fecc）；ws_write 經 aos-tools 擋得到自己的 stack 與定義夾（8e14a5e38、9ce053bfa）；ctl state 的 resources 行分清每行程上限與整隻用量（a69d96ae7）；mem_mb 的提醒（4226bd3a5）；09-份額的 systemd 句（259e8afa9）；self_llm、self_system 不算任意執行（0093988b0）；配給包說太強的句子與 CONVENTION 連結。公司機 11-23 共裝了四次 install.py（最後一次 16:30），**家機 pull 後要自己跑一次**。還開著的：① 全面改成 strict 格式——使用者「不要做嚴格」，不做；tool_io 把空字串當沒給——core 判斷先不做。② 其他九支標 arbitrary_exec: true 的工具沒審。③ mine_arena 第二輪提的六題（最小定義模板、取消與 scope 的 helper、任務級資源入口、沙箱配 Chromium、隔離等級、寄件人與工具版本驗證）：事實已回，要不要做等使用者來談。④ 沒有涵蓋整棵樹的組織文件；樹上有三隻同名的 main（mine_arena、mine_paper、mine_mecha）加 guanyu/forum/main。⑤ 斷連結：AGENTS.md:3 與 user/01:50 指到 repo 根已不在的 archive/，aos-teams.md 與 07 檔頭寫「本夾 archive/」也不在（打雜工 eca-aos-sol-2 查的），怎麼修已問使用者、還沒答。",
+      "next": "家機 pull 後跑 install.py；③⑤等使用者",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)",
         "[wf/org](org/README.md)"
@@ -485,10 +485,10 @@
     },
     "org-template-1123": {
       "title": "org 範本與 templates 分層（使用者 11-23 要的）",
-      "status": "等使用者",
+      "status": "open",
       "flow": "",
-      "what": "使用者 11-23「wf/org這塊，去看看…arena_cheater, mine/paper_readings, mine/mecha_srpg，去總結一下，弄進template。template這邊你看看，是不是考慮把它分成templates/agents, templates/kernels, templates/orgs」。fable 規劃完：四樣本總結、org 範本初稿 13 檔（英文，在規劃夾 draft/orgs/）、分層三個選項與搬動代價盤點、五題。推薦：只新增 templates/orgs/；一副骨架加 CHOICES.md；不附現成定義；英文；現有 org 不跟著改。五題已問使用者，他答了才派範本位子施工（施工清單在規劃夾 05）。",
-      "next": "等使用者答五題 → 範本位子把 draft 搬進 proto8/templates/、寫測試 → kb 位子補知識庫",
+      "what": "使用者 11-23「wf/org這塊，去看看…去總結一下，弄進template。template這邊你看看，是不是考慮把它分成templates/agents, templates/kernels, templates/orgs」。規劃夾已交（272845ad2）。他答五題「1.c,2.a,3.a,4.a,5.a」、追問四件「1.a,2.a,3.a,4.可以，明天早上切」：(一) org 範本：一副骨架加 CHOICES.md、不附定義、英文、現有 org 不改——範本位子在做 proto8/templates/orgs/（不搬舊夾）。(二) templates 分成六類 agents／kernels／orgs／daemons／starts／tools（kits 放 agents 底下），agent_def new 照收光名字，並把 agent-fsm 執行期用的格程式與 hook 宣告搬進 lib/。**不能在工作樹裡邊做邊交**（工作樹就是活樹的 AOS_HOME，一搬就斷），要在乾淨複本做成補丁、停樹後一次套上。**切換在 11-24 早上，使用者說停才做**。盤點（11-23 16:34）：整棵樹表上指 proto8/templates/ 的有 13 列（repo 這棵 4、eca_main、mine_arena/main、guanyu 底下 5、mine_paper/main、mine_mecha/main），專案自己的定義夾另有 8 份要逐份看。fable 在寫施工設計（規劃夾 06）。",
+      "next": "範本位子交 orgs → eca-aos 補 index_gen 設定、kb 寫知識庫頁、wf/org 入口加一行；fable 的 06 回來 → 派位子在乾淨複本做補丁 → 11-24 早上使用者說停 → 切換（每步要他本人授權）",
       "see": [
         "[規劃夾](../proto8/thinking/2026-11/23/org範本與templates分層-1123/README.md)",
         "[eca-aos 筆記](ws/eca-aos/notes.md)"

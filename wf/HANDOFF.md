@@ -45,11 +45,13 @@
 - **三個位子 15:24 起都在睡（`subagent sleep`，使用者「可以讓他們sleep？」）**：行程收掉、stack 與筆記留著、信照樣排隊；要用時 `subagent wake <名>`，repo 這台 daemon 重起時也會自己醒。
 - **三個位子是真的掛著的 eca**（`subagent` 工具掛的，定義直接指範本 `eca-claude`，各自 stack 有 `system.txt` 與 `notes_path`）：`subagent ls` 看、`mailbox_send {to: 名}` 派工、它們的 DONE 進我的信箱。每隻都吃第二帳號的額度。沒開 auto_restart。
 
-**還在跑、回來要收的**
-1. `eca-aos-templates`：兩件都交了（`26a1da529`、`2274b93bf`），閒著。沒派的尾巴：`proto8/docs/CONVENTION.md:12` 可加連結到 `daemon-sub`；`wf/workflows/dispatch/kits/gather/tools.json` 還有舊句「cannot lift its own limits」；`templates/kernel/docs/01-llm-kernel.md` 第 26 行可補 strict 一句。
-2. `eca-aos-core`：兩件都交了、都裝了（`a30197e52` 補 `strict:false`；`733a5fecc` `json_search` 的 `key:""` 報錯；公司機 15:01、15:23 各跑一次 `install.py`，使用者「現在跑」「1.好」）。全面 strict 格式使用者說「不要做嚴格」。`eca-aos-kb` 知識庫跟上了（`9c80bad55`、`b6b8c4222`）。
-3. 拿掉 `wf/tree/root` 的 `_clock`：定義與文件已交（`79fd8f1a1`），**公司機活樹那一列 15:01 已 `rm`**（使用者「_clock可以下」；表上剩 `_sweeper` 與四隻 agent，根的鐘照走，`~/repo/aos/.stack/clock` 留著不再更新）。暫存樹留在 `~/.aos/scratch/tree-noclock-1123/`。還沒跟上的文件：aos-teams/06 現況段與硬規則第 9 條（daemon 台數也舊了）、`wf/public/活樹旁邊.md` 第 5 行、`aos-teams.md` 第 62 行；想等家機改完一起改。
+**還在跑、回來要收的**（16:35 更新）
+1. **org 範本**（使用者「去總結一下，弄進template」；五題答「1.c,2.a,3.a,4.a,5.a」）：`eca-aos-templates` 在把規劃夾的初稿搬成 `proto8/templates/orgs/`（信 `01795422618877715679.2180326.3060074`）。它回來後我要做：`wf/tools/index_gen.json`、`index_gen_desc.json` 加 orgs 一格；派 kb 寫知識庫那頁；`wf/org/README.md` 加一行「範本在哪」。
+2. **templates 三分**（1c，加追問四件「1.a,2.a,3.a,4.可以，明天早上切」）：六類 `agents`／`kernels`／`orgs`／`daemons`／`starts`／`tools`，`kits` 放 `agents/` 底下；`agent_def new` 照收光名字；`agent-fsm` 執行期用的東西搬進 `lib/`。**工作樹裡今天一個範本夾都不能搬**（工作樹就是活樹的 `AOS_HOME`）。一隻 fable 子 agent 在寫施工設計（規劃夾 `06*`），回來後派位子在乾淨複本做成補丁。**11-24 早上使用者說停才切換，每一步要他本人授權**。盤點結果與細節在 progress `org-template-1123` 與筆記「16:33」。
+3. 三個位子：kb 醒著（閒）、templates 醒著（在做 orgs）、core 睡著。打雜工兩隻都 `rm` 了（stack 留著）。
 4. `mine_arena/main` 的第二封信（六題「請 aos 考慮」）：事實部分已回（PROGRESS），**方向部分等使用者來談**，談完回它一封 DONE。使用者說過會親自找我談「上層怎麼約束下屬」與「agent 之間的資源分配」。
+5. 問了使用者還沒答的：`AGENTS.md:3`、`user/01:50` 等處指到已不在的 `archive/`，連結拿掉還是把 `archive/` 放回來。
+6. 活樹：`wf/tree/root` 的 `_clock` 已 `rm`（15:01）；`install.py` 今天裝了四次（最後 16:30），`lib/` 等於 HEAD 的 `py/`。
 
 **今天交了什麼**（都沒 push；每個的來龍去脈在筆記）：範本 `cli.json` 加 `"tui": "fullscreen"`（滾輪）；`wf/org` 與舊文件對齊；`aos-user` 的 send 自建信箱、逐題留言、公告；知識庫與 `wf/public` 跟上；新範本 `daemon-sub`；kb 位子自己交的 `74bedc157`。
 
