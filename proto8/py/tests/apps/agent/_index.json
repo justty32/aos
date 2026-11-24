@@ -56,6 +56,9 @@
  "test_llm.py": {
   "description": "Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and…"
  },
+ "test_ls_deep.py": {
+  "description": "Test aos-agent ctl ls --deep: walks rows whose stack is a daemon, adds PID state, STAGE and LAST-ACTIVE (fake tables)."
+ },
  "test_ls_health.py": {
   "description": "Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table."
  },

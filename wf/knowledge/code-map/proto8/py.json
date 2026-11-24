@@ -331,6 +331,7 @@
      "test_listen_brain_failure.py": "驗證 listen 等交出去的信時讀問腦失敗紀錄（cooldown.json＋stderr.txt）：身體停在錯上就馬上帶原因結束，會自己重送的只提醒（small-1118）。",
      "test_listen_timeout.py": "Verify zero-second listen waits without a deadline and still rejects invalid timeout combinations.",
      "test_llm.py": "Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and…",
+     "test_ls_deep.py": "Test aos-agent ctl ls --deep: walks rows whose stack is a daemon, adds PID state, STAGE and LAST-ACTIVE (fake tables).",
      "test_ls_health.py": "Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table.",
      "test_peek.py": "Test aos-agent peek on a fake daemon table (11-16 ok-small): it runs the definition's screen entry with peek COMMAND and passes its output and errors…",
      "test_reply_match.py": "Test reply matching on the reading side (reply-match-1114): ask / chat / listen --letter get the answer to their own letter from upgraded bodies, fal…",

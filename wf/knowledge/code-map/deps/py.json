@@ -71,7 +71,7 @@
    "module": "aos.apps.agent",
    "unit": "proto8/py/aos/apps/agent",
    "used_by": "proto8/py/aos/py",
-   "uses": "aos.agentlib.cli_a2a aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_linger aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.daemon_ctl aos.declared_files aos.directive_value aos.flags aos.ws"
+   "uses": "aos.agentlib.cli_a2a aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_linger aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.comm aos.comm.walk aos.daemon_ctl aos.declared_files aos.directive_value aos.flags aos.ws"
   },
   {
    "kind": "app",
@@ -224,7 +224,7 @@
    "kind": "lib",
    "module": "aos.comm",
    "unit": "proto8/py/aos/comm",
-   "used_by": "proto8/py/aos/apps/comm",
+   "used_by": "proto8/py/aos/apps/agent proto8/py/aos/apps/comm",
    "uses": ""
   },
   {
