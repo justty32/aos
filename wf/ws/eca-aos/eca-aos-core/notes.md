@@ -127,3 +127,10 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - socket 雜湊：cli_cell.tty_socket＝sha256(realpath(小格))[:16]；socket 資料夾 /run/user/1000/aos-tty-1000/。
 - 晚上那封四件：(1) test_fork＝0fae77536（say 前綴不疊在 "[aos] " 開頭的通知上）；(2) defs＝c769fada6（catalog.tools_ls 也看 aos-tools 的「pack … skipped」那行，是 a551bba03 帶進來的）；(3) 背景 Bash 擋新信＝報告 [report-1124-bgmail.md](report-1124-bgmail.md)（只查不改：live_a2a 在 busy.txt 在時無限等、timeout_ms 0；-p 讀到 EOF 才收；過期通知＝mail_notify 寄出不重驗）。坑：在 py/aos 夾裡跑 python3 會被 aos/json.py 蓋掉標準庫，要 cd /tmp 或 -I。
 - ③ 查完（bdcef2272，已回 DONE）：claude -p 會等背景 Bash 結束才退出、還自己多開一輪；aos 讀到 EOF 才收＝lock 卡住；main 時間對得上 sleep 7000。等 eca-aos 定 ⑦（-p 第一個 result 就收）⑧（回答取第一個 result）。haiku 額度用了 1/3，腳本 ~/.aos/scratch/eca-aos-core-1124/bgtest/run.sh。
+
+## 交接（11-24 收工）
+
+- **今天全部已交、已回、已裝**（最後一次 install 含 0fae77536、c769fada6；033671bc0 也已在那之前裝）。手上沒有開著的信。
+- **下次開工會派的**：progress `eca-p-first-result-1124`——使用者答「好，但是先記著」＝修 ⑦⑧、收工時背景任務跟著收掉。做法：`py/aos/agentlib/cli_print.py` 的 `run_claude_stream`／`print_claude` 讀到第一個 `result` 就當這一輪答完、回答取第一個 result、放掉 lock，然後收掉 `claude -p` 行程（連它的背景任務）。**在 eca-aos 派之前不要動 cli_print.py。** 依據：[report-1124-bgmail.md](report-1124-bgmail.md) 第 7 節；重現腳本 `~/.aos/scratch/eca-aos-core-1124/bgtest/run.sh`（haiku，額度剩兩輪，eca-aos 叫先留著）。
+- **之後再排的**：fsm 那條「自己那份 tools.json 壞」的保底（cell_common 已搬進 py/aos/apps/agent_fsm，跟 reply-check 一起排）；tty_socket 搬家後認不得舊畫面（選項待給）；過期 new_mail 通知（報告選項 ④）。
+- 新規矩：三分後 stack 在 ~/aos-home/.stack/procs/repo-aos/procs/eca-aos-core（舊路徑 symlink）；py/cpp 改完 install.py 一律由 eca-aos 跑。
