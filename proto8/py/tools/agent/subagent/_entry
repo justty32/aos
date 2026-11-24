@@ -6,7 +6,8 @@
 #   add {def | def_json, name, ws | ws_json, stack | stack_json, limits?, envs?, auto_restart?, timeout_s?, on_queued?}
 #        先對帳、數配額（滿＝SubagentSlotMissing、不寄信）→ ctl add（旗標一對一，同 agents_ctl；../agents_cmd.py）→ 記帳；印 added … ; subagents N/MAX
 #        envs 沒給 AOS_NOTIFY_BOX 時補成父 agent 的 <stack>/mailbox（ctl who --json 的 stack）；明給的值（含空字串）優先。
-#        stack 沒給＝放自己 stack 隔壁：落在 daemon 的 stack 底下＝給 --stack-json {"$env": "AOS_DAEMON", "$path": 相對}（表上存指示詞、整棵搬家照樣對得上），不然給絕對路徑。
+#        stack 沒給＝放自己 stack 隔壁：落在 daemon 的 stack 底下、而且 $AOS_DAEMON 就是那台＝給 --stack-json {"$env": "AOS_DAEMON", "$path": 相對}
+#        （表上存指示詞、整棵搬家照樣對得上）；不然（含沒有 $AOS_DAEMON、只經 $AOS_KERNEL 的 agent）給絕對路徑。
 #   rm {name, purge?, timeout_s?}  先抄公開子帳 → ctl rm [--purge -y]（預設留 stack）→ 從帳上拿掉
 #   stop／sleep {name, timeout_s?}；start／wake {name, timeout_s?, on_queued?}；pause／resume／state {name}＝ctl 同名動作 --target
 #   ls {long?, json?}  一行一隻「NAME TAB STATE TAB WORKSPACE TAB QUEUED TAB REASON」（同 ctl ls；排隊中的＝NAME queued - - letter L），末行 subagents N/MAX；
@@ -209,7 +210,12 @@ if op == "add":
         own_stack = ME.get("stack")
         if not isinstance(own_stack, str) or not os.path.isabs(own_stack):
             die("StackMissing", "aos-agent ctl who did not give your absolute stack")
-        at = book_stack(os.path.join(os.path.dirname(own_stack.rstrip("/")), name))
+        # 指示詞要 ctl add 在這裡解得開（它先解一次檢查）、解出來就是這張表的 daemon：沒有 $AOS_DAEMON（只經 $AOS_KERNEL 的 agent）
+        # 或它指的不是 ctl who 的 daemon＝給絕對路徑（11-24 kernel-chain-check 第 1 段）。
+        here = os.environ.get("AOS_DAEMON", "")
+        same = bool(here) and os.path.realpath(here) == os.path.realpath(DAEMON)
+        at = book_stack(os.path.join(os.path.dirname(own_stack.rstrip("/")), name)) if same else os.path.join(
+            os.path.dirname(own_stack.rstrip("/")), name)
         argv[2:2] = (["--stack", at] if os.path.isabs(at)
                      else ["--stack-json", json.dumps({"$env": "AOS_DAEMON", "$path": at}, ensure_ascii=False)])
     result = cmd.parse_added(cmd.agent(argv, timeout_s=cmd.guard(args)))

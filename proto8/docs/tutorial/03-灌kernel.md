@@ -10,14 +10,14 @@ llm kernel 像一台專門打電話的總機：agent 要想事情，就寄一封
 
 - **最小核心**：板子買來就有——上一章的 daemon、時鐘 `_clock`、清道夫 `_sweeper`，加上信箱與「我是誰」。
 - **llm 件**：這一章灌的 llm kernel。名義上可選，但 agent 沒有它就不能想（第一次問腦就 `LlmKernelMissing` 停下）；不會想的 proc 才用不到。
-- **權限件**：一台站，管「准不准開 proc、同時幾個」。可選、預設不開，這份教學不裝；[start-api](../../templates/start-api/README.md#選裝權限件預設不開) 帶一份沒掛的，要的話照那裡三步打開。它是給守規矩的人用的規矩，不是牆：真要擋，靠換 Linux 帳號。
+- **權限件**：一台站，管「准不准開 proc、同時幾個」。可選、預設不開，這份教學不裝；[start-api](../../templates/starts/start-api/README.md#選裝權限件預設不開) 帶一份沒掛的，要的話照那裡三步打開。它是給守規矩的人用的規矩，不是牆：真要擋，靠換 Linux 帳號。
 
-另外還有「一串可選件」，有哪些還沒定。每塊的細節在 [kernel 入口「初始 kernel」](../../templates/kernel/README.md#初始-kernel買了板子之後灌什麼)。
+另外還有「一串可選件」，有哪些還沒定。每塊的細節在 [kernel 入口「初始 kernel」](../../templates/kernels/README.md#初始-kernel買了板子之後灌什麼)。
 
 ## 掛上去（視窗 B，板子要開著）
 
 ```sh
-cp -r $AOS_HOME/templates/kernel/llm-kernel llm
+cp -r $AOS_HOME/templates/kernels/llm-kernel llm
 ls llm
 aos-daemon-ctl -d .stack add --auto-restart llm
 aos-daemon-ctl -d .stack ls
@@ -63,13 +63,13 @@ aos-llm ls | head -4
 {"role": "assistant", "content": "FAKE ANSWER to: hi"}
 astra	normal	high	272000	-	-	LiteLLM gpt-6 astra: images and creative work, about 3x sol's price
 fake	fast	free	-	-	-	fake brain: calls peek_now_time (or the first tool), then answers FAKE ANSWER to ...
-fake-demo-fast	fast	free	-	1	-	fake brain that takes 3 s, one at a time, sorted first (templates/kernel/docs/03 part 3)
-fake-demo-self	fast	free	-	-	-	scripted fake brain for templates/kernel/docs/03 part 1: adds math to its own tools, then uses it
+fake-demo-fast	fast	free	-	1	-	fake brain that takes 3 s, one at a time, sorted first (templates/kernels/docs/03 part 3)
+fake-demo-self	fast	free	-	-	-	scripted fake brain for templates/kernels/docs/03 part 1: adds math to its own tools, then uses it
 ```
 
 `aos-llm ls` 列的是 llm kernel 登記的**腦包**（一個代號＝一組模型設定，例如 `fake`、`luna`；照名字排，前面幾個真模型的包也列出來，這章用不到）；agent 只寫代號，不寫網址和模型名。預設代號是 `fake`。`export AOS_LLM_KERNEL` 只是為了在這個視窗直接問；板子上的 agent 從 `.env` 繼承，不用你設。
 
 <details><summary>另一種擺法：kernel 自己一台、不掛在板子上</summary>
 
-主線是掛在板子上（使用者 11-20「掛同一塊板子」；`templates/start-api` 也這樣擺）。另一種是 kernel 自己一台：另開一個視窗 `aos-exec --stack <它的 stack> llm` 自己起停，`.env` 的 `AOS_LLM_KERNEL` 指那個 stack。這樣關板子時 kernel 不跟著關，好幾塊板子可以共用一台 llm daemon；代價是要多管一台的起停，第 08 章的一句全關也就不夠了。
+主線是掛在板子上（使用者 11-20「掛同一塊板子」；`templates/starts/start-api` 也這樣擺）。另一種是 kernel 自己一台：另開一個視窗 `aos-exec --stack <它的 stack> llm` 自己起停，`.env` 的 `AOS_LLM_KERNEL` 指那個 stack。這樣關板子時 kernel 不跟著關，好幾塊板子可以共用一台 llm daemon；代價是要多管一台的起停，第 08 章的一句全關也就不夠了。
 </details>

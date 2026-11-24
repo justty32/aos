@@ -52,7 +52,7 @@ class Live(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = Path(os.path.realpath(tempfile.mkdtemp(prefix="extern-live-")))
         cls.tree = cls.tmp / "tree"
-        shutil.copytree(PROTO / "templates" / "start-api", cls.tree, symlinks=True)
+        shutil.copytree(PROTO / "templates" / "starts" / "start-api", cls.tree, symlinks=True)
         cls.mounted = (cls.tree / "llm" / "kernel.json").is_file()      # the llm kernel as a row on the root (start-api 11-20) or llms/def
         kernel = cls.tree / ("llm" if cls.mounted else "llms/def") / "kernel.json"
         brain = cls.tree / "echo_system"
@@ -69,7 +69,7 @@ class Live(unittest.TestCase):
         os.environ["AOS_HOME"] = str(PROTO)                              # std.fsm() reads the agent-fsm template there
         from aos.py.agent import defs
         (cls.defn / "fsm.hand.json").write_text(json.dumps(defs.std.fsm().dry_run()["fsm.json"], indent=2) + "\n")
-        head = (PROTO / "templates" / "agent-python" / "agent.py").read_text().split("# ---- your agent")[0]
+        head = (PROTO / "templates" / "agents" / "agent-python" / "agent.py").read_text().split("# ---- your agent")[0]
         (cls.defn / "agent.py").write_text(head + BODY)
         cls.compiled = subprocess.run([sys.executable, str(cls.defn / "agent.py"), "--compile"], env=ENV, text=True,
                                       capture_output=True, timeout=60)

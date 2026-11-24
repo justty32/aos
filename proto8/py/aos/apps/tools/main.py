@@ -44,7 +44,9 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   物件逐 key 合，其餘（含 null）整個蓋過去——合併沒有刪除，null 只是值。讀的時候值是 null 的工具格不算工具；工具格裡值是 null 的欄位＝當沒設
   （所以只寫 {"env": {…}} 的同名格會沿用底檔的 path；add --replace 要整格換時用 null 蓋過底檔有、這次沒給的欄位）。
   底檔可以再 $override（鏈）；同一份經兩條路被引到＝序列裡出現兩次、照樣疊（菱形不算環）；環以真實路徑判、只看往上那幾層＝RegistryBad。
-  底檔指不到＝PathMissing（檔#/$override[/i]: 路徑 does not exist）、不是物件＝RegistryBad（訊息帶 from 檔#/$override）；頂層有 add／rm＝RegistryBad。
+  底檔指不到（PathMissing）、不是 JSON 或不是物件（RegistryBad）、指示詞解不開（DirectiveBad）＝**只跳過那一份**（11-24，使用者「pack檔壞掉，那我是希望
+  就是這個pack檔內的工具不能用，其他都可以用」）：它的工具不在清單上、其他照疊，stderr 每份一行 warning（pack … skipped (代號 原因); its tools are left out…），
+  ls 多一行「!檔<TAB>broken pack: …」（--json 不列）；環與 aos-directive／aos-json 起不來照舊整份報錯；F 自己壞照舊 RegistryBad；頂層有 add／rm＝RegistryBad。
   tools 那格先照 lv0 解 $ref／$env（aos-json get --follow --resolve），再做 $override 合併；寫入只寫 F（aos-json set／del --follow），
   rm：只有 F 自己記的名字＝刪那個 key；底檔也有的＝在 F 寫 "名": null（成功行說是哪一種）；底檔一個位元組都不動。
   路徑指不到＝PathMissing，訊息帶工具名、解出的路徑與它來自哪份檔的哪一格（檔#/tools/名/path，檔＝寫那個 path 的那份）。
@@ -72,12 +74,12 @@ add 時工具定義 env 陣列列的 hub 若不在當下環境與這次 env-file
   （R8：退非 0 時 stderr 有 `aos-tools: error:` 這行＝這支錯；沒有＝工具的碼；工具被訊號殺＝128＋N）。
 `--help`＝印該層 HELP／HELPS（英文）到 stdout、退 0（子命令後印該子命令的）；不給子命令＝ArgumentsBad；Ctrl-C＝退 130、不吐 traceback。
 """
-import json, os, re, shutil, sys, tempfile
+import json, os, re, shutil, subprocess, sys, tempfile
 from aos import flags as aos_flags
 from aos.env_file import Error as EnvFileError, read_env_file
 from .common import ENV_KEY_RE, NAME, NAME_RE, Fail, split_ptr, norm_loc, ptr_name
 from .helps import HELP, HELPS
-from .registry import (OVERRIDE_KEY, aos_json, base_tools, load_tools, make_dir_of, match, merged_tools, nulled,
+from .registry import (OVERRIDE_KEY, SKIPPED, aos_json, base_tools, load_tools, make_dir_of, match, merged_tools, nulled, use_once,
                        own_tools, read_layer, resolve_path_value, write_entry, write_new)
 from .tooldef import describe, inspect, kind_of
 
@@ -112,8 +114,24 @@ def parse_sub(sub, args, flags=None, switches=None, multi=None, short=None):
     return reg, opts, rest
 
 
+def tools_of(reg):
+    """load_tools，加上 11-24：$override 疊進來壞掉而被跳過的那幾份，stderr 各一行 warning（一次執行只說一次）。"""
+    tools = load_tools(reg)
+    for rec in SKIPPED:
+        if not rec.get("warned"):
+            rec["warned"] = True
+            aos_flags.warn(NAME, skipped_text(rec))
+    return tools
+
+
+def skipped_text(rec):
+    where = "%s (from %s)" % (rec["file"], rec["at"]) if rec.get("file") else rec["at"]
+    return "pack %s skipped (%s %s); its tools are left out, the other tools work; fix that file or take it out of %s" % (
+        where, rec["code"], rec["reason"], OVERRIDE_KEY)
+
+
 def cmd_add(args):
-    reg, opts, rest = parse_sub("add", args, {"--name": "name", "--env-file": "env_file", "--path-json": "path_json"},
+    reg, opts, rest = parse_sub("add", args, {"--name": "name", "--env-file": "env_file", "--path-json": "path_json", "--uses": "uses"},
                                 {"--replace": "replace", "--no-cache": "no_cache"},
                                 {"--envs": "envs"}, short=("-n",))
     if "path_json" in opts:
@@ -121,6 +139,11 @@ def cmd_add(args):
             raise Fail("ArgumentsBad", "add takes either XXX or --path-json, not both")
     elif len(rest) != 1:
         raise Fail("ArgumentsBad", "add needs one XXX (or --path-json JSON)")
+    uses = None
+    if "uses" in opts:                               # 11-24：成功叫過 N 次就從清單拿掉（1＝once、2＝twice）
+        if not re.fullmatch(r"[1-9][0-9]{0,8}", opts["uses"]):
+            raise Fail("ArgumentsBad", "--uses needs a whole number >= 1 (successful calls before it is taken off the list), got %r" % opts["uses"])
+        uses = int(opts["uses"])
     env = {}
     for kv in opts.get("envs", []):
         k, eq, v = kv.partition("=")
@@ -167,7 +190,7 @@ def cmd_add(args):
                                 else os.path.splitext(os.path.basename(path))[0])
     if not NAME_RE.fullmatch(name):
         raise Fail("NameBad", "tool name %r is invalid (only [A-Za-z0-9_-], at most 64 chars; pick another with --name)" % name)
-    tools = load_tools(reg)
+    tools = tools_of(reg)
     if name in tools and not opts.get("replace"):
         raise Fail("ToolExists", "%s is already registered (points to %s); add --replace to replace it" % (name, tools[name]["path"]))
     entry = {"path": stored}
@@ -177,6 +200,8 @@ def cmd_add(args):
         entry["env_file"] = env_file
     if opts.get("no_cache"):                         # 只有 --no-cache 才寫；定義快取在 stack，不進登記檔（步 2）
         entry["cache"] = False
+    if uses is not None:
+        entry["uses"] = uses
     below = base_tools(reg).get(name)                # 步 4：補丁式往下合，要整格換就用 null 蓋過底檔那格有、這次沒給的欄位
     if below is not None:
         for k, v in below["entry"].items():
@@ -195,7 +220,7 @@ def cmd_rm(args):
     reg, opts, rest = parse_sub("rm", args)
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "rm needs one XXX")
-    names = match(load_tools(reg), rest[0])
+    names = match(tools_of(reg), rest[0])
     below, own = base_tools(reg), own_tools(reg)     # 步 4：只寫 reg，底檔位元組不動
     done = []
     for n in names:
@@ -236,7 +261,11 @@ def cmd_override(args):
         new = dict({OVERRIDE_KEY: pointer}, **{k: v for k, v in raw.items() if k != OVERRIDE_KEY})
     else:
         new = {OVERRIDE_KEY: pointer, "tools": {}}
+    del SKIPPED[:]
     merged_tools(reg, dict(new, tools={}))           # 只驗底檔：指不到＝PathMissing、環＝RegistryBad、底檔壞＝帶來源的錯
+    if SKIPPED:                                      # 讀的時候壞的那份只跳過（11-24）；寫新指標時照舊先報、不寫
+        r = SKIPPED[0]
+        raise Fail(r["code"], r["reason"] if "file" not in r else "%s (from %s)" % (r["reason"], r["at"]))
     make_dir_of(reg)
     write_new(reg, new)
     print("%s %s -> %s" % (reg, OVERRIDE_KEY, json.dumps(pointer, ensure_ascii=False)))
@@ -294,7 +323,7 @@ def cmd_ls(args):
         raise Fail("ArgumentsBad", "ls takes no arguments")
     if opts.get("json") and opts.get("long"):
         raise Fail("ArgumentsBad", "ls takes one of -l, --json")
-    tools = load_tools(reg)
+    tools = tools_of(reg)
     found, broken = listed(tools)                    # 壞的那支：--json 不列（叫得到的才列），文字兩種標 broken
     if opts.get("json"):
         print(json.dumps(found, ensure_ascii=False))
@@ -310,7 +339,8 @@ def cmd_ls(args):
             print("\t".join((name, "broken" if t == "broken" else t["kind"], src["path"], src["src"],
                              json.dumps(src["stored"], ensure_ascii=False), env_column(src))))
     else:
-        rows = [(t["name"], first_sentence(t["tooldef"])) for t in found] + \
+        rows = [(t["name"], first_sentence(t["tooldef"]) + (" [uses left: %d]" % t["uses"] if "uses" in t else "")) for t in found] + \
+               [("!" + (r.get("file") or r["at"]), "broken pack: " + skipped_text(r)) for r in SKIPPED] + \
                [(n, "broken: " + broken_text(n, c)) for n, c in broken.items()]
         for name, line in sorted(rows):
             print("%s\t%s" % (name, line))
@@ -320,7 +350,7 @@ def cmd_get(args):
     reg, opts, rest = parse_sub("get", args)
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "get needs one XXX")
-    tools = load_tools(reg)
+    tools = tools_of(reg)
     for n in match(tools, rest[0]):
         print(json.dumps(describe(n, tools[n]), ensure_ascii=False))
 
@@ -341,7 +371,7 @@ def cmd_call(args):
     reg, opts, rest = parse_sub("call", args)
     if len(rest) not in (1, 2):
         raise Fail("ArgumentsBad", "call needs NAME and optional ARGS_JSON (else stdin = arguments)")
-    tools = load_tools(reg)
+    tools = tools_of(reg)
     name = rest[0]
     if name not in tools:
         raise Fail("ToolMissing", "%s is not registered (available: %s)" % (name, ", ".join(sorted(tools)) or "none"))
@@ -377,10 +407,38 @@ def cmd_call(args):
         raise Fail("CommandMissing", "no executable aos-exec on PATH")
     if len(rest) == 2:
         stdin_from(rest[1])
+    if "uses" in tools[name]:                         # 11-24 add --uses：要知道成功沒，所以當子行程跑、等它，成功才倒數
+        if os.path.realpath(tools[name]["uses_file"]) != os.path.realpath(reg):
+            raise Fail("RegistryBad", "tool %s: uses is written in %s, which %s only overrides; it is counted down only in the "
+                       "registry given to aos-tools (add it with --uses there)" % (name, tools[name]["uses_file"], reg))
+        counted_call(exe, lazy, path, env, tools[name]["uses_file"], name)
     try:
         os.execve(exe, ["aos-exec"] + lazy + [path], env)         # 三種工具都原樣保留 stdin、stdout 與結束碼
     except OSError as e:
         raise Fail("CommandMissing", "%s cannot start: %s" % (exe, e.strerror or e))
+
+
+def counted_call(exe, lazy, path, env, holder, name):
+    """登記格有 uses 的那支：子行程跑（stdin、stdout、stderr 原樣接著），TERM／INT／HUP 轉給它；退 0＝寫著 uses 的那份檔倒數一
+    （到 0 刪那格，registry.use_once）；退非 0、被訊號殺＝不算。結束碼照工具的（訊號 N＝128+N），跟 execve 那條一樣。"""
+    import signal
+    try:
+        proc = subprocess.Popen(["aos-exec"] + lazy + [path], executable=exe, env=env)
+    except OSError as e:
+        raise Fail("CommandMissing", "%s cannot start: %s" % (exe, e.strerror or e))
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(sig, lambda s, _f: proc.send_signal(s))
+    code = proc.wait()
+    if code == 0:
+        try:
+            left = use_once(holder, name)
+        except (Fail, OSError) as e:
+            aos_flags.warn(NAME, "tool %s ran, but its uses could not be counted down in %s: %s" % (name, holder, e))
+        else:
+            if left == 0:
+                aos_flags.warn(NAME, "tool %s is used up and was taken off the list (%s)" % (name, holder))
+    sys.stdout.flush()
+    os._exit(code if code >= 0 else 128 - code)
 
 
 COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls, "get": cmd_get, "call": cmd_call, "override": cmd_override}

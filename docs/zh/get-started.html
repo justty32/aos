@@ -49,8 +49,8 @@ cp -r $AOS_HOME/kernel/llm-kernel def
 nohup aos-exec --stack stacks/llm def &gt; llm.log 2&gt;&amp;1 &amp;
 
 cd ~/aos-demo/tree
-cp -r $AOS_HOME/templates/daemon-root defs
-cp -r $AOS_HOME/templates/agent-fsm defs/ann
+cp -r $AOS_HOME/templates/daemons/daemon-root defs
+cp -r $AOS_HOME/templates/agents/agent-fsm defs/ann
 nohup aos-exec --stack stacks/root defs &gt; root.log 2&gt;&amp;1 &amp;</code></pre>
 <pre><code class="language-text">~/aos-demo/
   llms/   def/ 是 llm kernel 的定義，stacks/llm/ 是它跑起來的狀態（這裡是假腦）

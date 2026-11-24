@@ -43,7 +43,7 @@ exit codes: 0 printed; 1 error (ToolMissing, ToolsMissing...).
 """,
     "add": """aos-agent tools add - add a tool for this agent only
 
-usage: aos-agent [--daemon D] tools [--target NAME] add [-n N] [--replace] [--envs K=V]... [--env-file FILE] [--no-cache] (XXX | --path-json JSON)
+usage: aos-agent [--daemon D] tools [--target NAME] add [-n N] [--replace] [--envs K=V]... [--env-file FILE] [--no-cache] [--uses N] (XXX | --path-json JSON)
        aos-agent tools add --help
 
 Same as aos-tools add (flags and meaning), written to this agent's own registry in
@@ -58,6 +58,8 @@ flags:
       --envs K=V      set K to V for every call of this tool (repeatable)
       --env-file FILE remember where FILE is; it is read on every call
       --no-cache      inspect executable tool definitions each time
+      --uses N        take it off this agent's list again after N successful calls
+                      (1 = once, 2 = twice); tools ls / get show what is left
   -h, --help          show this help
 
 exit codes: 0 added; 1 error (ToolExists, PathMissing, ToolsMissing...).
@@ -184,7 +186,7 @@ def cmd(argv):
     shorts = {"ls": {"-j": "--json", "-l": "--long"}, "reset": ("-y",)}.get(act, ())
     if act == "add":                                  # 11-10 Q8：旗標與 aos-tools add 一樣（C-86），原樣轉交
         try:
-            topts, args = aos_flags.parse(args, {"--name": "name", "--env-file": "env_file", "--path-json": "path_json"},
+            topts, args = aos_flags.parse(args, {"--name": "name", "--env-file": "env_file", "--path-json": "path_json", "--uses": "uses"},
                                           switches, {"--envs": "envs"}, help=HELPS[act], short=("-n",))
         except aos_flags.Error as e:
             if e.code == "ArgumentsBad":
@@ -229,6 +231,7 @@ def cmd(argv):
         targs = ["add"] + (["--replace"] if topts.get("replace") else []) + (["--no-cache"] if topts.get("no_cache") else []) \
             + (["--name", topts["name"]] if "name" in topts else []) \
             + (["--env-file", topts["env_file"]] if "env_file" in topts else []) \
+            + (["--uses", topts["uses"]] if "uses" in topts else []) \
             + [x for kv in topts.get("envs", []) for x in ("--envs", kv)] \
             + (["--path-json", topts["path_json"]] if "path_json" in topts else []) + args
         # 照使用者的寫法轉（同一個 cwd）：絕對存絕對、相對存相對 stack 那份（11-10 TC）

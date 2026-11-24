@@ -1,4 +1,4 @@
-"""test_fake_slow - the demo endpoint function fake_slow (templates/kernel/llm-kernel) finds lib/tools/base/llm_fake and passes its answer back."""
+"""test_fake_slow - the demo endpoint function fake_slow (templates/kernels/llm-kernel) finds lib/tools/base/llm_fake and passes its answer back."""
 # 11-19 線 fakedemo-fix-1119：11-18 目錄搬家後 fake_slow 把 llm_fake 算成 lib/aos/base/llm_fake（不存在），fake-demo-slow／fast 起不來。
 # 這支用 delay_s 0 直接跑一次 fake_slow（經 AOS_HOME 找裝好的 lib，要先跑過 install.py），不起任何 daemon。
 import json
@@ -9,7 +9,7 @@ import sys
 import unittest
 
 PROTO = Path(__file__).resolve().parents[2]
-ENTRY = PROTO / "templates" / "kernel" / "llm-kernel" / "fake_slow" / "_entry"
+ENTRY = PROTO / "templates" / "kernels" / "llm-kernel" / "fake_slow" / "_entry"
 
 
 class FakeSlowTest(unittest.TestCase):

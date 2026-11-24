@@ -14,6 +14,7 @@ from unittest import mock
 import test_reply_match as reply_tests
 
 CELLS = reply_tests.CELLS
+TEMPLATE = reply_tests.TEMPLATE
 PROTO = reply_tests.PROTO
 sys.dont_write_bytecode = True
 sys.path[:0] = [str(CELLS), str(PROTO / "py")]
@@ -318,7 +319,7 @@ class CompactDaemon(unittest.TestCase):
         daemon, kernel, definition = root / "daemon", root / "kernel", root / "definition"
         daemon.mkdir()
         kernel.mkdir()
-        shutil.copytree(CELLS, definition, ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copytree(TEMPLATE, definition, ignore=shutil.ignore_patterns("__pycache__"))
 
         def write(path, value):
             path.write_text(json.dumps(value), encoding="utf-8")

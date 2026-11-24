@@ -17,11 +17,11 @@ from aos.agentlib import hooks
 
 KERNEL_DIR = PY / "tools" / "aos" / "kernel"
 LOOP = hook_point.read([str(PY / "aos" / "apps" / "hook" / "loop_hooks.json")])
-FSM = hook_point.read([str(ROOT / "templates" / "agent-fsm" / "hooks.json")])
+FSM = hook_point.read([str(PY / "aos" / "apps" / "agent_fsm" / "hooks.json")])
 ECA = hook_point.read([str(PY / "aos" / "apps" / "eca" / "hooks.json"), str(PY / "aos" / "apps" / "mcp" / "hooks.json")])
 KERNEL = hook_point.read([str(KERNEL_DIR / "kernel_hooks.json")])
 COMPACT = {"before_compact", "after_compact"}   # rules not in aos.agentlib.hooks: agent-fsm's compact.py (HOOK_POINTS) and eca-claude's compact_hook keep their own
-FSM_COMPACT = ROOT / "templates" / "agent-fsm" / "compact.py"
+FSM_COMPACT = PY / "aos" / "apps" / "agent_fsm" / "compact.py"
 AGENT = dict(ECA, **FSM)
 POINTS = list(AGENT.items()) + [(n, ECA[n]) for n in sorted(COMPACT)]   # hand copies: both bodies' compact fields
 COMMON = {"event", "hook", "stack"}             # every handler gets these
@@ -83,8 +83,9 @@ class Rules(unittest.TestCase):
 
 
 class Wiring(unittest.TestCase):
-    AGENTS = ("agent-fsm", "agent-python", "start-api/agents/ann", "eca-claude", "eca-pi", "start-eca/agents/ann")
-    KERNELS = ("kernel/procs-kernel", "kernel/kernel-python", "start-api/perm")
+    AGENTS = ("agents/agent-fsm", "agents/agent-python", "starts/start-api/agents/ann", "agents/eca-claude", "agents/eca-pi",
+              "starts/start-eca/agents/ann")
+    KERNELS = ("kernels/procs-kernel", "kernels/kernel-python", "starts/start-api/perm")
 
     def test_templates_wire_start_stop(self):
         """on_start / on_stop fire after_start / after_stop through aos-hook fire --stop-on-nonzero --def $AOS_CD."""

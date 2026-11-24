@@ -1,0 +1,13 @@
+{"description": "Offer review scripts and workspace readers. No shell, but review_round, measure and promote run the cases, comparers and definitions the caller names (arbitrary_exec true), so this tool set counts as arbitrary execution; json_set and json_del can write files.",
+ "tools": {
+   "review_round": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/review_round"}},
+   "watch": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/watch"}},
+   "promote": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/promote"}},
+   "rollback": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/rollback"}},
+   "measure": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/measure"}},
+   "json_get": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/json_get"}},
+   "json_ls": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/json_ls"}},
+   "json_set": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/json_set"}},
+   "json_del": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/json_del"}},
+   "read": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/read"}},
+   "ls": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/ls"}}}}

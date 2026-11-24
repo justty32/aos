@@ -170,6 +170,18 @@ class Comm(unittest.TestCase):
         self.fails("StackMissing", "board", "set", "busy")
         self.fails("StackMissing", "-s", "nowhere", "board", "set", "busy")
 
+    def test_agent_root_before_its_mailbox_exists(self):
+        # 11-24（eca-aos-sol-3 報告 §4 第 4 點）：真的 lazy 工具小格——agent 的 stack 有 daemon 建的 stderr.txt，mailbox/ 與 tools/board_set/
+        # 都還沒建；board set 要寫進 <root>/board.json，不是 StackMissing、也不在小格裡建一份
+        dev = self.tmp / "dev"
+        dev.mkdir()
+        (dev / "stderr.txt").write_text("")
+        cell = dev / "tools" / "board_set"
+        self.ok("board", "set", "busy", "before", "mail", env=dict(self.env, AOS_STACK=str(cell)))
+        self.assertEqual(self.board("dev")["text"], "before mail")
+        self.assertFalse(cell.exists())
+        self.assertFalse((dev / "mailbox").exists())
+
     def test_refusals(self):
         for args, code in ((["board", "set", "nap"], "ArgumentsBad"),
                            (["board", "set"], "ArgumentsBad"),

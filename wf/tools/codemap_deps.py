@@ -68,6 +68,9 @@ def is_python(proto, rel):
     return head.startswith("#!") and "python" in head.splitlines()[0]
 
 
+TEMPLATE_KINDS = ("agents", "kernels", "orgs", "daemons", "starts", "tools")   # templates 底下的類別夾
+
+
 def unit_of(rel):
     """proto8 相對路徑 → (單位路徑, 種類, 單位自己的模組名或 "")；不掃的回 None。"""
     parts = rel.split("/")
@@ -82,7 +85,7 @@ def unit_of(rel):
         return rel, "lib", "aos" if mod == "__init__" else "aos." + mod
     if parts[:2] == ["py", "tools"] and len(parts) > 3:
         return "/".join(parts[:4]), "tool", ""
-    if parts[:2] == ["templates", "kernel"] and len(parts) > 3:
+    if parts[0] == "templates" and len(parts) > 3 and parts[1] in TEMPLATE_KINDS:   # templates/<類別>/<範本>/…（11-24 三分）
         return "/".join(parts[:3]), "template", ""
     if parts[0] == "templates" and len(parts) > 2:
         return "/".join(parts[:2]), "template", ""

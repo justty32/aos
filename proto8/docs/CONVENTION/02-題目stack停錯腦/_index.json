@@ -33,10 +33,10 @@
   "description": "agent 慣例「七、腦與工具」分檔 P-23～P-26：腦＝寄信給 llm kernel 收回信、想跟做分開、工具放在叫它那格的資料夾、參數怎麼進由工具說明定"
  },
  "06-P-41": {
-  "description": "分檔夾：- P-41 腦的工具呼叫（`tool_calls`）（範本 `templates/agent-fsm`；thinking 2026-10-23-tool-calls；走 queue 的做法：使用者 11-04「接下來是弄aos loop/fsm agent了」、看完規劃四題都選建議並說「記完就實作」，thinking 11-04 loop-fsm-agent）："
+  "description": "分檔夾：- P-41 腦的工具呼叫（`tool_calls`）（範本 `templates/agents/agent-fsm`；thinking 2026-10-23-tool-calls；走 queue 的做法：使用者 11-04「接下來是弄aos loop/fsm agent了」、看完規劃四題都選建議並說「記完就實作」，thinking 11-04 loop-fsm-agent）："
  },
  "06-P-41.md": {
-  "description": "- P-41 腦的工具呼叫（`tool_calls`）（範本 `templates/agent-fsm`；thinking 2026-10-23-tool-calls；走 queue 的做法：使用者 11-04「接下來是弄aos loop/fsm agent了」、看完規劃四題都選建議並說「記完就實作」，thinking 11-04 loop-fsm-agent）："
+  "description": "- P-41 腦的工具呼叫（`tool_calls`）（範本 `templates/agents/agent-fsm`；thinking 2026-10-23-tool-calls；走 queue 的做法：使用者 11-04「接下來是弄aos loop/fsm agent了」、看完規劃四題都選建議並說「記完就實作」，thinking 11-04 loop-fsm-agent）："
  },
  "07-P-44.md": {
   "description": "agent 慣例「十三、命令列」分檔 P-44：aos 自己程式的命令列形狀（長旗標、時間單位、FlagUnknown、--help 英文、--env-file／--envs）與給人用的指令"

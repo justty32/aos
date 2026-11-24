@@ -19,7 +19,7 @@ opus eca 隊長掛 agent-fsm sol（LiteLLM 的 `sol`，`reasoning_effort` high�
 
 ## 必讀清單要不要給
 
-- **先看角色**：使用者 11-14 裁「按角色分」。本節給**施工的** sol；蒐集員、審稿員只讀知識庫入口加站台層、任務書不附必讀清單，照 [kits](../workflows/dispatch/kits/README.md) 與 [card 第 3 步](../workflows/dispatch/kits/card.md)（產品版看包在 `proto8/templates/kits/`）。
+- **先看角色**：使用者 11-14 裁「按角色分」。本節給**施工的** sol；蒐集員、審稿員只讀知識庫入口加站台層、任務書不附必讀清單，照 [kits](../workflows/dispatch/kits/README.md) 與 [card 第 3 步](../workflows/dispatch/kits/card.md)（產品版看包在 `proto8/templates/agents/kits/`）。
 - sol 很聽話：system 寫「先讀」，它照順序全讀才讀程式；要它在答案末行自報讀了哪幾份，自報跟 history.jsonl 對得上。
 - 代價：每隻多約 5 萬 prompt token（必讀 7 份）。沒給清單的對照組在同一組規矩題也全對；清單換來的是路線固定、出處一致。
 - **做法**：system 放清單，要它末行自報讀了哪幾份。純蒐集的小雜活照 [aos-teams 入口「讀規矩」](../workflows/dispatch/aos-teams.md)（簡單工作與雜活可免讀），在任務書寫明可免讀或略讀（max_lines），不必改定義。

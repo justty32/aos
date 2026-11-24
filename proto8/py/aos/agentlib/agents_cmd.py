@@ -202,7 +202,7 @@ def _json_or_string(args, key):
         return json.dumps(v, ensure_ascii=False)
     if isinstance(v, dict) and v:
         return json.dumps(v, ensure_ascii=False)
-    die("ArgumentsBad", "%s must be a path string or a directive object like {\"$env\": \"AOS_HOME\", \"$path\": \"/templates/agent-fsm\"}" % key)
+    die("ArgumentsBad", "%s must be a path string or a directive object like {\"$env\": \"AOS_HOME\", \"$path\": \"/templates/agents/agent-fsm\"}" % key)
 
 
 # ---- ctl add ----

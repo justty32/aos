@@ -157,10 +157,27 @@ def tools_argv(reg):
     return ["aos-tools", "--file", reg]
 
 
+OWN_BAD = [None]                                  # 上一次說過的「自己那份壞了」原因（同一個原因只說一次）
+
+
 def load_tools(regs):
-    """問 aos-tools 每份註冊檔登記了什麼 → {名: {reg, spec, max_s}}；失敗丟 ToolsBad。--own 那份在＝只用它（每次重看）。"""
+    """問 aos-tools 每份註冊檔登記了什麼 → {名: {reg, spec, max_s}}；失敗丟 ToolsBad。--own 那份在＝只用它（每次重看）。
+    11-24：--own 那份自己壞了（aos-tools ls 退非 0）＝stderr 一行 warning、改用 REGISTRY（定義那份：信箱等基本工具保得住），
+    修好或刪掉之後下一次重讀就回到它。REGISTRY 也壞＝照舊 ToolsBad。疊進來的某份 pack 壞＝aos-tools 只跳過那份（它自己印 warning）。"""
     if OWN and os.path.isfile(OWN):
-        regs = [OWN]
+        try:
+            got = _load([OWN])
+            OWN_BAD[0] = None
+            return got
+        except ToolsBad as e:
+            if str(e) != OWN_BAD[0]:
+                OWN_BAD[0] = str(e)
+                aos_flags.warn(NAME, "the agent's own registry %s cannot be read (%s); using the definition's tools (%s) until it is "
+                               "fixed (aos-agent tools reset deletes it)" % (OWN, e, ", ".join(regs)))
+    return _load(regs)
+
+
+def _load(regs):
     tools = {}
     for reg in regs:
         try:

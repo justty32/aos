@@ -72,15 +72,33 @@ def read_bases(reg, pointer):
             except directive_value.Error as e:
                 if e.code == "CommandMissing":
                     raise Fail(e.code, "%s has directives that need aos-directive, which cannot start: %s" % (at, e.cause))
-                raise Fail("DirectiveBad", "%s: directives cannot be resolved (aos-directive exited %d)" % (at, e.returncode)
-                           if e.returncode is not None else "%s: directives cannot be resolved (%s)" % (at, e))
+                out.append((Fail("DirectiveBad", "%s: directives cannot be resolved (aos-directive exited %d)" % (at, e.returncode)
+                                 if e.returncode is not None else "%s: directives cannot be resolved (%s)" % (at, e)), at))
+                continue
         if not isinstance(item, str) or not item or "\0" in item:
-            raise Fail("RegistryBad", "%s must be a path string, a directive resolving to one, or an array of those" % at)
+            out.append((Fail("RegistryBad", "%s must be a path string, a directive resolving to one, or an array of those" % at), at))
+            continue
         base = os.path.normpath(os.path.join(folder, item))
-        if not os.path.isfile(base):
-            raise Fail("PathMissing", "%s: %s does not exist" % (at, base))
+        if not os.path.isfile(base):                 # 11-24：疊進來的那份不在＝只少那份（layers 記進 SKIPPED），不是整份壞
+            out.append((Fail("PathMissing", "%s: %s does not exist" % (at, base)), at))
+            continue
         out.append((base, at))
     return out
+
+
+# 11-24（使用者「pack檔壞掉，那我是希望就是這個pack檔內的工具不能用，其他都可以用」）：$override 疊進來的某一份不在、不是合法 JSON、
+# 形狀不對或指示詞解不開＝跳過那一份（它的工具不在清單上）、其他照疊；跳過的記在這裡（[{at, file?, code, reason}]），
+# ls 印出來、stderr 一行 warning。頂層那份（交給 aos-tools 的 F）自己壞照舊整份報錯。環（chain loops）與 aos-directive 起不來照舊整份報錯。
+SKIPPED = []
+SKIP_CODES = ("PathMissing", "RegistryBad", "DirectiveBad", "ReadFailed")
+
+
+def _skip(at, base, e):
+    rec = {"at": at, "code": e.code, "reason": str(e)}
+    if base:
+        rec["file"] = base
+    if not any(r["at"] == rec["at"] and r["reason"] == rec["reason"] for r in SKIPPED):   # 同一次執行可能疊好幾遍
+        SKIPPED.append(rec)
 
 
 def patch(acc, layer, reg):
@@ -118,11 +136,17 @@ def layers(reg, raw=None, chain=()):
     seq = []
     if pointer is not None:
         for base, at in read_bases(reg, pointer):
+            if isinstance(base, Fail):
+                _skip(at, None, base)
+                continue
             try:
                 seq += layers(base, None, chain + (real,))
             except Fail as e:
                 if e.code == "RegistryBad" and "chain loops" in str(e):
                     raise
+                if e.code in SKIP_CODES:
+                    _skip(at, base, e)
+                    continue
                 raise Fail(e.code, "%s (from %s)" % (e, at))
     return seq + [(reg, tools)]
 
@@ -159,10 +183,16 @@ def finish(merged):
         ef = e.get("env_file")                       # 11-10 步 3：只記位置，call 才讀（指示詞已跟整格一起解開）
         if "env_file" in e and (not isinstance(ef, str) or not ef or "\0" in ef):
             raise Fail("RegistryBad", "%s/env_file must be a non-empty path string (or a directive resolving to one)" % where)
+        if "uses" in e:                              # 11-24：成功叫過幾次就從清單拿掉（add --uses）；call 照它倒數、到 0 刪那格
+            u = e["uses"]
+            if not isinstance(u, int) or isinstance(u, bool) or u < 1:
+                raise Fail("RegistryBad", "%s/uses must be a whole number >= 1 (successful calls left before it is taken off the list)" % where)
         pfile = origin["path"]
         out[name] = {"path": norm_loc(os.path.dirname(os.path.abspath(pfile)), e["path"]), "entry": e,
                      "field": "%s#/tools/%s/path" % (pfile, name), "src": "%s#/tools/%s" % (pfile, name),
                      "stored": stored_value(pfile, name, "path", e["path"])}
+        if "uses" in e:
+            out[name]["uses"], out[name]["uses_file"] = e["uses"], origin["uses"]
         if ef:
             efile = origin["env_file"]
             out[name]["env_file"] = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(efile)), ef))
@@ -277,6 +307,25 @@ def resolve_path_value(value, folder):
     if not isinstance(value, str) or not value:
         raise Fail("ArgumentsBad", "--path-json must be a non-empty path string or a directive object resolving to one (got %s)" % json.dumps(value))
     return norm_loc(folder, value)
+
+def use_once(reg, name):
+    """call 成功一次（11-24 add --uses）：寫著 uses 的那份檔（reg）裡那格倒數一；剩 1 時改成刪掉那格（底檔有同名的就又看得到）。
+    同一份檔的倒數用 flock 排隊（旁邊的 .<檔名>.uses.lock）。回剩下的次數（0＝拿掉了）。那格已經不在或沒有 uses＝None。"""
+    import fcntl
+    lock = os.path.join(os.path.dirname(os.path.abspath(reg)), ".%s.uses.lock" % os.path.basename(reg))
+    with open(lock, "a") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        _, tools, _ = read_layer(reg)
+        entry = tools.get(name) if isinstance(tools, dict) else None
+        left = entry.get("uses") if isinstance(entry, dict) else None
+        if not isinstance(left, int) or isinstance(left, bool) or left < 1:
+            return None
+        if left > 1:
+            aos_json(["set", "--follow", "%s#/tools/%s/uses" % (reg, name), str(left - 1)])
+            return left - 1
+        aos_json(["del", "--follow", "%s#/tools/%s" % (reg, name)])
+        return 0
+
 
 def write_entry(reg, name, entry):
     """只寫 reg 那一格（檔在＝aos-json set --follow --parents，穿過 $ref 改被參照的那份；不在＝新建 {"tools": {…}}）。"""

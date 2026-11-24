@@ -1,4 +1,4 @@
-"""aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。
+"""aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/agents/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。
 
     aos-eca-screen --eca ECA_DIR open [--detach]   接進畫面（沒開就開、有對話就 --resume）；--detach＝只開不接
     aos-eca-screen --eca ECA_DIR close             收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）；cli.json 無效也能關（一行提醒）

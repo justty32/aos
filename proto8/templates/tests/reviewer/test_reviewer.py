@@ -8,8 +8,8 @@ import tempfile
 import time
 import unittest
 
-REVIEWER = Path(__file__).resolve().parents[2] / 'reviewer'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
-PROTO = REVIEWER.parents[1]
+REVIEWER = Path(__file__).resolve().parents[2] / 'agents' / 'reviewer'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
+PROTO = REVIEWER.parents[2]
 
 
 def write(path, value):

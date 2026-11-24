@@ -25,6 +25,7 @@ class Check:
         self.repo = Path(__file__).resolve().parents[3]
         self.env = {k: v for k, v in os.environ.items()
                     if not k.startswith("AOS_")}
+        self.env["AOS_HOME"] = str(self.repo)   # agent-fsm needs it (HomeMissing without); the proto8 this check runs from
         self.owned = {}
         self.process = None
         self.log = None
@@ -118,7 +119,7 @@ class Check:
             self.run(["cp", "-a", str(self.repo / name), str(image / name)])
         defs = image / "defs"
         defs.mkdir()
-        self.run(["cp", "-a", str(self.repo / "templates/agent-fsm"), str(defs / "agent")])
+        self.run(["cp", "-a", str(self.repo / "templates/agents/agent-fsm"), str(defs / "agent")])
         configs = {
             "root": {"interval_ms": 100, "procs": {
                 "_sweeper": SWEEPER,

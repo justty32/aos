@@ -22,15 +22,15 @@ a{color:#0b5cad}
 <p>先跑過 <a href="../get-started.html">Get Started</a>，或照下面的圖自己再起一次。這頁不重貼完整指令，只解釋「為什麼長這樣」。</p>
 <!-- copy:TRY -->
 <p>不用任何模型，先試試</p>
-<!-- source: 這兩列原稿標「用途本稿沒逐檔核對，標待驗」，hooks/ 等五項原稿稱「細節本稿沒逐檔核對，視為內部狀態」；ref/get-started.sh; ref/get-started.out.txt; proto8/templates/daemon-root/README.md; proto8/templates/agent-fsm/README.md; 知識庫 aos/definition.json、aos/mailbox.json、aos/agents.json -->
+<!-- source: 這兩列原稿標「用途本稿沒逐檔核對，標待驗」，hooks/ 等五項原稿稱「細節本稿沒逐檔核對，視為內部狀態」；ref/get-started.sh; ref/get-started.out.txt; proto8/templates/daemons/daemon-root/README.md; proto8/templates/agents/agent-fsm/README.md; 知識庫 aos/definition.json、aos/mailbox.json、aos/agents.json -->
 <h2 id="1-整體擺法">1. 整體擺法</h2>
 <pre><code class="language-text">~/aos-demo/
   llms/                      腦那一邊（一個獨立的專案）
     def/                     llm kernel 的定義（抄自 kernel/llm-kernel）
     stacks/llm/              它跑起來的狀態
   tree/                      你的 agent 那一邊
-    defs/                    根 daemon 的定義（抄自 templates/daemon-root）
-    defs/ann/                ann 的定義（抄自 templates/agent-fsm）
+    defs/                    根 daemon 的定義（抄自 templates/daemons/daemon-root）
+    defs/ann/                ann 的定義（抄自 templates/agents/agent-fsm）
     stacks/root/             根 daemon 跑起來的狀態
     stacks/root/procs/ann/   ann 自己的狀態</code></pre>
 <p>重點：<strong>定義（defs）是「這東西是什麼」，stack 是「它跑起來後的記憶」</strong>。定義不要手改；跑的時候的東西都在 stack。</p>
@@ -59,7 +59,7 @@ a{color:#0b5cad}
 <blockquote><p>這節要樹還在跑：請在<a href="../get-started.html">開始用</a>第 8 步停樹<strong>之前</strong>做。已經停了的話，在同一個示範夾把第 3 步的兩行 <code>nohup aos-exec …</code> 再跑一次，樹和 ann 會接著醒來。</p></blockquote>
 <!-- source: run literally 11-14 in a clean copy (ann + bob both running, bob answered, procs/ had ann and bob; no process left) -->
 <pre><code class="language-bash">cd ~/aos-demo/tree
-cp -r &quot;$AOS_HOME/templates/agent-fsm&quot; defs/bob
+cp -r &quot;$AOS_HOME/templates/agents/agent-fsm&quot; defs/bob
 aos-agent -d stacks/root ctl add -w . defs/bob
 aos-daemon-ctl -d stacks/root ls
 aos-agent -d stacks/root -t bob say &quot;hello, who are you?&quot;

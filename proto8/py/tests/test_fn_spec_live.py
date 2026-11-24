@@ -70,7 +70,7 @@ class Live(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = Path(os.path.realpath(tempfile.mkdtemp(prefix="fn-spec-live-")))
         cls.tree = cls.tmp / "tree"
-        shutil.copytree(PROTO / "templates" / "start-api", cls.tree, symlinks=True)
+        shutil.copytree(PROTO / "templates" / "starts" / "start-api", cls.tree, symlinks=True)
         cls.mounted = (cls.tree / "llm" / "kernel.json").is_file()      # the llm kernel as a row on the root (start-api 11-20) or llms/def
         kernel = cls.tree / ("llm" if cls.mounted else "llms/def") / "kernel.json"
         k = json.loads(kernel.read_text())
@@ -79,7 +79,7 @@ class Live(unittest.TestCase):
         kernel.write_text(json.dumps(k))
         cls.defn = cls.tree / "agents" / "fnbot"
         cls.defn.mkdir()
-        head = (PROTO / "templates" / "agent-python" / "agent.py").read_text().split("# ---- your agent")[0]
+        head = (PROTO / "templates" / "agents" / "agent-python" / "agent.py").read_text().split("# ---- your agent")[0]
         (cls.defn / "agent.py").write_text(head + "import json\n" + BODY)
         cls.compiled = subprocess.run([sys.executable, str(cls.defn / "agent.py"), "--compile"], env=ENV, text=True,
                                       capture_output=True, timeout=60)

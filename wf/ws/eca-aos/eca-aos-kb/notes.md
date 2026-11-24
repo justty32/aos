@@ -22,6 +22,17 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
    - 排錯少＝3c：寫一頁 `aos/troubleshooting.md`，每條寫症狀 → 原因 → 怎麼查，只寫查證過的；誰查出新的故障，就交給 eca-aos-kb 補一條（這條規矩寫在 wf/，由 eca-aos 加）。
    - echo $AOS_HOME＝4c：不改。
 
+# 現況（2026-11-24 收尾，壓縮前寫）
+
+- 手上沒有進行中的信；eca-aos 寄來的都回了 DONE（最後一封 349a923c3：dev-env/03 的 AOS_DAEMON 改指根、家機之後要搬）。
+- 11-24 線 `eca-aos-kb-1124` 交過：6f7f32352、c5016efd2、56de0d0f2、fe1c2e93f、5ab0b0e8a、2a9161dd0、46e0f0e1a、23e65da3a、cd9d62963、47b17122c、fa94b7874、349a923c3。
+- 還開著、等別人：家機 stack 搬進 `~/aos-home/.stack/procs/repo-aos`（progress `home-stack-move-1124`）；搬完要把 dev-env/03「家機照做」、`~/aos-home` 家機那條、AGENTS.md、wf/tree、dev-env/01、aos-teams 06／07、wf/public 裡寫「家機是 `~/repo/aos/.stack`」的句子改掉。eca-aos 會轉信。
+- core 說之後會改的：沒有還欠的句子（aos-llm ls 整台行、leftovers、ctl ls --deep 都已寫進知識庫）。
+- 11-24 下午：eca 別用背景 Bash 排定時，寫在 `aos/clock.md` 的 which way 段尾、`aos/eca_reading.md` 的 clock 那行、`aos/troubleshooting.md` 的 Hooks and timers 段。原因照 core 實測（report-1124-bgmail.md 第 7 節）：`claude -p` 等背景任務結束才退出，回答取最後一個 result。
+  - **待更新**：如果程式改成讀到第一個 result 就收（報告修法 7／8，eca-aos 在問使用者），這三處都要改。
+  - 只寫了預設那條路。`"live_mail": true` 會一直開著 stdin，回答取每個 result；這種情況下信進不進得來沒驗，所以沒寫。互動畫面開著時也沒驗，也沒寫。
+- 我的信箱回信地址：eca-aos 在 `/home/guanyu/aos-home/.stack/procs/repo-aos/procs/eca-aos/mailbox`（stack 11-24 搬家後）。
+
 # 下次照做
 
 ## 範本改了，知識庫跟上
@@ -84,6 +95,11 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - 腦的 pack 怎麼送：`"api": "responses"` 的 pack（start-api 的 gpt 那四個）由 `endpoints/litellm` 叫 `lib/tools/base/llm_http`；換形狀的程式在 `responses_api.py`。
 - 新開一頁：照「改一頁時」的格式寫；做法以範本 README 為正本，知識庫只寫大綱並指過去。md 錨點先用 `json_ls` 看真正的路徑（範本 README 的 `## How to use` 在 `# orgs` 底下，是 `#/orgs/How to use`）。`_index.json` 用 json_add 加一列，再用 `index_view` 看得到。eca 用得上的頁，`aos/eca_reading.md` 也加一行。
 - templates/ 會重新分層（2026-11-24 起，kits 搬進 agents/）：`aos/orgs.md` 只寫死 `templates/orgs/…`，別的範本指 `templates/README.md`；`aos/kits.md` 還寫著 `templates/kits/`，搬的時候要對。
+- 信裡的「agent 通常怎樣」先對範本（例：「agent 不帶 priority」對過 templates 沒有一份設 priority，才寫成「the stock agent templates send no priority」）。
+- 環境的坑（WSL 網路、WSL_INTEROP）出處是 `wf/workflows/dev-env` 的那條（使用者實測過），知識庫寫成 troubleshooting 一條，不寫哪台機器。
+- 不要對 `/` 跑 `find`（WSL 會掃到 /mnt/c，跑不完）；找 stack 先看 `~/repo/aos/.stack`、`~/aos-home`。
+- 負責人准了才改 `wf/` 文件（例：11-24 stack 搬家）：只換路徑事實，兩台分開寫（公司搬了、家機沒搬）；家機要不要跟、殼設定檔的值這類沒定的不替使用者選，列在回報裡。改標題前先 grep 有沒有連到那個錨點。
+- 公司 WSL 11-24 起 stack 全在 `~/aos-home/.stack`（repo 那棵在 `procs/repo-aos`，`~/repo/aos/.stack` 是 symlink）；我的 stack 也在那底下。
 - 範本、程式裡同樣說得比事實強的句子（例：`templates/kits/gather/tools.json` 的 description）只回報，不改。
 - **隔離只承諾防失誤**（使用者 11-23 晚「甲，先只防失誤」「可以」）：拿掉工具、ws、kits、aos-sandbox 是防不小心越界、讓越界看得到，不抗刻意繞過。正本是 `aos/rules.md` 的 `What does not enforce these rules` 段（線 kb-guard-level-1123 補的那段），`aos/kits.md` 的「Why a kit cuts tools」改成不說關得住、指過去；別頁寫限制時也不寫成關得住。
 

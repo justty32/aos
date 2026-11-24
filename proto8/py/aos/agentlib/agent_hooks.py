@@ -5,7 +5,7 @@ top-1121-hooknew, the user's fourth layer) the rules (what blocks, what may chan
 in aos.agentlib.hooks, and the engine aos.hook_run only runs handlers. The list is read again on every fire (an added hook
 counts from the next event). Errors go to the fail(code, sentence) given to open: what fail raises goes out as it is; if
 fail returns, FailReturned is raised.
-Firing programs call this: the cells (templates/agent-fsm and copies), aos-eca-turn, aos-mcp.
+Firing programs call this: the cells (templates/agents/agent-fsm and copies), aos-eca-turn, aos-mcp.
 
 API:
     open(def_folder, stack, fail, warn=None) -> remote; def_folder None = an empty remote (no hooks; aos-mcp without --hooks)

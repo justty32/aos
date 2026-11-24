@@ -268,7 +268,7 @@ class SetDefThroughAFullKernel(SetDef):
             raise
 
     def station(self):
-        shutil.copytree(PROTO / "templates" / "kernel" / "procs-kernel", self.tmp / "kern")
+        shutil.copytree(PROTO / "templates" / "kernels" / "procs-kernel", self.tmp / "kern")
         (self.tmp / "kern" / "kernel.json").write_text('{"queue": true}\n')
         r = subprocess.run(["aos-daemon-ctl", "-d", str(self.d), "add", str(self.tmp / "kern")], env=ENV, capture_output=True,
                            text=True, cwd=self.tmp)                  # not an aos-agent definition: the daemon's own add

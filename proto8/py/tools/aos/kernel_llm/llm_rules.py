@@ -313,6 +313,7 @@ def collect(ctx, before_reply=None):
     ctx.used = budget.read_used(ctx.stack, cfg["budget"]["window"])
     table = runner.read_table(ctx.daemon)
     packs.write_window(ctx.stack, cfg["packs"])
+    packs.write_limits(ctx.stack, cfg)
     ctx.slots = Slots(cfg, ctx.stack)
     cur = os.path.join(ctx.requests, "cur")
     for name in folders(cur):

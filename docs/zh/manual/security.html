@@ -22,7 +22,7 @@ a{color:#0b5cad}
 <p>agent 會用你的 Linux 帳號執行程式，同帳號內沒有隔離：會開 shell 的 agent 碰得到你帳號碰得到的一切。請在專用帳號、VM 或容器裡試。</p>
 <!-- copy:SEC -->
 <p>agent 會用你的帳號執行程式：你的帳號碰得到的檔案，它都碰得到。請在拋棄式帳號、虛擬機或容器裡試；換一個資料夾並不能隔離。沙箱是實驗功能。</p>
-<!-- source: 06-草稿/文案表.json SEC；03-計劃.md 4.1；proto8/templates/agent-fsm/README.md -->
+<!-- source: 06-草稿/文案表.json SEC；03-計劃.md 4.1；proto8/templates/agents/agent-fsm/README.md -->
 <h2 id="為什麼">為什麼</h2>
 <table><thead><tr><th>事實</th><th>意思</th></tr></thead><tbody><tr><td>agent 是一般的 Linux 行程</td><td>它能做你的帳號能做的事</td></tr><tr><td>agent-fsm 範本預設開了很多工具包：看、改、刪、殼（shell、run_python）等</td><td>它可以讀寫刪檔、跑指令</td></tr><tr><td>這些檔案工具不擋工作區外的路徑（相對路徑從工作區算、絕對路徑照用）</td><td>能不能動，只看 Linux 檔案權限</td></tr><tr><td>同一個帳號下的 agent 彼此沒有隔離</td><td>一隻 agent 能碰到同帳號的其他檔案與行程</td></tr></tbody></table>
 <p>假腦（L0）不會真的亂做事，但範本的工具與權限是一樣的；接上真腦（L1 以上）才是實際風險所在。</p>

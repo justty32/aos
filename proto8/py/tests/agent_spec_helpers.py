@@ -13,7 +13,7 @@ import unittest.mock
 sys.dont_write_bytecode = True
 LIB = Path(__file__).resolve().parents[1]
 PROTO = LIB.parent
-SKEL = PROTO / "templates" / "agent-python"
+SKEL = PROTO / "templates" / "agents" / "agent-python"
 sys.path.insert(0, str(LIB))
 from aos.py.agent import defs  # noqa: E402 （跟寫 agent.py 的人同一個名字；＝aos.agent_spec）
 

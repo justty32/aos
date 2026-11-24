@@ -40,7 +40,7 @@ elif argv[:2] == ["ctl", "who"]:
         sys.exit(1)
     r = rows[0]
     print(json.dumps({"name": r["name"], "stack": r["stack"], "ws": None, "def": os.environ.get("FAKE_DEF"),
-                      "daemon": os.environ["AOS_DAEMON"]}) if "--json" in argv else r["name"])
+                      "daemon": os.environ.get("FAKE_DAEMON") or os.environ["AOS_DAEMON"]}) if "--json" in argv else r["name"])
 elif argv[:2] == ["ctl", "add"]:
     name = argv[argv.index("--name") + 1] if "--name" in argv else os.path.basename(argv[-1])
     if os.environ.get("FAKE_QUEUE"):
@@ -124,6 +124,22 @@ class Subagent(unittest.TestCase):
         self.assertNotIn(str(self.tmp), r.stdout + r.stderr)
         r = self.run_tool({"op": "ls"})
         self.assertEqual(r.stdout.strip(), "%s: error: ReadFailed $AOS_STACK/subagents.json is not a JSON array of {name, stack}" % NAME)
+
+    def test_add_without_matching_aos_daemon_gives_an_absolute_stack(self):
+        """11-24 kernel-chain-check 第 1 段：只經 AOS_KERNEL 的 agent 沒有 AOS_DAEMON，ctl add 解不開指示詞＝給絕對 --stack；
+        AOS_DAEMON 指的不是 ctl who 的 daemon 也一樣。帳照舊記相對 ctl who 的 daemon。"""
+        kid = self.daemon / "procs" / "kid"
+        for extra in ({}, {"AOS_DAEMON": str(self.tmp / "other")}):
+            with self.subTest(extra=extra):
+                self.table.write_text(json.dumps([{"name": "mom", "stack": str(self.mom)}]))
+                (self.cell / "subagents.json").unlink(missing_ok=True)
+                env = {k: v for k, v in self.env.items() if k != "AOS_DAEMON"}
+                env.update(FAKE_DAEMON=str(self.daemon), **extra)
+                r = subprocess.run([str(TOOL)], input=json.dumps({"op": "add", "def": "defs/helper", "name": "kid"}),
+                                   capture_output=True, text=True, env=env, timeout=60)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertEqual(self.calls("ctl")[-1][:4], ["ctl", "add", "--stack", str(kid)])
+                self.assertEqual(self.record(), [{"name": "kid", "stack": "procs/kid"}])
 
     def test_add_records_and_argv(self):
         out = self.ok({"op": "add", "def": "defs/helper", "name": "kid", "ws": "kid", "limits": {"mem_mb": 64}, "timeout_s": 5})

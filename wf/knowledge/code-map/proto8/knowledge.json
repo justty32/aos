@@ -63,7 +63,7 @@
     "common.md": "Common error codes"
    },
    "errors.md": "Reading an error",
-   "kernel.md": "What a kernel is in aos and what a new board's initial kernel is made of, where to send requests, the example kernels in $AOS_HOME/templates/kernel/,…",
+   "kernel.md": "What a kernel is in aos and what a new board's initial kernel is made of, where to send requests, the example kernels in $AOS_HOME/templates/kernels/…",
    "kits.md": "Kits: ready-made system text and tools for one agent role",
    "mailbox.md": "Mailbox: letters between agents",
    "me": {

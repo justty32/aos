@@ -76,7 +76,7 @@ agent = defs.Agent("...", system="...", tools=[std.pack("ws-write")], llm={}, fs
 - `hooks=` 收：一張表 `{名: 格}`、`std.hooks()`（範本的 hookeds，靜態連結進來）、`defs.load(...)` 的 `hooks`、`@fn.hook` 標的函數、它們的串列（後面同名蓋前面、`None` 拿掉），或 `defs.extern("../shared/hookeds.json")`（整份動態連結）。
 - 編譯寫出 `hookeds.json`，`interfaces.json` 最外層補 `"hookeds": "hookeds.json"` 與 `"hooks"`（aos-loop 與 agent-fsm 的宣告），`loop.json` 補 `on_start`／`on_stop` 兩行。`interfaces=` 能蓋 `hooks`、不能蓋 `hookeds`（`SpecBad`）。
 - 事件名不驗；`fn.block` 用在不能攔的點也不擋（到時 agent 一家把 10 當放行）。
-- 細節：[templates/agent-python/README](../../../../../templates/agent-python/README.md)（`hooks`、「Functions as tools and hooks」）。
+- 細節：[templates/agents/agent-python/README](../../../../../templates/agents/agent-python/README.md)（`hooks`、「Functions as tools and hooks」）。
 
 ## loop 的點：before_run／after_run 要重新編譯並重起
 

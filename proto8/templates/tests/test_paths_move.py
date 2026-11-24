@@ -158,10 +158,10 @@ class PathsMove(unittest.TestCase):
         proj, llms = base / "proj", base / "llms"
         proj.mkdir(parents=True)
         llms.mkdir(parents=True)
-        m.cp_template("templates/daemon-root", "defs", cwd=proj)
-        m.cp_template("templates/agent-fsm", "defs/ann", cwd=proj)
+        m.cp_template("templates/daemons/daemon-root", "defs", cwd=proj)
+        m.cp_template("templates/agents/agent-fsm", "defs/ann", cwd=proj)
         (proj / "defs" / "ann" / "llm.json").write_text('{"model": "fake"}\n')
-        m.cp_template("templates/kernel/llm-kernel", "def", cwd=llms)
+        m.cp_template("templates/kernels/llm-kernel", "def", cwd=llms)
         if mode != "env":                              # 不 export：把範本 .env 那行註解換成自己的值（README 教的寫法）
             value = {"absolute": str(m.proto),
                      "relative": "${AOS_WS}/" + os.path.relpath(m.proto, proj)}[mode]

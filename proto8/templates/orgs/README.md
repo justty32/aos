@@ -49,7 +49,7 @@ An org is not an agent and not a daemon. It is a small set of documents in the w
 6. Point the workspace's entry file (`AGENTS.md`) to `wf/org/README.md` with one line: who owns what and who gets it next.
 7. Attach the agents. The org template ships no agent definition; make each seat's definition from an agent template and put the text of [basic/extras/system.seat.txt](basic/extras/system.seat.txt), with `<SEAT>` and `<AGENT>` filled, into its `system.txt`, so that the definition points to the card and repeats nothing. From a shell:
    ```
-   cp -r $AOS_HOME/templates/agent-fsm <where your definitions live>/<SEAT>
+   cp -r $AOS_HOME/templates/agents/agent-fsm <where your definitions live>/<SEAT>
    ```
    (or `eca-claude` for a coding CLI). An agent does the same with `agent_def {"op":"new","template":"agent-fsm","path":"<where your definitions live>/<SEAT>"}`; the `def` and `subagent` tool packs are in no stock template, so the lead adds them first (knowledge page `aos/agents.md`). Set the brain in `llm.json` (an agent then runs `agent_def` check), then attach it with `aos-agent ctl add` (a person) or `subagent` add (the lead).
 

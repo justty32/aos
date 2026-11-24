@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# tools_def - 工具定義的創造：new＝把 Python 骨架（templates/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段
+# tools_def - 工具定義的創造：new＝把 Python 骨架（templates/tools/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段
 # 使用者 11-10 深夜（thinking 2026-11/10/tools-def）：「1.做。2.tools_def 3.對。 4.給python一種，順便弄個好用的lib，方便AI弄json schema, metainfo啥的。」
 #   粗版、照 agent_def：只複製與檢查；改內容用一般的檔案工具，掛上去用 self_tools add。
 # 介面（py/docs/01 的契約）：stdin 收 {"op": "new"|"check", …}；別的鍵＝ArgumentsBad：
@@ -26,7 +26,7 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 NAME = os.path.basename(HERE)
 HELP = """\
 usage: %s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Make tools: op new copies the Python tool skeleton (templates/tool-python) to a new folder
+Make tools: op new copies the Python tool skeleton (templates/tools/tool-python) to a new folder
 (or into a JSON object: FILE.json#/POINTER, the script goes next to the JSON file);
 op check checks one tool location (folder, JSON file or FILE.json#/POINTER), recompiles
 _tooldef/_metainfo from a script written with fn (fn.main), can try one call, and says the stage.
@@ -53,7 +53,7 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.exit(1)
 
 tool_io.start(NAME, HELP)
-SKELETON = os.path.normpath(os.path.join(HERE, "..", "..", "..", "..", "templates", "tool-python"))
+SKELETON = os.path.normpath(os.path.join(HERE, "..", "..", "..", "..", "templates", "tools", "tool-python"))
 OPS = {"new": ("path", "description"), "check": ("path", "sample"), "add_entry": ("path", "script"),
        "add_metainfo": ("path", "description", "meta"), "add_tooldef": ("path", "description", "params")}
 PARAM_KEYS = ("name", "type", "description", "required", "default", "enum", "items")

@@ -48,6 +48,7 @@ def load(enable_counters):
             tool_io.die("StackMissing", "AOS_STACK is not set")
         try:
             cfg = packs.read_cfg(path, os.path.abspath(stack))
+            hooks.old_key(cfg["file"], os.path.abspath(stack))          # 11-24：還寫著舊的 hooks 鍵＝warning 一行（不擋、不洗版）
             cfg["hooks"] = hooks.load(os.path.dirname(cfg["file"]))   # 被勾清單：定義夾 interfaces.json 的 hookeds（11-21）
             cfg["host"] = llm_rules.find_host()
         except tool_io.Error as error:

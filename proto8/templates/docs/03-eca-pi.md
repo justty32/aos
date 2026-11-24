@@ -1,6 +1,6 @@
 # eca-pi：把 pi coding agent 當成一隻 aos agent（kind pi，rpc 一輪＋畫面）
 
-← [templates/eca-pi](../eca-pi/README.md)｜同類：[01-eca-claude](01-eca-claude.md)｜研究與裁定：[thinking 11-18 eca-pi](../../thinking/2026-11/18/eca-pi/README.md)
+← [templates/agents/eca-pi](../agents/eca-pi/README.md)｜同類：[01-eca-claude](01-eca-claude.md)｜研究與裁定：[thinking 11-18 eca-pi](../../thinking/2026-11/18/eca-pi/README.md)
 
 使用者 11-18：「1.做成第三種。2.甲。3.先全開。4.我是打算拿它來代替codex。5.對。6.開」，下午改口「算了，不要釘版吧，太麻煩了」，傍晚「codex身留下，pi coding agent要做畫面，去吧。每輪生一行外掛，目前就先這樣。…接著做乙丙吧。」所以：pi 是 eca 的第三種身（跟 claude、codex 並列）、權限照 pi 原樣全開、用使用者自己裝的那份 pi、codex 那種身照留；非互動那條走乙案（`pi --mode rpc`，回答途中收信），另有丙案的畫面（tmux＋aos 的 pi 外掛）。甲案（`--mode json`）沒留：乙完全涵蓋甲。
 

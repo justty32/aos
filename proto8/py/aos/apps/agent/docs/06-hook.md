@@ -14,7 +14,7 @@
 
 ## 事件
 
-每個事件什麼時候發、事件 JSON 帶哪些欄位，寫在各身體的宣告檔：agent-fsm 四格 [templates/agent-fsm/hooks.json](../../../../../templates/agent-fsm/hooks.json)、起來與停下、每一格前後 [py/aos/apps/hook/loop_hooks.json](../../hook/loop_hooks.json)，eca 見下面「eca（縮水版）」。下表是手抄的 agent-fsm 版，[py/tests/test_hook_points_match.py](../../../../tests/test_hook_points_match.py) 比對點名與欄位名有沒有漏。
+每個事件什麼時候發、事件 JSON 帶哪些欄位，寫在各身體的宣告檔：agent-fsm 四格 [lib/aos/apps/agent_fsm/hooks.json](../../agent_fsm/hooks.json)、起來與停下、每一格前後 [py/aos/apps/hook/loop_hooks.json](../../hook/loop_hooks.json)，eca 見下面「eca（縮水版）」。下表是手抄的 agent-fsm 版，[py/tests/test_hook_points_match.py](../../../../tests/test_hook_points_match.py) 比對點名與欄位名有沒有漏。
 
 | 事件 | 什麼時候（agent-fsm） | 事件 JSON 多的欄位 | `condition` 比什麼 | 退 10／能改 |
 |---|---|---|---|---|

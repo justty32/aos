@@ -11,8 +11,9 @@ import tempfile
 import time
 import unittest
 
-CELLS = Path(__file__).resolve().parents[2] / "agent-fsm"   # 範本本身
-PROTO = CELLS.parents[1]
+PROTO = Path(__file__).resolve().parents[3]
+CELLS = PROTO / "py" / "aos" / "apps" / "agent_fsm"   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
+TEMPLATE = PROTO / "templates" / "agents" / "agent-fsm"   # 範本本身（給人抄的定義）
 GOAL_TOOL = PROTO / "py" / "tools" / "agent" / "goal"
 NOTE = "[aos] goal: "
 _spec = importlib.util.spec_from_file_location("goal_state", PROTO / "py" / "aos" / "agentlib" / "goal_state.py")
@@ -35,7 +36,7 @@ class Base(unittest.TestCase):
         if not os.environ.get("KEEP"):
             self.addCleanup(shutil.rmtree, self.root, True)
         self.defn, self.d, self.ws, self.kernel = (self.root / n for n in ("def", "d", "ws", "kernel"))
-        shutil.copytree(CELLS, self.defn, ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copytree(TEMPLATE, self.defn, ignore=shutil.ignore_patterns("__pycache__"))
         (self.defn / "hookeds.json").write_text('{}')         # 不要範本的 on_clock 鉤子攪局
         (self.defn / "llm.json").write_text('{"model": "fake"}')
         (self.defn / "tools.json").write_text(json.dumps({"tools": {
@@ -69,7 +70,7 @@ class Base(unittest.TestCase):
         return [m["content"] for m in self.history() if m.get("role") == "user" and str(m.get("content")).startswith(NOTE)]
 
     def idle(self, code, *args):
-        r = subprocess.run([sys.executable, str(self.defn / "idle.py"), *args], env=self.env, capture_output=True, text=True,
+        r = subprocess.run([sys.executable, str(CELLS / "idle.py"), *args], env=self.env, capture_output=True, text=True,
                            timeout=30)
         self.assertEqual(r.returncode, code, r.stderr)
         return r

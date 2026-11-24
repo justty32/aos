@@ -4,7 +4,7 @@ Role card of the helper in <PROJECT>, written for whoever attaches one: what a h
 
 Back to [org](../README.md). Move this folder to `wf/org/helper/` if the org uses helpers.
 
-A helper is attached for one job and removed when the job is done. It holds no seat, owns no paths and keeps no notes. It does not read this card: it is made from a kit (`$AOS_HOME/templates/kits/`, knowledge page `aos/kits.md`) and knows only the kit's text, the site layer and its brief.
+A helper is attached for one job and removed when the job is done. It holds no seat, owns no paths and keeps no notes. It does not read this card: it is made from a kit (`$AOS_HOME/templates/agents/kits/`, knowledge page `aos/kits.md`) and knows only the kit's text, the site layer and its brief.
 
 ## Duties
 
@@ -40,7 +40,7 @@ An agreement, not a wall ([places](../places.md)).
 
 1. Pick the kit. If the org has a site layer (`extras/site.txt`, filled in), make a kit of your own first: copy the kit folder and put the site layer into its `system.txt` just before the role part (the last block, the same text as the kit's `roles/<role>.txt`).
 2. Attach it.
-   - From a shell: `aos-agent ctl add --kit <the kit folder> -n <agent name> -w <its workspace folder> <an agent-fsm definition>`; the kit's two files go into the agent's stack and the definition is not changed (`$AOS_HOME/templates/kits/README.md`).
+   - From a shell: `aos-agent ctl add --kit <the kit folder> -n <agent name> -w <its workspace folder> <an agent-fsm definition>`; the kit's two files go into the agent's stack and the definition is not changed (`$AOS_HOME/templates/agents/kits/README.md`).
    - As an agent: make a definition with `agent_def {"op":"new","template":"agent-fsm","path":"<where your definitions live>/gather"}`, copy the kit's `system.txt` and `tools.json` over it, set the brain in `llm.json`, run `agent_def check`, then `subagent` add with a name like `<your name>-<role>-<number>` and its own workspace folder. The `def` and `subagent` tool packs are in no stock template; add them first (knowledge page `aos/agents.md`).
 3. Send the brief. When the job is checked, remove the helper (`subagent` rm, or `aos-agent ctl rm`).
 

@@ -16,7 +16,7 @@
 # (what make makes is read from its dry run). So a rerun gives the same result as a fresh install.
 # Programs run only from bin/ and lib/: a change in py/ shows up after the next install.py.
 # At the end it prints the next steps: set AOS_HOME once (it is never set for you; a warning when it points at another home),
-# then copy a starter template (templates/start-api or start-eca) to a tree and source that tree's env.sh.
+# then copy a starter template (templates/starts/start-api or start-eca) to a tree and source that tree's env.sh.
 # --check only checks dependencies (required ones missing -> exit 1; optional ones are listed, never block).
 # Errors are one line: "install.py: error: <Code> <reason>", exit 1.
 # Standard library only. Written in old syntax on purpose, so an old python can still print the version error.
@@ -348,7 +348,7 @@ def print_next():
     else:
         sys.stderr.write("%s: warning: AOS_HOME is %s, not this home %s; env.sh and the trees follow AOS_HOME, "
                          "so change it (e.g. in ~/.bashrc) if this home is the one you want\n" % (PROG, have, HOME))
-    print("then: cp -r $AOS_HOME/templates/start-api ~/aos-home   (or start-eca; see templates/start-api/README.md), "
+    print("then: cp -r $AOS_HOME/templates/starts/start-api ~/aos-home   (or start-eca; see templates/starts/start-api/README.md), "
           "and in every window: cd ~/aos-home && source env.sh")
 
 

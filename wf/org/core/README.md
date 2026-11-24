@@ -17,7 +17,7 @@
   - 改完照 [feature-dev「補文檔」那張表](../../workflows/feature-dev/README.md)補該補的程式文件；新檔第一行一句話、職責變了改那一句（code map 的逐檔表由排隊生成，不手改）。
 - **不負責**
   - `proto8/frontend/`（含 `frontend/aos-user/`、`frontend/tests/`）：歸[前端位子](../frontend/README.md)。
-  - `proto8/templates/`（含 `templates/tests/`、`templates/kernel/`）：歸[範本位子](../templates/README.md)。
+  - `proto8/templates/`（含 `templates/tests/`、`templates/kernels/`）：歸[範本位子](../templates/README.md)。
   - `proto8/knowledge/`：歸[知識庫位子](../kb/README.md)。
   - 使用者條文 `proto8/docs/`（CONCEPTS、NORMS、CONVENTION）：要改就回報負責人，條文由它按件派，不當簡單工作（[user.md「子 agent 模型」](../../workflows/common/user.md)）。
   - `wf/tools/` 與 `wf/` 的其他文件；頂層結構變了要改的 `AGENTS.md`、`proto8/README.md`：寫在回報裡給負責人。

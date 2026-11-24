@@ -62,12 +62,12 @@ class FakeAgentMeasure(unittest.TestCase):
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
             env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'py')])
-            env.update(AOS_STACK=str(daemon_stack), AOS_DAEMON=str(daemon_stack),
+            env.update(AOS_STACK=str(daemon_stack), AOS_DAEMON=str(daemon_stack), AOS_HOME=str(PROTO),   # 11-24：抄來的 agent-fsm 動態連結 lib 的格
                        AOS_LLM_KERNEL=str(kernel_stack), AOS_CD=str(root), AOS_WS=str(root))
 
             def definition(name, tools):
                 target = defs / name
-                shutil.copytree(PROTO / 'templates/agent-fsm', target,
+                shutil.copytree(PROTO / 'templates/agents/agent-fsm', target,
                                 ignore=shutil.ignore_patterns('tests', '__pycache__'))
                 write(target / 'llm.json', {'model': name})
                 write(target / 'tools.json', {'tools': tools})

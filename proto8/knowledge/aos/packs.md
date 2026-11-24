@@ -37,13 +37,13 @@ What a pack costs: every pack you have is sent with every question to your brain
 | shell | 2 | 1,006 |
 | gadgets | 4 | 1,615 |
 | todo | 1 | 1,032 |
-| self | 6 | 5,439 |
+| self | 6 | 5,611 |
 | mailbox | 3 | 2,367 |
 | goal | 1 | 865 |
 | json | 9 | 5,906 |
 | index | 1 | 998 |
 | events (optional) | 2 | 10,263 |
-| subagent (optional) | 3 | 11,428 |
+| subagent (optional) | 3 | 11,435 |
 | def (optional) | 2 | 6,427 |
 | jsonx (optional) | 8 | 12,011 |
 | comm (optional) | 5 | 6,120 |
@@ -56,6 +56,8 @@ How to add a pack: whoever makes the definition adds one item to "$override" in 
 - Turn one tool off for yourself: self_tools {"op": "rm", "name": "shell"}.
 - A whole pack is turned off by removing it from the "$override" list of the definition's tools.json (a person or a definition change, not a tool call).
 - A tool whose description starts with `[MCP server NAME]` comes from an external MCP server, not from a stock pack: `aos/cli/mcp_import.md#/Where an external tool comes from`.
+- A pack file in `"$override"` that is missing or broken (not there, not JSON or not an object, a directive that cannot be resolved) only loses its own tools; the other tools work. stderr gets one warning line (`pack <file> (from <file>#/$override/<i>) skipped (...)`), and `self_tools` `{"op": "ls"}` shows a line `!<file>` with `broken pack:` and the reason (`ls --json` does not). Fix that file, or take it out of `"$override"`. A loop of `$override` files, or a broken registry file itself (the one at the top), still fails as a whole.
+- eca: when the `tools.json` in your own stack is broken itself, you get the definition's tools instead (mailbox and the other basics still work) and one warning line; the tools you added come back when that file is fixed or after `aos-agent tools reset`. agent-fsm has no such fallback yet.
 
 # look
 

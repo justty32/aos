@@ -4,6 +4,7 @@
 #（kernel_hookeds.json，kernel 第 3 題），每輪重讀；kernel.json 不再有 hooks。三個點都能攔（退 10）；hook 失敗（退 0／10 以外、逾時、起不來、
 # stdout 不合）＝這一輪停（HookFailed，同以前 on_error 的預設 stop）。
 import copy
+import io
 import json
 import os
 
@@ -21,6 +22,48 @@ def check_entry(entry):
         m = entry["condition"]
         if not ((isinstance(m, str) and m) or (isinstance(m, list) and all(isinstance(x, str) and x for x in m))):
             raise hook_lists.HooksBad("condition must be a non-empty string or an array of them")
+
+
+OLD_KEY_MARK = "hooks_key_warned.txt"
+
+
+def old_key(path, stack):
+    """kernel.json 最外層還寫著 11-21 以前的 hooks 鍵：不擋（使用者 11-24「1.不報錯。」），照常跑，stderr 印一行 warning 說它被忽略、
+    hook 要寫在哪。kernel 每拍是新行程，所以印過記在 $AOS_STACK/hooks_key_warned.txt（kernel.json 的路徑與 mtime），一樣就不再印；
+    kernel.json 改了（mtime 變）再看一次，拿掉那鍵就刪記號。讀不到、不是 JSON 物件＝不管（讀設定那步自己會報）。"""
+    path = path.partition("#")[0]
+    try:
+        with io.open(path, encoding="utf-8") as stream:
+            doc = json.load(stream)
+        stamp = "%s %d\n" % (os.path.abspath(path), os.stat(path).st_mtime_ns)
+    except (OSError, ValueError):
+        return
+    mark = os.path.join(stack, OLD_KEY_MARK) if stack else None
+    if not isinstance(doc, dict) or "hooks" not in doc:
+        if mark and os.path.exists(mark):
+            try:
+                os.unlink(mark)
+            except OSError:
+                pass
+        return
+    try:
+        with io.open(mark, encoding="utf-8") as stream:
+            if stream.read() == stamp:
+                return
+    except (OSError, UnicodeError, TypeError):
+        pass
+    from aos import tool_io
+    tool_io.warn("%s has a top-level \"hooks\" key, which is ignored since 11-21: no hook in it runs; put the hooks in the file named "
+                 "by \"hookeds\" in the interfaces.json next to it (the templates use kernel_hookeds.json) and delete that key"
+                 % os.path.abspath(path))
+    if mark:
+        try:
+            tmp = os.path.join(stack, "." + OLD_KEY_MARK + ".tmp")
+            with io.open(tmp, "w", encoding="utf-8") as stream:
+                stream.write(stamp)
+            os.replace(tmp, mark)
+        except OSError:
+            pass                                             # 寫不成＝下一拍再印一次
 
 
 def load(def_dir):

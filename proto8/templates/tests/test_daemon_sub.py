@@ -7,7 +7,7 @@ from pathlib import Path
 import unittest
 
 TEMPLATES = Path(__file__).resolve().parents[1]
-ROOT, SUB = TEMPLATES / "daemon-root", TEMPLATES / "daemon-sub"
+ROOT, SUB = TEMPLATES / "daemons" / "daemon-root", TEMPLATES / "daemons" / "daemon-sub"
 
 
 def files(folder):

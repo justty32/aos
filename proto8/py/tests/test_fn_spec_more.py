@@ -105,7 +105,7 @@ class Links(FnCase):
         self.assertEqual(out["tools.json"]["tools"], {})
         self.assertNotIn("fn/check.py", out)
         eca = Path(self.temp.name) / "eca"
-        shutil.copytree(TEMPLATES / "eca-claude", eca)
+        shutil.copytree(TEMPLATES / "agents" / "eca-claude", eca)
         self.agent(ADD + '\nagent = defs.Agent("Eca with a function.", system="S.\\n", tools=[add], llm={})\ndefs.main(agent)\n', name="eca")
         r = run_agent(eca / "agent.py", "--compile", home=self.home)
         self.assertEqual(r.returncode, 0, r.stderr)

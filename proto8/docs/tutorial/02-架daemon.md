@@ -7,7 +7,7 @@
 ## 抄範本、先替 kernel 留位置（視窗 B）
 
 ```sh
-cp -r $AOS_HOME/templates/daemon-root root
+cp -r $AOS_HOME/templates/daemons/daemon-root root
 ls -A root
 cat root/_entry
 sed -i 's|^AOS_LLM_KERNEL=.*|AOS_LLM_KERNEL=${AOS_STACK}/procs/llm|' root/.env

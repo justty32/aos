@@ -2,7 +2,7 @@
 
 設計稿 thinking/2026-11/19/aos-ns-1119/（03 的 B、05、07 使用者裁定）；施工紀錄 thinking/2026-11/19/aos-ns-第一刀.md。
 庫＝一個長相固定的資料夾：<根>/packs/<名>.json（工具包）、<根>/tools/<路徑>/（工具夾）。std 先不搬（07 第 4 題 b）：根＝$AOS_HOME，
-包在 lib/packs、工具在 lib/tools、hook 組與 fsm 格在 templates/<範本>/（Argon A6：不搬時 std 是三個固定位置的特例）。
+包在 lib/packs、工具在 lib/tools、fsm 格在 lib/aos/apps/agent_fsm；出廠的 hook 組編譯時從 templates/agents/<範本>/ 抄（Argon A6：不搬時 std 是固定位置的特例）。
 解析全在編譯時做完（「C 與 .o」）：編譯時一定要讀得到庫根，讀不到＝SpecBad（Argon A3）；json 裡只寫全路徑（指示詞或絕對路徑），不留庫名；動態連結時 $override 寫的是包檔的全路徑，名字照包裡的（所以只有不改名的包能動態）。
 別的庫的路徑在 agent.py 明寫（07 第 6 題：使用者 11-19「先明寫，以後有需要再去弄-I。」）；包怎麼連結是編譯選項
 （07 第 7 題：「或者說，用選項吧，gcc那樣」），預設靜態（選項框「預設靜態 (Recommended)」）。
@@ -14,7 +14,7 @@ from aos import agent_spec_parts as parts
 from aos.agent_spec_hooks import Hooks               # hook 那塊 11-20 第 3 刀拆到 agent_spec_hooks（線 aos-pylib-k3-1120）
 
 PREFIX_RE = re.compile(r"[A-Za-z0-9_-]*\Z")       # 腦叫工具的名字只准英數、_、-，前綴也一樣
-STOCK_CELLS = (("idle", "idle", {0: "think", 10: "idle"}, None),       # templates/agent-fsm/fsm.json 那四格，格的程式借範本那份
+STOCK_CELLS = (("idle", "idle", {0: "think", 10: "idle"}, None),       # agent-fsm 那四格，格的程式在 lib/aos/apps/agent_fsm
                ("think", "brain", {0: "wait", 10: "idle"}, None),
                ("wait", "wait", {0: "act", 10: "wait", 11: "think"}, None),
                ("act", "act", {0: "think", 10: "idle"}, 0))
@@ -163,19 +163,19 @@ class Lib:
 
 
 class Std(Lib):
-    """隨 aos 發的庫 std：沒搬（07 第 4 題 b），根＝$AOS_HOME；工具名不帶前綴（07 第 2 題 b）。hook 組與 fsm 格今天寄在範本名底下。"""
+    """隨 aos 發的庫 std：沒搬（07 第 4 題 b），根＝$AOS_HOME；工具名不帶前綴（07 第 2 題 b）。fsm 格在 lib/aos/apps/agent_fsm；出廠的 hook 組編譯時從 templates/agents/<範本>/ 抄。"""
 
     def __init__(self):
         Lib.__init__(self, "std", {"$env": "AOS_HOME", "$path": ""}, packs="lib/packs", tools="lib/tools", prefix="")
 
     def hooks(self, template="agent-fsm"):
-        """某個範本被勾清單 hookeds.json 的那組 hook（agent-fsm、eca-claude、eca-pi）。編譯時從 $AOS_HOME/templates/<template>/hookeds.json
+        """某個範本被勾清單 hookeds.json 的那組 hook（agent-fsm、eca-claude、eca-pi）。編譯時從 $AOS_HOME/templates/agents/<template>/hookeds.json
         讀出來抄進這夾的 hookeds.json（範本改了，下次重新編譯跟著變；11-21 起檔名 hookeds.json、不再包一層 hooks）。
         回一個帶來源標記的 dict（agent_spec_hooks.Hooks）：跟另一組（另一個範本、defs.load 的 HOOKS）同名又不同＝SpecBad。"""
         call = "std.hooks(%r)" % (template,)
         if not isinstance(template, str) or not parts.PACK_RE.match(template):
             return _bad("%s: give a template name, like \"agent-fsm\"" % call)
-        where, err = self._where("templates", call)
+        where, err = self._where("templates/agents", call)
         if err:
             return _bad(err)
         try:
@@ -186,20 +186,20 @@ class Std(Lib):
         except FileNotFoundError:
             have = sorted(t for t in os.listdir(where) if os.path.isfile(os.path.join(where, t, "hookeds.json"))) \
                 if os.path.isdir(where) else []
-            return _bad("%s: there is no $AOS_HOME/templates/%s/hookeds.json (templates with hooks: %s)"
+            return _bad("%s: there is no $AOS_HOME/templates/agents/%s/hookeds.json (templates with hooks: %s)"
                         % (call, template, ", ".join(have) or "none"))
         except (OSError, ValueError, AttributeError) as e:
-            return _bad("%s: cannot read $AOS_HOME/templates/%s/hookeds.json: %s" % (call, template, e))
+            return _bad("%s: cannot read $AOS_HOME/templates/agents/%s/hookeds.json: %s" % (call, template, e))
         if not isinstance(table, dict):
-            return _bad("%s: $AOS_HOME/templates/%s/hookeds.json is not a JSON object of hooks" % (call, template))
-        return Hooks(table, call, ["templates/%s/hookeds.json" % template])   # 帶標記的一組：std.hooks()["timer"] 取一格（繼承第一刀）
+            return _bad("%s: $AOS_HOME/templates/agents/%s/hookeds.json is not a JSON object of hooks" % (call, template))
+        return Hooks(table, call, ["templates/agents/%s/hookeds.json" % template])   # 帶標記的一組：std.hooks()["timer"] 取一格（繼承第一刀）
 
     def fsm(self, group="agent-fsm"):
-        """agent-fsm 範本那四格（idle、think、wait、act），格的程式借 $AOS_HOME/templates/agent-fsm/ 那份（不抄、編譯時不讀）。"""
+        """agent-fsm 範本那四格（idle、think、wait、act），格的程式在 $AOS_HOME/lib/aos/apps/agent_fsm/（動態連結，不抄、編譯時不讀）。"""
         if group != "agent-fsm":
             return _bad("std.fsm(%r): std has one state machine, \"agent-fsm\"" % (group,))
         spec = _spec()
-        return spec.fsm("idle", [spec.state(n, ["python3", _join(self.root, "templates/agent-fsm/%s.py" % prog)], nxt, timeout_ms=t)
+        return spec.fsm("idle", [spec.state(n, ["python3", _join(self.root, "lib/aos/apps/agent_fsm/%s.py" % prog)], nxt, timeout_ms=t)
                                  for n, prog, nxt, t in STOCK_CELLS])
 
 

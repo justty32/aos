@@ -55,6 +55,28 @@ def run(argv):
         die("CommandFailed", "%s exited %d: %s" % (argv[0], p.returncode, last[-1] if last else "(no message)"))
 
 
+UNREACHABLE = ("cannot connect", "connection refused", "timed out", "timeout", "name or service not known",
+               "no route to host", "connection reset", "network is unreachable", "temporary failure in name resolution")
+
+
+def unreachable(code, error, event):
+    """端點沒在聽：EndpointFailed、沒有 HTTP status（有回應就不是連不上），msg 是連不上或逾時那幾種（llm_http 的 cannot connect／timed out）。"""
+    if code != "EndpointFailed" or "status" in event or "status" in error:
+        return False
+    msg = str(error.get("msg") or "").lower()
+    return any(word in msg for word in UNREACHABLE)
+
+
+def next_try(wait_s):
+    """事件的 wait_s（秒）→ 現在加上去的本機時刻 HH:MM:SS；不是正數＝None。"""
+    if isinstance(wait_s, bool) or not isinstance(wait_s, (int, float)) or wait_s <= 0:
+        return None
+    try:
+        return (datetime.datetime.now().astimezone() + datetime.timedelta(seconds=wait_s)).strftime("%H:%M:%S")
+    except (OverflowError, ValueError):
+        return None
+
+
 def local_time(raw):
     """resets_at（ISO 8601 帶時區）→ 本機 HH:MM；不是字串、解不開、沒帶時區＝None。"""
     if not isinstance(raw, str):
@@ -144,13 +166,23 @@ def main():
                 return 0
             keep = {"kind": "retrying", "armed": False}
             title = "%s: brain failed (%s), retrying by itself" % (agent, code)
+            # 11-24（ops 意見 ②，使用者「那四條也照推薦做」）：事件帶 wait_s＝說下一次自己重試的本地時刻、提 ctl retry；
+            # 端點沒在聽（連不上、連線逾時，沒有 HTTP status）＝不說 no action is needed，改說要有人處理。
+            nxt = next_try(event.get("wait_s"))
+            now = (" Next try at %s; aos-agent ctl retry %s makes it try now." % (nxt, agent)) if nxt else ""
             if eca:
                 what = ("%s. It has tried %s times and keeps retrying by itself after each cooldown; "
-                        "the unanswered turn is continued in the same conversation. No action is needed. "
-                        "To stop it, use stop." % (detail, attempt))
+                        "the unanswered turn is continued in the same conversation. No action is needed.%s "
+                        "To stop it, use stop." % (detail, attempt, now))
+            elif unreachable(code, error, event):
+                title = "%s: brain endpoint not answering (%s), retrying by itself" % (agent, code)
+                what = ("%s. The endpoint is not answering, so someone needs to look at it (for example start the model "
+                        "server or fix its address). It has tried %s times and keeps retrying by itself%s; once the endpoint "
+                        "is back, aos-agent ctl retry %s makes it try at once instead of waiting. To stop it, use stop."
+                        % (detail, attempt, " (next try at %s)" % nxt if nxt else "", agent))
             else:
-                what = ("%s. It has tried %s times and keeps retrying by itself; no action is needed. "
-                        "To stop it, use stop." % (detail, attempt))
+                what = ("%s. It has tried %s times and keeps retrying by itself; no action is needed.%s "
+                        "To stop it, use stop." % (detail, attempt, now))
         else:
             keep = {"kind": "stopped", "code": code, "history_lines": lines, "attempt": attempt}
             if seen == keep:

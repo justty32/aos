@@ -30,9 +30,9 @@ class MailNotifyDaemon(unittest.TestCase):
                                                            "endpoints": {"fake": {}}}))
         (self.root / "kernel_daemon.json").write_text(json.dumps({"interval_ms": 10, "exec": {"argv": [
             str(PROTO / "py/tools/aos/kernel_llm/_entry"), str(self.root / "kernel.json")]}}))
-        shutil.copytree(PROTO / "templates" / "daemon-root", self.root / "defs")
+        shutil.copytree(PROTO / "templates" / "daemons" / "daemon-root", self.root / "defs")
         bob = self.root / "defs" / "bob"
-        shutil.copytree(PROTO / "templates" / "agent-fsm", bob, ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copytree(PROTO / "templates" / "agents" / "agent-fsm", bob, ignore=shutil.ignore_patterns("__pycache__"))
         (bob / "llm.json").write_text(json.dumps({"model": "fake"}))
         (bob / "tools.json").write_text(json.dumps({"tools": {}}))   # 假腦看到工具會先叫一支；這裡只看 history 裡的提醒
         hooks = json.loads((bob / "hookeds.json").read_text())

@@ -7,7 +7,7 @@
 - 重量過了（`907ddecc9`，線 prompt-cost-1122）：「九成六是工具說明、快取沒命中」是 11-20 的舊數字。今天 HEAD 的起手 ann 問一句話約 6,225 token（工具 4,199、instructions 2,011、對話 15）；前綴每輪逐字穩定，aos 這側沒有不改行為就能修的快取問題；沒中的大頭是上游偶發整段沒中（約 18% 的後續輪）。
 - 選項 A（讓上游拿到快取鍵）實驗過，無效，aos 改動不交、正式 LiteLLM 不用套 patch（`22501d7af`，線 prompt-cache-key-1122）。
 - 原本 next 寫的「等別線交了補」兩件，11-21 已做：self_llm 說明含 reasoning_effort、範本文件改成 36 支（`949925842`，線 top-1121-chore）。
-- 原本 next 寫的「使用者跑 install.py、把 ann 的 tools.json 與 system.txt 抄到 `~/aos-home/agents/ann`」不用做了：install.py 11-21 起跑過多次；11-22 搬家時舊樹的 ann 照使用者「舊樹的不搬」沒搬進 `_stack`（[工作區與stack-1122](../../proto8/thinking/2026-11/22/工作區與stack-1122/README.md)），`~/aos-home` 往後只裝 llm kernel。範本 `templates/start-api` 的 ann 已是新版，用它起的新樹就吃得到。
+- 原本 next 寫的「使用者跑 install.py、把 ann 的 tools.json 與 system.txt 抄到 `~/aos-home/agents/ann`」不用做了：install.py 11-21 起跑過多次；11-22 搬家時舊樹的 ann 照使用者「舊樹的不搬」沒搬進 `_stack`（[工作區與stack-1122](../../proto8/thinking/2026-11/22/工作區與stack-1122/README.md)），`~/aos-home` 往後只裝 llm kernel。範本 `templates/starts/start-api` 的 ann 已是新版，用它起的新樹就吃得到。
 - 剩：B（縮短 LiteLLM 自動加的 codex 指示）、C（再縮預設工具）、D（自加的工具排最後，推薦不做）、E（都不做）要使用者定，見 [prompt-cost-1122「要你定的」](../../proto8/thinking/2026-11/22/prompt-cost-1122/README.md#要你定的)。
 
 ## 11-21 以前（what 欄原文，逐字）

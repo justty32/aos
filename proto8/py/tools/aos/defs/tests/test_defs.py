@@ -102,8 +102,7 @@ class DefinitionsTest(unittest.TestCase):
         for part in ('tools/aos/defs', 'packs', 'tools/base', 'tools/agent/do_task'):   # 11-19：check 也查包裡的工具在不在（gadgets 有 do_task）
             shutil.copytree(PROTO / 'py' / part, home / 'lib' / part, ignore=skip)
         shutil.copytree(PROTO / 'py' / 'aos', home / 'lib' / 'aos', ignore=skip)
-        (home / 'templates' / 'agent-fsm').mkdir(parents=True)                # 11-19：腦設定照這份規則查
-        shutil.copy(PROTO / 'templates' / 'agent-fsm' / 'llm_settings.py', home / 'templates' / 'agent-fsm')
+        # 11-19：腦設定照 lib/aos/apps/agent_fsm/llm_settings.py 的規則查（隨上面的 lib/aos 抄到）
         self.assertFalse((home / 'cmd').exists())
         result, data = self.call('check', entry=home / 'lib' / 'tools' / 'aos' / 'defs' / '_entry')
         self.assertEqual(data, {'problems': []}, result.stderr)
@@ -346,7 +345,7 @@ class DefinitionsTest(unittest.TestCase):
             'idle': {'exec': {'argv': ['python3', 'idle.py']}, 'next': {'0': 'think'}},
             'think': {'exec': {'argv': ['python3', '-u', 'nocell.py', 'out.txt']}, 'next': {'0': 'idle'}},
             'mod': {'exec': {'argv': ['python3', '-m', 'json.tool']}, 'next': {'0': 'idle'}},
-            'std': {'exec': {'argv': ['python3', {'$env': 'AOS_HOME', '$path': '/templates/agent-fsm/nope.py'}]}, 'next': {'0': 'idle'}},
+            'std': {'exec': {'argv': ['python3', {'$env': 'AOS_HOME', '$path': '/templates/agents/agent-fsm/nope.py'}]}, 'next': {'0': 'idle'}},
             'sub': {'exec': {'argv': ['./gone.sh'], 'cwd': 'cells'}, 'next': {'0': 'idle'}},
             'tool': {'exec': 'missing_tool', 'next': {'0': 'idle'}}}},
             loop={'exec': 'fsm.json', 'on_start': {'argv': [home, 'after_start', {'$env': 'AOS_CD'}]}},
@@ -356,7 +355,7 @@ class DefinitionsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         text = '\n'.join(problems)
         for want in ('fsm.json#/states/think/exec/argv/2: script "nocell.py" does not exist',
-                     'fsm.json#/states/std/exec/argv/1: script {"$env": "AOS_HOME", "$path": "/templates/agent-fsm/nope.py"} does not exist',
+                     'fsm.json#/states/std/exec/argv/1: script {"$env": "AOS_HOME", "$path": "/templates/agents/agent-fsm/nope.py"} does not exist',
                      'fsm.json#/states/sub/exec/argv/0: program "./gone.sh" does not exist (looked for cells/gone.sh)',
                      'fsm.json#/states/tool/exec: target "missing_tool" does not exist',
                      'loop.json#/on_start/argv/0: program {"$env": "AOS_HOME", "$path": "/lib/tools/agent/nope"} does not exist',
@@ -418,7 +417,7 @@ class DefinitionsTest(unittest.TestCase):
         for name in ('agent-fsm', 'agent-python', 'reviewer', 'eca-claude'):
             with self.subTest(template=name):
                 root = self.root / ('t-' + name)
-                shutil.copytree(PROTO / 'templates' / name, root / 'd', ignore=shutil.ignore_patterns('__pycache__'))
+                shutil.copytree(PROTO / 'templates' / 'agents' / name, root / 'd', ignore=shutil.ignore_patterns('__pycache__'))
                 old, self.root = self.root, root / 'd'
                 result, data = self.call('check')
                 self.root = old

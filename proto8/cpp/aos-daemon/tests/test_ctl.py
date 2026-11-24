@@ -338,5 +338,66 @@ class Prune(unittest.TestCase):
         self.assertIn('stack / workspace file', result.stdout)
 
 
+
+class Leftovers(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix='aos-leftovers-ctl-')
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.cli = PROTO / 'bin' / 'aos-daemon-ctl'
+
+    def ctl(self, *args):
+        return subprocess.run([str(self.cli), '--daemon', str(self.root), *args],
+                              env=ENV, capture_output=True, text=True, timeout=5)
+
+    def test_lists_only_folders_no_row_uses(self):
+        procs = self.root / 'procs'
+        for name in ('kept', 'onrow', 'holder', 'gone', '_clock'):
+            (procs / name).mkdir(parents=True)
+        (procs / 'holder' / 'inner').mkdir()
+        (procs / 'kept' / 'state.json').write_text('{}')
+        os.utime(procs / 'kept' / 'state.json', (1000000000, 1000000000))
+        os.utime(procs / 'kept', (1000000000, 1000000000))
+        (procs / 'a-file').write_text('not a stack')
+        (self.root / 'elsewhere').mkdir()
+        write(self.root / 'procs_state.json', {'procs': {
+            'onrow': {'phase': 'stopped', 'stack': 'procs/onrow'},
+            'holder': {'phase': 'running', 'stack': 'procs/holder/inner'},
+            'gone': {'phase': 'stopped', 'stack': 'elsewhere'},          # same name, stack kept elsewhere
+            '_clock': {'phase': 'running', 'stack': str(procs / '_clock')}}})
+        result = self.ctl('leftovers')
+        self.assertEqual((result.returncode, result.stderr), (0, ''))
+        lines = result.stdout.splitlines()
+        self.assertEqual(lines[0], 'gone\t%s\t%s' % (lines[0].split('\t')[1], procs / 'gone'))
+        self.assertEqual(lines[1], 'kept\t2001-09-09T01:46:40+00:00\t%s' % (procs / 'kept'))
+        self.assertEqual(lines[2], '# 2 folders in %s not on the table (kept stacks; delete by hand when no longer needed)' % procs)
+        self.assertEqual(len(lines), 3)
+        result = self.ctl('leftovers', '-j')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        got = json.loads(result.stdout)['leftovers']
+        self.assertEqual([(x['name'], x['stack']) for x in got], [('gone', str(procs / 'gone')), ('kept', str(procs / 'kept'))])
+        self.assertEqual(got[1]['last_change'], '2001-09-09T01:46:40+00:00')
+        self.assertTrue((procs / 'kept' / 'state.json').exists())   # only lists
+
+    def test_no_procs_folder_and_errors(self):
+        write(self.root / 'procs_state.json', {'procs': {}})
+        result = self.ctl('leftovers')
+        self.assertEqual((result.returncode, result.stderr), (0, ''))
+        self.assertEqual(result.stdout, '# 0 folders in %s not on the table (kept stacks; delete by hand when no longer needed)\n'
+                         % (self.root / 'procs'))
+        result = self.ctl('leftovers', 'extra')
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('ArgumentsBad', result.stderr)
+        (self.root / 'procs_state.json').unlink()
+        result = self.ctl('leftovers')
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('StateMissing', result.stderr)
+        for args in (['--help'], ['leftovers', '--help']):
+            result = self.ctl(*args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('leftovers', result.stdout)
+            self.assertTrue(result.stdout.isascii())
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

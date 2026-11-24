@@ -1,6 +1,6 @@
 llm_forward 是端點轉交函數：包寫下一層 kernel 與代號，成功串帳，失敗原樣轉交。
 
-← [lib](../../../README.md)｜[隊 kernel 範本](../../../../templates/kernel/llm-team/)｜[kernel 契約](../kernel_llm/docs/01-用法.md)
+← [lib](../../../README.md)｜[隊 kernel 範本](../../../../templates/kernels/llm-team)｜[kernel 契約](../kernel_llm/docs/01-用法.md)
 
 平常由 llm kernel 經 `aos-exec` 呼叫。stdin 是 `{"endpoint":{"to":"fake","kernel":"/下層/stack"},"request":{"messages":[...]},"priority"?:...,"reasoning_effort"?:...}`。`to` 與 `kernel` 必填非空字串；request 原樣、priority 有就原樣帶給 `aos-llm ask --full`；`reasoning_effort`（思考程度，這台的包寫 `"reasoning_efforts": "forward"` 時 kernel 才給）有就原樣放進轉寄信的 body，由下一層 kernel 查收不收（11-21，使用者「kernel轉送不帶effort...要補」）。只對子行程設 AOS_LLM_KERNEL、拿掉 AOS_STACK（那是這封請求自己的小格），其他環境繼承；下一層的寄件人＝這台上層 kernel（aos-llm 沒有 `$AOS_STACK` 時照 `identity()`＝`$AOS_WS`），整台算一個寄件人、不冒用原 agent（11-13 線修：aos-llm 改 `$AOS_STACK` 優先後，不拿掉會每封一個寄件人）。
 

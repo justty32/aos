@@ -93,6 +93,8 @@ class Unresolved(ValueError):
 
 
 UNSET_RE = re.compile(r'environment variable (\S+) is not set')
+# 11-24 起 aos-tools 讀到疊進來的 pack 壞了＝只跳過那份、退 0、stderr 一行這個（a551bba03）；check 照舊要說出來
+PACK_SKIPPED_RE = re.compile(r'aos-tools: warning: (pack \S+(?: \(from \S+\))? skipped \((\w+) .*?\)); its tools are left out')
 
 
 def run_env():
@@ -122,10 +124,13 @@ def tools_ls(table):
                            capture_output=True, text=True, env=run_env(), timeout=60)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise ValueError('cannot merge %s with aos-tools: %s' % (table, e))
-    if r.returncode:
+    skipped = PACK_SKIPPED_RE.search(r.stderr or '')
+    if r.returncode or skipped:              # 跑起來時壞的 pack 只少那份工具；check 照舊當成要報的（變數沒設＝warning，其他＝problem）
         unset = UNSET_RE.search(r.stderr or '')
         if unset:
             raise Unresolved('tool paths in %s' % Path(table).name, unset.group(1))
+        if skipped:
+            raise ValueError('%s (when the agent runs, the tools of that pack are left out)' % skipped.group(1))
         raise ValueError(' '.join((r.stderr or r.stdout).strip().splitlines()[-1:]) or 'aos-tools ls failed')
     _listed[key] = (r.stdout, r.stderr)
     return _listed[key]

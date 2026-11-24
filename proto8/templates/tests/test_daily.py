@@ -191,7 +191,7 @@ class Machine:
         return r
 
     def cp_template(self, name, dest, cwd):
-        """照 README 的用法：cp -r $AOS_HOME/templates/名 目的地（kernel 範本＝templates/kernel/名）。"""
+        """照 README 的用法：cp -r $AOS_HOME/templates/類別/名 目的地（name 是 templates 底下的相對路徑，例 agents/agent-fsm）。"""
         src = self.proto / "templates" / name
         return self.run("cp", "-r", src, dest, cwd=cwd)
 
@@ -377,7 +377,7 @@ class Daily(unittest.TestCase):
                                              ' "idempotent": true, "deterministic": true, "interrupt": "safe",'
                                              ' "parallel": true, "cost": {"time_ms": 10}, "timeout_ms": 5000}\n')
         # llms：llm kernel，端點只留假腦（fake＝先叫 peek_now_time；fake-greet＝先叫 another 的 greet）
-        m.cp_template("kernel/llm-kernel", "def", cwd=h.llms)
+        m.cp_template("kernels/llm-kernel", "def", cwd=h.llms)
         kj = h.llms / "def" / "kernel.json"
         k = json.loads(kj.read_text())
         fake = k["endpoints"]["fake"]
@@ -390,10 +390,10 @@ class Daily(unittest.TestCase):
         defs_cwd = h.outside if self.defs_out else h.something
         root_def = "defs" if self.defs_out else self.root_def
         adir = "defs" if self.defs_out else self.agent_dir
-        m.cp_template("daemon-root", root_def, cwd=defs_cwd)
+        m.cp_template("daemons/daemon-root", root_def, cwd=defs_cwd)
         (defs_cwd / adir).mkdir(exist_ok=True)
-        m.cp_template("agent-fsm", adir + "/fsm", cwd=defs_cwd)
-        m.cp_template("eca-claude", adir + "/eca", cwd=defs_cwd)
+        m.cp_template("agents/agent-fsm", adir + "/fsm", cwd=defs_cwd)
+        m.cp_template("agents/eca-claude", adir + "/eca", cwd=defs_cwd)
         if self.defs_out:
             self.new_project(m, h.outside / "defs", "defs")
         fsm = defs_cwd / adir / "fsm"

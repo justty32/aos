@@ -122,7 +122,7 @@ class Objects(WithHome):
 
     def test_eca_needs_its_folder(self):
         dest = Path(self.temp.name) / "eca-pi"
-        shutil.copytree(TEMPLATES / "eca-pi", dest, symlinks=True)
+        shutil.copytree(TEMPLATES / "agents" / "eca-pi", dest, symlinks=True)
         a = agent("S.", fsm=None, llm={"model": "m"})
         self.assertRaisesRegex(defs.SpecBad, "give its folder", a.dry_run)
         self.assertEqual(sorted(a.dry_run(str(dest))), ["README.md", "_metainfo.json", "llm.json", "system.txt", "tools.json"])

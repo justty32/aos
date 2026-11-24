@@ -23,6 +23,9 @@
  "test_ctl_kit.py": {
   "description": "Test aos-agent ctl add / set-def --kit on a real aos-daemon: the kit's system.txt and tools.json become the agent's own copies in its stack (replacin…"
  },
+ "test_ctl_retry.py": {
+  "description": "Test aos-agent ctl retry: clears the stack's cooldown.json and says what it cleared (fake daemon table, no daemon)."
+ },
  "test_cwd_target.py": {
   "description": "aos-agent with no -t and no AOS_AGENT finds the target in the cwd (./.stack, then ./); with no -d and no AOS_DAEMON the daemon is two folders up from…"
  },
@@ -56,6 +59,9 @@
  "test_llm.py": {
   "description": "Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and…"
  },
+ "test_ls_deep.py": {
+  "description": "Test aos-agent ctl ls --deep: walks rows whose stack is a daemon, adds PID state, STAGE and LAST-ACTIVE (fake tables)."
+ },
  "test_ls_health.py": {
   "description": "Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table."
  },
@@ -85,6 +91,9 @@
  },
  "test_tools_override.py": {
   "description": "Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with \"$override\" (N2 poin…"
+ },
+ "test_top_state.py": {
+  "description": "Test aos-agent state (11-24 ops item 5): the same as ctl state at the top level; a ctl action typed at the top level hints at ctl."
  },
  "test_who_registered_daemon.py": {
   "description": "ctl who reads parent / notify_box of a row attached with --envs on a real isolated daemon (ok-devt-1114 05 定稿 1.3, ok-limits 11-14)."

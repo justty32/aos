@@ -62,12 +62,12 @@ class SubagentReply(unittest.TestCase):
         for p, _ in ps:
             p.stdout.close()
             p.stderr.close()
-        self.assertEqual([(c, o) for c, o, _ in got], [(0, "re: alpha\n"), (0, "re: beta\n")], [e for _, _, e in got])
+        self.assertEqual([(c, o) for c, o, _ in got], [(0, "re: [say from mom] alpha\n"), (0, "re: [say from mom] beta\n")], [e for _, _, e in got])
 
     def test_op_ask_old_body_falls_back(self):
         rf.Body(self, self.d.stack("kid"), upgraded=False)
         code, out, err = self.tool({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 20})
-        self.assertEqual((code, out), (0, "re: hi\n"), err)
+        self.assertEqual((code, out), (0, "re: [say from mom] hi\n"), err)   # 11-24：上層 agent 寄的話帶「[say from 名字] 」
         self.assertIn("kid's body is not upgraded yet", err)
 
     def test_op_ask_dropped(self):
@@ -82,7 +82,7 @@ class SubagentReply(unittest.TestCase):
         self.tool({"op": "say", "name": "kid", "text": "second"})
         rf.Body(self, self.d.stack("kid"), think_s=0.2)
         code, out, err = self.tool({"op": "listen", "name": "kid", "letter": first.strip(), "timeout_s": 20})
-        self.assertEqual((code, out), (0, "re: first\n"), err)
+        self.assertEqual((code, out), (0, "re: [say from mom] first\n"), err)
 
     def test_pre_change_entry_reads_new_history_the_same(self):
         """lib/ is swapped only at the tree swap: the old _entry (say, then listen without a letter) against bodies that already write aos keys."""

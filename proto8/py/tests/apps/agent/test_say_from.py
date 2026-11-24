@@ -61,6 +61,20 @@ class SayFrom(unittest.TestCase):
             sender.put(Target("/s2", str(self.t / "fsm")), "hi", "bob")
         self.assertEqual([c[0] for c in put.call_args_list], [("/s1", "hi", "bob"), ("/s2", "hi", None)])
 
+    def test_agent_or_from_senders_are_written_into_the_text(self):
+        # 11-24 ops 意見 ③：另一隻 agent 或明給 --from＝本文前接「[say from 名字] 」（fsm、eca 都收得到）；人在終端打的不加
+        bob = self.who({}, str(self.t / "stacks/bob/tools/x"))
+        carol = self.who({"from": "carol"})
+        person = self.who({}, str(self.t / "elsewhere"))
+        with patch.object(sender.aos_ws, "put", return_value="sig") as put:
+            sender.put(Target("/s1", str(self.t / "fsm")), "check the logs", bob)
+            sender.put(Target("/s2", str(self.t / "eca")), "hi", carol)
+            sender.put(Target("/s3", str(self.t / "fsm")), "hi", person)
+            sender.put(Target("/s4", str(self.t / "fsm")), "[aos] fork: you are a fork", bob)   # aos 的通知不疊前綴
+        self.assertEqual([c[0] for c in put.call_args_list],
+                         [("/s1", "[say from bob] check the logs", None), ("/s2", "[say from carol] hi", "carol"),
+                          ("/s3", "hi", None), ("/s4", "[aos] fork: you are a fork", None)])
+
     def test_put_writes_name_into_the_body(self):
         from aos import ws as aos_ws
         with patch.object(aos_ws, "post", return_value="sig") as post, patch.object(aos_ws.os.path, "isdir", return_value=True):

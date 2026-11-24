@@ -169,10 +169,10 @@ class WrapThenCompact(Base):
 
 
 class ClaudeCompactHook(unittest.TestCase):
-    """templates/eca-claude/compact_hook: PreCompact prints what the summary keeps; SessionStart (compact) points at the handoff and adds handoff.md."""
+    """templates/agents/eca-claude/compact_hook: PreCompact prints what the summary keeps; SessionStart (compact) points at the handoff and adds handoff.md."""
 
     def run_hook(self, what, env):
-        return subprocess.run([sys.executable, str(PROTO / "templates" / "eca-claude" / "compact_hook"), what], input="{}",
+        return subprocess.run([sys.executable, str(PROTO / "templates" / "agents" / "eca-claude" / "compact_hook"), what], input="{}",
                               capture_output=True, text=True, timeout=30, env=env)
 
     def test_pre_and_start(self):

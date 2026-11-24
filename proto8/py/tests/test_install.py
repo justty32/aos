@@ -132,7 +132,7 @@ class InstallTest(unittest.TestCase):
                 r = self.run_install(env={} if value is None else {"AOS_HOME": value})
                 self.assertEqual(r.returncode, 0, r.stderr)
                 self.assertIn(out, r.stdout)
-                self.assertIn("then: cp -r $AOS_HOME/templates/start-api ~/aos-home", r.stdout)
+                self.assertIn("then: cp -r $AOS_HOME/templates/starts/start-api ~/aos-home", r.stdout)
                 if err:
                     self.assertIn(err, r.stderr)
                     self.assertNotIn("export AOS_HOME", r.stdout)

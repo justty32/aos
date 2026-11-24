@@ -40,6 +40,13 @@ def load_cfg(tool_dir):
         cli_base.die("CfgBad", "%s: kind must be claude, codex or pi" % path)
     if cfg["kind"] == "pi" and "mcp_servers" in cfg:                # 外部 MCP 還沒接 pi（只接 aos 那台）
         cli_base.die("CfgBad", "%s: mcp_servers is not supported for kind pi yet" % path)
+    if "claude_mcp" in cfg:                                         # 11-24：claude 自己設定裡哪幾個範圍的 MCP server 要抄進來（cli_mcp.claude_own）
+        from aos.agentlib.cli_mcp import CLAUDE_SCOPES
+        scopes = cfg["claude_mcp"]
+        if cfg["kind"] != "claude":
+            cli_base.die("CfgBad", "%s: claude_mcp is only for kind claude" % path)
+        if not isinstance(scopes, list) or not all(s in CLAUDE_SCOPES for s in scopes):
+            cli_base.die("CfgBad", "%s: claude_mcp must be an array of %s (the scopes of claude mcp add)" % (path, ", ".join(CLAUDE_SCOPES)))
     for k in ("flags", "print_flags", "tools_flags"):
         if not isinstance(cfg.get(k, []), list) or not all(isinstance(a, str) for a in cfg.get(k, [])):
             cli_base.die("CfgBad", "%s: %s must be an array of strings" % (path, k))

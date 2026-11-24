@@ -1,5 +1,5 @@
 {
- "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區；templates、kernel 只看頂層與 docs／tests（定義夾會被整夾抄走）、py/packs 與各 bin、各夾的 expect／ws 不放、wf/user 不放（使用者的地盤，agent 不主動寫）、knowledge 不在範圍（那棵樹手寫維護）。",
+ "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區；templates、它的類別夾（agents、kernels、daemons、starts、tools）只看頂層，加 templates 與 kernels 的 docs／tests（定義夾會被整夾抄走）、py/packs 與各 bin、各夾的 expect／ws 不放、wf/user 不放（使用者的地盤，agent 不主動寫）、knowledge 不在範圍（那棵樹手寫維護）。",
  "more_than": 15,
  "scopes": [
   {
@@ -55,16 +55,32 @@
    "stage": 2
   },
   {
-   "path": "proto8/templates/kernel",
+   "path": "proto8/templates/agents",
    "stage": 2
   },
   {
-   "path": "proto8/templates/kernel/docs",
+   "path": "proto8/templates/daemons",
+   "stage": 2
+  },
+  {
+   "path": "proto8/templates/starts",
+   "stage": 2
+  },
+  {
+   "path": "proto8/templates/tools",
+   "stage": 2
+  },
+  {
+   "path": "proto8/templates/kernels",
+   "stage": 2
+  },
+  {
+   "path": "proto8/templates/kernels/docs",
    "deep": true,
    "stage": 2
   },
   {
-   "path": "proto8/templates/kernel/tests",
+   "path": "proto8/templates/kernels/tests",
    "deep": true,
    "stage": 2
   }
@@ -114,7 +130,7 @@
    "*LICENSE*": "第三方套件的授權條款原文（照抄，不加檔頭）",
    "cpp/third_party/nlohmann/json.hpp": "nlohmann/json 的單檔版（第三方，照官方 release 原樣收進 repo、不改；版本看同夾 VERSION）",
    "*requirements*.txt": "選配的 Python 套件清單（install.py 只檢查、不安裝；每行註解寫誰用到）",
-   "templates/agent-fsm/llm.json": "agent-fsm 的腦設定，出廠是空的 {}（照 kernel 的預設端點；起手範本 start-api 那份改成假腦）"
+   "templates/agents/agent-fsm/llm.json": "agent-fsm 的腦設定，出廠是空的 {}（照 kernel 的預設端點；起手範本 start-api 那份改成假腦）"
   },
   "skip_top": [
    "thinking",

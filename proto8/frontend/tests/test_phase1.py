@@ -330,7 +330,8 @@ class Phase1(unittest.TestCase):
 class AideDef(unittest.TestCase):
     """aos-frontend aide-def (11-17 Q3): the agent-fsm template copied, the files of aide-def/ laid over it."""
     AIDE = os.path.join(os.path.dirname(HERE), "aide-def")
-    TEMPLATE = os.path.join(os.path.dirname(os.path.dirname(HERE)), "templates", "agent-fsm")
+    PROTO = os.path.dirname(os.path.dirname(HERE))
+    TEMPLATE = os.path.join(PROTO, "templates", "agents", "agent-fsm")
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="view-aidedef-", dir="/tmp")
@@ -353,7 +354,7 @@ class AideDef(unittest.TestCase):
     def test_template_plus_overlay(self):
         ws = os.path.join(self.tmp, "ws")
         os.makedirs(os.path.join(ws, "defs"))
-        r = self.run_view(["defs/t-aide"], AOS_WS=ws, AOS_HOME=os.path.dirname(os.path.dirname(self.TEMPLATE)))
+        r = self.run_view(["defs/t-aide"], AOS_WS=ws, AOS_HOME=self.PROTO)
         self.assertEqual(r.returncode, 0, r.stderr)
         dest = os.path.join(ws, "defs", "t-aide")
         self.assertIn("wrote aide definition %s" % dest, r.stdout)
@@ -364,7 +365,7 @@ class AideDef(unittest.TestCase):
             self.assertEqual(self.read(os.path.join(dest, f)), self.read(src), f)
         self.assertEqual(json.loads(self.read(os.path.join(dest, "hookeds.json"))).keys(), {"description", "aide_tick"})
         self.assertFalse([f for f in os.listdir(os.path.join(ws, "defs")) if f.startswith(".")])   # no temp folder left
-        again = self.run_view(["defs/t-aide"], AOS_WS=ws, AOS_HOME=os.path.dirname(os.path.dirname(self.TEMPLATE)))
+        again = self.run_view(["defs/t-aide"], AOS_WS=ws, AOS_HOME=self.PROTO)
         self.assertEqual(again.returncode, 1)
         self.assertIn("aos-frontend: error: DefExists", again.stderr)
 

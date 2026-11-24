@@ -1,4 +1,4 @@
-What a kernel is in aos and what a new board's initial kernel is made of, where to send requests, the example kernels in $AOS_HOME/templates/kernel/, how to be a kernel yourself (kernel_gate), and how to write your own. Sections: what, where_to_send, templates, gate, write_your_own.
+What a kernel is in aos and what a new board's initial kernel is made of, where to send requests, the example kernels in $AOS_HOME/templates/kernels/, how to be a kernel yourself (kernel_gate), and how to write your own. Sections: what, where_to_send, templates, gate, write_your_own.
 
 # What a kernel is
 
@@ -45,7 +45,7 @@ Without the permission part, what stops a request is only Linux file permissions
 
 # Example kernels
 
-In `$AOS_HOME/templates/kernel/` (`AOS_HOME` = the proto8 folder that holds lib, templates and knowledge):
+In `$AOS_HOME/templates/kernels/` (`AOS_HOME` = the proto8 folder that holds lib, templates and knowledge):
 
 | folder | what |
 |---|---|
@@ -89,7 +89,7 @@ Errors: ArgumentsBad, OpUnknown, LetterMissing (not held: already decided, the s
 Any proc that takes request letters from a mailbox and decides what happens to them is a kernel. From the least work to the most:
 
 1. An agent that wants to decide requests itself: the `kernel_gate` tool (`aos/kernel.md#/Being a kernel yourself: kernel_gate`).
-2. A station with rules only, as a proc: copy `templates/kernel/daemon-kernel/` or `templates/kernel/procs-kernel/` and edit `kernel.json`; or copy `templates/kernel/kernel-python/`, write the rules and hooks in its `kernel.py` and compile it (`python3 kernel.py --compile`; its README says how).
+2. A station with rules only, as a proc: copy `templates/kernels/daemon-kernel/` or `templates/kernels/procs-kernel/` and edit `kernel.json`; or copy `templates/kernels/kernel-python/`, write the rules and hooks in its `kernel.py` and compile it (`python3 kernel.py --compile`; its README says how).
 3. A station on yourself without the tool, with what you already have (`self_hook`, your file tools):
    - In your workspace write `gate/kernel.json` (for example `{"allowed": ["worker"]}`) and an executable `gate/run`:
 

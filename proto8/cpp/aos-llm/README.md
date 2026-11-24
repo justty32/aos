@@ -15,7 +15,7 @@ N=$(echo "$B" | aos-llm send --reply-to $AOS_STACK/llm_box) # 非同步：寄完
 aos-llm recv $AOS_STACK/llm_box $N; echo $?               # 還沒到：10
 aos-llm recv $AOS_STACK/llm_box $N                        # 到了：{"role": "assistant", "content": "FAKE ANSWER to: hi"}
 echo "$B" | aos-llm ask --priority high                   # 同步：寄、等、印 message
-aos-llm ls                                                # 列 kernel 的能力包：代號 speed cost context slots backend summary
+aos-llm ls                                                # 列 kernel 的能力包：代號 speed cost context slots backend summary；最後一行整台的 slots、reserved、在飛、排隊
 aos-llm ls --kernel llm-local                             # 指定 AOS_DAEMON 表上的列名
 aos-llm ls --kernel ./stacks/brain                         # 含 / 的值＝kernel stack 路徑（相對 cwd）
 ```

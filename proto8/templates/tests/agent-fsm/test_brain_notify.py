@@ -269,7 +269,7 @@ class BrainNotify(unittest.TestCase):
         self.assertEqual(self.calls(), [])
 
     def test_template_mount(self):
-        hooks = json.loads((PROTO / "templates" / "agent-fsm" / "hookeds.json").read_text())
+        hooks = json.loads((PROTO / "templates" / "agents" / "agent-fsm" / "hookeds.json").read_text())
         self.assertEqual(hooks["brain_notify"],
                          {"event": "brain_failed", "condition": ["BudgetMissing", "BrainFailed"],
                           "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/brain_notify"},
@@ -387,8 +387,30 @@ class BrainNotify(unittest.TestCase):
                          'after start it first waits out its cooldown '
                          '(30 s doubling to 30 min; changing llm.json clears it).')
 
+    def test_unreachable_endpoint_asks_for_someone_and_says_when(self):
+        # 11-24 ops 意見 ②：端點沒在聽（EndpointFailed、沒有 status、連不上／逾時）＝要有人處理、下一次本地時刻、ctl retry；不說 no action is needed。
+        event = self.failed(attempt=3, code='EndpointFailed', wait_s=120,
+                            error={'msg': 'cannot connect to http://127.0.0.1:4000/v1: [Errno 111] Connection refused'})
+        del event['status']
+        self.run_hook(event)
+        call = self.calls()[-1]
+        self.assertEqual(call[call.index('--title') + 1], 'worker: brain endpoint not answering (EndpointFailed), retrying by itself')
+        text = call[-1]
+        self.assertTrue(text.startswith('EndpointFailed: cannot connect to http://127.0.0.1:4000/v1'), text)
+        self.assertIn('The endpoint is not answering, so someone needs to look at it', text)
+        self.assertRegex(text, r'keeps retrying by itself \(next try at \d\d:\d\d:\d\d\); once the endpoint is back, '
+                               r'aos-agent ctl retry worker makes it try at once')
+        self.assertNotIn('no action is needed', text)
+
+    def test_other_retrying_error_with_wait_s_adds_next_try_and_retry(self):
+        self.run_hook(self.failed(attempt=3, wait_s=60))
+        text = self.calls()[-1][-1]
+        self.assertRegex(text, r'^ReplyBad: no choices; status 200\. It has tried 3 times and keeps retrying by itself; '
+                               r'no action is needed\. Next try at \d\d:\d\d:\d\d; aos-agent ctl retry worker makes it try now\. '
+                               r'To stop it, use stop\.$')
+
     def test_eca_template_mount(self):
-        hooks = json.loads((PROTO / 'templates' / 'eca-claude' / 'hookeds.json').read_text())
+        hooks = json.loads((PROTO / 'templates' / 'agents' / 'eca-claude' / 'hookeds.json').read_text())
         self.assertEqual(hooks['brain_notify'],
                          {'event': 'brain_failed', 'condition': ['CliFailed', 'ReplyMissing'],
                           'handler': {'$env': 'AOS_HOME', '$path': '/lib/tools/agent/brain_notify'},

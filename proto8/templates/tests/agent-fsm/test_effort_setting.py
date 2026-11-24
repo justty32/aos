@@ -3,7 +3,9 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-CELLS = Path(__file__).resolve().parents[2] / "agent-fsm"
+PROTO = Path(__file__).resolve().parents[3]
+CELLS = PROTO / "py" / "aos" / "apps" / "agent_fsm"   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
+TEMPLATE = PROTO / "templates" / "agents" / "agent-fsm"   # 範本本身（給人抄的定義）
 _spec = importlib.util.spec_from_file_location("llm_settings_effort", CELLS / "llm_settings.py")
 llm_settings = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(llm_settings)
@@ -29,7 +31,7 @@ class ReasoningEffort(unittest.TestCase):
     def test_is_a_known_key(self):
         self.assertIn("reasoning_effort", llm_settings.KEYS)
         self.assertNotIn("effort", llm_settings.KEYS)
-        self.assertIn('"reasoning_effort"', (CELLS / "interfaces.json").read_text())
+        self.assertIn('"reasoning_effort"', (TEMPLATE / "interfaces.json").read_text())
 
 
 if __name__ == "__main__":

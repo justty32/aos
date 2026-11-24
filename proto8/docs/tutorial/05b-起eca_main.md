@@ -27,7 +27,7 @@ claude --version
 
 ```sh
 mkdir -p agents
-cp -r $AOS_HOME/templates/eca-claude agents/eca_main
+cp -r $AOS_HOME/templates/agents/eca-claude agents/eca_main
 cat agents/eca_main/llm.json
 aos-agent -d .stack ctl add --auto-restart -w . agents/eca_main
 aos-daemon-ctl -d .stack ls
@@ -127,4 +127,4 @@ started (same stack); 0 queued letter(s) will be answered next
 - `llm set` 只改這一隻跑起來的那份，下一輪起生效；`reset` 回定義的 `opus`。要整份定義換，改 `agents/eca_main/llm.json`。
 - 停、睡、拿掉的四種方式跟第 05 章那張表一樣；全部關掉照第 08 章，`aos-daemon-ctl -d .stack shutdown` 一句連 eca_main 一起睡下，再開板子它自己醒、對話接著。
 
-更多（換 codex、擋它的 Bash、接外部 MCP、子 agent）在 [eca-claude 範本說明](../../templates/eca-claude/README.md)，或直接問 eca_main。
+更多（換 codex、擋它的 Bash、接外部 MCP、子 agent）在 [eca-claude 範本說明](../../templates/agents/eca-claude/README.md)，或直接問 eca_main。

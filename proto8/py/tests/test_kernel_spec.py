@@ -13,7 +13,7 @@ from agent_spec_helpers import LIB, PROTO, fake_home, env_with  # noqa: E402
 from aos.py.kernel import defs  # noqa: E402
 from aos.spec_base import Program  # noqa: E402
 
-KT = PROTO / "templates" / "kernel"
+KT = PROTO / "templates" / "kernels"
 SKEL = KT / "kernel-python"
 HEAD = "import sys\nsys.path.insert(0, %r)\nfrom aos.py.kernel import defs\nfrom aos.py import fn\n" % str(LIB)
 NIGHT = '''
@@ -201,7 +201,7 @@ class CommandLine(unittest.TestCase):
             for name in ("_entry", "loop.json", "kernel.json", "interfaces.json", "kernel_hooks.json", "kernel_hookeds.json"):
                 with self.subTest(name=name):
                     self.assertEqual((dest / name).read_bytes(), (SKEL / name).read_bytes(),
-                                     "run python3 kernel.py --compile in templates/kernel/kernel-python")
+                                     "run python3 kernel.py --compile in templates/kernels/kernel-python")
 
     def test_flags(self):
         with tempfile.TemporaryDirectory(prefix="kernel-cli-") as tmp:

@@ -1,6 +1,6 @@
 """tool_clear - 把一份 OpenAI 格式 history 裡舊的工具輸出（role: tool 的 content）換成一行英文佔位；純函數，不讀檔、不寫檔、不印東西。
 
-給 agent-fsm 的 /compact 在叫腦寫摘要之前先用（templates/agent-fsm/compact.py 的 clear_old_tools），之後 aos-agent history clear-tools 共用同一套。
+給 agent-fsm 的 /compact 在叫腦寫摘要之前先用（lib/aos/apps/agent_fsm/compact.py 的 clear_old_tools），之後 aos-agent history clear-tools 共用同一套。
 規劃與實測：thinking/2026-11/21/compact-改進規劃-1121/02-先清工具輸出.md；施工紀錄 thinking/2026-11/21/compact-第1刀-1121.md。
 
 清法（預設）：

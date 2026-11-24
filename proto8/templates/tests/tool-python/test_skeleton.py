@@ -10,8 +10,8 @@ import unittest
 os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
 
 sys.dont_write_bytecode = True
-SKEL = Path(__file__).resolve().parents[2] / "tool-python"
-PROTO = SKEL.parents[1]
+SKEL = Path(__file__).resolve().parents[2] / "tools" / "tool-python"
+PROTO = SKEL.parents[2]
 
 
 class Skeleton(unittest.TestCase):

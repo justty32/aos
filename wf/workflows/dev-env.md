@@ -24,7 +24,7 @@
 | 做什麼 | 指令 | 備註 |
 |--------|------|------|
 | 建 proto8 的 C++ 實作 | 在 proto8 跑 `python3 install.py`（`--check` 只查相依；見 [testing「proto8」](testing.md#proto8)） | proto8 的 aos-exec／loop／fsm／daemon 只有 C++ 版，手跑前要先建；重跑＝全新安裝，C++ 沒改時幾秒；log 在 `proto8/cpp/build/build.log`；開發時只重編一支：`make -C proto8/cpp -j8 BINDIR=$AOS_HOME/bin aos-exec`；重運算，派給隊員時 `nice -n 19`（見 [resources](resources.md)）|
-| 把 proto8 的指令放進 PATH | 一台設一次 `export AOS_HOME=…`，每個視窗 `source $AOS_HOME/env.sh`（11-18 S6 分工：`AOS_HOME` 是人設的，`env.sh` 不設它、沒設就一行 `EnvBad` 什麼都不改；清掉 `AOS_HOME` 以外的 `AOS_*`、把 `$AOS_HOME/bin` 放 PATH 第一、`frontend/bin`（選配的網頁外掛，夾在才放）第二，不往 `~/.local/bin` 放東西；`aos-exec` 不在時提示 `python3 $AOS_HOME/install.py`）。樹裡的 `env.sh`（起手範本 `templates/start-api`、`start-eca` 帶的薄的那份）只是轉去這份 | 不再寫 Python user site 的 `aos-proto8.pth`（使用者 11-15 對自編規則盤點的裁定「6.拿掉。」；家機那份已搬到 `~/.aos/saves/pth-removed-1115/`）；Python 指令的入口自己把 `lib/` 放上路徑，抄出 repo 的程式要 import 共用模組就設 `AOS_HOME`（共用模組只經 `$AOS_HOME/lib` 找，沒設報 `HomeMissing`）。舊的 `cmd/install.sh`（連進 `~/.local/bin`）11-18 S5 收掉（題 X-4 A），`~/.local/bin` 裡以前連的 `aos-*` 要自己拿掉。開一棵新樹：`cp -r $AOS_HOME/templates/start-api 目的資料夾`（或 `start-eca`）；開新 agent：`cp -r $AOS_HOME/templates/名 目的資料夾`（範本都寫 `{"$env": "AOS_HOME", …}`，每台設一次 `AOS_HOME`；[templates/docs/02](../../proto8/templates/docs/02-agent-fsm.md)） |
+| 把 proto8 的指令放進 PATH | 一台設一次 `export AOS_HOME=…`，每個視窗 `source $AOS_HOME/env.sh`（11-18 S6 分工：`AOS_HOME` 是人設的，`env.sh` 不設它、沒設就一行 `EnvBad` 什麼都不改；清掉 `AOS_HOME` 以外的 `AOS_*`、把 `$AOS_HOME/bin` 放 PATH 第一、`frontend/bin`（選配的網頁外掛，夾在才放）第二，不往 `~/.local/bin` 放東西；`aos-exec` 不在時提示 `python3 $AOS_HOME/install.py`）。樹裡的 `env.sh`（起手範本 `templates/starts/start-api`、`start-eca` 帶的薄的那份）只是轉去這份 | 不再寫 Python user site 的 `aos-proto8.pth`（使用者 11-15 對自編規則盤點的裁定「6.拿掉。」；家機那份已搬到 `~/.aos/saves/pth-removed-1115/`）；Python 指令的入口自己把 `lib/` 放上路徑，抄出 repo 的程式要 import 共用模組就設 `AOS_HOME`（共用模組只經 `$AOS_HOME/lib` 找，沒設報 `HomeMissing`）。舊的 `cmd/install.sh`（連進 `~/.local/bin`）11-18 S5 收掉（題 X-4 A），`~/.local/bin` 裡以前連的 `aos-*` 要自己拿掉。開一棵新樹：`cp -r $AOS_HOME/templates/starts/start-api 目的資料夾`（或 `start-eca`）；開新 agent：`cp -r $AOS_HOME/templates/名 目的資料夾`（範本都寫 `{"$env": "AOS_HOME", …}`，每台設一次 `AOS_HOME`；[templates/docs/02](../../proto8/templates/docs/02-agent-fsm.md)） |
 | 查 md 連結／錨點 | `python3 wf/tools/check_anchors.py` | 想查才跑（大量搬檔後）；不是 commit 前必跑（使用者 11-13 晚，見 [user](common/user.md)）|
 | 查 `_index.json` 跟樹對不對得上 | `python3 wf/tools/index_check.py` | 同上，想查才跑；生成器 `index_gen.py --apply` 由 `commit-request` 排隊跑，自己不用跑（鐵律 3，11-14 改）|
 
@@ -42,7 +42,7 @@
 
 ## 跨機、外部工具、模型端點
 
-**Windows 機**：使用者在 Windows 機（`C:\code\mine\simple_tools\aos`）工作時，這台有 WSL Ubuntu，實跑（build、proto8 的程式與試驗場）都在 WSL 那邊做（使用者 10-28：「這台有wsl ubuntu，可能之後都要在那邊做處理」）。WSL 裡的 clone 是 `~/repo/aos`（11-13 起唯一一份；`AOS_HOME` 指它的 `proto8`；樹 11-23 起住 `~/repo/aos/.stack`，被 git 忽略、每台各有各的，見[每台設定說明書](dev-env/03-換機.md)）。**不要在 `/mnt/c` 底下跑**：那裡每個檔都帶 `+x`，aos-exec 會把 JSON 當可執行檔（N-61）。從 Windows 端經 `\\wsl.localhost\Ubuntu\…` 改檔會把 `+x` 弄掉，改完要在 WSL `chmod +x`。
+**Windows 機**：使用者在 Windows 機（`C:\code\mine\simple_tools\aos`）工作時，這台有 WSL Ubuntu，實跑（build、proto8 的程式與試驗場）都在 WSL 那邊做（使用者 10-28：「這台有wsl ubuntu，可能之後都要在那邊做處理」）。WSL 裡的 clone 是 `~/repo/aos`（11-13 起唯一一份；`AOS_HOME` 指它的 `proto8`；樹的 stack 家機在 `~/repo/aos/.stack`（被 git 忽略），公司那台 11-24 起在 `~/aos-home/.stack/procs/repo-aos`，每台各有各的，見[每台設定說明書](dev-env/03-換機.md)）。**不要在 `/mnt/c` 底下跑**：那裡每個檔都帶 `+x`，aos-exec 會把 JSON 當可執行檔（N-61）。從 Windows 端經 `\\wsl.localhost\Ubuntu\…` 改檔會把 `+x` 弄掉，改完要在 WSL `chmod +x`。
 
 <!-- wf-nav -->
 | 分檔 | 涵蓋段落 |

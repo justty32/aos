@@ -271,7 +271,7 @@ class Linger(unittest.TestCase):
         self.assertTrue(self.order())
         linger.cancel(str(self.stack))
         (self.stack / "hookeds.json").write_text(json.dumps({"screen_linger_stop": None}))   # the stack copy: null turns it off
-        defn = str(proto / "templates/eca-claude")
+        defn = str(proto / "templates/agents/eca-claude")
         entries = hooks.load(defn, str(self.stack))
         self.assertNotIn("screen_linger_stop", entries)
         hooks.fire("after_stop", {}, entries, str(self.stack))

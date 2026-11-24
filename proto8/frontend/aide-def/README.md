@@ -1,6 +1,6 @@
 小助手（aide）的定義範本：一隻 agent-fsm，腦是 `fake`、沒有工具，唯一的事是 on_clock hook 每 60 格跑一次 `aos-frontend aide-tick`（view-1114 第 1 期：只搬事實、不叫模型）。
 
-**這個夾只放 aide 跟 agent-fsm 範本不一樣的檔**（使用者 11-17 裁 Q3「只放差異、其餘從範本抄」；以前整份複製一份範本的格，跟範本走樣了）：`hookeds.json`（被勾清單，只掛 aide_tick；蓋掉範本那份）、`aide_tick.json`（那個 hook 的 handler）、`llm.json`（`fake`）、`tools.json`（沒有工具）、`system.txt`、`_metainfo.json`，還有本檔。其餘（`fsm.json`、`loop.json`、`interfaces.json`、各格的 `.py`…）都在做定義時從 `templates/agent-fsm` 現抄，所以範本改了、下次做的 aide 就跟著新。這個夾本身**不是**一份能跑的定義，不要拿 `agent_def` 的 `from` 直接複製它。
+**這個夾只放 aide 跟 agent-fsm 範本不一樣的檔**（使用者 11-17 裁 Q3「只放差異、其餘從範本抄」；以前整份複製一份範本的格，跟範本走樣了）：`hookeds.json`（被勾清單，只掛 aide_tick；蓋掉範本那份）、`aide_tick.json`（那個 hook 的 handler）、`llm.json`（`fake`）、`tools.json`（沒有工具）、`system.txt`、`_metainfo.json`，還有本檔。其餘（`fsm.json`、`loop.json`、`interfaces.json`、各格的 `.py`…）都在做定義時從 `templates/agents/agent-fsm` 現抄，所以範本改了、下次做的 aide 就跟著新。這個夾本身**不是**一份能跑的定義，不要拿 `agent_def` 的 `from` 直接複製它。
 
 ## 它做什麼
 
@@ -14,7 +14,7 @@ history 不會多任何一則，也不叫腦。範本刻意拿掉了 `timer` 和
 
 ## 隊長照做的步驟（`<隊>` 換成你在 daemon 表上的名字，例 `ok-kf`）
 
-1. **做定義**（shell；抄 `$AOS_HOME/templates/agent-fsm`，再把本夾的檔蓋上去；相對路徑從 `$AOS_WS` 算，跟 `agent_def` 一樣；`source $AOS_HOME/env.sh` 過的 shell 直接打 `aos-frontend` 也行）：
+1. **做定義**（shell；抄 `$AOS_HOME/templates/agents/agent-fsm`，再把本夾的檔蓋上去；相對路徑從 `$AOS_WS` 算，跟 `agent_def` 一樣；`source $AOS_HOME/env.sh` 過的 shell 直接打 `aos-frontend` 也行）：
 
    ```sh
    $AOS_HOME/frontend/bin/aos-frontend aide-def defs/<隊>-aide

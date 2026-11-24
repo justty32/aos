@@ -37,7 +37,7 @@ class Live(unittest.TestCase):
         cls.tmp = Path(os.path.realpath(tempfile.mkdtemp(prefix="aos-py-live-")))
         cls.daemon = str(cls.tmp / "tree" / ".stack")
         cls.tree = cls.tmp / "tree"
-        shutil.copytree(PROTO / "templates" / "start-api", cls.tree, symlinks=True)
+        shutil.copytree(PROTO / "templates" / "starts" / "start-api", cls.tree, symlinks=True)
         cls.logs = [open(cls.tmp / "root.log", "w")]
         cls.procs = [subprocess.Popen(["aos-exec", "root"], cwd=cls.tree, env=ENV, stdin=subprocess.DEVNULL,
                                       stdout=cls.logs[0], stderr=subprocess.STDOUT, start_new_session=True)]

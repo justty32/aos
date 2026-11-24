@@ -12,7 +12,7 @@ FILES = ("system", "tools")                     # 宣告鍵；kit 夾裡固定�
 KIT_NAMES = {"system": "system.txt", "tools": "tools.json"}
 
 HELP_FLAG = """      --kit KIT       lay a kit over it: KIT is a kit folder holding system.txt and tools.json
-                      (shipped ones: $AOS_HOME/templates/kits/gather, .../review). They are written
+                      (shipped ones: $AOS_HOME/templates/agents/kits/gather, .../review). They are written
                       as the agent's own copies in its stack (as aos-agent system set and tools add
                       do); the definition is not changed. Own copies already there (an earlier
                       kit, system set, tools add) are replaced, so a second --kit swaps kits. On an
@@ -39,7 +39,7 @@ def plan(kit_arg, def_folder, stack, name):
     """先全部檢查、什麼都不寫。回 [(宣告鍵, 內容, stack 裡的路徑, "create"|"replace"|"unchanged")]。"""
     kit = os.path.abspath(kit_arg)
     if not os.path.isdir(kit):
-        raise Fail("KitMissing", "%s is not a folder (--kit takes a kit folder, e.g. $AOS_HOME/templates/kits/gather)" % kit_arg)
+        raise Fail("KitMissing", "%s is not a folder (--kit takes a kit folder, e.g. $AOS_HOME/templates/agents/kits/gather)" % kit_arg)
     for key in FILES:
         if not os.path.isfile(os.path.join(kit, KIT_NAMES[key])):
             raise Fail("KitMissing", "%s has no %s (a kit folder holds system.txt and tools.json)" % (kit, KIT_NAMES[key]))

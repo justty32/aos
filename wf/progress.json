@@ -464,7 +464,7 @@
       "status": "open",
       "flow": "",
       "what": "11-23 使用者答七題（1、2、4～7 照推薦，第 3 題改成開 py／cpp 的核心程式位子），`wf/org` 已定稿、舊文件十個檔已對齊。剩：① 打雜工在公司 WSL 掛得起來前的四關（真模型端點、`sol-high` 包名、配給包 `.env` 的 `AOS_LLM_KERNEL`、eca-aos 要先有 `subagent` 與 `agent_def` 工具），打通前蒐集雜活實際由 sonnet 的 Claude 子 agent 做；② `wf/public/`（recipes、活樹旁邊、改文件與知識庫、patch-and-commit、sol-crew、等隊員與讀信、README）、`common/user/03`、`aos-teams/04` 還寫「部長」，沒改；③ 規矩卡 9206 bytes，超過它自己說的 8 KB（改之前 8919），要砍哪些沒定；④ `aos-teams.md` 與 07 檔頭說舊隊形原文在「本夾 `archive/`」，那個夾不在；`AGENTS.md` 的 `archive/README.md`、`user/01` 的 proto7-2 連結原本就是斷的；⑤ 位子的定義夾一份都還沒做（kb、templates、core、frontend 現在都靠 eca-aos 派 Claude 子 agent 代班），每次真的要掛人照鐵律 2 先問使用者；⑥ `wf/org` 裡還標〔提案〕的幾條（子 agent 不算成員、位子之間直接寄信、任務書與回信多要求的兩件、各卡的模型級別與交接表）使用者沒看過。",
-      "next": "",
+      "next": "11-24 對過：② 「部長」已改（1f742a69e），剩的都是講歷史的句子（「11-23 起沒有部長」那類），不用再改；④ AGENTS.md、user/01 的斷連結 11-23 晚已拿掉（b51f8745c 等），aos-teams.md 與 07 檔頭的「本夾 archive/」11-24 派 sonnet 改中；① 打雜工 11-23 已在公司機跑通兩次（eca-aos-sol-1、-2，stack 11-24 已刪）。還開著：③ 規矩卡 9206 bytes 超過 8 KB、⑤ 位子定義夾、⑥ 標〔提案〕的幾條使用者沒看。",
       "see": [
         "[wf/org](org/README.md)",
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
@@ -500,7 +500,7 @@
       "status": "open",
       "flow": "",
       "what": "使用者 11-23 晚在家機跟 main 談：隔離等級「甲，先只防失誤」（不做抗惡意）；main 照這一級推薦六題怎麼排，他答「可以」。定案：⑤ 做——知識庫寫明 aos 只承諾防失誤、不是隔離（歸 kb）；① 做——驗證過的最小定義範本（唯讀分析、限定路徑寫入）加「工具有沒有漏包」的檢查（歸 templates＋core）；③ 只做回報那半——有效限制、peak、OOM 看得到，鎖／排隊等准入先不做（歸 core）；② 做、排在 ①③ 後——工具死掉時 scope 收乾淨才放資源（歸 core）；④ 不由 aos 做——mine_arena 自己的場景，它們跑通可收成範例；⑥ 寄件人驗證與代辦授權先不做（屬抗惡意）、工具版本識別之後再說。排在 templates 三分切換之後。\n要回 mine_arena/main 的 DONE（它在公司那台，回信寄 /home/guanyu/aos-home/.stack/procs/mine_arena/procs/main/mailbox，in_reply_to＝第二封信 01795414583613126499.1008727.2256547）大意：使用者定了 aos 的隔離只承諾防失誤、不做抗惡意；六題：⑤ 知識庫會寫明這一級；① 會做最小定義範本與漏包檢查；③ 先做可觀測（有效限制、peak、OOM），准入（鎖、排隊）暫不做，你們的 flock＋systemd-run 繼續用；② 之後做；④ 不由 aos 做，你們跑通的配置歡迎交回當範例；⑥ 寄件人驗證、代辦授權不做，工具版本識別之後再說。上層約束下屬照你們回顧的結論走（專用最小定義、工具包 sandbox），是防失誤、不是隔離。",
-      "next": "11-24 公司：eca-aos 照上面寄 DONE 給 mine_arena/main → 三分切換完後派位子：kb 寫 ⑤、templates＋core 做 ①、core 做 ③ 回報半、再 ②",
+      "next": "DONE 已寄 mine_arena/main（11-24 08:5x，信 01795481183127695991.255847.193426）。三分切換完後派位子：kb 寫 ⑤（cf17b55e2 已改 rules.md、kits.md，看還缺什麼）、templates＋core 做 ①、core 做 ③ 回報半、再 ②",
       "see": [
         "[eca-aos 筆記 mine_arena 兩封信](ws/eca-aos/notes.md)"
       ],
@@ -514,6 +514,140 @@
       "next": "使用者 11-23 晚「明天再說。」——今晚不重起。下次在家機：問使用者何時重起根（從新開的殼）→ 驗 /proc/<新 pid>/environ 的 AOS_LLM_KERNEL → 回 repo-vc DONE。在那之前各樹掛 agent-fsm 照暫解在 envs 帶正確值",
       "see": [],
       "since": "2026-11-23"
+    },
+    "eca-main-obs-1124": {
+      "title": "eca_main 11-24 回報的 aos 問題六點（llm 通道、閒置輪詢 CPU、殘留 stack、遞迴 ls、連線逾時、WSL_INTEROP）",
+      "status": "open",
+      "flow": "",
+      "what": "信 01795484557450263667.853643.518765＋補充 01795484607007336637.861953.523507；已回 DONE（01795485122706629005.942821.573447）附判斷。查證：reserved 從 slots 扣（llm_rules.py:489-492），範本預設 2＋{high:1}；agent-fsm 每圈起 aos-fsm＋python3、閒著也起、aos-loop 不接 poke 無退避；subagent rm 留 stack 是本意但沒標記檔；遞迴 ls 已有 aos-comm board ls --deep（知識庫沒寫）；llm_http connect_timeout_s 預設 10、可設；repo 沒提 WSL_INTEROP。",
+      "next": "使用者 11-24 答三件「1.改。2.先記下來，這會是以後一段時間的我們的開發重點。3.刪」：① llm kernel 範本預設值要改（他沒給數字；我打算 slots 4、reserved {high:1}，跟活樹 eca_main 改的一樣，施工時跟他報）——改的是 templates/kernel/llm-kernel/kernel.json 與 start-api/llm/kernel.json、01-llm-kernel.md，**等三分切完才改**（現在改會讓補丁漂移）；② 閒置輪詢記成開發重點，另立 progress idle-polling；③ eca-aos-sol-1、-2 的 stack 已刪（11-24 10:2x）。切完後：kb 位子補知識庫（reserved、留下的 stack 怎麼認怎麼清、aos-comm board ls --deep、connect_timeout_s／鏡像網路、WSL_INTEROP）＋wf/dev-env/03 與 daemon-root README 各一句；core 位子：aos-llm ls／窗檔加總格保留格在飛排隊、rm 留 stack 寫標記或列出表外 stack、ctl ls --deep；templates 位子：①。做完回 eca_main。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "idle-polling": {
+      "title": "開發重點：閒置的 agent 照樣每圈起行程、吃 CPU（使用者 11-24 定為接下來一段時間的開發重點）",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-24（逐字）：「先記下來，這會是以後一段時間的我們的開發重點。」起因 eca_main 11-24 回報（信 01795484557450263667.853643.518765、補充 01795484607007336637.861953.523507）：8 核 load 16～17、閒置 3%（us 78% sy 18%），每秒約 200 個新 PID，沒有大戶、全是短命 python3；記憶體不緊。現況（11-24 只讀查證）：agent-fsm 每圈（loop.json interval 300ms）起 aos-fsm＋一支 python3，閒著停在 idle 格也照起（templates/agent-fsm/fsm.json）；eca 每圈起一支 aos-eca-turn（知識庫 me/self_hook.md 寫「about three a second, also with an empty queue」）；aos-loop 不接 poke（cpp/aos-daemon/docs/04、cpp/aos-loop/README）、沒有退避、信到不叫醒（mail_notify 每分鐘查）；thinking／docs 沒有常駐 Python 的討論，只有 11-05 edge-round2 記過閒著 82% CPU、當時只寫文件。現成的設定手段：loop.json interval_ms 拉長（重起生效、wait 格跟著慢）、ctl.json interval_ms 執行中改（沒指令包裝）、ctl pause／sleep（不收信或不會被叫醒）。候選方向（方向由使用者定，還沒定）：aos-loop 依回碼退避；aos-loop 接 poke、信寄進 queue 時叫醒收件那隻（cpp/aos-loop/src/engine/loop.cpp 已有 wake 掛鉤）；aos-fsm 格加「資料夾空就不起行程」的前置判斷；常駐 Python 格；aos-agent ctl 加改 interval 的指令；知識庫與 troubleshooting 寫每圈成本。 範圍（使用者 11-24 逐字）：「然後不停起python這件事，除去一些常用通用的aos基礎東西之外，那就是使用者要自己管理的。」＝aos 只負責基礎共用的部分（loop、閒置閘、範本格等）不空起行程；使用者自己加的工具與格起多少行程由使用者管。",
+      "next": "施工規劃已交（7b7a1829e，proto8/thinking/2026-11/24/閒置輪詢C++重寫-1124/）。使用者答五題「1.a 2.收 3.60秒 4.照推薦 5.a。不用調整間隔」：C++ 閘＋小程式、行為差異收（保底 60 秒）、context_wrap 60 秒、kernel 先只掛閘、.pyc 放 lib/（第 0 刀，改慣例）；不做止血。三分切完後照 04 刀序開工：第 0 刀 .pyc＋把量法包成常備腳本 → 第 1 刀 aos-loop／aos-daemon 認 gate → 第 2 刀 aos-idle（eca／fsm）＋對等測試 → 第 3 刀範本掛 gate＋context_wrap 60 秒 → 第 4 刀 kernel → 第 5 刀 wait 格（開工前逐條對 wait.py）→ 第 6 刀。通用 kernel（py/tools/aos/kernel）的閒置條件還沒列。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "ops-feedback-1124": {
+      "title": "guanyu/ops 11-24 來信：用 aos 兩天的意見（fsm 腦失敗 cooldown、BLOCKED 信措辭、say 帶來源、收尾忘回信、aos-agent state、WSL_INTEROP、cli.json 的 mcpServers）",
+      "status": "open",
+      "flow": "",
+      "what": "信 01795485983983422703.1049418.653198（留底在 eca-aos stack 的 mailbox/archive/），回信寄 /home/guanyu/aos-home/.stack/procs/guanyu/procs/ops/mailbox；它說讀過就好，採用哪條或覺得第 1、2 條不該改時回 DONE。建議改：① fsm 腦連不上端點時 cooldown 最長 900 秒、端點恢復也不提早接回（11-24 等了 32 分鐘；依據 templates/agent-fsm/wait.py、py/aos/agentlib/cooldown.py）——選項：connect refused／timeout 的上限低一點、cooldown 中便宜地探端點、給上層「立刻重試」動作；目前只有 subagent llm set 會清 cooldown（它沒實測）。② brain_notify 的 BLOCKED 信寫「no action is needed」，端點沒在聽時其實要人處理，建議改措辭並附下次重試時刻。③ say 進對方 history 看不出是誰說的（下屬寫成「依使用者要求」），建議帶「[say from X]」。④ fsm 做完常忘了寄回信，建議範本 system 或狀態機收尾時檢查「有 REQUEST 沒回」提醒一次。⑤ aos-agent 沒有 state 子命令（CommandUnknown）。坑：⑥ WSL_INTEROP（同 eca_main 第 6 點）：值寫進 .env 沒用（殼已 export 的優先），subagent add 用 envs 傳才有效；叫 .exe 卡 10 秒報 UtilAcceptVsock accept4 failed 110；紀錄 /mnt/c/code/guanyu/ops-notes/wf/workflows/common/ssh-and-shell.md。⑦ aos 起的 Claude Code 帶不到 ~/.claude.json 專案層的 mcpServers（因為 --setting-sources？要查），要寫進定義的 cli.json。分享的做法：邏輯寫成 script、再包薄 aos 工具給 fsm，eca 用 Bash 跑同一支（ops-notes/wf/org/tools/）；派遣工的累積放 repo 不放 stack（角色卡、筆記、接班單；ops-notes/wf/org/README.md、mount.md、letters.md）；檢討 ops-notes/ops-artifacts/20261124-org-review/report.md（21 KB，第二、六節）。",
+      "next": "全部採用。已做且已 install.py（第八次，11-24 13:4x）：① ctl retry（80d2ee043）；② BLOCKED 措辭＋重試時刻（57baee653）；③ say 帶 [say from 名字]（7ebe15b7e）；⑤ aos-agent state（cfa726273）；⑥ 文件（2d262f921、6f7f32352、cb24a25948）；⑦ claude_mcp（a7f58e07a）；④ 範本 system 文字（e90cd00d6，kb 5ab0b0e8a）。已回 ops DONE 兩封（01795493911376516835.2034324.1389013、01795499188394472285.2799745.1911761）。剩：kb 寫 ②③⑤（已派）；④ 狀態機收尾提醒（設計 wf/ws/eca-aos/eca-aos-templates/reply-check-提案.md）三分切完後派 core。冷卻階梯 30～1800 秒本身沒改，併進 idle-polling 看。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "eca-tool-mcp-idea": {
+      "title": "發想：eca 透過 aos 自產的工具，要不要另弄一個 MCP 存放（使用者 11-24）",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-24（逐字）：「可以的話去幫忙延伸一個想法：假如eca自己透過aos產出了不少工具，是否要再弄一個mcp用於存放這些他自己的工具？」派 fable 寫發想紀錄 proto8/thinking/2026-11/24/eca自產工具與MCP-1124/（現況、幾種意思、邊緣狀況、最多 5 題）。",
+      "next": "發想已交（bc82a8ebc）。使用者答：1 不另起 MCP；2、3 不設限；4 agent 自己管工具（筆記記有哪些可用、要用才掛、用完拿下）＋做 self_tools 的 once／twice 選項（core REQUEST 已寄，排隊中）；5 不管。剩：core 交了 once 選項後 install.py、轉 kb 寫 aos/me/self_tools.md（含「自己的工具記在筆記、要用才掛」這個用法）；同名蓋掉庫存工具：使用者「不管，這是一種使用方式」，不修；包檔壞了整台全掛：使用者「希望就是這個pack檔內的工具不能用，其他都可以用」→ core REQUEST 已寄（排隊中），修好後 install.py、轉 kb 改 packs.md。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "arena-feedback-1124": {
+      "title": "mine_arena/main 11-24 來信：arena_cheater 累積的 aos 使用意見（權限、mem_mb、資源鎖、fsm 看圖、board_set StackMissing、apply_patch、經驗）",
+      "status": "open",
+      "flow": "",
+      "what": "信 01795498128253917265.2624668.1805747，回信寄 /home/guanyu/aos-home/.stack/procs/mine_arena/procs/main/mailbox；全文 /mnt/c/code/mine/arena_cheater/wf/notes/investigations/aos-feedback.md（4.8 KB）。① read 類工具跨 daemon 讀得到別人 stack／信箱；edit／write 不能在定義設允許的路徑前綴（使用者對它們說只需防失誤；隔離等級甲＝防失誤，路徑前綴屬防失誤）。② limits.mem_mb 是 RLIMIT_AS，Node／V8 EAGAIN（subagent 工具說明已寫，另有 mem_total_mb＝cgroup；它們用 systemd scope MemoryMax）。③ 沒有跨 agent 的資源鎖／「等資源、輪到才叫醒」（使用者先前定資源只做可觀測、准入不做；此條是新的叫醒面，與 idle-polling 的叫醒可一起想）。④ agent-fsm 沒有看圖工具（qa 截得到圖看不到）。⑤ subagent 開的下屬 board_set 回 StackMissing（aos-comm 認 $AOS_STACK；可能跟 b914c016f 修的 subagent 無 AOS_DAEMON 回歸同源，待查）。⑥ sol 模型常先找 apply_patch。⑦ 經驗：固定程序做工具、判斷才給 agent；唯讀下屬好用；「低風險照判斷做、回信附理由」減少卡住；階段交界讀信。 11-24 下午使用者問 linux proc 與 aos proc 的差別、aos kernel 能不能管 linux proc（逐字）：「既然都直接就是/proc/aaa了，那它本身就是linux proc了，我會開始想，他和aos proc的差別在哪。就是說，linux proc他自己本身會儲存自己吃了多少cpu/mem嗎？還會儲存哪些東西呢？然後我們aos的kernel...是不是可以直接用來管理linux proc呢？」。我答：/proc/<pid> 是核心現算、行程死就沒、pid 會回收；aos proc＝長期身分底下一串來去的行程，Linux 對應物是 cgroup（cpu.stat、memory.peak、pids.current 跨行程累計）；aos kernel 適合做准入＋代跑（起在 systemd scope、設 memory.max／cpu.max／pids.max）＋記帳＋生命週期，就是資源鎖發想推薦的代跑式資源 kernel。這台 user systemd 委派 cpu memory pids。使用者（逐字）：「先記下來，三分切完再看那五題」。",
+      "next": "已回 main DONE（01795498205740864152.2637896.1813496）。使用者 11-24（逐字）：「權限這塊可以先記錄下來，之後可以來做。跨agent的資源鎖這塊，可以往kernel那邊想想。fsm看圖的工具確實要做，排進日程吧。5.這個你可以派fsm去查。6.沒事。」→ ① 權限（edit／write 定義裡設允許的路徑前綴、read 跨 daemon）：記著，之後做，還沒排。③ 資源鎖往 kernel 想：派 fable 寫發想 proto8/thinking/2026-11/24/跨agent資源鎖-kernel-1124/（不 commit，回來我看、日索引 day_upsert）。④ fsm 看圖工具：要做，排在三分切完之後（要動 fsm 腦送圖給 llm kernel 的訊息格式，格程式明早搬家），歸 core。⑤ 已修：打雜工 eca-aos-sol-3 查明（報告 wf/ws/eca-aos/temp/eca-aos-sol-3/report.md：comm own_root 只認 mailbox/ 已建），core 033671bc0 多認 stderr.txt，第九次 install.py，已回 main。③ 發想 28ddf25d3 五題等使用者。⑥ 不做。有結論再回 main。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "fs-tmpfs-1124": {
+      "title": "短期目標：樹（.stack）放記憶體（tmpfs），定期同步回硬碟",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-24（逐字）：「我原本就打算讓現有的這套樹，放到/tmp上，也就是記憶體內，確保效能，然後可能每隔一段時間，比如關機前，再去把它cp到硬碟內。並且還可以配合git，比如.git就放在硬碟。」後來補：「或許短期目標會是我說的，把東西放/tmp，定期同步到硬碟。」原則（逐字）：「我會希望aos就是依靠檔案系統，那這個檔案系統，不管是硬碟、/tmp，還是fuse，都可以撐著。」事實（11-24 查）：這台 /tmp 已是 tmpfs（2G）；兩棵 .stack 約 34M＋13M；aos 的原子寫入會 fsync（cpp/aos-util/src/files.cpp、cpp/aos-json/src/doc/file.cpp、py/aos/ws.py 等），tmpfs 上 fsync 近乎免費＝寫入有感，讀取 ext4 已有頁快取、差不多；閒置 CPU 是起行程的成本，tmpfs 不解（歸 idle-polling）。要注意：表與 on_clock.json 記絕對路徑——在相對路徑做好之前，tmpfs 要掛在原路徑上（不要 symlink，有程式會解開記真路徑）；只在關機前存會被 wsl --shutdown／更新／當機吃掉，要每幾分鐘 rsync、關機前停樹再存一次；開機先抄回再起 daemon。",
+      "next": "三分切完後：在暫存樹量 ext4 與 tmpfs 的收發＋原子寫入差多少，再定掛法與同步腳本（給使用者看再做）。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "relative-paths-1124": {
+      "title": "日程：aos 盡量都用相對路徑（樹搬到哪個檔案系統、哪個路徑都撐得住）",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-24（逐字）：「路徑這塊，我其實會希望盡量都用相對路徑，這塊紀錄進日程吧」。現況：daemon 的表（procs_state.json 的 def／stack／ws）、各 agent 的 on_clock.json、notes_path 以外的不少設定記的是絕對路徑（三分的盤點裡活樹 13 列的 def 都是 $AOS_HOME/templates/... 或展開後的絕對路徑）；樹一搬（換機、放 tmpfs、改路徑）就要改表。還沒盤點哪些檔、哪些程式寫絕對路徑。",
+      "next": "三分切完後派 core 只讀盤點：stack 與表裡哪些地方存絕對路徑、相對於什麼（stack 根？daemon 根？AOS_HOME？）才合理，出選項給使用者定。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "plan9-ns-1124": {
+      "title": "之後想：FUSE／9P 與 Plan 9 式的每隻 agent 各自命名空間",
+      "status": "暫停",
+      "flow": "",
+      "what": "使用者 11-24 提「或許我們應該用FUSE + 9P協議？」，聊完（逐字）：「FUSE沒辦法解決我們的效能問題，只是在一些地方會很好用，那就之後再說。」「或是獨特命名空間這個特性，plan 9的，這可以之後想想。」聊到的好處：會卡住等信的檔（取代輪詢）、每隻 agent 只看得到掛給它的子樹（權限，arena ①）、連線認身分（寄件人驗證，mine_arena ⑥）、ctl 檔、9P 走 TCP 跨機器。代價：伺服器一死整片檔案消失或卡住、小檔每次操作多一趟使用者空間來回（WSL 上更明顯）、rename 原子性與 inotify 要自己補。便宜的替代：權限用 bwrap 的 mount namespace＋bind mount，寄件人用 daemon 代送或 unix socket 的 SO_PEERCRED。若做，先做旁路小實驗（唯讀視圖＋wait 檔），真檔照舊。 使用者 11-24 補（逐字）：「使用FUSE的話，我們就不需要使用aos-post作為IPC啦，我們直接socket, shared memory, ....各種有的沒的」。聊到的：檔案格式（信＝mailbox/new/ 底下一個夾）當契約不變，FUSE 只是它的一種實作——伺服器背後可以用 socket／共享記憶體送信、讀信的檔可以卡住等、FUSE 每個請求帶呼叫者的 pid／uid 可以認寄件人；aos-post 退成「照契約寫一封信」的參考實作。要注意：現在 tmpfs 上 rename 投信本來就是記憶體速度，慢的是輪詢與起行程，不是 IPC 本身；只放記憶體的佇列當機就丟、要落檔就又回到檔案；伺服器一死所有 IPC 一起死。 使用者再補（逐字）：「持久性/單點故障沒差，我們可以定期保存。輪詢這塊，就是持續多次存取特定東西，假如都是proc...就是說，從原本linux檔案系統幫我們承擔，變成daemon伺服器要自己承擔。然後不停起行程這塊，我原本以為可以是/proc/daemon/procs/aaa軟連結到/proc/aaa」。聊到的：重複讀的成本可用 FUSE 的核心快取（attr／entry 逾時、keep_cache）與 poll 通知（FUSE_POLL）壓下來；aos 的一列不是一個常駐行程（aos-loop 常駐、每圈起短命的格程式），所以 /proc 連結只對常駐那支成立——要「不停起行程」消失得讓格常駐或等事件才起（閒置輪詢 C++ 閘就是後者）。 使用者再補（逐字）：「或許可以變成一個介面，就是說，我們想要把一個proc當aos-loop去存取，那除了他本身就是aos-loop之外，也可以是他用FUSE，讓我們在從/proc/aaa訪問他的時候，可以存取到所需的東西」＝proc 是一份目錄介面（stack 的檔案契約），實作可以是落檔的 aos-loop，也可以是常駐行程自己用 FUSE 把目錄掛在它的 stack 上、從記憶體回答。前置：先把「proc 介面」寫成規格（daemon 與別人會讀寫 stack 裡哪些檔、誰寫、原子性、信怎麼投）——這份規格對相對路徑、tmpfs、FUSE 三件都有用。這台 /dev/fuse 在、fusermount3 在；沒有 libfuse3 標頭、沒有 Python fuse 套件。 使用者（逐字）：「然後這可以和我們現在的aos體系共存...不急，先記下來吧」＝FUSE 實作跟現有落檔的 aos-loop 共存、各 proc 自己選；不急。",
+      "next": "",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "proc-interface-spec": {
+      "title": "之後做：把「proc 介面」寫成規格（stack 目錄的檔案契約）",
+      "status": "暫停",
+      "flow": "",
+      "what": "從 plan9-ns-1124 的討論來：proc＝一份目錄介面，aos-loop 落檔是一種實作、常駐行程用 FUSE 掛在自己 stack 上是另一種，兩種共存。規格要寫：daemon 與別人讀寫 stack 裡哪些檔（ctl.json、state、mailbox/、queue/、stderr.txt、exec.json…）、誰寫、要不要原子、信怎麼投、哪些檔帶路徑。也服務 relative-paths-1124（盤點帶路徑的檔）與 fs-tmpfs-1124。使用者 11-24：「不急，先記下來吧」。",
+      "next": "排在三分切完之後、relative-paths-1124 盤點之前或一起；開工前問使用者。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "eca-bg-mail-1124": {
+      "title": "mine_arena/main 回報：開著 Claude Code 背景 Bash（sleep）時 new_mail 叫不醒 eca",
+      "status": "open",
+      "flow": "",
+      "what": "信 01795507349728125121.4089102.2727893（11-24 16:02，使用者叫它寄的）：13:29 開 background sleep 7000 後回合結束，13:30～13:54 七封信、15:28～15:39 六封信都沒叫醒，直到背景任務結束或被 kill、task-notification 進來才醒，信延遲最多約 2 小時。它的推測（未證實）：有背景任務時 aos-eca-turn 當成忙、new_mail 被延後。建議：背景任務時照送或看得到延後狀態；eca 說明寫別用背景 sleep 排程；原生定時喚醒（已有 clock_register，範本沒帶）。另：kb 收到一次過期的「main 有 2 封新信」通知。我的對照：開 Agent 背景子 agent 時 new_mail 照進（11-24 16:0x 收這封時就是），可能只有 Bash run_in_background 中招（一次觀察）。回了 PROGRESS（01795507401051055371.4095392.2733027）：先用 clock_register、原因三分後查。 使用者補（逐字）：「喔，那是因為我用aos-agent open，開了claude code cli。不然平常沒open的時候都是-p方式跑的。」＝出事的是 open 的互動畫面（新信走 cross-session message 送進畫面）；平常沒 open 是 -p 一輪一支。我也是 open 的互動畫面，開著 Agent 背景時照收得到。",
+      "next": "三分切完派 core 查：open 互動畫面下，Claude Code 有背景 Bash 時 cross-session 的新信通知為什麼沒送進來（對照 Agent 背景照收）；-p 模式下背景 Bash 會不會讓 claude -p 不結束、一輪卡住；過期通知。修＋eca 說明（kb）；回 main DONE。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "home-stack-move-1124": {
+      "title": "家機：repo 那棵的 stack 也搬進根（~/aos-home/.stack/procs/repo-aos）",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-24（逐字）：「家機...要。」（問的是家機要不要也把 stack 搬進 ~/aos-home/.stack，跟公司那台一樣）。公司那台 11-24 16:14 搬完：switch.sh 加 stack_move.py 停樹、搬家、改寫表上與外部檔案的路徑、起樹、驗證（日誌在 ~/.aos/scratch/switch-1124/log/switch-20261124-161338.log）；過渡用的 symlink 與 .bak-trisplit-1124 使用者說「直接刪掉吧」，已刪。搬家前要先關掉開著的 eca 畫面（tty socket 名是照小格真實路徑的雜湊算的，搬了以後新的 loop 認不得舊畫面，可能另起 claude -p 接同一段對話）。家機的文件目前照實寫 ~/repo/aos/.stack，搬完要一起改（AGENTS.md、wf/tree/README.md、dev-env/01、03、aos-teams/06、07、kits site.txt、gather system.txt）。",
+      "next": "在家機做：抄 ~/.aos/scratch/switch-1124/ 過去（或從 repo 的 thinking/2026-11/23/org範本與templates分層-1123/06-switch/ 拿 stack_paths.py），只跑搬 stack 那段（三分補丁已經在 repo 裡，家機 pull 就有）；先 --check-only，再正式跑；搬完請 kb 改家機那幾節。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)",
+        "[換機](workflows/dev-env/03-換機.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "eca-p-first-result-1124": {
+      "title": "eca 的 claude -p 收到第一個 result 就算答完、收掉行程（背景任務跟著收）；回答取第一個 result",
+      "status": "open",
+      "flow": "",
+      "what": "core 11-24 實測（報告 wf/ws/eca-aos/eca-aos-core/report-1124-bgmail.md 第 7 節，bdcef2272）：沒開畫面時 claude -p 回完第一個答案不退出，等背景 Bash 結束、CLI 自開一輪才退；aos 的 run_claude_stream 讀 stdout 到 EOF 才收，lock 被佔、新信排 queue；aos 取最後一個 result，真回答丟了。使用者 11-24（逐字）：「好，但是先記著，我五點要下班...」——答的是 eca-aos 的推薦：修 ⑦⑧，收工時背景任務跟著收掉（放著跑會在 -p 結束後自己再開一輪寫同一段對話，跟下一次 --resume 撞）。",
+      "next": "下次開工派 core：改 py/aos/agentlib/cli_print.py（第一個 result 就收、收掉行程群組、回答取第一個 result），測試、install.py；kb 跟上 clock.md／eca_reading.md／troubleshooting 那段（現在寫的是 -p 會等背景）。互動畫面開著背景 Bash 時的行為沒驗（core 還有兩輪 haiku 額度）。",
+      "see": [
+        "[core 報告](ws/eca-aos/eca-aos-core/report-1124-bgmail.md)",
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
     }
   }
 }

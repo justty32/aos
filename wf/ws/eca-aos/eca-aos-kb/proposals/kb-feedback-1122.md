@@ -77,7 +77,7 @@
 
 # 題 4：系統文字要先 echo $AOS_HOME
 
-實例：`templates/eca-claude/system.txt` 第 3 行寫「File tools do not expand $AOS_HOME, so get it once with the shell (echo $AOS_HOME)」。
+實例：`templates/agents/eca-claude/system.txt` 第 3 行寫「File tools do not expand $AOS_HOME, so get it once with the shell (echo $AOS_HOME)」。
 
 改法（都不在知識庫裡，是範本或程式的事，要轉給 eca-aos-templates）：
 

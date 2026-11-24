@@ -2,7 +2,7 @@
 
 ← [dispatch](README.md)｜選人判準 [team-model](../team-model.md)
 
-本專案實際怎麼開隊、五件最常做的事的實際指令。只寫**今天的做法**（11-14 改寫，使用者專區「q2:move」；11-23 照 eca-aos 這邊的工作室分工改：打雜工、沒有部長、寫程式用 Claude，分工本身與下文「第 N 題」所指的七題表見 [wf/org](../../org/README.md)）；細節在分檔，舊隊形（codex 隊員、terra、sonnet 搜集）的原文在本夾 `archive/`。改制時直接改這裡。
+本專案實際怎麼開隊、五件最常做的事的實際指令。只寫**今天的做法**（11-14 改寫，使用者專區「q2:move」；11-23 照 eca-aos 這邊的工作室分工改：打雜工、沒有部長、寫程式用 Claude，分工本身與下文「第 N 題」所指的七題表見 [wf/org](../../org/README.md)）；細節在分檔，舊隊形（codex 隊員、terra、sonnet 搜集）的原文已刪（11-17 刪掉各 archive/），要看去 git 歷史，最後還在的 commit 是 `31a64d4a7`（路徑 `wf/workflows/dispatch/archive/`）。改制時直接改這裡。
 
 ## 誰做什麼
 
@@ -57,9 +57,9 @@ aos-user send --kind decide --from ok-x \
 
 `subagent say` 之後就結束這一回合；用 `clock_register {"op":"add","name":"…","at":"+10m","text":"…"}` 叫醒自己再看，或等它寄來的信。`subagent listen` 預設不限時一直等（11-15 起，以前 600 秒），別讓它卡著這一回合：帶 `"timeout_s": 60`，或用 `"last": 1` 只看最後一則不等。
 
-### 5. 活樹旁邊：`~/repo/aos/.stack` 有使用者正在用的樹
+### 5. 活樹旁邊：repo 那棵是使用者正在用的樹
 
-- 活樹＝兩台都是 `~/repo/aos/.stack`（被 git 忽略、每台各有各的，不跟著 git 搬，使用者 11-23；定義 `wf/tree/root/`，資料夾名字還叫 `root`，但 11-23 起它是子 daemon、不帶鐘）。`~/aos-home`：公司那台 11-23 起是整棵樹的根（`~/aos-home/.stack` 是根的 stack，鐘只在這裡），底下除了 llm kernel 與 repo 這棵，還掛著使用者自己別的專案的子 daemon；家機還沒改成同一套，那裡放的是 llm kernel，舊樹退路在 `~/aos-home.old-1122/`。這些一樣不碰（[06「現況」](aos-teams/06-公司WSL活樹與任務書硬規則.md#現況)）。
+- 活樹＝家機是 `~/repo/aos/.stack`，公司那台 11-24 起是 `~/aos-home/.stack/procs/repo-aos`（公司那台 repo 裡已經沒有 `.stack`）（每台各有各的，不跟著 git 搬，使用者 11-23；定義 `wf/tree/root/`，資料夾名字還叫 `root`，但 11-23 起它是子 daemon、不帶鐘）。`~/aos-home`：公司那台 11-23 起是整棵樹的根（`~/aos-home/.stack` 是根的 stack，鐘只在這裡），底下除了 llm kernel 與 repo 這棵，還掛著使用者自己別的專案的子 daemon；家機還沒改成同一套，那裡放的是 llm kernel，舊樹退路在 `~/aos-home.old-1122/`。這些一樣不碰（[06「現況」](aos-teams/06-公司WSL活樹與任務書硬規則.md#現況)）。
 - 活樹不碰（06 第 1 條）：不寫活樹底下任何檔（連同 `~/aos-home`、`~/aos-home.old-1122/`）、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）；唯讀查看只限任務書點名的，與 06 第 9 條的核對。
 - 不在共用工作樹跑 `git stash`、`git reset --hard`、`git checkout -- .`、`git clean -fdx`（06 第 7 條）：`.stack` 被根 `.gitignore` 忽略，`git clean -fdx` 會連活樹一起刪。
 - 清掉 `AOS_*` 之後，`aos-daemon-ctl`、`aos-mailbox` 這類指令不帶 `-d` 會找 cwd 的 `./.stack`：站在 `~/repo/aos` 下指令＝打到活樹。暫存樹的指令一律帶 `-d <暫存樹 stack 的絕對路徑>`。

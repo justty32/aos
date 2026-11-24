@@ -5,7 +5,7 @@
                 "properties": {"op": {"type": "string", "enum": ["add", "rm", "ls", "state", "where", "who", "start", "stop", "sleep", "wake", "pause", "resume"], "description": "what to do"},
                                "name": {"type": "string", "description": "the agent's name on the table (add: default = folder name of def)"},
                                "def": {"type": "string", "description": "add: the definition folder (a path string; for a directive object use def_json)"},
-                               "def_json": {"type": ["object", "string"], "description": "add, instead of def: a directive kept as written, like {\"$env\": \"AOS_HOME\", \"$path\": \"/templates/agent-fsm\"}"},
+                               "def_json": {"type": ["object", "string"], "description": "add, instead of def: a directive kept as written, like {\"$env\": \"AOS_HOME\", \"$path\": \"/templates/agents/agent-fsm\"}"},
                                "ws": {"type": "string", "description": "add: its workspace (created if missing; default: yours)"},
                                "ws_json": {"type": ["object", "string"], "description": "add, instead of ws: a directive kept as written"},
                                "stack": {"type": "string", "description": "add: its stack folder; who: the stack to look up (default: yours)"},

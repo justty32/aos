@@ -56,6 +56,13 @@ class Override(unittest.TestCase):
         self.assertIn("aos-tools: error: %s " % code, r.stderr)
         return r
 
+    def skipped(self, code, *args, **env):
+        """11-24：$override 疊進來的那份壞了＝只跳過它（stderr 一行 warning），ls 照常退 0。"""
+        r = self.ok(*args, **env)
+        self.assertIn("aos-tools: warning: pack ", r.stderr)
+        self.assertIn(" skipped (%s " % code, r.stderr)
+        return r
+
     def names(self, f):
         return [line.split("\t")[0] for line in self.ok("--file", f, "ls").stdout.splitlines()]
 
@@ -176,23 +183,25 @@ class Override(unittest.TestCase):
 
     def test_missing_base(self):
         self.write(self.mine, {KEY: "../nowhere.json", "tools": {}})
-        r = self.bad("PathMissing", "--file", self.mine, "ls")
+        r = self.skipped("PathMissing", "--file", self.mine, "ls")
         self.assertIn("%s#/$override: %s does not exist" % (self.mine, self.tmp / "nowhere.json"), r.stderr)
 
     def test_missing_array_element_names_index(self):
         self.write(self.mine, {KEY: ["../defs/tools.json", "../nowhere.json"], "tools": {}})
-        self.assertIn("#/$override/1:", self.bad("PathMissing", "--file", self.mine, "ls").stderr)
+        r = self.skipped("PathMissing", "--file", self.mine, "ls")
+        self.assertIn("#/$override/1:", r.stderr)
+        self.assertEqual([l.split("\t")[0] for l in r.stdout.splitlines() if not l.startswith("!")], ["a", "b"])   # the good base still counts
 
     def test_base_not_object(self):
         p = self.tmp / "arr.json"
         p.write_text("[1]")
         self.write(self.mine, {KEY: "../arr.json", "tools": {}})
-        r = self.bad("RegistryBad", "--file", self.mine, "ls")
+        r = self.skipped("RegistryBad", "--file", self.mine, "ls")
         self.assertIn("(from %s#/$override)" % self.mine, r.stderr)
 
     def test_element_not_a_path(self):
         self.write(self.mine, {KEY: ["../defs/tools.json", 3], "tools": {}})
-        self.assertIn("#/$override/1 must be a path", self.bad("RegistryBad", "--file", self.mine, "ls").stderr)
+        self.assertIn("#/$override/1 must be a path", self.skipped("RegistryBad", "--file", self.mine, "ls").stderr)
 
     def test_base_without_tools_is_empty(self):
         p = self.tmp / "empty.json"
@@ -213,7 +222,7 @@ class Override(unittest.TestCase):
         shutil.move(str(self.defs), str(moved))
         r = self.ok("--file", self.mine, "ls", "-l", TC_DEFS=str(moved))
         self.assertIn(str(moved / "lib" / "a"), r.stdout)
-        self.bad("DirectiveBad", "--file", self.mine, "ls")
+        self.skipped("DirectiveBad", "--file", self.mine, "ls")
 
     def test_relative_pointer_moves_with_tree(self):
         self.ok("--file", self.mine, "override", self.base.relative_to(self.tmp))

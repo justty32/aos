@@ -1,4 +1,4 @@
-// ls.cpp：【ls】定位指定或表上唯一的 llm kernel、讀含 backend 的能力包窗並印表（說明見 ls.hpp）。
+// ls.cpp：【ls】定位指定或表上唯一的 llm kernel、讀含 backend 的能力包窗並印表，最後一行印整台的格數與信數（說明見 ls.hpp）。
 #include "ls/ls.hpp"
 #include "send/send.hpp"
 
@@ -143,7 +143,42 @@ static std::string cell(const Json& pack, const char* k) {
     return v.is_string() ? v.get<std::string>() : v.dump();
 }
 
-void ls_print(const Json& window, bool json) {
+// 信箱一格裡的信（每封一個資料夾，. 開頭的是還在建的）；夾不在＝0。
+static long letters_in(const std::string& folder) {
+    long count = 0;
+    std::error_code ec;
+    for (std::filesystem::directory_iterator it(folder, ec), end; !ec && it != end; it.increment(ec)) {
+        std::string name = it->path().filename().string();
+        std::error_code dir_ec;
+        if (!name.empty() && name[0] != '.' && it->is_directory(dir_ec)) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+Json ls_whole(const Mailbox& mb) {
+    Json whole = Json::object();
+    std::optional<Json> limits;
+    try {
+        limits = aos::read_json(aos::join(aos::dirname(mb.root), "slots.json"));
+    } catch (const std::exception&) {
+        limits = std::nullopt;
+    }
+    if (limits && limits->is_object()) {
+        if (limits->contains("slots")) {
+            whole["slots"] = (*limits)["slots"];
+        }
+        if (limits->contains("reserved") && (*limits)["reserved"].is_object() && (*limits)["reserved"].contains("high")) {
+            whole["reserved_high"] = (*limits)["reserved"]["high"];
+        }
+    }
+    whole["in_flight"] = letters_in(aos::join(mb.root, "cur"));
+    whole["queued"] = letters_in(aos::join(mb.root, "new"));
+    return whole;
+}
+
+void ls_print(const Json& window, bool json, const Json& whole) {
     if (json) {
         std::printf("%s\n", aos::dumps(window).c_str());
         std::fflush(stdout);
@@ -158,6 +193,8 @@ void ls_print(const Json& window, bool json) {
         std::printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", it.key().c_str(), cell(p, "speed").c_str(), cell(p, "cost").c_str(),
                     cell(p, "context").c_str(), cell(p, "slots").c_str(), cell(p, "backend").c_str(), cell(p, "summary").c_str());
     }
+    std::printf("# kernel: slots %s, reserved for high %s, in flight %s, queued %s\n", cell(whole, "slots").c_str(),
+                cell(whole, "reserved_high").c_str(), cell(whole, "in_flight").c_str(), cell(whole, "queued").c_str());
     std::fflush(stdout);
 }
 

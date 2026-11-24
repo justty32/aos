@@ -3,17 +3,18 @@ from aos import flags as aos_flags
 
 from .. import common
 from ..common import Fail, actions, parse
-from . import add, rm, phase, ls, state, where, who, set_def
+from . import add, rm, phase, ls, state, where, who, set_def, retry
 
 SUBS = {"add": add.cmd, "rm": rm.cmd, "set-def": set_def.cmd, "start": phase.cmd_start, "stop": phase.cmd_stop, "sleep": phase.cmd_sleep, "wake": phase.cmd_wake,
             "pause": phase.cmd_pause_resume("pause"), "resume": phase.cmd_pause_resume("resume"),
+            "retry": retry.cmd,
             "ls": ls.cmd, "state": state.cmd, "status": state.cmd, "where": where.cmd, "who": who.cmd}
 
 
 NO_TARGET = ("add", "rm", "set-def", "ls", "who")               # 不看 --target／AOS_AGENT 的動作
 
 
-HELPS = [add.HELP, rm.HELP, set_def.HELP, ls.HELP, state.HELP, where.HELP, who.HELP, *phase.HELP.values()]
+HELPS = [add.HELP, rm.HELP, set_def.HELP, ls.HELP, state.HELP, where.HELP, who.HELP, *phase.HELP.values(), retry.HELP]
 HELP = """aos-agent ctl - attach, list and manage agents on the daemon table
 
 usage: aos-agent [--daemon D] ctl ACTION [FLAGS...] [ARGS...]

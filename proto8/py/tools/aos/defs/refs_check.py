@@ -13,7 +13,7 @@
   AOS_STACK、AOS_CO 只在執行時才有＝不查；其他變數這裡沒設＝warning（照實說沒查，不當 problem）。只有 $env 沒有 $path 的、$ref 等其他寫法不查。
   AOS_HOME 沒設時用放這份 lib 的資料夾（同 catalog 的 tool-packs 合併）。
 - 指令名（不帶 /）在這裡的 PATH 上找不到＝warning（agent 跑時的 PATH 可能不同）。
-- 腦設定：llm.json 每個鍵照執行時 brain.py 的 llm_settings.body_fields 轉型（用 $AOS_HOME/templates/agent-fsm/llm_settings.py；不執行定義夾裡的程式），
+- 腦設定：llm.json 每個鍵照執行時 brain.py 的 llm_settings.body_fields 轉型（用 $AOS_HOME/lib/aos/apps/agent_fsm/llm_settings.py；不執行定義夾裡的程式），
   轉不了＝problem；轉完 max_tokens < 1、temperature < 0、top_p 不在 0～1＝problem；interfaces.json 有 llm_keys 時，不在裡面的鍵（description 以外）＝warning
   （body 不讀它）。model 的名字對不對要問 kernel 才知道（kernel 的 endpoint 包），這裡不查。
 只讀：不寫檔、不起 agent；aos-tools 不給 AOS_STACK（不留 tooldef 快取）。"""
@@ -286,10 +286,10 @@ _settings = {}
 
 
 def settings():
-    """The llm_settings module agent-fsm's brain.py uses ($AOS_HOME/templates/agent-fsm; AOS_HOME unset = the folder holding this lib).
+    """The llm_settings module agent-fsm's brain.py uses ($AOS_HOME/lib/aos/apps/agent_fsm; AOS_HOME unset = the folder holding this lib).
     Returns (module, None) or (None, why not)."""
     home = os.environ.get('AOS_HOME') or str(HOME_OF_LIB)
-    p = os.path.join(home, 'templates', 'agent-fsm', 'llm_settings.py')
+    p = os.path.join(home, 'lib', 'aos', 'apps', 'agent_fsm', 'llm_settings.py')
     if p not in _settings:
         try:
             spec = importlib.util.spec_from_file_location('defs_check_llm_settings', p)

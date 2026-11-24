@@ -42,10 +42,10 @@ class ReviewRound(unittest.TestCase):
         self.env.update(PATH=os.pathsep.join(bins + [self.env['PATH']]),
                         PYTHONPATH=os.pathsep.join([str(PROTO / 'py')]),
                         PYTHONDONTWRITEBYTECODE='1',
-                        AOS_DAEMON=str(self.daemon), AOS_LLM_KERNEL=str(self.kernel),
+                        AOS_DAEMON=str(self.daemon), AOS_LLM_KERNEL=str(self.kernel), AOS_HOME=str(PROTO),   # 11-24：格在 lib
                         AOS_STACK=str(self.stack), AOS_WS=str(self.ws), AOS_CD=str(self.root))
         self.target = self.defs / 'worker'
-        shutil.copytree(PROTO / 'templates/agent-fsm', self.target,
+        shutil.copytree(PROTO / 'templates/agents/agent-fsm', self.target,
                         ignore=shutil.ignore_patterns('tests', '__pycache__'))
         write(self.target / 'llm.json', {'model': 'high'})
         write(self.target / 'tools.json', {'tools': {
