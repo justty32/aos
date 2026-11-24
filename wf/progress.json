@@ -558,6 +558,17 @@
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
       "since": "2026-11-24"
+    },
+    "arena-feedback-1124": {
+      "title": "mine_arena/main 11-24 來信：arena_cheater 累積的 aos 使用意見（權限、mem_mb、資源鎖、fsm 看圖、board_set StackMissing、apply_patch、經驗）",
+      "status": "open",
+      "flow": "",
+      "what": "信 01795498128253917265.2624668.1805747，回信寄 /home/guanyu/aos-home/.stack/procs/mine_arena/procs/main/mailbox；全文 /mnt/c/code/mine/arena_cheater/wf/notes/investigations/aos-feedback.md（4.8 KB）。① read 類工具跨 daemon 讀得到別人 stack／信箱；edit／write 不能在定義設允許的路徑前綴（使用者對它們說只需防失誤；隔離等級甲＝防失誤，路徑前綴屬防失誤）。② limits.mem_mb 是 RLIMIT_AS，Node／V8 EAGAIN（subagent 工具說明已寫，另有 mem_total_mb＝cgroup；它們用 systemd scope MemoryMax）。③ 沒有跨 agent 的資源鎖／「等資源、輪到才叫醒」（使用者先前定資源只做可觀測、准入不做；此條是新的叫醒面，與 idle-polling 的叫醒可一起想）。④ agent-fsm 沒有看圖工具（qa 截得到圖看不到）。⑤ subagent 開的下屬 board_set 回 StackMissing（aos-comm 認 $AOS_STACK；可能跟 b914c016f 修的 subagent 無 AOS_DAEMON 回歸同源，待查）。⑥ sol 模型常先找 apply_patch。⑦ 經驗：固定程序做工具、判斷才給 agent；唯讀下屬好用；「低風險照判斷做、回信附理由」減少卡住；階段交界讀信。",
+      "next": "已回 main DONE。待使用者定哪幾條做；排在三分切完之後。⑤ 可先只讀查證。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
     }
   }
 }

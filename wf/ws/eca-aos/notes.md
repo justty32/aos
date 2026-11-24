@@ -413,3 +413,11 @@
 - templates DONE（信 `01795495773252549656.2271855.1570247`）：`e90cd00d6` agent-fsm system.txt 回信段加收尾檢查句（1742／1800 字，start-api/ann 同抄；kits 本來就有類似句）。狀態機那半只有設計 `wf/ws/eca-aos/eca-aos-templates/reply-check-提案.md`——三分切完後派 core。
 - 轉 kb（`01795495867660880399.2285039.1579688`）補一句進知識庫。progress `ops-feedback-1124` 的 next 更新。
 - 工作樹上 core 的 pack-skip（registry.py 等）在做中；`2a1a259e7`（self_tools uses）已 commit，等 core 來信再 install.py。
+- core DONE self_tools uses（信 `01795495898870841176.2290044.1582809`，`2a1a259e7`）。**還沒 install.py**：工作樹有 core 做到一半的 pack-skip（apps/tools、apps/mcp 等未 commit），現在裝會把半成品裝進活樹——等 pack-skip 交了一起裝。轉 kb（`01795495922456503187.2295021.1585168`）寫 me/self_tools.md＋「自己的工具記筆記、要用才掛」。progress `eca-tool-mcp-idea` 待 install 後更新。
+- kb DONE `5ab0b0e8a`：收尾回信那句進 aos/mailbox.md 的 Mailbox rules（對過原文用 its one answer）。self_tools uses 那件 kb 還在做。
+- kb DONE `2a9161dd0`：me/self_tools.md 加 uses 一條＋「Your own tools: note them, add them when needed」一節。剩：pack-skip 交了後 install.py（含 uses），更新 progress eca-tool-mcp-idea。
+- 13:1x core DONE pack-skip（信 `01795497020188063292.2470835.1694941`，`a551bba03`；aos-mcp 自己那份壞＝退回定義那份；fsm 保底沒做，三分後跟 reply-check 一起派）。工作樹又有 core 第十件（kernel 舊 hooks 鍵警告）半成品 → **還沒 install.py**。回 core PROGRESS（`01795497089164930290.2482747.1701838`）：第十件交了先停，等我裝完說「裝好了」再開第十一件。轉 kb packs.md（`01795497093605054630.2484210.1702282`）。
+- kb DONE `46e0f0e1a`：packs.md 補 pack 壞只少那份＋eca 保底（寫明 fsm 沒有）。
+- core DONE 第十件（信 `01795497193171866632.2502637.1712239`，`3812eed62` 舊 hooks 鍵印一次警告）。core 還沒讀我那封「先停」就開了第十一件（brain_notify _entry 有改動）→ 仍不能 install.py。等它讀信停手或交下一件。轉 kb hooks 那句。
+- kb DONE `23e65da3a`：舊 hooks 鍵進 llm_kernel.md 與 troubleshooting。
+- 13:3x mine_arena/main 來信（`01795498128253917265.2624668.1805747`）：arena_cheater 七條意見，記 progress `arena-feedback-1124`，回 DONE（`01795498205740864152.2637896.1813496`）。待使用者定；三分後。
