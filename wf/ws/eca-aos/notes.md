@@ -387,3 +387,9 @@
 
 - fable 規劃 `7b7a1829e`。使用者（逐字）：「1.a 2.收 3.60秒 4.照推薦 5.a。不用調整間隔」——抄進規劃 README 末節、progress `idle-polling`。施工三分切完後開。
 - scratch `~/.aos/scratch/idle-cpp-plan-1124/`（34 MB）與 `eca-mcp-idea-1124/` 是兩隻 fable 的量測，可刪（要問）。
+
+## 2026-11-24 13:0x：core 三件小程式交了，第五次 install.py
+
+- core DONE（信 `01795491539178940466.1691536.1162373`）：`506cfe678` aos-llm ls 最後一行整台（py＋cpp，kernel 每拍寫 `slots.json`）、`6ca662af3` `aos-daemon-ctl leftovers`（列表外 stack，沒做標記檔）、`db97bc983` `aos-agent ctl ls --deep`。
+- **install.py 跑了**（13:0x，常設許可；裝前 py／cpp 乾淨；exit 0，「removed 25 left over」）。活樹試過：aos-llm ls 印 `slots 8, reserved for high 1`（eca_main 又把活樹調到 8）、leftovers 列出 `_clock`、ctl ls --deep 列 37 行。
+- 轉 kb（`01795491585558227844.1698205.1166894`）改三句＋准跨範圍補 NORMS 附錄 4 的 `slots.json` 一列。
