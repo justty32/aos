@@ -359,3 +359,8 @@
 - 我問「不碰 proto8 的剩不多，建議今天照常做 proto8、16:00 左右重做三分補丁」，使用者（逐字）：「都做」。
 - 派了三件：kb（REQUEST `01795486406762409539.1103554.694077`，知識庫五處）、templates（`01795486415641557727.1104517.694965`，llm kernel 預設 slots 4＋逾時兩鍵說明＋daemon-root 的 WSL_INTEROP＋reviewer/tools.json 第 1 行）、core（`01795486423393288569.1105429.695740`，排在調查之後：aos-llm ls 通道與排隊、表外 stack、ctl ls --deep）。
 - 16:00 左右派子 agent 重做補丁（新 clone `aos-1124b` 之類、新的底、改照打清單裡的底雜湊）；16:50 push。core 的程式件要 install.py（常設許可，我裝）。
+
+## 2026-11-24 11:2x：kb 與 core 回來
+
+- kb 第一件 DONE `6f7f32352`（知識庫五處，六頁，我抽看過 llm_kernel.md）。
+- core 三件調查 DONE（信 `01795487076831328110.1177129.758140`，報告 `wf/ws/eca-aos/eca-aos-core/report-1124.md`，`5d9081236`）：閒置輪詢約 4.3 核；cooldown 階梯 30～1800；mcpServers 主因是 `--strict-mcp-config`。我抽對過 STEPS_S、brain_notify 第 152 行、cli.json 的 strict。結論寫進 progress `idle-polling`、`ops-feedback-1124`。core 接著做三件小程式。
