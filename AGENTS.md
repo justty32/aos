@@ -45,7 +45,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md → 各工作流入口 → 工
 
 ## 開發環境
 
-家機（Manjaro）與公司 WSL（Ubuntu）兩台輪流開發，repo 都在 `~/repo/aos`；aos 的樹的 stack 住 repo 裡的 `~/repo/aos/.stack`，被 git 忽略、每台各有各的、不跟著 git 搬（使用者 11-23；llm kernel 也是各台自己跑在 `~/aos-home/llm`；家機 11-22、公司 WSL 11-23 起樹）。開場先確認在哪台，各台的細節見 [dev-env/01](wf/workflows/dev-env/01-跨機與外部工具.md)。在 proto8 跑 `python3 install.py` 就裝好（先查相依：g++ ≥ 10、gcc、make、ar；編 C++、把 `py/` 抄成 `lib/`、生指令入口），殼設定檔（設 `AOS_HOME`＝那個 proto8、source `$AOS_HOME/env.sh`，之後再 export `AOS_DAEMON`、`AOS_LLM_KERNEL`）、起樹照[每台設定說明書](wf/workflows/dev-env/03-換機.md)；細節、指令表與外部工具見 [wf/workflows/dev-env.md](wf/workflows/dev-env.md)，驗證（11-04 起只剩 build 得過）見 [wf/workflows/testing.md](wf/workflows/testing.md)。
+家機（Manjaro）與公司 WSL（Ubuntu）兩台輪流開發，repo 都在 `~/repo/aos`；aos 的樹的 stack 每台各有各的、不跟著 git 搬（使用者 11-23）：家機住 repo 裡的 `~/repo/aos/.stack`（被 git 忽略），公司 WSL 11-24 起搬進根底下的 `~/aos-home/.stack/procs/repo-aos`（`~/repo/aos/.stack` 留成指過去的 symlink）。llm kernel 也是各台自己跑在 `~/aos-home/llm`；家機 11-22、公司 WSL 11-23 起樹。開場先確認在哪台，各台的細節見 [dev-env/01](wf/workflows/dev-env/01-跨機與外部工具.md)。在 proto8 跑 `python3 install.py` 就裝好（先查相依：g++ ≥ 10、gcc、make、ar；編 C++、把 `py/` 抄成 `lib/`、生指令入口），殼設定檔（設 `AOS_HOME`＝那個 proto8、source `$AOS_HOME/env.sh`，之後再 export `AOS_DAEMON`、`AOS_LLM_KERNEL`）、起樹照[每台設定說明書](wf/workflows/dev-env/03-換機.md)；細節、指令表與外部工具見 [wf/workflows/dev-env.md](wf/workflows/dev-env.md)，驗證（11-04 起只剩 build 得過）見 [wf/workflows/testing.md](wf/workflows/testing.md)。
 
 ## 主工作流（活狀態：進度 / 信件）
 

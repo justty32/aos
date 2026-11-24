@@ -37,7 +37,7 @@ What a pack costs: every pack you have is sent with every question to your brain
 | shell | 2 | 1,006 |
 | gadgets | 4 | 1,615 |
 | todo | 1 | 1,032 |
-| self | 6 | 5,439 |
+| self | 6 | 5,611 |
 | mailbox | 3 | 2,367 |
 | goal | 1 | 865 |
 | json | 9 | 5,906 |

@@ -5,9 +5,9 @@
 ## 現況
 
 - 使用者正在用的樹下面叫「活樹」；兩台的 repo 都是 `~/repo/aos`，只有 `main`。
-- **兩台的活樹都是 `~/repo/aos/.stack`**：被根 `.gitignore` 忽略、每台各有各的，不跟著 git 搬（使用者 11-23「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」；11-22～11-23 叫 `_stack`）。它的定義 `wf/tree/root/` 進 git、兩台共用；資料夾名字還叫 `root`，但 11-23 起它不是根定義，是掛在 `~/aos-home` 根底下的子 daemon，拿掉了 `_clock` 列、不帶鐘（[wf/tree](../../../tree/README.md)）。
+- **活樹（repo 那棵）的 stack：家機是 `~/repo/aos/.stack`，公司那台 11-24 起是 `~/aos-home/.stack/procs/repo-aos`**（`~/repo/aos/.stack` 留成指過去的 symlink）：每台各有各的，不跟著 git 搬（使用者 11-23「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」；11-22～11-23 叫 `_stack`）。它的定義 `wf/tree/root/` 進 git、兩台共用；資料夾名字還叫 `root`，但 11-23 起它不是根定義，是掛在 `~/aos-home` 根底下的子 daemon，拿掉了 `_clock` 列、不帶鐘（[wf/tree](../../../tree/README.md)）。
 - **家機（11-22 14:12 搬好）**：eca-aos 與三個 subagent（eca-aos-templates、eca-aos-kb、aos-eca-frontend）住在這裡；工作區（cwd）照舊是 `~/repo/aos`，私有地盤在 `wf/ws/<上層>/<名>/`（[wf/ws](../../../ws/README.md)）。llm kernel 自己一台：定義 `~/aos-home/llm`、stack `~/aos-home/.llm-stack`，`~/aos-home` 只剩這兩樣（11-23 還是這樣；方向已定要改成跟公司那台同一套，步驟在說明書「家機照做」）；舊樹其他東西在 `~/aos-home.old-1122/`（退路，不刪、不在那裡起東西）。殼怎麼設、怎麼起樹見[每台設定說明書](../../dev-env/03-換機.md)；搬家經過見 [04-線6演練](../../../../proto8/thinking/2026-11/22/工作區與stack-1122/04-線6演練.md)。
-- **公司 WSL（11-23 起樹）**：表上掛 eca-aos（範本 `eca-claude`，工作區 `~/repo/aos`），用另一個 Claude 帳號。11-23 起樹根在 `~/aos-home`（stack `~/aos-home/.stack`），鐘只在這個根；表上掛著 `llm`（llm kernel，stack `~/aos-home/.stack/procs/llm`）與 `repo-aos`（repo 那棵的子 daemon，stack `~/repo/aos/.stack`，這一列帶 `CLAUDE_CONFIG_DIR="$HOME/.claude-alt"` 與 `AOS_LLM_KERNEL`），另外還有使用者自己掛的別的專案的子 daemon（台數會變，不是我們的，不碰）；起停只對 `~/aos-home` 的根（[說明書](../../dev-env/03-換機.md#起樹停樹)）。那裡以前的舊樹已不在（以前頂層 session 是那棵樹裡的 `repo-aos`，[main-session-in-aos](../../../../proto8/thinking/2026-11/13/main-session-in-aos.md)）。樹裡的 agent 派出去的每個子 agent，Bash 都帶著活樹的 `AOS_*` 變數。
+- **公司 WSL（11-23 起樹）**：表上掛 eca-aos（範本 `eca-claude`，工作區 `~/repo/aos`），用另一個 Claude 帳號。11-23 起樹根在 `~/aos-home`（stack `~/aos-home/.stack`），鐘只在這個根；表上掛著 `llm`（llm kernel，stack `~/aos-home/.stack/procs/llm`）與 `repo-aos`（repo 那棵的子 daemon，stack 11-24 起是 `~/aos-home/.stack/procs/repo-aos`、`~/repo/aos/.stack` 留成指過去的 symlink，這一列帶 `CLAUDE_CONFIG_DIR="$HOME/.claude-alt"` 與 `AOS_LLM_KERNEL`），另外還有使用者自己掛的別的專案的子 daemon（台數會變，不是我們的，不碰）；起停只對 `~/aos-home` 的根（[說明書](../../dev-env/03-換機.md#起樹停樹)）。那裡以前的舊樹已不在（以前頂層 session 是那棵樹裡的 `repo-aos`，[main-session-in-aos](../../../../proto8/thinking/2026-11/13/main-session-in-aos.md)）。樹裡的 agent 派出去的每個子 agent，Bash 都帶著活樹的 `AOS_*` 變數。
 - 活樹的 `AOS_HOME` 是 `~/repo/aos/proto8`（照[重建步驟單](../../../../proto8/thinking/2026-11/17/重建步驟單.md)建）：跑的是那裡 `install.py` 產的 `bin/`（指令）、`lib/`（工具與共用套件），**改 `py/`、`cpp/` 存檔不會動到活樹，在那份 proto8 跑 `install.py` 才換**（11-18 S3 起；以前「存檔即生效」的說法作廢）。`knowledge/`、`frontend/` 不經 install.py、活樹直接讀，存檔即生效；`templates/` 要重抄進樹才生效。`~/.local/bin` 不再放 aos 的東西（舊 `cmd/install.sh` 11-18 S5 收掉）。
 - 各條為什麼、踩過什麼 → wf/public 的 [活樹旁邊](../../../public/活樹旁邊.md)、[行程與環境](../../../public/行程與環境.md)。
 
@@ -16,7 +16,7 @@
 會跑程式、跑測試或改 `proto8/` 的線，任務書開頭整段照貼（`<…>` 由調度者填；隊長往下派時原樣帶進子任務書，codex 也一樣）。純改文件的線貼第 1、7 條。
 
 ```
-## 硬規則（這台有一棵使用者正在用的樹＝活樹：兩台都是 ~/repo/aos/.stack；你的 shell 繼承了它的環境）
+## 硬規則（這台有一棵使用者正在用的樹＝活樹：家機 ~/repo/aos/.stack、公司那台 ~/aos-home/.stack 底下全部；你的 shell 繼承了它的環境）
 1. 活樹不碰：不寫活樹底下任何檔、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）。活樹是 ~/repo/aos/.stack 與它的定義 ~/repo/aos/wf/tree/，同樣不碰的還有 ~/aos-home（公司那台 11-23 起是整棵樹的根，底下除了 llm kernel 與 repo 這棵，還掛著使用者自己別的專案的子 daemon；家機還沒改成同一套之前放的是 llm kernel）與家機的 ~/aos-home.old-1122/（舊樹退路）。清掉 AOS_* 之後站在 ~/repo/aos 不帶 -d 下 aos-daemon-ctl、aos-mailbox 這類指令，會找到 ./.stack＝活樹。唯讀查看只限本任務書點名的，與第 9 條的核對。
 2. 先清環境：你的 Bash 帶著活樹的 AOS_STACK、AOS_DAEMON、AOS_HOME、AOS_WS 等。起任何 aos 行程、跑任何測試或 aos 指令，一律經一支 bash 腳本：開頭「不是 bash 就拒絕」、逐一 unset 所有 AOS_*、「還有殘留就拒絕」，再 exec 你的指令。不在 zsh 裡 source 環境檔、不用 `env -u $VARS`（在 zsh 都等於沒清）。其他要靠分詞的寫法也一樣（隊長的 shell 是 zsh，`$VAR` 不分詞）：多字迴圈、`set -- $p`、`for f in $(cat list)` 一律包在 `bash -c '…'` 或寫成 bash 腳本。
 3. 暫存樹：要起樹，起在 ~/.aos/scratch/<線名-日期>/ 這個獨一無二的暫存夾；不放 ~/code（那是使用者自己的空間）。tmux 只用 `tmux -S <暫存夾內的 socket>`。

@@ -87,6 +87,8 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - 信裡的「agent 通常怎樣」先對範本（例：「agent 不帶 priority」對過 templates 沒有一份設 priority，才寫成「the stock agent templates send no priority」）。
 - 環境的坑（WSL 網路、WSL_INTEROP）出處是 `wf/workflows/dev-env` 的那條（使用者實測過），知識庫寫成 troubleshooting 一條，不寫哪台機器。
 - 不要對 `/` 跑 `find`（WSL 會掃到 /mnt/c，跑不完）；找 stack 先看 `~/repo/aos/.stack`、`~/aos-home`。
+- 負責人准了才改 `wf/` 文件（例：11-24 stack 搬家）：只換路徑事實，兩台分開寫（公司搬了、家機沒搬）；家機要不要跟、殼設定檔的值這類沒定的不替使用者選，列在回報裡。改標題前先 grep 有沒有連到那個錨點。
+- 公司 WSL 11-24 起 stack 全在 `~/aos-home/.stack`（repo 那棵在 `procs/repo-aos`，`~/repo/aos/.stack` 是 symlink）；我的 stack 也在那底下。
 - 範本、程式裡同樣說得比事實強的句子（例：`templates/kits/gather/tools.json` 的 description）只回報，不改。
 - **隔離只承諾防失誤**（使用者 11-23 晚「甲，先只防失誤」「可以」）：拿掉工具、ws、kits、aos-sandbox 是防不小心越界、讓越界看得到，不抗刻意繞過。正本是 `aos/rules.md` 的 `What does not enforce these rules` 段（線 kb-guard-level-1123 補的那段），`aos/kits.md` 的「Why a kit cuts tools」改成不說關得住、指過去；別頁寫限制時也不寫成關得住。
 

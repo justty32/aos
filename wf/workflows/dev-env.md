@@ -42,7 +42,7 @@
 
 ## 跨機、外部工具、模型端點
 
-**Windows 機**：使用者在 Windows 機（`C:\code\mine\simple_tools\aos`）工作時，這台有 WSL Ubuntu，實跑（build、proto8 的程式與試驗場）都在 WSL 那邊做（使用者 10-28：「這台有wsl ubuntu，可能之後都要在那邊做處理」）。WSL 裡的 clone 是 `~/repo/aos`（11-13 起唯一一份；`AOS_HOME` 指它的 `proto8`；樹 11-23 起住 `~/repo/aos/.stack`，被 git 忽略、每台各有各的，見[每台設定說明書](dev-env/03-換機.md)）。**不要在 `/mnt/c` 底下跑**：那裡每個檔都帶 `+x`，aos-exec 會把 JSON 當可執行檔（N-61）。從 Windows 端經 `\\wsl.localhost\Ubuntu\…` 改檔會把 `+x` 弄掉，改完要在 WSL `chmod +x`。
+**Windows 機**：使用者在 Windows 機（`C:\code\mine\simple_tools\aos`）工作時，這台有 WSL Ubuntu，實跑（build、proto8 的程式與試驗場）都在 WSL 那邊做（使用者 10-28：「這台有wsl ubuntu，可能之後都要在那邊做處理」）。WSL 裡的 clone 是 `~/repo/aos`（11-13 起唯一一份；`AOS_HOME` 指它的 `proto8`；樹的 stack 家機在 `~/repo/aos/.stack`（被 git 忽略），公司那台 11-24 起在 `~/aos-home/.stack/procs/repo-aos`，每台各有各的，見[每台設定說明書](dev-env/03-換機.md)）。**不要在 `/mnt/c` 底下跑**：那裡每個檔都帶 `+x`，aos-exec 會把 JSON 當可執行檔（N-61）。從 Windows 端經 `\\wsl.localhost\Ubuntu\…` 改檔會把 `+x` 弄掉，改完要在 WSL `chmod +x`。
 
 <!-- wf-nav -->
 | 分檔 | 涵蓋段落 |
