@@ -339,3 +339,7 @@
 - ① llm kernel 範本預設值要改：他沒給數字，我打算 slots 4、reserved {high:1}（跟 eca_main 改活樹的一樣），施工時報給他；動的是 `proto8/templates`，**等三分切完**。
 - ② 閒置輪詢＝接下來一段時間的開發重點：立 progress `idle-polling`（現況、現成手段、候選方向；方向他定）。
 - ③ 刪了 `~/repo/aos/.stack/procs/eca-aos-sol-1`、`-2`（表上沒有、沒有行程，340K＋624K）。同一夾還有表外的 `_clock`（11-23 rm 掉的那列留下的），沒刪、他沒說。工作區 `wf/ws/eca-aos/temp/eca-aos-sol-*` 與定義 `temp/defs/gather*` 也還在。
+
+## 2026-11-24 10:3x：guanyu/ops 來信（用 aos 兩天的意見）
+
+- 信 `01795485983983422703.1049418.653198`，寄件人 `guanyu` daemon 底下的 `ops`（ops-notes 運維，使用者叫它寫的）。七條建議與坑、五條分享，記成 progress `ops-feedback-1124`；它說讀過就好，回了一封 PROGRESS 說收到、排在三分之後。
