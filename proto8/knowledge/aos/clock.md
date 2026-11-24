@@ -54,3 +54,5 @@ Three ways, told apart by what enters your conversation (history):
 3. `on_clock` hook that writes to your queue only when there is news: the program checks something and sends one letter to your queue only then. History grows only then. Example: the stock `mail_notify` hook, on by default (`aos/mailbox.md#/Hearing about new letters`). Another example: a job at a wall time that first checks whether there is work (every day at 09:00, every 3 days): `aos/me/self_hook.md#/A job at a wall time (every day at 09:00)`. Just a reminder at a wall time, no check: `clock_register` with `at` or `cron` is simpler.
 
 On an eca body every brain turn costs money: prefer 2 or 3. A message already in your history can be removed with `self_history`. How to write the program: `aos/me/self_hook.md#/Writing the hook program`.
+
+On an eca body, do not use the CLI's background Bash (a `sleep`, for example) as a timer. While a background Bash runs, aos's notices of new letters may only reach your conversation after it ends. To wake yourself on a timer, use `clock_register` (add it first: see the top of this page).

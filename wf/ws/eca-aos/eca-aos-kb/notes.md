@@ -22,6 +22,15 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
    - 排錯少＝3c：寫一頁 `aos/troubleshooting.md`，每條寫症狀 → 原因 → 怎麼查，只寫查證過的；誰查出新的故障，就交給 eca-aos-kb 補一條（這條規矩寫在 wf/，由 eca-aos 加）。
    - echo $AOS_HOME＝4c：不改。
 
+# 現況（2026-11-24 收尾，壓縮前寫）
+
+- 手上沒有進行中的信；eca-aos 寄來的都回了 DONE（最後一封 349a923c3：dev-env/03 的 AOS_DAEMON 改指根、家機之後要搬）。
+- 11-24 線 `eca-aos-kb-1124` 交過：6f7f32352、c5016efd2、56de0d0f2、fe1c2e93f、5ab0b0e8a、2a9161dd0、46e0f0e1a、23e65da3a、cd9d62963、47b17122c、fa94b7874、349a923c3。
+- 還開著、等別人：家機 stack 搬進 `~/aos-home/.stack/procs/repo-aos`（progress `home-stack-move-1124`）；搬完要把 dev-env/03「家機照做」、`~/aos-home` 家機那條、AGENTS.md、wf/tree、dev-env/01、aos-teams 06／07、wf/public 裡寫「家機是 `~/repo/aos/.stack`」的句子改掉。eca-aos 會轉信。
+- core 說之後會改的：沒有還欠的句子（aos-llm ls 整台行、leftovers、ctl ls --deep 都已寫進知識庫）。
+- 11-24 下午：eca 別用背景 Bash 排定時（core 報告 report-1124-bgmail.md 第 5 項）寫進 `aos/clock.md` 的 which way 段尾與 `aos/eca_reading.md` 的 clock 那行；原因沒寫死，core 實測分出原因後要補（可能也補一條 troubleshooting）。
+- 我的信箱回信地址：eca-aos 在 `/home/guanyu/aos-home/.stack/procs/repo-aos/procs/eca-aos/mailbox`（stack 11-24 搬家後）。
+
 # 下次照做
 
 ## 範本改了，知識庫跟上
