@@ -138,3 +138,11 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 ### 11-24 晚（家機）home-gitignore-1124
 
 - main 信 01795526183223735704.609696.867477：.gitignore 的 /.stack/、/_stack/ 規則留著，只改註解（stack 現在兩台都在 ~/aos-home/.stack/procs/repo-aos，規則防誤收）。交 4b17a8341，git check-ignore 確認兩條照樣忽略；repo 根已無 .stack／_stack。已回 DONE。
+
+### 11-24 晚（家機）home-listen-1124（main 信 01795526309613972480.627214.880116；narr-amber 回報②②b③）
+
+- ② aa8bd9cef：aos-mcp 以前讀一行做完才讀下一行（main.py 主迴圈），長 listen 擋住同時叫的別的工具。改成 tools/call 各一條執行緒（新 py/aos/apps/mcp/serve.py：Server.send 拿鎖、gate＝_metainfo parallel false 同名排隊、notifications/cancelled 收行程群不回、stdin 讀完 join）；hook 一次一個（HOOK_TURN；同 hook 小格 event.json 的 .tmp 會撞，test_hooks 約 1/8 抓到）；回覆與 list_changed 連著寫。test_list_changed 改一則一則講（converse）。
+- ②b bc8938198：aos-agent listen／ask 加 --mailbox DIR（看 new/、cur/ 的 letter.json，in_reply_to 是那封＝印 `[aos] listen: …` 退 0，信留著）；subagent 的 listen／ask 帶 ME["stack"]/mailbox；NOTE_KINDS 加 listen（docs/NORMS N-43 續那份列種類，不在我範圍，請 kb）。subagent 帳加 flock、parallel 改 true（不然 state 仍排在 listen 後面）。
+- ③ 255d6da30：agent_fsm/wait.py observed think 列加 reasoning_effort（sent.json 也記），templates/tests/agent-fsm/test_cells 加一條。
+- 測：乾淨複本 `~/.aos/scratch/core-listen-1124/`（bin/mk.sh、run.sh、suite.sh；l0＝HEAD 基準、l5＝全部改動）：apps/agent、apps/mcp、subagent tests、apps/tools、apps/eca、templates/tests/agent-fsm（253）、py/tests 頂層、defs 全綠，跟基準比沒新紅。repo 跑過 install.py（main 准）。
+- 沒做：claude 真 session 端到端（Claude Code 實際並發叫兩個 aos 工具）沒跑；並發 add 搶配額沒寫測試（鎖有、測不到窗）。已在跑的 aos-mcp 要 session 重開才吃到新碼。
