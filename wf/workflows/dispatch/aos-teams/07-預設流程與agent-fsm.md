@@ -89,6 +89,6 @@
 
 **11-22 新定（家機搬進 repo 裡的 stack 之後；11-23 起那個資料夾叫 `.stack`）**：使用者 11-22「然後工作區仍然就是~/repo/aos」「現在就是讓他們有自己的私有地盤這樣」（[01-決定與調查](../../../../proto8/thinking/2026-11/22/工作區與stack-1122/01-決定與調查.md)）。
 
-- repo 那棵樹的 stack：家機是 `~/repo/aos/.stack`，公司那台 11-24 起是 `~/aos-home/.stack/procs/repo-aos`（公司那台 repo 裡已經沒有 `.stack`；定義 `wf/tree/root/`；被 git 忽略、每台各有各的，使用者 11-23）。家機頂層是住在裡面的 eca-aos，底下掛三個 subagent；公司那台 11-23 起樹，表上先只有 eca-aos；11-23 起那台的 `.stack` 是 `~/aos-home` 根底下的子 daemon（列 `repo-aos`），家機照說明書跟上。上面四條是公司那台舊樹（`~/aos-home`）的做法。
+- repo 那棵樹的 stack：兩台都是 `~/aos-home/.stack/procs/repo-aos`（公司那台 11-24 起、家機 11-24 晚起，repo 裡都已經沒有 `.stack`；定義 `wf/tree/root/`；每台各有各的、不跟著 git 搬，使用者 11-23）。兩台的 repo 那棵都是 `~/aos-home` 根底下的子 daemon（列 `repo-aos`；公司那台 11-23 起、家機 11-24 晚起）。家機頂層是住在裡面的 `main`，底下掛 eca-aos-kb、eca-aos-templates、eca-aos-core 三個位子（[wf/org](../../../org/README.md) 的「家機」那段）；公司那台頂層是 eca-aos。上面四條是公司那台舊樹（`~/aos-home`）的做法。
 - 線與隊員的工作區一律是 repo 根 `~/repo/aos`；草稿、任務書、自己做的定義夾放私有地盤 `wf/ws/<上層>/<名>/`（照掛的層級嵌套），不進 git 的放地盤裡的 `temp/`（[wf/ws](../../../ws/README.md)）。
 - 新做的定義放 `wf/tree/` 或地盤裡，不放 `~/aos-home`（那裡只放這台的根定義、llm kernel 與根的 stack）。

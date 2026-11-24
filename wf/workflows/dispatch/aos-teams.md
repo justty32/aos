@@ -46,7 +46,7 @@ aos-user send --kind decide --from ok-x \
 
 ### 3. 掛 sol 隊員
 
-`subagent` 這支工具不是每隻 eca 都有：現成的 eca 範本只掛到 `agent_def`（def 包）。公司那台 11-23 的現況：eca-aos 用 `self_tools add` 自己加了 `subagent` 與 `agent_def` 兩支（`{"$env":"AOS_HOME","$path":"/lib/tools/agent/subagent"}`，`agent_def` 同理）。以前線用的定義（公司那台舊樹 `~/aos-home/agents/` 的 `opus-kernel`、`fable-kernel`）多掛了 `subagent`、`kernel_gate` 兩包，那個夾 11-23 已經不在；家機 11-22 起新做的定義放 `wf/tree/` 或上層的地盤 `wf/ws/…`，兩處現在都還沒有這兩份。`self_state {"parts":["tools"]}` 看得到自己有沒有。
+`subagent` 這支工具不是每隻 eca 都有：現成的範本（eca 與 agent-fsm）都不帶 `subagent` 包，也不帶 `agent_def`（def 包），要用就 `self_tools add` 自己加（知識庫 `aos/agents.md`）。公司那台 11-23 的現況：eca-aos 用 `self_tools add` 自己加了 `subagent` 與 `agent_def` 兩支（`{"$env":"AOS_HOME","$path":"/lib/tools/agent/subagent"}`，`agent_def` 同理）。以前線用的定義（公司那台舊樹 `~/aos-home/agents/` 的 `opus-kernel`、`fable-kernel`）多掛了 `subagent`、`kernel_gate` 兩包，那個夾 11-23 已經不在；家機 11-22 起新做的定義放 `wf/tree/` 或上層的地盤 `wf/ws/…`，兩處現在都還沒有這兩份。`self_state {"parts":["tools"]}` 看得到自己有沒有。
 
 1. `agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}`，把 [kits/gather/](kits/README.md) 的 `system.txt`、`tools.json`、`llm.json` 蓋過去，`agent_def check`（包裡沒有 `.env`，`AOS_LLM_KERNEL` 由上層 daemon 那一列傳下來，見 [kits/card](kits/card.md) 第 1 步）。任務書寫知識庫的絕對路徑（card 第 3 步）。
 2. `subagent {"op":"add","def":"defs/gather","name":"ok-x-sol-1","ws":"wf/ws/<上層>/<你的名字>/temp/ok-x-sol-1","limits":{"mem_mb":1024,"files":256}}`（`ws` 從你的工作區算；11-22 起 eca 的工作區是 repo 根，照舊寫 agent 名會落在 repo 根底下，所以放進你自己地盤的 `temp/<agent 名>/`——11-23 提案，沒試過；`procs` 別設；開檔的鍵是 `files`）。
@@ -59,7 +59,7 @@ aos-user send --kind decide --from ok-x \
 
 ### 5. 活樹旁邊：repo 那棵是使用者正在用的樹
 
-- 活樹＝家機是 `~/repo/aos/.stack`，公司那台 11-24 起是 `~/aos-home/.stack/procs/repo-aos`（公司那台 repo 裡已經沒有 `.stack`）（每台各有各的，不跟著 git 搬，使用者 11-23；定義 `wf/tree/root/`，資料夾名字還叫 `root`，但 11-23 起它是子 daemon、不帶鐘）。`~/aos-home`：公司那台 11-23 起是整棵樹的根（`~/aos-home/.stack` 是根的 stack，鐘只在這裡），底下除了 llm kernel 與 repo 這棵，還掛著使用者自己別的專案的子 daemon；家機還沒改成同一套，那裡放的是 llm kernel，舊樹退路在 `~/aos-home.old-1122/`。這些一樣不碰（[06「現況」](aos-teams/06-公司WSL活樹與任務書硬規則.md#現況)）。
+- 活樹＝兩台都是 `~/aos-home/.stack/procs/repo-aos`（公司那台 11-24 起、家機 11-24 晚起，repo 裡都已經沒有 `.stack`）（每台各有各的，不跟著 git 搬，使用者 11-23；定義 `wf/tree/root/`，資料夾名字還叫 `root`，但 11-23 起它是子 daemon、不帶鐘）。`~/aos-home`：兩台都是整棵樹的根（公司那台 11-23 起、家機 11-24 晚起；`~/aos-home/.stack` 是根的 stack，鐘只在這裡），底下除了 llm kernel 與 repo 這棵，還掛著使用者自己別的專案的子 daemon；家機的舊樹退路 `~/aos-home.old-1122/` 已經不在。這些一樣不碰（[06「現況」](aos-teams/06-公司WSL活樹與任務書硬規則.md#現況)）。
 - 活樹不碰（06 第 1 條）：不寫活樹底下任何檔（連同 `~/aos-home`、`~/aos-home.old-1122/`）、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）；唯讀查看只限任務書點名的，與 06 第 9 條的核對。
 - 不在共用工作樹跑 `git stash`、`git reset --hard`、`git checkout -- .`、`git clean -fdx`（06 第 7 條）：`.stack` 被根 `.gitignore` 忽略，`git clean -fdx` 會連活樹一起刪。
 - 清掉 `AOS_*` 之後，`aos-daemon-ctl`、`aos-mailbox` 這類指令不帶 `-d` 會找 cwd 的 `./.stack`：站在 `~/repo/aos` 下指令＝打到活樹。暫存樹的指令一律帶 `-d <暫存樹 stack 的絕對路徑>`。
