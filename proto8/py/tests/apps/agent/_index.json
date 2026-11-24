@@ -23,6 +23,9 @@
  "test_ctl_kit.py": {
   "description": "Test aos-agent ctl add / set-def --kit on a real aos-daemon: the kit's system.txt and tools.json become the agent's own copies in its stack (replacin…"
  },
+ "test_ctl_retry.py": {
+  "description": "Test aos-agent ctl retry: clears the stack's cooldown.json and says what it cleared (fake daemon table, no daemon)."
+ },
  "test_cwd_target.py": {
   "description": "aos-agent with no -t and no AOS_AGENT finds the target in the cwd (./.stack, then ./); with no -d and no AOS_DAEMON the daemon is two folders up from…"
  },
