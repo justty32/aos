@@ -406,3 +406,4 @@
 - core DONE（信 `01795493865386311277.2027868.1384572`）：`80d2ee043` `aos-agent ctl retry`（清 cooldown.json，fsm／eca 共用；不替停著的起）、`a7f58e07a` cli.json 新鍵 `claude_mcp`（保留 strict，起 claude 前讀該帳號 .claude.json 的 user／local／已核准的 project server 併進小格 mcp.json；三份範本加了）。**install.py 第七次**；retry 在活樹試過（kb 沒冷卻＝nothing to clear）。retry 沒做真 agent 冷卻中的整段實跑。
 - 轉 kb（`01795493903417182191.2033230.1388217`）；回 ops DONE（`01795493911376516835.2034324.1389013`，採用 ①⑥⑦，②～⑤ 未定；claude_mcp 對它生效的三條件）。
 - 活樹上已經在跑的 eca 要用 claude_mcp：定義直接指範本的（我這棵四隻、eca_main 等）下次起 claude 就生效；自己抄過定義的要手動加。
+- 14:0x kb `fe1c2e93f`（retry、claude_mcp 進知識庫）。使用者（逐字）：「那四條也照推薦做」→ ops ②③⑤ 派 core 第十一件、④ 派 templates（system 文字今天改、狀態機 .py 先回設計）。
