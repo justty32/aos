@@ -400,3 +400,9 @@
 - core `b914c016f`（信 `01795492063815134798.1768957.1212983`）：subagent 沒 AOS_DAEMON 時改給絕對 --stack（139d8dd2b 起的回歸）；kernel-chain-check 的 hook 改寫進 kernel_hookeds.json（kernel.json 的 hooks 11-21 起被安靜忽略）；image-move-check 設 AOS_HOME。兩支原本就紅的 check 現在全過。**install.py 第六次**（13:1x）。
 - 要問使用者：① kernel.json 留著舊 `hooks` 鍵時 kernel 安靜忽略（擋 evil 的 hook 失效也不報）——要不要改 CfgBad 或 warning（py/tools/aos/kernel/round.py）；② `/tmp/aos-image-move-*` 四個、`/tmp/aos-home-move-*` 一個測試證據夾、scratch 的 `idle-cpp-plan-1124`（34 MB）、`eca-mcp-idea-1124` 刪不刪。
 - 使用者答（逐字）：「1.不報錯。2.好」→ ① 我讀成「不擋、只警告」（我問的是報錯或警告），派 core 第十件（印一行、別每拍洗版）；② 刪了 /tmp 五個證據夾與 scratch 兩個 fable 量測夾，scratch 剩 5 個。
+
+## 2026-11-24 13:5x：retry 與 claude_mcp 交了，第七次 install.py
+
+- core DONE（信 `01795493865386311277.2027868.1384572`）：`80d2ee043` `aos-agent ctl retry`（清 cooldown.json，fsm／eca 共用；不替停著的起）、`a7f58e07a` cli.json 新鍵 `claude_mcp`（保留 strict，起 claude 前讀該帳號 .claude.json 的 user／local／已核准的 project server 併進小格 mcp.json；三份範本加了）。**install.py 第七次**；retry 在活樹試過（kb 沒冷卻＝nothing to clear）。retry 沒做真 agent 冷卻中的整段實跑。
+- 轉 kb（`01795493903417182191.2033230.1388217`）；回 ops DONE（`01795493911376516835.2034324.1389013`，採用 ①⑥⑦，②～⑤ 未定；claude_mcp 對它生效的三條件）。
+- 活樹上已經在跑的 eca 要用 claude_mcp：定義直接指範本的（我這棵四隻、eca_main 等）下次起 claude 就生效；自己抄過定義的要手動加。
