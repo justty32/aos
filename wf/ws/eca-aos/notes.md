@@ -364,3 +364,9 @@
 
 - kb 第一件 DONE `6f7f32352`（知識庫五處，六頁，我抽看過 llm_kernel.md）。
 - core 三件調查 DONE（信 `01795487076831328110.1177129.758140`，報告 `wf/ws/eca-aos/eca-aos-core/report-1124.md`，`5d9081236`）：閒置輪詢約 4.3 核；cooldown 階梯 30～1800；mcpServers 主因是 `--strict-mcp-config`。我抽對過 STEPS_S、brain_notify 第 152 行、cli.json 的 strict。結論寫進 progress `idle-polling`、`ops-feedback-1124`。core 接著做三件小程式。
+
+## 2026-11-24 11:5x：清 ~/.aos/scratch
+
+- guanyu/ops 來信（`01795489462379734791.1427226.961982`）：使用者跟它說 scratch 可以清，它沒動、問我們。我回 PROGRESS（agent 轉的不算授權），把清單給使用者，他（逐字）：「刪」。
+- 刪了 68 個夾（11-19～11-23；三個有測試留下的唯讀夾，`chmod -R u+w` 後刪），9.0 GB → 853 MB。留 `tri-split-1124`、`eca-aos-core-1124`、`eca-aos-templates-1124`、`eca-aos-kb-1123`、`ok-fsmwrap`（來路不明）。回 ops DONE（`01795489595541517307.1447834.974778`）。
+- 範本位子 `cb24a25948`（slots 4、逾時兩鍵、WSL_INTEROP、reviewer 第 1 行）、kb `c5016efd2`（跟上 slots 4）。轉 core 第七件：kernel-chain-check 原本就紅（subagent 的 --stack-json $env AOS_DAEMON）。
