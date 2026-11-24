@@ -26,7 +26,7 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 
 - 手上沒有進行中的信；eca-aos 寄來的都回了 DONE（最後一封 349a923c3：dev-env/03 的 AOS_DAEMON 改指根、家機之後要搬）。
 - 11-24 線 `eca-aos-kb-1124` 交過：6f7f32352、c5016efd2、56de0d0f2、fe1c2e93f、5ab0b0e8a、2a9161dd0、46e0f0e1a、23e65da3a、cd9d62963、47b17122c、fa94b7874、349a923c3。
-- 還開著、等別人：家機 stack 搬進 `~/aos-home/.stack/procs/repo-aos`（progress `home-stack-move-1124`）；搬完要把 dev-env/03「家機照做」、`~/aos-home` 家機那條、AGENTS.md、wf/tree、dev-env/01、aos-teams 06／07、wf/public 裡寫「家機是 `~/repo/aos/.stack`」的句子改掉。eca-aos 會轉信。
+- ~~還開著：家機 stack 搬完後改文件~~ → 家機 11-24 晚做完，見下面「家機 11-24 晚」。
 - core 說之後會改的：沒有還欠的句子（aos-llm ls 整台行、leftovers、ctl ls --deep 都已寫進知識庫）。
 - 11-24 下午：eca 別用背景 Bash 排定時，寫在 `aos/clock.md` 的 which way 段尾、`aos/eca_reading.md` 的 clock 那行、`aos/troubleshooting.md` 的 Hooks and timers 段。原因照 core 實測（report-1124-bgmail.md 第 7 節）：`claude -p` 等背景任務結束才退出，回答取最後一個 result。
   - **待更新**：如果程式改成讀到第一個 result 就收（報告修法 7／8，eca-aos 在問使用者），這三處都要改。
@@ -109,3 +109,11 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - 不在活 daemon 上下指令；aos 工具只用自己的 self_*。
 - 回報寫繁體中文，先寫結論：commit 雜湊、改了哪頁哪句、拿不準沒改的、替使用者做的選擇（逐條列）。
 - 知識庫存檔就生效：一頁一次寫完整，寫英文、短句、一句一件事，只寫核對過的事。
+
+## 家機 2026-11-24 晚：home-docs-1124（main 派）
+
+- 交了 `4936939e5`（12 檔）：repo 那棵的 stack 兩台都在 `~/aos-home/.stack/procs/repo-aos`、家機負責人是 `main`（底下 kb／templates／core）。改了 AGENTS.md、wf/tree、dev-env.md、dev-env/01、03、aos-teams.md（第 3、5 段）、06、07、kits site.txt、gather/system.txt、wf/public 活樹旁邊、行程與環境。03「家機照做」那節沒改標題（wf/tree 連過去），開頭改成「家機已做完，這節留當紀錄」。
+- 家機查到的事實（只讀）：`~/aos-home` 只剩 `root/`、`llm/`、`.stack/`；`.llm-stack`、`~/aos-home.old-1122/` 都不在；根表 `_clock`、`_sweeper`、`llm`、`repo-aos`、`mod_skyrim`、`repo-vc`、`narr-amber`；repo-aos 表 `_sweeper`、`main`、三個位子；`.bak-trisplit-1124` 用 `find -maxdepth 4` 沒找到。
+- **回報給 main、沒改的**：家機的 `repo-aos` 那列定義是 `proto8/templates/daemons/daemon-sub`（cwd 也在那裡），不是文件寫的 `wf/tree/root`；那列的 `as_written` 也沒有 `envs`。wf/tree、03「第一次」那行都還寫 `wf/tree/root`，要不要改等 main。03 常見錯誤表「`.stack` 整個不見了／git clean -fdx」那列已經不適用（stack 不在 repo 裡），沒刪。
+- aos-teams 第 49 行「現成 eca 範本只掛到 agent_def」改成照知識庫：現成範本都不帶 `subagent` 包也不帶 def 包（對過 `templates/agents/*/tools*.json` 與 `lib/packs/`）。
+
