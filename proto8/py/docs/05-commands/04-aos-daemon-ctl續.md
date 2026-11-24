@@ -15,6 +15,10 @@
 
 帶鐘的那台（通常只有根）在 `ls` 中會有普通 proc `_clock`（範本取的名）；對它 `pause _clock`／`resume _clock` 可停走整棵樹的時間（子樹預設都聽根的鐘），其他工作照跑；沒帶鐘的子 daemon 表上沒有這列。表上不記時鐘的值：想看時鐘走不走，`cat "$AOS_CLOCK"` 讀鐘檔，或看根的 `ls` 裡 `_clock` 列是不是 `running`（鐘列寫了 `stuck_after_ms`，鐘被凍住時會變 `stuck`）。改時鐘設定（鐘列或根定義資料夾的 `.env`）先 sleep 整台、再改、再 wake／重開；詳見 [daemon 時鐘](../../../cpp/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列)。
 
+## leftovers：表外留下的 stack
+
+`aos-daemon-ctl [--daemon D] leftovers [-j]`（11-24）：`rm`（含 `aos-agent ctl rm` 不帶 `--purge`、subagent 的 rm 不 purge）下表時 stack 留著，`D/procs/<名>` 看起來跟表上 stopped 的那格一樣、卻已經沒有列。這個子命令列出 `D/procs/` 底下**沒有任何一列用到**的資料夾（一列的 stack 是它、在它底下或在它上面都算用到），一行一個 `NAME<TAB>LAST_CHANGE<TAB>PATH`（`LAST_CHANGE`＝資料夾本身與直接底下檔案的最新 mtime，UTC ISO，跟 prune 同一套；讀不到＝`-`），最後一行 `# N folders in D/procs not on the table (…)`；`-j`＝一行 `{"leftovers": [{"name", "stack", "last_change"}…]}`。列放在 `D/procs/` 以外的 stack 不看。**只讀、不刪**：不要了自己刪；同名同 stack 再 `add` 就接著用。表讀不到＝`StateMissing`／`StateBad`。
+
 ## prune：自檢與清理舊列
 
 （stderr 的封存與刪封存不在 prune：見 [03 的 sweep](03-aos-daemon-ctl.md)、[aos-sweeper](../../aos/apps/sweeper/README.md)。）

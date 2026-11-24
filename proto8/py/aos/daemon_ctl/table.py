@@ -209,6 +209,42 @@ def last_change(stack):
         raise Fail("StateBad", "cannot inspect stack %s: %s" % (stack, exc))
 
 
+def _inside(path, root):
+    return path == root or path.startswith(root.rstrip(os.sep) + os.sep)
+
+
+def leftovers(d, procs):
+    """D/procs/ 底下沒有任何一列用到的資料夾（rm、subagent rm 不 purge 留下的 stack；daemon 的預設小格也在這裡）。
+    一列的 stack 是它、在它底下或在它上面都算用到。回 [(名字, 絕對路徑, 最後修改 ISO 或 None)]，照名字排；只讀。"""
+    base = os.path.join(d, "procs")
+    try:
+        with os.scandir(base) as it:
+            folders = sorted((e.name, e.path) for e in it if e.is_dir(follow_symlinks=False))
+    except FileNotFoundError:
+        return []
+    except OSError as exc:
+        raise Fail("StateBad", "cannot list %s: %s" % (base, exc))
+    used = []
+    for row in procs.values():
+        stack = row.get("stack") if isinstance(row, dict) else None
+        if isinstance(stack, str) and stack:
+            used.append(os.path.realpath(stack))
+    out = []
+    for name, path in folders:
+        real = os.path.realpath(path)
+        if any(_inside(stack, real) or _inside(real, stack) for stack in used):
+            continue
+        changed = last_change(path)
+        stamp = None
+        if changed is not None:
+            try:
+                stamp = datetime.datetime.fromtimestamp(changed, datetime.timezone.utc).isoformat()
+            except (OverflowError, OSError, ValueError):
+                stamp = None
+        out.append((name, path, stamp))
+    return out
+
+
 def prune_candidates(d, procs, seconds, now):
     """只選 stack 存在、stopped／sleeping 且最新修改嚴格早於門檻的列；不修改表或檔案。"""
     for name, row in procs.items():

@@ -23,6 +23,7 @@ subcommands:
   pause NAME     write {"cmd": "pause", "seq": N} to its ctl window; prints N
   resume NAME    the same with "resume"
   ls [-j]        the table: NAME  PHASE  PID  CODE  WS  REASON; last line = the supervisor's view
+  leftovers [-j]   folders in D/procs/ that no row uses (stacks rm left behind); lists only
   where --stack NAME   print its stack (one absolute path)
   poke [--ctl|--mail|--all]   wake now: read ctl (default), ctl + mailbox, or run a full round early
   ping [--timeout-s S]   wait for the daemon's ping reply; prints "replied in N ms"
@@ -154,7 +155,8 @@ exit codes: 0 sent; 1 error (ArgumentsBad, DaemonMissing, MailboxMissing, PathMi
 
 usage: aos-daemon-ctl [--daemon D] rm [--reply-to BOX] [--timeout-s S] NAME
 
-Asks the daemon to stop and remove NAME from its table. The stack is kept.
+Asks the daemon to stop and remove NAME from its table. The stack is kept
+(aos-daemon-ctl leftovers lists the stacks in D/procs/ that no row uses).
 Prints the letter name; without --reply-to, waits up to --timeout-s seconds for it to leave new/.
 
 flags:
@@ -277,6 +279,24 @@ flags:
 
 exit codes: 0 (an empty table prints only the last line); 1 error (DaemonMissing,
   StateMissing, StateBad).
+""",
+    "leftovers": """aos-daemon-ctl leftovers - list stacks in D/procs/ that are not on the table
+
+usage: aos-daemon-ctl [--daemon D] leftovers [-j]
+
+rm (and aos-agent ctl rm, subagent rm without purge) keeps the stack: a folder D/procs/NAME
+that looks the same as a stopped row's stack but has no row any more. This lists every folder
+directly in D/procs/ that no row uses (a row's stack is that folder, inside it or above it), one
+per line: NAME TAB LAST_CHANGE TAB PATH (LAST_CHANGE = newest mtime of the folder and its direct
+files, UTC ISO; - when it cannot be read). Stacks a row keeps outside D/procs/ are not looked at.
+The last line starts with "# " and says how many there are. Only reads files; nothing is deleted
+(delete a leftover by hand when it is no longer needed; add with the same name and stack reuses it).
+
+flags:
+  -j, --json   one line {"leftovers": [{"name", "stack", "last_change"}...]}
+  -h, --help   show this help
+
+exit codes: 0 listed (also when there are none); 1 error (DaemonMissing, StateMissing, StateBad).
 """,
     "where": """aos-daemon-ctl where - print the recorded stack of one proc
 
@@ -618,6 +638,23 @@ def cmd_ls(opts, args):
     print(CTRL.sub(" ", line))
 
 
+def cmd_leftovers(opts, args):
+    """leftovers（11-24）：D/procs/ 有、表上沒有任何一列用到的資料夾；只列不刪。"""
+    o, rest = aos_flags.parse(args, {}, {"--json": "json"}, help=HELPS["leftovers"], short=("-j",))
+    if rest:
+        raise Fail("ArgumentsBad", "leftovers takes no arguments")
+    d = dc.find_daemon(opts.get("daemon"))
+    found = dc.leftovers(d, dc.rows(d))
+    if o.get("json"):
+        print(json.dumps({"leftovers": [{"name": n, "stack": p, "last_change": t} for n, p, t in found]},
+                         ensure_ascii=False))
+        return
+    for name, path, stamp in found:
+        print("\t".join(CTRL.sub(" ", field) for field in (name, stamp or "-", path)))
+    print("# %d folder%s in %s not on the table (kept stacks; delete by hand when no longer needed)"
+          % (len(found), "" if len(found) == 1 else "s", CTRL.sub(" ", os.path.join(d, "procs"))))
+
+
 def cmd_poke(opts, args):
     switches = {"--" + mode: mode for mode in dc.MODES}
     o, rest = aos_flags.parse(args, {}, switches, help=HELPS["poke"])
@@ -721,7 +758,7 @@ def cmd_sweep(opts, args):
 # 子命令表：一列一組，新子命令接在對應那組（或新開一組）後面。
 COMMANDS = {"add": cmd_add, "rm": cmd_rm, "prune": cmd_prune, "stop": cmd_stop, "start": cmd_start, "sleep": cmd_sleep, "wake": cmd_wake,
             "pause": cmd_pause, "resume": cmd_resume,
-            "ls": cmd_ls, "where": cmd_where, "ping": cmd_ping, "poke": cmd_poke,
+            "ls": cmd_ls, "leftovers": cmd_leftovers, "where": cmd_where, "ping": cmd_ping, "poke": cmd_poke,
             "shutdown": cmd_shutdown,
             "sweep": cmd_sweep}
 

@@ -28,6 +28,7 @@ from .table import (
     duration,
     inspect_row,
     last_change,
+    leftovers,
     prune_candidates,
 )
 from .ctl import (

@@ -10,4 +10,6 @@
 
 `prune` 只查檔案與 stopped 原因，自檢表上可疑的列；`prune --older-than 7d` 預覽久未修改的 stopped／sleeping 列，加 `--apply` 才走 rm 下表，保留 stack／ws 的全部檔案。`--apply` 必須附門檻；細節見 [04 的 prune](../../../docs/05-commands/04-aos-daemon-ctl續.md#prune自檢與清理舊列)。
 
+`leftovers`（11-24）列出 `D/procs/` 底下表上沒有任何一列用到的資料夾（rm 留下的 stack），只列不刪；細節見 [04 的 leftovers](../../../docs/05-commands/04-aos-daemon-ctl續.md#leftovers表外留下的-stack)。
+
 `sweep`（11-10）在這個指令裡立刻跑一輪清道夫（本體 `py/aos/sweep.py`，跟常駐列 `_sweeper` 同一套）：封存大 stderr、收表外子 loop；`sweep --purge` 刪這台所有封存。細節見 [aos-sweeper](../sweeper/README.md)、[docs/03](../../../docs/05-commands/03-aos-daemon-ctl.md)。
