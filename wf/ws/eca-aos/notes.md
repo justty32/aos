@@ -407,3 +407,9 @@
 - 轉 kb（`01795493903417182191.2033230.1388217`）；回 ops DONE（`01795493911376516835.2034324.1389013`，採用 ①⑥⑦，②～⑤ 未定；claude_mcp 對它生效的三條件）。
 - 活樹上已經在跑的 eca 要用 claude_mcp：定義直接指範本的（我這棵四隻、eca_main 等）下次起 claude 就生效；自己抄過定義的要手動加。
 - 14:0x kb `fe1c2e93f`（retry、claude_mcp 進知識庫）。使用者（逐字）：「那四條也照推薦做」→ ops ②③⑤ 派 core 第十一件、④ 派 templates（system 文字今天改、狀態機 .py 先回設計）。
+
+## 2026-11-24 12:5x（實際鐘；前幾節的 13:x／14:x 是我估錯的時刻）：templates 交了 ops ④
+
+- templates DONE（信 `01795495773252549656.2271855.1570247`）：`e90cd00d6` agent-fsm system.txt 回信段加收尾檢查句（1742／1800 字，start-api/ann 同抄；kits 本來就有類似句）。狀態機那半只有設計 `wf/ws/eca-aos/eca-aos-templates/reply-check-提案.md`——三分切完後派 core。
+- 轉 kb（`01795495867660880399.2285039.1579688`）補一句進知識庫。progress `ops-feedback-1124` 的 next 更新。
+- 工作樹上 core 的 pack-skip（registry.py 等）在做中；`2a1a259e7`（self_tools uses）已 commit，等 core 來信再 install.py。
