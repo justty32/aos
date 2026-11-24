@@ -4,7 +4,10 @@
 
 ## 2026-11-24 晚（家機）
 
-- **push 授權**：使用者 11-24 20:1x「晚上十一點統一推」——23:00 推一次 `origin main`，只這一次；鐘 `push-2300` 已登記（clock_register，到時寄進 main 的 queue）。之前的 commit 都等那次。
+- **聊 aos 的目標（compact 後，模型換 fable）**：使用者口述六層目標（尋址與 index、_entry、_metainfo 與九軸、aos proc 界面、agent、kernel），要我派 opus 帶 sonnet 蒐集後再想。原話照他交代整理進 `wf/user/advice/`（`3cbaa0d34`）。蒐集報告、我的第一輪反饋、原話都在 [aos的目標-1124](../../../proto8/thinking/2026-11/24/aos的目標-1124/README.md)；**三題等他**（proc 界面要不要先寫一頁規格、九軸定不定稿、kernel 要不要拿非 LLM 的資源實測），progress `aos-goals-1124`。他 23:10 睡，回來接著談；這是聊想法，沒派工，別自己開工。
+- **23:00 那次推已用掉**：使用者改口「那之前推就好」（23:10 前），22:58 推了 `be448758e..3cbaa0d34`（21 個 commit），鐘 `push-2300` 拿掉了。**現在沒有 push 授權**；之後的 commit（thinking 那夾、這份筆記）只在本地，要帶去公司得他再說推。
+
+- **push 授權**（已用掉，見上）：使用者 11-24 20:1x「晚上十一點統一推」——23:00 推一次 `origin main`，只這一次；鐘 `push-2300` 已登記（clock_register，到時寄進 main 的 queue）。之前的 commit 都等那次。
 - **core 兩件**：`.gitignore` 的 .stack／_stack 註解（使用者「做」）；接著 narr-amber-fb-1124 的 listen 擋其他工具等三件（使用者「做，盡量做，反正就是今天晚上十一點push」，22:45 前交件）。→ core 交 `4b17a8341`、`aa8bd9cef`、`bc8938198`、`255d6da30`；kb 跟上 `37a101e9a`、`e7a73061f`；四個位子都睡了。剩真 session 端到端驗（progress narr-amber-fb-1124）。
 - kb 第二件（線 home-docs-1124 續）：wf/tree 與 dev-env/03 註「家機掛 daemon-sub、設定同 wf/tree/root」、刪常見錯誤表 `.stack 整個不見了` 那列；`~/aos-home.old-1122` 不動（使用者「好，都如你所說」）。
 

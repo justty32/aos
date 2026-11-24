@@ -636,6 +636,17 @@
       "next": "使用者「做，盡量做」→ 家機 core 交 aa8bd9cef（aos-mcp tools/call 各一條執行緒）、bc8938198（listen／ask --mailbox；subagent 帳加 flock、parallel true）、255d6da30（observed think 記 reasoning_effort）；kb 交 37a101e9a（mcp.md、talk_settings、subagent.md、me.md）、e7a73061f（N-43 續種類表加 listen）。repo 已 install.py。剩：已在跑的 session 要重開才吃新 aos-mcp；下次 main 或位子重開後實地試一次「listen 等著時叫 mailbox_peek」，過了就刪這條。並發 add 搶配額的鎖沒有可靠測試。",
       "see": [],
       "since": "2026-11-24"
+    },
+    "aos-goals-1124": {
+      "title": "聊 aos 的整體目標（使用者 11-24 晚口述六層；聊想法，不是派工）",
+      "status": "等使用者",
+      "flow": "",
+      "what": "使用者口述六層目標，家機 main 派 opus 帶 sonnet 蒐集 repo 現況與差距後給了第一輪反饋。三題等他：① aos proc 的界面要不要先寫成一頁規格 ② 九軸要定稿還是維持隨便填 ③ kernel 要不要拿一個非 LLM 的資源（commit 的隊或 arena 的 Node 鎖）實測一次。他自己留著沒說的：agent 設計的缺點、生長式開發、再更往後。",
+      "next": "等使用者回來接著談；方向他定，沒說做之前不開工。",
+      "see": [
+        "[入口](../proto8/thinking/2026-11/24/aos的目標-1124/README.md)"
+      ],
+      "since": "2026-11-24"
     }
   }
 }
