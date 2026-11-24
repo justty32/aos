@@ -297,3 +297,32 @@
 - HANDOFF 那條已改成明早的順序。16:55 push 照他的話做；關機前樹要先停（`aos-daemon-ctl -d ~/aos-home/.stack shutdown`，他自己下）。
 - **明早開工先做**：讀這節與 HANDOFF → `git status`、`subagent ls`（睡著的位子會醒）→ 問三題 → 照 `06d`、`06e` 派工（設一個整合的人，只有它在 clone 裡下 git）。
 - **16:55 push 做了**（他 16:03「2.4:55推上去」的那一次授權）：`git push origin main`，`d5e9a39e4..6c42a21a7`，49 個 commit；推完 `origin/main..main` 是 0。這次授權到此用完，之後的 commit 要他再說才推。這一行筆記是推完才寫的，本地會比 origin 多 1 個 commit。
+
+## 2026-11-24 08:44：開工
+
+- 使用者第一句：「早上好，這是新的一天。」
+- 現況：工作樹乾淨，本地比 origin 多 1 個（`9239ecdd4`，筆記）；信箱空；`wf/user` 沒新改動；三個位子隨樹重起醒了（running，閒著）。
+- 真專區多了三封 `alice` 寄的 fyi「done」（16:0x，`reply_to` 在 `/tmp/user-send-*`）：測試漏進真專區，多半是 core 第四件修 `test_tool_missing` 之前跑測試留下的（沒查實）。要不要清，問使用者。
+- ~~三分還沒開始備~~（這句錯了）：08:44 已 `pull --rebase`，拿到家機 11-23 晚的 commit——三題他在家機答了（都照推薦，③ b：他開樹外 Claude Code 視窗照 06e 代打、每步他點頭），補丁材料在規劃夾 `06-switch/`（`69509c2fc`、`e6241c047`），家機全套新紅 0。本地 HEAD `f263b12b6`，比 origin 多 1（筆記）。
+
+## 2026-11-24 08:50：/clear 之後重讀
+
+- 使用者又說一次「早上好，這是新的一天」（中間 /clear 過）。
+- 派了一隻 opus 子 agent 在 `~/.aos/scratch/tri-split-1124/` 的新 clone 上照 `06-switch/README` 重做 M＋H1～H6、底與 HEAD 各跑全套測試、出 `out/` 的補丁與清單；不碰工作樹與活樹。回來後：看結果 → 跟使用者報 → 他說停才切（06e 第 1 步起由他的樹外視窗打）。
+- 寄了 mine_arena/main 六題方向的 DONE（`01795481183127695991.255847.193426`），progress `mine-arena-dir-1123` 更新。
+- 問了兩件，他答（逐字）：「1.清掉。2.下午五點我關機下班前一起推」。
+  - 三封 `alice` fyi 用 `aos-user ok` 收了（進 `done/`）。五題那封 decide 收不掉（`ok` 只收 fyi；`answer`／`reply` 是替他回信，我不代打），請他自己打 `aos-user answer 1 q1:c* q2:a q3:a q4:a q5:a`。09:45 他自己清了：五題都答「-」、備註「我昨天好像回答過了」（回信 `01795484744194961684.886774.536904`）——只是收信，答案仍以 11-23 畫面上的「1.c,2.a,3.a,4.a,5.a」為準，沒驗、不據此做事。
+  - **push 授權：11-24 下午五點、他關機下班前，推一次 `origin main`**，只這一次。
+
+## 2026-11-24 09:42：eca_main 來信，六點 aos 問題請評估
+
+- 信 `01795484557450263667.853643.518765`（留底在 `mailbox/archive/`），回信寄 `/home/guanyu/aos-home/.stack/procs/eca_main/mailbox`。六點：① llm kernel `slots=2`＋`reserved {high:1}` 一般只剩 1 條（它已改 slots=4）② 每個 aos-loop 300ms 每秒起 2～3 個短命 python，閒著也一樣，8 核 85% ③ `subagent rm` 不 purge 留 stack（含我的 `eca-aos-sol-1`、`-2`）④ 沒有遞迴的整棵樹 ls ⑤ WSL 鏡像網路下連沒人聽的 port 要 ~127 秒逾時 ⑥ tmux 裡的 WSL_INTEROP 坑（已解）。完成條件：逐點判斷＋要改的怎麼做。
+- 回了 PROGRESS（`01795484598386105169.860644.522644`）；派一隻 opus 只讀查六點現況與文件。
+- **查回來、回了 DONE**（`01795485122706629005.942821.573447`，兩封一起回）：判斷與後續記在 progress `eca-main-obs-1124`。要點：reserved 從 slots 扣；閒置輪詢是結構性的（方向題帶給使用者）；rm 留 stack 是本意、沒標記檔；遞迴 ls 已有 `aos-comm board ls --deep`；llm_http 連線逾時預設 10 秒可設（127 秒是 litellm 自己）；WSL_INTEROP 補文件。
+
+## 2026-11-24 10:05：三分補丁備好了
+
+- 子 agent 在 `~/.aos/scratch/tri-split-1124/` 重做完：底 `$B`＝`f263b12b6`（等於 repo HEAD），複本 HEAD `d34fba370`；M 動 380 檔、跑第二次 0；六個 H `git am -3` 全過、沒衝突；`--check` stale 0。底與 HEAD 各 83 夾 3,362 支，新紅 0（兩支時好時壞的在高負載下互有紅綠，不加負載重跑各 3 次確認）；frontend 兩邊 52 支 0 紅。
+- 出的東西在 `~/.aos/scratch/tri-split-1124/out/`：`tri-split.patch`（908 KB）、`files.txt` 403、`rm.txt` 214、`name-status.txt`。在退回底的 clone `aos-base` 上真的 apply 過：403 檔雜湊一致、整棵樹等於 `d34fba370`。材料用的是它抄到 `$S/d` 的那份。
+- 要注意：工作樹的 `notes.md`、`progress.json` 要先交掉（不在補丁清單裡）；`proto8/templates/agent-fsm/__pycache__/` 要在 apply 後清；活樹有 `aos-fsm …/templates/agent-fsm/fsm.json` 在跑（停樹前不能 apply）；`wf/knowledge/code-map.json` 在 files.txt 裡——它是手寫的（index_gen 不碰），該交；`/tmp/aos-image-move-*` 兩個 check.py 留的證據夾沒刪。要改 aos 本身的排在三分切換之後；第 ③ 的兩個 stack 要不要 purge 是刪檔，問使用者。
+- 補充信 `01795484607007336637.861953.523507`（同一個回信地址，也要逐點回）：09:43 load 16～17、閒置 3%（us 78% sy 18%），沒有大戶、全是短命 python3、每秒約 200 個新 PID；記憶體不緊（2.7/15.4 GB）。litellm 不限併發，瓶頸在 kernel slots 與上游限流；litellm 開機慢是 ollama 探測撞鏡像網路逾時（使用者已在本地分支刪 ollama／lmstudio 來源）；`~/aos-home/llm/kernel.json` 的 `stupid-fast` 指 LM Studio localhost:1234（沒在跑，選到會卡 127 秒）——屬第 ⑤ 點「endpoint 不在要等多久」。查證那隻子 agent 派出時還沒這封，回信時我自己併進第 ②⑤ 點。

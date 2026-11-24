@@ -500,7 +500,7 @@
       "status": "open",
       "flow": "",
       "what": "使用者 11-23 晚在家機跟 main 談：隔離等級「甲，先只防失誤」（不做抗惡意）；main 照這一級推薦六題怎麼排，他答「可以」。定案：⑤ 做——知識庫寫明 aos 只承諾防失誤、不是隔離（歸 kb）；① 做——驗證過的最小定義範本（唯讀分析、限定路徑寫入）加「工具有沒有漏包」的檢查（歸 templates＋core）；③ 只做回報那半——有效限制、peak、OOM 看得到，鎖／排隊等准入先不做（歸 core）；② 做、排在 ①③ 後——工具死掉時 scope 收乾淨才放資源（歸 core）；④ 不由 aos 做——mine_arena 自己的場景，它們跑通可收成範例；⑥ 寄件人驗證與代辦授權先不做（屬抗惡意）、工具版本識別之後再說。排在 templates 三分切換之後。\n要回 mine_arena/main 的 DONE（它在公司那台，回信寄 /home/guanyu/aos-home/.stack/procs/mine_arena/procs/main/mailbox，in_reply_to＝第二封信 01795414583613126499.1008727.2256547）大意：使用者定了 aos 的隔離只承諾防失誤、不做抗惡意；六題：⑤ 知識庫會寫明這一級；① 會做最小定義範本與漏包檢查；③ 先做可觀測（有效限制、peak、OOM），准入（鎖、排隊）暫不做，你們的 flock＋systemd-run 繼續用；② 之後做；④ 不由 aos 做，你們跑通的配置歡迎交回當範例；⑥ 寄件人驗證、代辦授權不做，工具版本識別之後再說。上層約束下屬照你們回顧的結論走（專用最小定義、工具包 sandbox），是防失誤、不是隔離。",
-      "next": "11-24 公司：eca-aos 照上面寄 DONE 給 mine_arena/main → 三分切換完後派位子：kb 寫 ⑤、templates＋core 做 ①、core 做 ③ 回報半、再 ②",
+      "next": "DONE 已寄 mine_arena/main（11-24 08:5x，信 01795481183127695991.255847.193426）。三分切換完後派位子：kb 寫 ⑤（cf17b55e2 已改 rules.md、kits.md，看還缺什麼）、templates＋core 做 ①、core 做 ③ 回報半、再 ②",
       "see": [
         "[eca-aos 筆記 mine_arena 兩封信](ws/eca-aos/notes.md)"
       ],
@@ -514,6 +514,17 @@
       "next": "使用者 11-23 晚「明天再說。」——今晚不重起。下次在家機：問使用者何時重起根（從新開的殼）→ 驗 /proc/<新 pid>/environ 的 AOS_LLM_KERNEL → 回 repo-vc DONE。在那之前各樹掛 agent-fsm 照暫解在 envs 帶正確值",
       "see": [],
       "since": "2026-11-23"
+    },
+    "eca-main-obs-1124": {
+      "title": "eca_main 11-24 回報的 aos 問題六點（llm 通道、閒置輪詢 CPU、殘留 stack、遞迴 ls、連線逾時、WSL_INTEROP）",
+      "status": "open",
+      "flow": "",
+      "what": "信 01795484557450263667.853643.518765＋補充 01795484607007336637.861953.523507；已回 DONE（01795485122706629005.942821.573447）附判斷。查證：reserved 從 slots 扣（llm_rules.py:489-492），範本預設 2＋{high:1}；agent-fsm 每圈起 aos-fsm＋python3、閒著也起、aos-loop 不接 poke 無退避；subagent rm 留 stack 是本意但沒標記檔；遞迴 ls 已有 aos-comm board ls --deep（知識庫沒寫）；llm_http connect_timeout_s 預設 10、可設；repo 沒提 WSL_INTEROP。",
+      "next": "三分切完後：kb 位子補知識庫（reserved、留下的 stack 怎麼認怎麼清、aos-comm board ls --deep、connect_timeout_s／鏡像網路、WSL_INTEROP）＋wf/dev-env/03 與 daemon-root README 各一句；core 位子：aos-llm ls／窗檔加總格保留格在飛排隊、rm 留 stack 寫標記或列出表外 stack、ctl ls --deep。問使用者：範本 llm kernel 預設值改不改；閒置輪詢要不要改 aos（loop 退避／接 poke／fsm 前置判斷／常駐 python，方向題）；eca-aos-sol-1、-2 的 stack 刪不刪。做完回 eca_main。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
     }
   }
 }
