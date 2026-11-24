@@ -118,6 +118,17 @@ else:
         self.assertEqual(record['letter'], 'local-request')
         self.assertEqual(record['usage'], {'prompt_tokens':9})
         self.assertGreaterEqual(record['elapsed_ms'], 0)
+        self.assertIsNone(record['reasoning_effort'])
+
+    def test_wait_observation_records_the_sent_effort(self):
+        (self.stack / 'llm.json').write_text(json.dumps({'reasoning_effort': 'medium'}))
+        self.history([{'role':'user','content':'hello'}])
+        self.run_cell('brain')
+        self.run_cell('wait', code=10)
+        self.assertEqual(json.loads((self.stack / 'think/sent.json').read_text())['reasoning_effort'], 'medium')
+        self.run_cell('wait')
+        record = json.loads((self.stack / 'observed.jsonl').read_text().splitlines()[-1])
+        self.assertEqual((record['model'], record['reasoning_effort']), ('fake', 'medium'))
 
     def test_missing_or_bad_timing_only_warns(self):
         for timing in (None, 'broken', '[]', '{}', '{"started_ns":"bad"}'):

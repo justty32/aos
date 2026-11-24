@@ -109,7 +109,7 @@ Lost letter: when aos-llm recv says "not yet" and $AOS_LLM_KERNEL resolves to a 
 (relative to $AOS_DAEMON, else the current folder) but the letter is in neither
 requests/new/ nor requests/cur/ there, the cell receives once more; still nothing = it
 forgets the letter (deletes think/pending.txt), prints one warning and sends again next tick.
-Append think letter, endpoint, model, usage and elapsed_ms to observed.jsonl (best effort).
+Append think letter, endpoint, model, reasoning_effort (as sent; null = not set), usage and elapsed_ms to observed.jsonl (best effort).
 A /compact reply uses kind compact, replaces history with its summary while preserving
 unanswered letters, and exits 11 to resume think rather than answering the pending task.
 Cooldown after a failure of the outside service, recorded in $AOS_STACK/cooldown.json
@@ -472,7 +472,8 @@ if not name:                                     # 還沒寄
     ensure_box()
     try:
         with open(sent_path, "w", encoding="utf-8") as f:
-            f.write(json.dumps({"started_ns": time.time_ns(), "endpoint": body.get("endpoint")}) + "\n")
+            f.write(json.dumps({"started_ns": time.time_ns(), "endpoint": body.get("endpoint"),
+                                "reasoning_effort": body.get("reasoning_effort")}) + "\n")   # 11-24：observed 記實際送出的思考程度
     except OSError as e:
         aos_flags.warn("agent-fsm", "cannot write think timing: %s" % e)
     with open(request, encoding="utf-8") as f:
@@ -524,11 +525,11 @@ except FileNotFoundError:
 forget_warned()
 received_ns = time.time_ns()
 elapsed_ms = None
-sent_endpoint = None
+sent_endpoint = sent_effort = None
 try:
     with open(sent_path, encoding="utf-8") as f:
         sent = json.load(f)
-        sent_endpoint = sent.get("endpoint")
+        sent_endpoint, sent_effort = sent.get("endpoint"), sent.get("reasoning_effort")
         started_ns = sent["started_ns"]
         if not isinstance(started_ns, int) or isinstance(started_ns, bool):
             raise ValueError("started_ns must be an integer")
@@ -538,10 +539,13 @@ except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
 
 
 def observe(reply, kind="think"):
+    # reasoning_effort（11-24 晚，narr-amber 回報③）：model 是端點包固定的名字（例 chatgpt-gpt-6-luna-low），看不出這次送的思考程度；
+    # 記請求信 body 的 reasoning_effort（kernel 回信有就用回信的），沒設＝null。kernel 收不收照那包宣告，這裡只記送了什麼。
     append_observed(stack, {"kind": kind,
                             "letter": name,
                             "endpoint": reply.get("endpoint", sent_endpoint),
-                            "model": reply.get("model"), "usage": reply.get("usage"),
+                            "model": reply.get("model"), "reasoning_effort": reply.get("reasoning_effort", sent_effort),
+                            "usage": reply.get("usage"),
                             "elapsed_ms": elapsed_ms})
 
 
