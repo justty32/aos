@@ -399,3 +399,4 @@
 - kb `56de0d0f2`（三條新指令進知識庫＋附錄 4 的 slots.json 一列，順手改附錄 md 的列數，我留著）。
 - core `b914c016f`（信 `01795492063815134798.1768957.1212983`）：subagent 沒 AOS_DAEMON 時改給絕對 --stack（139d8dd2b 起的回歸）；kernel-chain-check 的 hook 改寫進 kernel_hookeds.json（kernel.json 的 hooks 11-21 起被安靜忽略）；image-move-check 設 AOS_HOME。兩支原本就紅的 check 現在全過。**install.py 第六次**（13:1x）。
 - 要問使用者：① kernel.json 留著舊 `hooks` 鍵時 kernel 安靜忽略（擋 evil 的 hook 失效也不報）——要不要改 CfgBad 或 warning（py/tools/aos/kernel/round.py）；② `/tmp/aos-image-move-*` 四個、`/tmp/aos-home-move-*` 一個測試證據夾、scratch 的 `idle-cpp-plan-1124`（34 MB）、`eca-mcp-idea-1124` 刪不刪。
+- 使用者答（逐字）：「1.不報錯。2.好」→ ① 我讀成「不擋、只警告」（我問的是報錯或警告），派 core 第十件（印一行、別每拍洗版）；② 刪了 /tmp 五個證據夾與 scratch 兩個 fable 量測夾，scratch 剩 5 個。
