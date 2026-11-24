@@ -125,3 +125,4 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - 對過 aa8bd9cef、bc8938198、255d6da30（`cmp` py/ 與 lib/ 都一樣＝已裝）。改：`aos/cli/mcp.md` 開頭補 notifications/cancelled、新標題 `# Calls at the same time`（五行）；`aos/cli/talk_settings.md` 範例加一行、`--mailbox DIR` 一段；`aos/agents/subagent.md` 兩條（用信回也結束等待、eca 等著時照樣能叫別的工具）；`aos/me.md` 的 stack 清單加 `observed.jsonl`。
 - 核對時抓到 core 草稿沒講的：observed.jsonl 不只 think 列，還有 `compact` 列（wait.py）與 `tool` 列（act.py，欄位 name、code、elapsed_ms、in/out_bytes）；`--mailbox` 不跟 `--last`／`--follow`、空字串＝ArgumentsBad；subagent 帶 `"last"` 時不帶 --mailbox。「等著時能叫別的工具」只寫 eca（aos-mcp 那條路），agent-fsm 沒驗。
 - 第 5 件（docs/NORMS N-43 續 第 10 行的種類表少 `listen`）不在範圍，轉給 main。
+- 續（main 准）：docs/NORMS N-43 續 第 10 行種類表加 `listen`（照 py/aos/flags.py NOTE_KINDS，只加名字）。
