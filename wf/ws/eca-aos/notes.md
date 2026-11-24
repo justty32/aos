@@ -343,3 +343,7 @@
 ## 2026-11-24 10:3x：guanyu/ops 來信（用 aos 兩天的意見）
 
 - 信 `01795485983983422703.1049418.653198`，寄件人 `guanyu` daemon 底下的 `ops`（ops-notes 運維，使用者叫它寫的）。七條建議與坑、五條分享，記成 progress `ops-feedback-1124`；它說讀過就好，回了一封 PROGRESS 說收到、排在三分之後。
+
+## 2026-11-24 10:4x：切換定在 11-25 早上
+
+- 使用者（逐字）：「三分切...要等到明天早上了」。HANDOFF 改了。明早開工：`git log --oneline f263b12b6..HEAD --name-only` 看有沒有碰到 `proto8/`（家機今晚若有改再 pull 進來就會漂移）→ 沒有就照 `~/.aos/scratch/tri-split-1124/out/RUNBOOK.md` 打；有就先照 06-switch/README 重做補丁（新 clone、約一小時）。
