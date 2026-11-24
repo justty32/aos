@@ -613,6 +613,17 @@
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
       "since": "2026-11-24"
+    },
+    "eca-bg-mail-1124": {
+      "title": "mine_arena/main 回報：開著 Claude Code 背景 Bash（sleep）時 new_mail 叫不醒 eca",
+      "status": "open",
+      "flow": "",
+      "what": "信 01795507349728125121.4089102.2727893（11-24 16:02，使用者叫它寄的）：13:29 開 background sleep 7000 後回合結束，13:30～13:54 七封信、15:28～15:39 六封信都沒叫醒，直到背景任務結束或被 kill、task-notification 進來才醒，信延遲最多約 2 小時。它的推測（未證實）：有背景任務時 aos-eca-turn 當成忙、new_mail 被延後。建議：背景任務時照送或看得到延後狀態；eca 說明寫別用背景 sleep 排程；原生定時喚醒（已有 clock_register，範本沒帶）。另：kb 收到一次過期的「main 有 2 封新信」通知。我的對照：開 Agent 背景子 agent 時 new_mail 照進（11-24 16:0x 收這封時就是），可能只有 Bash run_in_background 中招（一次觀察）。回了 PROGRESS（01795507401051055371.4095392.2733027）：先用 clock_register、原因三分後查。",
+      "next": "三分切完派 core 查 aos-eca-turn／mail_notify 怎麼判 session 忙（背景 Bash vs Agent）、過期通知；修＋eca 說明（kb）；回 main DONE。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
     }
   }
 }
