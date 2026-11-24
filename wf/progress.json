@@ -627,6 +627,15 @@
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
       "since": "2026-11-24"
+    },
+    "narr-amber-fb-1124": {
+      "title": "narr-amber（琥珀之劍）的 main 11-24 回報：subagent listen 等待時其他 aos 工具全排隊、listen 不認同 in_reply_to 的 BLOCKED 信、fsm observed 的 model 字串看不出 effort",
+      "status": "等使用者",
+      "flow": "",
+      "what": "來信 01795526176029391454.609206.866758（使用者同意轉來；原件在對方 repo 的 wf/project/aos-feedback.md）。① AOS_LLM_KERNEL 錯值：同 repo-vc 那件，家機根 11-24 19:05 重起後已對，不用再帶 envs。② main 對下屬 subagent listen（timeout 280／600 秒）時，同時叫的 subagent state、mailbox_read 都等到 listen 結束才回（被 Claude Code 移到背景）——疑 aos-mcp 一次只處理一個呼叫；另 listen 指定 letter 時，下屬回的 BLOCKED 信（in_reply_to 相同）不算回答，只有最後的純文字才算，約 10 分鐘看不到 BLOCKED。建議：MCP 呼叫不互相排隊；listen 把同 in_reply_to 的信也當回覆或至少報有新信。③ fsm 的 observed／think 記的 model 是 pack 固定名（luna 顯示 chatgpt-gpt-6-luna-low），信封 effort 是 medium、ledger 也記 medium，容易誤讀成沒生效；建議 observed 加記實際 effort。②③ 歸 core。",
+      "next": "問使用者要不要派家機 core 查②（先查 aos-mcp 是否序列處理），③ 順便；照家機五題 5.a 要他當場交代才做。已回 narr-amber DONE（收下、①已解、②③記在這條）。",
+      "see": [],
+      "since": "2026-11-24"
     }
   }
 }
