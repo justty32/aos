@@ -427,3 +427,15 @@
 - 13:4x core DONE ops ②③⑤（信 `01795499132151132578.2791695.1906137`）：`57baee653` BLOCKED 措辭＋重試時刻、`7ebe15b7e` say 帶 [say from 名字]（使用者終端打的不加）、`cfa726273` aos-agent state＋did you mean。工作樹乾淨 → **install.py 第八次**（exit 0；含 uses、pack-skip、舊 hooks 鍵、②③⑤）；活樹試過 state 與 did you mean。回 core「裝好了」、轉 kb、回 ops DONE（`01795499188394472285.2799745.1911761`，④ 狀態機那半三分後）。
 - kb DONE `cd9d62963`：ops ②③⑤ 進知識庫（brain.md、talk_settings.md 改掉「Only an eca agent gets the name」、agent.md）。
 - 13:5x core DONE comm 認 stack（信 `01795499625865000931.2855424.1955508`，`033671bc0`：多認 stderr.txt）。**install.py 第九次**。回 mine_arena/main DONE（⑤ 修好＋①③④⑥ 安排）。progress arena-feedback-1124 ⑤ 完。
+
+## 2026-11-24 13:58：三分提早到今天
+
+- 使用者（逐字）：「感覺我們可以提早做三分。反正就是把樹停掉重開這樣。開始準備吧」。
+- 底漂移：`f263b12b6..HEAD` 有 31 個 commit 碰 `proto8/` → 補丁要重做。新底＝現在的 HEAD `f727a4e84`。**從現在到切完，`proto8/`（含 knowledge）不交任何改動**；三個位子閒著，不派 proto8 的活。
+- 派一隻 opus 子 agent 在 `~/.aos/scratch/tri-split-1124b/` 新 clone 重做 M＋H1～H6、解衝突、底與 HEAD 跑全套、出 `out/`（patch、files、rm、name-status、pre-switch），並把 RUNBOOK 改成新底新路徑（`out/RUNBOOK.md`）。不碰工作樹與活樹。
+- 回來後：我看結果 → 跟使用者報 → 他開樹外 Claude Code 視窗照 RUNBOOK 打（停樹會把我也停掉）。
+
+## 2026-11-24 14:1x：聊 FUSE／9P、tmpfs（等補丁時）
+
+- 使用者問要不要 FUSE＋9P；聊完他定：FUSE 之後再說；短期目標＝樹放 /tmp（tmpfs）定期同步回硬碟；原則「aos 依靠檔案系統，硬碟、/tmp、fuse 都撐得住」；不停起 python 只管 aos 基礎共用的，其餘使用者自己管；路徑盡量相對——記日程；Plan 9 獨特命名空間之後想。
+- 記進 progress：`fs-tmpfs-1124`、`relative-paths-1124`、`plan9-ns-1124`（暫停）、`idle-polling` 的 what 補範圍那句。原話逐字在各條。
