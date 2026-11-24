@@ -636,6 +636,18 @@
         "[換機](workflows/dev-env/03-換機.md)"
       ],
       "since": "2026-11-24"
+    },
+    "eca-p-first-result-1124": {
+      "title": "eca 的 claude -p 收到第一個 result 就算答完、收掉行程（背景任務跟著收）；回答取第一個 result",
+      "status": "open",
+      "flow": "",
+      "what": "core 11-24 實測（報告 wf/ws/eca-aos/eca-aos-core/report-1124-bgmail.md 第 7 節，bdcef2272）：沒開畫面時 claude -p 回完第一個答案不退出，等背景 Bash 結束、CLI 自開一輪才退；aos 的 run_claude_stream 讀 stdout 到 EOF 才收，lock 被佔、新信排 queue；aos 取最後一個 result，真回答丟了。使用者 11-24（逐字）：「好，但是先記著，我五點要下班...」——答的是 eca-aos 的推薦：修 ⑦⑧，收工時背景任務跟著收掉（放著跑會在 -p 結束後自己再開一輪寫同一段對話，跟下一次 --resume 撞）。",
+      "next": "下次開工派 core：改 py/aos/agentlib/cli_print.py（第一個 result 就收、收掉行程群組、回答取第一個 result），測試、install.py；kb 跟上 clock.md／eca_reading.md／troubleshooting 那段（現在寫的是 -p 會等背景）。互動畫面開著背景 Bash 時的行為沒驗（core 還有兩輪 haiku 額度）。",
+      "see": [
+        "[core 報告](ws/eca-aos/eca-aos-core/report-1124-bgmail.md)",
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
     }
   }
 }

@@ -480,3 +480,15 @@
 - 要問使用者（kb 問的）：① 家機也把 stack 搬進 ~/aos-home/.stack？② dev-env/03 殼設定範例的 AOS_DAEMON 指根（~/aos-home/.stack，同公司 .zshrc）還是 repo 那棵？
 - mine_arena/main DONE `81ba8df`（arena_cheater 裡 16 個 JSON＋7 個 README，16 個 .bak 刪了沒交；沒 push）。kb DONE `fa94b7874`（symlink 句子拿掉，十個檔；kits site.txt／gather system.txt 改了，不用 install.py，已抄出去的 gather 定義要重抄才吃到）。切換的對外收尾全交了；剩 core 三件、17:00 push、使用者兩題（家機搬 stack、殼設定範例的 AOS_DAEMON）。
 - 使用者答（逐字）：「家機...要。shell設定範例的AOS_DAEMON指向~/aos-home/.stack」→ progress 新條 `home-stack-move-1124`（家機回去才做；搬前先關 eca 畫面）；派 kb（`01795508910902416121.102419.2884012`）改殼設定範例、家機那幾節加「之後也要搬」。
+- kb DONE `349a923c3`（dev-env/03：殼範例 AOS_DAEMON＝根、要打 repo 那棵帶 -d；家機節加「之後也要搬」）。kb 更正我：選 daemon 的順序是 --daemon、$AOS_DAEMON、cwd，殼裡 export 了 AOS_DAEMON 就不看 cwd——別再說「站在 stack 底下就打到它」。
+- 16:3x core DONE（`01795509370567776173.162838.2929978`）：`0fae77536` test_fork（`[aos] ` 開頭不加 [say from]）、`c769fada6` defs 警告（catalog 看 pack skipped 那行）、`5f9da49ab` 背景 Bash 報告（wf/ws/eca-aos/eca-aos-core/report-1124-bgmail.md：busy.txt 在時 live_a2a 無限等回執、timeout_ms 0；推兩種原因沒實測；修法 ①～⑥）。**install.py 第十次**（三分後第一次，exit 0），5 隻 running。
+- 我替使用者定 ③：准 core 唯讀看 mine_arena/main 的 claude 小格四個檔（busy.txt、a2a.json、a2a_acks.jsonl、stderr.txt），分不出來再准 haiku 實測最多三輪（暫存樹）。①④⑥ 等結果再定；⑤ 轉 kb。
+- kb DONE `41dede686`：clock.md「Doing something on a timer: which way」加 eca 別用背景 Bash 當定時、用 clock_register；eca_reading.md clock 行連過去。troubleshooting 等 core 實測後補。
+- core DONE ③（`01795509671114495060.205256.2960033`，報告 `bdcef2272` 第 7 節）：haiku 實測——`claude -p` 等背景 Bash 結束、CLI 自開一輪才退出；aos run_claude_stream 讀到 EOF 才收→lock 佔住、信排 queue；時間跟 main 的 sleep 7000 對上；aos 取最後一個 result→真回答丟了。main 小格的 stderr 0 位元組＝沒走過畫面路。新修法 ⑦ 第一個 result 就收、⑧ 取第一個 result（cli_print.py）。kb 換句＋troubleshooting（`01795509747404297051.215587.2967662`）。回 core PROGRESS：先別動、問使用者。
+- 要問使用者：⑦⑧ 修不修；收工時背景任務收掉還是放著跑。我推薦：修，收掉（放著跑會在 -p 結束後自己再開一輪寫同一段對話，跟下一次 --resume 撞）。
+
+## 2026-11-24 16:4x：使用者五點下班，收尾
+
+- 使用者（逐字）：「好，但是先記著，我五點要下班...」→ ⑦⑧ 照推薦（修、背景任務跟著收），記 progress `eca-p-first-result-1124`，**下次開工派 core**；回 core 先別動（`01795509819620449819.226260.2974884`）。
+- **下次開工先看**：① progress `eca-p-first-result-1124`（派 core）；② `home-stack-move-1124`（家機回去才做，搬前關 eca 畫面）；③ arena 意見 ①③④（arena-feedback-1124；看圖工具歸 core）；④ reply-check 狀態機那半、pack-skip 的 fsm 保底（三分後派 core）；⑤ core 提的 tty_socket 搬家坑的選項；⑥ fs-tmpfs-1124 量測。
+- 還在跑：kb 換 clock.md 那句＋troubleshooting（`01795509747404297051.215587.2967662`）。17:00 push（等 kb 交了一起推）。
