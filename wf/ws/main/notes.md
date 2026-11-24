@@ -7,4 +7,4 @@
 - **建組織**：使用者「家機這邊你也來建組織吧，學學公司那邊」→ 五題「1.a,2.a,3,a,4.a,5.a」（記在 [wf/org「家機」](../../org/README.md#成員表)）。`main` 加了 `subagent`、`agent_def` 兩支工具；掛了 `eca-aos-kb`、`eca-aos-templates`、`eca-aos-core`（定義 `$AOS_HOME/templates/agents/eca-claude`，各自 `system.txt` 與 `notes_path` 寫在 stack 裡）。templates、core 掛完就 sleep；kb 接家機文件跟上那件。
 - **三分在家機已就位**：19:05 整棵樹重起，跑在新路徑；`stack_paths.py` 的 `.bak-trisplit-1124` 五份使用者「可以刪」後刪了；舊範本夾只剩 `__pycache__` 的兩個刪了；push 到 `be448758e`。
 - **信**：repo-vc 的 main 兩封都回了 DONE（根的 AOS_LLM_KERNEL；知識庫 source.md 的 .json→.md，`e8439c021`）。
-- **還開著**：progress `home-stack-move-1124` 的文件跟上（派 kb）。
+- **文件跟上**：kb 交 `4936939e5`（12 檔）＋筆記 `71e2dd871`，progress `home-stack-move-1124` 刪了。kb 留給 main 的：家機 repo-aos 那列的定義是 `templates/daemons/daemon-sub`（文件寫 `wf/tree/root`，兩者設定相同）；dev-env/03 常見錯誤表「.stack 整個不見了」那列已不適用；不碰清單還列著家機已不在的 `~/aos-home.old-1122`（公司那台可能還在）。三個位子都 sleep 了。

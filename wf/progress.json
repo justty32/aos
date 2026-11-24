@@ -616,18 +616,6 @@
       ],
       "since": "2026-11-24"
     },
-    "home-stack-move-1124": {
-      "title": "家機：repo 那棵的 stack 也搬進根（~/aos-home/.stack/procs/repo-aos）——已搬，剩文件與備份檔",
-      "status": "open",
-      "flow": "",
-      "what": "使用者 11-24（逐字）：「家機...要。」家機 11-24 晚 pull 三分後，19:05 整棵樹重起：~/repo/aos/.stack 已不在，repo-aos 的 stack 在 ~/aos-home/.stack/procs/repo-aos，daemon 跑在 templates/daemons/daemon-sub，各樹 procs_state.json 旁留著 .bak-trisplit-1124（根、repo-aos、mod_skyrim、repo-vc、narr-amber 各一份）。根的 AOS_LLM_KERNEL 重起後是對的 procs/llm（原 home-llm-env-1123，已回 repo-vc DONE 01795518927257173089.38856.141880）。舊範本夾 templates/agent-fsm、judge-llm 只剩 __pycache__，使用者 11-24 晚「都可以做」後刪了。",
-      "next": "① 家機那幾節文件改成已搬（AGENTS.md、wf/tree/README.md、dev-env/01、03、aos-teams/06、07、kits site.txt、gather system.txt），派 kb 或 opus；② .bak-trisplit-1124 刪不刪問使用者（公司那台他說「直接刪掉吧」）。",
-      "see": [
-        "[eca-aos 筆記](ws/eca-aos/notes.md)",
-        "[換機](workflows/dev-env/03-換機.md)"
-      ],
-      "since": "2026-11-24"
-    },
     "eca-p-first-result-1124": {
       "title": "eca 的 claude -p 收到第一個 result 就算答完、收掉行程（背景任務跟著收）；回答取第一個 result",
       "status": "open",
