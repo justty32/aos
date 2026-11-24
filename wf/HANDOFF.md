@@ -12,19 +12,29 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-24 上午 10:10（公司機）——templates 三分切換中：醒來先讀這條
+## 2026-11-24 晚 22:30（家機）——家機建好組織；23:00 推一次；使用者要 compact 後切 fable 聊 aos 的目標
 
-**寫這條的是 `eca-aos`**。細節在 [`wf/ws/eca-aos/notes.md`](ws/eca-aos/notes.md) 的 11-24 各節。
+**寫這條的是家機 repo-aos 樹裡的 `main`**（家機工作室的負責人，對應公司的 eca-aos）。細節在 [`wf/ws/main/notes.md`](ws/main/notes.md)。上一條（公司 11-24 上午）在 git 歷史 `be448758e`，它「切完要接的」第 2、3 項照抄在下面。
 
-**使用者 11-24 10:1x「晚一點，這可能要明天了」——切換延後；接著又說「三分切...要等到明天早上了」＝**11-25 早上切**。** **後來改了**：使用者 11-24「都做」——今天照常改 proto8（三個位子各一件），**16:00 左右派子 agent 在新 main 上重做補丁**（照 06-switch/README，新 clone、約一小時），五點前備好；明早開工若 proto8 又有新 commit（家機推的）就再重做一次。照打清單第 2 步會擋下漂移，清單裡的 `f263b12b6` 要換成新的底。
+**使用者 compact 前的話（逐字）**：「Hmmm，我想compact，然後我要切到fable，來聊一聊一些我的想法，關於整個aos的目標。」——compact 後他換 fable 模型來談 aos 的目標：**這是聊想法，不是派工**；聽、整理、擺選項，方向他定（鐵律 5），談出來的要記就記進 thinking 或 progress，別自己開工。
 
-**切換**：補丁在 `~/.aos/scratch/tri-split-1124/` 做好、測過（底 `f263b12b6`，複本 HEAD `d34fba370`，全套新紅 0）。照打清單在 `~/.aos/scratch/tri-split-1124/out/RUNBOOK.md`（不在 git 裡），由使用者開的樹外 Claude Code 視窗照打、每步他點頭（11-23 晚家機答第 ③ 題 b）。停樹時 eca-aos 也停；**醒來（樹重起後）先看**：`git log --oneline -3` 有沒有 `tri-split-1124` 的 commit、`git status --short` 乾淨嗎、`subagent ls`、`mailbox_peek`。
+**授權（11-24 晚當場）**
+- **push**：「晚上十一點統一推」——23:00 推一次 `origin main`，只這一次。鐘 `push-2300` 已登記（clock_register，到時寄進 main 的 queue）；推前看工作樹乾淨、沒有位子在交件。推完就沒有 push 授權了。
+- 家機組織五題「1.a,2.a,3,a,4.a,5.a」：負責人沿用 `main`、三位子現在就掛（沒活就睡）、主帳號 eca-claude、位子筆記兩台共用 `wf/ws/eca-aos/<位子>/`、**家機只接使用者在家機當場交代的**（記在 [wf/org「家機」](org/README.md#成員表)）。
 
-**授權（11-24 當場）**
-- **push：使用者「下午五點我關機下班前一起推」**——17:00 前推一次 `origin main`，只這一次。
-- `install.py` 常設許可（11-23「想跑就跑，隨便跑」）照舊；其餘照 11-23 那條（git 歷史）：派工模型、eca_main 的普通工作算授權、專區回信要 verify、掛新位子先問。
+**今晚做完的（都已交，23:00 一起推）**
+- 家機三分已就位（19:05 重起、`.bak` 刪了、舊範本夾刪了）；根的 AOS_LLM_KERNEL 對了，repo-vc 兩封、narr-amber 一封都回了 DONE。
+- 組織：`main` 加了 `subagent`、`agent_def`、`clock_register`；掛了 `eca-aos-kb`、`-templates`、`-core`（各自 `system.txt`、`notes_path`），現在三個都睡著。
+- kb：家機文件跟上（`4936939e5`、`e392793d6`）、git clean 規矩換理由（`bb9f51818`）、知識庫 source.md（`e8439c021`）、listen 那批跟上（`37a101e9a`、`e7a73061f`）。
+- core：`.gitignore` 註解（`4b17a8341`）；narr-amber 回報三件（`aa8bd9cef` aos-mcp 同時跑多個呼叫、`bc8938198` listen／ask 也認子回的信、`255d6da30` observed 記 effort），repo 已 install.py。
+- `wf/advices/feedback/` 四份意見收進 git（`6e4f82bfb`）。
 
-**切完要接的**
-1. 家機也要照 06f「家機照做」：停樹、pull、跑 `stack_paths.py`（家機的 `repo-aos/main` 也直接掛 `templates/agents/eca-claude`）。
-2. 各專案協調者在自己的 repo 交第 10 步的定義改動（arena_cheater 七份、ops-notes 的 patrol）；`templates/agents/reviewer/tools.json` 第 1 行；知識庫三句；各位子讀一遍腳本改過的句子；CONVENTION P-27 等句子派 opus 逐句看（使用者 11-23 晚「1.可以」）。
-3. progress `eca-main-obs-1124`（eca_main 六點：文件派 kb、小程式派 core；範本 llm kernel 預設值、閒置輪詢的方向、`eca-aos-sol-1`／`-2` 的 stack 刪不刪要問使用者）、`mine-arena-dir-1123`（①②③ 開工）。
+**還開著**
+- progress `narr-amber-fb-1124`：已在跑的 session 要重開才吃新 aos-mcp；重開後實地試一次「listen 等著時叫 mailbox_peek」，過了刪那條。
+- 公司那條留下的（第 2、3 項）：各專案協調者交定義改動（arena_cheater 七份、ops-notes 的 patrol）；`templates/agents/reviewer/tools.json` 第 1 行；知識庫三句；各位子讀一遍腳本改過的句子；CONVENTION P-27 等句子派 opus 逐句看；progress `eca-main-obs-1124`、`mine-arena-dir-1123`。照 5.a 這些留給公司做。
+
+**坑**
+- 家機的 `ls` 是 `eza --git`，接管線用 `/usr/bin/ls`。
+- 位子睡著時別的位子寄信給它不會叫醒它：要 `subagent wake` 再 `say` 提醒它看信箱。
+- commit-request：progress 用 `--ops-file` 的 `progress_upsert`／`progress_delete`，不列 `--files`。
+- 不跑 `git stash`、`reset --hard`、`checkout -- .`、`clean -fdx`；別棵樹的 stack、信箱、`/proc/*/environ` 不讀。
