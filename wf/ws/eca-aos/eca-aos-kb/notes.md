@@ -117,3 +117,4 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - **回報給 main、沒改的**：家機的 `repo-aos` 那列定義是 `proto8/templates/daemons/daemon-sub`（cwd 也在那裡），不是文件寫的 `wf/tree/root`；那列的 `as_written` 也沒有 `envs`。wf/tree、03「第一次」那行都還寫 `wf/tree/root`，要不要改等 main。03 常見錯誤表「`.stack` 整個不見了／git clean -fdx」那列已經不適用（stack 不在 repo 裡），沒刪。
 - aos-teams 第 49 行「現成 eca 範本只掛到 agent_def」改成照知識庫：現成範本都不帶 `subagent` 包也不帶 def 包（對過 `templates/agents/*/tools*.json` 與 `lib/packs/`）。
 
+- 續（main 轉使用者「好，都如你所說」）：wf/tree/README 第 7 行、dev-env/03「第一次」各註一句「家機那列掛範本 daemon-sub，設定同 wf/tree/root、只差說明文字」（對過：daemon.json 去掉 description 相同、.env 都只有 `AOS_HOME=${AOS_HOME}`、_entry 同 argv）；刪 03 常見錯誤表「.stack 整個不見了」那列（表列沒有錨點，沒人連）；`~/aos-home.old-1122` 不碰清單照舊。還沒改、已回報：aos-teams.md 第 64 行「.stack 被 .gitignore 忽略，git clean -fdx 會連活樹一起刪」也已不適用。
