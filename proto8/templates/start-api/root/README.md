@@ -25,6 +25,8 @@ unset AOS_CLOCK AOS_DAEMON AOS_STACK   # 起根前一定清掉：殼裡留著 AO
 aos-exec --stack stacks/root defs                          # 前景起根；stacks/、stacks/root 不在會自己建
 ```
 
+WSL 上在 tmux 裡起根時，殼設定檔要固定 `export WSL_INTEROP=/run/WSL/1_interop`：不然關掉開 tmux 的那個終端機之後，樹底下叫 `.exe` 會卡 10 秒、報 `accept4 failed 110`。寫進 `defs/.env` 沒用，殼裡已經 export 的那份優先。
+
 另一個殼掛 agent（`-w .`＝工作區是專案資料夾；表上存相對路徑，整包搬走照樣對）：
 
 ```sh

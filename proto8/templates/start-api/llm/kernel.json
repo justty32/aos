@@ -1,4 +1,4 @@
-{"description": "Main llm kernel with backend limits for local models", "backends": {"lmstudio": {"slots": 1, "max_packs": 1}}, "slots": 2, "reserved": {"high": 1}, "timeout_ms": 0,
+{"description": "Main llm kernel with backend limits for local models", "backends": {"lmstudio": {"slots": 1, "max_packs": 1}}, "slots": 4, "reserved": {"high": 1}, "timeout_ms": 0,
  "exec": {"$env": "AOS_HOME", "$path": "/lib/tools/base/llm_http"},
  "endpoint": "fake",
  "reasoning_effort_levels": {"gpt": ["low", "medium", "high", "xhigh", "max"], "gpt_none": ["none"]},

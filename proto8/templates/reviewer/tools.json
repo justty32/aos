@@ -1,4 +1,4 @@
-{"description": "Offer review scripts and workspace readers without arbitrary execution tools.",
+{"description": "Offer review scripts and workspace readers. No shell, but review_round, measure and promote run the cases, comparers and definitions the caller names (arbitrary_exec true), so this tool set counts as arbitrary execution; json_set and json_del can write files.",
  "tools": {
    "review_round": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/review_round"}},
    "watch": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/aos/watch"}},

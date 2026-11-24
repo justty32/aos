@@ -190,7 +190,7 @@
    "llm.json": "Use the caller's default kernel endpoint unless model names one.",
    "loop.json": "Schedule the reviewer FSM and expose public control and state files.",
    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-   "tools.json": "Offer review scripts and workspace readers without arbitrary execution tools."
+   "tools.json": "Offer review scripts and workspace readers. No shell, but review_round, measure and promote run the cases, comparers and definitions the caller names…"
   },
   "reviewer/": "Review measured definition costs and prescribe a fix or split when model downgrades fail.",
   "start-api": {
