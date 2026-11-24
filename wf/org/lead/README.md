@@ -4,7 +4,7 @@
 
 ← [org](../README.md)｜地盤 [wf/ws/eca-aos](../../ws/eca-aos/README.md)｜筆記 [notes.md](../../ws/eca-aos/notes.md)
 
-工作室裡唯一跟使用者說話的人。**現況**：公司 WSL 11-23 掛著（`eca-aos`，在子 daemon `repo-aos` 底下，範本 `eca-claude`，用第二帳號）。
+工作室裡唯一跟使用者說話的人。**現況**：公司 WSL 11-23 掛著（`eca-aos`，在子 daemon `repo-aos` 底下，範本 `eca-claude`，用第二帳號）；家機由 repo-aos 樹裡的 `main` 當負責人（使用者 11-24 晚「1.a」，見 [org「家機」](../README.md#成員表)），筆記在 [`wf/ws/main/`](../../ws/main/README.md)。
 
 「頂層只當調度者、不親做內容」是使用者定的（[user.md](../../workflows/common/user.md)「工作模式」與「子 agent 模型」）。註「第 N 題」的出自使用者 11-23 答七題「都按照推薦。…」（題目與原話在 [org 入口](../README.md#哪些是使用者說的)）；其餘切法是 fable 11-23 的〔提案〕，使用者沒逐條定過。
 
@@ -30,7 +30,7 @@
 
 - **可以寫**：上面「親手寫的三類」、自己的地盤 `wf/ws/eca-aos/`（含替下層建的夾）。
 - **唯讀**：`proto8/` 的程式、範本、知識庫、條文（要改就派人）；[`wf/user/`](../../user/)（使用者的地盤，叫了才寫）。
-- **不碰**：使用者自己開的 agent 與別的專案的樹（這台是 `eca_main`、`mine_arena`）。
+- **不碰**：使用者自己開的 agent 與別的專案的樹（公司那台是 `eca_main`、`mine_arena`；家機是 `mod_skyrim`、`repo-vc`、`narr-amber`）。
 - **暫存**：地盤的 `temp/`。
 
 ## 交接

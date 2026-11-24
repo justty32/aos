@@ -20,6 +20,7 @@
 ## 現有的地盤
 
 - `eca-aos/`：頂層 `eca-aos`。
-  - `eca-aos/eca-aos-templates/`、`eca-aos/eca-aos-kb/`、`eca-aos/eca-aos-core/`、`eca-aos/aos-eca-frontend/`：eca-aos 底下四個位子的地盤。位子有活才掛，地盤一直在（公司 WSL 11-23 只掛著 eca-aos）；位子與角色卡見 [wf/org](../org/README.md)。
+  - `eca-aos/eca-aos-templates/`、`eca-aos/eca-aos-kb/`、`eca-aos/eca-aos-core/`、`eca-aos/aos-eca-frontend/`：eca-aos 底下四個位子的地盤。位子有活才掛，地盤一直在（公司 WSL 11-23 只掛著 eca-aos）；位子與角色卡見 [wf/org](../org/README.md)。家機的 kb、templates、core 也用這三格（11-24 晚家機 `main` 掛的）。
+- `main/`：家機 repo-aos 樹的頂層 `main`（家機工作室的負責人，使用者 11-24 晚定）。
 
 人的那一格不在這裡，在 [`wf/user/`](../user/)：規矩同上，主人是使用者，agent 只讀、叫了才寫（使用者 11-22 定）。agent 讀 wf/user 讀到哪，記在自己這格的 `user-seen.json`，不寫進 wf/user。

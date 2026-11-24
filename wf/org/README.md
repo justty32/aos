@@ -49,7 +49,7 @@ eca-aos 拿 fable 的第一版問了七題，使用者 11-23 答（逐字）：
 
 ## 成員表
 
-現況是公司 WSL 11-23 的樣子（出處：[eca-aos 筆記](../ws/eca-aos/notes.md)）；家機那棵樹現在掛著誰沒查。
+現況是公司 WSL 11-23 的樣子（出處：[eca-aos 筆記](../ws/eca-aos/notes.md)）；家機見表下「家機」。
 
 | 位子 | 誰 | 一句話 | 現況 |
 |---|---|---|---|
@@ -61,6 +61,14 @@ eca-aos 拿 fable 的第一版問了七題，使用者 11-23 答（逐字）：
 | 打雜工 [chore](chore/README.md) | 用到才掛 | 蒐集、核對、機械式施工 | 11-23 下午第一次掛起來做完一張蒐集單；平常不掛 |
 
 除了打雜工（agent-fsm＋gpt）全是 eca claude，地盤在 `wf/ws/eca-aos/<名>/`。「位子」「負責人」「代班」這些叫法跟著七題的題目用，使用者照推薦答了，算接受（eca-aos 的判斷）。`eca-aos-core` 這個名字是 eca-aos 取的；`aos-eca-frontend` 要不要改名使用者沒定。
+
+**家機**（11-24 晚起）：使用者在家機說「家機這邊你也來建組織吧，學學公司那邊」，對五題答「1.a,2.a,3,a,4.a,5.a」（逐字）＝
+① 負責人沿用家機 repo-aos 樹裡的 `main`，不另掛 `eca-aos`——本夾寫「eca-aos」的地方，在家機都讀成 `main`；
+② 三個位子現在就掛、沒活就睡；
+③ 位子用主帳號的 eca-claude（定義 `{"$env":"AOS_HOME","$path":"/templates/agents/eca-claude"}`，跟公司一樣）；
+④ 位子名字與筆記兩台共用（`wf/ws/eca-aos/<位子>/notes.md`，條目標「家機」與日期）；
+⑤ 家機的組織只接使用者在家機當場交代的，公司排好的事留給公司。
+現況：`eca-aos-kb`、`eca-aos-templates`、`eca-aos-core` 11-24 晚掛在 `~/aos-home/.stack/procs/repo-aos/procs/<名>`，各有自己的 `system.txt`（範本兩段＋「負責人是 main」的位子段＋筆記段）與 `notes_path`；前端不掛；打雜工有活才掛，名字 `main-sol-N`、定義放 `wf/ws/main/temp/defs/`。`main` 自己的筆記在 [`wf/ws/main/`](../ws/main/README.md)。
 
 **不開的位子**〔提案〕：設計、審查、測試、整合不開（驗收是派工的人的事，要第二雙眼睛就按件派一隻；交件口是 commit-request 的排隊）。開位子的條件與做法見 [places](places.md#開位子)。
 
