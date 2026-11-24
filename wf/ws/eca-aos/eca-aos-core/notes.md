@@ -115,6 +115,8 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 
 ### 11-24 下午收尾狀態
 
-- 今天交的（都已回 DONE、都要 eca-aos install.py）：506cfe678、6ca662af3、db97bc983、b914c016f、80d2ee043、a7f58e07a、2a1a259e7、a551bba03、3812eed62、57baee653、cfa726273、7ebe15b7e。
+- 今天交的（都已回 DONE；05:46 eca-aos 第八次 install 已裝到 7ebe15b7e，033671bc0 還要裝）：506cfe678、6ca662af3、db97bc983、b914c016f、80d2ee043、a7f58e07a、2a1a259e7、a551bba03、3812eed62、57baee653、cfa726273、7ebe15b7e、033671bc0。
 - 還開著：fsm 那條「自己那份 tools.json 壞」的保底（等三分把 cell_common 搬進 py/aos/apps/agent_fsm 再補）；retry 沒做真 agent 整段實跑。
 - 暫存複本 l1～l12、各重現腳本在 `~/.aos/scratch/eca-aos-core-1124/`；/tmp 有 image-move-check 留的證據夾（沒刪）。
+- **F 已交已回 DONE（033671bc0）**：aos-comm own_root（py/aos/comm/root.py:17～22）只在 `<root>/mailbox` 在時才把 `<root>/tools/<名>` 認回 root；lazy 小格＋mailbox 還沒建＝board_set StackMissing。打算：多認 `<root>/stderr.txt`（daemon 起每個 proc 前在 stack 建；apps/agent/common.py 的 MARK 也用它），mailbox 照舊也算；test_comm.py:157 test_agent_root_from_tool_folder 的 bob（兩個都沒有）行為不變；補一條真 lazy 小格（agent stack 有 stderr.txt、沒 mailbox、沒 tools/board_set）。別處同類判斷：mail_notify/_entry:103 是「沒信箱＝沒信」，不是認 root，不用改。報告：wf/ws/eca-aos/temp/eca-aos-sol-3/report.md。
+- 11-24 05:11 eca-aos 要我交完 hooks 那件就停手等它 install；我讀到時 ops 三條已交完，已回 PROGRESS 說明、工作樹乾淨。
