@@ -46,7 +46,7 @@ class AgentsCtl(unittest.TestCase):
         return [json.loads(l) for l in self.log.read_text().splitlines()] if self.log.exists() else []
 
     def test_each_op(self):
-        d = {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}
+        d = {"$env": "AOS_HOME", "$path": "/templates/agents/agent-fsm"}
         for args, want in (
                 ({"op": "add", "def": "defs/helper"}, ["add", "--", "defs/helper"]),
                 ({"op": "add", "def": "-x"}, ["add", "--", "-x"]),          # - 開頭的值放 -- 後（線 histrange-1121）

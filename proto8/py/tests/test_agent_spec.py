@@ -1,4 +1,4 @@
-"""Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad before any write, hooks and files, and the skeleton's committed files matching its agent.py."""
+"""Test py/aos/agent_spec.py and the templates/agents/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad before any write, hooks and files, and the skeleton's committed files matching its agent.py."""
 import json
 import os
 from pathlib import Path
@@ -27,7 +27,7 @@ class Declaration(WithHome):
         self.assertEqual(list(files["fsm.json"]["states"]), ["idle", "think", "wait", "act"])
         self.assertEqual(files["fsm.json"]["states"]["act"]["exec"]["timeout_ms"], 0)
         self.assertEqual(files["fsm.json"]["states"]["wait"]["exec"]["argv"][1],
-                         {"$env": "AOS_HOME", "$path": "/templates/agent-fsm/wait.py"})
+                         {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/wait.py"})
         self.assertNotIn("$override", files["tools.json"])                  # the pack is copied in, tool by tool
         self.assertEqual(files["tools.json"]["tools"], dict(look("grep"), x={"path": "tools/x", "env": {"A": "1"}}))
         self.assertIn("std.pack('look')", files["tools.json"]["description"])
@@ -143,20 +143,20 @@ class Declaration(WithHome):
         mine = {"event": "before_tool", "condition": "shell", "handler": defs.home("/lib/tools/agent/hook_noop")}
         files = agent(hooks=[defs.std.hooks(), {"timer": None, "mine": mine}],
                       files={"ladder.json": {"repeat": 3}, "notes.txt": "plain text\n"}).dry_run()
-        stock = json.loads((TEMPLATES / "agent-fsm" / "hookeds.json").read_text())
+        stock = json.loads((TEMPLATES / "agents" / "agent-fsm" / "hookeds.json").read_text())
         self.assertEqual(list(files), ["_entry", "body.json", "loop.json", "fsm.json", "interfaces.json", "tools.json",
                                        "llm.json", "system.txt", "hookeds.json", "ladder.json", "notes.txt", "_metainfo.json",
                                        "README.md"])
         table = {k: v for k, v in stock.items() if k not in ("description", "timer")}   # the list file: {name: entry}, no "hooks" wrap
         table["mine"] = mine
         self.assertEqual({k: v for k, v in files["hookeds.json"].items() if k != "description"}, table)
-        self.assertIn("templates/agent-fsm/hookeds.json", files["hookeds.json"]["description"])
+        self.assertIn("templates/agents/agent-fsm/hookeds.json", files["hookeds.json"]["description"])
         self.assertEqual(list(files["interfaces.json"]["aos-agent"]),
                          ["entry", "tools", "llm", "llm_keys", "history", "system"])   # no hooks / hook_points in the aos-agent cell
         self.assertEqual(files["interfaces.json"]["hookeds"], "hookeds.json")         # the two hook keys are top level
         self.assertEqual(files["interfaces.json"]["hooks"],
                          [{"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"},
-                          {"$env": "AOS_HOME", "$path": "/templates/agent-fsm/hooks.json"}])
+                          {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/hooks.json"}])
         fire = ["aos-hook", "fire", "-q", "--stop-on-nonzero", "--def", {"$env": "AOS_CD"}]
         self.assertEqual(files["loop.json"]["on_start"], {"argv": fire + ["after_start"]})
         self.assertEqual(files["loop.json"]["on_stop"], {"argv": fire + ["after_stop"]})
@@ -174,7 +174,7 @@ class Declaration(WithHome):
     def test_hooks_loop_matches_agent_fsm_template(self):
         """with hooks, loop.json is the agent-fsm template's loop.json (apart from its description)."""
         files = agent(hooks={}).dry_run()
-        loop = json.loads((TEMPLATES / "agent-fsm" / "loop.json").read_text())
+        loop = json.loads((TEMPLATES / "agents" / "agent-fsm" / "loop.json").read_text())
         self.assertEqual(plain(files["loop.json"]), plain(loop))
         self.assertEqual(files["hookeds.json"], {"description": defs.WHAT["hookeds.json"]})
 
@@ -205,7 +205,7 @@ class Declaration(WithHome):
 
 
 class Skeleton(unittest.TestCase):
-    """templates/agent-python: the committed files are exactly what its agent.py writes today."""
+    """templates/agents/agent-python: the committed files are exactly what its agent.py writes today."""
 
     def test_aos_py_next_to_agent_py_does_not_win(self):
         """an aos.py next to agent.py: with AOS_HOME set, the skeleton still finds the aos package ($AOS_HOME/lib comes first)."""
@@ -290,4 +290,4 @@ class Skeleton(unittest.TestCase):
             for name in SKEL_GENERATED:
                 with self.subTest(name=name):
                     self.assertEqual((dest / name).read_bytes(), (SKEL / name).read_bytes(),
-                                     "run python3 agent.py --compile in templates/agent-python")
+                                     "run python3 agent.py --compile in templates/agents/agent-python")

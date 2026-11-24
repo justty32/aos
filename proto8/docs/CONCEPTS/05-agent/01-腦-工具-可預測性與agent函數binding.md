@@ -22,7 +22,7 @@
   同一隻跑久了，工具會被它自己（`self_tools`）改進覆蓋層——定義（函數本體）照樣不變、漂移只在 stack，`aos-agent ctl state` 會印出覆蓋層的改動（[feat-proto 01](../../../thinking/2026-11/05/feat-proto/01-self-tools.md)、[02](../../../thinking/2026-11/05/feat-proto/02-endpoint-packs.md) 代定 4）。工具要知道「叫我的是哪隻」＝**`aos-agent ctl who`**：拿自己的 `$AOS_STACK` 查 daemon 的表、找 stack 包住它的那列（經 daemon 表這個機制看上層，不從路徑往上爬；沒掛 daemon 的不支援，N-63）。
 - **C-50** agent＝狀態機＋各狀態跑的 inst，複雜度集中在那些 inst（使用者：「agent基於狀態機，在某狀態下跑某個inst，所以複雜度主要集中在那些inst」）。「程式方面的實作可以擠在一坨，共用一些lib，但是在實際的資料夾布局和json那塊仍要保持單純」。（10-15 收工後意見 1～3，[thinking 意見 1～4](../../../thinking/2026-10/15/opinions-1-4.md)）
   **一個 agent 的定義＝一個資料夾**（C-68），入口 `$AOS_ENTRY`；裡面的檔互相用相對路徑指、從這個資料夾算（起跑 cwd 就是它，N-59），不靠 `$ref`；檔少一點、把設定寫成一份大 JSON 也行（單子可內嵌，P-27）。agent 資料夾**可以帶 loop 當入口**（P-05、P-06；使用者 10-19，[ideas § 1](../../../thinking/2026-10/19/ideas/README.md)）。工具一律是資料夾程式，`date` 這類本來就是指令的也是（現行見 [C-61](02-agent-的工具與agent-就是一台狀態機.md)，待裁網頁 條文-7 選 A）；**資料夾程式之間互指不靠 PATH**（C-61）。
-  **標準 agent 做成範本 `templates/agent-fsm`**（使用者 10-23；範本就是一個標準 agent 資料夾，跑的時候仍靠 aos-loop＋aos-fsm，不是一支包了邏輯的程式；[thinking 10-23 agent 與 kernel](../../../thinking/2026-10/23/agent-kernel.md)；使用者 11-14 專區答「small:ok」，reply cee70afc742361ba）。
+  **標準 agent 做成範本 `templates/agents/agent-fsm`**（使用者 10-23；範本就是一個標準 agent 資料夾，跑的時候仍靠 aos-loop＋aos-fsm，不是一支包了邏輯的程式；[thinking 10-23 agent 與 kernel](../../../thinking/2026-10/23/agent-kernel.md)；使用者 11-14 專區答「small:ok」，reply cee70afc742361ba）。
 
 例：
 - C-22b：同一函式在老舊硬體上跑，可預測性不一樣。

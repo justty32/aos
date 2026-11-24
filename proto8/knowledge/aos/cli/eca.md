@@ -1,6 +1,6 @@
 # External coding agents (eca)
 
-The two commands behind an eca agent (claude, codex or pi run by aos, as in `templates/eca-claude` and `templates/eca-pi`). People use `aos-agent` for both; run them by hand only to test.
+The two commands behind an eca agent (claude, codex or pi run by aos, as in `templates/agents/eca-claude` and `templates/agents/eca-pi`). People use `aos-agent` for both; run them by hand only to test.
 
 Guarding the CLI's own tools (Bash ...) with the CLI's own hooks: `aos/cli/eca.md#/Guarding the CLI's own tools (claude)`.
 
@@ -98,7 +98,7 @@ No sweeper fallback: SIGKILL/OOM without after_stop, or opening a screen while t
 
 # The pi body (kind pi)
 
-`"kind": "pi"` in `cli.json` runs the pi coding agent (`templates/eca-pi`). `pi` must be on PATH, and so must the `node` it runs on (pi's launcher starts with `#!/usr/bin/env node`; exit 127 means one of them is missing). The shell that opens the screen needs both too.
+`"kind": "pi"` in `cli.json` runs the pi coding agent (`templates/agents/eca-pi`). `pi` must be on PATH, and so must the `node` it runs on (pi's launcher starts with `#!/usr/bin/env node`; exit 127 means one of them is missing). The shell that opens the screen needs both too.
 
 - Each batch is one `pi --mode rpc --no-approve --session-dir <cell>/pi-sessions --session-id <id>` run: aos sends the prompt as one `prompt` command and the run ends at `agent_settled`. aos makes the id on the first turn (`session.txt`); the same id continues the conversation. The conversation file is `<cell>/pi-sessions/<time>_<id>.jsonl` (cell = `$AOS_STACK/pi`). Events go to `<cell>/live.jsonl`.
 - Letters that come while it answers are sent one `steer` each; pi reads them before its next model call, all before `agent_settled`. The answer is every segment joined with a blank line (one reply to the prompt and each letter, or one reply that covers them). `"live_mail": false` in cli.json turns this off (the letters wait for the next turn); `live_mail_cap` is as for claude.

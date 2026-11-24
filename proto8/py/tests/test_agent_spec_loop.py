@@ -34,7 +34,7 @@ class Loop(WithHome):
 
     def test_without_loop_the_agent_fsm_template_loop(self):
         """no loop=: loop.json is still the agent-fsm template's (apart from its description), 300 ms."""
-        loop = json.loads((TEMPLATES / "agent-fsm" / "loop.json").read_text())
+        loop = json.loads((TEMPLATES / "agents" / "agent-fsm" / "loop.json").read_text())
         made = agent(hooks={}).dry_run()["loop.json"]
         self.assertEqual({k: v for k, v in made.items() if k != "description"}, {k: v for k, v in loop.items() if k != "description"})
 

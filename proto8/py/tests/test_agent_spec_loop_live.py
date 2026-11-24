@@ -45,8 +45,8 @@ class Live(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = Path(os.path.realpath(tempfile.mkdtemp(prefix="loop-live-")))
         cls.tree = cls.tmp / "tree"
-        shutil.copytree(PROTO / "templates" / "start-api", cls.tree, symlinks=True)
-        head = (PROTO / "templates" / "agent-python" / "agent.py").read_text().split("# ---- your agent")[0]
+        shutil.copytree(PROTO / "templates" / "starts" / "start-api", cls.tree, symlinks=True)
+        head = (PROTO / "templates" / "agents" / "agent-python" / "agent.py").read_text().split("# ---- your agent")[0]
         cls.compiled = {}
         for name, loop in (("slow", "\n    loop=defs.loop(interval_ms=1000),"), ("plain", "")):
             d = cls.tree / "agents" / name

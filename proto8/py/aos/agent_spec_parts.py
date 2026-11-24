@@ -12,7 +12,7 @@ from aos import hook_point
 from aos.spec_base import SpecBad, DefBad  # noqa: F401（兩個例外在 spec_base，跟 tool_spec 共用；parts.SpecBad 照舊叫得到）
 
 LLM_KEYS = ["model", "reasoning_effort", "temperature", "top_p", "max_tokens", "seed", "presence_penalty", "frequency_penalty",
-            "stop"]   # 同 templates/agent-fsm/llm_settings.KEYS（reasoning_effort：11-21 使用者「effort...改叫reasoning_effort吧」）
+            "stop"]   # 同 lib/aos/apps/agent_fsm/llm_settings.KEYS（reasoning_effort：11-21 使用者「effort...改叫reasoning_effort吧」）
 PACK_RE = re.compile(r"[a-z0-9][a-z0-9_-]*\Z")
 TOOL_RE = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")                        # aos-tools 的 NAME_RE
 ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")                  # aos-tools 的 ENV_KEY_RE
@@ -20,7 +20,7 @@ RUNTIME_FILES = ("ctl.json", "state.json", "state_flux.json", "history.jsonl")  
 OWN_FILES = {"tools": "tools.json", "llm": "llm.json", "system": "system.txt", "fsm": "fsm.json", "hooks": "hookeds.json"}   # hooks＝掛上去的 hook（11-21 起檔名 hookeds.json）
 SKELETON = ("_entry", "body.json", "loop.json", "interfaces.json")
 HOOK_POINTS = ({"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"},   # 有 fsm 又有 hooks 時寫進 interfaces.json 最外層的 hooks（宣告，只是參考）
-               {"$env": "AOS_HOME", "$path": "/templates/agent-fsm/hooks.json"})
+               {"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/hooks.json"})
 CONTENT = ("system", "tools", "llm", "hooks")                          # 不宣告 FSM 時 agent.py 寫的內容檔（檔名照 interfaces.json）
 RESERVED = set(SKELETON) | set(RUNTIME_FILES) | set(OWN_FILES.values()) | {"_metainfo.json", "README.md", "agent.py"}
 WHAT = {"_entry": "Register this agent with the current daemon (aos-agent ctl add).",

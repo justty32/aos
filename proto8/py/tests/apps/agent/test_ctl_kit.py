@@ -14,7 +14,7 @@ from env_helper import until  # noqa: E402  同夾的共用零件
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[4]
 BIN = PROTO / "bin" / "aos-agent"
-KITS = PROTO / "templates" / "kits"
+KITS = PROTO / "templates" / "agents" / "kits"
 ENV = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
 ENV["PATH"] = str(PROTO / "bin") + ":" + ENV["PATH"]
 ENV["PYTHONDONTWRITEBYTECODE"] = "1"

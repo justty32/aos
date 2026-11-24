@@ -25,6 +25,6 @@
 - `install.py` 常設許可（11-23「想跑就跑，隨便跑」）照舊；其餘照 11-23 那條（git 歷史）：派工模型、eca_main 的普通工作算授權、專區回信要 verify、掛新位子先問。
 
 **切完要接的**
-1. 家機也要照 06f「家機照做」：停樹、pull、跑 `stack_paths.py`（家機的 `repo-aos/main` 也直接掛 `templates/eca-claude`）。
-2. 各專案協調者在自己的 repo 交第 10 步的定義改動（arena_cheater 七份、ops-notes 的 patrol）；`templates/reviewer/tools.json` 第 1 行；知識庫三句；各位子讀一遍腳本改過的句子；CONVENTION P-27 等句子派 opus 逐句看（使用者 11-23 晚「1.可以」）。
+1. 家機也要照 06f「家機照做」：停樹、pull、跑 `stack_paths.py`（家機的 `repo-aos/main` 也直接掛 `templates/agents/eca-claude`）。
+2. 各專案協調者在自己的 repo 交第 10 步的定義改動（arena_cheater 七份、ops-notes 的 patrol）；`templates/agents/reviewer/tools.json` 第 1 行；知識庫三句；各位子讀一遍腳本改過的句子；CONVENTION P-27 等句子派 opus 逐句看（使用者 11-23 晚「1.可以」）。
 3. progress `eca-main-obs-1124`（eca_main 六點：文件派 kb、小程式派 core；範本 llm kernel 預設值、閒置輪詢的方向、`eca-aos-sol-1`／`-2` 的 stack 刪不刪要問使用者）、`mine-arena-dir-1123`（①②③ 開工）。

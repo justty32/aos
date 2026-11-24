@@ -16,7 +16,7 @@ LIB = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(LIB))
 from aos.agentlib import cli_cell, cli_cfg, cli_mcp  # noqa: E402
 
-TEMPLATE = LIB.parent / "templates" / "eca-claude"
+TEMPLATE = LIB.parent / "templates" / "agents" / "eca-claude"
 SUB_TOOLS = ["index_view", "json_get", "json_len", "json_ls", "json_multi_get", "json_search", "math", "peek_clock", "peek_now_time"]
 
 
@@ -149,7 +149,7 @@ class Template(unittest.TestCase):
         env = dict(os.environ, AOS_HOME=str(LIB.parent))
         jsonx = sorted(json.loads((LIB / "packs" / "jsonx.json").read_text())["tools"])
         self.assertEqual(len(jsonx), 8)
-        for f, want in ((TEMPLATE / "tools.json", []), (LIB.parent / "templates" / "agent-fsm" / "tools.json", []),
+        for f, want in ((TEMPLATE / "tools.json", []), (LIB.parent / "templates" / "agents" / "agent-fsm" / "tools.json", []),
                         (TEMPLATE / "tools_sub.json", [])):
             r = subprocess.run(["aos-tools", "--file", str(f), "ls", "--json"], capture_output=True, text=True, env=env, timeout=120)
             self.assertEqual(r.returncode, 0, r.stderr)

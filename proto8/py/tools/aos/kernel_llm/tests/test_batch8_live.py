@@ -33,7 +33,7 @@ class Batch8Live(unittest.TestCase):
     def copy_template(self, name):
         stack = self.root / name
         stack.mkdir()
-        subprocess.run(['cp', '-a', str(PROTO/'templates'/'kernel'/name), str(stack/'def')], check=True)
+        subprocess.run(['cp', '-a', str(PROTO/'templates'/'kernels'/name), str(stack/'def')], check=True)
         return stack
 
     def launch(self, stack):

@@ -44,7 +44,7 @@ class Live(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = Path(os.path.realpath(tempfile.mkdtemp(prefix="gdb-live-")))
         cls.tree = cls.tmp / "tree"
-        shutil.copytree(PROTO / "templates" / "start-api", cls.tree, symlinks=True)
+        shutil.copytree(PROTO / "templates" / "starts" / "start-api", cls.tree, symlinks=True)
         kj = cls.tree / "llm" / "kernel.json"
         k = json.loads(kj.read_text())
         k["endpoints"]["fake-math"] = dict(k["endpoints"]["fake"], tool="math", summary="fake brain that calls math with {} (an error)")
@@ -550,9 +550,9 @@ class Live(unittest.TestCase):
 
     # ---- 骨架起的 agent（使用者 11-19 下午選「骨架帶一行空的 HOOKS」，線 aos-bpfix-1119）----
     def skeleton_agent(self, name, drop_hooks=False):
-        """templates/agent-python 原樣抄一份（drop_hooks＝拿掉 hook 宣告，當沒帶 HOOKS 的舊定義）、掛上去（腦是 kernel 預設的假腦）。"""
+        """templates/agents/agent-python 原樣抄一份（drop_hooks＝拿掉 hook 宣告，當沒帶 HOOKS 的舊定義）、掛上去（腦是 kernel 預設的假腦）。"""
         d = self.tree / "agents" / name
-        shutil.copytree(PROTO / "templates" / "agent-python", d)
+        shutil.copytree(PROTO / "templates" / "agents" / "agent-python", d)
         if drop_hooks:
             ij = d / "interfaces.json"
             doc = json.loads(ij.read_text())

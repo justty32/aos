@@ -158,7 +158,7 @@ class NoFsm(unittest.TestCase):
 
     def copy(self, template):
         dest = Path(self.temp.name) / template
-        shutil.copytree(TEMPLATES / template, dest, symlinks=True)
+        shutil.copytree(TEMPLATES / "agents" / template, dest, symlinks=True)   # 11-24 起 agent 範本在 templates/agents/
         return dest
 
     def test_eca_templates(self):

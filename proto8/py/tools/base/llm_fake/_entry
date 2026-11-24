@@ -11,7 +11,7 @@
 #   self_tools，按名字排在 peek_now_time 前面；demo 的 fake 包寫 "tool": "peek_now_time"）。
 # 錯：stderr 與 stdout 各一行「llm_fake: error: ArgumentsBad 原因」、退 1。
 # 用法：kernel.json 的 endpoints 登記一組 "fake": {"exec": "<到這個資料夾的路徑>"}，信寫 "endpoint": "fake"（或設成預設）。
-# 來源：templates/agent-fsm/brain.py 的 fake()（11-04 晚搬過來；不再用「URL 沒設＝假腦」的暗規則，C-56）。
+# 來源：lib/aos/apps/agent_fsm/brain.py 的 fake()（11-04 晚搬過來；不再用「URL 沒設＝假腦」的暗規則，C-56）。
 import json, os, sys
 HELP = """\
 usage: llm_fake < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)

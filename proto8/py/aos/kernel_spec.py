@@ -3,12 +3,12 @@
 使用者 11-20 選項框待裁第 9 題「from aos.py.kernel import defs」（設計稿 thinking/2026-11/20/aos-pylib-plan-1120/02「kernel 以後怎麼接上」）；
 11-21「編譯的kernel入口那塊可以派」（線 top-1121-kdefs）。寫法比照 agent 那邊（aos/agent_spec）：一個物件、兩個方法（.dry_run()／.compile(夾)），
 命令列殼與 Unit 共用 aos/spec_unit，例外與寫檔後端共用 aos/spec_base，@fn.hook 的函數照樣抽成 fn/<名>.py（aos/fn_spec）。
-編譯出的夾就是 templates/kernel/ 那幾種手寫夾的樣子（procs-kernel、daemon-kernel、llm-kernel）：重新編譯直接蓋，產出後的 json 照常能改（C 與 .o）。
+編譯出的夾就是 templates/kernels/ 那幾種手寫夾的樣子（procs-kernel、daemon-kernel、llm-kernel）：重新編譯直接蓋，產出後的 json 照常能改（C 與 .o）。
 
 宣告用的（寫錯在 .dry_run()／.compile()／defs.main 才報 SpecBad）：
   Kernel(說明, knobs=None, hooks=None, program="kernel", body=None)
       program  "kernel"＝框架站（掛 proc 那一站：白名單、同時幾個…）、"kernel_llm"＝llm kernel（問腦那一站；interfaces.json 多 aos-ledger）
-      knobs    kernel.json 的其餘鍵，原樣寫進去（鍵的意思看 templates/kernel/README.md；不認得的鍵程式不管，這裡也不驗）
+      knobs    kernel.json 的其餘鍵，原樣寫進去（鍵的意思看 templates/kernels/README.md；不認得的鍵程式不管，這裡也不驗）
       hooks    一張表 {名字: 一格}、@fn.hook 的函數、或它們的串列（後面的同名蓋前面、None 拿掉）；全部寫進被勾清單 kernel_hookeds.json
                （11-21 kernel 甲案：interfaces.json 最外層 hookeds 指它；kernel.json 不再有 hooks）。事件名不驗（宣告只是參考）；
                身體是 loop 時掛了 before_run／after_run 才在 loop.json 接那兩條線（編譯時決定，沒有旗標檔）
@@ -33,14 +33,14 @@ from aos.agent_spec import _keys      # defs.loop／defs.daemon 跟 agent 的 de
 PUBLIC = ("Kernel", "main", "loop", "daemon", "home", "env", "SpecBad", "DefBad")
 FIELDS = ("description", "knobs", "hooks", "program", "body")
 PROGRAMS = ("kernel", "kernel_llm")
-DEFAULT_BODY = {"kernel": "loop", "kernel_llm": "daemon"}      # 照 templates/start-api：perm 是 loop、llm 是 daemon
+DEFAULT_BODY = {"kernel": "loop", "kernel_llm": "daemon"}      # 照 templates/starts/start-api：perm 是 loop、llm 是 daemon
 _LIB = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))   # py/ 或裝好的 lib/
 KERNEL_POINTS = os.path.join(_LIB, "tools", "aos", "kernel", "kernel_hooks.json")   # kernel、kernel_llm 共用這三個點的宣告（正本；編譯抄一份進定義夾）
 LOOP_POINTS_ENV = {"$env": "AOS_HOME", "$path": "/lib/aos/apps/hook/loop_hooks.json"}   # aos-loop 四個點的宣告（loop 身體的 interfaces.json 用指示詞指）
 HOOKS_FILE, HOOKEDS_FILE = "kernel_hooks.json", "kernel_hookeds.json"
 SWEEPER = {"exec": {"argv": ["aos-sweeper", "--retention-days", "7", "--report", {"$env": "AOS_STACK", "$path": "sweeper_report.json"}]},
-           "interval_ms": 600000, "auto_restart": True, "stuck_after_ms": 600000}   # 同 templates/kernel/daemon-kernel 的 _sweeper 列
-LEDGER = {"aos-ledger": {"file": "ledger.jsonl"}}   # llm kernel 的帳（同 templates/kernel/llm-kernel 的 interfaces.json）
+           "interval_ms": 600000, "auto_restart": True, "stuck_after_ms": 600000}   # 同 templates/kernels/daemon-kernel 的 _sweeper 列
+LEDGER = {"aos-ledger": {"file": "ledger.jsonl"}}   # llm kernel 的帳（同 templates/kernels/llm-kernel 的 interfaces.json）
 RENAME_LAST = {"daemon.json": 1, "loop.json": 1, "interfaces.json": 2, "_entry": 3}   # 被指的檔先換、_entry 最後（其他＝0）
 HELP = """\
 usage: python3 kernel.py --compile [FOLDER] | --dry-run | --help
@@ -54,7 +54,7 @@ defs.main(it): k = defs.Kernel("what it does", knobs={"max_running": 2}, hooks=[
   --dry-run           compile and print everything --compile would write, as one JSON object
                       {"file name": content}, and write nothing.
 program="kernel" (the default) is the station that admits procs; program="kernel_llm" is the llm kernel.
-knobs= is the rest of kernel.json, written as given (keys: templates/kernel/README.md).
+knobs= is the rest of kernel.json, written as given (keys: templates/kernels/README.md).
 body=defs.loop() mounts it as one row of a daemon (aos-loop); body=defs.daemon()
 makes it a daemon of its own, with a sweeper row. Default: loop for kernel, daemon for kernel_llm.
 Any other keyword of defs.loop / defs.daemon goes into loop.json / daemon.json as it is, unchecked, and
@@ -227,7 +227,7 @@ def fire(point):
 
 
 def _loop_json(exec_, interval_ms, events=()):
-    """同 templates/kernel/procs-kernel/loop.json：起停兩點一律接；before_run／after_run 只在編譯時有 hook 掛才接（11-21「編譯時決定」）。"""
+    """同 templates/kernels/procs-kernel/loop.json：起停兩點一律接；before_run／after_run 只在編譯時有 hook 掛才接（11-21「編譯時決定」）。"""
     run = sorted({"before_run", "after_run"} & set(events))
     loop = {"description": "Run the kernel once every %d ms over kernel.json. on_start / on_stop fire the aos-loop points after_start / after_stop "
                            "through aos-hook with the hookeds of interfaces.json (a failing hook stops the loop); %s"

@@ -18,7 +18,7 @@ import aos.gdb as g  # noqa: E402
 from aos.gdb import decl, trigger  # noqa: E402
 from test_gdb_trigger import FAKE_AGENT, FAKE_DAEMON_CTL, ENTRY, spec  # noqa: E402
 
-FSM = PROTO / "templates" / "agent-fsm" / "hooks.json"
+FSM = PROTO / "py" / "aos" / "apps" / "agent_fsm" / "hooks.json"
 LOOP = PROTO / "py" / "aos" / "apps" / "hook" / "loop_hooks.json"
 SAVER = {"description": "Hook points of a test saver.",
          "before_save": {"description": "before a file is saved",
@@ -355,7 +355,7 @@ class Live(unittest.TestCase):
         decl.current.clear()
         cls.tmp = Path(os.path.realpath(tempfile.mkdtemp(prefix="gdb-decl-live-")))
         cls.tree = cls.tmp / "tree"
-        shutil.copytree(PROTO / "templates" / "start-api", cls.tree, symlinks=True)
+        shutil.copytree(PROTO / "templates" / "starts" / "start-api", cls.tree, symlinks=True)
         cls.saver = cls.tmp / "saver_hooks.json"
         cls.saver.write_text(json.dumps(SAVER))
         cls.log = open(cls.tmp / "root.log", "w")

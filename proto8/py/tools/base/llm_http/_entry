@@ -8,7 +8,7 @@
 #   ArgumentsBad／KeyBad 不重試；EndpointFailed 依階段與狀態分類；ReplyBad 與讀回應的連線例外隔 1 秒重打一次，成功多帶 tries:2。
 # 逾時（11-16 ok-timeout，wf/temp/ok-timeout-1116/計劃.md）：連線＋TLS＋送出 connect_timeout_s（預設 10）、讀回應閒置 read_timeout_s（預設 900，
 #   多久沒收到任何位元組；非串流的長回答只是表頭晚到，所以寬），兩者可由 endpoint 包調、0＝不限；有 priority.deadline 時每次等待收在期限前 1 秒。
-#   逾時＝EndpointFailed retry:true、不當場重打。平常由 llm kernel 經 aos-exec 跑。來源：templates/agent-fsm/brain.py 的 ask()。
+#   逾時＝EndpointFailed retry:true、不當場重打。平常由 llm kernel 經 aos-exec 跑。來源：lib/aos/apps/agent_fsm/brain.py 的 ask()。
 # 思考程度（11-21 線 top-1121-effort）：stdin 頂層的 reasoning_effort（llm kernel 照包的 reasoning_efforts 放行才給）——
 #   endpoint.api 沒寫或 "chat"＝送 {url}/chat/completions、body 的 reasoning_effort 參數（換程度會讓上游前綴快取作廢）；
 #   "responses"＝送 {url}/responses（responses_api.py 換寫法），程度變成 input 最後一個 configuration_update，前綴快取照留。

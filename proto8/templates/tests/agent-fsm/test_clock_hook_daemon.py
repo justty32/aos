@@ -37,9 +37,9 @@ class Daemon(unittest.TestCase):
         self.env = dict(env, AOS_HOME=str(PROTO), PATH=os.pathsep.join(bins + [env["PATH"]]),
                         PYTHONPATH=os.pathsep.join([str(PROTO / "py")]), PYTHONDONTWRITEBYTECODE="1")
         self.log = self.root / "events.jsonl"
-        shutil.copytree(PROTO / "templates" / "daemon-root", self.root / "defs")
+        shutil.copytree(PROTO / "templates" / "daemons" / "daemon-root", self.root / "defs")
         ann = self.root / "defs" / "ann"
-        shutil.copytree(PROTO / "templates" / "agent-fsm", ann, ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copytree(PROTO / "templates" / "agents" / "agent-fsm", ann, ignore=shutil.ignore_patterns("__pycache__"))
         hook = ann / "log_hook"
         hook.write_text(LOGGER % (sys.executable, str(self.log)))
         hook.chmod(0o755)

@@ -1,6 +1,6 @@
 # Kits: ready-made system text and tools for one agent role
 
-A kit is a system text plus a tool set for one role (gatherer, reviewer), laid over a new agent-fsm definition. Kits live in the templates folder, in `templates/kits/` next to `agent-fsm/`; `kits.json` there lists them. A kit is not a template of its own: it is a folder with a system.txt and a tools.json. You make an agent-fsm definition and copy the kit's files over it (a person can instead give the folder to `aos-agent ctl add --kit`).
+A kit is a system text plus a tool set for one role (gatherer, reviewer), laid over a new agent-fsm definition. Kits live in the templates folder, in `templates/agents/kits/` next to `agent-fsm/`; `kits.json` there lists them. A kit is not a template of its own: it is a folder with a system.txt and a tools.json. You make an agent-fsm definition and copy the kit's files over it (a person can instead give the folder to `aos-agent ctl add --kit`).
 
 - How to make an agent from a kit: `aos/kits.md#/Make an agent from a kit`.
 - How a kit's system text is built from layers: `aos/kits.md#/Layers of a kit's system text`.
@@ -10,12 +10,12 @@ A kit is a system text plus a tool set for one role (gatherer, reviewer), laid o
 # Make an agent from a kit
 
 1. agent_def {"op": "new", "template": "agent-fsm", "path": "defs/gather"}
-2. Copy `templates/kits/gather/system.txt` and `templates/kits/gather/tools.json` over `defs/gather/system.txt` and `defs/gather/tools.json` (tools.json names its packs with {"$env": "AOS_HOME"}, so it works wherever it is copied).
+2. Copy `templates/agents/kits/gather/system.txt` and `templates/agents/kits/gather/tools.json` over `defs/gather/system.txt` and `defs/gather/tools.json` (tools.json names its packs with {"$env": "AOS_HOME"}, so it works wherever it is copied).
 3. Set the brain in `defs/gather/llm.json` (aos/brain.md).
 4. agent_def {"op": "check", "path": "defs/gather"}: an empty problems list = ready.
 5. Start it with subagent add, and give it a brief: the one task, the paths it may read and write, what to deliver in out/, the finish condition (it copies that into its goal), and the knowledge folder path.
 
-For a reviewer, do the same with `templates/kits/review/` (its tools.json is the same as gather's). Several agents of one role can share one definition.
+For a reviewer, do the same with `templates/agents/kits/review/` (its tools.json is the same as gather's). Several agents of one role can share one definition.
 
 A person attaching an agent from a shell does not copy: `aos-agent ctl add --kit KIT-FOLDER ...` (or `ctl set-def --kit KIT-FOLDER NAME DEF`) writes the kit's system.txt and tools.json into that agent's stack as its own copies, and leaves the definition as it is. Own copies already in the stack are replaced, so giving another kit swaps kits. An eca definition takes a kit too: its system text is appended to the CLI's own and its tools.json replaces the aos tools, but the CLI's built-in tools (Bash, Read...) stay, so the kit's tool limits do not hold on an eca. `aos-agent system reset` and `aos-agent tools reset` drop the kit again.
 

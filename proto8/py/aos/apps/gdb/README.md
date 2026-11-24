@@ -112,7 +112,7 @@ b.fired       # Failed: breakpoint 3: it is gone from ann (removed); a.bp.ls() l
 ## 最短試法（假腦）
 
 ```sh
-cp -r $AOS_HOME/templates/start-api /tmp/t && cd /tmp/t && source env.sh
+cp -r $AOS_HOME/templates/starts/start-api /tmp/t && cd /tmp/t && source env.sh
 aos-exec root &                                   # 根
 aos-daemon-ctl -d .stack add --auto-restart llm  # llm kernel（假腦）掛在根上一列
 aos-agent -d .stack ctl add --auto-restart -w . agents/ann
@@ -223,7 +223,7 @@ aos-gdb: attached to ann (stack /tmp/t/.stack/procs/ann)
 gdb> hooks
 hook declarations (only for reference): 13 point(s) from 2 file(s); hooks.load(FILE) adds, hooks.clear() empties
   .../lib/aos/apps/hook/loop_hooks.json
-  .../templates/agent-fsm/hooks.json
+  .../lib/aos/apps/agent_fsm/hooks.json
 point           a.bp.add               declared       subject       fields
 after_start     pause                  after          -             -
 before_run      pause                  before, block  -             -

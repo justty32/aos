@@ -9,8 +9,9 @@ import tempfile
 import unittest
 os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
 
-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身
-PROTO = CELLS.parents[1]
+PROTO = Path(__file__).resolve().parents[3]
+CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
+TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
 TOOL = PROTO / "py" / "tools" / "agent" / "self_system" / "_entry"
 
 
@@ -20,7 +21,7 @@ class OwnSystem(unittest.TestCase):
         self.defn, self.d, kernel, self.ws = self.root / "def", self.root / "d", self.root / "k", self.root / "ws"
         for x in (self.defn, self.d, kernel, self.ws):
             x.mkdir()
-        decl = json.loads((CELLS / "interfaces.json").read_text())["aos-agent"]
+        decl = json.loads((TEMPLATE / "interfaces.json").read_text())["aos-agent"]
         self.assertEqual(decl["system"], "system.txt")                   # the template declares it
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"llm": "llm.json", "system": decl["system"]}}))
         (self.defn / "llm.json").write_text('{"model":"fake"}')

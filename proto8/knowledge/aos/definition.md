@@ -24,10 +24,10 @@ A definition is a folder that says what an agent is (its source code). Its `inte
 Only agent-fsm:
 
 - `body.json`: the body, `aos-loop loop.json`.
-- `fsm.json`: the four cells `idle` (take letters from the queue), `think` (ask the brain), `wait` (wait for its answer), `act` (run the tool calls).
-- `idle.py`, `brain.py`, `wait.py`, `act.py`, `llm_settings.py`: the programs of those cells; `atomic_file.py`: the atomic file write that idle and wait share; `cell_common.py`: the first steps brain and act share (reading the history, choosing the tool registry); `compact.py`: how a `/compact` letter is done, with the rules of the `before_compact` / `after_compact` hooks, and how a `/clear` letter empties history (`aos/me/compact.md`).
+- `fsm.json`: the four cells `idle` (take letters from the queue), `think` (ask the brain), `wait` (wait for its answer), `act` (run the tool calls). Each cell's `argv` names its program as `{"$env": "AOS_HOME", "$path": "/lib/aos/apps/agent_fsm/idle.py"}`.
+- The cell programs are not in the definition: they live in `$AOS_HOME/lib/aos/apps/agent_fsm/`, one copy for every agent-fsm (the template, `fsm=std.fsm()` in an agent.py, the `ann` of the start-api starter all point there; the template is only something to copy). `idle.py`, `brain.py`, `wait.py`, `act.py`, `llm_settings.py`: the programs of those cells; `atomic_file.py`: the atomic file write that idle and wait share; `cell_common.py`: the first steps brain and act share (reading the history, choosing the tool registry); `compact.py`: how a `/compact` letter is done, with the rules of the `before_compact` / `after_compact` hooks, and how a `/clear` letter empties history (`aos/me/compact.md`); `hooks.json`: the hook points the cells fire (the `hooks` of `interfaces.json` points at it).
 - `subagents.json`: `max_subagents`, how many subagents you may have at once (tool `subagent`).
-- A definition may carry none of these programs: when its `fsm.json` names them as `{"$env": "AOS_HOME", "$path": "/templates/agent-fsm/idle.py"}` (the `ann` of the start-api starter does, and so does `fsm=std.fsm()` in an agent.py), the cells run the agent-fsm template's copies under `$AOS_HOME`, and the `hooks` of its `interfaces.json` points at the agent-fsm template's `hooks.json` declaration instead of carrying its own.
+- A definition may carry its own copies instead: copy those nine files into it, write `["python3", "idle.py"]` (a name relative to the definition) in each cell's `argv` and `"hooks.json"` in the `hooks` of `interfaces.json`. Its copies no longer follow `$AOS_HOME`; they still import `aos.*` from `$AOS_HOME/lib`.
 
 Only eca-claude (and eca-pi, the same minus the last two):
 

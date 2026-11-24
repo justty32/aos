@@ -6,6 +6,9 @@
   "description": "aos-agent：給人用的 agent 介面，ctl add／rm／起停睡醒、say／listen／chat、畫面、tools／llm／system／goal／hook 覆蓋層與搬家說明；要改人操作 agent 的指令時進去",
   "index": "agent/_index.json"
  },
+ "agent_fsm": {
+  "description": "agent-fsm 的四格（idle、think、wait、act）、共用模組與 hook 點宣告；每一隻 agent-fsm 的定義都從 lib/aos/apps/agent_fsm 跑這幾支（11-24 從範本搬來）"
+ },
  "asuser": {
   "description": "aos-asuser：免 root 換成 subuid 執行程式或救援檔案"
  },

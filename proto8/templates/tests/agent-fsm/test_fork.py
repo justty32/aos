@@ -8,8 +8,9 @@ import tempfile
 import time
 import unittest
 
-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'
-PROTO = CELLS.parents[1]
+PROTO = Path(__file__).resolve().parents[3]
+CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
+TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
 SECRET = 'plum-42'
 
 
@@ -54,7 +55,7 @@ class Fork(unittest.TestCase):
             defs = {}
             for model in ('plain', 'kept'):             # 兩份定義：範本原樣（hookeds.json 照帶），工具只有 fork，腦各一份劇本
                 own = root / ('def_' + model)
-                shutil.copytree(CELLS, own, ignore=shutil.ignore_patterns('tests', '__pycache__'))
+                shutil.copytree(TEMPLATE, own, ignore=shutil.ignore_patterns('tests', '__pycache__'))
                 write(own / 'llm.json', {'model': model})
                 write(own / 'tools.json', {'tools': {'fork': {'path': str(PROTO / 'py/tools/agent/fork')}}})
                 write(own / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10, 'ctl': 'ctl.json', 'state': 'state.json',

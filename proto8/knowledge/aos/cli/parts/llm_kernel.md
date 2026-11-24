@@ -1,9 +1,9 @@
 # kernel_llm: one round of the llm kernel
 
-One run = one round, then it exits: the tool folder `$AOS_HOME/lib/tools/aos/kernel_llm`, run by `aos-exec` (`aos-exec $AOS_HOME/lib/tools/aos/kernel_llm [--enable-counters] kernel.json`); you do not run it by hand. A loop runs it again and again: `{"exec": {"argv": ["aos-exec", <kernel_llm>, <kernel.json>]}, "interval_ms": 300}`, so at least 300 ms from the end of one round to the start of the next. That loop is either the own `exec` body of a daemon (the template `templates/kernel/llm-kernel`, its daemon.json) or a looping proc on a daemon you already have (a loop.json with the same two keys; for example a tree's `kernels/llm-gpt` runs as a proc on the ws daemon). Each round is a new process and reads kernel.json again, so an edit to kernel.json counts from the next round, without a restart. Its own errors start with `kernel_llm:`. Start the kernel as its own project:
+One run = one round, then it exits: the tool folder `$AOS_HOME/lib/tools/aos/kernel_llm`, run by `aos-exec` (`aos-exec $AOS_HOME/lib/tools/aos/kernel_llm [--enable-counters] kernel.json`); you do not run it by hand. A loop runs it again and again: `{"exec": {"argv": ["aos-exec", <kernel_llm>, <kernel.json>]}, "interval_ms": 300}`, so at least 300 ms from the end of one round to the start of the next. That loop is either the own `exec` body of a daemon (the template `templates/kernels/llm-kernel`, its daemon.json) or a looping proc on a daemon you already have (a loop.json with the same two keys; for example a tree's `kernels/llm-gpt` runs as a proc on the ws daemon). Each round is a new process and reads kernel.json again, so an edit to kernel.json counts from the next round, without a restart. Its own errors start with `kernel_llm:`. Start the kernel as its own project:
 
 ```sh
-cp -r $AOS_HOME/templates/kernel/llm-kernel llms/def
+cp -r $AOS_HOME/templates/kernels/llm-kernel llms/def
 cd llms && aos-exec --stack stacks/llm def      # then point agents at it: AOS_LLM_KERNEL=/abs/llms/stacks/llm
 aos-daemon-ctl -d stacks/llm shutdown           # stop it
 ```

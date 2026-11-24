@@ -506,7 +506,10 @@ class OldRules(Base):
 PROTO = os.path.normpath(os.path.join(HERE, "..", "..", "..", "..", "..", "proto8"))   # this repo's proto8 (installed: lib/ bin/)
 
 
-@unittest.skipUnless(os.path.isfile(os.path.join(PROTO, "templates", "agent-fsm", "act.py"))
+CELLS = os.path.join(PROTO, "lib", "aos", "apps", "agent_fsm")   # the agent-fsm cells, installed (11-24: no longer in the template)
+
+
+@unittest.skipUnless(os.path.isfile(os.path.join(CELLS, "act.py"))
                      and os.path.isdir(os.path.join(PROTO, "lib", "aos")), "needs an installed proto8 next to wf/")
 class Mounted(unittest.TestCase):
     """Mount the guard as the README says (hookeds.json of a definition, wrapper + defs/shared/guard) and run the real act cell."""
@@ -517,7 +520,7 @@ class Mounted(unittest.TestCase):
         t = self.tmp.name
         self.ws, self.stack, fake = os.path.join(t, "ws"), os.path.join(t, "procs", "sol-T01"), os.path.join(t, "bin")
         self.defn = os.path.join(t, "defs", "worker")
-        shutil.copytree(os.path.join(PROTO, "templates", "agent-fsm"), self.defn)
+        shutil.copytree(os.path.join(PROTO, "templates", "agents", "agent-fsm"), self.defn)
         os.makedirs(os.path.join(t, "defs", "shared"))
         shutil.copy(GUARD, os.path.join(t, "defs", "shared", "guard"))
         for d in (self.ws, self.stack, fake):
@@ -552,7 +555,7 @@ class Mounted(unittest.TestCase):
         hist = os.path.join(self.stack, "history.jsonl")
         with open(hist, "w") as f:
             f.write(json.dumps({"role": "user", "content": "hi"}) + "\n" + json.dumps({"role": "assistant", "tool_calls": [call]}) + "\n")
-        p = subprocess.run([sys.executable, os.path.join(self.defn, "act.py")], env=self.env, capture_output=True, text=True, timeout=60)
+        p = subprocess.run([sys.executable, os.path.join(CELLS, "act.py")], env=self.env, capture_output=True, text=True, timeout=60)
         self.assertEqual(p.returncode, code, p.stderr)
         with open(hist) as f:
             last = [json.loads(l) for l in f if l.strip()][-1]

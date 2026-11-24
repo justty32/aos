@@ -1,6 +1,6 @@
 # aos-eca — 外部 coding agent（claude／codex／pi）的兩支指令
 
-← [cmd](../../../docs/05-commands.md)｜範本：[templates/eca-claude](../../../../templates/docs/01-eca-claude.md)、[templates/eca-pi](../../../../templates/docs/03-eca-pi.md)
+← [cmd](../../../docs/05-commands.md)｜範本：[templates/agents/eca-claude](../../../../templates/docs/01-eca-claude.md)、[templates/agents/eca-pi](../../../../templates/docs/03-eca-pi.md)
 
 - `bin/aos-eca-turn`：答一輪——從 stack 的 queue 認領一批、交給 CLI 就收信、回答接進 history。說明在 [05-commands/01](../../../docs/05-commands/01-逐支說明.md#逐支說明)。
   **畫面開著的 claude 身改走收件口**（[eca-a2a-notify](../../../../thinking/2026-11/13/eca-a2a-notify.md)，使用者 11-13「1.a2a這個按照建議。馬上送，eca他會自己處理。say/chat被當成不是使用者打的，我覺得可以，真的有要的話，就自己open進去說。」）：一批信不貼字，改往 Claude Code 這個 session 自己的收件口（cross-session messaging 的 Unix socket）寫，一封一個署名信封，畫面顯示「› Message from @名字: …」、CLI 自己告訴模型這則不是它的使用者打的。署名＝信 body 的 `name`（`aos-agent say`／`chat` 對 eca 寄時填，見 [aos-agent](../agent/README.md)），沒有＝`aos通知中心`（新信通知、時鐘信、goal 提醒、開場白、換台前情提要）；`name` 不接進 history。這條路不看 `--on-busy`：有人接在畫面上、正在跑一輪都照投（CLI 手上那步工具做完就讀到）；等回答時 queue 又來信也一封一封馬上投（`aos_eca/midturn.py`，slash 指令、hook 或 aos-post 出錯、投不出去、冷卻剛到那輪除外，那封留到下一輪）。socket 位置與有沒有收到靠畫面 hook 記在小格的 `a2a.json`、`a2a_acks.jsonl`（`py/aos/agentlib/cli_a2a.py`）；沒記到、投不出去、投了 30 秒沒回執＝退回貼字（後者這個畫面之後都貼，到下一次 SessionStart）。接線前開的畫面要關掉重開才換新路。關掉：定義的 `cli.json` 寫 `"a2a": false`。畫面沒開、codex 身、slash 指令、工具形照舊。

@@ -8,8 +8,9 @@ import tempfile
 import time
 import unittest
 
-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
-PROTO = CELLS.parents[1]
+PROTO = Path(__file__).resolve().parents[3]
+CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
+TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
 
 
 def write(path, value):
@@ -35,12 +36,12 @@ class Batch3Integration(unittest.TestCase):
             bins = [str(PROTO / 'bin')]
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
             env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'py')])
-            env.update(AOS_STACK=str(daemon_stack), AOS_CD=str(root), AOS_WS=str(root),
+            env.update(AOS_STACK=str(daemon_stack), AOS_CD=str(root), AOS_WS=str(root), AOS_HOME=str(PROTO),
                        AOS_DAEMON=str(daemon_stack), AOS_LLM_KERNEL=str(kernel_stack))
 
             def definition(name, endpoint, tools):
                 target = root / name
-                shutil.copytree(CELLS, target, ignore=shutil.ignore_patterns('tests', '__pycache__'))
+                shutil.copytree(TEMPLATE, target, ignore=shutil.ignore_patterns('tests', '__pycache__'))
                 write(target / 'llm.json', {'model': endpoint})
                 write(target / 'tools.json', {'tools': tools})
                 write(target / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10,

@@ -107,8 +107,8 @@ class AgentDef(unittest.TestCase):
         self.assertFalse(link.exists())
 
     def test_every_stock_template_is_copied_byte_for_byte(self):
-        """repo 的每份範本（有 interfaces.json 的）抄到深一層的地方：跟範本逐 byte 相同。"""
-        root = PROTO / "templates"
+        """repo 的每份範本（templates/agents/ 底下有 interfaces.json 的）抄到深一層的地方：跟範本逐 byte 相同。"""
+        root = PROTO / "templates" / "agents"
         names = sorted(d.name for d in root.iterdir() if (d / "interfaces.json").is_file())
         self.assertIn("agent-fsm", names)
         for name in names:
@@ -119,7 +119,7 @@ class AgentDef(unittest.TestCase):
 
     # ---- new（舊 test_copy_repo 的案例改成新介面）----
     def test_repo_template_is_copied_as_written(self):
-        tpl = PROTO / "templates" / "agent-fsm"
+        tpl = PROTO / "templates" / "agents" / "agent-fsm"
         for env in ({"AOS_HOME": str(PROTO)}, {}):
             with self.subTest(env=env):
                 r = self.new(str(tpl), **env)
@@ -282,8 +282,8 @@ class AgentDef(unittest.TestCase):
         self.assertIn("%s: error: DefMissing" % NAME, r.stdout)
 
     def test_copy_real_template_then_check(self):
-        """複製真的 templates/agent-fsm 後 check：照實記結果（11-10 晚：problems 空、退 0）。"""
-        r = self.new(str(PROTO / "templates" / "agent-fsm"), "helper")
+        """複製真的 templates/agents/agent-fsm 後 check：照實記結果（11-10 晚：problems 空、退 0）。"""
+        r = self.new(str(PROTO / "templates" / "agents" / "agent-fsm"), "helper")
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
         r = self.run_tool({"op": "check", "path": "helper"})
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
@@ -291,13 +291,15 @@ class AgentDef(unittest.TestCase):
 
     def test_check_finds_what_the_copy_calls_but_is_not_there(self):
         """11-19 aos-check-refs（G1，使用者選「只放進檢查指令」）：寫錯的工具路徑、不在的格程式、型別錯的腦設定，check 報 DefBad。"""
-        r = self.new(str(PROTO / "templates" / "agent-fsm"), "helper")
+        r = self.new(str(PROTO / "templates" / "agents" / "agent-fsm"), "helper")
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
         d = self.ws / "helper"
         tools = json.loads((d / "tools.json").read_text())
         tools.setdefault("tools", {})["ghost"] ={"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/nope"}}
         (d / "tools.json").write_text(json.dumps(tools))
-        (d / "wait.py").unlink()
+        fsm = json.loads((d / "fsm.json").read_text())
+        fsm["states"]["wait"]["exec"]["argv"][1] = "wait.py"     # 11-24 起範本不帶格：改成靜態連結卻沒抄那支進來
+        (d / "fsm.json").write_text(json.dumps(fsm))
         (d / "llm.json").write_text('{"temperature": "hot"}')
         r = self.run_tool({"op": "check", "path": "helper"})
         self.assertEqual(r.returncode, 1, r.stderr + r.stdout)

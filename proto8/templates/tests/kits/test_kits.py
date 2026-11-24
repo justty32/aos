@@ -1,12 +1,12 @@
-"""Check the public kits folder (templates/kits): English only, no site-specific wording, valid JSON with a description first, each kit folder holding system.txt and tools.json (for ctl --kit), and each kit's system.txt equal to its assembled layers."""
+"""Check the public kits folder (templates/agents/kits): English only, no site-specific wording, valid JSON with a description first, each kit folder holding system.txt and tools.json (for ctl --kit), and each kit's system.txt equal to its assembled layers."""
 import json
 import re
 import unittest
 from pathlib import Path
 
 TEMPLATES = Path(__file__).resolve().parents[2]
-KITS = TEMPLATES / 'kits'
-AGENT_SYSTEM = TEMPLATES / 'agent-fsm' / 'system.txt'
+KITS = TEMPLATES / 'agents' / 'kits'
+AGENT_SYSTEM = TEMPLATES / 'agents' / 'agent-fsm' / 'system.txt'
 
 CJK = re.compile('[⺀-鿿豈-﫿＀-￯　-〿]')
 FORBIDDEN = ['wf/', '/home/', 'aos-home', 'xiaosi', 'repo-aos', 'llm-gpt',

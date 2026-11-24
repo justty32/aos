@@ -8,8 +8,9 @@ import tempfile
 import time
 import unittest
 
-CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'
-PROTO = CELLS.parents[1]
+PROTO = Path(__file__).resolve().parents[3]
+CELLS = PROTO / 'py' / 'aos' / 'apps' / 'agent_fsm'   # 格的程式（11-24 起搬出範本，裝好在 lib/aos/apps/agent_fsm）
+TEMPLATE = PROTO / 'templates' / 'agents' / 'agent-fsm'   # 範本本身（給人抄的定義）
 DO, PEEK = str(PROTO / 'py/tools/agent/do_task'), str(PROTO / 'py/tools/base/peek_now_time')
 
 
@@ -64,7 +65,7 @@ class DoTaskFold(unittest.TestCase):
         cls.env = env
         for name in SCRIPTS:                         # 每個情境一份定義：範本原樣，工具換成 do_task＋peek_now_time，腦＝那個情境的劇本
             d = root / ('def_' + name)
-            shutil.copytree(CELLS, d, ignore=shutil.ignore_patterns('tests', '__pycache__'))
+            shutil.copytree(TEMPLATE, d, ignore=shutil.ignore_patterns('tests', '__pycache__'))
             write(d / 'llm.json', {'model': name})
             write(d / 'tools.json', {'tools': {'do_task': {'path': DO}, 'peek_now_time': {'path': PEEK}}})
             write(d / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10, 'ctl': 'ctl.json', 'state': 'state.json',

@@ -9,7 +9,7 @@
 eca 壓縮後，有兩支 SessionStart（matcher compact）hook 的輸出會進對話：
 
 1. **repo 的 `wf/tools/compact_reload.sh`**（`.claude/settings.json` 掛；範本有 `--setting-sources project,local`，工作區在 repo 的每一隻 eca 都會跑）：貼 `user.md` 全文，加上 **`wf/HANDOFF.md` 的第一條**。
-2. **範本的 `compact_hook start`**（`proto8/templates/eca-claude/cli.json` 的 `settings` 掛）：印「read your handoff notes again (the handoff file or session log your workspace's rules name, or `$AOS_STACK/handoff.md`)」，再附 stack 的 `handoff.md` 尾巴與 before_compact 交的補回字。
+2. **範本的 `compact_hook start`**（`proto8/templates/agents/eca-claude/cli.json` 的 `settings` 掛）：印「read your handoff notes again (the handoff file or session log your workspace's rules name, or `$AOS_STACK/handoff.md`)」，再附 stack 的 `handoff.md` 尾巴與 before_compact 交的補回字。
 
 兩支都把 subagent 指向頂層的交接，而那是 eca-aos 的。系統文字裡雖然有一句「compact 後讀 notes.md」，但壓縮那一刻貼進來的兩段字都在叫它去讀另一個檔，而且離得更近。所以 hook 要做的不只是提醒，還要**改掉這個互相矛盾的指示**。
 
@@ -37,7 +37,7 @@ eca 壓縮後，有兩支 SessionStart（matcher compact）hook 的輸出會進�
 要正式做時還得跟著改：範本 README 和 `templates/docs/01` 的「壓縮前後的 hook 點」段、`templates/tests/test_eca_compact_hook.py` 加上面四個情況，再重抄 `start-eca/agents/ann`（`test_ann_is_the_same_file`）。
 
 ```diff
---- proto8/templates/eca-claude/compact_hook
+--- proto8/templates/agents/eca-claude/compact_hook
 +++ temp/proto-1/compact_hook
 @@ -21,6 +21,7 @@
  import sys

@@ -6,7 +6,7 @@ review_round 執行七步審視、降級與只記錄的成長建議。
 {"case":"/abs/case","defs":"/abs/defs","ladder":"/abs/reviewer/ladder.json","ws":"/abs/ws","daemons":[]}
 ```
 
-`ws` 省略時用 `$AOS_WS`；量測需要 `$AOS_STACK`。`ladder.json` 格式與預設值見 [reviewer](../../../../templates/reviewer/README.md)。工具不直接叫 LLM；case 或比對器若使用腦，仍由 measure 執行。
+`ws` 省略時用 `$AOS_WS`；量測需要 `$AOS_STACK`。`ladder.json` 格式與預設值見 [reviewer](../../../../templates/agents/reviewer/README.md)。工具不直接叫 LLM；case 或比對器若使用腦，仍由 measure 執行。
 
 stdout 是 `{"round":"<UTC timestamp>","review":"/abs/ws/reviews/<round>/review.json","action":"downgrade"}`；action 另有 `prescribe`、`none`。每輪保留原量測的 `tree` 與 `consistency`，七步的 `steps`、處方空陣列及完整定義副本。逐級試到第一次不過，副本恢復最後過門的一級；整個 case 都過且單位成本下降才換上。`promote_by: claude` 或正式定義正在用時，留下 `pending_promote`。後者的 daemon 清單由呼叫者在實際換上時再提供。
 

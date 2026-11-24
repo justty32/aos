@@ -6,7 +6,7 @@
 #   11-21 使用者選「不寫」：new 是純粹的照抄（thinking 2026-11/21/小事八題-使用者已答-1121.md 第 6 題）。
 # 介面（py/docs/01 的契約）：stdin 收 {"op": "new"|"check"|"tools"|"llm"|"system", …}；別的鍵＝ArgumentsBad：
 #   new {template | from, path}  template＝內建範本的名字（$AOS_HOME/templates/<名>，例 agent-fsm；不在＝DefMissing 並列出有哪些）；
-#       from（範本資料夾；字串路徑，或指示詞 {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}）整份複製到 path：
+#       from（範本資料夾；字串路徑，或指示詞 {"$env": "AOS_HOME", "$path": "/templates/agents/agent-fsm"}）整份複製到 path：
 #       symlinks 照搬、略過 __pycache__；path 哪裡都行（能不能寫交給 Linux 權限）、已經在＝DefExists；from 不是資料夾＝DefMissing。
 #       相對路徑從 $AOS_WS 算。from 用字面路徑、不解開捷徑（同舊 agents 11-10 TC）；path 解開捷徑（同舊 agents 的 write_path）。
 #       指示詞：act／aos-tools call／aos-exec 都把 arguments 原樣交給工具（11-10 實測），所以這裡自己經 py/aos/directive_value.py（aos-directive）解，
@@ -89,13 +89,13 @@ def source_path():
     """from：字串＝路徑；物件＝指示詞，經 aos-directive 解成路徑字串。"""
     if ("template" in args) == ("from" in args):
         die("ArgumentsBad", "new needs template (a stock template name like \"agent-fsm\") or from (a folder), not both")
-    if "template" in args:                      # 內建範本的名字＝$AOS_HOME/templates/<名>（小模型寫不好 {"$env": …} 的鍵，11-10 gemma 實測）
+    if "template" in args:                      # 內建範本的名字＝$AOS_HOME/templates/agents/<名>（小模型寫不好 {"$env": …} 的鍵，11-10 gemma 實測）
         name, home = text("template"), os.environ.get("AOS_HOME")
         if not home:
             die("DirectiveBad", "template %r: environment variable AOS_HOME is not set" % name)
         if "/" in name or name.startswith("."):
             die("ArgumentsBad", "template must be a template name like \"agent-fsm\" (for any other folder use from)")
-        return os.path.join(home, "templates", name), name
+        return os.path.join(home, "templates", "agents", name), name
     v = args.get("from")
     if isinstance(v, dict):
         written = json.dumps(v, ensure_ascii=False)

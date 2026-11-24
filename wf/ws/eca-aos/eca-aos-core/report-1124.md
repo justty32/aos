@@ -10,7 +10,7 @@
 
 ### 現況
 
-- **怎麼長**：`py/aos/agentlib/cooldown.py` 的 `STEPS_S = (30, 60, 120, 240, 480, 900, 1800)`，第 n 次失敗等第 n 格，第 7 次起固定 1800 秒；成功一次就刪檔歸零。ops 說「失敗 6 次後排到 900 秒」，對得上第 6 格。這張表 eca（`aos-eca-turn`）與 fsm（`templates/agent-fsm/wait.py`）共用。
+- **怎麼長**：`py/aos/agentlib/cooldown.py` 的 `STEPS_S = (30, 60, 120, 240, 480, 900, 1800)`，第 n 次失敗等第 n 格，第 7 次起固定 1800 秒；成功一次就刪檔歸零。ops 說「失敗 6 次後排到 900 秒」，對得上第 6 格。這張表 eca（`aos-eca-turn`）與 fsm（`lib/aos/apps/agent_fsm/wait.py`）共用。
 - **上限在哪設**：兩處寫死，沒有設定可調：
   - `cooldown.py` 那張表的最後一格；
   - `wait.py` 約 585 行，BrainFailed 而 `retry: true` 時算 `wait_s = min(1800, max(step_s, retry_after_s))`。
@@ -36,7 +36,7 @@
 
 | 選項 | 做什麼 | 要改的檔 | 牽動的測試 |
 |---|---|---|---|
-| A 分錯誤種類的上限 | llm_http 的錯多一格（例 `phase`: connect／read／http），wait.py 遇到「連不上」用較短的上限（例 60 秒），其他照舊 | `py/tools/base/llm_http/_entry`（錯誤物件加欄）、`templates/agent-fsm/wait.py`（算 wait_s 那段）、`py/aos/agentlib/cooldown.py`（`fail` 收上限，或表外另給）；kernel 不用改 | `py/tools/base/llm_http/tests/test_llm_http.py`（錯誤形狀）、`templates/tests/agent-fsm/test_cooldown.py`（約 186～191 行的上限案例）、`test_hooks.py`、`test_selfheal.py` |
+| A 分錯誤種類的上限 | llm_http 的錯多一格（例 `phase`: connect／read／http），wait.py 遇到「連不上」用較短的上限（例 60 秒），其他照舊 | `py/tools/base/llm_http/_entry`（錯誤物件加欄）、`lib/aos/apps/agent_fsm/wait.py`（算 wait_s 那段）、`py/aos/agentlib/cooldown.py`（`fail` 收上限，或表外另給）；kernel 不用改 | `py/tools/base/llm_http/tests/test_llm_http.py`（錯誤形狀）、`templates/tests/agent-fsm/test_cooldown.py`（約 186～191 行的上限案例）、`test_hooks.py`、`test_selfheal.py` |
 | B 冷卻中探端點 | 冷卻期間便宜地看端點活了沒，活了就當作到了 | wait.py 不知道端點位址（包在 kernel 那邊），要嘛 kernel 公布端點健康（新檔或新信），wait.py 讀；要嘛加一種「探」的信。動 `py/tools/aos/kernel_llm/`、`py/aos/apps/` 的 aos-llm（若加信種）、wait.py | kernel_llm 的 tests、test_cooldown.py、`py/tests/apps/agent/test_listen_brain_failure.py` |
 | C 給上層「立刻重試」 | 一個指令或工具動作，刪掉那隻的 cooldown.json（`cooldown.clear` 已有） | `py/aos/apps/agent/`（新子命令，例 `aos-agent ctl retry`）、`py/tools/agent/subagent`、`agents_ctl`、`self_*`（要不要加 op）、知識庫 | `py/tests/apps/agent/`（新測試）、subagent／agents_ctl 的 tests |
 | D 改措辭、附下次重試時刻 | brain_notify 用事件的 `wait_s` 算出本機時刻；`EndpointFailed`（或 A 的 phase＝connect）改寫成「端點沒回應，要人看一下；下次 HH:MM 重試」，拿掉 no action is needed | `py/tools/agent/brain_notify/_entry`；知識庫 `aos/brain.md` 第 26 行 | `templates/tests/agent-fsm/test_brain_notify.py`（有斷言舊句子） |
@@ -49,7 +49,7 @@
 ### 原因（暫存設定實測過）
 
 - **主因是 `--strict-mcp-config`**，不是 `--setting-sources project,local`。
-  - 範本 `templates/eca-claude/cli.json` 的 flags 兩個都帶；aos 另外經 `py/aos/agentlib/cli_mcp.py`（約 196～200 行）加 `--mcp-config <小格的 mcp.json>`，裡面只有 aos 自己那台。
+  - 範本 `templates/agents/eca-claude/cli.json` 的 flags 兩個都帶；aos 另外經 `py/aos/agentlib/cli_mcp.py`（約 196～200 行）加 `--mcp-config <小格的 mcp.json>`，裡面只有 aos 自己那台。
   - `claude --help` 寫明 `--strict-mcp-config`「Only use MCP servers from --mcp-config, ignoring all other MCP configurations」。
 - **專案層 mcpServers 實際存在哪**：`claude mcp add` 預設的 local 範圍，存在**設定資料夾**的 `.claude.json` 的 `projects["<專案的絕對路徑>"].mcpServers`。
   - 設定資料夾＝`$CLAUDE_CONFIG_DIR`，沒設才是 `~`。這棵樹的 eca 帶 `CLAUDE_CONFIG_DIR=~/.claude-alt`。

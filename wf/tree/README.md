@@ -13,13 +13,13 @@ cd ~/aos-home && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK -u AOS_KERNEL -u AO
 **這份定義不能再單獨起成一台根**（11-23 起）：單獨起照樣起得來、不印任何警告，但底下的 agent 拿不到 `AOS_CLOCK`，on_clock hook（收信通知 mail_notify、context 收尾 context_wrap 等）都不跑。更容易看錯的是起過舊定義的 stack：表上留著的舊 `_clock` 列會被接回、照樣每秒寫 `.stack/clock`，看起來鐘在走，agent 還是拿不到（11-23 暫存樹實跑過）。
 
 - **還沒改成這套的那台（家機 11-23）**：pull 之後**先照說明書[「家機照做」](../workflows/dev-env/03-換機.md#家機照做從舊樣子改成同一套做一次)改成 `~/aos-home` 一套，再起樹**。以前那行 `cd ~/repo/aos && … aos-exec --stack .stack wf/tree/root` 不要再用。
-- **真的得臨時單獨起**（還沒空改）：改起範本 `daemon-root`（它自己帶鐘），殼裡先 export 好 `AOS_LLM_KERNEL`：`cd ~/repo/aos && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK aos-exec --stack .stack "$AOS_HOME/templates/daemon-root"`（11-23 暫存樹實跑過，底下拿到 `AOS_CLOCK`）。殼裡忘了 export 的話，範本 `.env` 那行預設會把 `AOS_LLM_KERNEL` 指到 `../llms`，agent 問腦就一直等。
+- **真的得臨時單獨起**（還沒空改）：改起範本 `daemon-root`（它自己帶鐘），殼裡先 export 好 `AOS_LLM_KERNEL`：`cd ~/repo/aos && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK aos-exec --stack .stack "$AOS_HOME/templates/daemons/daemon-root"`（11-23 暫存樹實跑過，底下拿到 `AOS_CLOCK`）。殼裡忘了 export 的話，範本 `.env` 那行預設會把 `AOS_LLM_KERNEL` 指到 `../llms`，agent 問腦就一直等。
 - **已經掛在 `~/aos-home` 底下的那台**更別單獨起（會 `DaemonExists`，或在上面的根沒開時起成一台沒帶 alt 帳號、也沒鐘的獨立根）。
 - **舊的 `_clock` 列要自己拿掉**：daemon 只在起來時讀一次 `daemon.json`，表上已有的列照記錄接回，所以改了定義、重起都不會讓它消失。下 `aos-daemon-ctl -d ~/repo/aos/.stack rm _clock` 一次就好（不用重起，暫存樹實跑過：拿掉後重起也不會回來）；留下的 `.stack/clock` 不再更新、沒人讀。
 
-## 跟範本 `proto8/templates/daemon-sub` 的差異
+## 跟範本 `proto8/templates/daemons/daemon-sub` 的差異
 
-11-23 拿掉鐘之後，它跟子 daemon 範本 [`daemon-sub`](../../proto8/templates/daemon-sub/README.md) 設定一樣（`daemon.json` 只有 `procs_requests` 與同一列 `_sweeper`，`.env` 只設 `AOS_HOME=${AOS_HOME}`，`_entry` 同一行 argv），差在：
+11-23 拿掉鐘之後，它跟子 daemon 範本 [`daemon-sub`](../../proto8/templates/daemons/daemon-sub/README.md) 設定一樣（`daemon.json` 只有 `procs_requests` 與同一列 `_sweeper`，`.env` 只設 `AOS_HOME=${AOS_HOME}`，`_entry` 同一行 argv），差在：
 
 - `.env`：第一行寫明是 `repo-aos` 那一列；多三行註解：`AOS_LLM_KERNEL` 從那一列的環境值來、故意不給預設（那一列忘了帶時，agent-fsm 第一次問腦就停下，`procs/<名>/stderr.txt` 寫 `agent-fsm: error: LlmKernelMissing AOS_LLM_KERNEL is not set …`，不會指向不存在的資料夾默默一直等）、不要在這裡設 `AOS_KERNEL`（權限站是各台的）。
 - `daemon.json`：展開排版（原本從家機舊樹 `~/aos-home/root/` 抄來的樣子），說明句寫明是 repo 那棵。

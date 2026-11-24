@@ -2,14 +2,14 @@
 
 ← [proto8](../README.md)｜下半：[慣例（下）](CONVENTION/00-慣例-下.md)｜proto8 原則：[CONCEPTS](CONCEPTS.md)、[NORMS](NORMS.md)
 
-**aos 本身只保證六個環境變數和一支 `aos-exec`（已升成規範 N-57～N-62），其餘全是慣例**：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂。**標準＝[templates/agent-fsm](../templates/README.md#agent-fsm) 現在的樣子（走 queue），stack 裡面自由。** 這兩份只放條文本體；例子、細節、原話、出處在每組標題連的分檔（前言、依據寫法、實作說明、命名原文在 [00-前言-命名-實作](CONVENTION/00-前言-命名-實作.md)）。條號不重編。
+**aos 本身只保證六個環境變數和一支 `aos-exec`（已升成規範 N-57～N-62），其餘全是慣例**：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂。**標準＝[templates/agents/agent-fsm](../templates/README.md#agent-fsm) 現在的樣子（走 queue），stack 裡面自由。** 這兩份只放條文本體；例子、細節、原話、出處在每組標題連的分檔（前言、依據寫法、實作說明、命名原文在 [00-前言-命名-實作](CONVENTION/00-前言-命名-實作.md)）。條號不重編。
 
 ## 保證的底、佈局、命名
 
 **[一、aos 保證的；二、佈局](CONVENTION/01-保證佈局入口/01-一-aos-保證的與二-佈局.md)**（[命名](CONVENTION/00-前言-命名-實作.md)）
 - **P-01～P-04** aos 保證的底（六個環境變數、`aos-exec` 命令列、它只做的那幾件事、退 1 的情形）已升成規範：P-01＝N-57、P-02＝N-58、P-03＝N-59、P-04＝N-60；找入口（N-61）、`#/`（N-62）沒有 P 號。條號只留給別處引用。
 - **佈局** 一個 agent＝一個資料夾程式：狀態表一律寫在 `fsm.json`，每格是一個資料夾程式或一張單子（P-09），範本的格是單子、叫範本裡的一支程式；stack 裡（直接 aos-exec 時預設 `$AOS_WS/.stack/`，掛 daemon 見 P-18）有 `stage.txt` 記 fsm 停在哪格、`queue/`、`history.jsonl`、`think/`、工具小格 `tools/<登記名>/`；stack 樹就是呼叫樹；fsm 不寫 trace。
-- **時鐘** 只放在根 daemon（daemon.json 的 `procs` 一列跑 `aos-clock`，根的 `.env` 設 `AOS_CLOCK`）；子 daemon 範本（[`templates/daemon-sub/`](../templates/daemon-sub/README.md)）預設不帶、聽外層的鐘（有特殊需求的由人手動加），aos-daemon 程式不認時鐘。
+- **時鐘** 只放在根 daemon（daemon.json 的 `procs` 一列跑 `aos-clock`，根的 `.env` 設 `AOS_CLOCK`）；子 daemon 範本（[`templates/daemons/daemon-sub/`](../templates/daemons/daemon-sub/README.md)）預設不帶、聽外層的鐘（有特殊需求的由人手動加），aos-daemon 程式不認時鐘。
 - **命名** loop.json 與 fsm 格要跑的東西都叫 `exec`；時間點叫 `<發生了什麼>_at`，計數說「次」；純文字檔帶 `.txt`；指示詞的檔內位置寫在 `#` 右邊；入口預設名 `_entry`，不認得的 key 一律忽略，`_` 開頭沒有特別意思。
 
 ## 入口、loop、fsm
@@ -32,7 +32,7 @@
 
 **[P-42](CONVENTION/02-題目stack停錯腦/02-P-42.md)、[P-43](CONVENTION/02-題目stack停錯腦/03-P-43-本文.md)（[續：aos-agent 介面](CONVENTION/02-題目stack停錯腦/03-P-43續-11-04-aos-agent.md)）、[P-48](CONVENTION/02-題目stack停錯腦/10-P-48.md)**
 - **P-42** 對話協議：人或程式對跑著的 agent 說話、看、停，只碰它 stack 裡的三樣——queue、history、ctl／state 窗；agent 本身仍是函數、沒有 ctl。人經 `aos-agent say`／`listen`／`chat`（只限掛在 daemon 上的）；aos-agent 只認定義的 `interfaces.json` 宣告、不驗內容；跑完要不要結束寫在定義裡；外部 coding agent 也只碰這三樣。
-- **P-43** 外部 coding agent（eca：claude code、codex 這類）包成一個資料夾程式（範本 `templates/eca-claude`）：`_entry` 直接是 aos-loop，`loop.json` 叫 `aos-eca-turn`，`cli.json` 寫 `kind` 與旗標；跟 agent-fsm 一樣有開三個窗的 `loop.json`、stack 三樣、`tools.json`，入口不同（agent-fsm 是 `ctl add`＋`body.json`）；它是平級的另一隻 agent、內部黑盒，aos 只碰它 stack 的三樣與它的 session 檔。aos-eca-turn 一次替它答一批，交給 CLI 就算完成。
+- **P-43** 外部 coding agent（eca：claude code、codex 這類）包成一個資料夾程式（範本 `templates/agents/eca-claude`）：`_entry` 直接是 aos-loop，`loop.json` 叫 `aos-eca-turn`，`cli.json` 寫 `kind` 與旗標；跟 agent-fsm 一樣有開三個窗的 `loop.json`、stack 三樣、`tools.json`，入口不同（agent-fsm 是 `ctl add`＋`body.json`）；它是平級的另一隻 agent、內部黑盒，aos 只碰它 stack 的三樣與它的 session 檔。aos-eca-turn 一次替它答一批，交給 CLI 就算完成。
 - **P-48** agent 之間的往來走信箱 `<stack>/mailbox/`（aos-post 箱子，跟 queue 分開、不自己進 history）；信是 JSON、STATUS 六種，人用 `aos-mailbox`、腦用 `mailbox_*` 工具，自己決定何時看；範本預設每 1 分鐘看一次信箱、有新信才提醒。a2a 協議先不原生支援，頂多做中轉。
 
 ## stack

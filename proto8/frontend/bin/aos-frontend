@@ -13,7 +13,7 @@ usage: aos-frontend [--port 8767] [--home DIR] serve     run the page on 127.0.0
        aos-frontend decide [--team T] FILE                a user-zone letter body -> teams/T/outbox/<id>.json; prints the id
        aos-frontend match REPLY_FOLDER                    is the zone's answered letter the one the captain wrote?
        aos-frontend aide-def [--template DIR] PATH        make the team's aide definition PATH: copy the agent-fsm template
-                                                      (--template, else $AOS_HOME/templates/agent-fsm), then lay every
+                                                      (--template, else $AOS_HOME/templates/agents/agent-fsm), then lay every
                                                       file of aide-def/ over it (not _index.json); a relative PATH starts
                                                       at $AOS_WS when set, else here
   the aide (an on_clock hook of agent <team>-aide-1; event JSON on stdin):
@@ -3003,7 +3003,7 @@ def cmd_aide_def(home, args):
         ah = os.environ.get("AOS_HOME")
         if not ah:
             raise Fail("TemplateMissing", "AOS_HOME is not set; give --template DIR (the agent-fsm template folder)")
-        tpl = os.path.join(ah, "templates", "agent-fsm")
+        tpl = os.path.join(ah, "templates", "agents", "agent-fsm")
     tpl = os.path.abspath(tpl)
     if not os.path.isfile(os.path.join(tpl, "interfaces.json")):
         raise Fail("TemplateMissing", "%s is not an agent definition (no interfaces.json)" % tpl)

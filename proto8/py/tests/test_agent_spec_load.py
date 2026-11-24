@@ -1,4 +1,4 @@
-"""Test defs.load of py/aos/agent_spec.py (one agent.py built on another: the loaded agent's fields, worked out when agent.py runs, nothing of the base left in the files) and templates/reviewer rewritten as one agent.py."""
+"""Test defs.load of py/aos/agent_spec.py (one agent.py built on another: the loaded agent's fields, worked out when agent.py runs, nothing of the base left in the files) and templates/agents/reviewer rewritten as one agent.py."""
 import json
 import os
 from pathlib import Path
@@ -12,12 +12,12 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from agent_spec_helpers import HEAD, TEMPLATES, WithHome, agent, defs, fake_home, plain, run_agent, snapshot  # noqa: E402
 
-# templates/reviewer written as one agent.py (design 04, third cut's check): compared with the hand-written files, the template is not changed
+# templates/agents/reviewer written as one agent.py (design 04, third cut's check): compared with the hand-written files, the template is not changed
 REVIEWER = '''\
 std = defs.std
 
 def cell(name):
-    return ["python3", defs.home("/templates/agent-fsm/%s.py" % name)]
+    return ["python3", defs.home("/lib/aos/apps/agent_fsm/%s.py" % name)]
 
 agent = defs.Agent(
     "Review measured definition costs and prescribe a fix or split when model downgrades fail.",
@@ -256,7 +256,7 @@ class Inherit(WithHome):
         mine = {n: stock[n] for n in both}
         self.assertEqual(hooks([stock, eca, mine])[both[0]], stock[both[0]])        # written after them: picked
         self.assertRaises(defs.SpecBad, hooks, [stock, mine, eca])                              # written between: not picked
-        self.assertEqual(hooks([defs.std.hooks(), defs.std.hooks()])["description"].count("templates/agent-fsm/hookeds.json"), 1)
+        self.assertEqual(hooks([defs.std.hooks(), defs.std.hooks()])["description"].count("templates/agents/agent-fsm/hookeds.json"), 1)
         h = defs.std.hooks()["timer"]
         h["every_ms"] = 1
         self.assertNotEqual(defs.std.hooks()["timer"]["every_ms"], 1)
@@ -269,19 +269,19 @@ class Inherit(WithHome):
 
 
 class Reviewer(unittest.TestCase):
-    """templates/reviewer written as one agent.py gives the same definition as the hand-written files (third cut's check)."""
+    """templates/agents/reviewer written as one agent.py gives the same definition as the hand-written files (third cut's check)."""
 
     def test_same_as_the_template(self):
         with tempfile.TemporaryDirectory(prefix="agent-spec-") as tmp:
             dest = Path(tmp) / "reviewer"
             dest.mkdir()
-            shutil.copy(TEMPLATES / "reviewer" / "system.txt", dest / "system.hand.txt")
+            shutil.copy(TEMPLATES / "agents" / "reviewer" / "system.txt", dest / "system.hand.txt")
             (dest / "agent.py").write_text(HEAD + REVIEWER)
             r = run_agent(dest / "agent.py", "--compile", home=fake_home(tmp))
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(os.readlink(dest / "system.txt"), "system.hand.txt")     # cut 4: a link to the file kept by hand
             made = snapshot(dest)
-        want = snapshot(TEMPLATES / "reviewer")
+        want = snapshot(TEMPLATES / "agents" / "reviewer")
         self.assertEqual(sorted(made), sorted(list(want) + ["agent.py", "system.hand.txt"]))
         self.assertEqual(made["system.txt"], want["system.txt"])
         for name in sorted(want):

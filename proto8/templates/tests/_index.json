@@ -34,7 +34,7 @@
   "description": "驗 eca-pi 範本（11-18）：cli.json 讀得過、kind pi、畫面子介面同 eca-claude、工具登記檔跟 eca-claude 同一份、hook 格都驗得過。"
  },
  "test_fake_slow.py": {
-  "description": "the demo endpoint function fake_slow (templates/kernel/llm-kernel) finds lib/tools/base/llm_fake and passes its answer back."
+  "description": "the demo endpoint function fake_slow (templates/kernels/llm-kernel) finds lib/tools/base/llm_fake and passes its answer back."
  },
  "test_paths_move.py": {
   "description": "Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to anothe…"

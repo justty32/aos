@@ -11,8 +11,9 @@ import unittest
 
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
-CASES = (("agent-fsm", "idle.py"), ("agent-fsm", "brain.py"), ("agent-fsm", "wait.py"), ("agent-fsm", "act.py"),
-         ("tool-python", "tool.py"), ("judge-llm", "_entry"))
+CELLS = "py/aos/apps/agent_fsm"   # 11-24 起 agent-fsm 的格在這裡（不在範本裡）
+CASES = ((CELLS, "idle.py"), (CELLS, "brain.py"), (CELLS, "wait.py"), (CELLS, "act.py"),
+         ("templates/tools/tool-python", "tool.py"), ("templates/tools/judge-llm", "_entry"))
 
 
 class HomeRule(unittest.TestCase):
@@ -20,7 +21,7 @@ class HomeRule(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp(prefix="home-rule-"))
         for name in {c[0] for c in CASES}:
-            shutil.copytree(PROTO / "templates" / name, cls.tmp / name, ignore=shutil.ignore_patterns("__pycache__", "tests"))
+            shutil.copytree(PROTO / name, cls.tmp / Path(name).name, ignore=shutil.ignore_patterns("__pycache__", "tests"))
 
     @classmethod
     def tearDownClass(cls):
@@ -31,7 +32,7 @@ class HomeRule(unittest.TestCase):
         env.update(PYTHONNOUSERSITE="1", PYTHONDONTWRITEBYTECODE="1")
         if home:
             env["AOS_HOME"] = str(PROTO)
-        return subprocess.run([sys.executable, str(self.tmp / folder / program), "--help"], cwd=str(self.tmp),
+        return subprocess.run([sys.executable, str(self.tmp / Path(folder).name / program), "--help"], cwd=str(self.tmp),
                               env=env, capture_output=True, text=True, timeout=60)
 
     def test_with_home_runs(self):

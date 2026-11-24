@@ -14,7 +14,7 @@ from aos import hook_point
 from aos.hook_point import PointsBad
 
 SHIPPED = {"loop": PY / "aos" / "apps" / "hook" / "loop_hooks.json",
-           "agent-fsm": ROOT / "templates" / "agent-fsm" / "hooks.json",
+           "agent-fsm": PY / "aos" / "apps" / "agent_fsm" / "hooks.json",
            "eca": PY / "aos" / "apps" / "eca" / "hooks.json",
            "mcp": PY / "aos" / "apps" / "mcp" / "hooks.json",
            "kernel": PY / "tools" / "aos" / "kernel" / "kernel_hooks.json"}

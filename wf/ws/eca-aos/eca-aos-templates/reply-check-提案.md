@@ -6,7 +6,7 @@ agent-fsm 收尾時「有 REQUEST 還沒回就提醒一次」的狀態機設計�
 
 ## 現象
 
-ops-patrol（agent-fsm、gpt sol）11-23 做完工作沒寄回信，要上層 `say` 提醒才寄；排隊中的那則 `say` 又讓它多寄一封重複的確認。system 文字 11-24 已補一句「寄出回信是最後一步，給最後答案之前先確認每個接下的 request 都有它唯一的一封回信」（`templates/agent-fsm/system.txt` 第 10 段）。這份是另一半：不靠腦記得，由狀態機在收尾時看一次。
+ops-patrol（agent-fsm、gpt sol）11-23 做完工作沒寄回信，要上層 `say` 提醒才寄；排隊中的那則 `say` 又讓它多寄一封重複的確認。system 文字 11-24 已補一句「寄出回信是最後一步，給最後答案之前先確認每個接下的 request 都有它唯一的一封回信」（`templates/agents/agent-fsm/system.txt` 第 10 段）。這份是另一半：不靠腦記得，由狀態機在收尾時看一次。
 
 ## 做法：照 goal 提醒的樣子放在 idle 格
 

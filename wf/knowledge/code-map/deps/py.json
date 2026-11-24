@@ -63,7 +63,7 @@
    "kind": "lib",
    "module": "aos.agentlib",
    "unit": "proto8/py/aos/agentlib",
-   "used_by": "proto8/py/aos/agent_spec_agent.py proto8/py/aos/agent_spec_hooks.py proto8/py/aos/apps/agent proto8/py/aos/apps/eca proto8/py/aos/apps/mcp proto8/py/aos/gdb proto8/py/tools/agent/agent_def proto8/py/tools/agent/agents_ctl proto8/py/tools/agent/board_clear proto8/py/tools/agent/board_ls proto8/py/tools/agent/board_read proto8/py/tools/agent/board_set proto8/py/tools/agent/board_wait proto8/py/tools/agent/claude proto8/py/tools/agent/clock_register proto8/py/tools/agent/codex proto8/py/tools/agent/context_wrap proto8/py/tools/agent/do_task proto8/py/tools/agent/fork proto8/py/tools/agent/goal proto8/py/tools/agent/kernel_gate proto8/py/tools/agent/mailbox_peek proto8/py/tools/agent/mailbox_read proto8/py/tools/agent/mailbox_send proto8/py/tools/agent/screen_linger proto8/py/tools/agent/self_ctl proto8/py/tools/agent/self_history proto8/py/tools/agent/self_hook proto8/py/tools/agent/self_llm proto8/py/tools/agent/self_state proto8/py/tools/agent/self_system proto8/py/tools/agent/self_tools proto8/py/tools/agent/subagent proto8/py/tools/agent/user_send proto8/py/tools/agent/user_verify proto8/templates/agent-fsm",
+   "used_by": "proto8/py/aos/agent_spec_agent.py proto8/py/aos/agent_spec_hooks.py proto8/py/aos/apps/agent proto8/py/aos/apps/agent_fsm proto8/py/aos/apps/eca proto8/py/aos/apps/mcp proto8/py/aos/gdb proto8/py/tools/agent/agent_def proto8/py/tools/agent/agents_ctl proto8/py/tools/agent/board_clear proto8/py/tools/agent/board_ls proto8/py/tools/agent/board_read proto8/py/tools/agent/board_set proto8/py/tools/agent/board_wait proto8/py/tools/agent/claude proto8/py/tools/agent/clock_register proto8/py/tools/agent/codex proto8/py/tools/agent/context_wrap proto8/py/tools/agent/do_task proto8/py/tools/agent/fork proto8/py/tools/agent/goal proto8/py/tools/agent/kernel_gate proto8/py/tools/agent/mailbox_peek proto8/py/tools/agent/mailbox_read proto8/py/tools/agent/mailbox_send proto8/py/tools/agent/screen_linger proto8/py/tools/agent/self_ctl proto8/py/tools/agent/self_history proto8/py/tools/agent/self_hook proto8/py/tools/agent/self_llm proto8/py/tools/agent/self_state proto8/py/tools/agent/self_system proto8/py/tools/agent/self_tools proto8/py/tools/agent/subagent proto8/py/tools/agent/user_send proto8/py/tools/agent/user_verify",
    "uses": "aos.declared_files aos.directive_value aos.flags aos.hook_lists aos.hook_point aos.hook_run aos.mcp_server_file aos.process_group aos.tool_io aos.ws"
   },
   {
@@ -72,6 +72,13 @@
    "unit": "proto8/py/aos/apps/agent",
    "used_by": "proto8/py/aos/py",
    "uses": "aos.agentlib.cli_a2a aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_linger aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.comm aos.comm.walk aos.daemon_ctl aos.declared_files aos.directive_value aos.flags aos.ws"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.agent_fsm",
+   "unit": "proto8/py/aos/apps/agent_fsm",
+   "used_by": "",
+   "uses": "aos.agentlib.agent_hooks aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.agentlib.tool_clear aos.declared_files aos.flags aos.hook_run aos.metainfo aos.observed aos.observed_children aos.ws"
   },
   {
    "kind": "app",
@@ -245,7 +252,7 @@
    "kind": "lib",
    "module": "aos.declared_files",
    "unit": "proto8/py/aos/declared_files.py",
-   "used_by": "proto8/py/aos/agent_spec_parts.py proto8/py/aos/agentlib proto8/py/aos/apps/agent proto8/py/tools/agent/agent_def proto8/py/tools/aos/shell_report proto8/templates/agent-fsm",
+   "used_by": "proto8/py/aos/agent_spec_parts.py proto8/py/aos/agentlib proto8/py/aos/apps/agent proto8/py/aos/apps/agent_fsm proto8/py/tools/agent/agent_def proto8/py/tools/aos/shell_report",
    "uses": ""
   },
   {
@@ -280,7 +287,7 @@
    "kind": "lib",
    "module": "aos.flags",
    "unit": "proto8/py/aos/flags.py",
-   "used_by": "proto8/py/aos/agent_spec.py proto8/py/aos/agent_spec_load.py proto8/py/aos/agentlib proto8/py/aos/apps/agent proto8/py/aos/apps/asuser proto8/py/aos/apps/clock proto8/py/aos/apps/clock_register proto8/py/aos/apps/comm proto8/py/aos/apps/daemon_ctl proto8/py/aos/apps/eca proto8/py/aos/apps/feedback proto8/py/aos/apps/gdb proto8/py/aos/apps/grow proto8/py/aos/apps/hook proto8/py/aos/apps/json_view proto8/py/aos/apps/mailbox proto8/py/aos/apps/mcp proto8/py/aos/apps/mcp_import proto8/py/aos/apps/sandbox proto8/py/aos/apps/share proto8/py/aos/apps/sweeper proto8/py/aos/apps/tools proto8/py/aos/clock_register.py proto8/py/aos/daemon_ctl proto8/py/aos/kernel_spec.py proto8/py/aos/spec_unit.py proto8/py/aos/sweep.py proto8/py/aos/sweep_proc.py proto8/py/aos/ws.py proto8/templates/agent-fsm proto8/templates/kernel/llm-kernel proto8/templates/start-api",
+   "used_by": "proto8/py/aos/agent_spec.py proto8/py/aos/agent_spec_load.py proto8/py/aos/agentlib proto8/py/aos/apps/agent proto8/py/aos/apps/agent_fsm proto8/py/aos/apps/asuser proto8/py/aos/apps/clock proto8/py/aos/apps/clock_register proto8/py/aos/apps/comm proto8/py/aos/apps/daemon_ctl proto8/py/aos/apps/eca proto8/py/aos/apps/feedback proto8/py/aos/apps/gdb proto8/py/aos/apps/grow proto8/py/aos/apps/hook proto8/py/aos/apps/json_view proto8/py/aos/apps/mailbox proto8/py/aos/apps/mcp proto8/py/aos/apps/mcp_import proto8/py/aos/apps/sandbox proto8/py/aos/apps/share proto8/py/aos/apps/sweeper proto8/py/aos/apps/tools proto8/py/aos/clock_register.py proto8/py/aos/daemon_ctl proto8/py/aos/kernel_spec.py proto8/py/aos/spec_unit.py proto8/py/aos/sweep.py proto8/py/aos/sweep_proc.py proto8/py/aos/ws.py proto8/templates/kernels/llm-kernel proto8/templates/starts/start-api",
    "uses": "aos.tool_io"
   },
   {
@@ -329,7 +336,7 @@
    "kind": "lib",
    "module": "aos.hook_run",
    "unit": "proto8/py/aos/hook_run.py",
-   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/hook proto8/py/tools/aos/kernel proto8/templates/agent-fsm",
+   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/agent_fsm proto8/py/aos/apps/hook proto8/py/tools/aos/kernel",
    "uses": "aos.directive_value aos.hook_lists"
   },
   {
@@ -392,21 +399,21 @@
    "kind": "lib",
    "module": "aos.metainfo",
    "unit": "proto8/py/aos/metainfo.py",
-   "used_by": "proto8/py/aos/apps/mcp proto8/py/tools/aos/metainfo_check proto8/templates/agent-fsm",
+   "used_by": "proto8/py/aos/apps/agent_fsm proto8/py/aos/apps/mcp proto8/py/tools/aos/metainfo_check",
    "uses": ""
   },
   {
    "kind": "lib",
    "module": "aos.observed",
    "unit": "proto8/py/aos/observed.py",
-   "used_by": "proto8/py/aos/observed_children.py proto8/py/aos/shell_observed.py proto8/py/tools/aos/measure proto8/py/tools/aos/review_round proto8/py/tools/aos/watch proto8/templates/agent-fsm proto8/templates/judge-llm",
+   "used_by": "proto8/py/aos/apps/agent_fsm proto8/py/aos/observed_children.py proto8/py/aos/shell_observed.py proto8/py/tools/aos/measure proto8/py/tools/aos/review_round proto8/py/tools/aos/watch proto8/templates/tools/judge-llm",
    "uses": "aos.observed_children aos.tool_io"
   },
   {
    "kind": "lib",
    "module": "aos.observed_children",
    "unit": "proto8/py/aos/observed_children.py",
-   "used_by": "proto8/py/aos/observed.py proto8/py/tools/agent/fork proto8/py/tools/agent/subagent proto8/templates/agent-fsm",
+   "used_by": "proto8/py/aos/apps/agent_fsm proto8/py/aos/observed.py proto8/py/tools/agent/fork proto8/py/tools/agent/subagent",
    "uses": "aos.observed aos.tool_io"
   },
   {
@@ -420,7 +427,7 @@
    "kind": "lib",
    "module": "aos.py",
    "unit": "proto8/py/aos/py",
-   "used_by": "proto8/py/aos/apps/gdb proto8/py/aos/gdb proto8/templates/agent-python proto8/templates/kernel/kernel-python proto8/templates/tool-python",
+   "used_by": "proto8/py/aos/apps/gdb proto8/py/aos/gdb proto8/templates/agents/agent-python proto8/templates/kernels/kernel-python proto8/templates/tools/tool-python",
    "uses": "aos.apps.agent aos.apps.daemon_ctl.main aos.fn_mark aos.fn_run aos.gdb"
   },
   {
@@ -483,7 +490,7 @@
    "kind": "lib",
    "module": "aos.tool_io",
    "unit": "proto8/py/aos/tool_io.py",
-   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/mcp_import proto8/py/aos/apps/mcp_launch proto8/py/aos/directive_value.py proto8/py/aos/flags.py proto8/py/aos/fn_run.py proto8/py/aos/index.py proto8/py/aos/json.py proto8/py/aos/json_multi.py proto8/py/aos/mcp_client.py proto8/py/aos/mcp_freeze.py proto8/py/aos/mcp_server_file.py proto8/py/aos/observed.py proto8/py/aos/observed_children.py proto8/py/aos/shell_observed.py proto8/py/aos/swap.py proto8/py/tools/agent/agent_def proto8/py/tools/agent/agents_ctl proto8/py/tools/agent/board_clear proto8/py/tools/agent/board_ls proto8/py/tools/agent/board_read proto8/py/tools/agent/board_set proto8/py/tools/agent/board_wait proto8/py/tools/agent/brain_notify proto8/py/tools/agent/claude proto8/py/tools/agent/clock_register proto8/py/tools/agent/codex proto8/py/tools/agent/context_wrap proto8/py/tools/agent/do_task proto8/py/tools/agent/fork proto8/py/tools/agent/gdb_trigger proto8/py/tools/agent/gdb_watch proto8/py/tools/agent/goal proto8/py/tools/agent/kernel_gate proto8/py/tools/agent/mail_notify proto8/py/tools/agent/mailbox_peek proto8/py/tools/agent/mailbox_read proto8/py/tools/agent/mailbox_send proto8/py/tools/agent/self_ctl proto8/py/tools/agent/self_history proto8/py/tools/agent/self_hook proto8/py/tools/agent/self_llm proto8/py/tools/agent/self_state proto8/py/tools/agent/self_system proto8/py/tools/agent/self_tools proto8/py/tools/agent/subagent proto8/py/tools/agent/todo proto8/py/tools/agent/tools_def proto8/py/tools/agent/user_send proto8/py/tools/agent/user_verify proto8/py/tools/aos/box_check proto8/py/tools/aos/defs proto8/py/tools/aos/feedback proto8/py/tools/aos/kernel proto8/py/tools/aos/kernel_llm proto8/py/tools/aos/llm_forward proto8/py/tools/aos/measure proto8/py/tools/aos/metainfo_check proto8/py/tools/aos/promote proto8/py/tools/aos/review_round proto8/py/tools/aos/rollback proto8/py/tools/aos/shell_report proto8/py/tools/aos/watch proto8/py/tools/base/copy proto8/py/tools/base/edit proto8/py/tools/base/glob proto8/py/tools/base/grep proto8/py/tools/base/llm_fake proto8/py/tools/base/llm_http proto8/py/tools/base/ls proto8/py/tools/base/math proto8/py/tools/base/mcp_tool proto8/py/tools/base/mkdir proto8/py/tools/base/move proto8/py/tools/base/peek_clock proto8/py/tools/base/peek_now_time proto8/py/tools/base/read proto8/py/tools/base/remove proto8/py/tools/base/run_python proto8/py/tools/base/shell proto8/py/tools/base/stat proto8/py/tools/base/trash proto8/py/tools/base/view proto8/py/tools/base/write proto8/py/tools/base/ws_write proto8/templates/judge-llm proto8/templates/kernel/llm-kernel proto8/templates/start-api",
+   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/mcp_import proto8/py/aos/apps/mcp_launch proto8/py/aos/directive_value.py proto8/py/aos/flags.py proto8/py/aos/fn_run.py proto8/py/aos/index.py proto8/py/aos/json.py proto8/py/aos/json_multi.py proto8/py/aos/mcp_client.py proto8/py/aos/mcp_freeze.py proto8/py/aos/mcp_server_file.py proto8/py/aos/observed.py proto8/py/aos/observed_children.py proto8/py/aos/shell_observed.py proto8/py/aos/swap.py proto8/py/tools/agent/agent_def proto8/py/tools/agent/agents_ctl proto8/py/tools/agent/board_clear proto8/py/tools/agent/board_ls proto8/py/tools/agent/board_read proto8/py/tools/agent/board_set proto8/py/tools/agent/board_wait proto8/py/tools/agent/brain_notify proto8/py/tools/agent/claude proto8/py/tools/agent/clock_register proto8/py/tools/agent/codex proto8/py/tools/agent/context_wrap proto8/py/tools/agent/do_task proto8/py/tools/agent/fork proto8/py/tools/agent/gdb_trigger proto8/py/tools/agent/gdb_watch proto8/py/tools/agent/goal proto8/py/tools/agent/kernel_gate proto8/py/tools/agent/mail_notify proto8/py/tools/agent/mailbox_peek proto8/py/tools/agent/mailbox_read proto8/py/tools/agent/mailbox_send proto8/py/tools/agent/self_ctl proto8/py/tools/agent/self_history proto8/py/tools/agent/self_hook proto8/py/tools/agent/self_llm proto8/py/tools/agent/self_state proto8/py/tools/agent/self_system proto8/py/tools/agent/self_tools proto8/py/tools/agent/subagent proto8/py/tools/agent/todo proto8/py/tools/agent/tools_def proto8/py/tools/agent/user_send proto8/py/tools/agent/user_verify proto8/py/tools/aos/box_check proto8/py/tools/aos/defs proto8/py/tools/aos/feedback proto8/py/tools/aos/kernel proto8/py/tools/aos/kernel_llm proto8/py/tools/aos/llm_forward proto8/py/tools/aos/measure proto8/py/tools/aos/metainfo_check proto8/py/tools/aos/promote proto8/py/tools/aos/review_round proto8/py/tools/aos/rollback proto8/py/tools/aos/shell_report proto8/py/tools/aos/watch proto8/py/tools/base/copy proto8/py/tools/base/edit proto8/py/tools/base/glob proto8/py/tools/base/grep proto8/py/tools/base/llm_fake proto8/py/tools/base/llm_http proto8/py/tools/base/ls proto8/py/tools/base/math proto8/py/tools/base/mcp_tool proto8/py/tools/base/mkdir proto8/py/tools/base/move proto8/py/tools/base/peek_clock proto8/py/tools/base/peek_now_time proto8/py/tools/base/read proto8/py/tools/base/remove proto8/py/tools/base/run_python proto8/py/tools/base/shell proto8/py/tools/base/stat proto8/py/tools/base/trash proto8/py/tools/base/view proto8/py/tools/base/write proto8/py/tools/base/ws_write proto8/templates/kernels/llm-kernel proto8/templates/starts/start-api proto8/templates/tools/judge-llm",
    "uses": ""
   },
   {
@@ -497,7 +504,7 @@
    "kind": "lib",
    "module": "aos.ws",
    "unit": "proto8/py/aos/ws.py",
-   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/agent proto8/py/aos/apps/eca proto8/py/aos/daemon_ctl proto8/templates/agent-fsm",
+   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/agent proto8/py/aos/apps/agent_fsm proto8/py/aos/apps/eca proto8/py/aos/daemon_ctl",
    "uses": "aos.flags"
   },
   {
@@ -1126,49 +1133,42 @@
   {
    "kind": "template",
    "module": "",
-   "unit": "proto8/templates/agent-fsm",
-   "used_by": "",
-   "uses": "aos.agentlib.agent_hooks aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.agentlib.tool_clear aos.declared_files aos.flags aos.hook_run aos.metainfo aos.observed aos.observed_children aos.ws"
-  },
-  {
-   "kind": "template",
-   "module": "",
-   "unit": "proto8/templates/agent-python",
+   "unit": "proto8/templates/agents/agent-python",
    "used_by": "",
    "uses": "aos.py.agent"
   },
   {
    "kind": "template",
    "module": "",
-   "unit": "proto8/templates/judge-llm",
-   "used_by": "",
-   "uses": "aos.observed aos.tool_io"
-  },
-  {
-   "kind": "template",
-   "module": "",
-   "unit": "proto8/templates/kernel/kernel-python",
+   "unit": "proto8/templates/kernels/kernel-python",
    "used_by": "",
    "uses": "aos.py.kernel"
   },
   {
    "kind": "template",
    "module": "",
-   "unit": "proto8/templates/kernel/llm-kernel",
+   "unit": "proto8/templates/kernels/llm-kernel",
    "used_by": "",
    "uses": "aos.flags aos.tool_io"
   },
   {
    "kind": "template",
    "module": "",
-   "unit": "proto8/templates/start-api",
+   "unit": "proto8/templates/starts/start-api",
    "used_by": "",
    "uses": "aos.flags aos.tool_io"
   },
   {
    "kind": "template",
    "module": "",
-   "unit": "proto8/templates/tool-python",
+   "unit": "proto8/templates/tools/judge-llm",
+   "used_by": "",
+   "uses": "aos.observed aos.tool_io"
+  },
+  {
+   "kind": "template",
+   "module": "",
+   "unit": "proto8/templates/tools/tool-python",
    "used_by": "",
    "uses": "aos.py.fn"
   }

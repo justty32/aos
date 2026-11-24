@@ -119,7 +119,7 @@ class Check:
             self.run(["cp", "-a", str(self.repo / name), str(image / name)])
         defs = image / "defs"
         defs.mkdir()
-        self.run(["cp", "-a", str(self.repo / "templates/agent-fsm"), str(defs / "agent")])
+        self.run(["cp", "-a", str(self.repo / "templates/agents/agent-fsm"), str(defs / "agent")])
         configs = {
             "root": {"interval_ms": 100, "procs": {
                 "_sweeper": SWEEPER,

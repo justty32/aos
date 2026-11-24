@@ -2,7 +2,7 @@
 
 `_entry` 把 `llm_rules` 交給 `round.run(pack, cfg_path, name="kernel_llm")`（骨架在 [`../kernel/`](../kernel/README.md)）。一輪做的事：收上一輪掛出去、已經跑完的問腦結果寄回信；再看 `$AOS_STACK/requests/new/` 裡排隊的請求信，照急不急排好，在格數與額度內請 daemon 把每封掛成一個問腦 proc（`llm_<信名>`），然後結束，不等它跑完。由那台 llm daemon 當身體一次次叫。
 
-範本 `templates/kernel/llm-kernel`、`templates/kernel/llm-team` 的身體就是這包。用法全文在下面的分檔。
+範本 `templates/kernels/llm-kernel`、`templates/kernels/llm-team` 的身體就是這包。用法全文在下面的分檔。
 
 ```json
 {"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel_llm"}, {"$env": "AOS_CD", "$path": "kernel.json"}]},

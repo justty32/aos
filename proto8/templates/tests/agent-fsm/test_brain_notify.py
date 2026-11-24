@@ -269,7 +269,7 @@ class BrainNotify(unittest.TestCase):
         self.assertEqual(self.calls(), [])
 
     def test_template_mount(self):
-        hooks = json.loads((PROTO / "templates" / "agent-fsm" / "hookeds.json").read_text())
+        hooks = json.loads((PROTO / "templates" / "agents" / "agent-fsm" / "hookeds.json").read_text())
         self.assertEqual(hooks["brain_notify"],
                          {"event": "brain_failed", "condition": ["BudgetMissing", "BrainFailed"],
                           "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/brain_notify"},
@@ -410,7 +410,7 @@ class BrainNotify(unittest.TestCase):
                                r'To stop it, use stop\.$')
 
     def test_eca_template_mount(self):
-        hooks = json.loads((PROTO / 'templates' / 'eca-claude' / 'hookeds.json').read_text())
+        hooks = json.loads((PROTO / 'templates' / 'agents' / 'eca-claude' / 'hookeds.json').read_text())
         self.assertEqual(hooks['brain_notify'],
                          {'event': 'brain_failed', 'condition': ['CliFailed', 'ReplyMissing'],
                           'handler': {'$env': 'AOS_HOME', '$path': '/lib/tools/agent/brain_notify'},

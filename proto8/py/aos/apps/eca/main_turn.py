@@ -14,7 +14,7 @@
     相對路徑從定義資料夾算；給了但不是檔＝PromptMissing、空字串＝ArgumentsBad、跟 --one 一起給＝ArgumentsBad（工具形沒有 queue）；
     沒給＝沒有開場白（不找 prompt.txt）。例：["aos-eca-turn", "--on-empty", "stop", "--prompt", "prompt.txt", {"$env": "AOS_CD"}]。
 
-定義資料夾＝eca 的定義（templates/eca-claude、eca-pi 那種）：頂層 cli.json（kind claude｜codex｜pi、flags、print_flags、timeout_ms〔0＝不限時〕；
+定義資料夾＝eca 的定義（templates/agents/eca-claude、eca-pi 那種）：頂層 cli.json（kind claude｜codex｜pi、flags、print_flags、timeout_ms〔0＝不限時〕；
   cli_session 讀的同一份；flags／print_flags 寫了 aos 自己會加的旗標＝CfgBad，在認領信之前就停、信留在 queue，清單見 cli_session.py 開頭；11-03 起選填 tools、tools_flags；寫了 prompt 不看，開場白走 --prompt）、選填 tools.json（aos-tools 的登記檔：cli.json 沒寫 tools
   就用它，接上 aos-mcp，工作區＝$AOS_WS、stack＝$AOS_STACK；11-03 eca-tools）。定義不被寫（P-15）；寫的都在 $AOS_STACK。
 

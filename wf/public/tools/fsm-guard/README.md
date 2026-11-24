@@ -40,7 +40,7 @@ Examples that pass: `rg -n 'rm accepted' x`, `pgrep -u "$USER" -af aos-daemon`, 
 
 ## Tests
     cd wf/public/tools/fsm-guard && python3 -m unittest discover -s tests -v
-(run with a clean environment: no AOS_* variables). The `Mounted` tests copy `proto8/templates/agent-fsm`, mount the guard in its hookeds.json and run the real act cell; they need an installed `proto8/` (with `lib/`) next to `wf/` and are skipped otherwise.
+(run with a clean environment: no AOS_* variables). The `Mounted` tests copy `proto8/templates/agents/agent-fsm`, mount the guard in its hookeds.json and run the real act cell; they need an installed `proto8/` (with `lib/`) next to `wf/` and are skipped otherwise.
 
 ## Author
 ok-astra (claude subagent, reviewed by ok-astra), 2026-11-14; the relaxed check went through three Argon review rounds. Moved to the hookeds.json format (hook cells `<stack>/hookeds/<hook>`) by repo-aos, 2026-11-21.

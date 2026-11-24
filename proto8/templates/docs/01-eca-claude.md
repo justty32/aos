@@ -56,19 +56,19 @@ eca-claude/
 - **pi 的對話會記程度**：pi 把程度記在對話檔裡，`--thinking` 有給就蓋過；`llm rm reasoning_effort` 之後同一段對話照用上次記的程度（不是回 pi 的預設），開新對話（`/clear`）才回預設。claude 每輪是新行程、程度不跟著對話走，拿掉就回 CLI 的預設。
 - `/status` 會多寫 `reasoning_effort X`（有設時）。
 
-**實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`（掛 daemon 的在 daemon 給的 proc 的 stack），裡面長 `queue/`、`history.jsonl`、`ctl.json`、`state.json` 與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）。這隻自己改過的還有 tools 與 llm 覆蓋層（只存差異；路徑依 `interfaces.json` 的同名欄位，此範本是 `tools.json`、`llm.json`，K-6）（`aos-agent tools`／`llm`；`aos-agent llm --target myproj set model=haiku`＝下一題起 `--model haiku`，`reset` 回定義的 sonnet）。換定義的模型＝`aos-json set --str proto8/templates/eca-claude/llm.json#/model opus`。eca 的腦是 CLI 自己，不經 llm kernel（think-as-function 03 § 2）。
+**實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`（掛 daemon 的在 daemon 給的 proc 的 stack），裡面長 `queue/`、`history.jsonl`、`ctl.json`、`state.json` 與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）。這隻自己改過的還有 tools 與 llm 覆蓋層（只存差異；路徑依 `interfaces.json` 的同名欄位，此範本是 `tools.json`、`llm.json`，K-6）（`aos-agent tools`／`llm`；`aos-agent llm --target myproj set model=haiku`＝下一題起 `--model haiku`，`reset` 回定義的 sonnet）。換定義的模型＝`aos-json set --str proto8/templates/agents/eca-claude/llm.json#/model opus`。eca 的腦是 CLI 自己，不經 llm kernel（think-as-function 03 § 2）。
 
 ```sh
 # PATH 要有 proto8/bin 的 aos-exec／aos-loop／aos-post／aos-daemon 與 aos-eca-turn、aos-eca-screen、aos-tools、aos-daemon-ctl、
 # aos-mcp、aos-agent（source 過 "$AOS_HOME/env.sh" 就都在），還有 claude；AOS_DAEMON＝跑著的 daemon 的 $AOS_STACK
-aos-agent ctl add --ws ~/code/myproj --name myproj proto8/templates/eca-claude
+aos-agent ctl add --ws ~/code/myproj --name myproj proto8/templates/agents/eca-claude
 aos-agent say --target myproj 看一下 README 在講什麼 && aos-agent listen --target myproj
 aos-agent ctl pause --target myproj  # 暫停：不餵下一則（新信留 queue/new/），粒度＝一則訊息
 aos-agent open --target myproj       # 接上畫面（Ctrl-] 跳出）
 aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才連 stack 刪）
 ```
 
-不掛 daemon、直接 `aos-exec --ws ~/code/myproj proto8/templates/eca-claude &` 跑的，aos-agent 不管：`aos-post send --ordered ~/code/myproj/.stack/queue` 寫信（stdin＝`{"role": "user", "content": 話}`）、看 `.stack/history.jsonl`、寫 `.stack/ctl.json` 停（`{"cmd": "pause"}`／`{"cmd": "stop"}`）。
+不掛 daemon、直接 `aos-exec --ws ~/code/myproj proto8/templates/agents/eca-claude &` 跑的，aos-agent 不管：`aos-post send --ordered ~/code/myproj/.stack/queue` 寫信（stdin＝`{"role": "user", "content": 話}`）、看 `.stack/history.jsonl`、寫 `.stack/ctl.json` 停（`{"cmd": "pause"}`／`{"cmd": "stop"}`）。
 
 `aos-eca-turn` 一次答一批（怎麼答、`--on-empty`／`--on-busy`、錯見 [05-commands/01](../../py/docs/05-commands/01-逐支說明.md)）。`--on-busy yield` 只管貼字那條路：畫面開著、信走 claude 的收件口（一封一個署名信封，11-13 [eca-a2a-notify](../../thinking/2026-11/13/eca-a2a-notify.md)）時不退讓，有人接在畫面上、正在跑一輪都照投，`loop.json` 不用改。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就放一份檔、aos-eca-turn 加 `--prompt 那個檔`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。**goal**（[thinking goal](../../thinking/2026-11/11/goal/README.md)）：queue 空、上一輪 CLI 答完了、`$AOS_STACK/goal.json` 是 active＝這輪的題目換成一則 `[aos] goal: …`（射後不理版也一樣：有 active 的 goal 就不收工）；這輪 CLI 自己的對話檔（`transcripts/`）裡叫了 `goal` 以外的工具＝計數歸零，連續 LIMIT 次（預設 10）沒進展＝goal 改 paused；codex 照同一套。
 

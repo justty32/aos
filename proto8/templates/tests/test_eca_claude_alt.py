@@ -7,7 +7,7 @@ from pathlib import Path
 import unittest
 
 TEMPLATES = Path(__file__).resolve().parents[1]
-SRC, ALT = TEMPLATES / "eca-claude", TEMPLATES / "eca-claude-alt"
+SRC, ALT = TEMPLATES / "agents" / "eca-claude", TEMPLATES / "agents" / "eca-claude-alt"
 DIFFER = {"README.md"}
 EXTRA = {".env", os.path.join("screen", ".env")}
 LINE = "CLAUDE_CONFIG_DIR=${HOME}/.claude-alt"

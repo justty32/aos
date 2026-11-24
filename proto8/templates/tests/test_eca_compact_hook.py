@@ -11,7 +11,7 @@ import unittest
 
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[2]
-TEMPLATE = PROTO / "templates" / "eca-claude"
+TEMPLATE = PROTO / "templates" / "agents" / "eca-claude"
 HANDLER = '''#!/usr/bin/env python3
 import json, os, sys
 ev = json.load(sys.stdin)
@@ -182,7 +182,7 @@ class CompactHook(unittest.TestCase):
         self.assertIn("your own notes are %s" % (ws / "wf/ws/boss/kid/notes.md"), r.stdout)
 
     def test_ann_is_the_same_file(self):
-        ann = PROTO / "templates" / "start-eca" / "agents" / "ann" / "compact_hook"
+        ann = PROTO / "templates" / "starts" / "start-eca" / "agents" / "ann" / "compact_hook"
         self.assertEqual(ann.read_bytes(), (TEMPLATE / "compact_hook").read_bytes())
 
 

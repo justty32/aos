@@ -2,7 +2,7 @@
 
 **aos-mcp - 把 aos-tools 登記的工具當 MCP tools，給外部 agent（Claude Code、codex…；eca 經 cli_session 自動接上）叫。**
 
-← [cmd](../../../docs/05-commands.md)｜用到的程式：[aos-tools](../tools/README.md)、[cpp](../../../../cpp/README.md)（aos-exec、aos-json）｜接它的：eca 範本 [templates/eca-claude](../../../../templates/docs/01-eca-claude.md)（`proto8/py/aos/agentlib/cli_mcp.py` 的 `mcp_argv`）、[aos-agent](../agent/README.md)
+← [cmd](../../../docs/05-commands.md)｜用到的程式：[aos-tools](../tools/README.md)、[cpp](../../../../cpp/README.md)（aos-exec、aos-json）｜接它的：eca 範本 [templates/agents/eca-claude](../../../../templates/docs/01-eca-claude.md)（`proto8/py/aos/agentlib/cli_mcp.py` 的 `mcp_argv`）、[aos-agent](../agent/README.md)
 
 ```
 aos-mcp/
@@ -21,4 +21,4 @@ aos-mcp/
 - **`--hooks DEF`**（[hook 圖紙 § 6](../../../../thinking/2026-11/10/self-family/hook/01-圖紙.md#6-eca-縮水版)）：DEF＝agent 的定義資料夾（被勾清單＝它 interfaces.json 最外層的 `hookeds`），清單＝定義那份疊 stack 那份（`py/aos/agentlib/hooks.py`）。`tools/call` 跑之前 `before_tool`（可改 arguments；攔下＝不跑、結果文字＝hook stdout，空就 `[aos] hook: tool NAME blocked by hook HOOK.`，不算 isError），跑完 `after_tool`（可改結果文字）；`before_tool` 的 hook 失敗（hook 停下）＝那次回 isError、文字是 `aos-mcp: error: HookFailed …`，櫃台不死；`after_tool` 的 hook 失敗＝stderr 一行 warning、結果照常回（11-21 agent 一家的規矩）。沒給＝沒有 hook；eca 由 cli_session 自動帶。
 - 工作區＝`--ws` ＞ `$AOS_WS`；stack＝`--stack` ＞ `$AOS_STACK` ＞ `$WS/.stack/`。短名 `-w`＝`--ws`、`-s`＝`--stack`、`-h`＝`--help`。旗標都寫在 REGISTRY 前面（照 [CONVENTION P-44](../../../../docs/CONVENTION/02-題目stack停錯腦/07-P-44.md)，用 `proto8/py/aos/flags.py`）。自己的錯 stderr 一行 `aos-mcp: error: 代號 原因` 退 1（`ArgumentsBad`、`FlagUnknown`〔不認得的旗標〕、`WsMissing`、`ToolMissing`〔REGISTRY 不是檔〕、`ToolsBad`〔啟動時 aos-tools ls 失敗，aos-tools 自己那行在前面〕）；跑起來之後登記檔壞了＝那一則回 JSON-RPC 錯誤（-32603）、不退，錯誤訊息附 aos-tools 那次 stderr 的最後一段（同上）。
 - 只做 `initialize`、`ping`、`tools/list`、`tools/call`；沒有 progress、resources、prompts、HTTP。
-- 掛法（Claude Code，WSL 裡）：`--mcp-config` 一份 `{"mcpServers": {"aos": {"command": ".../proto8/py/aos/apps/mcp/main.py", "args": ["--ws", WS, "<登記檔>"], "env": {"PATH": "proto8/py/aos/apps/tools、cpp 的 aos-exec／aos-json 的 bin:…"}}}}`，`--allowedTools mcp__aos__<名>`（**eca 不用手寫**：eca 資料夾放一份 `tools.json`，cli_session 自己接上 aos-mcp、工作區與 stack 跟著那隻實例，見 [templates/eca-claude](../../../../templates/docs/01-eca-claude.md)）。
+- 掛法（Claude Code，WSL 裡）：`--mcp-config` 一份 `{"mcpServers": {"aos": {"command": ".../proto8/py/aos/apps/mcp/main.py", "args": ["--ws", WS, "<登記檔>"], "env": {"PATH": "proto8/py/aos/apps/tools、cpp 的 aos-exec／aos-json 的 bin:…"}}}}`，`--allowedTools mcp__aos__<名>`（**eca 不用手寫**：eca 資料夾放一份 `tools.json`，cli_session 自己接上 aos-mcp、工作區與 stack 跟著那隻實例，見 [templates/agents/eca-claude](../../../../templates/docs/01-eca-claude.md)）。

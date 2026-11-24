@@ -15,7 +15,7 @@ TOOL = Path(__file__).resolve().parents[1] / "_entry"
 AGENT = TOOL.parents[1]
 CTL_TOOL = AGENT / "agents_ctl" / "_entry"
 PROTO = AGENT.parents[2]
-TEMPLATE = PROTO / "templates" / "agent-fsm"
+TEMPLATE = PROTO / "templates" / "agents" / "agent-fsm"
 DAEMON_BIN = PROTO / "bin" / "aos-daemon"
 
 

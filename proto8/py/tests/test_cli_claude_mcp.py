@@ -106,7 +106,7 @@ class ClaudeMcp(unittest.TestCase):
 
     def test_shipped_claude_templates_keep_strict_and_take_all_scopes(self):
         proto = LIB.parent
-        for rel in ("templates/eca-claude/cli.json", "templates/eca-claude-alt/cli.json", "templates/start-eca/agents/ann/cli.json"):
+        for rel in ("templates/agents/eca-claude/cli.json", "templates/agents/eca-claude-alt/cli.json", "templates/starts/start-eca/agents/ann/cli.json"):
             with self.subTest(path=rel):
                 cfg = json.loads((proto / rel).read_text())
                 self.assertIn("--strict-mcp-config", cfg["flags"])

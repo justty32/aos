@@ -24,7 +24,7 @@
   "description": "Hook points fired by aos-eca-turn (the eca body), and before_compact / after_compact fired by the eca-claude template's compact_hook from Claude Code's own compaction hooks; tool hooks are in ../mcp/…"
  },
  "main_screen.py": {
-  "description": "aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。"
+  "description": "aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/agents/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。"
  },
  "main_turn.py": {
   "description": "aos-eca-turn - 外部 coding agent（claude／codex，eca）的一輪：把 stack 的 queue 裡的信照順序全部一起交給 CLI——交出去就收信——等它答完、回答接進 history。"

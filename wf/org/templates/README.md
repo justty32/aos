@@ -19,7 +19,7 @@
   - 知識庫跟上：交給 [kb](../kb/README.md)。
   - `proto8/py/` 的程式與測試（例：限制 `cli.json` 能有哪些鍵的 `proto8/py/tests/test_cli_settings.py`）：歸[核心程式位子](../core/README.md)，要一起改就寫清楚哪個檔哪一句，請負責人派或直接寄信給它〔提案〕。`wf/tools/`：要動先問負責人。
   - 在 repo 裡跑 `install.py`、把範本重抄進活樹（範本要重抄進樹才生效）：回報負責人，由它問使用者。
-  - 配給包在 `wf/` 的那一份（[kits](../../workflows/dispatch/kits/README.md)，頂層管）：改了產品版 `proto8/templates/kits/` 就在回報裡提醒負責人，兩邊要一字不差。
+  - 配給包在 `wf/` 的那一份（[kits](../../workflows/dispatch/kits/README.md)，頂層管）：改了產品版 `proto8/templates/agents/kits/` 就在回報裡提醒負責人，兩邊要一字不差。
 - **Done when**：乾淨複本上相關測試過；交件有雜湊；回報寫了知識庫哪裡要跟、要不要重抄進活樹。
 
 ## 讀寫範圍

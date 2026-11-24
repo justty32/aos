@@ -80,6 +80,17 @@
      "tools.py": "aos/apps/agent/tools.py - 分層解析工具命令並管理 agent 自己那份工具登記檔（$override 定義那份）與重設確認。",
      "using-aos-agent.sh": "給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。"
     },
+    "agent_fsm": {
+     "act.py": "act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。",
+     "atomic_file.py": "agent-fsm 的格（idle、wait）共用的寫檔：先寫同資料夾的 .<名>.tmp 再改名（N-05），寫不成交給呼叫端的 die（WriteFailed）。",
+     "brain.py": "think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。",
+     "cell_common.py": "agent-fsm 的格共用的開頭幾步：brain、act 的讀 history.jsonl 與決定用哪份工具登記檔（四格的 on_clock 看時鐘改在 hook 遙控器 H.clock_tick()，11-20）。",
+     "compact.py": "Compact (/compact) or clear (/clear) agent-fsm conversations, keeping the original messages in history_removed.jsonl.",
+     "hooks.json": "Hook points fired by the agent-fsm cells (idle, think, wait, act); before_compact / after_compact keep their own rules in compact.py (said in their d…",
+     "idle.py": "idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。",
+     "llm_settings.py": "agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。",
+     "wait.py": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
+    },
     "asuser": {
      "main.py": "aos-asuser：免 root 透過 user namespace 換成 subuid 執行程式或救援檔案。"
     },
@@ -107,7 +118,7 @@
      "history.py": "aos/apps/eca/history.py - $AOS_STACK/history.jsonl 的讀、附加，與 .history_sum（⑩ history 被改過＝開新對話）。",
      "hook.py": "aos/apps/eca/hook.py - 這支的 hook 遙控器（open：hook 停下換成 Fail）與 before_queue、tool_added 兩個點的這支這邊。",
      "hooks.json": "Hook points fired by aos-eca-turn (the eca body), and before_compact / after_compact fired by the eca-claude template's compact_hook from Claude Code…",
-     "main_screen.py": "aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。",
+     "main_screen.py": "aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/agents/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。",
      "main_turn.py": "aos-eca-turn - 外部 coding agent（claude／codex，eca）的一輪：把 stack 的 queue 裡的信照順序全部一起交給 CLI——交出去就收信——等它答完、回答接進 history。",
      "midturn.py": "aos/apps/eca/midturn.py - 等 CLI 回答的這段時間又來的信：馬上認領、過 hook、交給 cli_ask 投進 CLI（More）；信的寄件人欄（unnamed）。",
      "reseed.py": "aos/apps/eca/reseed.py - ⑧ 換台開新對話時接在題目前面的開場白（從 history 組「整理過的紀錄」）。",
@@ -460,7 +471,7 @@
    "md_path_cases.json": "Shared table for reading markdown as JSON (aos/mdpath.py and aos-directive src/md.cpp; rules: thinking 2026-11/21/知識庫-骨架加md-規劃-1121/07-尋址規則.md). docs…",
    "ref_path_cases.json": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per …",
    "test_agent_hooks.py": "Test aos.agentlib.agent_hooks, the agent's hook remote: fire like hooks.fire (the agent family's rules), the two layers, take_letter's three steps, g…",
-   "test_agent_spec.py": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad before any w…",
+   "test_agent_spec.py": "Test py/aos/agent_spec.py and the templates/agents/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad befor…",
    "test_agent_spec_extern.py": "Test defs.extern as a link (compile-library cut 4, line aos-pylib-k4-1120; design thinking/2026-11/20/aos-pylib-plan-1120/05): the field compiles int…",
    "test_agent_spec_extern_live.py": "cut 4 for real: an agent.py with system=defs.extern(\"../shared/system.txt\") and fsm=defs.extern(\"fsm.hand.json\") compiled with the installed aos, mou…",
    "test_agent_spec_lib.py": "Test the libraries of py/aos/agent_spec.py (std, defs.lib: packs copied in, other libraries prefixed, clashes SpecBad) and how tool packs are linked,…",
@@ -709,7 +720,7 @@
       "test_tools_def.py": "Test tools_def new (copy the fn skeleton, description= in @fn.tool, PathExists, outside the workspace, into JSON objects), check (folder, JSON file, …"
      }
     },
-    "tools_def/": "工具定義的創造：new＝把 Python 骨架（templates/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段",
+    "tools_def/": "工具定義的創造：new＝把 Python 骨架（templates/tools/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段",
     "user_send": {
      "tests": {
       "test_user_send.py": "Test user_send wraps aos-user send for the calling agent: from = its name, reply-to = its mailbox, envelope sender = its stack, the body passes throu…"

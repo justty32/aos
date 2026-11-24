@@ -12,7 +12,7 @@ from aos.agentlib import hooks
 
 class ScreenLinger(unittest.TestCase):
     def test_default_hooks(self):
-        table = json.loads((PROTO / "templates/eca-claude/hookeds.json").read_text())
+        table = json.loads((PROTO / "templates/agents/eca-claude/hookeds.json").read_text())
         self.assertIsInstance(table.pop("description"), str)
         # the first after_start hook in table order (brain_notify, a brain_failed hook, may sit before it)
         self.assertEqual(next(n for n, e in table.items() if e["event"] == "after_start"), "screen_linger_start")

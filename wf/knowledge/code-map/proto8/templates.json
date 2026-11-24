@@ -2,103 +2,120 @@
  "description": "proto8/templates 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。誰連誰、誰 import 誰、bin/ 指令對哪個檔看 wf/knowledge/code-map/deps/。",
  "generated_by": "wf/tools/index_gen.py",
  "tree": {
-  "agent-fsm": {
-   "act.py": "act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。",
-   "atomic_file.py": "agent-fsm 的格（idle、wait）共用的寫檔：先寫同資料夾的 .<名>.tmp 再改名（N-05），寫不成交給呼叫端的 die（WriteFailed）。",
-   "body.json": "argv：`aos-loop loop.json`",
-   "brain.py": "think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。",
-   "cell_common.py": "agent-fsm 的格共用的開頭幾步：brain、act 的讀 history.jsonl 與決定用哪份工具登記檔（四格的 on_clock 看時鐘改在 hook 遙控器 H.clock_tick()，11-20）。",
-   "compact.py": "Compact (/compact) or clear (/clear) agent-fsm conversations, keeping the original messages in history_removed.jsonl.",
-   "fsm.json": "入口 `aos-fsm $AOS_CF`；鍵：start、states",
-   "hookeds.json": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_sta…",
-   "hooks.json": "Hook points fired by the agent-fsm cells (idle, think, wait, act); before_compact / after_compact keep their own rules in compact.py (said in their d…",
-   "idle.py": "idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。",
-   "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds、aos-observed）",
-   "llm.json": "agent-fsm 的腦設定，出廠是空的 {}（照 kernel 的預設端點；起手範本 start-api 那份改成假腦）",
-   "llm_settings.py": "agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。",
-   "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks thro…",
-   "subagents.json": "設定（鍵：max_subagents）",
-   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-   "tools.json": "設定（鍵：$override、tools）",
-   "wait.py": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
-  },
-  "agent-fsm/": "Run an aos agent with loop and FSM cells.",
-  "agent-python": {
-   "agent.py": "一支 agent.py 宣告一隻 agent（說明、system、工具、腦設定、狀態機），python3 agent.py --compile 編譯成這夾的定義檔（說明看 README.md）。",
-   "body.json": "Run this agent's loop: aos-loop with loop.json.",
-   "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
-   "hookeds.json": "What is hooked on this agent: aos functions run when an event happens; the stack copy of this file overrides it by name, null turns one off.",
-   "interfaces.json": "Look things up in the workspace and answer by mail.",
-   "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",
-   "loop.json": "Run the state machine in fsm.json every tick and expose public control, state and state flux files. on_start / on_stop fire the after_start / after_s…",
-   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-   "tools.json": "Tools this agent can call. agent.py copied in the tools of std.pack('look'), std.pack('mailbox'), std.pack('json')."
-  },
-  "agent-python/": "Look things up in the workspace and answer by mail.",
-  "daemon-root": {
-   ".env": "defaults for this root (a value already exported in the shell wins); every agent and child daemon inherits them.",
-   "_entry": "Start the root daemon with stdout logs",
-   "daemon.json": "Root daemon: owns the clock and the sweeper; agents join through procs_requests"
-  },
-  "daemon-sub": {
-   ".env": "defaults for this sub-daemon (a value the daemon above already passed down wins); every agent under it inherits them.",
-   "_entry": "Start this sub-daemon with stdout logs; the daemon above starts it as one row of its table",
-   "daemon.json": "Sub-daemon: hangs under another daemon; no clock row (it follows the root's AOS_CLOCK), only its own sweeper; agents join through procs_requests"
-  },
-  "eca-claude": {
-   "cli.json": "設定（鍵：kind、flags、claude_mcp、tools_sub、timeout_ms、settings）",
-   "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
-   "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
-   "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
-   "llm.json": "設定（鍵：model、reasoning_effort）",
-   "loop.json": "Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho…",
-   "screen": {
-    "_entry": "入口：`aos-eca-screen --eca ..`",
-    "interfaces.json": "設定（鍵：aos-agent/screen）"
+  "agents": {
+   "agent-fsm": {
+    "body.json": "argv：`aos-loop loop.json`",
+    "fsm.json": "入口 `aos-fsm $AOS_CF`；鍵：start、states",
+    "hookeds.json": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_sta…",
+    "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds、aos-observed）",
+    "llm.json": "agent-fsm 的腦設定，出廠是空的 {}（照 kernel 的預設端點；起手範本 start-api 那份改成假腦）",
+    "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks thro…",
+    "subagents.json": "設定（鍵：max_subagents）",
+    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
+    "tools.json": "設定（鍵：$override、tools）"
    },
-   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-   "tools.json": "設定（鍵：$override、tools）",
-   "tools_sub.json": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,…"
-  },
-  "eca-claude-alt": {
-   ".env": "run this eca's Claude Code on a second account: CLAUDE_CONFIG_DIR (login, settings, conversations) is ~/.claude-alt unless the shell that starts the …",
-   "cli.json": "設定（鍵：kind、flags、claude_mcp、tools_sub、timeout_ms、settings）",
-   "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
-   "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
-   "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
-   "llm.json": "設定（鍵：model、reasoning_effort）",
-   "loop.json": "Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho…",
-   "screen": {
-    ".env": "the screen (aos-agent open / close / watch / peek) runs Claude Code on the same second account as the loop; keep this value equal to ../.env.",
-    "_entry": "入口：`aos-eca-screen --eca ..`",
-    "interfaces.json": "設定（鍵：aos-agent/screen）"
+   "agent-fsm/": "Run an aos agent with loop and FSM cells.",
+   "agent-python": {
+    "agent.py": "一支 agent.py 宣告一隻 agent（說明、system、工具、腦設定、狀態機），python3 agent.py --compile 編譯成這夾的定義檔（說明看 README.md）。",
+    "body.json": "Run this agent's loop: aos-loop with loop.json.",
+    "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
+    "hookeds.json": "What is hooked on this agent: aos functions run when an event happens; the stack copy of this file overrides it by name, null turns one off.",
+    "interfaces.json": "Look things up in the workspace and answer by mail.",
+    "llm.json": "Brain settings of this agent: model names a brain pack of the llm kernel (none = the kernel's default).",
+    "loop.json": "Run the state machine in fsm.json every tick and expose public control, state and state flux files. on_start / on_stop fire the after_start / after_s…",
+    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
+    "tools.json": "Tools this agent can call. agent.py copied in the tools of std.pack('look'), std.pack('mailbox'), std.pack('json')."
    },
-   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-   "tools.json": "設定（鍵：$override、tools）",
-   "tools_sub.json": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,…"
-  },
-  "eca-claude-alt/": "Run Claude Code as an aos agent: one turn per queue batch, answers appended to history.",
-  "eca-claude/": "Run Claude Code as an aos agent: one turn per queue batch, answers appended to history.",
-  "eca-pi": {
-   "cli.json": "設定（鍵：kind、flags、timeout_ms）",
-   "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
-   "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
-   "llm.json": "設定（空的 {}：全用預設）",
-   "loop.json": "Schedule the pi agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks …",
-   "screen": {
-    "_entry": "入口：`aos-eca-screen --eca ..`",
-    "interfaces.json": "設定（鍵：aos-agent/screen）"
+   "agent-python/": "Look things up in the workspace and answer by mail.",
+   "eca-claude": {
+    "cli.json": "設定（鍵：kind、flags、claude_mcp、tools_sub、timeout_ms、settings）",
+    "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
+    "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
+    "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
+    "llm.json": "設定（鍵：model、reasoning_effort）",
+    "loop.json": "Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho…",
+    "screen": {
+     "_entry": "入口：`aos-eca-screen --eca ..`",
+     "interfaces.json": "設定（鍵：aos-agent/screen）"
+    },
+    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
+    "tools.json": "設定（鍵：$override、tools）",
+    "tools_sub.json": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,…"
    },
-   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-   "tools.json": "設定（鍵：$override、tools）"
+   "eca-claude-alt": {
+    ".env": "run this eca's Claude Code on a second account: CLAUDE_CONFIG_DIR (login, settings, conversations) is ~/.claude-alt unless the shell that starts the …",
+    "cli.json": "設定（鍵：kind、flags、claude_mcp、tools_sub、timeout_ms、settings）",
+    "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
+    "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
+    "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
+    "llm.json": "設定（鍵：model、reasoning_effort）",
+    "loop.json": "Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho…",
+    "screen": {
+     ".env": "the screen (aos-agent open / close / watch / peek) runs Claude Code on the same second account as the loop; keep this value equal to ../.env.",
+     "_entry": "入口：`aos-eca-screen --eca ..`",
+     "interfaces.json": "設定（鍵：aos-agent/screen）"
+    },
+    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
+    "tools.json": "設定（鍵：$override、tools）",
+    "tools_sub.json": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,…"
+   },
+   "eca-claude-alt/": "Run Claude Code as an aos agent: one turn per queue batch, answers appended to history.",
+   "eca-claude/": "Run Claude Code as an aos agent: one turn per queue batch, answers appended to history.",
+   "eca-pi": {
+    "cli.json": "設定（鍵：kind、flags、timeout_ms）",
+    "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
+    "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
+    "llm.json": "設定（空的 {}：全用預設）",
+    "loop.json": "Schedule the pi agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks …",
+    "screen": {
+     "_entry": "入口：`aos-eca-screen --eca ..`",
+     "interfaces.json": "設定（鍵：aos-agent/screen）"
+    },
+    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
+    "tools.json": "設定（鍵：$override、tools）"
+   },
+   "eca-pi/": "Run the pi coding agent as an aos agent: one pi --mode rpc run per queue batch (letters that come meanwhile are steered in), answers appended to hist…",
+   "kits": {
+    "gather": {
+     "system.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
+     "tools.json": "Tool set of the gather and review kits (gather/tools.json and review/tools.json are the same file, kept in step by tests/kits): read, write (only in …"
+    },
+    "general.A.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
+    "kits.json": "Index of the kits in this folder: for each kit its role, folder (give it to aos-agent ctl add / set-def --kit), system text, tool set, model tiers it…",
+    "review": {
+     "system.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
+     "tools.json": "Tool set of the gather and review kits (gather/tools.json and review/tools.json are the same file, kept in step by tests/kits): read, write (only in …"
+    },
+    "roles": {
+     "gather.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
+     "review.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）"
+    }
+   },
+   "reviewer": {
+    "body.json": "Run the reviewer loop with shared agent FSM cells.",
+    "fsm.json": "Reuse agent-fsm cells while reading configuration from the reviewer definition.",
+    "interfaces.json": "Declare reviewer agent configuration and its public observation ledger.",
+    "ladder.json": "Configure model downgrade trials, quality gates, and post-promotion watching.",
+    "llm.json": "Use the caller's default kernel endpoint unless model names one.",
+    "loop.json": "Schedule the reviewer FSM and expose public control and state files.",
+    "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
+    "tools.json": "Offer review scripts and workspace readers. No shell, but review_round, measure and promote run the cases, comparers and definitions the caller names…"
+   },
+   "reviewer/": "Review measured definition costs and prescribe a fix or split when model downgrades fail."
   },
-  "eca-pi/": "Run the pi coding agent as an aos agent: one pi --mode rpc run per queue batch (letters that come meanwhile are steered in), answers appended to hist…",
-  "judge-llm": {
-   "judge.json": "Configure the comparator endpoint and per-section byte limit",
-   "prompt.txt": "給腦的提示詞（純文字，整份交給腦，不加檔頭）"
+  "daemons": {
+   "daemon-root": {
+    ".env": "defaults for this root (a value already exported in the shell wins); every agent and child daemon inherits them.",
+    "_entry": "Start the root daemon with stdout logs",
+    "daemon.json": "Root daemon: owns the clock and the sweeper; agents join through procs_requests"
+   },
+   "daemon-sub": {
+    ".env": "defaults for this sub-daemon (a value the daemon above already passed down wins); every agent under it inherits them.",
+    "_entry": "Start this sub-daemon with stdout logs; the daemon above starts it as one row of its table",
+    "daemon.json": "Sub-daemon: hangs under another daemon; no clock row (it follows the root's AOS_CLOCK), only its own sweeper; agents join through procs_requests"
+   }
   },
-  "judge-llm/": "Compare artifacts with one LLM request and public think accounting.",
-  "kernel": {
+  "kernels": {
    "daemon-kernel": {
     ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
     "_entry": "入口：`aos-daemon --enable-logs daemon.json`",
@@ -158,22 +175,6 @@
     }
    }
   },
-  "kits": {
-   "gather": {
-    "system.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
-    "tools.json": "Tool set of the gather and review kits (gather/tools.json and review/tools.json are the same file, kept in step by tests/kits): read, write (only in …"
-   },
-   "general.A.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
-   "kits.json": "Index of the kits in this folder: for each kit its role, folder (give it to aos-agent ctl add / set-def --kit), system text, tool set, model tiers it…",
-   "review": {
-    "system.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
-    "tools.json": "Tool set of the gather and review kits (gather/tools.json and review/tools.json are the same file, kept in step by tests/kits): read, write (only in …"
-   },
-   "roles": {
-    "gather.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
-    "review.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）"
-   }
-  },
   "orgs": {
    "basic": {
     "extras": {
@@ -182,90 +183,81 @@
     }
    }
   },
-  "reviewer": {
-   "body.json": "Run the reviewer loop with shared agent FSM cells.",
-   "fsm.json": "Reuse agent-fsm cells while reading configuration from the reviewer definition.",
-   "interfaces.json": "Declare reviewer agent configuration and its public observation ledger.",
-   "ladder.json": "Configure model downgrade trials, quality gates, and post-promotion watching.",
-   "llm.json": "Use the caller's default kernel endpoint unless model names one.",
-   "loop.json": "Schedule the reviewer FSM and expose public control and state files.",
-   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-   "tools.json": "Offer review scripts and workspace readers. No shell, but review_round, measure and promote run the cases, comparers and definitions the caller names…"
-  },
-  "reviewer/": "Review measured definition costs and prescribe a fix or split when model downgrades fail.",
-  "start-api": {
-   "agents": {
-    "ann": {
-     ".env": "ann's own defaults (a value already set wins). The permission part is optional and off: to switch it on, mount perm on the root (aos-daemon-ctl -d .s…",
-     "body.json": "argv：`aos-loop loop.json`",
-     "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
-     "hookeds.json": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_sta…",
-     "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds、aos-observed）",
-     "llm.json": "設定（鍵：model）",
-     "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks thro…",
-     "subagents.json": "設定（鍵：max_subagents）",
-     "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-     "tools.json": "設定（鍵：$override、tools）"
-    },
-    "ann/": "Run an aos agent with loop and FSM cells."
-   },
-   "env.sh": "This tree's env.sh: \"cd <this tree> && source env.sh\" (bash or zsh) in every window; it hands over to $AOS_HOME/env.sh, the real one, so it hardly ev…",
-   "llm": {
-    ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
-    "_entry": "入口：`aos-daemon --enable-logs daemon.json`",
-    "daemon.json": "設定（鍵：exec、interval_ms、procs）",
-    "endpoints": {
-     "litellm": {
-      "_entry": "Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable (unset or empty: no key is sent)."
-     }
-    },
-    "fake_slow": {
-     "_entry": "demo 用的慢假腦 endpoint 函數：先睡 endpoint.delay_s 秒，再把同一份 stdin 交給 py/tools/base/llm_fake、它的 stdout／結束碼原樣交回"
-    },
-    "interfaces.json": "What this kernel offers: its hook points (hooks), what is hooked on it (hookeds), and its ledger (aos-ledger).",
-    "kernel.json": "Main llm kernel with backend limits for local models",
-    "kernel_hookeds.json": "What is hooked on this kernel (none yet): entries {\"NAME\": {\"event\", \"handler\", \"timeout_ms\"?, \"condition\"? (after_verdict: verdict)}} for before_ver…",
-    "kernel_hooks.json": "Hook points every kernel station fires (the kernel and kernel_llm programs): before_verdict, after_verdict, before_reply. The canonical copy is in th…"
-   },
-   "perm": {
-    ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
-    "_entry": "入口：`aos-loop loop.json`",
-    "interfaces.json": "What this kernel offers: its hook points (hooks), what is hooked on it (hookeds).",
-    "kernel.json": "設定（空的 {}：全用預設）",
-    "kernel_hookeds.json": "What is hooked on this kernel (none yet): entries {\"NAME\": {\"event\", \"handler\", \"timeout_ms\"?, \"condition\"? (after_verdict: verdict)}} for before_ver…",
-    "kernel_hooks.json": "Hook points every kernel station fires (the kernel and kernel_llm programs): before_verdict, after_verdict, before_reply. The canonical copy is in th…",
-    "loop.json": "Run the kernel once every 300 ms over kernel.json. on_start / on_stop fire the aos-loop points after_start / after_stop through aos-hook with the hoo…"
-   },
-   "root": {
-    ".env": "defaults for this root (a value already exported in the shell wins); every agent and child daemon inherits them.",
-    "_entry": "Start the root daemon with stdout logs",
-    "daemon.json": "Root daemon: owns the clock and the sweeper; agents join through procs_requests"
-   }
-  },
-  "start-eca": {
-   "agents": {
-    "ann": {
-     "cli.json": "設定（鍵：kind、flags、claude_mcp、tools_sub、timeout_ms、settings）",
-     "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
-     "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
-     "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
-     "llm.json": "設定（鍵：model、reasoning_effort）",
-     "loop.json": "Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho…",
-     "screen": {
-      "_entry": "入口：`aos-eca-screen --eca ..`",
-      "interfaces.json": "設定（鍵：aos-agent/screen）"
+  "starts": {
+   "start-api": {
+    "agents": {
+     "ann": {
+      ".env": "ann's own defaults (a value already set wins). The permission part is optional and off: to switch it on, mount perm on the root (aos-daemon-ctl -d .s…",
+      "body.json": "argv：`aos-loop loop.json`",
+      "fsm.json": "The state machine of this agent: which program each state runs, and the next state by exit code.",
+      "hookeds.json": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_sta…",
+      "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds、aos-observed）",
+      "llm.json": "設定（鍵：model）",
+      "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks thro…",
+      "subagents.json": "設定（鍵：max_subagents）",
+      "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
+      "tools.json": "設定（鍵：$override、tools）"
      },
-     "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
-     "tools.json": "設定（鍵：$override、tools）",
-     "tools_sub.json": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,…"
+     "ann/": "Run an aos agent with loop and FSM cells."
     },
-    "ann/": "Run Claude Code as an aos agent: one turn per queue batch, answers appended to history."
+    "env.sh": "This tree's env.sh: \"cd <this tree> && source env.sh\" (bash or zsh) in every window; it hands over to $AOS_HOME/env.sh, the real one, so it hardly ev…",
+    "llm": {
+     ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+     "_entry": "入口：`aos-daemon --enable-logs daemon.json`",
+     "daemon.json": "設定（鍵：exec、interval_ms、procs）",
+     "endpoints": {
+      "litellm": {
+       "_entry": "Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable (unset or empty: no key is sent)."
+      }
+     },
+     "fake_slow": {
+      "_entry": "demo 用的慢假腦 endpoint 函數：先睡 endpoint.delay_s 秒，再把同一份 stdin 交給 py/tools/base/llm_fake、它的 stdout／結束碼原樣交回"
+     },
+     "interfaces.json": "What this kernel offers: its hook points (hooks), what is hooked on it (hookeds), and its ledger (aos-ledger).",
+     "kernel.json": "Main llm kernel with backend limits for local models",
+     "kernel_hookeds.json": "What is hooked on this kernel (none yet): entries {\"NAME\": {\"event\", \"handler\", \"timeout_ms\"?, \"condition\"? (after_verdict: verdict)}} for before_ver…",
+     "kernel_hooks.json": "Hook points every kernel station fires (the kernel and kernel_llm programs): before_verdict, after_verdict, before_reply. The canonical copy is in th…"
+    },
+    "perm": {
+     ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+     "_entry": "入口：`aos-loop loop.json`",
+     "interfaces.json": "What this kernel offers: its hook points (hooks), what is hooked on it (hookeds).",
+     "kernel.json": "設定（空的 {}：全用預設）",
+     "kernel_hookeds.json": "What is hooked on this kernel (none yet): entries {\"NAME\": {\"event\", \"handler\", \"timeout_ms\"?, \"condition\"? (after_verdict: verdict)}} for before_ver…",
+     "kernel_hooks.json": "Hook points every kernel station fires (the kernel and kernel_llm programs): before_verdict, after_verdict, before_reply. The canonical copy is in th…",
+     "loop.json": "Run the kernel once every 300 ms over kernel.json. on_start / on_stop fire the aos-loop points after_start / after_stop through aos-hook with the hoo…"
+    },
+    "root": {
+     ".env": "defaults for this root (a value already exported in the shell wins); every agent and child daemon inherits them.",
+     "_entry": "Start the root daemon with stdout logs",
+     "daemon.json": "Root daemon: owns the clock and the sweeper; agents join through procs_requests"
+    }
    },
-   "env.sh": "This tree's env.sh: \"cd <this tree> && source env.sh\" (bash or zsh) in every window; it hands over to $AOS_HOME/env.sh, the real one, so it hardly ev…",
-   "root": {
-    ".env": "defaults for this root (a value already exported in the shell wins); every agent and child daemon inherits them.",
-    "_entry": "Start the root daemon with stdout logs",
-    "daemon.json": "Root daemon: owns the clock and the sweeper; agents join through procs_requests"
+   "start-eca": {
+    "agents": {
+     "ann": {
+      "cli.json": "設定（鍵：kind、flags、claude_mcp、tools_sub、timeout_ms、settings）",
+      "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
+      "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
+      "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
+      "llm.json": "設定（鍵：model、reasoning_effort）",
+      "loop.json": "Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho…",
+      "screen": {
+       "_entry": "入口：`aos-eca-screen --eca ..`",
+       "interfaces.json": "設定（鍵：aos-agent/screen）"
+      },
+      "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
+      "tools.json": "設定（鍵：$override、tools）",
+      "tools_sub.json": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,…"
+     },
+     "ann/": "Run Claude Code as an aos agent: one turn per queue batch, answers appended to history."
+    },
+    "env.sh": "This tree's env.sh: \"cd <this tree> && source env.sh\" (bash or zsh) in every window; it hands over to $AOS_HOME/env.sh, the real one, so it hardly ev…",
+    "root": {
+     ".env": "defaults for this root (a value already exported in the shell wins); every agent and child daemon inherits them.",
+     "_entry": "Start the root daemon with stdout logs",
+     "daemon.json": "Root daemon: owns the clock and the sweeper; agents join through procs_requests"
+    }
    }
   },
   "tests": {
@@ -306,7 +298,7 @@
     "test_judge.py": "Verify judge reply normalization, truncation, kernel failures, and measured check costs."
    },
    "kits": {
-    "test_kits.py": "Check the public kits folder (templates/kits): English only, no site-specific wording, valid JSON with a description first, each kit folder holding s…"
+    "test_kits.py": "Check the public kits folder (templates/agents/kits): English only, no site-specific wording, valid JSON with a description first, each kit folder ho…"
    },
    "orgs": {
     "test_orgs.py": "Check the org templates (templates/orgs): English only, no site-specific names, each file at most 8 KB, every .md starting with a describing line, re…"
@@ -320,7 +312,7 @@
    "test_eca_claude_alt.py": "eca-claude-alt stays a verbatim copy of eca-claude except its README, and carries the same CLAUDE_CONFIG_DIR line in .env and screen/.env.",
    "test_eca_compact_hook.py": "Test the eca-claude template's compact_hook as Claude Code runs it (11-21 top-1121-ecaeffort): pre fires before_compact (change the instructions, giv…",
    "test_eca_pi.py": "驗 eca-pi 範本（11-18）：cli.json 讀得過、kind pi、畫面子介面同 eca-claude、工具登記檔跟 eca-claude 同一份、hook 格都驗得過。",
-   "test_fake_slow.py": "the demo endpoint function fake_slow (templates/kernel/llm-kernel) finds lib/tools/base/llm_fake and passes its answer back.",
+   "test_fake_slow.py": "the demo endpoint function fake_slow (templates/kernels/llm-kernel) finds lib/tools/base/llm_fake and passes its answer back.",
    "test_paths_move.py": "Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to anothe…",
    "test_screen_linger.py": "驗 eca 範本的延後關畫面 hook 兩格存在、驗格成功且啟動撤單排第一。",
    "test_start.py": "the two starter templates (start-api, start-eca) stay verbatim copies of the templates they were made from, except the few files their README names a…",
@@ -328,11 +320,18 @@
     "test_skeleton.py": "Test the tool-python skeleton (written with fn): its compiled _tooldef.json/_metainfo.json match tool.py byte for byte, and a copy outside the repo r…"
    }
   },
-  "tool-python": {
-   "_entry.json": "Entry of the tool-python skeleton: aos-exec runs tool.py in this folder with python3 (arguments come on stdin).",
-   "_metainfo.json": "Add two numbers and return the sum",
-   "_tooldef.json": "Add two numbers and return the sum. Example: {\"a\": 2, \"b\": 3} -> 5",
-   "tool.py": "最小、合格、能跑的工具：把兩個數相加。"
+  "tools": {
+   "judge-llm": {
+    "judge.json": "Configure the comparator endpoint and per-section byte limit",
+    "prompt.txt": "給腦的提示詞（純文字，整份交給腦，不加檔頭）"
+   },
+   "judge-llm/": "Compare artifacts with one LLM request and public think accounting.",
+   "tool-python": {
+    "_entry.json": "Entry of the tool-python skeleton: aos-exec runs tool.py in this folder with python3 (arguments come on stdin).",
+    "_metainfo.json": "Add two numbers and return the sum",
+    "_tooldef.json": "Add two numbers and return the sum. Example: {\"a\": 2, \"b\": 3} -> 5",
+    "tool.py": "最小、合格、能跑的工具：把兩個數相加。"
+   }
   }
  }
 }

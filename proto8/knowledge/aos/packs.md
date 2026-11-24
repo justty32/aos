@@ -43,7 +43,7 @@ What a pack costs: every pack you have is sent with every question to your brain
 | json | 9 | 5,906 |
 | index | 1 | 998 |
 | events (optional) | 2 | 10,263 |
-| subagent (optional) | 3 | 11,428 |
+| subagent (optional) | 3 | 11,435 |
 | def (optional) | 2 | 6,427 |
 | jsonx (optional) | 8 | 12,011 |
 | comm (optional) | 5 | 6,120 |

@@ -60,7 +60,7 @@ class CodemapDepsTests(unittest.TestCase):
                  ('proto8/py/tools/base/echo/_tooldef.json', '{"description": "echo"}'),
                  ('proto8/py/tools/base/echo/tests/test_echo.py', 'from aos import flags\n'),
                  ('proto8/py/tools/base/plain/_entry', '#!/bin/sh\n# plain - shell.\n'),
-                 ('proto8/templates/fsm/act.py', '"""act."""\nfrom aos import tool_io\n'),
+                 ('proto8/templates/agents/fsm/act.py', '"""act."""\nfrom aos import tool_io\n'),
                  ('proto8/py/tests/test_x.py', 'from aos import flags\n')]
         for rel, text in files:
             path = self.root / rel
@@ -115,7 +115,7 @@ class CodemapDepsTests(unittest.TestCase):
         self.assertEqual(hello['uses'], 'aos.agentlib.cooldown aos.agentlib.hooks aos.flags aos.tool_io aos.ws')  # 括號跨行、縮排、import 都認；自己的不算
         self.assertEqual(py['proto8/py/aos/apps/quiet']['uses'], '')                          # 指令每支都列
         self.assertEqual(py['proto8/py/aos/tool_io.py']['used_by'],
-                         'proto8/py/aos/agentlib proto8/py/aos/apps/hello proto8/py/aos/flags.py proto8/py/tools/base/echo proto8/templates/fsm')
+                         'proto8/py/aos/agentlib proto8/py/aos/apps/hello proto8/py/aos/flags.py proto8/py/tools/base/echo proto8/templates/agents/fsm')
         self.assertEqual(py['proto8/py/aos/agentlib']['uses'], 'aos.tool_io')                 # 子套件裡互相 import 不算
         self.assertEqual(py['proto8/py/tools/base/echo']['uses'], 'aos.tool_io')              # `from aos.tool_io import Error`：Error 不是模組
         self.assertNotIn('proto8/py/tools/base/plain', py)                                    # shell 工具、沒用到 aos 的工具不列

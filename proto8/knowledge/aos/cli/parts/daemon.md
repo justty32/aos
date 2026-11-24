@@ -8,7 +8,7 @@ aos-exec --stack stacks/root defs         # defs/_entry: {"argv": ["aos-daemon",
 AOS_STACK=/tmp/st aos-daemon --max 10 daemon.json   # a short test: 10 rounds, then its procs sleep
 ```
 
-Templates: `$AOS_HOME/templates/daemon-root` for the root of a tree; `$AOS_HOME/templates/daemon-sub` for a daemon under another one. Copy it, then attach the copy as a row of the daemon above: `aos-daemon-ctl -d <upper stack> add --auto-restart -n NAME -w WS <copy>`. Its README says how to attach agents under it and how to stop it.
+Templates: `$AOS_HOME/templates/daemons/daemon-root` for the root of a tree; `$AOS_HOME/templates/daemons/daemon-sub` for a daemon under another one. Copy it, then attach the copy as a row of the daemon above: `aos-daemon-ctl -d <upper stack> add --auto-restart -n NAME -w WS <copy>`. Its README says how to attach agents under it and how to stop it.
 
 Starting a root from an agent's shell (it carries `AOS_STACK`, `AOS_WS` and more): clear every `AOS_*` first, then set back only `AOS_HOME`. A leftover one makes the new root use the wrong folder.
 

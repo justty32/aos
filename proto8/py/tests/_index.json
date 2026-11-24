@@ -22,7 +22,7 @@
   "description": "Test aos.agentlib.agent_hooks, the agent's hook remote: fire like hooks.fire (the agent family's rules), the two layers, take_letter's three steps, g…"
  },
  "test_agent_spec.py": {
-  "description": "Test py/aos/agent_spec.py and the templates/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad before any w…"
+  "description": "Test py/aos/agent_spec.py and the templates/agents/agent-python skeleton: declarations to definition files (defs.Agent(...).dry_run()), SpecBad befor…"
  },
  "test_agent_spec_extern.py": {
   "description": "Test defs.extern as a link (compile-library cut 4, line aos-pylib-k4-1120; design thinking/2026-11/20/aos-pylib-plan-1120/05): the field compiles int…"
