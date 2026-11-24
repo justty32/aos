@@ -494,3 +494,4 @@
 - 還在跑：kb 換 clock.md 那句＋troubleshooting（`01795509747404297051.215587.2967662`）。17:00 push（等 kb 交了一起推）。
 - core 收工 DONE（`01795509849428739418.230720.2977865`，筆記 `6e3dfb2e4`）：沒開著的信；之後再排：fsm tools.json 壞的保底、tty_socket 搬家坑、過期 new_mail 通知；haiku 剩兩輪。
 - kb DONE `aec9c1940`（clock.md 那段換成實測原因；troubleshooting「Hooks and timers」加一條；live_mail 那條路沒寫，等 core 驗；程式改了這三處要再改，記在 kb 筆記）。
+- 16:45 push（`90994593a..bf04371b8`，84 個 commit；使用者五點下班，提早在 17:00 授權那次推）。今天收工。
