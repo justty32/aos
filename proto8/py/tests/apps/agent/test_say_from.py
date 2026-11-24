@@ -70,9 +70,10 @@ class SayFrom(unittest.TestCase):
             sender.put(Target("/s1", str(self.t / "fsm")), "check the logs", bob)
             sender.put(Target("/s2", str(self.t / "eca")), "hi", carol)
             sender.put(Target("/s3", str(self.t / "fsm")), "hi", person)
+            sender.put(Target("/s4", str(self.t / "fsm")), "[aos] fork: you are a fork", bob)   # aos 的通知不疊前綴
         self.assertEqual([c[0] for c in put.call_args_list],
                          [("/s1", "[say from bob] check the logs", None), ("/s2", "[say from carol] hi", "carol"),
-                          ("/s3", "hi", None)])
+                          ("/s3", "hi", None), ("/s4", "[aos] fork: you are a fork", None)])
 
     def test_put_writes_name_into_the_body(self):
         from aos import ws as aos_ws

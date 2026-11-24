@@ -16,7 +16,8 @@ flags:
                       its CLI marks the message as not typed by its user. Other agents ignore it.
                       When the sender is another agent (or --from is given) the message itself starts
                       with "[say from WHO] ", so every agent sees in its history who said it; a person
-                      typing in a shell adds nothing (no prefix = the user).
+                      typing in a shell adds nothing (no prefix = the user), nor does a message that
+                      already starts with "[aos] " (an aos notice, like the fork tool's opening).
   -h, --help          show this help
 
 exit codes: 0 queued; 1 error (TargetMissing, InstanceMissing, PostFailed...)."""

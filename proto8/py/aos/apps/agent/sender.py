@@ -53,7 +53,10 @@ def sender(opts, help):
 
 
 def tag(text, name):
-    """寄件人是 agent 或明給 --from（sender 回的 Who.tagged）＝本文前接「[say from 名字] 」；人在終端打的照原樣。"""
+    """寄件人是 agent 或明給 --from（sender 回的 Who.tagged）＝本文前接「[say from 名字] 」；人在終端打的、或本文以「[aos] 」開頭
+    （aos 工具的通知，例 fork 的開場；11-24 test_fork 抓到）照原樣。"""
+    if text.startswith("[aos] "):                    # aos 自己的通知（fork 開場、[aos] new_mail…）本來就說了不是使用者，不再疊一層
+        return text
     return "[say from %s] %s" % (name, text) if getattr(name, "tagged", False) and name else text
 
 
