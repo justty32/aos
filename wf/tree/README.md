@@ -4,7 +4,7 @@
 
 `root/` 是 repo 那棵（表上 `repo-aos`）那台 daemon 的定義（資料夾名字還叫 `root`，但它已經不是根，見下一段）：表上只有 `_sweeper`，agent 之後用 `aos-agent ctl add` 掛上去（表上存相對 `.stack` 的路徑）。`.stack` 被 git 忽略、每台各有各的，不跟著 git 搬（使用者 11-23）；這份定義跟著 git 走，兩台起的都用它。llm kernel 與權限站**不在這裡**，各台自己跑、放在 repo 外（使用者 11-22 決定 E）。
 
-**11-23 起，這份定義是 `~/aos-home` 那棵樹底下的一台子 daemon**（表上那列叫 `repo-aos`；stack 在公司那台 11-24 起是 `~/aos-home/.stack/procs/repo-aos`、`~/repo/aos/.stack` 留成指過去的 symlink，家機是 `~/repo/aos/.stack`）：使用者 11-23「repo aos這個樹會變成~/aos-home底下的一個proc」。`AOS_LLM_KERNEL`（公司那台另有 `CLAUDE_CONFIG_DIR`）記在那一列的環境值裡，子 daemon 傳給底下每一隻。**鐘只在 `~/aos-home` 的根**：根的 `_clock` 寫 `~/aos-home/.stack/clock`，`AOS_CLOCK` 由上層傳下來，所以這份定義 11-23 起拿掉了 `_clock` 那列與 `.env` 的 `AOS_CLOCK`（之前它一直多寫一份 `~/repo/aos/.stack/clock`，底下的 agent 聽的都是根的，那份沒人讀；使用者 11-23「可以拿，不用馬上重啟」）。公司那台 11-23 已這樣建好，家機還沒改。起樹只起 `~/aos-home` 的根，怎麼掛、怎麼起停，看[每台設定說明書](../workflows/dev-env/03-換機.md)：
+**11-23 起，這份定義是 `~/aos-home` 那棵樹底下的一台子 daemon**（表上那列叫 `repo-aos`；stack 在公司那台 11-24 起是 `~/aos-home/.stack/procs/repo-aos`、公司那台 repo 裡已經沒有 `.stack`，家機是 `~/repo/aos/.stack`）：使用者 11-23「repo aos這個樹會變成~/aos-home底下的一個proc」。`AOS_LLM_KERNEL`（公司那台另有 `CLAUDE_CONFIG_DIR`）記在那一列的環境值裡，子 daemon 傳給底下每一隻。**鐘只在 `~/aos-home` 的根**：根的 `_clock` 寫 `~/aos-home/.stack/clock`，`AOS_CLOCK` 由上層傳下來，所以這份定義 11-23 起拿掉了 `_clock` 那列與 `.env` 的 `AOS_CLOCK`（之前它一直多寫一份 `~/repo/aos/.stack/clock`，底下的 agent 聽的都是根的，那份沒人讀；使用者 11-23「可以拿，不用馬上重啟」）。公司那台 11-23 已這樣建好，家機還沒改。起樹只起 `~/aos-home` 的根，怎麼掛、怎麼起停，看[每台設定說明書](../workflows/dev-env/03-換機.md)：
 
 ```sh
 cd ~/aos-home && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK -u AOS_KERNEL -u AOS_LLM_KERNEL aos-exec --stack .stack root
