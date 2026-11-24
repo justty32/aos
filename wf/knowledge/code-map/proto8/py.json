@@ -343,6 +343,7 @@
      "test_kernel_screen.py": "驗證 kernel 畫面入口環境與 purge 的回信、關畫面、刪 stack 次序。",
      "test_kernel_state_path.py": "Test aos-agent ctl with AOS_KERNEL set: table commands ask it where the table is (query letter) and read that file, letter commands read only their o…",
      "test_listen_brain_failure.py": "驗證 listen 等交出去的信時讀問腦失敗紀錄（cooldown.json＋stderr.txt）：身體停在錯上就馬上帶原因結束，會自己重送的只提醒（small-1118）。",
+     "test_listen_mailbox.py": "驗證 listen --mailbox：等一封信的回答時，對方改用信回（落在叫的人信箱、in_reply_to 是這封，例 BLOCKED）也結束等待（11-24 晚 home-listen-1124，narr-amber 回報②）。",
      "test_listen_timeout.py": "Verify zero-second listen waits without a deadline and still rejects invalid timeout combinations.",
      "test_llm.py": "Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and…",
      "test_ls_deep.py": "Test aos-agent ctl ls --deep: walks rows whose stack is a daemon, adds PID state, STAGE and LAST-ACTIVE (fake tables).",

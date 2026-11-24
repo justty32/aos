@@ -198,6 +198,7 @@ class Subagent(unittest.TestCase):
 
     def test_each_targeted_op(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})
+        box = ["--mailbox", str(self.mom / "mailbox")]   # 11-24 晚：listen／ask 也看我的信箱裡回那封的信（--last 不看）
         for args, want in (({"op": "state", "name": "kid"}, ["ctl", "state", "--target", "kid"]),
                            ({"op": "stop", "name": "kid", "timeout_s": 3}, ["ctl", "stop", "--target", "kid", "--timeout-s", "3"]),
                            ({"op": "start", "name": "kid", "on_queued": "ok"}, ["ctl", "start", "--target", "kid", "--on-queued", "ok"]),
@@ -206,14 +207,14 @@ class Subagent(unittest.TestCase):
                            ({"op": "pause", "name": "kid"}, ["ctl", "pause", "--target", "kid"]),
                            ({"op": "resume", "name": "kid"}, ["ctl", "resume", "--target", "kid"]),
                            ({"op": "say", "name": "kid", "text": "hi"}, ["say", "--target", "kid"]),
-                           ({"op": "listen", "name": "kid"}, ["listen", "--target", "kid", "--timeout-s", "0"]),
-                           ({"op": "listen", "name": "kid", "timeout_s": 0}, ["listen", "--target", "kid", "--timeout-s", "0"]),
-                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 0}, ["ask", "--target", "kid", "--timeout-s", "0"]),
-                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_cycles": 5}, ["ask", "--target", "kid", "--timeout-cycles", "5"]),
-                           ({"op": "listen", "name": "kid", "letter": "000000000003.q"}, ["listen", "--target", "kid", "--letter", "000000000003.q", "--timeout-s", "0"]),
+                           ({"op": "listen", "name": "kid"}, ["listen", "--target", "kid"] + box + ["--timeout-s", "0"]),
+                           ({"op": "listen", "name": "kid", "timeout_s": 0}, ["listen", "--target", "kid"] + box + ["--timeout-s", "0"]),
+                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 0}, ["ask", "--target", "kid"] + box + ["--timeout-s", "0"]),
+                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_cycles": 5}, ["ask", "--target", "kid"] + box + ["--timeout-cycles", "5"]),
+                           ({"op": "listen", "name": "kid", "letter": "000000000003.q"}, ["listen", "--target", "kid", "--letter", "000000000003.q"] + box + ["--timeout-s", "0"]),
                            ({"op": "listen", "name": "kid", "last": 3}, ["listen", "--target", "kid", "--last", "3"]),
-                           ({"op": "listen", "name": "kid", "timeout_cycles": 7}, ["listen", "--target", "kid", "--timeout-cycles", "7"]),
-                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 9}, ["ask", "--target", "kid", "--timeout-s", "9"])):
+                           ({"op": "listen", "name": "kid", "timeout_cycles": 7}, ["listen", "--target", "kid"] + box + ["--timeout-cycles", "7"]),
+                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 9}, ["ask", "--target", "kid"] + box + ["--timeout-s", "9"])):
             out = self.ok(args)
             self.assertEqual(self.calls()[-1], want, args)
         self.assertEqual(out, "the answer\n")

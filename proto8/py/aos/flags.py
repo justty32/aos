@@ -117,7 +117,7 @@ def with_usage(help, code, reason, stop=()):
 #   fork（工具 fork 給分身的開場與補上的工具結果，py/tools/agent/fork 與 py/tools/agent/fork/fork_copy.py 自己拼，11-11 thinking fork-and-do-task/01）、
 #   slash（eca 收到 /clear、/status 這類 slash 指令時 aos 這層的回答，aos-eca-turn ⑭，11-12 thinking eca-slash）、
 #   kernel_hold（agent 當 kernel 時，站把請求留下等它表態的通知，py/tools/agent/kernel_gate/tick 自己拼，11-13 thinking eca-as-kernel）。新種類加在這裡。
-NOTE_KINDS = ("summary", "session", "clock", "hook", "tool", "warning", "new_mail", "goal", "fork", "slash", "kernel_hold")
+NOTE_KINDS = ("summary", "session", "clock", "hook", "tool", "warning", "new_mail", "goal", "fork", "slash", "kernel_hold", "listen")
 
 
 def aos_note(kind, text):

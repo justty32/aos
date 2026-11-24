@@ -24,7 +24,7 @@
 #   對帳＝名字與「帳上 stack 從這次的 daemon 拼回的絕對路徑」都對得上 ctl ls --json 那列才算還在。
 # 配額：max_subagents 從 subagents.json 讀——我的定義那份疊我的 stack 那份（ctl who --json 的 def 與 stack；只放改過的鍵）；都沒有＝4。
 # 錯：stderr 與 stdout 各一行「subagent: error: 代號 原因」、退 1；下層 stderr 原樣透出；下層最後一行錯誤行接成自己的（C-52 例外 ⑤）。
-import json, os, re, sys
+import fcntl, json, os, re, sys
 HELP = """\
 usage: subagent < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Your own subagents: add | rm | ls | state | stop | start | sleep | wake | pause | resume |
@@ -76,6 +76,30 @@ def load_json(path, missing):
         die("ReadFailed", "cannot read %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
 
 
+BOOK_HELD = [None]               # 拿著的帳鎖（開著的鎖檔）；None＝沒拿
+
+
+def book_lock():
+    """拿帳鎖（<我的小格>/.subagents.json.lock，flock）：讀帳→改→寫回這段一次一份（11-24 晚：aos-mcp 讓呼叫同時跑，
+    本工具 _metainfo 改 parallel true，listen 等著時 state／ls 照樣能叫；兩份同時改帳不能互蓋）。已經拿著＝不再拿；行程結束自己放。"""
+    if BOOK_HELD[0] is None:
+        try:
+            os.makedirs(stack, exist_ok=True)
+            held = open(os.path.join(stack, ".%s.lock" % CFG), "a")
+            fcntl.flock(held, fcntl.LOCK_EX)
+        except OSError as e:
+            die("WriteFailed", "cannot lock %s: %s" % (tool_io.place(book_path), tool_io.os_reason(e)))
+        BOOK_HELD[0] = held
+        return True
+    return False
+
+
+def book_unlock(took):
+    if took and BOOK_HELD[0] is not None:
+        BOOK_HELD[0].close()
+        BOOK_HELD[0] = None
+
+
 def write_book(kids):
     tmp = os.path.join(stack, ".%s.%d" % (CFG, os.getpid()))
     try:
@@ -99,7 +123,16 @@ def book_stack(path):
 
 
 def reconcile():
-    """對帳：名字與 stack（帳上的從 daemon 拼回絕對）都對得上表上那列的才算還在；不在的忘掉（寫回）。回 (還在的, 忘掉的名字, 表)。"""
+    """對帳：名字與 stack（帳上的從 daemon 拼回絕對）都對得上表上那列的才算還在；不在的忘掉（寫回）。回 (還在的, 忘掉的名字, 表)。
+    讀帳到寫回拿著帳鎖（add 自己先拿、拿到寫完新帳）。"""
+    took = book_lock()
+    try:
+        return _reconcile()
+    finally:
+        book_unlock(took)
+
+
+def _reconcile():
     kids = load_json(book_path, [])
     if not isinstance(kids, list) or not all(isinstance(k, dict) and isinstance(k.get("name"), str) for k in kids):
         die("ReadFailed", "%s is not a JSON array of {name, stack}" % tool_io.place(book_path))
@@ -196,6 +229,7 @@ if not isinstance(DAEMON, str) or not os.path.isabs(DAEMON):
 DAEMON = os.path.normpath(DAEMON)
 
 if op == "add":
+    book_lock()                                 # 對帳→起→寫新帳一路拿著（同時兩個 add 不會一起過配額、互蓋帳）；結束時放
     alive, gone, _ = reconcile()
     n = max_subagents()
     if len(alive) >= n:
@@ -254,12 +288,18 @@ if op in cmd.LIFE_OPS:
         preserve_child(name)
     out = cmd.agent(argv, timeout_s=cmd.life_guard(op, args))
     if op == "rm":
+        took = book_lock()
         write_book([k for k in load_json(book_path, []) if k.get("name") != name])
+        book_unlock(took)
 elif op == "say":
     out = cmd.agent(["say", "--target", name], text=words)
 elif op in ("listen", "ask"):
     # ask＝一支 aos-agent ask（寄、記信名、等那封的回答）；listen 給了 letter＝等那封。話走 stdin（同 say）。
     base = ["ask", "--target", name] if op == "ask" else ["listen", "--target", name] + (["--letter", letter] if letter else [])
+    # 11-24 晚（home-listen-1124）：子也可能用信回（mailbox_send，in_reply_to 是這封，例 BLOCKED），落在我的信箱——那封也結束等待
+    box = os.path.join(ME["stack"], "mailbox") if isinstance(ME.get("stack"), str) and os.path.isabs(ME["stack"]) else None
+    if box and last is None:                    # 信箱還沒建（第一封信才建）也照給：listen 看不到就是沒有
+        base += ["--mailbox", box]
     try:
         if cyc is not None:
             out = cmd.agent(base + ["--timeout-cycles", str(cyc)], text=words, timeout_cycles=cyc + 30)

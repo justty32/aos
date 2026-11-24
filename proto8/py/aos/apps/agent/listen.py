@@ -1,7 +1,7 @@
 # aos/apps/agent/listen.py - 以秒或 cycle 等待回答（給信名就配那封），或列出與追蹤歷史對話。
 HELP = """aos-agent listen - print the agent's answer
 
-usage: aos-agent [--daemon D] listen [--target NAME] [--letter NAME] [--timeout-s SECS | --timeout-cycles N | --last N [--follow] | --follow]
+usage: aos-agent [--daemon D] listen [--target NAME] [--letter NAME] [--mailbox DIR] [--timeout-s SECS | --timeout-cycles N | --last N [--follow] | --follow]
 
 Without --last or --follow: wait for an answer and print only its text.
 --letter NAME waits for the answer to that letter (the name aos-agent say printed). Without it:
@@ -12,6 +12,10 @@ the old way: the latest answer, with a warning on stderr.
 While a handed-over letter waits, a failed brain call (the stack's cooldown.json) is said once on
 stderr with the error lines from the agent's stderr file; if the agent stopped on that error,
 listen ends at once with AnswerMissing and those lines instead of waiting for the timeout.
+--mailbox DIR also watches that mailbox (yours: the agent may answer with a letter there, e.g. BLOCKED;
+a folder that does not exist yet is watched until it does):
+a letter in it whose in_reply_to is the letter waited for ends the wait (exit 0); stdout says so and
+gives its status, title and text; the letter stays in the mailbox.
 --last N prints the last N exchanges as blocks: "== #N", question lines prefixed "> ",
 then the answer. --follow prints new exchanges; add --last N to show history first.
 Ctrl-C leaves follow mode with exit 0; reminders go to stderr.
@@ -19,6 +23,7 @@ Ctrl-C leaves follow mode with exit 0; reminders go to stderr.
 flags:
   -t, --target NAME   which agent (default: $AOS_AGENT, else ./.stack or ./)
   --letter NAME       wait for the answer to this letter (not with --last / --follow)
+  --mailbox DIR       also end on a letter in DIR that answers it (in_reply_to); not with --last / --follow
   --timeout-s SECS    give up after SECS seconds (AnswerMissing); 0 = no limit; omitted = no limit
   --timeout-cycles N  give up after N cycles (positive integer); exclusive with --timeout-s
   --last N            show the last N exchanges (a whole number) instead of waiting
@@ -27,7 +32,9 @@ flags:
 
 exit codes: 0 printed; 1 error (AnswerMissing, LetterDropped, QuestionUnknown...); 130 Ctrl-C while waiting."""
 
+from aos import flags as aos_flags
 from aos import ws as aos_ws
+import json
 import math
 import os
 import sys
@@ -89,13 +96,42 @@ def print_text(text):
     sys.stdout.flush()
 
 
-def wait_latest(a, timeout, before=None, *, timeout_cycles=None, letter=None, before_rows=None):
+def mail_reply(box, sig):
+    """box（aos-post 信箱）的 new/、cur/ 裡 in_reply_to 是 sig 的第一封 → (信名, letter.json 的內容)；沒有＝None。讀不懂的信略過。"""
+    for stage in ("new", "cur"):
+        here = os.path.join(box, stage)
+        try:
+            names_ = sorted(n for n in os.listdir(here) if not n.startswith("."))
+        except OSError:
+            continue
+        for n in names_:
+            try:
+                got = json.loads(aos_ws.read(os.path.join(here, n, "letter.json"), ""))
+            except ValueError:
+                continue
+            if isinstance(got, dict) and got.get("in_reply_to") == sig:
+                return n, got
+    return None
+
+
+def print_mail(a, sig, box, name, letter):
+    """11-24 晚（home-listen-1124，narr-amber 回報②）：對方用信回了（例 BLOCKED），不是 history 裡的回答——照樣結束等待、說清楚。"""
+    body = letter.get("body") if isinstance(letter.get("body"), dict) else {"what": letter.get("body")}
+    one = lambda v: " ".join(str(v).split()) if v is not None else "-"
+    head = aos_flags.aos_note("listen", "%s answered %s with a letter in %s, not with a reply: %s \"%s\" (letter %s; it stays there, read it with mailbox_read)"
+                       % (a.name, sig, box, one(body.get("status")), one(body.get("title")), name))
+    what = body.get("what")
+    print_text(head + ("\n" + str(what) if what not in (None, "") else ""))
+
+
+def wait_latest(a, timeout, before=None, *, timeout_cycles=None, letter=None, before_rows=None, mailbox=None):
     """等一封信的回答（before＝寄之前的回答數；ask／chat 給，listen 開始時才數；reply-match-1114 03 §2、§5）。
     letter 給了（ask、chat、listen --letter）＝只認 aos_ws.answer_for 配到這封的回答；離開 queue 後查無紀錄（unknown）時，
     history[before_rows:] 有舊身體的信列才退回舊配法（還在答就等、回答數比 before 多才印最新那則），stderr 說一句；
     before_rows＝寄之前 history 的列數，沒給＝信還在 queue 就現在數，不然從頭找（此時不要求回答變多，同現行 listen）。
     letter 沒給（listen）＝等 queue 最新那封，queue 空就等 letters.json pending 最後那封，都配信名；查無紀錄＝照舊配法、不另說；
-    都沒有＝現行規則（還在答就等新回答，不然印最新那則）。"""
+    都沒有＝現行規則（還在答就等新回答，不然印最新那則）。
+    mailbox＝也看這個信箱（叫的人自己的）：有 in_reply_to 是這封的信＝印那封的摘要、結束（print_mail）。"""
     deadline = aos_ws.deadline_after(timeout_cycles) if timeout_cycles is not None else None
     duration = "%d cycles" % timeout_cycles if deadline is not None else "%g s" % timeout if timeout is not None else ""
 
@@ -122,6 +158,19 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None, letter=None, be
     brain_warned = False
     what = sig or "the latest letter"
     state, old = None, False                          # state＝answer_for 最後看到的；old＝這封已退回舊配法
+    next_mail = 0.0
+
+    def mailed():
+        """mailbox 給了：每秒看一次有沒有回這封的信；有＝印、回 True。"""
+        nonlocal next_mail
+        if mailbox is None or sig is None or time.monotonic() < next_mail:
+            return False
+        next_mail = time.monotonic() + 1.0
+        hit = mail_reply(mailbox, sig)
+        if hit:
+            print_mail(a, sig, mailbox, *hit)
+            return True
+        return False
 
     def say_brain():
         nonlocal brain_warned
@@ -191,6 +240,8 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None, letter=None, be
 
     while True:
         stages = [s for s in aos_ws.where(a.stack, sig) if s in ("new", "cur")] if sig else []
+        if mailed():
+            return
         if not stages:
             if sig is None:
                 if not handed_unanswered(a, before):
@@ -320,7 +371,8 @@ def count(v):
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--target": "target", "--letter": "letter", "--timeout-s": "timeout", "--timeout-cycles": "timeout_cycles", "--last": "last"},
+    opts, rest = parse(argv, {"--target": "target", "--letter": "letter", "--timeout-s": "timeout", "--timeout-cycles": "timeout_cycles", "--last": "last",
+                              "--mailbox": "mailbox"},
                        {"--follow": "follow"}, help=HELP, short=("-t", "-f"))
     if "timeout" in opts and "timeout_cycles" in opts:
         raise bad_args(HELP, "--timeout-s and --timeout-cycles are mutually exclusive")
@@ -335,12 +387,18 @@ def cmd(argv):
     letter = opts.get("letter")
     if letter is not None and not waits:
         raise bad_args(HELP, "--letter is only for waiting on a letter, not with --last / --follow")
+    mailbox = opts.get("mailbox")
+    if mailbox is not None and not waits:
+        raise bad_args(HELP, "--mailbox is only for waiting on a letter, not with --last / --follow")
+    if mailbox == "":
+        raise bad_args(HELP, "--mailbox needs a mailbox folder")
     if letter is not None and (not letter or "/" in letter or letter.startswith(".")):
         raise bad_args(HELP, "--letter needs a letter name as aos-agent say printed it (no / and not starting with .): %s" % letter)
     a = target(opts)
     try:
         if waits:
-            wait_latest(a, None if timeout == 0 else timeout, timeout_cycles=timeout_cycles, letter=letter)
+            wait_latest(a, None if timeout == 0 else timeout, timeout_cycles=timeout_cycles, letter=letter,
+                        mailbox=None if mailbox is None else os.path.abspath(mailbox))
         else:
             follow(a, last or 0, bool(opts.get("follow")))
     except KeyboardInterrupt:
