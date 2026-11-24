@@ -12,67 +12,17 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-23 下午 14:50（公司機）——eca-aos 接手當頂層；wf/org 工作室定案、三個位子真的掛上了；使用者專區可用
+## 2026-11-24 上午 10:10（公司機）——templates 三分切換中：醒來先讀這條
 
-**寫這條的是 `eca-aos`**（樹裡的頂層 eca，使用者在它的畫面上直接對話）。細節全在它的筆記 [`wf/ws/eca-aos/notes.md`](ws/eca-aos/notes.md)（今天每一段的原話、信名、雜湊）；compact 後先讀那份，再回來看這條。
+**寫這條的是 `eca-aos`**。細節在 [`wf/ws/eca-aos/notes.md`](ws/eca-aos/notes.md) 的 11-24 各節。
 
-**使用者換 compact 前的話（逐字）**：「你這邊我想compact」。
+**切換**：補丁在 `~/.aos/scratch/tri-split-1124/` 做好、測過（底 `f263b12b6`，複本 HEAD `d34fba370`，全套新紅 0）。照打清單在 `~/.aos/scratch/tri-split-1124/out/RUNBOOK.md`（不在 git 裡），由使用者開的樹外 Claude Code 視窗照打、每步他點頭（11-23 晚家機答第 ③ 題 b）。停樹時 eca-aos 也停；**醒來（樹重起後）先看**：`git log --oneline -3` 有沒有 `tri-split-1124` 的 commit、`git status --short` 乾淨嗎、`subagent ls`、`mailbox_peek`。
 
-**授權（11-23 當場）**
-- **push 還沒給**：早上他說「我今天五點下班，下班前再統一push」。本地 main 比 origin 多 11 個以上 commit，五點前問他，要他本人說才推。
-- 刪檔：只給過滾輪調查留下的那幾個痕跡（已刪）；`wf/workflows/dispatch/kits/gather/.env`（「1.刪掉。」，已刪）。
-- **`install.py` 不用再問**：他 11-23 16:13 被問第三次要不要跑時說「2.想跑就跑，隨便跑」。eca-aos 在 repo 跑 `install.py` 不必再逐次問（我的讀法：只限 `install.py`，位子仍不自己跑、回信提醒 eca-aos 裝；跑之前照舊確認 `py/`、`cpp/` 沒有未交的改動、清掉 `AOS_*`）。
-- **16:55 push 一次**：他 16:03 說「2.4:55推上去」。只這一次、推 `origin main`；之後的 commit 要他再說。
-- 派工：普通 opus、簡單與雜活 sonnet、規劃 fable；寫程式與重要的施工一律 Claude、蒐集雜活給 fsm gpt（這台掛不起來前由 sonnet 補位）。
-- `eca_main`（根 daemon 上使用者的中心 agent）派來的普通工作算他的授權；push、刪檔不算。
-- 使用者專區的回信用 `aos-user verify` 驗過才算（今天第一次整條走通）。
-- 掛位子：他說「這麼多的需求，可以試試看」，所以掛了三隻。再掛新的、收掉、重啟 repo 這一列，照舊先問。
+**授權（11-24 當場）**
+- **push：使用者「下午五點我關機下班前一起推」**——17:00 前推一次 `origin main`，只這一次。
+- `install.py` 常設許可（11-23「想跑就跑，隨便跑」）照舊；其餘照 11-23 那條（git 歷史）：派工模型、eca_main 的普通工作算授權、專區回信要 verify、掛新位子先問。
 
-**這台現況**
-- 樹：根 `~/aos-home/.stack`，表上 `_clock`、`_sweeper`、`llm`、`repo-aos`、`eca_main`、`mine_arena`、`guanyu`、`mine_paper`（後四個是使用者或 eca_main 掛的，不是我的，不碰）。repo 這棵 `~/repo/aos/.stack`：`_clock`、`_sweeper`、`eca-aos`、`eca-aos-kb`、`eca-aos-templates`、`eca-aos-core`。
-- 起停指令沒變（細節 [03-換機「起樹、停樹」](workflows/dev-env/03-換機.md#起樹停樹)）：
-  ```sh
-  cd ~/aos-home && env -u AOS_DAEMON -u AOS_STACK -u AOS_CLOCK -u AOS_KERNEL -u AOS_LLM_KERNEL aos-exec --stack .stack root   # 起（前景，一行全起）
-  CLAUDE_CONFIG_DIR="$HOME/.claude-alt" aos-agent -t eca-aos open                                                          # 開 eca-aos 畫面
-  aos-daemon-ctl -d ~/aos-home/.stack shutdown                                                                              # 停（一行全停）
-  ```
-- 使用者專區 `~/.aos/user/` 建好、可用；全景頁沒起，他用 `aos-user ls`／`answer` 回。tick 的 timer 他答不裝。
-- 127.0.0.1:4000 我看的時候沒在聽（別棵樹的 gpt 腦卻有在答話，實際端點沒查清，core 位子正在查）。
-
-**組織（[wf/org](org/README.md)，使用者 11-23 答七題定案）**
-- 負責人 `eca-aos`；位子 kb（`proto8/knowledge`）、templates（`proto8/templates`）、core（`proto8/py`、`cpp`）、frontend（`proto8/frontend`，大修開工才掛）；打雜工是 sol 的 agent-fsm，這台還掛不起來。
-- 我只親手寫三樣：活狀態（progress、HANDOFF、筆記）、抄他的話進規矩、`wf/org`；其餘照派。位子在自己範圍內先交後報。
-- **三個位子 15:24 起都在睡（`subagent sleep`，使用者「可以讓他們sleep？」）**：行程收掉、stack 與筆記留著、信照樣排隊；要用時 `subagent wake <名>`，repo 這台 daemon 重起時也會自己醒。
-- **三個位子是真的掛著的 eca**（`subagent` 工具掛的，定義直接指範本 `eca-claude`，各自 stack 有 `system.txt` 與 `notes_path`）：`subagent ls` 看、`mailbox_send {to: 名}` 派工、它們的 DONE 進我的信箱。每隻都吃第二帳號的額度。沒開 auto_restart。
-
-**還在跑、回來要收的**（16:35 更新）
-1. **org 範本做完了**（使用者「去總結一下，弄進template」；五題答「1.c,2.a,3.a,4.a,5.a」）：`proto8/templates/orgs/`（`fd871a355`）、`wf/org` 入口一行與索引（`284f5e5ec`）、知識庫 `aos/orgs.md`（`8236c07f2`）。
-2. **templates 三分**（1c，加追問四件「1.a,2.a,3.a,4.可以，明天早上切」）：六類 `agents`／`kernels`／`orgs`／`daemons`／`starts`／`tools`，`kits` 放 `agents/` 底下；`agent_def new` 照收光名字；`agent-fsm` 執行期的九個檔搬進 `py/aos/apps/agent_fsm/`。**工作樹裡一個範本夾都不能先搬**（工作樹就是活樹的 `AOS_HOME`）。施工設計已交（規劃夾 `06`～`06f`，`7fe875cfa`；明早的清單是 `06e-切換步驟.md`），**全部只是讀程式寫的，沒有一步實跑過**。
-   - **使用者 16:52 說「我會關機下班...」**：所以今晚什麼都不會做。**11-24 早上開機後的順序**：起樹 → 我讀筆記與這條 → 問他三題（下面）→ 派位子在 `~/.aos/scratch/tri-split-1123/` 的 clone 上做補丁與兩支切換腳本、暫存樹預演改表（這段要幾個小時，他說的「早上切」實際會落在備好之後）→ 他說停才切，每一步要他本人授權。
-   - **11-23 晚家機改成今晚先備**（使用者「好」）：家機的 main 派了兩隻 opus 在家機 `~/.aos/scratch/tri-split-1123/` 做補丁（split.py＋手改層＋全套測試＋預演交件，線 `tri-split-1123`）與改表腳本加暫存樹預演（線 `tri-split-1123-table`），成果交進規劃夾 `06-switch/`；要 push 公司才拿得到（還沒授權）。明早公司 pull 後在新 main 上重跑、接上手改就能切。
-   - **11-23 晚家機答了**（「那三題都按照推薦」）：① a、② a；③ 家機的 main 推薦 b、他答「Hmmm，可以」＝他開一個樹外的 Claude Code 視窗代打，每步等他點頭（progress `org-template-1123` 的 next）。原本的三題：① 直接拿範本夾當定義的 13 列只改路徑（推薦），還是各樹抄一份；② 別的專案的 6 份定義（arena_cheater 五、ops-notes 一）切換腳本直接改檔可不可以（推薦可以）；③ 明早誰在樹外打指令（他本人，或他開一個樹外的 Claude Code 視窗）。另有規劃員替他做的五個小選擇，已列給他看、他還沒說話。
-   - 盤點結果與細節在 progress `org-template-1123` 與筆記「16:33」。
-3. 三個位子 16:44 都 sleep 了（org 範本做完：`fd871a355`、`284f5e5ec`、`8236c07f2`）；**daemon 重起時睡著的位子會自己醒**，明早起樹後它們會各起一個 claude 行程，閒著不叫模型。打雜工兩隻都 `rm` 了（stack 留著）。
-4. `mine_arena/main` 的第二封信（六題「請 aos 考慮」）：事實部分已回（PROGRESS），**方向部分等使用者來談**，談完回它一封 DONE。**11-23 晚家機開談**：隔離要做到哪一級，使用者答「甲，先只防失誤」（不做抗惡意）；六題逐件要不要做還在談。使用者說過會親自找我談「上層怎麼約束下屬」與「agent 之間的資源分配」。
-5. 問了使用者還沒答的：`AGENTS.md:3`、`user/01:50` 等處指到已不在的 `archive/`，連結拿掉還是把 `archive/` 放回來。
-6. 活樹：`wf/tree/root` 的 `_clock` 已 `rm`（15:01）；`install.py` 今天裝了四次（最後 16:30），`lib/` 等於 HEAD 的 `py/`。
-
-**今天交了什麼**（都沒 push；每個的來龍去脈在筆記）：範本 `cli.json` 加 `"tui": "fullscreen"`（滾輪）；`wf/org` 與舊文件對齊；`aos-user` 的 send 自建信箱、逐題留言、公告；知識庫與 `wf/public` 跟上；新範本 `daemon-sub`；kb 位子自己交的 `74bedc157`。
-
-**還開著的**（progress：`org-1123`、`aos-user-home`、`findings-1123`、`company-wsl-1123-verify`、`sol-high-pack`）
-- 今天查出、還沒修的 aos 問題記在 progress `findings-1123`。
-- 「把stack一起隨機器搬遷，不是一個好主意」：使用者 11-23 晚家機說「只是我初步的想法，先不管，後續隨着我對aos體系的了解加深，才會有結論。」——不追、不列題，等他自己提。
-- `wf/user/README.md` 有一句「不把這裡當信箱用」跟他 11-23「沒有~/.aos/user，那就放wf/user」相反；那是他的地盤，沒動。
-
-**家機 pull 之後要做的**
-1. 先停舊樹、改名（還叫 `_stack` 的話）：`aos-daemon-ctl -d ~/repo/aos/_stack shutdown`；`mv ~/repo/aos/_stack ~/repo/aos/.stack`；殼設定檔裡的 `repo/aos/_stack` 改成 `repo/aos/.stack`。
-2. **不要再單獨起 `wf/tree/root`**（11-23 起它不帶鐘，單獨起整棵樹沒有時鐘）：照 [03-換機「家機照做」](workflows/dev-env/03-換機.md#家機照做從舊樣子改成同一套做一次)改成 `~/aos-home` 那一套（根底下掛 llm kernel 與 repo 這棵）再起。 掛好之後下一次 `aos-daemon-ctl -d ~/repo/aos/.stack rm _clock`（舊表上的 `_clock` 列不會自己消失）。
-3. 跑一次 `python3 ~/repo/aos/proto8/install.py`（11-23 改了 `py/` 的 llm_http）。
-4. 全景頁若是 systemd 起的，unit 裡的 `_stack` 也要改。
-
-**坑**
-- 開畫面的殼要帶跟根一樣的 `CLAUDE_CONFIG_DIR`；不帶就是主帳號。
-- 不要在 repo 跑 `git stash`、`reset --hard`、`checkout -- .`、`clean -fdx`（`.stack` 被忽略，會被倒回或刪光）。
-- 位子與子 agent 同時在同一個工作樹改檔：交件前 `git status` 看到別人範圍的改動是正常的，`--files` 只點自己的。
-- 樹上有兩隻叫 `main` 的（`mine_arena`、`mine_paper`），通知只寫「from main」，看信的 sender 路徑分。
-- 派 Claude 子 agent 查別棵樹的事時，任務書要寫死：別棵樹的 stack、信箱、`/proc/*/environ` 不讀（今天有一隻讀了）。
+**切完要接的**
+1. 家機也要照 06f「家機照做」：停樹、pull、跑 `stack_paths.py`（家機的 `repo-aos/main` 也直接掛 `templates/eca-claude`）。
+2. 各專案協調者在自己的 repo 交第 10 步的定義改動（arena_cheater 七份、ops-notes 的 patrol）；`templates/reviewer/tools.json` 第 1 行；知識庫三句；各位子讀一遍腳本改過的句子；CONVENTION P-27 等句子派 opus 逐句看（使用者 11-23 晚「1.可以」）。
+3. progress `eca-main-obs-1124`（eca_main 六點：文件派 kb、小程式派 core；範本 llm kernel 預設值、閒置輪詢的方向、`eca-aos-sol-1`／`-2` 的 stack 刪不刪要問使用者）、`mine-arena-dir-1123`（①②③ 開工）。
