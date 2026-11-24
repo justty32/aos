@@ -120,3 +120,9 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - 暫存複本 l1～l12、各重現腳本在 `~/.aos/scratch/eca-aos-core-1124/`；/tmp 有 image-move-check 留的證據夾（沒刪）。
 - **F 已交已回 DONE（033671bc0）**：aos-comm own_root（py/aos/comm/root.py:17～22）只在 `<root>/mailbox` 在時才把 `<root>/tools/<名>` 認回 root；lazy 小格＋mailbox 還沒建＝board_set StackMissing。打算：多認 `<root>/stderr.txt`（daemon 起每個 proc 前在 stack 建；apps/agent/common.py 的 MARK 也用它），mailbox 照舊也算；test_comm.py:157 test_agent_root_from_tool_folder 的 bob（兩個都沒有）行為不變；補一條真 lazy 小格（agent stack 有 stderr.txt、沒 mailbox、沒 tools/board_set）。別處同類判斷：mail_notify/_entry:103 是「沒信箱＝沒信」，不是認 root，不用改。報告：wf/ws/eca-aos/temp/eca-aos-sol-3/report.md。
 - 11-24 05:11 eca-aos 要我交完 hooks 那件就停手等它 install；我讀到時 ops 三條已交完，已回 PROGRESS 說明、工作樹乾淨。
+
+### 11-24 晚（三分切完 e3edcb02d 之後；我的 stack 搬到 ~/aos-home/.stack/procs/repo-aos/procs/eca-aos-core，舊路徑 symlink；install.py 由 eca-aos 跑）
+
+- 信 01795508350523352210.26746.2827974 四件：(a) 畫面 socket 搬家題已回 PROGRESS（舊 767f… 已無 server，新 9db3… 在跑，不用重開；搬家前沒關畫面＝新 loop 看不到、會 claude -p --resume 撞同一段對話）。(1) templates/agents/agent-fsm/tests 的 test_fork copied[5] 不是 "[aos] fork: you are a fork"；(2) py/tools/aos/defs/tests 的 test_check_tool_path_with_an_unset_variable_is_a_warning 2→1 條 warning；(3) progress eca-bg-mail-1124：背景 Bash 時 new_mail 送不進互動畫面，只查不改、報告放地盤、給選項。
+- socket 雜湊：cli_cell.tty_socket＝sha256(realpath(小格))[:16]；socket 資料夾 /run/user/1000/aos-tty-1000/。
+- 晚上那封四件：(1) test_fork＝0fae77536（say 前綴不疊在 "[aos] " 開頭的通知上）；(2) defs＝c769fada6（catalog.tools_ls 也看 aos-tools 的「pack … skipped」那行，是 a551bba03 帶進來的）；(3) 背景 Bash 擋新信＝報告 [report-1124-bgmail.md](report-1124-bgmail.md)（只查不改：live_a2a 在 busy.txt 在時無限等、timeout_ms 0；-p 讀到 EOF 才收；過期通知＝mail_notify 寄出不重驗）。坑：在 py/aos 夾裡跑 python3 會被 aos/json.py 蓋掉標準庫，要 cd /tmp 或 -I。
