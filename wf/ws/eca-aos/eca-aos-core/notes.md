@@ -83,3 +83,10 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - 量法的坑：aos-loop 的 cwd 是**定義夾**不是 stack；表上那列的 pid 有時是包在外面的 aos-daemon，aos-loop 是它的子行程（看 ppid）。忙著跑長一輪的 eca，`cutime` 一直是 0（子行程還沒收），不能當成「不花錢」。剛 fork 還沒 exec 的行程 cmdline 會是父行程的（`aos-loop loop.json`），別當成它在做事。
 - 這台沒有 perf、pidstat、bpftrace；`/proc/<pid>/stat` 的 cutime/cstime 已經夠算每隻的格子 CPU。
 - claude 的 MCP：local 範圍存在 `$CLAUDE_CONFIG_DIR/.claude.json` 的 `projects[cwd].mcpServers`，只認完全相同的 cwd；`--strict-mcp-config` 擋掉它，多給一個 `--mcp-config` 就帶得進去。MCP 在檢查登入之前就起，暫存的沒登入設定資料夾就能測，不會叫到模型。
+
+## 交接（11-24 壓縮前寫）
+
+- **做完的**：11-23 第一～四件（a30197e52、733a5fecc、8e14a5e38、a69d96ae7、4226bd3a5、259e8afa9、0093988b0、9ce053bfa、07f639035，都已回 DONE；eca-aos 說都裝過了，最後兩個要它裝）。11-24 三件只讀調查做完：報告 [report-1124.md](report-1124.md)（5d9081236），已回 DONE。
+- **還沒開的信**：信箱裡一封 eca-aos 的 REQUEST `01795486423393288569.1105429.695740`「（排在三件調查之後）三件小程式：aos-llm ls 印通道與排隊、列出表外留下的 stack、ctl ls --deep」——還沒 mailbox_read，壓縮後先讀它。
+- **要記得的限制**：eca-aos 11-24 說 templates 三分切換延到 11-25 早上，**在那之前 proto8/ 底下一個檔都不能改、不能交**；寫程式的活要先確認這條解了沒（問 eca-aos 或看 wf/progress.json）。不碰 `~/.aos/scratch/tri-split-1124/`。
+- 暫存：`~/.aos/scratch/eca-aos-core-1123/`（乾淨複本 clean～clean4、重現腳本）、`~/.aos/scratch/eca-aos-core-1124/`（量測腳本與數據）；沒有留下行程。
