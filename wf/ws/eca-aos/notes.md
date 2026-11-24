@@ -451,3 +451,10 @@
 - **切換腳本回來了**（`~/.aos/scratch/switch-1124/`：switch.sh、rollback.sh、stack_move.py、rehearse.sh、README、test/e2e-sandbox.sh）。沙盒整條跑過 SWITCH-OK／ROLLBACK-OK；拷貝上預演 stack_move 改 48 檔、stack_paths 19 檔 64 處＋外部 19 檔 51 處，驗證器 0 壞、前後對照 0 差。重點：表上路徑相對 daemon stack 的真實路徑（symlink 先解開）→ 只搬加 symlink 會斷，必須改寫；三個 subagent 的 cell `exec.json` 也要改；`.gitignore` 是 `/.stack/` 擋不了 symlink → 第 3 步在 `.git/info/exclude` 加 `/.stack`。RUNBOOK 第 5 步 `split.py --check` 在 commit 前對 repo 跑必失敗（讀 index），switch.sh 已改成 commit 前對 clone、commit 後對 repo。
 - 我替使用者先定（小事、可推翻）：用 `--allow-other-daemons`（測試與別的樹會有 aos-daemon）；`as_written.stack` 先放新絕對路徑（相對化留給 relative-paths-1124）；symlink 留幾天；文件裡的 `~/repo/aos/.stack` 切完再改；退回用 git revert。
 - 啟動：獨立 tmux 視窗 `./switch.sh --check-only`（CHECK-OK）→ `setsid ./switch.sh --allow-other-daemons < /dev/null &` → `tail -f log/switch-*.log`。切完：`CLAUDE_CONFIG_DIR=~/.claude-alt aos-agent -t eca-aos open`（stack 新位置 `~/aos-home/.stack/procs/repo-aos/procs/eca-aos`）。
+
+## 2026-11-24 16:1x：補丁重做完、CHECK-OK，等使用者說開始
+
+- 補丁（`~/.aos/scratch/tri-split-1124b/out/`）：新底 `f727a4e84`、複本 HEAD `f0ac62b0d`；files 407、rm 214；只有 H2 一個衝突（start-eca/ann README 逐字重抄、帶上今天的 claude_mcp 段）；底與 HEAD 各 83 夾 3,394 支＋前端 52，新紅 0。HANDOFF 在補丁裡 → **切換前不准改 HANDOFF**。
+- 兩邊都紅、跟補丁無關、今天的 commit 帶進來的：agent-fsm `test_fork`（猜是 7ebe15b7e 的 [say from] 前綴）、defs `test_check_tool_path_with_an_unset_variable_is_a_warning`。切完派 core 修。packs.md 的 self 那列字數可能過時（kb）。
+- `switch.sh --check-only --allow-other-daemons` 用 `systemd-run --user --wait --pipe` 在樹外跑：**CHECK-OK**（8 台 daemon、37 列 161 路徑 0 壞；stack_move dry 48 檔；stack_paths 19 檔 64 處＋外部 19 檔 51 處）。
+- 正式啟動我打算用 `systemd-run --user --unit=aos-switch-1124 -p KillMode=process --collect`（不用 setsid：我的殼在樹裡，孤兒可能被收養或連帶收掉；KillMode=process 讓腳本在 tmux 起的根不被 unit 結束時收掉）。日誌 `~/.aos/scratch/switch-1124/log/switch-*.log`。
