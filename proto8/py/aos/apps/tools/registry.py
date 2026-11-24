@@ -72,15 +72,33 @@ def read_bases(reg, pointer):
             except directive_value.Error as e:
                 if e.code == "CommandMissing":
                     raise Fail(e.code, "%s has directives that need aos-directive, which cannot start: %s" % (at, e.cause))
-                raise Fail("DirectiveBad", "%s: directives cannot be resolved (aos-directive exited %d)" % (at, e.returncode)
-                           if e.returncode is not None else "%s: directives cannot be resolved (%s)" % (at, e))
+                out.append((Fail("DirectiveBad", "%s: directives cannot be resolved (aos-directive exited %d)" % (at, e.returncode)
+                                 if e.returncode is not None else "%s: directives cannot be resolved (%s)" % (at, e)), at))
+                continue
         if not isinstance(item, str) or not item or "\0" in item:
-            raise Fail("RegistryBad", "%s must be a path string, a directive resolving to one, or an array of those" % at)
+            out.append((Fail("RegistryBad", "%s must be a path string, a directive resolving to one, or an array of those" % at), at))
+            continue
         base = os.path.normpath(os.path.join(folder, item))
-        if not os.path.isfile(base):
-            raise Fail("PathMissing", "%s: %s does not exist" % (at, base))
+        if not os.path.isfile(base):                 # 11-24：疊進來的那份不在＝只少那份（layers 記進 SKIPPED），不是整份壞
+            out.append((Fail("PathMissing", "%s: %s does not exist" % (at, base)), at))
+            continue
         out.append((base, at))
     return out
+
+
+# 11-24（使用者「pack檔壞掉，那我是希望就是這個pack檔內的工具不能用，其他都可以用」）：$override 疊進來的某一份不在、不是合法 JSON、
+# 形狀不對或指示詞解不開＝跳過那一份（它的工具不在清單上）、其他照疊；跳過的記在這裡（[{at, file?, code, reason}]），
+# ls 印出來、stderr 一行 warning。頂層那份（交給 aos-tools 的 F）自己壞照舊整份報錯。環（chain loops）與 aos-directive 起不來照舊整份報錯。
+SKIPPED = []
+SKIP_CODES = ("PathMissing", "RegistryBad", "DirectiveBad", "ReadFailed")
+
+
+def _skip(at, base, e):
+    rec = {"at": at, "code": e.code, "reason": str(e)}
+    if base:
+        rec["file"] = base
+    if not any(r["at"] == rec["at"] and r["reason"] == rec["reason"] for r in SKIPPED):   # 同一次執行可能疊好幾遍
+        SKIPPED.append(rec)
 
 
 def patch(acc, layer, reg):
@@ -118,11 +136,17 @@ def layers(reg, raw=None, chain=()):
     seq = []
     if pointer is not None:
         for base, at in read_bases(reg, pointer):
+            if isinstance(base, Fail):
+                _skip(at, None, base)
+                continue
             try:
                 seq += layers(base, None, chain + (real,))
             except Fail as e:
                 if e.code == "RegistryBad" and "chain loops" in str(e):
                     raise
+                if e.code in SKIP_CODES:
+                    _skip(at, base, e)
+                    continue
                 raise Fail(e.code, "%s (from %s)" % (e, at))
     return seq + [(reg, tools)]
 

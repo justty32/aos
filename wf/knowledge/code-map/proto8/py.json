@@ -445,6 +445,7 @@
      "test_env_file.py": "Test aos-tools env_file (11-10 aos-tools-cli step 3): add --env-file stores only the location, call reads it every time, a missing file at call is Pa…",
      "test_metainfo_tooldef.py": "Test aos-tools reading the tool definition from _metainfo's tooldef as well as the separate _tooldef (11-12 metainfo, N-69): merged one level deep, o…",
      "test_override.py": "Test aos-tools \"$override\" registries (11-10 aos-tools-cli step 4): patch merge with null removal, chains and arrays, loops and diamonds, writes only…",
+     "test_pack_skip.py": "Test 11-24 (the user's \"pack檔壞掉，那我是希望就是這個pack檔內的工具不能用，其他都可以用\"): a registry that \"$override\"s a pack that is",
      "test_paths.py": "Test aos-tools path forms: directives in an overriding registry (path and env), add keeping the user's form, --path-json, and the PathMissing line.",
      "test_pointer.py": "Test aos-tools with FILE.json#/POINTER locations: add (stored form, default name), ls -l, get, call through aos-exec, rm by path, and the errors.",
      "test_stack_in_caller.py": "Test that aos-tools call tells the tool where its cell sits in the caller's stack (AOS_STACK_IN_CALLER=tools/NAME), and drops a stale one when there …",
