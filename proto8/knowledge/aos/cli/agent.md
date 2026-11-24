@@ -34,6 +34,8 @@ aos-agent ctl state -t bob tools history   # only these parts, in full
 
 An empty table prints nothing. `-j` prints JSON. `state` (alias `status`) has the parts who, state, tools, llm, system, hooks, history, mailbox, subagents, resources, time; give part names for detail, or `all`. `state tools` lists every tool and ends with `own: N listed, M set to null (...)` when the agent changed its tools.
 
+The whole tree, with the tables of procs that are daemons themselves: `aos-comm -d <root stack> board ls --deep [-j]` (at most 5 levels and 500 procs, then `truncated`). Its columns are the notice board's (NAME MODE DOING WAITING BACK), with no phase and no pid.
+
 # Stop, sleep, pause
 
 ```sh

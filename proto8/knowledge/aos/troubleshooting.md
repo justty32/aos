@@ -30,10 +30,12 @@ Key points:
 - **mailbox, clock and `self_*` tools all fail with `KernelFailed`.** Cause: `$AOS_KERNEL` is set and the kernel did not answer within 3 s, for example a `kernel_gate` agent in a long turn or asleep. Check: wait and try again once; if it keeps failing, report that the kernel is not answering (`aos/kernel.md#/Where to send requests/When the kernel is slow or busy`).
 - **`BudgetMissing ... max_calls N reached in this window`.** Cause: the brain budget of this window is used up. Check: the error's `resets_at` says when the next window starts (`aos/brain.md#/Priority and budgets`).
 - **`SubagentSlotMissing`.** Cause: your subagent quota is full; nothing was started. Check: `rm` a subagent you no longer need, or say the limit is reached (`aos/agents/subagent.md`).
+- **Under WSL, every `.exe` an agent runs (ssh.exe, git.exe, cmd.exe) hangs about 10 s, then fails with `UtilAcceptVsock:273: accept4 failed 110`.** Cause: the root daemon was started in tmux, and the terminal that opened that tmux was closed; the `WSL_INTEROP` the agents inherited (`/run/WSL/<pid>_interop`) is gone. Check: `echo $WSL_INTEROP` and whether that file exists. Fix (a person): `export WSL_INTEROP=/run/WSL/1_interop` in the shell profile, then start the root again. Writing it into the daemon's `.env` does not help (a value the shell exported wins); to rescue one agent, pass it in the `envs` of `subagent add`.
 
 # The brain
 
 - **A gpt brain fills optional tool parameters it does not need, often with empty strings (for example `index_view` with `"index": ""`), and the tool refuses or answers something else.** Cause: the pack uses `"api": "responses"`, and the installed llm_http is an older one that sends function tools without `"strict": false`; the Responses API then makes every parameter required. Check: `grep -n 'strict=False' $AOS_HOME/lib/tools/base/llm_http/responses_api.py`; no line = the old llm_http, ask a person to run `python3 install.py` in `$AOS_HOME` (`aos/brain.md`).
+- **A brain call to a local model service that is not running hangs, then fails with `EndpointFailed` (`retry` true) after about 10 s instead of at once.** Cause: under WSL with mirrored networking, connecting to a port on 127.0.0.1 where nothing listens is not refused at once; it waits until the timeout (about 127 s for a program without one; `::1` is refused at once). Check: whether the service runs; the pack's `connect_timeout_s` sets the wait (default 10; `aos/cli/parts/llm_kernel.md`).
 
 # The overview page (aos-frontend)
 

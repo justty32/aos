@@ -13,7 +13,7 @@ One op per call:
 - its brain: `{"op": "llm", "name": "kid", "args": {"op": "set", "settings": {"model": "fake"}}}`
 - its history, its hooks, its system text: `"op": "history"`, `"op": "hook"`, `"op": "system"`
 - `{"op": "state", "name": "kid"}`; `stop`/`start`, `sleep`/`wake`, `pause`/`resume` the same way
-- remove: `{"op": "rm", "name": "kid"}` (keeps its stack; `"purge": true` deletes it)
+- remove: `{"op": "rm", "name": "kid"}` (keeps its stack; `"purge": true` deletes it). A kept stack stays in `D/procs/<name>` (D = your daemon's stack) with no mark: it looks like the stack of a stopped row. To find kept ones, compare `D/procs/*` with the rows of `aos-daemon-ctl -d D ls`. It is kept so that `add` with the same stack picks it up again; to delete it, `rm` with `purge` (already removed: delete that folder).
 
 `say` is not a brake: the message waits in the subagent's queue, and an agent-fsm body takes it in only when it is back at idle, so a subagent in the middle of a run of tool calls does not see it yet. `pause` does not interrupt the step that is running; it only keeps the next step from starting. To stop a subagent at once, use `sleep`: the daemon ends its process, its stack is kept, and `wake` starts it again.
 

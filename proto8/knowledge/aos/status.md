@@ -14,7 +14,7 @@ Phases:
 | `stopping` | finishing its current turn before stopping | wait |
 | `stuck` | alive, but it has not answered a control request (stop, pause ...) in time: only when the row sets `stuck_after_cycles` / `stuck_after_ms` (not set or 0 = never stuck). The `reason` reads `control window has not been answered within N cycles`. Usually one long step, or a hung body. It turns back to `running` as soon as it answers. The daemon only marks it, unless the row has `restart_on_stuck`: then it is restarted, and stopped after 3 tries with no answer | wait; commands treat it as `running`. If it stays stuck, tell a human (they can `sleep` or `rm` it) |
 
-A row that disappeared: the proc finished (exit 0) or was removed (`rm`). `rm` keeps its stack (only `rm` with purge deletes it); adding it again with the same stack picks it up. After `ask` a missing row shows as `InstanceMissing`.
+A row that disappeared: the proc finished (exit 0) or was removed (`rm`). `rm` keeps its stack (only `rm` with purge deletes it); adding it again with the same stack picks it up. A kept stack has no mark; how to find one: `aos/agents/subagent.md`. After `ask` a missing row shows as `InstanceMissing`.
 
 `queue N`: how many letters wait in its queue. `queue 0` with phase `running` means idle.
 
