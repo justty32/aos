@@ -32,6 +32,8 @@ aos-agent ctl state -t bob       # one line per part
 aos-agent ctl state -t bob tools history   # only these parts, in full
 ```
 
+`aos-agent state` is the same as `aos-agent ctl state`. Another ctl action typed at the top (`aos-agent stop bob`) is `CommandUnknown` with a hint: `did you mean aos-agent ctl stop?`.
+
 An empty table prints nothing. `-j` prints JSON. `state` (alias `status`) has the parts who, state, tools, llm, system, hooks, history, mailbox, subagents, resources, time; give part names for detail, or `all`. `state tools` lists every tool and ends with `own: N listed, M set to null (...)` when the agent changed its tools.
 
 The whole tree: `aos-agent ctl ls --deep` also lists the tables of rows that are daemons themselves (breadth first, at most 5 levels and 500 procs; a table it cannot read is a warning). A row is PATH STATE PID STAGE QUEUED LAST-ACTIVE REASON: PATH = parent/child names; PID with `alive`, `dead`, `exited` or `reused`; STAGE = the first line of `stage.txt` (agent-fsm), else busy, else `-`; LAST-ACTIVE = the stack's last change, local time. `aos-comm -d <root stack> board ls --deep` walks the same way and shows the notice boards.
