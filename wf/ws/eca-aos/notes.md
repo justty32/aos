@@ -353,3 +353,9 @@
 - core 位子（醒著）第五件 REQUEST `01795486274884238333.1086931.681296`（線 `eca-aos-core-1124`）：三件只讀調查——fsm 腦失敗 cooldown 與 BLOCKED 措辭（ops ①②）、eca 帶不到 mcpServers（ops ⑦）、閒置輪詢的實際成本（idle-polling 的談話材料）；報告放它地盤、只交 wf/ws。
 - 派一隻 sonnet 改 wf 文件：dev-env/03 加 WSL_INTEROP 注意事項、dev-env/01 加鏡像網路逾時、aos-teams.md 與 07 檔頭的「本夾 archive/」。不 commit，回來我看 diff 交。
 - progress `org-1123` 的 next 對過更新（②④ 已做、① 打雜工跑通過）。
+
+## 2026-11-24 11:0x：今天照常改 proto8，下班前重做補丁
+
+- 我問「不碰 proto8 的剩不多，建議今天照常做 proto8、16:00 左右重做三分補丁」，使用者（逐字）：「都做」。
+- 派了三件：kb（REQUEST `01795486406762409539.1103554.694077`，知識庫五處）、templates（`01795486415641557727.1104517.694965`，llm kernel 預設 slots 4＋逾時兩鍵說明＋daemon-root 的 WSL_INTEROP＋reviewer/tools.json 第 1 行）、core（`01795486423393288569.1105429.695740`，排在調查之後：aos-llm ls 通道與排隊、表外 stack、ctl ls --deep）。
+- 16:00 左右派子 agent 重做補丁（新 clone `aos-1124b` 之類、新的底、改照打清單裡的底雜湊）；16:50 push。core 的程式件要 install.py（常設許可，我裝）。
