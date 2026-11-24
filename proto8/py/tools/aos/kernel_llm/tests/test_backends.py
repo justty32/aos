@@ -95,6 +95,21 @@ class BackendFixtures(unittest.TestCase):
         self.assertEqual(window['a']['backend'], 'local')
         self.assertNotIn('backend', window['free'])
 
+    def test_limits_window(self):
+        cfg = self.config_backends(slots=2, max_packs=None, total=4)
+        self.config.write_text(json.dumps(dict(cfg, reserved={'high': 1})))
+        self.run_kernel()
+        limits = self.stack / 'slots.json'
+        self.assertEqual(json.loads(limits.read_text()),
+                         {'slots': 4, 'reserved': {'high': 1}, 'backends': {'local': {'slots': 2}}})
+        before = limits.stat().st_mtime_ns
+        time.sleep(0.02)
+        self.run_kernel()
+        self.assertEqual(limits.stat().st_mtime_ns, before)       # unchanged = not rewritten
+        self.config.write_text(json.dumps({'exec': str(test_ledger.FAKE.parent), 'endpoints': {'free': {}}}))
+        self.run_kernel()
+        self.assertEqual(json.loads(limits.read_text()), {'slots': 1, 'reserved': {'high': 0}})
+
     def test_max_packs_counts_distinct_and_skips_blocked_pack(self):
         self.config_backends(slots=5, max_packs=1)
         self.send('01', 'a')

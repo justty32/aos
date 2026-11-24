@@ -133,6 +133,10 @@ $AOS_DAEMON's table. Automatic candidates have both an endpoints.json file and a
 requests/ directory in their stack; exec and definition names are not used.
 No matching rows or several matches = LlmKernelMissing; choose --kernel explicitly. Read the selected stack's endpoints.json and print one pack per line.
 Columns (TAB): name, speed, cost, context, slots, backend, summary.
+The last line is the whole kernel: "# kernel: slots N, reserved for high R, in flight F,
+queued Q" (slots and reserved from the kernel's slots.json window, - when it has not
+written one yet; in flight = letters in requests/cur/, queued = letters in requests/new/,
+counted now). --json prints only the endpoint window.
 
 exit codes: 0 listed; 1 error.
 more: aos-llm/README.md
@@ -209,7 +213,8 @@ int main(int argc, char** argv) {
         }
         if (cmd == "ls") {
             aos::Cli cli = parse(args, {{"--kernel", "kernel"}}, 0, "ls takes no positional arguments", "ls", {{"--json", "json"}}, {"-j"});
-            g::ls_print(g::ls_window(g::ls_kernel(opt(cli, "kernel"))), cli.opts.count("json") > 0);
+            g::Mailbox mb = g::ls_kernel(opt(cli, "kernel"));
+            g::ls_print(g::ls_window(mb), cli.opts.count("json") > 0, g::ls_whole(mb));
             return 0;
         }
         if (cmd == "regret") {

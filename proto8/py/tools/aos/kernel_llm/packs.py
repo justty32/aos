@@ -309,6 +309,31 @@ def write_window(stack, packs):
         raise Error(error.code, error.msg) from None
 
 
+def limits(cfg):
+    """窗 slots.json 的內容：整台的格數（kernel.json 頂層 slots、reserved、backends，解完的值）。"""
+    doc = {"slots": cfg["slots"], "reserved": {"high": cfg["reserved_high"]}}
+    if cfg["backends"]:
+        doc["backends"] = {name: {key: value for key, value in limit.items() if value is not None}
+                           for name, limit in sorted(cfg["backends"].items())}
+    return doc
+
+
+def write_limits(stack, cfg):
+    """寫窗 slots.json（給 aos-llm ls 印整台那行）；跟現有的一樣就不寫。"""
+    path = os.path.join(stack, "slots.json")
+    doc = limits(cfg)
+    try:
+        with open(path, "rb") as stream:
+            if json.loads(stream.read()) == doc:
+                return
+    except (OSError, ValueError, UnicodeError):
+        pass
+    try:
+        runner.write_json(path, doc)
+    except runner.Failed as error:
+        raise Error(error.code, error.msg) from None
+
+
 def group_of(cfg, name):
     """那個代號整組解開（同一輪只解一次）；解不開丟指示詞自己的代號。"""
     if name not in cfg["groups"]:
