@@ -506,15 +506,6 @@
       ],
       "since": "2026-11-23"
     },
-    "home-llm-env-1123": {
-      "title": "家機根 daemon 的 AOS_LLM_KERNEL 帶錯值（.stack/proc/llm 少 s），整棵樹的 agent-fsm 問不到腦",
-      "status": "等使用者",
-      "flow": "",
-      "what": "repo-vc 的 main 11-23 22:11 來信（01795443064506605665.493227.1166375）。家機的 main 確認：根 daemon pid 7763 於 20:25:00 起，當時殼裡已 export 錯值；~/.zshrc 20:31:48 改過、第 97 行現在是對的 procs/llm；~/aos-home/root/.env 也對（殼裡已有的值優先）。修法＝從新開的殼重起整棵根樹（停起時 repo-aos、repo-vc、mod_skyrim、narr-amber 全停）。暫解：座位掛載時 envs 帶正確值。已回 PROGRESS（01795443138735416535.506149.1173798），重起後回 DONE。另建議：aos-llm 報 LlmKernelMissing 時若有相近路徑就提示（歸 core）。",
-      "next": "使用者 11-23 晚「明天再說。」——今晚不重起。下次在家機：問使用者何時重起根（從新開的殼）→ 驗 /proc/<新 pid>/environ 的 AOS_LLM_KERNEL → 回 repo-vc DONE。在那之前各樹掛 agent-fsm 照暫解在 envs 帶正確值",
-      "see": [],
-      "since": "2026-11-23"
-    },
     "eca-main-obs-1124": {
       "title": "eca_main 11-24 回報的 aos 問題六點（llm 通道、閒置輪詢 CPU、殘留 stack、遞迴 ls、連線逾時、WSL_INTEROP）",
       "status": "open",
@@ -626,11 +617,11 @@
       "since": "2026-11-24"
     },
     "home-stack-move-1124": {
-      "title": "家機：repo 那棵的 stack 也搬進根（~/aos-home/.stack/procs/repo-aos）",
+      "title": "家機：repo 那棵的 stack 也搬進根（~/aos-home/.stack/procs/repo-aos）——已搬，剩文件與備份檔",
       "status": "open",
       "flow": "",
-      "what": "使用者 11-24（逐字）：「家機...要。」（問的是家機要不要也把 stack 搬進 ~/aos-home/.stack，跟公司那台一樣）。公司那台 11-24 16:14 搬完：switch.sh 加 stack_move.py 停樹、搬家、改寫表上與外部檔案的路徑、起樹、驗證（日誌在 ~/.aos/scratch/switch-1124/log/switch-20261124-161338.log）；過渡用的 symlink 與 .bak-trisplit-1124 使用者說「直接刪掉吧」，已刪。搬家前要先關掉開著的 eca 畫面（tty socket 名是照小格真實路徑的雜湊算的，搬了以後新的 loop 認不得舊畫面，可能另起 claude -p 接同一段對話）。家機的文件目前照實寫 ~/repo/aos/.stack，搬完要一起改（AGENTS.md、wf/tree/README.md、dev-env/01、03、aos-teams/06、07、kits site.txt、gather system.txt）。",
-      "next": "在家機做：抄 ~/.aos/scratch/switch-1124/ 過去（或從 repo 的 thinking/2026-11/23/org範本與templates分層-1123/06-switch/ 拿 stack_paths.py），只跑搬 stack 那段（三分補丁已經在 repo 裡，家機 pull 就有）；先 --check-only，再正式跑；搬完請 kb 改家機那幾節。",
+      "what": "使用者 11-24（逐字）：「家機...要。」家機 11-24 晚 pull 三分後，19:05 整棵樹重起：~/repo/aos/.stack 已不在，repo-aos 的 stack 在 ~/aos-home/.stack/procs/repo-aos，daemon 跑在 templates/daemons/daemon-sub，各樹 procs_state.json 旁留著 .bak-trisplit-1124（根、repo-aos、mod_skyrim、repo-vc、narr-amber 各一份）。根的 AOS_LLM_KERNEL 重起後是對的 procs/llm（原 home-llm-env-1123，已回 repo-vc DONE 01795518927257173089.38856.141880）。舊範本夾 templates/agent-fsm、judge-llm 只剩 __pycache__，使用者 11-24 晚「都可以做」後刪了。",
+      "next": "① 家機那幾節文件改成已搬（AGENTS.md、wf/tree/README.md、dev-env/01、03、aos-teams/06、07、kits site.txt、gather system.txt），派 kb 或 opus；② .bak-trisplit-1124 刪不刪問使用者（公司那台他說「直接刪掉吧」）。",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)",
         "[換機](workflows/dev-env/03-換機.md)"
