@@ -90,3 +90,31 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - **還沒開的信**：信箱裡一封 eca-aos 的 REQUEST `01795486423393288569.1105429.695740`「（排在三件調查之後）三件小程式：aos-llm ls 印通道與排隊、列出表外留下的 stack、ctl ls --deep」——還沒 mailbox_read，壓縮後先讀它。
 - **要記得的限制**：eca-aos 11-24 說 templates 三分切換延到 11-25 早上，**在那之前 proto8/ 底下一個檔都不能改、不能交**；寫程式的活要先確認這條解了沒（問 eca-aos 或看 wf/progress.json）。不碰 `~/.aos/scratch/tri-split-1124/`。
 - 暫存：`~/.aos/scratch/eca-aos-core-1123/`（乾淨複本 clean～clean4、重現腳本）、`~/.aos/scratch/eca-aos-core-1124/`（量測腳本與數據）；沒有留下行程。
+
+### 11-24 三件小程式（線 eca-aos-core-1124；proto8 限制已解，使用者「今天照常改 proto8」）
+
+- 第 1 件 aos-llm ls 整台那行：506cfe678（cpp/aos-llm＋kernel_llm 寫新窗 `slots.json`）。NORMS 附錄4 沒動（範圍外），回信附一句給 eca-aos。
+- 第 2 件 `aos-daemon-ctl leftovers`：6ca662af3（只列不刪、沒寫標記檔）。坑：main.py 的 `CTRL` 連 TAB 都換成空白，要逐欄換再用 TAB 接。
+- 第 3 件 `aos-agent ctl ls --deep`：db97bc983。三件已回 DONE（附給 kb 的句子、NORMS 附錄4 slots.json 一列請 eca-aos 轉）。
+- kernel-chain-check／image-move-check：b914c016f，已回 DONE。三個原因：subagent 沒 AOS_DAEMON 也給 `$env AOS_DAEMON` 指示詞（139d8dd2b 回歸，ctl add 會先在這裡解）；check 把 hook 寫在 kernel.json 的 `hooks`（11-21 起只讀 interfaces.json 的 hookeds＝kernel_hookeds.json，舊鍵被安靜忽略）；image-move-check 連 AOS_HOME 一起清掉（agent-fsm HomeMissing）。等 eca-aos 定：kernel.json 留舊 hooks 鍵要不要報錯。
+- 跑 templates 的 check：`bin/chain.sh 名 kernel/tests/kernel-chain-check/check.py`（從複本根跑，log 在複本根）。check 失敗會把暫存樹收掉，要看細節就只在複本的 check.py 加印。
+- 要 eca-aos 裝：506cfe678（含 C++ aos-llm）、6ca662af3、db97bc983、b914c016f。
+- 乾淨複本腳本：`~/.aos/scratch/eca-aos-core-1124/bin/mk.sh 名 檔…`（git archive HEAD＋疊檔＋複本 install.py）、`run.sh 名 測試夾…`。複本的 lib/ 是抄的不是連結，改了 py/ 要一起抄進 lib/。
+
+### 11-24 下午的四件（eca-aos 來信，線 eca-aos-core-1124；每件一個 commit、不跑 install.py、回 DONE 附 kb 句子）
+
+- **A 兩件已交已回 DONE**：retry＝80d2ee043（`aos-agent ctl retry`）、MCP＝a7f58e07a（cli.json `claude_mcp`，cli_mcp.claude_own；e2e 腳本 `~/.aos/scratch/eca-aos-core-1124/mcp/e2e.sh`）。
+- A 信 01795489723948427180.1462868.987190 第 1 件：腦失敗「立刻重試」＝現有指令的子指令（不做工具），清 cooldown、印清之前的狀態；少碰 templates/agent-fsm/*.py（16:00 三分重做會搬去 py/aos/apps/agent_fsm/）。
+- A 信第 2 件：eca 帶得到使用者／專案的 MCP（--strict-mcp-config 是主因）；准跨範圍改三份 cli.json（eca-claude、eca-claude-alt、start-eca/agents/ann）＋README＋test_cli_settings；查 git log 當初為什麼加 strict。
+- B 信 01795490438622181769.1555798.1056236：self_tools add 加「叫過 N 次自己拿掉」（once／twice 一般化）；fsm 與 eca 兩條路都要；self_tools ls／self_state 看得到剩幾次。
+- C 信 01795490534907782473.1569415.1065508：tools.json 的 "$override" 疊的 pack 檔不在或壞 JSON＝只跳過那份、其餘照疊、讓 agent 看得到；agent 自己那層壞了至少保住信箱等基本工具（判斷並說明）。
+- **B 已交已回 DONE（2a1a259e7）**：`aos-tools add --uses N`（registry.finish 驗、use_once 倒數／到 0 刪格、flock `.<檔>.uses.lock`；main.cmd_call 有 uses＝counted_call 子行程跑、退 0 才倒數；uses 寫在底檔＝RegistryBad；tooldef.describe 在 description 後接一句＋`uses` 欄；ls 行尾 ` [uses left: N]`）；aos-agent tools add 轉 `--uses`；self_tools 收 `"uses"`（_tooldef 加 integer）。測試 py/tests/apps/tools/test_uses.py 四條、test_self_tools 一條；複本 l7。aos-mcp 實測（`~/.aos/scratch/eca-aos-core-1124/uses/mcp.sh`）：說明帶剩幾次、用完送 list_changed、清單變空。等 py/tests＋apps/mcp＋apps/agent 跑完就交。
+- **C 已交已回 DONE（a551bba03）**：registry.read_bases／layers 壞的底檔記進 SKIPPED（_skip）跳過；main.tools_of 印 warning、ls 多「!檔<TAB>broken pack」行；cmd_override 寫新指標時照舊嚴格；aos-mcp --own 壞＝warning 改用 REGISTRY（OWN_BAD 只說一次）；test_override 五條改成 skipped、新 test_pack_skip；重現腳本 `~/.aos/scratch/eca-aos-core-1124/packrepro/run.sh`。fsm 那邊 own 壞的保底沒做（cell_common.tools_file 在 templates/agent-fsm，三分會搬）。原計畫：registry.layers 的底檔（`$override` 陣列每一份）讀不到／壞 JSON／形狀不對＝跳過那份、warning、其餘照疊；agent 自己那份（頂層）壞仍整份報錯，但想想保住信箱。看 read_layer、read_bases、layers（py/aos/apps/tools/registry.py 34～128 行）。
+- **D 已交已回 DONE（3812eed62，kernel/hooks.old_key；坑：kernel/hooks.py 自己定義了 open()，要用 io.open）**：kernel.json 留舊 `hooks` 鍵＝不報錯、印一行警告（使用者「1.不報錯。」），別每拍洗版（kernel 每拍新行程：例 mtime 變了才印、或記窗檔）；py/tools/aos/kernel/round.py 讀設定那段（約 41 行 `cfg["hooks"] = hooks.load(...)`）。回 DONE 附 kb 一句。
+- **E 三條已交已回 DONE**：② 57baee653（brain_notify）、⑤ cfa726273（aos-agent state）、③ 7ebe15b7e（say 前綴 `[say from 名]`，只在寄件人是 agent 或 --from；sender 回 Who(str).tagged）。原信：ops 三條，每條一個 commit：② brain_notify（py/tools/agent/brain_notify/_entry 約 141～153 行）端點沒在聽／連線失敗／逾時改寫成「端點沒回應，要有人處理」、附下次重試本地時刻（事件 extra 帶 wait_s）、提 `aos-agent ctl retry <名>`；③ say 進對方 history 帶來源（例 `[say from ops]`；終端打的沒身分寫 user／shell 你定），eca 與 fsm 都要、ask 同路也一起；⑤ `aos-agent state` 子命令＝ctl state 的別名（CommandUnknown 時提示）。
+
+### 11-24 下午收尾狀態
+
+- 今天交的（都已回 DONE、都要 eca-aos install.py）：506cfe678、6ca662af3、db97bc983、b914c016f、80d2ee043、a7f58e07a、2a1a259e7、a551bba03、3812eed62、57baee653、cfa726273、7ebe15b7e。
+- 還開著：fsm 那條「自己那份 tools.json 壞」的保底（等三分把 cell_common 搬進 py/aos/apps/agent_fsm 再補）；retry 沒做真 agent 整段實跑。
+- 暫存複本 l1～l12、各重現腳本在 `~/.aos/scratch/eca-aos-core-1124/`；/tmp 有 image-move-check 留的證據夾（沒刪）。
