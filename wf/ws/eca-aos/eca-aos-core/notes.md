@@ -134,3 +134,7 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - **下次開工會派的**：progress `eca-p-first-result-1124`——使用者答「好，但是先記著」＝修 ⑦⑧、收工時背景任務跟著收掉。做法：`py/aos/agentlib/cli_print.py` 的 `run_claude_stream`／`print_claude` 讀到第一個 `result` 就當這一輪答完、回答取第一個 result、放掉 lock，然後收掉 `claude -p` 行程（連它的背景任務）。**在 eca-aos 派之前不要動 cli_print.py。** 依據：[report-1124-bgmail.md](report-1124-bgmail.md) 第 7 節；重現腳本 `~/.aos/scratch/eca-aos-core-1124/bgtest/run.sh`（haiku，額度剩兩輪，eca-aos 叫先留著）。
 - **之後再排的**：fsm 那條「自己那份 tools.json 壞」的保底（cell_common 已搬進 py/aos/apps/agent_fsm，跟 reply-check 一起排）；tty_socket 搬家後認不得舊畫面（選項待給）；過期 new_mail 通知（報告選項 ④）。
 - 新規矩：三分後 stack 在 ~/aos-home/.stack/procs/repo-aos/procs/eca-aos-core（舊路徑 symlink）；py/cpp 改完 install.py 一律由 eca-aos 跑。
+
+### 11-24 晚（家機）home-gitignore-1124
+
+- main 信 01795526183223735704.609696.867477：.gitignore 的 /.stack/、/_stack/ 規則留著，只改註解（stack 現在兩台都在 ~/aos-home/.stack/procs/repo-aos，規則防誤收）。交 4b17a8341，git check-ignore 確認兩條照樣忽略；repo 根已無 .stack／_stack。已回 DONE。
