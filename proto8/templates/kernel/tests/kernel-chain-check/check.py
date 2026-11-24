@@ -213,10 +213,14 @@ class Check:
         raise RuntimeError("timed out waiting for " + label)
 
     def kernel(self, folder, cfg, **extra):
+        # 11-21 起 kernel.json 不再有 hooks：被勾的寫進定義夾 interfaces.json 的 hookeds 指的 kernel_hookeds.json（範本抄來就指著它）。
         hooks = {name: {"event": name, "handler": str(self.defs / "audit"),
                         "timeout_ms": 5000}
                  for name in ("before_verdict", "after_verdict", "before_reply")}
-        save(folder / "kernel.json", dict(cfg, hooks=dict(hooks, **extra), reply_via_me=True))
+        require(read(folder / "interfaces.json").get("hookeds") == "kernel_hookeds.json",
+                "%s/interfaces.json does not name kernel_hookeds.json as its hookeds" % folder.name)
+        save(folder / "kernel.json", dict(cfg, reply_via_me=True))
+        save(folder / "kernel_hookeds.json", dict(hooks, **extra))
 
     def make(self):
         for command in ("aos-exec", "aos-daemon", "aos-daemon-ctl", "aos-loop",
