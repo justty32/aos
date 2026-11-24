@@ -61,7 +61,7 @@ aos-user send --kind decide --from ok-x \
 
 - 活樹＝兩台都是 `~/aos-home/.stack/procs/repo-aos`（公司那台 11-24 起、家機 11-24 晚起，repo 裡都已經沒有 `.stack`）（每台各有各的，不跟著 git 搬，使用者 11-23；定義 `wf/tree/root/`，資料夾名字還叫 `root`，但 11-23 起它是子 daemon、不帶鐘）。`~/aos-home`：兩台都是整棵樹的根（公司那台 11-23 起、家機 11-24 晚起；`~/aos-home/.stack` 是根的 stack，鐘只在這裡），底下除了 llm kernel 與 repo 這棵，還掛著使用者自己別的專案的子 daemon；家機的舊樹退路 `~/aos-home.old-1122/` 已經不在。這些一樣不碰（[06「現況」](aos-teams/06-公司WSL活樹與任務書硬規則.md#現況)）。
 - 活樹不碰（06 第 1 條）：不寫活樹底下任何檔（連同 `~/aos-home`、`~/aos-home.old-1122/`）、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）；唯讀查看只限任務書點名的，與 06 第 9 條的核對。
-- 不在共用工作樹跑 `git stash`、`git reset --hard`、`git checkout -- .`、`git clean -fdx`（06 第 7 條）：`.stack` 被根 `.gitignore` 忽略，`git clean -fdx` 會連活樹一起刪。
+- 不在共用工作樹跑 `git stash`、`git reset --hard`、`git checkout -- .`、`git clean -fdx`（06 第 7 條）：`git stash`、`git reset --hard`、`git checkout -- .` 會把別的線還沒交的改動弄掉；`git clean -fdx` 連被忽略的檔也刪，每一層的 `temp/`（`wf/temp/`、各地盤的 `temp/`）和 `install.py` 裝的 `proto8/bin/`、`proto8/lib/`（活樹跑的就是它們）都會不見。
 - 清掉 `AOS_*` 之後，`aos-daemon-ctl`、`aos-mailbox` 這類指令不帶 `-d` 會找 cwd 的 `./.stack`：站在 `~/repo/aos` 下指令＝打到活樹。暫存樹的指令一律帶 `-d <暫存樹 stack 的絕對路徑>`。
 - 你的 shell 帶著活樹的 `AOS_*`：跑任何 aos 指令或測試，一律經一支 bash 腳本（不是 bash 就拒絕 → 逐一 unset `AOS_*` → 還有殘留就拒絕 → exec）。shell 是 zsh，要分詞的寫法包 `bash -c`。
 - 不把整份環境變數寫進檔、log 或信（`env`、`printenv`、`/proc/*/environ` 都不行，裡面有 API key）；要看只列變數名或只列 `AOS_*`。
