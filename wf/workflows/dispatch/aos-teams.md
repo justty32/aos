@@ -2,7 +2,7 @@
 
 ← [dispatch](README.md)｜選人判準 [team-model](../team-model.md)
 
-本專案實際怎麼開隊、五件最常做的事的實際指令。只寫**今天的做法**（11-14 改寫，使用者專區「q2:move」；11-23 照 eca-aos 這邊的工作室分工改：打雜工、沒有部長、寫程式用 Claude，分工本身與下文「第 N 題」所指的七題表見 [wf/org](../../org/README.md)）；細節在分檔，舊隊形（codex 隊員、terra、sonnet 搜集）的原文在本夾 `archive/`。改制時直接改這裡。
+本專案實際怎麼開隊、五件最常做的事的實際指令。只寫**今天的做法**（11-14 改寫，使用者專區「q2:move」；11-23 照 eca-aos 這邊的工作室分工改：打雜工、沒有部長、寫程式用 Claude，分工本身與下文「第 N 題」所指的七題表見 [wf/org](../../org/README.md)）；細節在分檔，舊隊形（codex 隊員、terra、sonnet 搜集）的原文已刪（11-17 刪掉各 archive/），要看去 git 歷史，最後還在的 commit 是 `31a64d4a7`（路徑 `wf/workflows/dispatch/archive/`）。改制時直接改這裡。
 
 ## 誰做什麼
 

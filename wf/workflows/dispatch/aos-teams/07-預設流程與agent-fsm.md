@@ -2,7 +2,7 @@
 
 ← [入口](../aos-teams.md)｜涵蓋：正統規劃流程、sol 走 agent-fsm、commit、回報（寄信怎麼寫）、頂層也當 kernel｜上一份 [06-公司WSL活樹與任務書硬規則](06-公司WSL活樹與任務書硬規則.md)
 
-只寫今天的做法（2026-11-14 改寫，使用者專區「q2:move」；11-23 照 eca-aos 這邊的工作室改了施工歸誰與回報對象，分工見 [wf/org](../../../org/README.md)）。入口短卡已有的指令不重抄，這裡補它沒寫的細節。11-13 那幾版（sonnet 搜集、等 agent-fsm 有雛形、terra、codex、astra 帶 sol）的原文封存在 dispatch 的 `archive/`。
+只寫今天的做法（2026-11-14 改寫，使用者專區「q2:move」；11-23 照 eca-aos 這邊的工作室改了施工歸誰與回報對象，分工見 [wf/org](../../../org/README.md)）。入口短卡已有的指令不重抄，這裡補它沒寫的細節。11-13 那幾版（sonnet 搜集、等 agent-fsm 有雛形、terra、codex、astra 帶 sol）的原文已刪（11-17 刪掉各 archive/），要看去 git 歷史，最後還在的 commit 是 `31a64d4a7`（路徑 `wf/workflows/dispatch/archive/`）。
 
 <a id="正統規劃流程11-13-2340-重述"></a>
 ## 正統規劃流程
