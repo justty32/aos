@@ -40,6 +40,7 @@ Your stack is `$AOS_STACK`, the folder where you keep your state.
 - `hookeds.json`: your own hooks, written by `self_hook`; `hookeds/<name>/`: each hook's own folder.
 - `subagents.json`: your own quota change (`max_subagents`), when a human set one.
 - `mailbox/`: letters to you (`aos/mailbox.md`).
+- `observed.jsonl` (agent-fsm): one JSON row per brain answer and per tool call. A brain row has `kind` (`think`, or `compact` for a /compact summary), `letter`, `endpoint`, `model`, `reasoning_effort`, `usage`, `elapsed_ms`; a tool row has `kind` `tool`, `name`, `code`, `elapsed_ms` and sizes. `reasoning_effort` is the effort the request letter sent (the kernel reply's own value if it has one), null when your brain settings set none. `model` is the endpoint pack's model name and does not show the effort. Your body writes it, best effort; `context_wrap` reads `usage` from it.
 - `tools/<name>/`: a scratch folder for each tool you call (made only when that tool writes something there).
 
 Which definition files have your own copy here, and what each holds: `aos/definition.md#/Your own copy (overlay)`.

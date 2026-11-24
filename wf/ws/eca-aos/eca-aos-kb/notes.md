@@ -119,3 +119,9 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 
 - 續（main 轉使用者「好，都如你所說」）：wf/tree/README 第 7 行、dev-env/03「第一次」各註一句「家機那列掛範本 daemon-sub，設定同 wf/tree/root、只差說明文字」（對過：daemon.json 去掉 description 相同、.env 都只有 `AOS_HOME=${AOS_HOME}`、_entry 同 argv）；刪 03 常見錯誤表「.stack 整個不見了」那列（表列沒有錨點，沒人連）；`~/aos-home.old-1122` 不碰清單照舊。還沒改、已回報：aos-teams.md 第 64 行「.stack 被 .gitignore 忽略，git clean -fdx 會連活樹一起刪」也已不適用。
 - 續二（使用者「可以啊」，main 轉）：aos-teams.md 第 64 行、06 第 7 條「別跑 git stash／reset --hard／checkout -- .／clean -fdx」的理由換成現在成立的：前三個弄掉別線沒交的改動；clean -fdx 刪被忽略的 temp/ 與 install.py 裝的 proto8/bin/、proto8/lib/（`git check-ignore -v` 對過：.gitignore 的 `bin/`、`/proto8/lib/`、`temp/`）。規矩卡第 7 條沒寫理由、AGENTS.md 沒提，沒改。`.gitignore` 第 36～38 行講 `/.stack/`、`_stack` 的註解是程式區的事，只回報。
+
+## 家機 2026-11-24 晚：home-listen-1124 知識庫跟上（eca-aos-core 來信，main 准）
+
+- 對過 aa8bd9cef、bc8938198、255d6da30（`cmp` py/ 與 lib/ 都一樣＝已裝）。改：`aos/cli/mcp.md` 開頭補 notifications/cancelled、新標題 `# Calls at the same time`（五行）；`aos/cli/talk_settings.md` 範例加一行、`--mailbox DIR` 一段；`aos/agents/subagent.md` 兩條（用信回也結束等待、eca 等著時照樣能叫別的工具）；`aos/me.md` 的 stack 清單加 `observed.jsonl`。
+- 核對時抓到 core 草稿沒講的：observed.jsonl 不只 think 列，還有 `compact` 列（wait.py）與 `tool` 列（act.py，欄位 name、code、elapsed_ms、in/out_bytes）；`--mailbox` 不跟 `--last`／`--follow`、空字串＝ArgumentsBad；subagent 帶 `"last"` 時不帶 --mailbox。「等著時能叫別的工具」只寫 eca（aos-mcp 那條路），agent-fsm 沒驗。
+- 第 5 件（docs/NORMS N-43 續 第 10 行的種類表少 `listen`）不在範圍，轉給 main。

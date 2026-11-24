@@ -1,6 +1,6 @@
 # aos tools for an external agent
 
-Use aos-mcp to serve the tools of aos-tools registries as MCP tools over stdio (JSON-RPC: initialize, ping, tools/list, tools/call). An eca agent gets it automatically; set it up by hand only for your own MCP client.
+Use aos-mcp to serve the tools of aos-tools registries as MCP tools over stdio (JSON-RPC: initialize, ping, tools/list, tools/call, and notifications/cancelled). Calls run at the same time: `aos/cli/mcp.md#/Calls at the same time`. An eca agent gets it automatically; set it up by hand only for your own MCP client.
 
 # Serving a registry
 
@@ -22,3 +22,11 @@ read: error: FileMissing no.txt
 ```
 
 Timeout = the tool's `_metainfo` `timeout_ms`, else `--timeout-s` (default 60; a broken `timeout_ms` counts as not written and prints a warning); 0 = no limit for either. On expiry the whole process group gets TERM, then KILL 2 seconds later, and the result is `CommandFailed`. A nonzero exit with empty stdout is also `CommandFailed`, and the text says so, e.g. `read exited 1 with empty stdout`. The list is re-read on every call; when a call changed it (self_tools add), a `notifications/tools/list_changed` follows, so new tools work in the same turn. `--enable-logs` writes one line per call to `<stack>/aos-mcp-logs.jsonl` (`--logs-path FILE` elsewhere; `--logs-path` alone = `ArgumentsBad`).
+
+# Calls at the same time
+
+- tools/call requests run at the same time, each in its own thread. Replies go back by request id, not in arrival order, so a long call (a subagent listen) does not hold the others.
+- A tool whose `_metainfo` says `"parallel": false` runs one call at a time; calls to it wait in turn. Other tools still run.
+- Hooks (before_tool / after_tool) fire one at a time.
+- `notifications/cancelled` stops that call's process group, and the call gets no reply. A call still waiting its turn does not run.
+- A request that depends on an earlier one (calling a tool that self_tools just added) must wait for the earlier reply, as MCP clients do.
