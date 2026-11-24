@@ -531,7 +531,7 @@
       "status": "open",
       "flow": "",
       "what": "使用者 11-24（逐字）：「先記下來，這會是以後一段時間的我們的開發重點。」起因 eca_main 11-24 回報（信 01795484557450263667.853643.518765、補充 01795484607007336637.861953.523507）：8 核 load 16～17、閒置 3%（us 78% sy 18%），每秒約 200 個新 PID，沒有大戶、全是短命 python3；記憶體不緊。現況（11-24 只讀查證）：agent-fsm 每圈（loop.json interval 300ms）起 aos-fsm＋一支 python3，閒著停在 idle 格也照起（templates/agent-fsm/fsm.json）；eca 每圈起一支 aos-eca-turn（知識庫 me/self_hook.md 寫「about three a second, also with an empty queue」）；aos-loop 不接 poke（cpp/aos-daemon/docs/04、cpp/aos-loop/README）、沒有退避、信到不叫醒（mail_notify 每分鐘查）；thinking／docs 沒有常駐 Python 的討論，只有 11-05 edge-round2 記過閒著 82% CPU、當時只寫文件。現成的設定手段：loop.json interval_ms 拉長（重起生效、wait 格跟著慢）、ctl.json interval_ms 執行中改（沒指令包裝）、ctl pause／sleep（不收信或不會被叫醒）。候選方向（方向由使用者定，還沒定）：aos-loop 依回碼退避；aos-loop 接 poke、信寄進 queue 時叫醒收件那隻（cpp/aos-loop/src/engine/loop.cpp 已有 wake 掛鉤）；aos-fsm 格加「資料夾空就不起行程」的前置判斷；常駐 Python 格；aos-agent ctl 加改 interval 的指令；知識庫與 troubleshooting 寫每圈成本。",
-      "next": "使用者 11-24 定方向（逐字）：「閒置輪詢這塊就是乖乖用C++重寫，並且考慮各種優化方向。」→ 派 fable 寫施工規劃（proto8/thinking/2026-11/24/閒置輪詢C++重寫-1124/：每個熱點閒著時判斷什麼、C++ 切法、各種優化方向、分刀、最多 5 題）。規劃回來給使用者看題目 → 三分切完後 core 位子照刀施工。成本數字見 wf/ws/eca-aos/eca-aos-core/report-1124.md 第 3 節（約 4.3 核）。",
+      "next": "施工規劃已交（7b7a1829e，proto8/thinking/2026-11/24/閒置輪詢C++重寫-1124/）。使用者答五題「1.a 2.收 3.60秒 4.照推薦 5.a。不用調整間隔」：C++ 閘＋小程式、行為差異收（保底 60 秒）、context_wrap 60 秒、kernel 先只掛閘、.pyc 放 lib/（第 0 刀，改慣例）；不做止血。三分切完後照 04 刀序開工：第 0 刀 .pyc＋把量法包成常備腳本 → 第 1 刀 aos-loop／aos-daemon 認 gate → 第 2 刀 aos-idle（eca／fsm）＋對等測試 → 第 3 刀範本掛 gate＋context_wrap 60 秒 → 第 4 刀 kernel → 第 5 刀 wait 格（開工前逐條對 wait.py）→ 第 6 刀。通用 kernel（py/tools/aos/kernel）的閒置條件還沒列。",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],

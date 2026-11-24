@@ -382,3 +382,8 @@
 
 - 發想交了 `bc82a8ebc`（開了 11-24 日索引）。使用者答（逐字照抄在發想 README 末節）：1 不另起、2／3 不設限、4 agent 自己管工具（筆記記、要用才掛、用完拿下）＋做 `self_tools` 的 once／twice、5 不管。
 - core 第九件：self_tools 用幾次就自己拿掉的選項。
+
+## 2026-11-24 12:5x：閒置輪詢規劃交了、五題答了
+
+- fable 規劃 `7b7a1829e`。使用者（逐字）：「1.a 2.收 3.60秒 4.照推薦 5.a。不用調整間隔」——抄進規劃 README 末節、progress `idle-polling`。施工三分切完後開。
+- scratch `~/.aos/scratch/idle-cpp-plan-1124/`（34 MB）與 `eca-mcp-idea-1124/` 是兩隻 fable 的量測，可刪（要問）。
