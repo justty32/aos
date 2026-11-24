@@ -84,6 +84,9 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - 腦的 pack 怎麼送：`"api": "responses"` 的 pack（start-api 的 gpt 那四個）由 `endpoints/litellm` 叫 `lib/tools/base/llm_http`；換形狀的程式在 `responses_api.py`。
 - 新開一頁：照「改一頁時」的格式寫；做法以範本 README 為正本，知識庫只寫大綱並指過去。md 錨點先用 `json_ls` 看真正的路徑（範本 README 的 `## How to use` 在 `# orgs` 底下，是 `#/orgs/How to use`）。`_index.json` 用 json_add 加一列，再用 `index_view` 看得到。eca 用得上的頁，`aos/eca_reading.md` 也加一行。
 - templates/ 會重新分層（2026-11-24 起，kits 搬進 agents/）：`aos/orgs.md` 只寫死 `templates/orgs/…`，別的範本指 `templates/README.md`；`aos/kits.md` 還寫著 `templates/kits/`，搬的時候要對。
+- 信裡的「agent 通常怎樣」先對範本（例：「agent 不帶 priority」對過 templates 沒有一份設 priority，才寫成「the stock agent templates send no priority」）。
+- 環境的坑（WSL 網路、WSL_INTEROP）出處是 `wf/workflows/dev-env` 的那條（使用者實測過），知識庫寫成 troubleshooting 一條，不寫哪台機器。
+- 不要對 `/` 跑 `find`（WSL 會掃到 /mnt/c，跑不完）；找 stack 先看 `~/repo/aos/.stack`、`~/aos-home`。
 - 範本、程式裡同樣說得比事實強的句子（例：`templates/kits/gather/tools.json` 的 description）只回報，不改。
 - **隔離只承諾防失誤**（使用者 11-23 晚「甲，先只防失誤」「可以」）：拿掉工具、ws、kits、aos-sandbox 是防不小心越界、讓越界看得到，不抗刻意繞過。正本是 `aos/rules.md` 的 `What does not enforce these rules` 段（線 kb-guard-level-1123 補的那段），`aos/kits.md` 的「Why a kit cuts tools」改成不說關得住、指過去；別頁寫限制時也不寫成關得住。
 
