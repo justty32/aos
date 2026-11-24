@@ -347,3 +347,9 @@
 ## 2026-11-24 10:4x：切換定在 11-25 早上
 
 - 使用者（逐字）：「三分切...要等到明天早上了」。HANDOFF 改了。明早開工：`git log --oneline f263b12b6..HEAD --name-only` 看有沒有碰到 `proto8/`（家機今晚若有改再 pull 進來就會漂移）→ 沒有就照 `~/.aos/scratch/tri-split-1124/out/RUNBOOK.md` 打；有就先照 06-switch/README 重做補丁（新 clone、約一小時）。
+
+## 2026-11-24 10:5x：使用者「可以先做不碰 proto8 的那些」
+
+- core 位子（醒著）第五件 REQUEST `01795486274884238333.1086931.681296`（線 `eca-aos-core-1124`）：三件只讀調查——fsm 腦失敗 cooldown 與 BLOCKED 措辭（ops ①②）、eca 帶不到 mcpServers（ops ⑦）、閒置輪詢的實際成本（idle-polling 的談話材料）；報告放它地盤、只交 wf/ws。
+- 派一隻 sonnet 改 wf 文件：dev-env/03 加 WSL_INTEROP 注意事項、dev-env/01 加鏡像網路逾時、aos-teams.md 與 07 檔頭的「本夾 archive/」。不 commit，回來我看 diff 交。
+- progress `org-1123` 的 next 對過更新（②④ 已做、① 打雜工跑通過）。
