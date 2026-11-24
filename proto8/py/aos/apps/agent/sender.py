@@ -11,6 +11,18 @@ from .common import Fail, bad_args, table, under
 from .system import eca_kind
 
 FLAG = {"--from": "from"}
+# 11-24（ops 意見 ③，使用者「那四條也照推薦做」）：寄件人是另一隻 agent（$AOS_STACK 落在表上某一隻的 stack 裡）或明給了 --from，
+# 訊息本文前面接「[say from 名字] 」，fsm 與 eca 收到的、進 history 的都看得出是誰說的（不會把上層 agent 的提醒當成使用者說的）。
+# 人在終端直接打的（沒有 --from、$AOS_STACK 不在表上）不加：沒有這個前綴＝使用者本人。
+class Who(str):
+    """寄件人名字；tagged＝它是另一隻 agent 或明給的 --from（本文要接「[say from 名字] 」）。"""
+    tagged = False
+
+
+def _who(name, tagged):
+    w = Who(name)
+    w.tagged = tagged
+    return w
 
 
 def sender(opts, help):
@@ -19,7 +31,7 @@ def sender(opts, help):
     if name is not None:
         if not cli_a2a.name_ok(name):
             raise bad_args(help, "--from must be one line of at most %d characters without \" < > &" % cli_a2a.NAME_MAX)
-        return name
+        return _who(name, True)
     stack = os.environ.get("AOS_STACK") or ""
     if stack:
         try:
@@ -32,7 +44,7 @@ def sender(opts, help):
             if isinstance(st, str) and st and under(stack, st) and (hit is None or len(os.path.realpath(st)) > len(os.path.realpath(hit[1]))):
                 hit = (n, st)
         if hit and cli_a2a.name_ok(hit[0]):
-            return hit[0]
+            return _who(hit[0], True)
     try:
         name = getpass.getuser()
     except (KeyError, OSError):
@@ -40,6 +52,11 @@ def sender(opts, help):
     return name if cli_a2a.name_ok(name) else "user"
 
 
+def tag(text, name):
+    """寄件人是 agent 或明給 --from（sender 回的 Who.tagged）＝本文前接「[say from 名字] 」；人在終端打的照原樣。"""
+    return "[say from %s] %s" % (name, text) if getattr(name, "tagged", False) and name else text
+
+
 def put(a, text, name):
-    """寄一則到 a 的 queue；a 是 eca 才帶寄件人。回信件名稱。"""
-    return aos_ws.put(a.stack, text, name if eca_kind(a.row.get("def") or "") else None)
+    """寄一則到 a 的 queue；a 是 eca 才帶寄件人（body 的 name）；本文照 tag 帶來源。回信件名稱。"""
+    return aos_ws.put(a.stack, tag(text, name), name if eca_kind(a.row.get("def") or "") else None)
