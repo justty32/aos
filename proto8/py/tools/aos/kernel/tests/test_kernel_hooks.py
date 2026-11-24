@@ -264,5 +264,23 @@ class KernelHooksTest(unittest.TestCase):
         self.assertEqual(self.events(), [])
         self.assertEqual(len(list((self.ctl / "new").iterdir())), 3)
 
+    def test_13_old_hooks_key_warns_once_per_change(self):
+        # 11-24（使用者「1.不報錯。」）：kernel.json 還有舊 hooks 鍵＝照跑、warning 一行；同一份沒改不再印，改了再印，拿掉就收記號。
+        self.configure()
+        self.policy.write_text(json.dumps({"hooks": self.hook("old", "before_verdict", "sys.exit(7)")}))
+        first = self.assert_round().stderr
+        self.assertIn('has a top-level "hooks" key, which is ignored since 11-21', first)
+        self.assertIn("kernel_hookeds.json", first)
+        self.assertNotIn("hooks", self.assert_round().stderr)                  # same file, next round: quiet
+        mark = self.stack / "hooks_key_warned.txt"
+        self.assertTrue(mark.exists())
+        self.policy.write_text(json.dumps({"hooks": {}, "reply_via_me": False}))
+        os.utime(self.policy, ns=(1, 1))
+        self.assertIn('"hooks" key', self.assert_round().stderr)               # changed: once more
+        self.policy.write_text(json.dumps({}))
+        self.assertNotIn("hooks", self.assert_round().stderr)
+        self.assertFalse(mark.exists())
+        self.assertEqual(self.events(), [])
+
 if __name__ == "__main__":
     unittest.main()

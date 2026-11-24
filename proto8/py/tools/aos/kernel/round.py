@@ -38,6 +38,7 @@ def load(pack, path):
                 if not isinstance(cfg[key], str) or not cfg[key]:
                     raise ValueError("%s must be a non-empty path string" % key)
                 cfg[key] = os.path.abspath(os.path.join(os.path.dirname(path), cfg[key]))
+        hooks.old_key(path, os.environ.get("AOS_STACK"))   # 11-24：還寫著舊的 hooks 鍵＝warning 一行（不擋、不洗版）
         cfg["hooks"] = hooks.load(os.path.dirname(path))   # 被勾清單：定義夾 interfaces.json 最外層的 hookeds（11-21 起不在 kernel.json）
         pack.load(cfg, os.path.dirname(path))
     except (ValueError, TypeError) as error:
