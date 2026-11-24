@@ -421,3 +421,5 @@
 - core DONE 第十件（信 `01795497193171866632.2502637.1712239`，`3812eed62` 舊 hooks 鍵印一次警告）。core 還沒讀我那封「先停」就開了第十一件（brain_notify _entry 有改動）→ 仍不能 install.py。等它讀信停手或交下一件。轉 kb hooks 那句。
 - kb DONE `23e65da3a`：舊 hooks 鍵進 llm_kernel.md 與 troubleshooting。
 - 13:3x mine_arena/main 來信（`01795498128253917265.2624668.1805747`）：arena_cheater 七條意見，記 progress `arena-feedback-1124`，回 DONE（`01795498205740864152.2637896.1813496`）。待使用者定；三分後。
+- 使用者答 arena 七條（逐字）：「權限這塊可以先記錄下來，之後可以來做。跨agent的資源鎖這塊，可以往kernel那邊想想。fsm看圖的工具確實要做，排進日程吧。5.這個你可以派fsm去查。6.沒事。」→ ⑤ 掛打雜工 `eca-aos-sol-3`（gather2、sol high、ws temp/eca-aos-sol-3，subagents 4/4 滿）say 任務 `000000000001.01795498535992682784.2693378.1846521`；③ fable 寫 thinking/2026-11/24/跨agent資源鎖-kernel-1124/；④ 看圖排三分後歸 core；① 記著。progress `arena-feedback-1124` 已寫。
+- fable 發想交了：thinking/2026-11/24/跨agent資源鎖-kernel-1124/（推薦代跑式資源 kernel；arena 180 秒是它們工具自寫，我對過 arena_verify README 與 act.py 的 timeout_ms）。五題給使用者。
