@@ -1,4 +1,4 @@
-這一庫的內容從哪裡來、哪些沒帶進來。併入的經過與之後每一塊的搬遷紀錄在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。第 3、4 塊太大，拆在 `source/block-3.json`、`source/block-4.json`，`blocks` 裡原位放 `$ref`。
+這一庫的內容從哪裡來、哪些沒帶進來。併入的經過與之後每一塊的搬遷紀錄在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。第 3、4 塊太大，拆在 `source/block-3.md`、`source/block-4.md`，`blocks` 裡原位放 `$ref`。
 
 # commit_ids
 
@@ -209,10 +209,10 @@
   ]
  },
  {
-  "$ref": "source/block-3.json"
+  "$ref": "source/block-3.md"
  },
  {
-  "$ref": "source/block-4.json"
+  "$ref": "source/block-4.md"
  }
 ]
 ```
