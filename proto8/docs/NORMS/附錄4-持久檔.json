@@ -703,6 +703,16 @@
    "on_bad": "不在、不是 JSON、不是物件＝當成空的（pending、dropped 都空），不報錯；pending／dropped 裡型別不對的項跳過。eca 收信時寫不進＝WriteFailed，丟信或清 pending 時寫不進＝一行 warning",
    "note": "11-14 reply-match-1114 新增：{\"pending\": [交出去還沒答的信名…], \"dropped\": [{\"letter\", \"reason\", \"at\"}…]}；reason 只有 bad（壞信）、blocked（before_queue hook 擋）、failed（eca 交出去後 CLI 失敗）；dropped 只留最近 50 筆；先寫 letters.json.<pid>.tmp 再 os.replace。只有身體寫，aos-agent 只讀；fork 不抄（fork_copy 只抄 history 與覆蓋檔）。新檔，不用重建",
    "evidence": "proto8/py/aos/ws.py（letters、letters_take、letters_answered、letters_drop、answer_for）、proto8/templates/agent-fsm/idle.py、proto8/templates/agent-fsm/wait.py、proto8/py/aos/apps/eca/common.py、proto8/py/aos/apps/eca/handoff.py"
+  },
+  {
+   "path": "<kernel stack>/slots.json",
+   "lifetime": "暫時",
+   "writer": "py/tools/aos/kernel_llm",
+   "reader": "aos-llm ls",
+   "image": "不進",
+   "on_bad": "醒來重寫",
+   "note": "",
+   "evidence": "proto8/py/tools/aos/kernel_llm/packs.py（write_limits）、proto8/cpp/aos-llm/src/ls/ls.cpp（ls_whole）"
   }
  ]
 }
