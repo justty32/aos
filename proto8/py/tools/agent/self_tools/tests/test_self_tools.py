@@ -60,6 +60,17 @@ class SelfTools(unittest.TestCase):
                                             "--envs", "A=x y", "--envs", "B=2", "--env-file", "secrets/m.env", "--no-cache",
                                             "--", "tools/math"])
 
+    def test_add_uses(self):
+        """11-24：uses＝成功叫過 N 次就自己拿掉（使用者「self_tools --once…或是--twice」），轉成 tools add --uses N。"""
+        r = self.run_tool({"op": "add", "path": "tools/math", "uses": 2})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.calls()[-1][4:], ["add", "--uses", "2", "--", "tools/math"])
+        for bad in (0, -1, 1.5, True, "1"):
+            with self.subTest(uses=bad):
+                r = self.run_tool({"op": "add", "path": "tools/math", "uses": bad})
+                self.assertEqual(r.returncode, 1)
+                self.assertIn("ArgumentsBad uses must be", r.stdout)
+
     def test_each_op(self):
         d = {"$env": "AOS_HOME", "$path": "/lib/tools/base/math"}
         for args, want in (({"op": "ls"}, ["ls"]),

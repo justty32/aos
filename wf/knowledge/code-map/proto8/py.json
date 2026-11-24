@@ -447,7 +447,8 @@
      "test_override.py": "Test aos-tools \"$override\" registries (11-10 aos-tools-cli step 4): patch merge with null removal, chains and arrays, loops and diamonds, writes only…",
      "test_paths.py": "Test aos-tools path forms: directives in an overriding registry (path and env), add keeping the user's form, --path-json, and the PathMissing line.",
      "test_pointer.py": "Test aos-tools with FILE.json#/POINTER locations: add (stored form, default name), ls -l, get, call through aos-exec, rm by path, and the errors.",
-     "test_stack_in_caller.py": "Test that aos-tools call tells the tool where its cell sits in the caller's stack (AOS_STACK_IN_CALLER=tools/NAME), and drops a stale one when there …"
+     "test_stack_in_caller.py": "Test that aos-tools call tells the tool where its cell sits in the caller's stack (AOS_STACK_IN_CALLER=tools/NAME), and drops a stale one when there …",
+     "test_uses.py": "Test aos-tools add --uses N (11-24, the user's \"self_tools --once ... or --twice\"): a successful call counts down \"uses\" in the registry"
     }
    },
    "fake-mcp-http": {

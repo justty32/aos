@@ -6,8 +6,9 @@
 #   ls {long?}                   ＝tools ls（預設短版：一行一支「名字 TAB 說明第一句」；11-10 使用者「好，有需要的再自己去看細項」、深夜「默認是給出短板」）
 #                                 long: true＝ls -l 的文字（含被設成 null 的格）；細項（整份說明與參數）用 get
 #   get {name}                   ＝tools get NAME_OR_PATH
-#   add {path | path_json, name?, replace?, envs?, env_file?, no_cache?}
-#                                ＝tools add [--name] [--replace] [--envs K=V]… [--env-file] [--no-cache] (XXX | --path-json)
+#   add {path | path_json, name?, replace?, envs?, env_file?, no_cache?, uses?}
+#                                ＝tools add [--name] [--replace] [--envs K=V]… [--env-file] [--no-cache] [--uses N] (XXX | --path-json)
+#                                 uses＝成功叫過（退 0）N 次就自己從我的清單拿掉（11-24 使用者「self_tools --once的選項，就是一次性，用完就拿掉，或是--twice」）
 #   rm {name}                    ＝tools rm XXX（名字，不然路徑）
 #   reset {}                     ＝tools reset -y（腦叫了就算確認過）
 #   先 aos-agent ctl who（拿 $AOS_STACK＝<agent stack>/tools/self_tools/ 查 daemon 表，C-52 經機制看上層、不爬路徑）認出是哪隻。
@@ -64,7 +65,7 @@ def agent(*args):
 
 cmd_call.catch_signals()                       # TERM 與 Ctrl-C：先收掉正在跑的那一群，退 128＋N（Ctrl-C 130、不吐 traceback，R12）
 args = arguments()
-OPS = {"ls": ("long",), "get": ("name",), "add": ("path", "path_json", "name", "replace", "envs", "env_file", "no_cache"),
+OPS = {"ls": ("long",), "get": ("name",), "add": ("path", "path_json", "name", "replace", "envs", "env_file", "no_cache", "uses"),
        "rm": ("name",), "reset": ()}
 op = args.get("op")
 if op is None:
@@ -109,6 +110,11 @@ else:
     cmd += (["--name", name] if name else []) + (["--replace"] if flag("replace") else []) \
         + [x for k in sorted(envs) for x in ("--envs", "%s=%s" % (k, envs[k]))] \
         + (["--env-file", env_file] if env_file else []) + (["--no-cache"] if flag("no_cache") else [])
+    if "uses" in args:                              # 11-24：成功叫過幾次就自己拿掉（使用者「self_tools --once…或是--twice」）
+        uses = args["uses"]
+        if not isinstance(uses, int) or isinstance(uses, bool) or not 1 <= uses <= 999999999:
+            die("ArgumentsBad", "uses must be a whole number >= 1 (1 = once, 2 = twice)")
+        cmd += ["--uses", str(uses)]
     if "path_json" in args:
         pj = args["path_json"]
         if not isinstance(pj, dict) or not pj:

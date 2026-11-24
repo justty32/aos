@@ -51,7 +51,7 @@ more: proto8/py/aos/apps/tools/README.md
 HELPS = {
     "add": """aos-tools add - put a tool on the list
 
-usage: aos-tools [--file F] add [--name N] [--replace] [--no-cache]
+usage: aos-tools [--file F] add [--name N] [--replace] [--no-cache] [--uses N]
                  [--env-file FILE] [--envs K=V]... (XXX | --path-json JSON)
 
 XXX is a tool folder, JSON file or executable; flags may go before or after it.
@@ -76,6 +76,10 @@ flags:
       --env-file FILE remember where FILE is (stored like XXX); it is read on every
                       call, never copied into F. Use it for secrets.
       --no-cache      ask the executable for its definition every time
+      --uses N        take it off the list again after N successful calls (exit 0);
+                      1 = once, 2 = twice. Stored as "uses" in F and counted down
+                      there by call; at 0 the entry is deleted from F (a tool F
+                      replaced comes back). ls and get show what is left.
   -h, --help          show this help
 
 On a call, later wins: the tool's own .env (fills gaps only), the caller's
@@ -153,6 +157,9 @@ tool that writes there creates it), otherwise aos-exec's default (.stack/ in the
 current directory). With AOS_STACK set the tool also gets
 AOS_STACK_IN_CALLER=tools/NAME (where its folder sits in your stack), so a path
 it prints as $AOS_STACK/tools/NAME/... can be opened from your stack as written.
+A tool registered with --uses ("uses": N) runs as a child of aos-tools instead of in
+its place: when it exits 0, N goes down by one in the file that holds it, and at 0
+its entry is deleted there. A failed call (exit not 0, killed) does not count.
 
 flags:
   -h, --help   show this help

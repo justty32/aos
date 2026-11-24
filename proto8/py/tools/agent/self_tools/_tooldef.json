@@ -10,5 +10,6 @@
                                "envs": {"type": "object", "additionalProperties": {"type": "string"}, "description": "add: fixed env values for this tool"},
                                "env_file": {"type": "string", "description": "add: a KEY=VALUE file read on every call"},
                                "no_cache": {"type": "boolean", "description": "add: re-ask an executable for its definition"},
+                               "uses": {"type": "integer", "minimum": 1, "description": "add: take it off your list again after this many successful calls (1 = once, 2 = twice); ls shows what is left"},
                                "long": {"type": "boolean", "description": "true = more detail"}},
                 "required": ["op"]}}

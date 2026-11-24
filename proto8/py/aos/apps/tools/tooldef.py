@@ -215,4 +215,11 @@ def describe(name, t):
     out = {"name": name, "kind": info["kind"], "path": t["path"], "tooldef": info["tooldef"]}
     if "metainfo" in info:
         out["metainfo"] = info["metainfo"]
+    if "uses" in t:                                  # 11-24 add --uses：給腦的說明後面接一句還剩幾次（ls --json 給 fsm 與 aos-mcp 的就是這份）
+        n = t["uses"]
+        d = out["tooldef"].get("description") if isinstance(out["tooldef"], dict) else None
+        note = "(Taken off your tool list after %d more successful call%s.)" % (n, "" if n == 1 else "s")
+        if isinstance(out["tooldef"], dict):
+            out["tooldef"] = dict(out["tooldef"], description=(d.rstrip() + " " if isinstance(d, str) and d.strip() else "") + note)
+        out["uses"] = n
     return out
