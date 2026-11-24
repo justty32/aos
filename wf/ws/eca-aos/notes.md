@@ -332,3 +332,10 @@
 - 照打清單 `~/.aos/scratch/tri-split-1124/out/RUNBOOK.md`（0 快照～13 回到 eca-aos、退回法）、commit 訊息 `out/msg-tri-split.txt`；別的專案定義只列不改跑過：19 檔 51 處（arena_cheater 現在七份、ops-notes patrol、`~/aos-home/llm/kernel.json` 6 處）。HANDOFF 換成「切換中」那條（`6673abbaf`）。
 - 使用者（逐字）：「晚一點，這可能要明天了」。→ 切換延後。在那之前 `proto8/` 不交改動（會漂移、要重做補丁）；eca_main 六點與 mine_arena ①②③ 照排在切換之後。補丁的底若到時還是 `f263b12b6`＋只有 wf 的 commit，清單可直接用；否則照 06-switch/README 重做（新 clone、約一小時）。
 - 五點 push 照他的話做（現在只有 wf 的 commit）。
+
+## 2026-11-24 10:2x：使用者答三件
+
+- 他答（逐字）：「1.改。2.先記下來，這會是以後一段時間的我們的開發重點。3.刪」。
+- ① llm kernel 範本預設值要改：他沒給數字，我打算 slots 4、reserved {high:1}（跟 eca_main 改活樹的一樣），施工時報給他；動的是 `proto8/templates`，**等三分切完**。
+- ② 閒置輪詢＝接下來一段時間的開發重點：立 progress `idle-polling`（現況、現成手段、候選方向；方向他定）。
+- ③ 刪了 `~/repo/aos/.stack/procs/eca-aos-sol-1`、`-2`（表上沒有、沒有行程，340K＋624K）。同一夾還有表外的 `_clock`（11-23 rm 掉的那列留下的），沒刪、他沒說。工作區 `wf/ws/eca-aos/temp/eca-aos-sol-*` 與定義 `temp/defs/gather*` 也還在。

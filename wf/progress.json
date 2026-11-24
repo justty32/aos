@@ -520,7 +520,18 @@
       "status": "open",
       "flow": "",
       "what": "信 01795484557450263667.853643.518765＋補充 01795484607007336637.861953.523507；已回 DONE（01795485122706629005.942821.573447）附判斷。查證：reserved 從 slots 扣（llm_rules.py:489-492），範本預設 2＋{high:1}；agent-fsm 每圈起 aos-fsm＋python3、閒著也起、aos-loop 不接 poke 無退避；subagent rm 留 stack 是本意但沒標記檔；遞迴 ls 已有 aos-comm board ls --deep（知識庫沒寫）；llm_http connect_timeout_s 預設 10、可設；repo 沒提 WSL_INTEROP。",
-      "next": "三分切完後：kb 位子補知識庫（reserved、留下的 stack 怎麼認怎麼清、aos-comm board ls --deep、connect_timeout_s／鏡像網路、WSL_INTEROP）＋wf/dev-env/03 與 daemon-root README 各一句；core 位子：aos-llm ls／窗檔加總格保留格在飛排隊、rm 留 stack 寫標記或列出表外 stack、ctl ls --deep。問使用者：範本 llm kernel 預設值改不改；閒置輪詢要不要改 aos（loop 退避／接 poke／fsm 前置判斷／常駐 python，方向題）；eca-aos-sol-1、-2 的 stack 刪不刪。做完回 eca_main。",
+      "next": "使用者 11-24 答三件「1.改。2.先記下來，這會是以後一段時間的我們的開發重點。3.刪」：① llm kernel 範本預設值要改（他沒給數字；我打算 slots 4、reserved {high:1}，跟活樹 eca_main 改的一樣，施工時跟他報）——改的是 templates/kernel/llm-kernel/kernel.json 與 start-api/llm/kernel.json、01-llm-kernel.md，**等三分切完才改**（現在改會讓補丁漂移）；② 閒置輪詢記成開發重點，另立 progress idle-polling；③ eca-aos-sol-1、-2 的 stack 已刪（11-24 10:2x）。切完後：kb 位子補知識庫（reserved、留下的 stack 怎麼認怎麼清、aos-comm board ls --deep、connect_timeout_s／鏡像網路、WSL_INTEROP）＋wf/dev-env/03 與 daemon-root README 各一句；core 位子：aos-llm ls／窗檔加總格保留格在飛排隊、rm 留 stack 寫標記或列出表外 stack、ctl ls --deep；templates 位子：①。做完回 eca_main。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)"
+      ],
+      "since": "2026-11-24"
+    },
+    "idle-polling": {
+      "title": "開發重點：閒置的 agent 照樣每圈起行程、吃 CPU（使用者 11-24 定為接下來一段時間的開發重點）",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-24（逐字）：「先記下來，這會是以後一段時間的我們的開發重點。」起因 eca_main 11-24 回報（信 01795484557450263667.853643.518765、補充 01795484607007336637.861953.523507）：8 核 load 16～17、閒置 3%（us 78% sy 18%），每秒約 200 個新 PID，沒有大戶、全是短命 python3；記憶體不緊。現況（11-24 只讀查證）：agent-fsm 每圈（loop.json interval 300ms）起 aos-fsm＋一支 python3，閒著停在 idle 格也照起（templates/agent-fsm/fsm.json）；eca 每圈起一支 aos-eca-turn（知識庫 me/self_hook.md 寫「about three a second, also with an empty queue」）；aos-loop 不接 poke（cpp/aos-daemon/docs/04、cpp/aos-loop/README）、沒有退避、信到不叫醒（mail_notify 每分鐘查）；thinking／docs 沒有常駐 Python 的討論，只有 11-05 edge-round2 記過閒著 82% CPU、當時只寫文件。現成的設定手段：loop.json interval_ms 拉長（重起生效、wait 格跟著慢）、ctl.json interval_ms 執行中改（沒指令包裝）、ctl pause／sleep（不收信或不會被叫醒）。候選方向（方向由使用者定，還沒定）：aos-loop 依回碼退避；aos-loop 接 poke、信寄進 queue 時叫醒收件那隻（cpp/aos-loop/src/engine/loop.cpp 已有 wake 掛鉤）；aos-fsm 格加「資料夾空就不起行程」的前置判斷；常駐 Python 格；aos-agent ctl 加改 interval 的指令；知識庫與 troubleshooting 寫每圈成本。",
+      "next": "排在 templates 三分切換之後。開工前先跟使用者談方向（鐵律 5：大方向是他的）；可先派 core 位子把成本量清楚（每圈各起哪些行程、每支多久、整棵樹的分布）當談的材料。",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
