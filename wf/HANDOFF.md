@@ -16,6 +16,8 @@
 
 **寫這條的是 `eca-aos`**。細節在 [`wf/ws/eca-aos/notes.md`](ws/eca-aos/notes.md) 的 11-24 各節。
 
+**使用者 11-24 10:1x「晚一點，這可能要明天了」——切換延後、可能 11-25。** 在那之前 `proto8/` 不交改動（一交就漂移，補丁要重做、全套測試約一小時）；照打清單第 2 步會擋下漂移。
+
 **切換**：補丁在 `~/.aos/scratch/tri-split-1124/` 做好、測過（底 `f263b12b6`，複本 HEAD `d34fba370`，全套新紅 0）。照打清單在 `~/.aos/scratch/tri-split-1124/out/RUNBOOK.md`（不在 git 裡），由使用者開的樹外 Claude Code 視窗照打、每步他點頭（11-23 晚家機答第 ③ 題 b）。停樹時 eca-aos 也停；**醒來（樹重起後）先看**：`git log --oneline -3` 有沒有 `tri-split-1124` 的 commit、`git status --short` 乾淨嗎、`subagent ls`、`mailbox_peek`。
 
 **授權（11-24 當場）**

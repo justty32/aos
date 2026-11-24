@@ -326,3 +326,9 @@
 - 出的東西在 `~/.aos/scratch/tri-split-1124/out/`：`tri-split.patch`（908 KB）、`files.txt` 403、`rm.txt` 214、`name-status.txt`。在退回底的 clone `aos-base` 上真的 apply 過：403 檔雜湊一致、整棵樹等於 `d34fba370`。材料用的是它抄到 `$S/d` 的那份。
 - 要注意：工作樹的 `notes.md`、`progress.json` 要先交掉（不在補丁清單裡）；`proto8/templates/agent-fsm/__pycache__/` 要在 apply 後清；活樹有 `aos-fsm …/templates/agent-fsm/fsm.json` 在跑（停樹前不能 apply）；`wf/knowledge/code-map.json` 在 files.txt 裡——它是手寫的（index_gen 不碰），該交；`/tmp/aos-image-move-*` 兩個 check.py 留的證據夾沒刪。要改 aos 本身的排在三分切換之後；第 ③ 的兩個 stack 要不要 purge 是刪檔，問使用者。
 - 補充信 `01795484607007336637.861953.523507`（同一個回信地址，也要逐點回）：09:43 load 16～17、閒置 3%（us 78% sy 18%），沒有大戶、全是短命 python3、每秒約 200 個新 PID；記憶體不緊（2.7/15.4 GB）。litellm 不限併發，瓶頸在 kernel slots 與上游限流；litellm 開機慢是 ollama 探測撞鏡像網路逾時（使用者已在本地分支刪 ollama／lmstudio 來源）；`~/aos-home/llm/kernel.json` 的 `stupid-fast` 指 LM Studio localhost:1234（沒在跑，選到會卡 127 秒）——屬第 ⑤ 點「endpoint 不在要等多久」。查證那隻子 agent 派出時還沒這封，回信時我自己併進第 ②⑤ 點。
+
+## 2026-11-24 10:15：照打清單寫好、切換延後
+
+- 照打清單 `~/.aos/scratch/tri-split-1124/out/RUNBOOK.md`（0 快照～13 回到 eca-aos、退回法）、commit 訊息 `out/msg-tri-split.txt`；別的專案定義只列不改跑過：19 檔 51 處（arena_cheater 現在七份、ops-notes patrol、`~/aos-home/llm/kernel.json` 6 處）。HANDOFF 換成「切換中」那條（`6673abbaf`）。
+- 使用者（逐字）：「晚一點，這可能要明天了」。→ 切換延後。在那之前 `proto8/` 不交改動（會漂移、要重做補丁）；eca_main 六點與 mine_arena ①②③ 照排在切換之後。補丁的底若到時還是 `f263b12b6`＋只有 wf 的 commit，清單可直接用；否則照 06-switch/README 重做（新 clone、約一小時）。
+- 五點 push 照他的話做（現在只有 wf 的 commit）。
