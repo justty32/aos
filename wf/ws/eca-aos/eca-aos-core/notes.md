@@ -76,3 +76,10 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - 判準在 C-22：工具本身直接執行、或登記叫的人給的東西才標 true；經由寫檔間接達成的不算（write、edit、json_set 這類不標；使用者 11-23 晚「可以」）。讀這旗標的只有 `py/tools/aos/shell_report/report.py`（`arbitrary_exec is True`、沒 `sandbox`＝open）。
 - 標 true 的現在有：shell、run_python、self_tools、self_hook、tools_def、agents_ctl、subagent、agent_def、measure、review_round、promote；fork、screen_linger、do_task、self_llm、self_system 是 false。`py/tools/aos/` 那幾支的 `_metainfo.json` 是單行緊湊寫法，照原樣接在 `"parallel":false` 後面。
 - 跑法：`~/.aos/scratch/arbexec-1123/setup.sh`（git archive HEAD＋改動、複本 install.py）、`test.sh`（清 `AOS_*`，六支工具測試＋`py/tests/apps/tools` 124＋`py/tests` 768，全部約 3 分鐘）。
+
+### 11-24 三件只讀調查（線 eca-aos-core-1124）
+
+- 報告在 [report-1124.md](report-1124.md)。要再量閒置輪詢就照抄 `~/.aos/scratch/eca-aos-core-1124/` 的 `sample.py`（60 秒）、`names.py`（daemon 表的 pid 對名字）、`analyze.py sample.json names.json`。
+- 量法的坑：aos-loop 的 cwd 是**定義夾**不是 stack；表上那列的 pid 有時是包在外面的 aos-daemon，aos-loop 是它的子行程（看 ppid）。忙著跑長一輪的 eca，`cutime` 一直是 0（子行程還沒收），不能當成「不花錢」。剛 fork 還沒 exec 的行程 cmdline 會是父行程的（`aos-loop loop.json`），別當成它在做事。
+- 這台沒有 perf、pidstat、bpftrace；`/proc/<pid>/stat` 的 cutime/cstime 已經夠算每隻的格子 CPU。
+- claude 的 MCP：local 範圍存在 `$CLAUDE_CONFIG_DIR/.claude.json` 的 `projects[cwd].mcpServers`，只認完全相同的 cwd；`--strict-mcp-config` 擋掉它，多給一個 `--mcp-config` 就帶得進去。MCP 在檢查登入之前就起，暫存的沒登入設定資料夾就能測，不會叫到模型。
