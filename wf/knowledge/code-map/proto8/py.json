@@ -154,7 +154,8 @@
     },
     "mcp": {
      "hooks.json": "Hook points fired by aos-mcp: aos tools called through it (the CLI's own tools do not pass here). The agent family's rules (aos.agentlib.hooks, in co…",
-     "main.py": "aos-mcp - 把 aos-tools 的工具註冊檔（登記檔，例 tools.json）登記的工具當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫；stdio JSON-RPC"
+     "main.py": "aos-mcp - 把 aos-tools 的工具註冊檔（登記檔，例 tools.json）登記的工具當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫；stdio JSON-RPC",
+     "serve.py": "aos-mcp 的收發台：tools/call 各開一條執行緒跑，長等的呼叫（subagent listen 等 600 秒）不擋同時叫的別的工具"
     },
     "mcp_import": {
      "main.py": "aos-mcp-import - 連一次外部 MCP server、把它的工具凍結進同一份 server 檔（加 mcp_import、mcp_tools、tools），之後疊進 tools.json 就是一包工具；sync 重問 server、印差異、--yes 才寫（external-mcp …"
@@ -429,6 +430,7 @@
     },
     "mcp": {
      "test_broken_entry.py": "Verify aos-mcp keeps serving when one registry entry is broken (path gone): tools/list leaves it out, tools/call of the others works (11-12 tool-path…",
+     "test_concurrent.py": "Verify aos-mcp runs tools/call at the same time (11-24 home-listen-1124: a long subagent listen held every other call):",
      "test_hooks.py": "Verify aos-mcp's --hooks DEF: before_tool changes / blocks a call, after_tool changes the result, no --hooks = no hooks, a failing hook = isError.",
      "test_list_changed.py": "Verify aos-mcp sends notifications/tools/list_changed right after a tools/call that changed the list (11-10 tools-def, \"3.同一輪就生效\"), not after one tha…",
      "test_own_registry.py": "Verify aos-mcp serves an agent's own registry (\"$override\" of the definition's) and the definition's, and has no --overlay flag (11-10 aos-tools-cli …",

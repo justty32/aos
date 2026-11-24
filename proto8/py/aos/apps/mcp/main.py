@@ -24,7 +24,9 @@
 #   cli_session 起它時帶上。tools/call 跑之前 before_tool（name、id＝請求 id 轉字串、arguments；可改 arguments、攔下＝不跑，結果文字＝hook stdout，
 #   空就「[aos] hook: tool NAME blocked by hook HOOK.」，不算 isError）、跑完 after_tool（加 content、code〔逾時 null〕、timed_out；可改 content）。
 #   hook 停下（before_tool 的 hook 失敗＝HookFailed、清單壞＝HooksBad）＝這次 tools/call 回 isError、文字是那行錯，櫃台不死；after_tool 的 hook 失敗＝stderr 一行 warning（11-21 agent 一家的規矩，aos.agentlib.hooks）。沒給＝沒有 hook。
-# 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
+# 只做 initialize、ping、tools/list、tools/call（與 notifications/cancelled）；沒有 progress、resources、prompts、HTTP。
+#   11-24 晚（線 home-listen-1124）：tools/call 各開一條執行緒同時跑，回覆照 id 回；_metainfo "parallel": false 的工具同名排隊；
+#   notifications/cancelled＝收掉那次的行程群、不回；收發台在 serve.py。
 # 錯：自己的錯 stderr 一行「aos-mcp: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、WsMissing、ToolMissing、ToolsBad；11-05 stdio-unify R1）。
 #   --help＝英文說明到 stdout、退 0（R3）；不給參數照常（讀 ./tools.json）；Ctrl-C＝退 130、不吐 traceback（R12）。
 #   啟動時 aos-tools ls 失敗＝ToolsBad（aos-tools 自己那行照樣在 stderr）；跑起來之後重讀失敗＝那一則 JSON-RPC 回錯誤、不退
@@ -32,12 +34,13 @@
 #   工具與 aos-tools 的 stderr：aos-mcp 接住後原樣轉印到自己的 stderr（MCP 用戶端的 log）；失敗時最後一段另附給外部 agent
 #   （11-05 使用者選「附 stderr 尾巴（推薦）」，edge-basics 題 1；C-52 的明文例外：出口是給外部 agent 看原因，11-05 R10 照舊）。成功時不附。
 #   命令列形狀照 CONVENTION P-44（11-04）：旗標都在 REGISTRY 前面、`--` 結束旗標、`--x V`／`--x=V`；不認得的旗標＝FlagUnknown。
-import json, os, subprocess, sys, time
+import json, os, subprocess, sys, threading, time
 
 from aos import flags as aos_flags  # noqa: E402  proto8/py/aos/flags.py：P-44 的解析
 from aos import metainfo  # noqa: E402
 from aos import process_group  # noqa: E402  py/aos/process_group.py：逾時收整群（TERM→等→KILL）
 from aos.agentlib import agent_hooks  # noqa: E402  py/aos/agentlib/agent_hooks.py：hook 遙控器，before_tool／after_tool（--hooks DEF）
+from aos.apps.mcp import serve  # noqa: E402  py/aos/apps/mcp/serve.py：收發台（tools/call 同時跑、同名排隊、取消）
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
@@ -45,6 +48,8 @@ USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-
 OWN = None                                      # --own FILE（11-10 深夜 tools-def）：這隻自己那份登記檔；在＝用它代替 REGISTRY（每次重看，self_tools 第一次加就建出來）
 HOOKS = None                                    # --hooks DEF（11-10）：定義資料夾的絕對路徑；None＝沒有 hook
 H = None                                        # hook 遙控器（main 開一次；HOOKS None＝空遙控器，什麼都不跑、原樣回）
+SERVER = serve.Server()                         # 收發台（stdout 一次一則、parallel false 的工具同名排隊）
+HOOK_TURN = threading.Lock()                    # hook 一次一個：同一個 hook 的小格（<stack>/hookeds/<名>/event.json）同時寫會撞（11-24 實測）；工具本身照樣同時跑
 DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.json（跟 aos-tools 一致；11-02 改回）
 LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
 LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對路徑）；None＝不記（預設）
@@ -62,6 +67,8 @@ Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call
   AOS_WS=WS AOS_STACK=<stack> aos-tools --file REGISTRY call NAME (aos-tools selects tools/NAME/); arguments go to stdin, stdout goes back as the
   result, exit non-zero = isError (the last 2048 bytes of the tool's stderr are attached). Timeout = the tool's _metainfo timeout_ms,
   otherwise --timeout-s (default 60; a bad timeout_ms = a warning and this); 0 = no limit for either. Then TERM to the whole group, KILL 2 s later.
+Calls run at the same time (a long wait does not hold the others); replies go back by request id. A tool whose _metainfo says
+  "parallel": false runs one call at a time (calls to it wait in turn). notifications/cancelled stops that call's process group, no reply.
 --hooks DEF: DEF is the agent definition folder (the hookeds of its interfaces.json; the stack copy goes on top). On tools/call,
   before_tool may change the arguments or block the call (the result text = the hook's stdout, or "[aos] hook: tool NAME blocked by hook HOOK.";
   not an error), after_tool may change the result text. A failing before_tool hook = that call returns isError with a HookFailed
@@ -69,7 +76,7 @@ Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call
 --own FILE: the agent's own registry (in its stack); whenever it exists it is used instead of REGISTRY
   (checked on every read, so one made by the first self_tools add counts at once).
 --enable-logs: log one line per call to <stack>/aos-mcp-logs.jsonl (or --logs-path FILE). Off by default.
-Supports initialize, ping, tools/list, tools/call only.
+Supports initialize, ping, tools/list, tools/call (and notifications/cancelled) only.
 Errors: one stderr line `aos-mcp: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, WsMissing, ToolMissing, ToolsBad.
   stderr of the tools and of aos-tools is passed through to aos-mcp's stderr."""
 
@@ -202,12 +209,13 @@ def _load(regs):
             for note in notes:
                 aos_flags.warn(NAME, "tool %s: %s; using --timeout-s" % (t["name"], note))
             max_s = milliseconds / 1000.0 if milliseconds is not None else None
-            tools[t["name"]] = {"reg": reg, "spec": spec, "max_s": max_s}
+            tools[t["name"]] = {"reg": reg, "spec": spec, "max_s": max_s,
+                                "parallel": meta.get("parallel") is not False}   # 只有明寫 false 才排隊（tool_spec 的預設是 true）
     return tools
 
 
-def call(name, tool, args, ws, stack, timeout_s, echo=True):
-    """跑一次工具 → (結束碼, stdout, stderr 最後一段, 花幾毫秒, 逾時秒數)。結束碼 None＝逾時被收掉。"""
+def call(name, tool, args, ws, stack, timeout_s, echo=True, job=None):
+    """跑一次工具 → (結束碼, stdout, stderr 最後一段, 花幾毫秒, 逾時秒數)。結束碼 None＝逾時被收掉。job＝serve.Job（起了行程就交給它，取消時收）。"""
     env = dict(os.environ, AOS_WS=ws, AOS_STACK=stack)   # 工具小格統一由 aos-tools call 算（P-17）
     # AOS_ENTRY 照常繼承（11-04 四元素審查：原本 pop 掉、怕外面殘留的值讓工具找錯入口；但 P-39 是一路繼承、使用者 11-01 裁留，外面設了＝要它）
     limit = tool["max_s"] if tool["max_s"] is not None else timeout_s
@@ -215,6 +223,8 @@ def call(name, tool, args, ws, stack, timeout_s, echo=True):
     p = subprocess.Popen(tools_argv(tool["reg"]) + ["call", name], stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
                          start_new_session=True)   # 自成一群：逾時能整群收掉（P-36）
+    if job is not None:
+        job.started(p)
     try:
         out, err = p.communicate(json.dumps(args).encode(), timeout=None if limit == 0 else limit)
         code = p.returncode
@@ -246,22 +256,27 @@ def hook_stop(code, sentence):
     raise HookStop(aos_flags.error_line(NAME, code, sentence))
 
 
-def tools_call(params, tools, ws, stack, timeout_s, mid=None):
+def tools_call(params, tools, ws, stack, timeout_s, mid=None, job=None):
     try:
-        return run_tool(params, tools, ws, stack, timeout_s, mid)
+        name = params.get("name")
+        if name not in tools:
+            return None, (-32602, "no such tool: %s" % name)
+        with SERVER.gate(name, tools[name].get("parallel", True)):   # parallel false＝同名一次一份
+            if job is not None and job.cancelled:                   # 排隊時被取消了：不跑（也不會回）
+                return None, (-32800, "request cancelled")
+            return run_tool(params, tools, ws, stack, timeout_s, mid, job)
     except HookStop as e:
         return {"content": [{"type": "text", "text": str(e)}], "isError": True}, None
 
 
-def run_tool(params, tools, ws, stack, timeout_s, mid):
+def run_tool(params, tools, ws, stack, timeout_s, mid, job=None):
     name, args = params.get("name"), params.get("arguments") or {}
-    if name not in tools:
-        return None, (-32602, "no such tool: %s" % name)
     cid = "" if mid is None else str(mid)
-    verdict, args = H.guard_tool(name, cid, args)
+    with HOOK_TURN:
+        verdict, args = H.guard_tool(name, cid, args)
     if verdict == "blocked":                    # 攔下：不跑、不記、不觸發 after_tool；args＝給外部 agent 看的字
         return {"content": [{"type": "text", "text": args}], "isError": False}, None
-    code, out, tail, ms, limit = call(name, tools[name], args, ws, stack, timeout_s)
+    code, out, tail, ms, limit = call(name, tools[name], args, ws, stack, timeout_s, job=job)
     record({"name": name, "arguments": args, "code": code, "elapsed_ms": ms,
                    "called_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
     if code is None:
@@ -273,14 +288,15 @@ def run_tool(params, tools, ws, stack, timeout_s, mid):
     content = [{"type": "text", "text": text}]
     if code != 0 and tail:                      # 失敗時附 stderr 尾巴，外部 agent 才看得到原因（11-05，edge-basics 題 1）
         content.append({"type": "text", "text": "%s\n%s" % (aos_flags.aos_note("tool", "%s stderr (last %d bytes at most):" % (name, STDERR_TAIL)), tail)})
-    after = H.fire("after_tool", {"name": name, "id": cid, "arguments": args, "content": "\n".join(c["text"] for c in content),
-                                  "code": code, "timed_out": code is None})
+    with HOOK_TURN:
+        after = H.fire("after_tool", {"name": name, "id": cid, "arguments": args, "content": "\n".join(c["text"] for c in content),
+                                      "code": code, "timed_out": code is None})
     if "content" in after["changed"]:           # hook 改了結果：整段換成它給的一段文字
         content = [{"type": "text", "text": after["data"]["content"]}]
     return {"content": content, "isError": code != 0}, None
 
 
-def handle(msg, regs, ws, stack, timeout_s):
+def handle(msg, regs, ws, stack, timeout_s, job=None):
     """一則 JSON-RPC → 回覆（通知不回，傳回 None）。"""
     method, params, mid = msg.get("method"), msg.get("params") or {}, msg.get("id")
     if mid is None:                             # 通知（notifications/initialized 等）：不用回
@@ -295,7 +311,7 @@ def handle(msg, regs, ws, stack, timeout_s):
         elif method == "tools/list":
             result = {"tools": [t["spec"] for t in load_tools(regs).values()]}
         elif method == "tools/call":
-            result, err = tools_call(params, load_tools(regs), ws, stack, timeout_s, mid)
+            result, err = tools_call(params, load_tools(regs), ws, stack, timeout_s, mid, job)
         else:
             err = (-32601, "method not supported: %s" % method)
     except ToolsBad as e:                       # 跑起來之後登記檔壞了：這一則回錯，不退
@@ -315,31 +331,49 @@ def main():
     ws, stack, timeout_s, regs = parse_args(sys.argv[1:])
     H = agent_hooks.open(HOOKS, stack, fail=hook_stop, warn=lambda line: aos_flags.warn(NAME, line))
     try:
-        shown = signature(load_tools(regs))     # 啟動時先讀一次：壞了就別開櫃台
+        shown = [signature(load_tools(regs))]   # 啟動時先讀一次：壞了就別開櫃台；之後是最後一次給出去的清單
     except ToolsBad as e:
         die("ToolsBad", str(e))
+    seen = threading.Lock()
+
+    def relist(notify):
+        """重讀清單、記成最後給出去的；notify（tools/call 做完）且跟上次不一樣＝回 [list_changed]（收發台緊跟在回覆後面送；
+        腦剛加減了工具，同一輪就生效），不然 []。"""
+        try:
+            now = signature(load_tools(regs))
+        except ToolsBad:
+            return []                           # 登記檔這時壞了：下一則照常回錯，這裡不通知
+        with seen:
+            changed, shown[0] = now != shown[0], now
+        return [{"jsonrpc": "2.0", "method": "notifications/tools/list_changed"}] if notify and changed else []
+
+    SERVER.after = lambda: relist(True)
     for line in sys.stdin:                      # 一行一則（MCP stdio 傳輸）
         if not line.strip():
             continue
-        msg = None
         try:
             msg = json.loads(line)
-            reply = handle(msg, regs, ws, stack, timeout_s) if isinstance(msg, dict) else \
-                {"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "must be a JSON object"}}
         except ValueError as e:
-            reply = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "not JSON: %s" % e}}
+            SERVER.send({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "not JSON: %s" % e}})
+            continue
+        if not isinstance(msg, dict):
+            SERVER.send({"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "must be a JSON object"}})
+            continue
+        method = msg.get("method")
+        if method == "tools/call" and msg.get("id") is not None:   # 一則一條執行緒：長等的不擋別的
+            SERVER.spawn(msg["id"], lambda job, msg=msg: handle(msg, regs, ws, stack, timeout_s, job))
+            continue
+        if method == "notifications/cancelled":
+            rid = (msg.get("params") or {}).get("requestId")
+            if rid is not None:
+                SERVER.cancel(rid)
+            continue
+        reply = handle(msg, regs, ws, stack, timeout_s)
         if reply is not None:
-            sys.stdout.write(json.dumps(reply, ensure_ascii=False) + "\n")
-            sys.stdout.flush()
-        if isinstance(msg, dict) and msg.get("method") in ("tools/list", "tools/call") and reply is not None:
-            try:
-                now = signature(load_tools(regs))
-            except ToolsBad:
-                continue                        # 登記檔這時壞了：下一則照常回錯，這裡不通知
-            if msg["method"] == "tools/call" and now != shown:   # 腦剛加減了工具：叫用戶端重拿清單（同一輪就生效）
-                sys.stdout.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/tools/list_changed"}) + "\n")
-                sys.stdout.flush()
-            shown = now
+            SERVER.send(reply)
+            if method == "tools/list":
+                relist(False)
+    SERVER.wait()                               # stdin 讀完：還在跑的回完再走
 
 
 if __name__ == "__main__":

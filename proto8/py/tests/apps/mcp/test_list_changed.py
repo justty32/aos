@@ -7,6 +7,26 @@ import subprocess
 import tempfile
 import unittest
 
+
+def converse(argv, msgs, env):
+    """像用戶端那樣一則一則講：寄一則、有 id 就讀到它的回覆才寄下一則（11-24 起 tools/call 同時跑、回覆照 id 回，
+    一次全灌進去就不保證順序）。回 (結束碼, 收到的每一則, stderr)。"""
+    p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+    out = []
+    for m in msgs:
+        p.stdin.write(json.dumps(m) + '\n')
+        p.stdin.flush()
+        while 'id' in m:
+            line = p.stdout.readline()
+            if not line:
+                break
+            out.append(json.loads(line))
+            if out[-1].get('id') == m['id']:
+                break
+    rest, err = p.communicate(timeout=60)
+    out += [json.loads(line) for line in rest.splitlines() if line.strip()]
+    return p.returncode, out, err
+
 PROTO = Path(__file__).resolve().parents[4]
 MCP = PROTO / 'bin' / 'aos-mcp'
 CLOCK = PROTO / 'py' / 'tools' / 'base' / 'peek_now_time'
@@ -43,11 +63,8 @@ class ListChanged(unittest.TestCase):
                 {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call', 'params': {'name': 'grow', 'arguments': {}}},
                 {'jsonrpc': '2.0', 'id': 4, 'method': 'tools/list', 'params': {}},
                 {'jsonrpc': '2.0', 'id': 5, 'method': 'tools/call', 'params': {'name': 'clock2', 'arguments': {}}}]
-        r = subprocess.run([str(MCP), '--ws', str(self.root), '--stack', str(self.root / 'st'), str(self.reg)],
-                           input=''.join(json.dumps(m) + '\n' for m in msgs), capture_output=True, text=True,
-                           timeout=60, env=self.env)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        out = [json.loads(line) for line in r.stdout.splitlines() if line.strip()]
+        code, out, err = converse([str(MCP), '--ws', str(self.root), '--stack', str(self.root / 'st'), str(self.reg)], msgs, self.env)
+        self.assertEqual(code, 0, err)
         self.assertTrue(out[0]['result']['capabilities']['tools']['listChanged'])
         order = [m.get('id', m.get('method')) for m in out]
         self.assertEqual(order, [1, 2, 3, 'notifications/tools/list_changed', 4, 5])
@@ -62,11 +79,9 @@ class ListChanged(unittest.TestCase):
         msgs = [{'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {}},
                 {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call', 'params': {'name': 'grow', 'arguments': {}}},
                 {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call', 'params': {'name': 'clock2', 'arguments': {}}}]
-        r = subprocess.run([str(MCP), '--ws', str(self.root), '--stack', str(self.root / 'st'), '--own', str(own), str(self.reg)],
-                           input=''.join(json.dumps(m) + '\n' for m in msgs), capture_output=True, text=True,
-                           timeout=60, env=self.env)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        out = [json.loads(line) for line in r.stdout.splitlines() if line.strip()]
+        code, out, err = converse([str(MCP), '--ws', str(self.root), '--stack', str(self.root / 'st'), '--own', str(own), str(self.reg)],
+                                  msgs, self.env)
+        self.assertEqual(code, 0, err)
         self.assertEqual([m.get('id', m.get('method')) for m in out], [1, 2, 'notifications/tools/list_changed', 3])
         self.assertFalse(out[3]['result'].get('isError'), out[3])
 
