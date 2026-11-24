@@ -55,4 +55,4 @@ Three ways, told apart by what enters your conversation (history):
 
 On an eca body every brain turn costs money: prefer 2 or 3. A message already in your history can be removed with `self_history`. How to write the program: `aos/me/self_hook.md#/Writing the hook program`.
 
-On an eca body, do not use the CLI's background Bash (a `sleep`, for example) as a timer. While a background Bash runs, aos's notices of new letters may only reach your conversation after it ends. To wake yourself on a timer, use `clock_register` (add it first: see the top of this page).
+On an eca body, do not use the CLI's background Bash (a `sleep`, for example) as a timer. With the screen closed, `claude -p` does not end the turn while a background task runs. When the task ends, the CLI starts one more turn by itself about that task, and only then exits. Until then the turn holds the lock, so new letters wait in your queue. The answer kept in your history is that last turn's ("the background task finished"), not your real answer. To wake yourself on a timer, use `clock_register` (add it first: see the top of this page).

@@ -28,7 +28,9 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - 11-24 線 `eca-aos-kb-1124` 交過：6f7f32352、c5016efd2、56de0d0f2、fe1c2e93f、5ab0b0e8a、2a9161dd0、46e0f0e1a、23e65da3a、cd9d62963、47b17122c、fa94b7874、349a923c3。
 - 還開著、等別人：家機 stack 搬進 `~/aos-home/.stack/procs/repo-aos`（progress `home-stack-move-1124`）；搬完要把 dev-env/03「家機照做」、`~/aos-home` 家機那條、AGENTS.md、wf/tree、dev-env/01、aos-teams 06／07、wf/public 裡寫「家機是 `~/repo/aos/.stack`」的句子改掉。eca-aos 會轉信。
 - core 說之後會改的：沒有還欠的句子（aos-llm ls 整台行、leftovers、ctl ls --deep 都已寫進知識庫）。
-- 11-24 下午：eca 別用背景 Bash 排定時（core 報告 report-1124-bgmail.md 第 5 項）寫進 `aos/clock.md` 的 which way 段尾與 `aos/eca_reading.md` 的 clock 那行；原因沒寫死，core 實測分出原因後要補（可能也補一條 troubleshooting）。
+- 11-24 下午：eca 別用背景 Bash 排定時，寫在 `aos/clock.md` 的 which way 段尾、`aos/eca_reading.md` 的 clock 那行、`aos/troubleshooting.md` 的 Hooks and timers 段。原因照 core 實測（report-1124-bgmail.md 第 7 節）：`claude -p` 等背景任務結束才退出，回答取最後一個 result。
+  - **待更新**：如果程式改成讀到第一個 result 就收（報告修法 7／8，eca-aos 在問使用者），這三處都要改。
+  - 只寫了預設那條路。`"live_mail": true` 會一直開著 stdin，回答取每個 result；這種情況下信進不進得來沒驗，所以沒寫。互動畫面開著時也沒驗，也沒寫。
 - 我的信箱回信地址：eca-aos 在 `/home/guanyu/aos-home/.stack/procs/repo-aos/procs/eca-aos/mailbox`（stack 11-24 搬家後）。
 
 # 下次照做
