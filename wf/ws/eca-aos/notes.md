@@ -458,3 +458,12 @@
 - 兩邊都紅、跟補丁無關、今天的 commit 帶進來的：agent-fsm `test_fork`（猜是 7ebe15b7e 的 [say from] 前綴）、defs `test_check_tool_path_with_an_unset_variable_is_a_warning`。切完派 core 修。packs.md 的 self 那列字數可能過時（kb）。
 - `switch.sh --check-only --allow-other-daemons` 用 `systemd-run --user --wait --pipe` 在樹外跑：**CHECK-OK**（8 台 daemon、37 列 161 路徑 0 壞；stack_move dry 48 檔；stack_paths 19 檔 64 處＋外部 19 檔 51 處）。
 - 正式啟動我打算用 `systemd-run --user --unit=aos-switch-1124 -p KillMode=process --collect`（不用 setsid：我的殼在樹裡，孤兒可能被收養或連帶收掉；KillMode=process 讓腳本在 tmux 起的根不被 unit 結束時收掉）。日誌 `~/.aos/scratch/switch-1124/log/switch-*.log`。
+
+## 2026-11-24 16:14：三分切完、stack 搬進根（SWITCH-OK）
+
+- 使用者「開始」→ 16:13 `systemd-run --user --unit=aos-switch-1124` 起 switch.sh；16:14:09 `SWITCH-OK`。停樹 1 秒；commit `e3edcb02d`（三分）；`~/repo/aos/.stack` → symlink 到 `~/aos-home/.stack/procs/repo-aos`；`.git/info/exclude` 加 `/.stack`；根與 repo-aos 表全 running；stack_paths 剩 0；驗證 161 路徑 0 壞、8 個警告＝別的 eca 小格 `claude/tool.txt` 指舊範本路徑（下次 ask／open 自己重寫）。日誌 `~/.aos/scratch/switch-1124/log/switch-20261124-161338.log`、產物 `out/20261124-161338/`。
+- 我（eca-aos）的畫面沒斷：`AOS_STACK` 還是舊路徑 `/home/guanyu/repo/aos/.stack/procs/eca-aos/`（走 symlink、能用）；拿掉 symlink 前我要重開。
+- 外部定義（arena_cheater 八份、ops-notes patrol、~/aos-home/llm/kernel.json）已改沒 commit，要通知各自協調者交。
+- 本地比 origin 多 69 個 commit；17:00 照授權 push 一次。
+- 16:2x 使用者「好，都去做」：寄了 mine_arena/main（REQUEST `01795508304887996619.20436.2823410`＋更正 PROGRESS：8 夾 16 檔）、guanyu/ops（REQUEST `01795508336974492833.24769.2826619`：patrol 兩檔＋llm/kernel.json 備份），都請交 commit 回 DONE。core（REQUEST `01795508350523352210.26746.2827974`：test_fork、defs 警告數、eca-bg-mail 調查、**我這個畫面認不認得**先回）。kb（REQUEST `01795508359183885956.28070.2828840`：wf 文件與知識庫跟上新路徑、packs.md self 列）。HANDOFF 我自己改。
+- 我沒被停掉：我的 claude 跑在 aos 起的 tmux 伺服器（`/run/user/1000/aos-tty-1000/767fb7812c4b71e2.sock`），伺服器脫離到 /init，不是 daemon 的子行程；shutdown 只停 loop。畫面 socket 名照小格真實路徑算，搬家後新 loop 可能認不得這個畫面——怕有信時另起 claude -p 撞同一段對話。建議使用者關掉重開。
