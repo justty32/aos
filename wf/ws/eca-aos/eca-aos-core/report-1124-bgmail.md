@@ -4,6 +4,8 @@
 
 ## 結論
 
+> **11-24 晚更新（第 7 節）**：實測證實 `claude -p` 會等背景 Bash 結束才退出、而且自己多開一輪；main 的時間跟 `sleep 7000` 對得上，13:29 那輪很可能是 -p 跑的。下面原本的推測（busy.txt 卡住）在 -p 路徑上換成「lock 卡住」。
+
 - **aos 這邊會一直等下去，不會退回貼字**：畫面開著時，新信走 Claude Code 的 cross-session 收件 socket。aos 投出去之後，要等 CLI 的 UserPromptSubmit hook 寫回執。
   - 等的期間，只要 `busy.txt` 在（CLI 正在跑一輪），aos 就不判它「不吃這個格式」，也不退回貼字。
   - 範本 `timeout_ms` 是 0，也就是不限時，所以一直等。
@@ -80,3 +82,50 @@
 - 舊畫面若還活著，loop 會當成沒畫面、起 `claude -p --resume` 接同一段對話，兩支撞在一起。
 - 16:19 查的現況：eca-aos 的舊 socket `767fb7812c4b71e2` 沒有 server，新的 `9db3a6cf7b61f650` 在跑；repo-aos 底下其他各隻，用舊路徑算的 socket 一個都沒活著。
 - 以後搬家前要先關畫面，或讓 `tty_socket` 也認搬家前的路徑（例如小格裡記一份開畫面時的 socket 路徑）。
+
+## 7. 實測與讀檔結果（11-24 晚，eca-aos 准：唯讀看 main 小格四個檔＋一次 haiku）
+
+### main 小格的四個檔（只看、不改）
+
+- `busy.txt`：現在不在。
+- `a2a.json`：`{"socket": "/run/user/1000/cc-socks/3920082.sock"}`，15:45:16 寫的；同夾 `tmux.conf` 是 15:45:13（只看了 mtime）。開畫面時 `cli_screen.start` 會先刪 a2a.json、a2a_acks.jsonl、busy.txt，所以**這三個只剩 15:45 之後的**，13:29～15:44 的痕跡已經被清掉，分不出 A／B。
+- `a2a_acks.jsonl`：4 行，全在 15:45:21～15:47:27（新畫面開起來之後）。
+- stack 的 `stderr.txt`：0 位元組，mtime 11-23 11:49。aos-eca-turn 的 warning 直接印在它自己的 stderr（`cli_base.warn`，沒有導走），也就是這份檔。這份檔是空的，所以 13:29～15:44 **沒有**「no receipt 30 s … typing into the screen instead」，也沒有「cannot deliver」。
+- 也就是說，那段時間沒有走過第 2 節 A 的那條路（閒著 30 秒沒回執）。
+
+### haiku 一次實測（暫存 `~/.aos/scratch/eca-aos-core-1124/bgtest/run.sh`；ws 是暫存夾，設定 project,local，Stop／UserPromptSubmit 掛記時間的 hook）
+
+題目叫它用 run_in_background 跑 `sleep 45`、馬上回 STARTED。時間從起動算：
+
+| 秒 | 事件 |
+|---|---|
+| +2.3 | UserPromptSubmit |
+| +5.2 | `background_tasks_changed`、`task_started` |
+| +6.2 | **Stop** |
+| +6.3 | `result success STARTED` |
+| +50.2 | `task_updated`、**`task_notification`** |
+| +50.3 | **UserPromptSubmit**（CLI 自己開第二輪） |
+| +51.7 | Stop、第二個 `result`（「The background sleep 45 finished …」） |
+| +52.2 | `claude -p` **才退出** |
+
+- **`claude -p` 會等背景 Bash 結束才退出**，而且結束時自己多開一輪，答的是背景任務的事。
+- aos 的 `run_claude_stream` 讀 stdout 到 EOF，所以那一輪會卡到背景任務結束。這段時間格的 lock 一直被佔，新信全部排在 queue。
+- 回答取**最後一個** result，所以記進 history 的是第二輪的「背景 sleep 結束了」，第一輪真正的回答（STARTED）不見了。
+- 互動畫面那條路的 Stop 照常在第一輪後就到（+6.2），busy.txt 應該會被刪。
+
+### 合起來的判斷
+
+- 數字對得上 **-p 這條**：13:29 開的 `sleep 7000` 在 15:25:40 結束，跟摘要記的「第一段空窗 13:29～15:25」一分不差；第二段 15:25 開的，到 kb 15:44 kill 才結束。
+- stderr 是空的，跟 -p 這條一致（-p 卡住時 aos 不印任何東西）。
+- 15:45 那次是開畫面（tmux.conf、a2a.json 的時間），所以 13:29 那輪很可能是 **`claude -p` 跑的**，不是互動畫面。這點要 main 小格的 `live.jsonl`（只有 -p 會寫）13:29 附近的時間才能確定；我沒被准看，沒看。
+- 互動畫面開著背景 Bash 時到底收不收得到信，這次沒驗，要一個暫存的互動畫面。eca-aos 准的三輪只用了一輪，可以再做。
+
+### 修法選項補充
+
+| # | 做什麼 | 改哪 |
+|---|---|---|
+| 7 | -p 那條：讀到第一個 `result` 就當這一輪答完、記回答、放掉 lock；行程還在（等背景任務）就留著讓它自己結束，之後的輸出丟掉或記一行；或者不等，直接收掉行程（背景任務跟著死） | `py/aos/agentlib/cli_print.py` 的 `run_claude_stream`／`print_claude` |
+| 8 | 回答取第一個 `result`（或第一輪的），不取最後一個；背景任務結束後 CLI 自己多開的那輪不算答這封信 | 同上 |
+| 9 | 在 eca 的 system 或 tools 說明直接寫：背景 Bash 會讓這一輪不結束、新信進不來，要定時用 `clock_register`（⑤ 的加強版，因為這是 -p 的本來行為） | 範本 system.txt／知識庫 |
+
+7 是治本（-p 不再被背景任務綁住）；要不要讓背景任務在 -p 收掉之後跟著死，是方向題。
