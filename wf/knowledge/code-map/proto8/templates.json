@@ -46,7 +46,7 @@
    "daemon.json": "Sub-daemon: hangs under another daemon; no clock row (it follows the root's AOS_CLOCK), only its own sweeper; agents join through procs_requests"
   },
   "eca-claude": {
-   "cli.json": "設定（鍵：kind、flags、tools_sub、timeout_ms、settings）",
+   "cli.json": "設定（鍵：kind、flags、claude_mcp、tools_sub、timeout_ms、settings）",
    "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
    "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
    "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
@@ -62,7 +62,7 @@
   },
   "eca-claude-alt": {
    ".env": "run this eca's Claude Code on a second account: CLAUDE_CONFIG_DIR (login, settings, conversations) is ~/.claude-alt unless the shell that starts the …",
-   "cli.json": "設定（鍵：kind、flags、tools_sub、timeout_ms、settings）",
+   "cli.json": "設定（鍵：kind、flags、claude_mcp、tools_sub、timeout_ms、settings）",
    "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
    "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
    "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",
@@ -245,7 +245,7 @@
   "start-eca": {
    "agents": {
     "ann": {
-     "cli.json": "設定（鍵：kind、flags、tools_sub、timeout_ms、settings）",
+     "cli.json": "設定（鍵：kind、flags、claude_mcp、tools_sub、timeout_ms、settings）",
      "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼並發 aos 的 before_compact；PostCompact 發 after_compact；SessionStart（matcher compact）壓完後提醒讀…",
      "hookeds.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
      "interfaces.json": "設定（鍵：aos-agent、hooks、hookeds）",

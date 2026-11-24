@@ -69,6 +69,9 @@
 #   system（11-11 self-system，使用者裁「fsm 取代、eca 附加」）：interfaces.json 宣告了 system＝$AOS_STACK 那份在就用它、否則定義那份，非空就附加給 CLI：
 #   claude＝--append-system-prompt-file＋--system-prompt-snapshot off（宣告了就一律 off，--resume 才換得到新的）、codex＝-c developer_instructions；
 #   沒宣告＝不碰。畫面開著的 CLI 帶的是開畫面那時的（重開才換）。
+# claude 自己設的 MCP（11-24）：cli.json 選填 claude_mcp＝["user", "project", "local"] 的子集，每次起 claude 前讀這個帳號的 .claude.json
+#   （$CLAUDE_CONFIG_DIR，沒設＝~），把那幾個範圍登記的 server 抄進小格 mcp.json（0600）、--allowedTools 放行 mcp__<名>；--strict-mcp-config 照留
+#   （project 只收核准過的 .mcp.json 那幾台）。讀法在 cli_mcp.claude_own。
 # 外部 MCP（11-12 external-mcp 步 1，thinking 2026-11/12/external-mcp）：cli.json 選填 mcp_servers＝server 檔路徑的陣列（相對從 cli.json 的資料夾算、
 #   可寫指示詞），一份一台，讀與驗在 py/aos/mcp_server_file.py。CLI 自己接（不凍結工具說明）、列了＝整台免核准。這版只接 codex 身的 http：
 #   -c mcp_servers.<名>.url／bearer_token_env_var／default_tools_approval_mode="approve"／enabled_tools（only）／disabled_tools（except），

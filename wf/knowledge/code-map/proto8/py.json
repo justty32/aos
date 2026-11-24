@@ -471,6 +471,7 @@
    "test_aos_py_live.py": "入口 aos.py 對真的 aos 樹（start-api 抄一份、假腦）實跑：遙控器 a.ctl.state(json=True)、a.tools.ls()、a.say／a.listen、a.stack；模組層 agent.ctl.ls、daemon_ctl；指令自己擋下的（a.ctl.ls 不…",
    "test_aos_ws_reply_match.py": "Check aos_ws reply matching (reply-match-1114): answer_for's order queue -> history -> history_removed -> letters.json, the letters.json helpers, mar…",
    "test_cli_a2a.py": "驗畫面開著的 claude 身往 CLI 的收件 socket 投署名訊息（11-13 cli_a2a）：信封與署名、hook 記 socket 與回執、投遞、等回答；",
+   "test_cli_claude_mcp.py": "驗 cli.json 的 claude_mcp（11-24）：claude 自己設定裡的 MCP server（user、project 核准過的、local＝這個 cwd 的）抄進小格的 mcp.json、",
    "test_cli_codex_mcp.py": "驗 cli_session 起 codex 時給 aos MCP server 的設定（11-11）：明寫帶 AOS_* 環境（只帶清單裡有設的，AOS_WS／AOS_STACK 用這次的值），只對 aos 這個 server 免核准；claude 那邊不變。",
    "test_cli_external_mcp.py": "驗 cli.json 的 mcp_servers（11-12 external-mcp 步 1）：server 檔讀取與形狀、codex 的 -c、bearer 只進 CLI 行程的環境、壞的那台 warning 跳過、畫面啟動器。",
    "test_cli_fault.py": "驗證 claude API 失敗分類表的優先順序、壞型別容錯與工具計數。",

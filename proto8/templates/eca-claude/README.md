@@ -46,6 +46,8 @@ hook 什麼都不印＝照跑、不問人；印 `deny`＝不跑、腦收到理�
 
 **接外部 MCP server**：`cli.json` 加 `"mcp_servers": ["mcp/<名>.json"]`，一台一份 server 檔（http 或 stdio），寫法見 [eca-claude 說明的「接外部 MCP server」](../docs/01-eca-claude.md#接外部-mcp-server11-12-external-mcp)；token 放 server 檔的 `env_file`，不要用 `ctl add --envs`。
 
+**帶 Claude Code 自己設的 MCP server（11-24）**：`cli.json` 的 `"claude_mcp": ["user", "project", "local"]`＝每次起 claude 前，aos 讀這個帳號的 `.claude.json`（`$CLAUDE_CONFIG_DIR/.claude.json`，沒設＝`~/.claude.json`），把 `claude mcp add` 登記的 server 抄進小格的 `mcp.json`、跟 aos 那台並排，`--allowedTools` 放行 `mcp__<名>`：`user`＝最外層的 `mcpServers`；`local`＝`projects[這隻的 ws]` 的（cwd 要完全相同，子資料夾不算）；`project`＝ws 的 `.mcp.json` 裡**你在 claude 核准過的**（`enabledMcpjsonServers`，或 `enableAllProjectMcpServers`）。`--strict-mcp-config` 照留：它原本擋的是工作區 `.mcp.json` 不問就連（[eca-claude-dir](../../thinking/2026-11/04/eca-claude-dir.md)），沒核准的照樣進不來；外掛與 claude.ai 的 connector 也不進來。換帳號＝看那個帳號那份，換 ws＝看那個 ws 那格。server 設定可能帶 token，抄進的 `mcp.json` 是 0600、在 stack 裡（`stack.gitignore` 已擋）；不要就拿掉這格或刪掉不要的範圍。名字撞 `aos`、`aos_sub` 或 `mcp_servers` 的＝warning 跳過那台。
+
 `interfaces.json` 宣告畫面、工具、腦設定、history 與 hook 的位置。`_metainfo.json` 宣告估時 `cost.time_ms`（一輪約一分鐘，粗估）與 `llm` 資源，未設定逾時（一輪的上限在 `cli.json` 的 `timeout_ms` 與 `loop.json` 的 `timeout_ms`，範本兩個都是 0＝不限時，11-15 起；一輪很久沒動靜只寫 `$AOS_STACK/quiet.json` 標記、不殺）。
 
 

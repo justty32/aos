@@ -37,6 +37,88 @@ def external_servers(cfg, tool_dir, path):
     return out
 
 
+CLAUDE_SCOPES = ("user", "project", "local")      # cli.json 的 claude_mcp 認的範圍（照 claude mcp add --scope 的名字）
+
+
+def claude_config_file():
+    """這次起的 claude 讀的那份 .claude.json：$CLAUDE_CONFIG_DIR/.claude.json，沒設＝~/.claude.json（Claude Code 自己的規則）。"""
+    d = os.environ.get("CLAUDE_CONFIG_DIR", "")
+    return os.path.join(os.path.expanduser(d) if d else os.path.expanduser("~"), ".claude.json")
+
+
+def _project_entry(projects, ws):
+    """projects 裡這個 cwd 那格：claude 照完全相同的 cwd 認（子資料夾不算），先比真實路徑再比原字。"""
+    if not isinstance(projects, dict):
+        return {}
+    for key in (os.path.realpath(ws), os.path.abspath(ws)):
+        if isinstance(projects.get(key), dict):
+            return projects[key]
+    return {}
+
+
+def claude_own(cfg, ws, taken=()):
+    """cli.json 選填 claude_mcp（11-24，使用者：aos 起的 Claude Code 要用得到使用者自己設的 MCP；「總之把事情解決」）：
+    範本帶 --strict-mcp-config（不讓工作區的 .mcp.json 不問就連），所以 claude 自己設定裡的 server 要由 aos 抄進小格的 mcp.json 才接得到。
+    範圍照 claude mcp add --scope：user＝那份 .claude.json 最外層的 mcpServers；local＝projects[cwd].mcpServers（cwd＝ws，要完全相同）；
+    project＝ws 的 .mcp.json 裡、那份 projects[cwd] 的 enabledMcpjsonServers 列過的（人在 claude 裡核准過的；
+    enableAllProjectMcpServers 是 true＝全部；disabledMcpjsonServers 列的不要）。後面的範圍蓋前面的同名（claude 的順序：local＞project＞user）。
+    名字是 aos、aos_sub 或 taken 裡已有的（cli.json 的 mcp_servers）＝warning 跳過。檔不在＝沒有；讀不懂＝warning、沒有。
+    回 {名: claude 那格的設定（原樣）}。"""
+    scopes = cfg.get("claude_mcp") or []
+    if not scopes:
+        return {}
+    path = claude_config_file()
+    try:
+        with open(path, encoding="utf-8") as f:
+            doc = json.load(f)
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as e:
+        cli_base.warn("claude_mcp: cannot read %s, no MCP servers taken from it: %s" % (path, tool_io.os_reason(e)))
+        return {}
+    if not isinstance(doc, dict):
+        cli_base.warn("claude_mcp: %s is not a JSON object, no MCP servers taken from it" % path)
+        return {}
+    project = _project_entry(doc.get("projects"), ws)
+    found = {}
+    for scope in CLAUDE_SCOPES:
+        if scope not in scopes:
+            continue
+        if scope == "user":
+            got = doc.get("mcpServers")
+        elif scope == "local":
+            got = project.get("mcpServers")
+        else:
+            got = {}
+            try:
+                with open(os.path.join(ws, ".mcp.json"), encoding="utf-8") as f:
+                    listed = json.load(f).get("mcpServers")
+            except FileNotFoundError:
+                listed = None
+            except (OSError, ValueError, AttributeError) as e:
+                cli_base.warn("claude_mcp: cannot read %s: %s" % (os.path.join(ws, ".mcp.json"), e))
+                listed = None
+            if isinstance(listed, dict):
+                ok = project.get("enabledMcpjsonServers") if isinstance(project.get("enabledMcpjsonServers"), list) else []
+                off = project.get("disabledMcpjsonServers") if isinstance(project.get("disabledMcpjsonServers"), list) else []
+                every = project.get("enableAllProjectMcpServers") is True
+                got = {n: v for n, v in listed.items() if (every or n in ok) and n not in off}
+        if not isinstance(got, dict):
+            continue
+        for name, entry in got.items():
+            if not isinstance(entry, dict) or not name:
+                cli_base.warn("claude_mcp: %s server %r in %s is not an object, skipped" % (scope, name, path))
+                continue
+            found[name] = entry
+    out = {}
+    for name, entry in found.items():
+        if name in ("aos", SUB_SERVER) or name in taken:
+            cli_base.warn("claude_mcp: MCP server %s skipped: the name is already used by aos or a server file in mcp_servers" % name)
+            continue
+        out[name] = entry
+    return out
+
+
 def stdio_ready(servers):
     """起 CLI 前先看每台 stdio server 起不起得來：CLI 自己接的 server 起不來，CLI 只是少了那台的工具、不說原因，aos 看不到。
     照 aos-mcp-launch 的讀法解出指令與環境（mcp_server_file.stdio_launch：指示詞、env、env_file）；解不開、指令找不到或不能執行
@@ -182,7 +264,8 @@ def mcp_argv(cfg, cell, ws, stack, external=()):
     ws＝CLI 的 cwd、stack＝給 aos-mcp 的 --stack（工具叫的小格在 <stack>/tools/<名>/）。
     external＝claude 身要並排接的外部 http server（external_claude 留下的；11-12 external-mcp 步 3）；codex 的外部 server 走 external_codex。"""
     reg, sub = cfg.get("registry"), cfg.get("sub_registry")
-    if not reg and not external and not sub:
+    own = claude_own(cfg, ws, {s["name"] for s in external}) if cfg["kind"] == "claude" else {}
+    if not reg and not external and not sub and not own:
         return []
     servers = {}
     if reg:
@@ -192,11 +275,14 @@ def mcp_argv(cfg, cell, ws, stack, external=()):
     msf = _server_mod() if external else None
     entries, allowed, denied = msf.claude_entries(external, _launcher(external)) if external else ({}, [], [])
     servers.update(entries)
+    servers.update(own)                            # claude 自己設定裡的（claude_mcp）：可能帶金鑰，檔只給自己讀
     try:
         cell.write("mcp.json", json.dumps({"mcpServers": servers}, ensure_ascii=False) + "\n")
+        if own:
+            os.chmod(cell.file("mcp.json"), 0o600)
     except OSError as e:
         cli_base.die("WriteFailed", "cannot write %s: %s" % (tool_io.place(cell.file("mcp.json")), tool_io.os_reason(e)))
-    allow = (["mcp__aos"] if reg else []) + (["mcp__" + SUB_SERVER] if sub else []) + allowed
+    allow = (["mcp__aos"] if reg else []) + (["mcp__" + SUB_SERVER] if sub else []) + allowed + ["mcp__" + n for n in own]
     return ["--mcp-config", cell.file("mcp.json"), "--allowedTools", ",".join(allow)] \
         + (["--disallowedTools", ",".join(denied)] if denied else []) \
         + (["--agents", json.dumps(sub_agents(cfg, ws, stack), ensure_ascii=False)] if sub else [])
