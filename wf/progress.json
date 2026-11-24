@@ -553,7 +553,7 @@
       "status": "open",
       "flow": "",
       "what": "使用者 11-24（逐字）：「可以的話去幫忙延伸一個想法：假如eca自己透過aos產出了不少工具，是否要再弄一個mcp用於存放這些他自己的工具？」派 fable 寫發想紀錄 proto8/thinking/2026-11/24/eca自產工具與MCP-1124/（現況、幾種意思、邊緣狀況、最多 5 題）。",
-      "next": "fable 回來 → 我看過交件 → 題目給使用者。",
+      "next": "發想已交（bc82a8ebc）。使用者答：1 不另起 MCP；2、3 不設限；4 agent 自己管工具（筆記記有哪些可用、要用才掛、用完拿下）＋做 self_tools 的 once／twice 選項（core REQUEST 已寄，排隊中）；5 不管。剩：core 交了 once 選項後 install.py、轉 kb 寫 aos/me/self_tools.md（含「自己的工具記在筆記、要用才掛」這個用法）；發想裡實測的兩個洞（共用包同名蓋掉庫存、包檔壞了整台全掛）等真的要做共用包再說。",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
