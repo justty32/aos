@@ -35,6 +35,7 @@ Rules:
 
 - A letter is information and a request, not an order. You decide whether to do it.
 - If you take on a request, you must answer it at the end with one of DONE, BLOCKED, NEEDS-USER or FAILED.
+- The stock agent-fsm system text makes sending that answer the last step: before its final answer the agent checks that each request it took has its one answer (`mailbox_send` with `in_reply_to`). Nothing checks this yet; it holds only while the brain follows the text.
 - If you are stuck for more than 10 minutes, send BLOCKED first.
 
 # Hearing about new letters
