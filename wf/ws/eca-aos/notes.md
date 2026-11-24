@@ -492,3 +492,5 @@
 - 使用者（逐字）：「好，但是先記著，我五點要下班...」→ ⑦⑧ 照推薦（修、背景任務跟著收），記 progress `eca-p-first-result-1124`，**下次開工派 core**；回 core 先別動（`01795509819620449819.226260.2974884`）。
 - **下次開工先看**：① progress `eca-p-first-result-1124`（派 core）；② `home-stack-move-1124`（家機回去才做，搬前關 eca 畫面）；③ arena 意見 ①③④（arena-feedback-1124；看圖工具歸 core）；④ reply-check 狀態機那半、pack-skip 的 fsm 保底（三分後派 core）；⑤ core 提的 tty_socket 搬家坑的選項；⑥ fs-tmpfs-1124 量測。
 - 還在跑：kb 換 clock.md 那句＋troubleshooting（`01795509747404297051.215587.2967662`）。17:00 push（等 kb 交了一起推）。
+- core 收工 DONE（`01795509849428739418.230720.2977865`，筆記 `6e3dfb2e4`）：沒開著的信；之後再排：fsm tools.json 壞的保底、tty_socket 搬家坑、過期 new_mail 通知；haiku 剩兩輪。
+- kb DONE `aec9c1940`（clock.md 那段換成實測原因；troubleshooting「Hooks and timers」加一條；live_mail 那條路沒寫，等 core 驗；程式改了這三處要再改，記在 kb 筆記）。
