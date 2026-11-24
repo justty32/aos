@@ -33,9 +33,9 @@ wf/workflows/dispatch/trial/archive/sandbox/**/.aos/agents/*/say/
 temp/
 # 使用者專屬區裡不公開的私人那格（要留、只是不公開；換台不會跟著走，使用者 11-22 待裁第 1 題選 a）
 /wf/user/private/
-# repo 根的 .stack：aos 那棵樹的 stack，每台各有各的、不進 git、不跟著機器搬（使用者 11-23「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」）
+# repo 根的 .stack：以前 repo-aos 那棵樹的 stack 放這裡（11-23 起）；現在兩台都搬到 ~/aos-home/.stack/procs/repo-aos，repo 裡已經沒有。規則留著，防哪天又在 repo 裡起 stack 被 git 收進去
 /.stack/
-# 舊名 _stack（11-22～11-23）：這行留著。別台 pull 之後、還沒把資料夾改名成 .stack 之前，它仍在那裡，不能變成未追蹤檔被 git clean 掃到
+# 舊名 _stack（11-22～11-23，.stack 之前的名字）：同上，stack 已不在 repo 裡，規則留著防誤收
 /_stack/
 # proto8/frontend 的 bin/ 是手寫的啟動檔（11-17 aos-view 改名 aos-frontend、搬到頂層）
 !proto8/frontend/bin/
