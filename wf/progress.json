@@ -596,7 +596,7 @@
       "title": "之後想：FUSE／9P 與 Plan 9 式的每隻 agent 各自命名空間",
       "status": "暫停",
       "flow": "",
-      "what": "使用者 11-24 提「或許我們應該用FUSE + 9P協議？」，聊完（逐字）：「FUSE沒辦法解決我們的效能問題，只是在一些地方會很好用，那就之後再說。」「或是獨特命名空間這個特性，plan 9的，這可以之後想想。」聊到的好處：會卡住等信的檔（取代輪詢）、每隻 agent 只看得到掛給它的子樹（權限，arena ①）、連線認身分（寄件人驗證，mine_arena ⑥）、ctl 檔、9P 走 TCP 跨機器。代價：伺服器一死整片檔案消失或卡住、小檔每次操作多一趟使用者空間來回（WSL 上更明顯）、rename 原子性與 inotify 要自己補。便宜的替代：權限用 bwrap 的 mount namespace＋bind mount，寄件人用 daemon 代送或 unix socket 的 SO_PEERCRED。若做，先做旁路小實驗（唯讀視圖＋wait 檔），真檔照舊。",
+      "what": "使用者 11-24 提「或許我們應該用FUSE + 9P協議？」，聊完（逐字）：「FUSE沒辦法解決我們的效能問題，只是在一些地方會很好用，那就之後再說。」「或是獨特命名空間這個特性，plan 9的，這可以之後想想。」聊到的好處：會卡住等信的檔（取代輪詢）、每隻 agent 只看得到掛給它的子樹（權限，arena ①）、連線認身分（寄件人驗證，mine_arena ⑥）、ctl 檔、9P 走 TCP 跨機器。代價：伺服器一死整片檔案消失或卡住、小檔每次操作多一趟使用者空間來回（WSL 上更明顯）、rename 原子性與 inotify 要自己補。便宜的替代：權限用 bwrap 的 mount namespace＋bind mount，寄件人用 daemon 代送或 unix socket 的 SO_PEERCRED。若做，先做旁路小實驗（唯讀視圖＋wait 檔），真檔照舊。 使用者 11-24 補（逐字）：「使用FUSE的話，我們就不需要使用aos-post作為IPC啦，我們直接socket, shared memory, ....各種有的沒的」。聊到的：檔案格式（信＝mailbox/new/ 底下一個夾）當契約不變，FUSE 只是它的一種實作——伺服器背後可以用 socket／共享記憶體送信、讀信的檔可以卡住等、FUSE 每個請求帶呼叫者的 pid／uid 可以認寄件人；aos-post 退成「照契約寫一封信」的參考實作。要注意：現在 tmpfs 上 rename 投信本來就是記憶體速度，慢的是輪詢與起行程，不是 IPC 本身；只放記憶體的佇列當機就丟、要落檔就又回到檔案；伺服器一死所有 IPC 一起死。",
       "next": "",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
