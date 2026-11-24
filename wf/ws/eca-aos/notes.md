@@ -439,3 +439,15 @@
 
 - 使用者問要不要 FUSE＋9P；聊完他定：FUSE 之後再說；短期目標＝樹放 /tmp（tmpfs）定期同步回硬碟；原則「aos 依靠檔案系統，硬碟、/tmp、fuse 都撐得住」；不停起 python 只管 aos 基礎共用的，其餘使用者自己管；路徑盡量相對——記日程；Plan 9 獨特命名空間之後想。
 - 記進 progress：`fs-tmpfs-1124`、`relative-paths-1124`、`plan9-ns-1124`（暫停）、`idle-polling` 的 what 補範圍那句。原話逐字在各條。
+
+## 2026-11-24 14:3x：使用者要我自己停樹重開，並把 ~/repo/aos/.stack 搬進根
+
+- 使用者（逐字）：「你可以直接幫我跑aos daemon ctl shutdown，然後重開？我記得上次我ctrl+c關掉根daemon也沒事。對了，可以的話順便幫我把~/repo/aos/.stack搬到~/aos-home/.stack/procs底下，可以嗎?」
+- 我答：我在樹裡，停樹會先停掉我 → 寫切換腳本，`setsid` 在樹外的 tmux 視窗跑完整段（停、套補丁、install、commit、搬、改表、起、驗、日誌），出錯就停、不硬起。
+- 搬家查到的（只讀）：根表 `repo-aos` 列 stack 存 `../../repo/aos/.stack`（相對根 stack）、as_written 絕對；子 daemon 表的 def 存相對它自己 stack 的 `../proto8/templates/eca-claude`（搬了會斷，要依新位置重算，跟三分改同一批欄位）；子表 `/daemon` 寫死 `/home/guanyu/aos-home/.stack/`；hookeds 的 event.json、claude/mcp.json 有舊絕對路徑（猜起時重生，要驗）；mine_arena/main 信箱 new/ 有兩封我的信 reply_to 舊路徑。根是 aos-exec root 在 tmux 裡前景跑。
+- 問了三件（推薦）：併進三分同一次停樹（是）、新位置 `~/aos-home/.stack/procs/repo-aos`（是）、舊路徑留 symlink 過渡（留）。**等他答**，沒意見就派人寫腳本＋在拷貝上預演改表（不起 daemon）。
+- 使用者（逐字）：「照推薦」→ 三件都照推薦。派了一隻 opus 寫 `~/.aos/scratch/switch-1124/`（switch.sh、rollback.sh、README、改表小程式、預演＋驗證器；只拷表相關檔、不起 daemon、不叫模型）。跟重做補丁那隻並行；它只讀 tri-split-1124b。
+- 兩隻都回來後：我看過 → 跟使用者報 → 他說開始，我用 setsid 在獨立 tmux 視窗啟動 switch.sh。
+- **切換腳本回來了**（`~/.aos/scratch/switch-1124/`：switch.sh、rollback.sh、stack_move.py、rehearse.sh、README、test/e2e-sandbox.sh）。沙盒整條跑過 SWITCH-OK／ROLLBACK-OK；拷貝上預演 stack_move 改 48 檔、stack_paths 19 檔 64 處＋外部 19 檔 51 處，驗證器 0 壞、前後對照 0 差。重點：表上路徑相對 daemon stack 的真實路徑（symlink 先解開）→ 只搬加 symlink 會斷，必須改寫；三個 subagent 的 cell `exec.json` 也要改；`.gitignore` 是 `/.stack/` 擋不了 symlink → 第 3 步在 `.git/info/exclude` 加 `/.stack`。RUNBOOK 第 5 步 `split.py --check` 在 commit 前對 repo 跑必失敗（讀 index），switch.sh 已改成 commit 前對 clone、commit 後對 repo。
+- 我替使用者先定（小事、可推翻）：用 `--allow-other-daemons`（測試與別的樹會有 aos-daemon）；`as_written.stack` 先放新絕對路徑（相對化留給 relative-paths-1124）；symlink 留幾天；文件裡的 `~/repo/aos/.stack` 切完再改；退回用 git revert。
+- 啟動：獨立 tmux 視窗 `./switch.sh --check-only`（CHECK-OK）→ `setsid ./switch.sh --allow-other-daemons < /dev/null &` → `tail -f log/switch-*.log`。切完：`CLAUDE_CONFIG_DIR=~/.claude-alt aos-agent -t eca-aos open`（stack 新位置 `~/aos-home/.stack/procs/repo-aos/procs/eca-aos`）。
