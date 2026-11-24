@@ -624,6 +624,18 @@
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
       "since": "2026-11-24"
+    },
+    "home-stack-move-1124": {
+      "title": "家機：repo 那棵的 stack 也搬進根（~/aos-home/.stack/procs/repo-aos）",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-24（逐字）：「家機...要。」（問的是家機要不要也把 stack 搬進 ~/aos-home/.stack，跟公司那台一樣）。公司那台 11-24 16:14 搬完：switch.sh 加 stack_move.py 停樹、搬家、改寫表上與外部檔案的路徑、起樹、驗證（日誌在 ~/.aos/scratch/switch-1124/log/switch-20261124-161338.log）；過渡用的 symlink 與 .bak-trisplit-1124 使用者說「直接刪掉吧」，已刪。搬家前要先關掉開著的 eca 畫面（tty socket 名是照小格真實路徑的雜湊算的，搬了以後新的 loop 認不得舊畫面，可能另起 claude -p 接同一段對話）。家機的文件目前照實寫 ~/repo/aos/.stack，搬完要一起改（AGENTS.md、wf/tree/README.md、dev-env/01、03、aos-teams/06、07、kits site.txt、gather system.txt）。",
+      "next": "在家機做：抄 ~/.aos/scratch/switch-1124/ 過去（或從 repo 的 thinking/2026-11/23/org範本與templates分層-1123/06-switch/ 拿 stack_paths.py），只跑搬 stack 那段（三分補丁已經在 repo 裡，家機 pull 就有）；先 --check-only，再正式跑；搬完請 kb 改家機那幾節。",
+      "see": [
+        "[eca-aos 筆記](ws/eca-aos/notes.md)",
+        "[換機](workflows/dev-env/03-換機.md)"
+      ],
+      "since": "2026-11-24"
     }
   }
 }

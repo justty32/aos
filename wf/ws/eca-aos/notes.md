@@ -467,3 +467,16 @@
 - 本地比 origin 多 69 個 commit；17:00 照授權 push 一次。
 - 16:2x 使用者「好，都去做」：寄了 mine_arena/main（REQUEST `01795508304887996619.20436.2823410`＋更正 PROGRESS：8 夾 16 檔）、guanyu/ops（REQUEST `01795508336974492833.24769.2826619`：patrol 兩檔＋llm/kernel.json 備份），都請交 commit 回 DONE。core（REQUEST `01795508350523352210.26746.2827974`：test_fork、defs 警告數、eca-bg-mail 調查、**我這個畫面認不認得**先回）。kb（REQUEST `01795508359183885956.28070.2828840`：wf 文件與知識庫跟上新路徑、packs.md self 列）。HANDOFF 我自己改。
 - 我沒被停掉：我的 claude 跑在 aos 起的 tmux 伺服器（`/run/user/1000/aos-tty-1000/767fb7812c4b71e2.sock`），伺服器脫離到 /init，不是 daemon 的子行程；shutdown 只停 loop。畫面 socket 名照小格真實路徑算，搬家後新 loop 可能認不得這個畫面——怕有信時另起 claude -p 撞同一段對話。建議使用者關掉重開。
+
+## 2026-11-24 16:2x：使用者關掉重開我的畫面
+
+- 使用者「我開好了」。新畫面的 `AOS_STACK`＝`/home/guanyu/aos-home/.stack/procs/repo-aos/procs/eca-aos/`（新位置，沒走 symlink）；信照常送進來。
+- mine_arena/main PROGRESS（`01795508373664548570.30423.2830288`）：16 檔只換了路徑，交給它們的 integration；README 請 kb 改。問 `.bak-trisplit-1124`（16 個）→ 我回（`01795508462630545224.44751.2839185`）：那些是 stack_paths.py --restore 退回用的，先留、不提交，跟 symlink 一起留幾天，**到時我寫信通知它們刪**；lib/ 對 py/ 不衝突（install.py 把 py/ 裝成 lib/）。
+- 待辦：等 main、ops、core、kb 的 DONE；17:00 push；symlink 與 .bak 什麼時候收（要問使用者）。
+- core PROGRESS（`01795508443533371330.42012.2837275`）：socket 名＝小格 realpath 的雜湊（舊 767f… 已死、新 9db3… 是現在這個畫面），loop 認得，別隻沒撞。坑：搬家前要先關畫面（或讓 tty_socket 也認 symlink 前的路徑），core 三件做完後給選項。回了「16:19～16:20 關了又開是使用者重開」（`01795508511676171695.50855.2844088`）。
+- ops DONE `0e28566`（patrol 兩檔＋ops-notes 文件路徑；三隻派遣工 running）。回請 .bak 先留到我通知（`01795508514286715867.51144.2844350`）。
+- 使用者（逐字）：「直接刪掉吧」→ 刪了 `~/repo/aos/.stack` symlink、`~/aos-home` 底下 20 個 `.bak-trisplit-1124`（含 llm/kernel.json、各 org 的 procs_state／exec／tools 備份）、`.git/info/exclude` 的 `/.stack` 行。刪前查過：沒行程的 AOS_* 指舊路徑；舊路徑只剩 think/request.json 與 llm/used.json（歷史）。arena 那 16 個已不在。**切換不能再用 rollback 退回了。**通知 main、ops（更正上一封）。全部 agent running。
+- kb DONE `47b17122c`（wf 文件改成公司 stack 在根、packs.md self 5,611）；但寫的是「舊路徑留 symlink」→ 回 REQUEST（`01795508661483539773.66009.2859069`）改成 symlink 已刪、補 kits site.txt／gather system.txt／aos-teams §5。progress.json 432 行是家機，不用改。
+- 要問使用者（kb 問的）：① 家機也把 stack 搬進 ~/aos-home/.stack？② dev-env/03 殼設定範例的 AOS_DAEMON 指根（~/aos-home/.stack，同公司 .zshrc）還是 repo 那棵？
+- mine_arena/main DONE `81ba8df`（arena_cheater 裡 16 個 JSON＋7 個 README，16 個 .bak 刪了沒交；沒 push）。kb DONE `fa94b7874`（symlink 句子拿掉，十個檔；kits site.txt／gather system.txt 改了，不用 install.py，已抄出去的 gather 定義要重抄才吃到）。切換的對外收尾全交了；剩 core 三件、17:00 push、使用者兩題（家機搬 stack、殼設定範例的 AOS_DAEMON）。
+- 使用者答（逐字）：「家機...要。shell設定範例的AOS_DAEMON指向~/aos-home/.stack」→ progress 新條 `home-stack-move-1124`（家機回去才做；搬前先關 eca 畫面）；派 kb（`01795508910902416121.102419.2884012`）改殼設定範例、家機那幾節加「之後也要搬」。
