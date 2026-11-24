@@ -92,6 +92,9 @@
  "test_tools_override.py": {
   "description": "Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with \"$override\" (N2 poin…"
  },
+ "test_top_state.py": {
+  "description": "Test aos-agent state (11-24 ops item 5): the same as ctl state at the top level; a ctl action typed at the top level hints at ctl."
+ },
  "test_who_registered_daemon.py": {
   "description": "ctl who reads parent / notify_box of a row attached with --envs on a real isolated daemon (ok-devt-1114 05 定稿 1.3, ok-limits 11-14)."
  }

@@ -28,6 +28,7 @@ subcommands:
   hook     its hooks: ls, get, add, rm, reset
   system   its system text: get, set, reset
   goal     its goal: get, set, done, pause, resume, clear
+  state    the same as ctl state: its overview, or the details of some parts
 
 flags:
   -d, --daemon D       the daemon's stack folder (default: $AOS_DAEMON, else found from the cwd)
@@ -61,7 +62,8 @@ from .common import Fail, parse
 SUBS = {"ctl": ctl.cmd,
         "say": say.cmd, "listen": listen.cmd, "ask": ask.cmd, "chat": chat.cmd,
         "open": screen.cmd("open"), "close": screen.cmd("close"), "watch": screen.cmd("watch"), "peek": screen.peek,
-        "tools": tools.cmd, "llm": llm.cmd, "history": history.cmd, "hook": hook.cmd, "system": system.cmd, "goal": goal.cmd}
+        "tools": tools.cmd, "llm": llm.cmd, "history": history.cmd, "hook": hook.cmd, "system": system.cmd, "goal": goal.cmd,
+        "state": ctl.state.cmd}                  # 11-24 ops 意見 ⑤：aos-agent state＝ctl state（同一支、同一份說明）
 
 
 def on_signal(sig, frame):
@@ -81,7 +83,8 @@ def main():
         if not rest:
             raise Fail("ArgumentsBad", "missing subcommand (%s; see aos-agent --help)" % ", ".join(SUBS))
         if rest[0] not in SUBS:
-            raise Fail("CommandUnknown", "unknown subcommand %s (%s; see aos-agent --help)" % (rest[0], ", ".join(SUBS)))
+            hint = "; did you mean aos-agent ctl %s?" % rest[0] if rest[0] in ctl.SUBS else ""   # 11-24：ctl 底下的動作寫在頂層
+            raise Fail("CommandUnknown", "unknown subcommand %s (%s; see aos-agent --help)%s" % (rest[0], ", ".join(SUBS), hint))
         SUBS[rest[0]](rest[1:])
     except dc.Already as e:          # 11-10 cli-sweep Q4＝A：已在那個狀態＝印一句、退 0
         print(e, flush=True)
