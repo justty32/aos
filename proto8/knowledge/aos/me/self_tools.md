@@ -22,6 +22,16 @@ Rules and errors: `aos/me/self_tools.md#/self_tools: rules and errors`.
 - `"env_file": "secrets/read.env"`: only its location is stored; it is read on every call. Use it for secrets.
 - `"no_cache": true`: for executable tools.
 - Instead of `path`: `"path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/base/math"}` keeps the path as written and looks it up on every use.
+- `"uses": N`: the tool takes itself off your list after N successful calls (exit 0); `{"op": "add", "path": "tools/x", "uses": 1}` is for one use. Failed or killed calls do not count.
+  - What is left shows at the end of its `ls` line (`[uses left: N]`) and in the last sentence of its description.
+  - With `"replace": true` over a tool of your definition, that tool comes back when the uses run out.
+  - The count is kept in your stack, so a restart does not reset it; `reset` clears it with your other changes.
+
+# Your own tools: note them, add them when needed
+
+- Tools you make yourself: write in your notes which ones you have and where each folder is.
+- Add one with `self_tools` only when you need it, and `rm` it when you are done, or add it with `"uses"`. Every tool on your list is sent with every brain call.
+- Do not set up an MCP server to hold them.
 
 # self_tools: rules and errors
 
