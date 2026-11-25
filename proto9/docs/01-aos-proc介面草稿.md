@@ -255,6 +255,7 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 活著的 proc 用寫檔收信，有兩種做法，兩種都做，一隻 proc 提供哪種自己選：
 
 - **信箱資料夾**（照 Maildir，先做這個）：proc 在自己的目錄裡擺出 `mailbox/`，別人照 aos post 原樣把信放進去（先在 `tmp/` 寫好，再搬進 `new/`）。寄的人做的事跟寄給掛掉的 proc 一樣，只是這次對面是活的：信一放進去它當場知道，也可以當場拒收（那次放信失敗）。
+  已經做出來（小庫 `add_mailbox`，11-25）：proto8 現成的寄信程式 `aos-post send` 原樣就寄得進活著的 proc 的 `mailbox/`，一行都不用改。細節見第 11 節「信箱」。
 - **一個只寫的檔**（照 Plan 9 的 plumber）：寫進去就是送一則，沒人收就讓寫入失敗。檔名【擬】`msg`。
 
 【擬】一隻 proc 提供哪幾樣，寫在 `attrs`：`aos_mailbox: yes`、`aos_msg: yes`、`aos_sock: yes`；都沒寫就是活著時不直接收，只能寄到它 persists 的信箱。
@@ -270,6 +271,20 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 - 【擬】為了那個目標，現在先守兩條：
   - 每隻 proc 要留的東西，從它自己的目錄走得到（`persists`）。
   - 留下來的檔裡，指別人用名字路，不用絕對路徑、不用 PID。
+
+### 用 `cp` 抄一棵活的樹（11-25 實測：一台 daemon 加一隻底下的 proc）
+
+使用者問要不要另外做一支會解連結的 cp（「cp -r抄不到persist，那可能就是在另外做一個簡單的，會解symlink的cp程式」「或是現在已經有了？」）。已經有：`cp -rL`。
+
+| 指令 | 結果 |
+|---|---|
+| `cp -r $AOS_ROOT 某處` | 只抄到一個連結（`$AOS_ROOT` 本身就是連結，daemon 一停它就指向空的） |
+| `cp -r $AOS_ROOT/ 某處` | 抄到 root 這一層的檔；`procs/名字` 還是連結，底下的沒抄到 |
+| `cp -rL $AOS_ROOT 某處` | 整棵都抄到：各檔的內容、底下每隻的目錄、信箱裡等著的信 |
+
+`cp -rL` 會撞到的：`ctl`、`procs_ctl` 只能寫不能讀，`cp` 報錯並回失敗（其餘照抄）；別名 `proc` 讓底下的被抄兩份；抄出來的資料夾照原樣是唯讀的，要先 `chmod -R u+w` 才刪得掉。
+
+還差的不是工具，是抄出來的東西夠不夠用：`status` 這類抄到的是當下的快照，不能拿來重起；真正要帶走的是每隻的 `persists` 與 daemon 存下來的表，這兩樣還沒做（`persists` 那條連結也還沒測到）。
 
 ## 11. FUSE 小實驗查到的（11-25，[報告](../experiments/fuse-proc-1125/README.md)）
 
@@ -316,6 +331,21 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   3. 外來登記（`register`）的只收 `rm`；`stop`、`start`、`kill` 都拒；誰都能登記任何 PID、不驗身分。
   4. `add` 只收絕對路徑；檔讀不到時那次寫入照樣成功、錯誤記在回饋裡（回答的線不去讀那個檔）。
 - 沒做：自動重起、`sleep`／`wake`、預設的 persists、底下的 stderr 收進 `reason`。`kill` 一台嵌套的 daemon，它底下的就沒人管（照「自行承擔風險」）。
+
+### 信箱、`failed`、`AOS_NAME_PID`（11-25，小庫與 daemon 的第二批）之後補的
+
+- **`failed` 做了**：指令收下後做的時候失敗，`aos_ctl_state` 是 `failed`、原因在 `aos_ctl_error`；`done` 一定沒有錯誤。daemon 跟上（例：`add` 的檔讀不到＝`failed`＋`PathBad`）。
+- **`AOS_NAME_PID`（【擬】的名字）**：daemon 起底下的 proc 時多給這一個，值是那隻的 PID；`AOS_NAME`、`AOS_MOUNT` 只有在它等於自己的 PID 時才算數，孫子行程原樣拿到也不會誤用。`AOS_ROOT` 不擋。後果：包一層的腳本要用 `exec` 換成真正的程式，不然 PID 對不上、那支程式不認。
+- **信箱**（小庫 `add_mailbox`）：
+  - 信放在 proc 的記憶體裡。`tmp/`、`new/` 可寫，`cur/` 只是擺著（永遠空的，為了長得跟 proto8 的信箱一樣）。
+  - 一封信可以是一個檔（Maildir 的樣子），也可以是一個裝著檔的夾（proto8 `aos-post` 的樣子：夾裡一份 `letter.json`）。
+  - 進 `new/` 只有一條路：從 `tmp/` 搬過去。搬進去那一刻就封住，之後改不了、刪不了、搬不走，只能讀；撞名不覆蓋（`EEXIST`）。
+  - proc 這邊：`take()` 拿最早到的一封（內容、大小、寄的人的 uid／PID、到的時間），拿了就從 `new/` 消失；有一個可以等的 fd；可以掛一個只看記憶體的「收不收」檢查，不收就讓那次搬失敗、信留在 `tmp/`。
+  - 上限（【擬】，都能改）：一封 8 MiB、等著的與寫到一半的合計 4096 封、總共 64 MiB、一個夾裡 64 個檔；`tmp/` 裡放超過 36 小時的清掉（照 Maildir）。
+  - 實測：proto8 的 `aos-post send` 原樣寄得進來；同名再寄一次得到 `LetterExists`、第一封不變；對拒收的 proc 得到寫入失敗、`tmp/` 有清乾淨。寄一封小信約 0.25 毫秒；等著 1000 封時讀 `status` 還是約 40 微秒。
+  - 做不到的：`aos-post send --ordered`（它要在信箱根建一個鎖夾，信箱根不給寫）。
+  - 要知道的：信只在記憶體，proc 在 `take()` 之前死掉，信就沒了；對被暫停的 proc 寄信會卡著等它（跟讀它的檔一樣）。
+- 這批挑的【開】整張表在[小庫的 README](../cpp/aos-procfs/README.md)。
 
 ## 12. 還沒定的（照我覺得該先談的排）
 

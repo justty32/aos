@@ -59,7 +59,9 @@ uint64_t Fs::Impl::add_node(const std::string& path, Node n) {
     std::lock_guard<std::mutex> g(mu);
     std::string leaf;
     uint64_t parent = lookup_path(path, &leaf, true);
-    if (!parent || nodes.at(parent).kind != Kind::Dir) throw std::runtime_error("no parent dir for " + path);
+    // 信箱的夾底下只放信箱自己的節點（add_mailbox 擺的 tmp/ new/ cur/）
+    if (!parent || !(nodes.at(parent).kind == Kind::Dir || (nodes.at(parent).kind == Kind::MailDir && n.mb)))
+        throw std::runtime_error("no parent dir for " + path);
     if (leaf == "." || leaf == "..") throw std::runtime_error("bad name " + path);
     for (uint64_t c : nodes.at(parent).kids)
         if (nodes.at(c).name == leaf) throw std::runtime_error("already exists: " + path);

@@ -117,7 +117,8 @@ void Ctl::Impl::run() {
         }
         std::lock_guard<std::mutex> g(mu);
         if (r.hold) continue;   // stop：鎖到行程結束，state 停在 doing
-        state = "done";
+        // 收下了、做的時候失敗＝failed（使用者 11-25 定）；done 一定是做成了、error 是 -
+        state = r.error.empty() ? "done" : "failed";
         error = r.error.empty() ? "-" : r.error;
         busy = false;
     }

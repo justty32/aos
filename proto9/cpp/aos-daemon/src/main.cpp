@@ -24,11 +24,13 @@ const char* HELP = R"(aos-daemon - A minimal aos daemon: an aos proc that also m
 usage: aos-daemon [NAME [MOUNTPOINT]] [flags]
 
 NAME and MOUNTPOINT default to $AOS_NAME (last part) and $AOS_MOUNT, which a parent
-daemon sets. Without $AOS_ROOT this daemon is the root and prints
+daemon sets together with $AOS_NAME_PID; they count only when $AOS_NAME_PID equals this
+process's pid (a wrapper script must exec aos-daemon). Without $AOS_ROOT this daemon is the root and prints
 "export AOS_ROOT=/proc/<PID>/cwd" on stdout once it is mounted.
 
 Files: status, ctl (stop, pause, resume), settings, attrs, _metainfo.json,
 procs/ (alias proc), procs_ctl, procs_status.
+A proc started here gets AOS_NAME, AOS_MOUNT, AOS_NAME_PID (its own pid) and AOS_ROOT.
 procs_ctl words: add NAME PATH, rm NAME, stop NAME, start NAME, kill NAME, register NAME PID.
 PATH is an executable or a json file {"exec": [argv...], "env": {...}}.
 
@@ -119,10 +121,13 @@ int main(int argc, char** argv) {
             return fail("ArgumentsBad", e.what());
         }
     }
-    std::string env_name = env_or("AOS_NAME", "");
+    // AOS_NAME、AOS_MOUNT 只在 AOS_NAME_PID 等於自己的 PID 時算數（孫子行程繼承到的不算）
+    auto given = pf::env_assignment();
+    std::string env_name = given ? given->name : "";
     std::string name = pos.size() > 0 ? pos[0] : env_name.substr(env_name.rfind('/') + 1);
-    std::string mnt = pos.size() > 1 ? pos[1] : env_or("AOS_MOUNT", "");
-    if (pos.size() > 2 || name.empty() || mnt.empty()) return fail("ArgumentsBad", "need NAME and MOUNTPOINT (or $AOS_NAME and $AOS_MOUNT)");
+    std::string mnt = pos.size() > 1 ? pos[1] : (given ? given->mount : "");
+    if (pos.size() > 2 || name.empty() || mnt.empty())
+        return fail("ArgumentsBad", "need NAME and MOUNTPOINT (or $AOS_NAME and $AOS_MOUNT with $AOS_NAME_PID = own pid)");
     const pid_t pid = getpid();
     cfg.is_root = env_or("AOS_ROOT", "").empty();
     cfg.aos_name = !env_name.empty() ? env_name : (cfg.is_root ? "/" : name);

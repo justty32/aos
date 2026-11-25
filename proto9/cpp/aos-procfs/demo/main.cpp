@@ -1,5 +1,6 @@
-// main.cpp：aos-procfs-demo——一隻最小的 aos proc（status／ctl／settings／attrs／_metainfo.json），另有 --cleanup 收死掉的掛載。
+// main.cpp：aos-procfs-demo——一隻最小的 aos proc（status／ctl／settings／attrs／_metainfo.json／mailbox/），另有 --cleanup 收死掉的掛載。
 #include "aos/procfs.hpp"
+#include "mail.hpp"
 
 #include <cerrno>
 #include <chrono>
@@ -22,24 +23,32 @@ namespace {
 
 namespace pf = aos::procfs;
 
-const char* USAGE = "aos-procfs-demo [NAME MOUNTPOINT] [--threads N] [--socket] [--persist PATH] | --cleanup PATH [--force]";
+const char* USAGE = "aos-procfs-demo [NAME MOUNTPOINT] [--threads N] [--socket] [--persist PATH] [--mail-* N] | --cleanup PATH [--force]";
 
 const char* HELP = R"(aos-procfs-demo - A minimal aos proc served over FUSE.
 
-usage: aos-procfs-demo NAME MOUNTPOINT [--threads N] [--socket] [--persist PATH]
+usage: aos-procfs-demo NAME MOUNTPOINT [--threads N] [--socket] [--persist PATH] [--mail-* N]
        aos-procfs-demo --cleanup PATH [--force]
 
-Without NAME and MOUNTPOINT it uses $AOS_NAME and $AOS_MOUNT (set by aos-daemon).
+Without NAME and MOUNTPOINT it uses $AOS_NAME and $AOS_MOUNT (set by aos-daemon), but only
+when $AOS_NAME_PID equals its own pid: a grandchild that inherited them ignores them, so a
+wrapper script must exec this program.
 
 Mounts MOUNTPOINT, chdirs into it and prints "pid: N" and "AOS_ROOT=/proc/N/cwd".
-Files: status, ctl, settings, attrs, _metainfo.json, links/.
+Files: status, ctl, settings, attrs, _metainfo.json, links/, mailbox/ (tmp/ new/ cur/).
 ctl words: stop, pause, resume; for tests: slow N (sleep N seconds), link NAME TARGET,
-unlink NAME (add or remove the symlink links/NAME).
+unlink NAME (add or remove the symlink links/NAME), take (take the oldest letter from
+mailbox/new/), refuse on|off (refuse letters as they are moved into new/, with EPERM).
+Deliver a letter: write it under mailbox/tmp/, then mv it into mailbox/new/.
 
 flags:
   --threads N      answer threads (default 1)
   --socket         allow unix sockets in the root and serve an echo socket named "sock"
   --persist PATH   value of aos_persist in settings (default -)
+  --mail-max-bytes N    max bytes in one letter (default 8388608; over it: EFBIG)
+  --mail-max-letters N  max entries in tmp/ and new/ together (default 4096; ENOSPC)
+  --mail-max-total N    max bytes in tmp/ and new/ together (default 67108864; ENOSPC)
+  --mail-stale S        drop entries in tmp/ untouched for S seconds (default 129600)
   --cleanup PATH   unmount a dead aos-procfs mount at PATH, then exit
   --force          with --cleanup: unmount even if the server process still exists
   -h, --help       show this help
@@ -108,6 +117,7 @@ int main(int argc, char** argv) {
     int threads = 1;
     bool sock = false, force = false;
     std::string persist, clean;
+    DemoMail dm;
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         auto need = [&](const char* f) -> std::string {
@@ -128,6 +138,8 @@ int main(int argc, char** argv) {
                 clean = need("--cleanup");
             } else if (a == "--force") {
                 force = true;
+            } else if (demo_mail_wants_value(a)) {
+                demo_mail_flag(a, need(a.c_str()), dm);
             } else if (a.rfind("-", 0) == 0) {
                 return fail("FlagUnknown", a);
             } else {
@@ -138,11 +150,11 @@ int main(int argc, char** argv) {
         }
     }
     if (!clean.empty()) return cleanup(clean, force);
-    // daemon 起它時不給參數，名字路與掛載點走環境變數 AOS_NAME、AOS_MOUNT
-    const char* en = std::getenv("AOS_NAME");
-    const char* em = std::getenv("AOS_MOUNT");
-    if (pos.empty() && en && *en && em && *em) pos = {en, em};
-    if (pos.size() != 2) return fail("ArgumentsBad", "need NAME and MOUNTPOINT (or $AOS_NAME and $AOS_MOUNT)");
+    // daemon 起它時不給參數，名字路與掛載點走環境變數 AOS_NAME、AOS_MOUNT（AOS_NAME_PID 要等於自己的 PID）
+    if (pos.empty())
+        if (auto a = pf::env_assignment()) pos = {a->name, a->mount};
+    if (pos.size() != 2)
+        return fail("ArgumentsBad", "need NAME and MOUNTPOINT (or $AOS_NAME and $AOS_MOUNT with $AOS_NAME_PID = own pid)");
     const std::string name = pos[0], mnt = pos[1];
     const long pid = static_cast<long>(getpid());
     const std::string started_at = now_iso();
@@ -188,10 +200,13 @@ int main(int argc, char** argv) {
                 .add("aos_pid", static_cast<long long>(pid))
                 .add("aos_started_at", started_at)
                 .raw(ctl->feedback())
+                .raw(demo_mail_status(dm))
                 .str();
         });
+        // settings 的 aos_mailbox 是「掛了的時候信投到哪」（硬碟上的），跟活著時的 mailbox/ 不是同一個：demo 沒有，寫 -
         fs.add_text("settings", [&] { return pf::Kv().add("aos_persist", persist).add("aos_mailbox", "").str(); });
-        fs.add_text("attrs", [] { return pf::Kv().add("aos_kind", "fuse").add("aos_live", "yes").str(); });
+        fs.add_text("attrs", [] { return pf::Kv().add("aos_kind", "fuse").add("aos_live", "yes").add("aos_mailbox", "yes").str(); });
+        demo_mail_setup(fs, *ctl, dm);
         fs.add_json("_metainfo.json", "{\n  \"summary\": \"Minimal aos proc served over FUSE by aos-procfs-demo.\"\n}\n");
 
         auto no_args = [](const pf::Command& c) -> std::string {

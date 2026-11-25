@@ -165,6 +165,7 @@ std::string Supervisor::start_proc(Proc& p) {
     std::vector<std::string> env = p.env;
     env.push_back("AOS_NAME=" + child_name(p.name));
     env.push_back("AOS_MOUNT=" + p.mount);
+    env.push_back("AOS_NAME_PID=");   // spawn 在 fork 之後填那一支自己的 PID（照 systemd 的 LISTEN_PID）
     env.push_back("AOS_ROOT=" + cfg_.aos_root);
     std::string err;
     pid_t pid = spawn(p.argv, env, err);

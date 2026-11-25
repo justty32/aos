@@ -181,7 +181,19 @@ pid_t spawn(const std::vector<std::string>& argv_in, const std::vector<std::stri
         for (const auto& x : extra_env) over = over || key(x) == k;
         if (!over) envs.push_back(kv);
     }
-    for (const auto& x : extra_env) envs.push_back(x);
+    // extra_env 裡同一個鍵出現兩次時後面的贏（daemon 自己的 AOS_* 排在 json 的 env 後面）
+    for (size_t i = 0; i < extra_env.size(); ++i) {
+        bool later = false;
+        for (size_t j = i + 1; j < extra_env.size(); ++j) later = later || key(extra_env[j]) == key(extra_env[i]);
+        if (!later) envs.push_back(extra_env[i]);
+    }
+    // "AOS_NAME_PID=" 先留 20 格，fork 之後由孩子自己填進 getpid()（只用 async-signal-safe 的事）
+    char* pid_slot = nullptr;
+    for (auto& s : envs)
+        if (s == "AOS_NAME_PID=") {
+            s.append(20, '\0');
+            pid_slot = s.data() + 13;
+        }
     std::vector<char*> av, ev;
     for (auto& s : args) av.push_back(s.data());
     av.push_back(nullptr);
@@ -197,6 +209,12 @@ pid_t spawn(const std::vector<std::string>& argv_in, const std::vector<std::stri
     if (pid == 0) {
         // 自己一個行程組：殼對 daemon 按 Ctrl-C 時，底下的不會被一起打到，由 daemon 好好收
         setpgid(0, 0);
+        if (pid_slot) {
+            char digits[20];
+            int n = 0;
+            for (unsigned long v = static_cast<unsigned long>(getpid()); v || n == 0; v /= 10) digits[n++] = static_cast<char>('0' + v % 10);
+            for (int i = 0; i < n; ++i) pid_slot[i] = digits[n - 1 - i];
+        }
         if (chdir("/") != 0) _exit(127);
         if (devnull >= 0) dup2(devnull, 0);
         dup2(2, 1);   // daemon 的 stdout 只留給自己的那行 export

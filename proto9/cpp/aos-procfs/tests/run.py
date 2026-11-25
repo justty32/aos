@@ -2,7 +2,7 @@
 # run.py：aos-procfs 的測試——起 aos-procfs-demo，逐條驗草稿第 6、7 節的行為，每條印 ok／FAIL，最後印總數並收乾淨。
 """用法：python3 tests/run.py [測試名 ...]   （不給＝全部；名字見 TESTS）"""
 import errno, os, signal, socket, subprocess, sys, time
-from common import DEMO, start_demo, sh, bg, status, wait_until, mounted, cleanup, leftovers
+from common import DEMO, MNT, start_demo, sh, bg, status, wait_until, mounted, cleanup, leftovers
 
 results = []
 
@@ -172,13 +172,38 @@ def t_links():
     ctl_state(root, "done")
     gone = not os.path.lexists(root + "/links/kid")
     check("symlink removed: gone right away (entry_valid=0)", rc == 0 and gone)
+    rc, _, _ = sh("echo 'unlink kid' > %s/ctl" % root)
+    st = ctl_state(root, "failed") and status(root) or {}
+    check("accepted but failed while carried out: write ok, state failed, error LinkMissing",
+          rc == 0 and st.get("aos_ctl_error", "").startswith("LinkMissing"), st)
+    sh("echo pause > %s/ctl" % root)
+    st = ctl_state(root, "done") and status(root) or {}
+    check("done always means it worked: error is -", st.get("aos_ctl_error") == "-", st)
     for r, x in ((root, p), (qroot, q)):
         sh("echo stop > %s/ctl" % r)
         x.wait(5)
     check("both stop cleanly", not mounted(mnt) and not mounted(qmnt))
 
 
-TESTS = {"basic": t_basic, "kill": t_kill, "abort": t_abort, "socket": t_socket, "links": t_links}
+def t_env():
+    m = os.path.join(MNT, "env-%d" % os.getpid())
+    base = "AOS_NAME=envkid AOS_MOUNT=%s" % m
+    rc, _, err = sh("env -u AOS_NAME_PID %s %s" % (base, DEMO))
+    check("AOS_NAME/AOS_MOUNT without AOS_NAME_PID: ignored (exit 1)", rc == 1 and "AOS_NAME_PID" in err, (rc, err))
+    # 孫子：殼設 AOS_NAME_PID=$$（殼自己的）再 fork 出 demo（後面多一個 true，殼不會 exec 優化掉）
+    rc, _, err = sh("export %s AOS_NAME_PID=$$; %s; true" % (base, DEMO))
+    check("grandchild with the shell's AOS_NAME_PID: ignored (no mount)", "AOS_NAME_PID" in err and not mounted(m), (rc, err))
+    p = bg("export %s AOS_NAME_PID=$$; exec %s" % (base, DEMO))
+    st = wait_until(lambda: os.path.exists(m) and mounted(os.path.realpath(m)) and status(m), 5) or {}
+    check("exec with AOS_NAME_PID = own pid: takes the name and mount", st.get("aos_name") == "envkid", st)
+    sh("echo stop > %s/ctl" % m)
+    try:
+        p.wait(5)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+TESTS = {"basic": t_basic, "kill": t_kill, "abort": t_abort, "socket": t_socket, "links": t_links, "env": t_env}
 
 
 def main():

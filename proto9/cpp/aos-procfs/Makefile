@@ -1,8 +1,8 @@
-# Builds aos-procfs: libaos-procfs.a (src/*.cpp) and the demo aos-procfs-demo (demo/main.cpp) under build/.
+# Builds aos-procfs: libaos-procfs.a (src/*.cpp) and the demo aos-procfs-demo (demo/*.cpp) under build/.
 #
 # Usage:
 #   make            build/libaos-procfs.a and build/bin/aos-procfs-demo
-#   make test       build, then run tests/run.py
+#   make test       build, then run tests/run.py and tests/mail.py
 #   make clean      remove build/
 
 BUILD    := build
@@ -12,7 +12,7 @@ XFLAGS   := -std=c++20 -Wall -Wextra -MMD -MP -Iinclude -pthread
 
 LIB_SRC  := $(wildcard src/*.cpp)
 LIB_OBJ  := $(patsubst %.cpp,$(BUILD)/obj/%.o,$(LIB_SRC))
-DEMO_OBJ := $(BUILD)/obj/demo/main.o
+DEMO_OBJ := $(patsubst %.cpp,$(BUILD)/obj/%.o,$(wildcard demo/*.cpp))
 LIB      := $(BUILD)/libaos-procfs.a
 DEMO     := $(BUILD)/bin/aos-procfs-demo
 
@@ -32,6 +32,7 @@ $(DEMO): $(DEMO_OBJ) $(LIB)
 
 test: all
 	python3 tests/run.py
+	python3 tests/mail.py
 
 clean:
 	rm -rf $(BUILD)

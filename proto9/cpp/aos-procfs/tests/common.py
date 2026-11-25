@@ -125,6 +125,15 @@ def cleanup():
                 pass
 
 
+RESULTS = []
+
+
+def check(name, cond, detail=""):
+    """印一條 ok／FAIL，記進 RESULTS（mail.py、mail_more.py 用；run.py 有自己的）。"""
+    RESULTS.append(bool(cond))
+    print("%s  %s%s" % ("ok  " if cond else "FAIL", name, "" if cond or not detail else "  -- %s" % (detail,)), flush=True)
+
+
 def leftovers():
     alive = [p.pid for p in _procs + _stuck if p.poll() is None]
     return alive, our_mounts()

@@ -62,8 +62,8 @@ def t_lock():
     check("procs_ctl locked by a slow command: another writer gets busy", rc != 0 and "busy" in err
           and st.get("aos_procs_ctl_cmd", "").startswith("add y"), (rc, err, st))
     out = first.communicate(timeout=5)
-    st = wait_until(lambda: (read_kv(root + "/status") or {}).get("aos_procs_ctl_state") == "done" and read_kv(root + "/status"), 3) or {}
-    check("the slow add gives up after the deadline (PathBad ... timed out), daemon still answers",
+    st = wait_until(lambda: (read_kv(root + "/status") or {}).get("aos_procs_ctl_state") == "failed" and read_kv(root + "/status"), 3) or {}
+    check("the slow add gives up after the deadline (failed, PathBad ... timed out), daemon still answers",
           "timed out" in st.get("aos_procs_ctl_error", ""), (out, st))
     os.kill(zpid, signal.SIGCONT)
     stop_daemon(p, root, "lock")
@@ -83,7 +83,7 @@ def t_stopstuck():
     dt = time.time() - t0
     err = st.get("aos_procs_ctl_error", "")
     check("stop on a stuck proc gives up within ctl-timeout (%.2f s): %s" % (dt, err.split(" ")[0]),
-          dt < 2 and (err.startswith("CtlTimeout") or err.startswith("ProcStuck")), st)
+          dt < 2 and st.get("aos_procs_ctl_state") == "failed" and (err.startswith("CtlTimeout") or err.startswith("ProcStuck")), st)
     rc, _, e = ctl(root + "/procs_ctl", "kill a")
     check("... then kill goes in", rc == 0 and phase_is(root, "a", "stopped"), e)
     ctl(root + "/procs_ctl", "start a")

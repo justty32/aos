@@ -100,8 +100,8 @@ def t_regfail():
     pctl_done(root)
     ctl(root + "/procs_ctl", "add nx /no/such/file")
     st = pctl_done(root)
-    check("add a missing path -> done with PathBad, not on the table",
-          st.get("aos_procs_ctl_error", "").startswith("PathBad") and table(root, "nx") == {}, st)
+    check("add a missing path -> failed with PathBad, not on the table", st.get("aos_procs_ctl_state") == "failed"
+          and st.get("aos_procs_ctl_error", "").startswith("PathBad") and table(root, "nx") == {}, st)
     stop_daemon(p, root, "regfail")
 
 
@@ -183,9 +183,53 @@ def t_sigterm():
           and wait_until(lambda: our_mounts() == [], 3), (code, our_mounts()))
 
 
+def t_envpid():
+    p, pid, root, base = start_daemon("envpid")
+    ctl(root + "/procs_ctl", "add kid %s" % DEMO)
+    ok = phase_is(root, "kid", "running")
+    kpid = int(table(root, "kid").get("pid", "0"))
+    with open("/proc/%d/environ" % kpid, "rb") as f:
+        envs = dict(x.split(b"=", 1) for x in f.read().split(b"\0") if b"=" in x)
+    check("child gets AOS_NAME_PID = its own pid and still registers", ok and envs.get(b"AOS_NAME_PID") == str(kpid).encode(),
+          envs.get(b"AOS_NAME_PID"))
+    # 殼包一層、有 exec：PID 不變，照樣登記
+    s = spec(os.path.join(SCRATCH, "wrap-exec.json"), ["/bin/sh", "-c", "exec %s" % DEMO])
+    ctl(root + "/procs_ctl", "add wx %s" % s)
+    check("wrapper that execs the demo: registers (aos_name wx)", phase_is(root, "wx", "running")
+          and (read_kv(root + "/procs/wx/status") or {}).get("aos_name") == "wx", table(root, "wx"))
+    # 殼包一層、沒有 exec：demo 是孫子，繼承到的 AOS_NAME_PID 是殼的，它不理 AOS_NAME／AOS_MOUNT
+    err, rcf = os.path.join(SCRATCH, "grand.err"), os.path.join(SCRATCH, "grand.rc")
+    for f in (err, rcf):
+        if os.path.exists(f):
+            os.unlink(f)
+    s = spec(os.path.join(SCRATCH, "wrap-fork.json"), ["/bin/sh", "-c", "%s 2>%s; echo $? >%s" % (DEMO, err, rcf)])
+    ctl(root + "/procs_ctl", "add gc %s" % s)
+    ok = phase_is(root, "gc", "failed", 6)
+    rc = open(rcf).read().strip() if os.path.exists(rcf) else None
+    msg = open(err).read() if os.path.exists(err) else ""
+    check("grandchild (wrapper without exec) does not take the child's name/mount: demo exits 1, nothing mounted",
+          ok and rc == "1" and "AOS_NAME_PID" in msg and os.path.join(base, "gc") not in our_mounts(), (table(root, "gc"), rc, msg))
+    stop_daemon(p, root, "envpid")
+
+
+def t_mailbox():
+    p, pid, root, base = start_daemon("mailbox")
+    ctl(root + "/procs_ctl", "add kid %s" % DEMO)
+    phase_is(root, "kid", "running")
+    mb = root + "/procs/kid/mailbox"
+    rc, _, err = sh("printf 'via the daemon\n' > %s/tmp/m1 && mv %s/tmp/m1 %s/new/m1" % (mb, mb, mb))
+    rc2, out, _ = sh("cat %s/new/m1" % mb)
+    st = read_kv(root + "/procs/kid/status") or {}
+    check("deliver to $AOS_ROOT/procs/kid/mailbox/ (tmp/ then mv to new/): lands, kid counts it",
+          rc == 0 and out == "via the daemon\n" and st.get("mail_waiting") == "1", (err, out, st))
+    check("procs_status kid.mailbox stays the settings line (the on-disk box, -)", table(root, "kid").get("mailbox") == "-",
+          table(root, "kid"))
+    stop_daemon(p, root, "mailbox")
+
+
 TESTS = {"self": t_self, "add": t_add, "crash": t_crash, "stuck": t_stuck, "regfail": t_regfail,
          "register": t_register, "lock": t_lock, "nested": t_nested, "startup": t_startup,
-         "stopstuck": t_stopstuck, "sigterm": t_sigterm}
+         "stopstuck": t_stopstuck, "sigterm": t_sigterm, "envpid": t_envpid, "mailbox": t_mailbox}
 
 
 def main():

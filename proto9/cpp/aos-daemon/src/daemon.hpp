@@ -84,7 +84,7 @@ struct HelperStart {
     int fd = -1;
 };
 HelperStart start_helper(const std::string& path, bool write, const std::string& data);
-// fork＋execve 一隻底下的 proc；失敗回 -1 並填 err。
+// fork＋execve 一隻底下的 proc；env 裡同鍵後面的贏；"AOS_NAME_PID=" 由孩子在 fork 之後填自己的 PID。失敗回 -1 並填 err。
 pid_t spawn(const std::vector<std::string>& argv, const std::vector<std::string>& env, std::string& err);
 std::string find_in_path(const std::string& prog);
 

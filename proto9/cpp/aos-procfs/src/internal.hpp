@@ -1,10 +1,12 @@
-// internal.hpp：aos-procfs 庫內部共用的型別——節點表、指令檔的鎖與做事的線、掛載的小工具。
+// internal.hpp：aos-procfs 庫內部共用的型別——節點表、請求、指令檔的鎖與做事的線、信箱、掛載的小工具。
 #pragma once
 
 #include "aos/procfs.hpp"
 
 #include <atomic>
 #include <condition_variable>
+#include <cstring>
+#include <linux/fuse.h>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -43,7 +45,9 @@ struct Ctl::Impl : std::enable_shared_from_this<Ctl::Impl> {
 
 // ---------- 節點表 ----------
 
-enum class Kind { Dir, Text, Json, Ctl, Link, Sock };
+enum class Kind { Dir, Text, Json, Ctl, Link, Sock, MailDir, MailFile };
+// MailDir 是哪一個夾：信箱根、tmp/、new/、cur/，或一封信夾
+enum class Role : uint8_t { None, Root, Tmp, New, Cur, Letter };
 
 struct Node {
     Kind kind = Kind::Dir;
@@ -55,7 +59,69 @@ struct Node {
     Producer produce;
     std::shared_ptr<const std::string> data;   // json 內容或 symlink 目標
     Ctl* ctl = nullptr;
+    // 信箱的節點（mb 非空）。都在 Fs::Impl::mu 底下讀寫
+    Mailbox::Impl* mb = nullptr;
+    Role role = Role::None;
+    std::shared_ptr<std::string> body;    // MailFile 的內容
+    uint64_t top = 0;                     // 它屬於哪一封（tmp/、new/ 底下頂層那一項；頂層的就是自己）
+    size_t lbytes = 0;                    // 頂層那一項：整封幾 byte
+    bool sealed = false;                  // 在 new/ 裡（或正在搬進去）：不能再寫、刪、搬
+    double mtime = 0, touched = 0;        // 給 stat 看的時間；最後一次有動靜（判過期用，寄的人改不了）
+    uint32_t from_uid = 0, from_pid = 0;  // 搬進 new/ 那次請求的發起者
+    double arrived = 0;
 };
+
+// 一個請求：表頭與本體（本體的長度已經對過）
+struct Req {
+    fuse_in_header h;
+    const char* body;
+    size_t blen;
+    // 依結構大小把本體抄出來；短了補 0，不越界
+    template <class T>
+    void in(T& s) const {
+        std::memset(&s, 0, sizeof s);
+        std::memcpy(&s, body, std::min(sizeof s, blen));
+    }
+    // 本體 off 起的一個以 NUL 結尾的名字（越界＝空字串）
+    std::string name_at(size_t off) const {
+        return off < blen ? std::string(body + off, strnlen(body + off, blen - off)) : std::string();
+    }
+};
+
+struct Mailbox::Impl {
+    Fs::Impl* fs = nullptr;
+    MailLimits lim;
+    Accept accept;
+    uint64_t root = 0, tmp = 0, nw = 0, cur = 0;
+    int efd = -1;
+    size_t entries = 0;                   // tmp/＋new/ 頂層幾項
+    size_t bytes = 0;
+    unsigned long long delivered = 0, taken = 0, refused = 0, dropped_stale = 0;
+    std::string last_refusal;
+    double last_sweep = 0;
+
+    // 以下都要拿著 fs->mu 叫
+    void sweep(double now);               // 丟掉 tmp/ 裡過期的
+    void drop(uint64_t nid);              // 整項（含信夾裡的檔）拿掉、扣掉計數
+    Letter letter(uint64_t nid) const;
+};
+
+double wall_now();
+
+// 信名與信夾裡的檔名：不空、不是 . ..、沒有 / 與控制字元（aos-post 的 check_name 也擋控制字元）
+inline bool mail_name_ok(const std::string& n) {
+    if (n.empty() || n.size() > 255 || n == "." || n == "..") return false;
+    for (unsigned char c : n)
+        if (c == '/' || c < 0x20 || c == 0x7f) return false;
+    return true;
+}
+
+// 還在 tmp/、還沒封住的（頂層那一項或信夾裡的檔）：寄的人可以寫、刪、改名
+inline bool open_in_tmp(const std::unordered_map<uint64_t, Node>& nodes, const Node& n) {
+    if (!n.top) return false;
+    const Node& t = nodes.at(n.top);
+    return t.parent == t.mb->tmp && !t.sealed;
+}
 
 struct DirEnt {
     std::string name;
@@ -75,6 +141,7 @@ struct Fs::Impl {
     std::unordered_map<uint64_t, std::shared_ptr<std::vector<DirEnt>>> dirs;
     uint64_t next_fh = 1;
     std::vector<std::unique_ptr<Ctl>> ctls;
+    std::vector<std::unique_ptr<Mailbox>> mailboxes;
 
     int fd = -1;
     std::string mnt;
@@ -90,6 +157,27 @@ struct Fs::Impl {
     void loop();
     void dispatch(const char* buf, size_t len);
     void reply(uint64_t unique, int err, const void* data = nullptr, size_t len = 0);
+    void fill_attr(uint64_t nid, const Node& n, fuse_attr& a) const;
+    fuse_entry_out entry_of(uint64_t nid, const Node& n) const;
+    uint64_t kid(const Node& dir, const std::string& name) const;   // 沒有回 0
+
+    // 下面的 op_* 進來時拿著 mu、node 是 h.nodeid 那一個；回覆之前自己放開
+    using Lock = std::unique_lock<std::mutex>;
+    void op_mknod(const Req& r, Lock& lk, uint64_t nid, Node& node);
+    void op_unlink(const Req& r, Lock& lk, Node& node);
+    void op_open(const Req& r, Lock& lk, Node& node);
+    void op_read(const Req& r, Lock& lk);
+    void op_write(const Req& r, Lock& lk, Node& node);
+    void op_opendir(const Req& r, Lock& lk, uint64_t nid, Node& node);
+    void op_readdir(const Req& r, Lock& lk);
+    // 信箱的節點：處理了回 true；false＝交給一般的（LOOKUP、GETATTR、OPENDIR…）
+    bool mail_op(const Req& r, Lock& lk, uint64_t nid, Node& node);
+    void mail_make(const Req& r, Lock& lk, uint64_t pid, const std::string& name, bool dir, uint32_t mode, bool open);
+    void mail_setattr(const Req& r, Lock& lk, uint64_t nid, Node& node);
+    void mail_write(const Req& r, Lock& lk, Node& node);
+    void mail_remove(const Req& r, Lock& lk, Node& node, bool dir);
+    void mail_rename(const Req& r, Lock& lk, uint64_t nid, Node& node);
+    int mail_resize(Node& f, size_t size);   // 照上限改 MailFile 的長度；回 errno
 };
 
 // ---------- 掛載（mount.cpp） ----------
