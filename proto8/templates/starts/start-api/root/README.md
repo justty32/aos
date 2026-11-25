@@ -34,7 +34,7 @@ aos-agent -d stacks/root ctl add --auto-restart -w . defs/ann
 aos-daemon-ctl -d stacks/root ls        # _clock、_sweeper、ann 都是 running
 ```
 
-子項的 stack 預設在 `stacks/root/procs/<名>/`（例 `stacks/root/procs/ann/`）。
+子項的 stack 預設在 `stacks/root/procs/<名>/`（例 `stacks/root/procs/ann/`）。`rm` 掉的那列 stack 會留著，`aos-daemon-ctl -d stacks/root leftovers` 列出沒人用的（只列不刪）；整棵樹的表與板子：`aos-agent -d stacks/root ctl ls --deep`、`aos-comm -d stacks/root board ls --deep`。其他症狀（WSL、連不上模型服務）查知識庫 `aos/troubleshooting.md`。
 
 - **llm kernel** 是另外一個專案、自己起停（`cp -r $AOS_HOME/templates/kernels/llm-kernel <那邊的定義>` 抄一份，再 `aos-exec --stack <那邊的 stack> <那邊的定義>`）；`AOS_LLM_KERNEL` 指它的 stack，`.env` 預設是 `${AOS_WS}/../llms/stacks/llm`。它沒開時 agent 只是一直等、不會壞。現在 `aos-agent listen`／`say` 會印一行說 llm kernel 沒在跑。
 - **下班**：`aos-daemon-ctl -d stacks/root shutdown`（子項全睡下、記在表上），再 `git` 推。

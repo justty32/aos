@@ -26,12 +26,12 @@ aos-daemon-ctl -d .stack shutdown                          # 關樹；再起＝�
 |---|---|---|---|
 | `env.sh` | 薄的：`AOS_HOME` 沒設報一行錯；有就 `source "$AOS_HOME/env.sh"`（清掉別棵樹的 `AOS_*`、把 `$AOS_HOME/bin` 放上 `PATH`）；最後可以加這棵樹自己的 `export` | — | — |
 | `root/` | 根 daemon 的定義（時鐘＋清道夫） | [daemon-root](../../daemons/daemon-root/README.md) | `.env` 的 `AOS_LLM_KERNEL` 指樹裡的 `llms/stacks/llm`（這包沒帶 llm kernel；要的話照 start-api 抄 `kernel/llm-kernel` 到 `llm/`、掛上根，並把這行改成 `${AOS_STACK}/procs/llm`） |
-| `agents/ann/` | 一隻外部 coding agent（Claude Code） | [eca-claude](../../agents/eca-claude/README.md) | 沒有（`llm.json` 照範本是 `sonnet`） |
+| `agents/ann/` | 一隻外部 coding agent（Claude Code） | [eca-claude](../../agents/eca-claude/README.md) | 不帶 `compact_hook`：`cli.json` 的三個 Claude Code hook（PreCompact、PostCompact、SessionStart）借 `$AOS_HOME/templates/agents/eca-claude/compact_hook`（那支不在就 stderr 一行 warning、照沒有 hook 的樣子壓，不擋）；其餘沒有（`llm.json` 照範本是 `sonnet`）。11-25 起（使用者 11-25「17.要」），已經抄出去的樹不會自己變，要借就重抄 `agents/ann/cli.json`、刪掉它的 `compact_hook` |
 
 跑起來後樹裡多出 `.stack/`（根的 stack，agent 的 stack 在 `.stack/procs/ann/`）。
 
 ## 維護
 
-`root/`、`agents/ann/` 是原範本的逐字抄本，只差上表那一處；改了原範本要同步抄過來，[templates/tests/test_start.py](../../tests/test_start.py) 會逐檔比對、不一樣就紅。`env.sh` 兩包是同一份。
+`root/`、`agents/ann/` 是原範本的逐字抄本，只差上表那幾處；改了原範本要同步抄過來，[templates/tests/test_start.py](../../tests/test_start.py) 會逐檔比對、不一樣就紅。`env.sh` 兩包是同一份。
 
 repo 更新後，已經抄出去的樹哪些要重抄見 [14-更新與重新複製](../../../thinking/2026-11/17/cpp-py-改名/14-更新與重新複製.md)。

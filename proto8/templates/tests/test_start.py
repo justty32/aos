@@ -22,9 +22,11 @@ STARTERS = {
                          ("perm", "kernels/procs-kernel", {"kernel.json"}),
                          ("agents/ann", "agents/agent-fsm", {"llm.json", "fsm.json", "README.md"})],
     "starts/start-eca": [("root", "daemons/daemon-root", {".env"}),
-                         ("agents/ann", "agents/eca-claude", set())],
+                         ("agents/ann", "agents/eca-claude", {"cli.json"})],
 }
 EXTRA = {("starts/start-api", "agents/ann"): {".env"}}   # files a copy has on top of its template
+MISSING = {("starts/start-eca", "agents/ann"): {"compact_hook"}}   # files a copy borrows from its template instead of carrying (11-25)
+BORROWED_HOOK = "$AOS_HOME/templates/agents/eca-claude/compact_hook"
 CELLS = ("idle.py", "brain.py", "wait.py", "act.py")
 SHARED = ("atomic_file.py", "cell_common.py", "compact.py", "llm_settings.py")
 # files ann links dynamically from $AOS_HOME/lib/aos/apps/agent_fsm instead of carrying: nothing in ann may name them
@@ -50,9 +52,9 @@ class StartTest(unittest.TestCase):
             for sub, src, differ in parts:
                 with self.subTest(starter=starter, folder=sub):
                     a, b = TEMPLATES / src, TEMPLATES / starter / sub
-                    self.assertEqual(files(b), files(a) | EXTRA.get((starter, sub), set()),
+                    self.assertEqual(files(b), (files(a) | EXTRA.get((starter, sub), set())) - MISSING.get((starter, sub), set()),
                                      "%s/%s has other files than %s: copy it again" % (starter, sub, src))
-                    for rel in sorted(files(a) - differ):
+                    for rel in sorted(files(a) - differ - MISSING.get((starter, sub), set())):
                         self.assertTrue(filecmp.cmp(a / rel, b / rel, shallow=False),
                                         "%s/%s/%s differs from %s/%s: copy it again" % (starter, sub, rel, src, rel))
                         self.assertEqual(os.access(a / rel, os.X_OK), os.access(b / rel, os.X_OK),
@@ -80,6 +82,24 @@ class StartTest(unittest.TestCase):
             text = (ann / rel).read_text(encoding="utf-8")
             for name in sorted(LINKED):
                 self.assertNotIn('"%s"' % name, text, "%s names %s, which ann does not carry" % (rel, name))
+
+    def test_eca_ann_borrows_compact_hook(self):
+        """start-eca's ann has eca-claude's cli.json, except that its three Claude Code hooks run $AOS_HOME's compact_hook (11-25, user "17.要")."""
+        ann = TEMPLATES / "starts" / "start-eca" / "agents" / "ann"
+        a = json.loads((TEMPLATES / "agents" / "eca-claude" / "cli.json").read_text(encoding="utf-8"))
+        b = json.loads((ann / "cli.json").read_text(encoding="utf-8"))
+        hooks_a, hooks_b = a["settings"].pop("hooks"), b["settings"].pop("hooks")
+        self.assertEqual(a, b, "start-eca/agents/ann/cli.json differs from eca-claude's in more than the hook commands")
+        self.assertEqual(sorted(hooks_a), sorted(hooks_b))
+        self.assertTrue((TEMPLATES / BORROWED_HOOK[len("$AOS_HOME/templates/"):]).is_file())
+        for event in hooks_a:
+            for ga, gb in zip(hooks_a[event], hooks_b[event], strict=True):
+                self.assertEqual({k: v for k, v in ga.items() if k != "hooks"}, {k: v for k, v in gb.items() if k != "hooks"})
+                for ha, hb in zip(ga["hooks"], gb["hooks"], strict=True):
+                    what = ha["command"].rsplit(" ", 1)[1]                     # pre / post / start
+                    self.assertEqual({k: v for k, v in ha.items() if k != "command"}, {k: v for k, v in hb.items() if k != "command"})
+                    self.assertEqual(hb["command"], 'f="%s"; [ -f "$f" ] && exec python3 "$f" %s; '
+                                     'echo "compact_hook: warning: $f is not a file" >&2' % (BORROWED_HOOK, what))
 
     def test_nothing_else_at_the_top(self):
         for starter, parts in STARTERS.items():

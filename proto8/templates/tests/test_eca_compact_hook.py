@@ -181,9 +181,39 @@ class CompactHook(unittest.TestCase):
         self.assertIn("compact_hook: warning: %s names %s, which is not a file" % (self.stack / "notes_path", ws / "wf/ws/boss/kid/notes.md"), r.stderr)
         self.assertIn("your own notes are %s" % (ws / "wf/ws/boss/kid/notes.md"), r.stdout)
 
-    def test_ann_is_the_same_file(self):
-        ann = PROTO / "templates" / "starts" / "start-eca" / "agents" / "ann" / "compact_hook"
-        self.assertEqual(ann.read_bytes(), (TEMPLATE / "compact_hook").read_bytes())
+    def ann_command(self, event):
+        """The shell string start-eca's ann gives Claude Code for this hook event (it borrows eca-claude's compact_hook, 11-25)."""
+        cfg = json.loads((PROTO / "templates" / "starts" / "start-eca" / "agents" / "ann" / "cli.json").read_text())
+        (cmd,) = [h["command"] for g in cfg["settings"]["hooks"][event] for h in g["hooks"]]
+        return cmd
+
+    def run_ann(self, event, given, home):
+        """Run ann's hook command the way Claude Code does (sh -c), with ann's own definition as AOS_CLI_DEF."""
+        (self.defn / "compact_hook").unlink(missing_ok=True)       # ann carries no copy
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env.update(AOS_STACK=str(self.stack), AOS_CLI_DEF=str(self.defn), AOS_HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+        return subprocess.run(["sh", "-c", self.ann_command(event)], input=json.dumps(given),
+                              env=env, capture_output=True, text=True, timeout=60)
+
+    def test_ann_borrows_the_template_file(self):
+        self.assertFalse((PROTO / "templates" / "starts" / "start-eca" / "agents" / "ann" / "compact_hook").exists())
+        r = self.run_ann("PreCompact", {"trigger": "manual", "custom_instructions": ""}, PROTO)
+        self.assertEqual((r.returncode, r.stdout.strip()), (0, "KEEP THE NAMES"), r.stderr)
+        self.assertEqual(self.seen()[0]["event"], "before_compact")
+        (self.defn / "block").write_text("")
+        r = self.run_ann("PreCompact", {"trigger": "manual"}, PROTO)
+        self.assertEqual(r.returncode, 2, r.stderr)                 # exec keeps the hook's own exit code: a block still blocks
+        r = self.run_ann("SessionStart", {"source": "compact"}, PROTO)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.run_ann("PostCompact", {"trigger": "manual", "compact_summary": "SUM"}, PROTO)
+        self.assertEqual((r.returncode, self.seen()[-1]["summary"]), (0, "SUM"), r.stderr)
+
+    def test_ann_without_the_template_file_does_not_block(self):
+        for event in ("PreCompact", "PostCompact", "SessionStart"):
+            with self.subTest(event=event):
+                r = self.run_ann(event, {"trigger": "manual"}, self.t / "no-home")
+                self.assertEqual((r.returncode, r.stdout), (0, ""), r.stderr)
+                self.assertIn("compact_hook: warning: %s is not a file" % (self.t / "no-home/templates/agents/eca-claude/compact_hook"), r.stderr)
 
 
 if __name__ == "__main__":
