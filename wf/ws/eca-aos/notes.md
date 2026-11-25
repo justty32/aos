@@ -585,3 +585,41 @@
   - 現況對照：今天 daemon 與 agent 的 cwd 是**定義夾**不是 stack（根 2223 的 cwd＝~/aos-home/root）。
   - 沒測、憑 Linux 規則說的：`/proc/<PID>/cwd` 要過 ptrace 讀權限檢查，**不同 Linux 帳號走不進去**（以後 agent 分帳號做權限時會擋）；跨機器沒有 /proc。
   - 我攤的邊緣與問題：外面的殼怎麼知道根的 PID（根起來時寫一個固定名字的連結）；`procs/<名>` 連到活行程後，留在硬碟的信箱／歷史掛在哪個名字（可選：兩個名字分工，`proc/`＝活的、`procs/`＝留下的）；socket 那條收到但沒處理完就死＝丟（照他 11-24「定期保存」算可接受，待他確認）；兩條路的順序（醒來先清信箱）；問 daemon 信箱在哪的那一下要不要順手叫醒。
+- 使用者第六段（「神了！…」：cwd 那招適用硬碟與 tmpfs、FUSE 時也許不用 symlink；`.stack` 以後沒有、stack＝活著的 proc 的身體；要留的各自處理、推薦 `procs/<名>/persist`；proc／procs 同指一處；叫醒＝daemon 可選設定）原話在 thinking `proto8/thinking/2026-11/25/9p-proc-1125.md`。
+- **交了 `c196f9110a`**（thinking 9p-proc-1125＋日／月索引＋progress proc-interface-spec＋這份筆記；沒 push，跟 16:55 一起）。之後每談一輪：往那份 thinking 補原話與定了的，再交一次。
+- 這輪我問他的：persist 的位置誰定（daemon 起它時給 vs proc 自己挑再登記）；接下來想先談哪塊（ctl 收哪些字／status 有哪些行／socket 上講什麼）。
+
+## 2026-11-25 12:0x：使用者叫我派一大批 fable（思考 max）做 9P proc 架構規劃
+
+- 使用者（逐字）：「1. daemon起proc的時候給，沒錯，但daemon是透過proc的一些東西來確定他的persist在哪，或許是起來之後訪問其/proc/<PID>/settings，找到相關路徑？具體的應該會是proc自己挑 ，proc沒登記就死，那自然就是這樣。daemon可以給預設位置OK，並且是在/tmp開闢一塊給他。2.好，咱們繼續，看你有沒有需要compact」「現在討論好的這些，看你要不要派subagent去做架構規劃」「建議是派fable，然後思考拉到max。因為額度今晚重置」「可以的話我希望你能派一大堆subagent，建議都用claude subagent。」「或許可以派一些fable max，去針對我們現在這套新的p9，去看看過去的一些kernel, perm/權限等的一些規劃，做一些報告這樣」「你這邊也可以散出一些fable max」「去幫你思考一些東西」
+- compact：不用。這個 session 上一輪輸入約 19.4 萬 token，視窗 100 萬（live.jsonl 記的 contextWindow），約 19%。
+- 查到：公司這台 `/tmp` 是 tmpfs → 預設放 /tmp 的 persist 過得了 proc 重起、過不了重開機。
+- **派出第一波**（Claude Code 的 Agent 工具，general-purpose、model fable、effort max，背景跑；同時上限 20 隻）：共同說明與題目一覽在 `proto8/thinking/2026-11/25/aos-proc介面架構規劃-1125/00-共同說明.md`，入口 README 同夾。01～20 已派出（各寫 `報告/NN-….md`）；**21 原型（`原型/` 夾）撞到上限沒派出，等第一隻回來就補派**（派它的那段話：玩具 daemon＋玩具 proc＋送訊息與列表小工具，只照「定了的」做，README 要有「我自己挑的」與「撞到的坑」，實測 FIFO 當 ctl）。
+- 之後：第二波＝綜合成架構規劃（介面草案、實作路線、邊緣、待裁；可以先讓兩三隻各寫一條路線再綜合）；第三波＝獨立檢查（有沒有偏離使用者原話、漏的邊緣、讀不讀得懂）。每波回來：我看過 → 更新入口 README 的狀態表 → commit-request 交（16:50～17:00 不交）。
+- 還沒交的檔：thinking `9p-proc-1125.md`（補了第 7、8 段與邊緣）、`aos-proc介面架構規劃-1125/README.md`、`00-共同說明.md`、這份筆記。
+- 風險：這批跟我、core、kb、templates 同一個帳號（~/.claude-alt）；撞到用量上限時大家一起卡，16:55 的 push 也會卡。已跟使用者說。
+- 12:27 第一波回報開始：**05 信與 IPC 現況**回來（459 行）。重點：今天沒有任何 aos proc 在聽 unix socket，身體每拍是新行程（常駐的只有 aos-loop、aos-daemon）→「活著走 socket」第一個要定的是誰來聽；「掛了走寄信」的零件全有，查信箱只要讀 daemon 落檔的表；信不叫醒人；寄件人自報可假冒；額度帳與提示快取鍵綁 stack 路徑，改成 /proc/<PID> 後每次重起會斷（它的推論）；最大延遲是 agent 只在兩輪之間收信（活例 21 封等近三小時）。它要問的：socket 上的訊息算 queue 還是 mailbox、daemon 掛了還要不要查得到信箱、寄件人身分綁什麼。
+- 12:27 **21 原型補派出去了**（05 空出位子）。回報累計：05。還在跑：01～04、06～20、21。
+- repo 根有一個沒追蹤的檔 `ls`（2 bytes，內容「1」，11:01:33 建的；不是這批子 agent 建的，來源沒查到）。推之前順手問 core 是不是它的，或直接刪。
+- 12:29 **01 aos-loop 現況**回來。重點：loop／daemon／kernel／agent 的外框是同一份骨架，窗的讀寫全在 `proto8/cpp/aos-loop/src/engine/window.cpp`（改一處全家跟上）；今天 ctl 的回音是「做了」不是「收到」（身體在跑要等它跑完，實測 2.53 秒）；兩人同時寫 ctl 會丟一道、seq 撞號時被蓋掉的人被誤報成功（現在就有的毛病，實測重現）；loop 型的列已經站在小格、agent 多半是監工站小格而 loop 站定義夾；**ctl 直接換成 FIFO 會卡死、SIGTERM 也收不掉**，「寫回來＝收到」它列了八種做法；條文與實作兩處不符記在它第 6 節（之後轉 kb）。它要問的：落檔實作的「收到」做到哪一級、身體在跑時能不能等這圈跑完才回、`procs/<名>` 連到回答 ctl 的那支還是 daemon 起的那支。回報累計：01、05。
+- 12:30 **04 eca 身體與 stack 現況**回來。重點：eca 不是一個行程（loop 加 Claude Code；畫面那棵 tmux／claude／aos-mcp 不是 daemon 的子孫，loop 停了還活著 → `/proc/<PID>` 只能指 loop）；對話本體在帳號資料夾，aos 只有指標（session.txt、.session_home）與縮水抄本（history.jsonl）；**今天事故的第二個原因：人先開口，UserPromptSubmit 的 hook 就把 session.txt 填上了，「session.txt 空著才 reseed」那條路沒走到，所以新對話裡 aos 前情 0 行**（跟「摘要慢一拍」是兩件事；還沒轉 core，先問使用者要不要一起修）；loop 等一輪時不讀 ctl；context_use 只給 context 多滿、累計 token 只在 -p 的 result 行；畫面 socket 187 bytes 連不上、走 /proc/<PID>/cwd 26 bytes 可以，但畫面 socket 不能掛在 loop 的 PID 底下；`ctl ls` 忙碌欄疑似看不到 eca（ls.py:83，沒實跑）。它要問的：對話檔要不要進 persist、帳號資料夾寫不寫進 settings、stop 等答完還是馬上停（它推薦加一個「打斷這輪」的字）。回報累計：01、04、05。
+- 12:31 **02 aos-daemon 現況**回來。重點：表上的 PID 四成是外殼不是 proc 本身（活樹 49 列有 20 列），本身站在自己 stack 的只有 12 列、daemon 自己也站定義夾；`procs/<名>` 連結 fork 完馬上建會讀到 daemon 自己的夾（要等子站好）、先拿連結再收屍做得到（實測）；daemon 被 kill -9 再起今天子項同 PID 接回（實測），`AOS_ROOT` 照字面寫根的 PID 則根一重起就斷；「只登記、不起」已有大半零件（外來行程在小格擺一份 state，daemon 就接它不另起，實測）；**`sub:N`（換帳號）起的子項讀 daemon 的 /proc/<PID>/cwd 是 Permission denied（實測）＝我先前沒測的「不同帳號走不進去」被證實**。它要問的：`procs/<名>` 連到誰（推薦 proc 站好後自己報到）、根重起後 AOS_ROOT 怎麼辦（推薦固定名字的連結）、「加一列」怎麼用純文字 ctl 下（推薦一行只帶名字與 JSON 檔路徑）。暫存樹留在 ~/.aos/scratch/aos-proc-arch-1125/02/。回報累計：01、02、04、05。
+- 12:33 **06 路徑、環境變數與命名現況**回來。重點：**這台每秒起約 149 個行程，PID 約七小時就繞一圈**——舊的 `/proc/<PID>/cwd` 號碼被拿走後會安靜指到別的行程（實測）→ PID 不能放進會留很久的環境變數；固定名字的連結當 `AOS_ROOT` 實測可行（根重起後值不變、socket 連得上）；根與 repo-aos 兩張活表除 stack 外 ws／def／exec 全是 `../` 往外爬，身體一搬就斷；`AOS_STACK` 今天兼當身分（寄件人、查名字、鎖），改指身體後要拆；取真實路徑與 `..` 會把名字路解掉；`aos-sandbox` 裡看不到 /proc/<PID>/cwd（實測）；「站在身體裡」對上 N-59 有衝突（它只指出）。它要問的：AOS_ROOT 放固定名字還是 PID（推薦固定名字）、proc 的身分用哪個字串（推薦從根算的名字路）、proc 目錄要不要有往上的 `daemon` 入口。回報累計：01、02、04、05、06。
+- 12:35 **14 kernel 過去的規劃對照新模型**回來。重點：總表 43 項——原樣成立 23、更清楚 7、要改寫 5、被取代 5、對不上 2、仍開著 1；kernel 的定案沒有被推翻（「daemon 是橋」「kernel 是 daemon 底下的 proc」11-05、11-12 就說過）；token 兩邊各記今天已如此（活樹：kernel 帳 4,923 筆、2.687 億 token，36 隻 agent-fsm 自記逐筆相同，差的 71 筆都有原因）；**eca 兩邊都沒帳**（kernel 帳 0 筆、自己目錄也沒有累計）；要改寫三處：寄件人身分（帶 PID 的路徑根一重起就變）、`AOS_KERNEL` 指的是信箱不是 proc 目錄、kernel 不是常駐行程（每 300 ms 起一輪）；11-20「寄信問 kernel」、11-21「對外另一份 json」變成讀 kernel 目錄裡的檔。它要問的（共五題）：請求算訊息還是 ctl 的字（推薦訊息）、AOS_KERNEL／AOS_LLM_KERNEL 是否都改指 proc 目錄（推薦是）、自報用量放不放 persist 與 eca 誰報（推薦放、eca 身體自己報）。回報累計：01、02、04、05、06、14。
+- 12:36 **12 _metainfo、index 與 proc 目錄**回來。重點：agent／daemon／kernel 的 `_metainfo` 沒有任何程式照它做決定（daemon、kernel 連這個檔都沒有，活樹 stack 裡 0 份；有人照做的只有工具的四個鍵）；四個檔照「誰決定、何時變」分得開：`_metainfo`（定義）／`settings`（起來時定）／`status`（一直變）／`interfaces`（怎麼接），附今天各欄位的歸屬表；對 `procs` 做 index_view 今天不改程式就行（每項 `$ref` 到各 proc 的 summary，死了那行印 bad $ref），但同範本的 agent 那句話全一樣；**純文字的 status、settings 進不了 json 工具與 `$ref`（FileBad … is not JSON）**；關進 bwrap 的行程走不進 /proc/<外面PID>/cwd，aos-json 先 realpath、隔著 mount namespace 會讀到外面同路徑的檔。它要問的：proc 目錄的 `_metainfo` 是定義原樣／起來時抄一份／行程自己答（推薦原樣）、純文字檔要不要讓 json 工具讀得到（推薦只讀地認「名稱: 值」）、`procs` 列表那句話從哪來（推薦 add 時給一句、daemon 記）。回報累計：01、02、04、05、06、12、14。
+- 12:4x 使用者（逐字）：「婷婷婷」（＝停停停）「停」，我給三個選項後他答「b」「讓他們收尾」。＝**不再補派、第二波與第三波不做**（除非他再說）；還在跑的讓它們自己做完，不砍（我這邊也沒有工具能停或催它們）；手上有幾份算幾份。回來的只記筆記、不逐份報。全部回來後我的收尾：入口 README 的狀態表改成「第一波收完、第二三波照使用者的話沒做」、把報告與原型交 commit（16:50～17:00 不交）、給他一則總結。
+- 還沒回的（12:4x）：03、07、08、09、10、11、13、15、16、17、18、19、20、21。
+- 還沒答我的：① 介面＝目錄長相、各種實作一個一個來，對不對；② 「人先開口就不補送前情」要不要也交給 core。都不催。
+- 12:4x 使用者（逐字）：「fable limit要沒了」「馬上讓子agent都停」。子 agent 跑在我這個畫面的 claude 行程裡（沒有獨立行程、這個環境也沒有停單一背景任務的工具），唯一立刻做得到的是把自己這個畫面的 claude 行程關掉（PID 1584129，SIGTERM），它們一起停。**我自己關的，不是當掉。**
+  - 關之前已回報的九份：01、02、04、05、06、07、12、14、16。有檔但子 agent 沒回報（可能沒寫完，要看檔尾）：03、13、15、17、18。當時還沒有檔的：08、09、10、11、19、20、21 原型（以 `ls 報告/ 原型/` 為準）。
+  - 16 的重點（還沒跟使用者講）：真的衝突六處，其中四處使用者說新話時沒提舊裁定——別人不碰 pid（11-06 選「不放寬」，理由是 pid 搬不走）、image＝stack＋ws、不依賴 symlink（11-03、11-11 各說一次）、一般 proc 只看得到 kernel；11-12 他說過「聯絡得上就是 proc」被問到跟 C-80 衝突時自己收回，這次等於翻回來；舊條文有規定而新模型沒提的 24 項，最急的是死掉的 proc 去哪看（11-19 才裁過留在表上）。07 的重點：Plan 9 的 status 是固定寬度靠位置（「名稱: 值」是 Linux 式）、它的 stop 是暫停 kill 才是結束；核心的 9p 要 root 才能掛；玩具 9P 伺服器 189 行。
+  - **重開後**：`CLAUDE_CONFIG_DIR=~/.claude-alt aos-agent -t eca-aos open`（同帳號才接得回對話）；先請使用者 `/model` 切 Opus（Fable 額度快沒了）；**不再派子 agent**（第二、三波不做）；等使用者說才收尾（看有哪些檔 → 入口 README 狀態表 → commit-request 交，16:50～17:00 不交）；16:55 push 照舊（鐘 push-1655 會進 queue）；repo 根那個沒追蹤的 `ls` 檔推之前處理。
+  - 還沒答我的：① 介面＝目錄長相、各種實作一個一個來，對不對；② 「人先開口就不補送前情」要不要也交給 core。
+
+## 2026-11-25 12:4x：關掉畫面停子 agent 後重開（Opus），收尾
+
+- 關畫面那一下生效了（重開後 task 通知列了 12 隻 stopped）。使用者 `/model` 切 Opus。說「好了，都停了...一切都...結束了...」「收尾吧，先在這邊停頓」。
+- 留下十六份報告（01～07、10、12～18、20；七份沒回報的看過檔尾都有最後一節，算寫完）；08、09、11、19、21 沒有。入口 README 改成收尾版（狀態表、最值得先看的、沒做的）。
+- 交件：thinking 9p-proc-1125（補第 7、8 段與邊緣）、規劃夾全部、這份筆記。
+- **停頓**：不派、不談 9P，等使用者。照舊：16:55 push（鐘 push-1655）；core 做閒置輪詢與摘要慢一拍；repo 根那個沒追蹤的 `ls` 檔推之前處理。
+- 還沒答我的：① 介面＝目錄長相、實作一個一個來對不對；②「人先開口就不補送前情」要不要交給 core。

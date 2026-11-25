@@ -1,0 +1,50 @@
+{
+ "01-aos-loop現況.md": {
+  "description": "01 aos-loop 現況，與它對到新模型要動哪裡"
+ },
+ "02-aos-daemon現況.md": {
+  "description": "aos-daemon 現況，對到「橋＋procs 夾」"
+ },
+ "03-agent-fsm身體與stack現況.md": {
+  "description": "03 agent-fsm 的身體與 stack 現況"
+ },
+ "04-eca身體與stack現況.md": {
+  "description": "eca 的身體與 stack 現況（Claude Code 當身體）"
+ },
+ "05-信與IPC現況.md": {
+  "description": "05 信與 IPC 現況（11-25）"
+ },
+ "06-路徑、環境變數與命名現況.md": {
+  "description": "06 路徑、環境變數與命名的現況，對到 `AOS_ROOT`"
+ },
+ "07-9P與Plan9原樣.md": {
+  "description": "9P 與 Plan 9 的 /proc 原樣，以及「基於 9P」的三個層次"
+ },
+ "10-前例-服務目錄與監督者.md": {
+  "description": "前例：服務目錄與監督者（daemontools／runit／s6、systemd、Erlang、Plan 9…）"
+ },
+ "12-_metainfo、index與proc目錄.md": {
+  "description": "12 `_metainfo`、index 與 proc 目錄"
+ },
+ "13-文件、測試與活樹的遷移衝擊.md": {
+  "description": "13 文件、測試與活樹的遷移衝擊"
+ },
+ "14-kernel過去的規劃對照新模型.md": {
+  "description": "14 kernel 過去的規劃對照新模型（11-25）"
+ },
+ "15-權限過去的規劃對照新模型.md": {
+  "description": "權限、隔離、身分：過去的規劃對照新模型（報告 15）"
+ },
+ "16-過去定案與新模型的衝突檢查.md": {
+  "description": "16 過去定案與新模型的衝突檢查"
+ },
+ "17-open進度總掃描.md": {
+  "description": "17 open 進度總掃描：四十二條進度與五條條文待定，各自受不受新模型影響"
+ },
+ "18-ctl、status、settings的候選寫法.md": {
+  "description": "18 ctl、status、settings 的候選寫法"
+ },
+ "20-送訊息兩條路的細節.md": {
+  "description": "20 送訊息的兩條路：socket 與寄信的細節（11-25）"
+ }
+}
