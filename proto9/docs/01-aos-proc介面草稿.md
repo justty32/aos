@@ -27,7 +27,7 @@ aos proc 介面草稿第 1 版：一個 aos proc 的目錄長什麼樣、每個�
 | 詞 | 意思 | |
 |---|---|---|
 | 身體（stack） | 一隻活著的 proc 的目錄。行程死了就走不到 | 【定】 |
-| persist | 這隻 proc 要留下來的東西放的地方。身體沒了它還在 | 【定】 |
+| persists | 這隻 proc 要留下來的東西放的地方。身體沒了它還在 | 【定】 |
 | daemon | Linux 與 aos 之間的橋。本身是 aos proc，另外多一個放「底下的 proc」的夾 | 【定】 |
 | 根 | 最上面那台 daemon | 【定】 |
 | kernel | 普通的 aos proc，只是帶了某種功能（發模型額度、管權限…） | 【定】 |
@@ -55,7 +55,7 @@ aos proc 介面草稿第 1 版：一個 aos proc 的目錄長什麼樣、每個�
 | `settings` | 它的東西放哪（起來時就定的） | 只讀 | 同 `status` | 【定】 |
 | `attrs` | 它是哪一種身體、能不能當場回答；要用它的人看了自己決定怎麼做 | 只讀 | 同 `status` | 【定】 |
 | `_metainfo.json` | 它是什麼（定義帶來的那份） | 只讀 | json，照 aos 現有的 | 【定】 |
-| `persist` | 走到它要留的東西 | — | 一個夾（或指過去的連結） | 【定】推薦位置；怎麼擺【開】 |
+| `persists` | 走到它要留的東西 | — | 一個夾（或指過去的連結） | 【定】推薦位置；怎麼擺【開】 |
 
 daemon 另外多：
 
@@ -134,10 +134,10 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 
 | 行 | 值 |
 |---|---|
-| `aos_persist` | 它要留的東西在哪（硬碟上的真實位置） |
+| `aos_persists` | 它要留的東西在哪（硬碟上的真實位置） |
 | `aos_mailbox` | 它掛了的時候，信投到哪 |
 
-【定】persist 在哪，以 proc 自己在 `settings` 說的為準；daemon 起它之後來讀。daemon 可以給預設位置，在 `/tmp` 開一塊。proc 沒說就死了，daemon 就不知道。
+【定】persists 在哪，以 proc 自己在 `settings` 說的為準；daemon 起它之後來讀。daemon 可以給預設位置，在 `/tmp` 開一塊。proc 沒說就死了，daemon 就不知道。
 
 **`attrs`**（【定】）
 
@@ -159,7 +159,7 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   | 字 | 做什麼 |
   |---|---|
   | `add 名字 路徑` | 加一隻並起它。路徑是定義夾，或一份 json 檔（其餘參數放裡面） |
-  | `rm 名字` | 收掉、從表上拿掉（persist 不刪） |
+  | `rm 名字` | 收掉、從表上拿掉（persists 不刪） |
   | `stop 名字`／`start 名字` | 叫它好好收尾後留在表上／再起 |
   | `kill 名字` | 現在就收（強制；proc 卡住、ctl 鎖著時用） |
   | `register 名字 PID` | 只登記、不起：一支已經在跑的行程來說「我是 aos proc」 |
@@ -169,7 +169,7 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   【定】`procs_ctl` 的「做完」＝daemon 這邊的動作做完（例：`stop arena` 是把字送給 arena 了），不等那隻 proc 真的結束；結果看 `procs_status`。這樣 `stop` 很久的時候，`kill` 才下得進去。
 
 - 【定】`procs_status`：底下每隻 proc 的狀態，純文字。proc 死了，它自己的 `status` 就沒了，這張表是唯一還答得出來的地方。
-- 【定】行名是 `名字.欄名`，欄有 `phase`、`want`、`pid`、`code`、`reason`、`persist`、`mailbox`：
+- 【定】行名是 `名字.欄名`，欄有 `phase`、`want`、`pid`、`code`、`reason`、`persists`、`mailbox`：
 
   ```
   arena.phase: stopped
@@ -177,8 +177,8 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   arena.pid: -
   arena.code: 1
   arena.reason: exited within 3s of start
-  arena.persist: /tmp/aos/persist/repo-aos/arena
-  arena.mailbox: /tmp/aos/persist/repo-aos/arena/mailbox
+  arena.persists: /tmp/aos/persists/repo-aos/arena
+  arena.mailbox: /tmp/aos/persists/repo-aos/arena/mailbox
   ```
 
 - 【定】照報告的推薦走的四件（細節都還【擬】）：
@@ -246,7 +246,7 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 - 收的人先開口：連上之後它先講一行，送的人看到才送。（對方被暫停時，連得上、寫得進去都會成功，但沒人在收。）
 - 改走寄信的時機：連不上、對方沒先開口、期限內沒回條；用同一個信名，收的人照信名擋重複。對方明講 `error` 就算失敗，不改寄信。
 - 順序：只保證同一個寄件人送的先後。收的人醒來先清信箱，再收 socket 上的。
-- 收到後還沒處理就死：介面不保證。我們自己的實作先寫進 persist 再回條。
+- 收到後還沒處理就死：介面不保證。我們自己的實作先寫進 persists 再回條。
 - 放哪：proc 的目錄裡，叫 `sock`。（C++ 小庫實測：FUSE 擺出來的目錄裡放得了 unix socket，從 `/proc/<PID>/cwd/sock` 連得上。）
 - 對面是誰：socket 上拿得到對方的 PID（系統填的，改不了），先只記、不擋。
 
@@ -257,16 +257,18 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 - **信箱資料夾**（照 Maildir，先做這個）：proc 在自己的目錄裡擺出 `mailbox/`，別人照 aos post 原樣把信放進去（先在 `tmp/` 寫好，再搬進 `new/`）。寄的人做的事跟寄給掛掉的 proc 一樣，只是這次對面是活的：信一放進去它當場知道，也可以當場拒收（那次放信失敗）。
 - **一個只寫的檔**（照 Plan 9 的 plumber）：寫進去就是送一則，沒人收就讓寫入失敗。檔名【擬】`msg`。
 
-【擬】一隻 proc 提供哪幾樣，寫在 `attrs`：`aos_mailbox: yes`、`aos_msg: yes`、`aos_sock: yes`；都沒寫就是活著時不直接收，只能寄到它 persist 的信箱。
+【擬】一隻 proc 提供哪幾樣，寫在 `attrs`：`aos_mailbox: yes`、`aos_msg: yes`、`aos_sock: yes`；都沒寫就是活著時不直接收，只能寄到它 persists 的信箱。
 
 要知道的一點：預設 queue 的話，同一句話活著時是直接進對話，掛了改寄信則是進信箱等它自己看，兩邊意思不一樣。
 
 ## 10. 留下來的東西與搬家
 
-- 【定】`.stack` 這個夾以後沒有；身體是活的，要留的各自處理，推薦放 `persist`。
+【定】名字是 `persists`（使用者 11-25：「persist我感覺應該改名為persists」；原本叫 `persist`）。【擬】`settings` 的那一行與 `procs_status` 的那一欄跟著改成 `aos_persists`、`名字.persists`。程式（小庫、daemon）下一批才跟上。
+
+- 【定】`.stack` 這個夾以後沒有；身體是活的，要留的各自處理，推薦放 `persists`。
 - 【定】可遷移性現在不動，設計時先考慮著。遠期目標：`cp AOS_ROOT` 就能把一切搬走。
 - 【擬】為了那個目標，現在先守兩條：
-  - 每隻 proc 要留的東西，從它自己的目錄走得到（`persist`）。
+  - 每隻 proc 要留的東西，從它自己的目錄走得到（`persists`）。
   - 留下來的檔裡，指別人用名字路，不用絕對路徑、不用 PID。
 
 ## 11. FUSE 小實驗查到的（11-25，[報告](../experiments/fuse-proc-1125/README.md)）
@@ -313,15 +315,15 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   2. 掛載點放 `<mount-base>/<名字路把 / 換成 %>`，例 `d1%kid`。**【定】**（使用者 11-25「2.可以...不過%不會有問題吧。」——功能上沒問題；`%` 在 crontab、systemd 的 unit 檔、printf 的格式字串裡有特別意思，把這個路徑寫進那三種地方時要小心。平常走 `$AOS_ROOT/procs/…`，不會打到這個路徑。）
   3. 外來登記（`register`）的只收 `rm`；`stop`、`start`、`kill` 都拒；誰都能登記任何 PID、不驗身分。
   4. `add` 只收絕對路徑；檔讀不到時那次寫入照樣成功、錯誤記在回饋裡（回答的線不去讀那個檔）。
-- 沒做：自動重起、`sleep`／`wake`、預設的 persist、底下的 stderr 收進 `reason`。`kill` 一台嵌套的 daemon，它底下的就沒人管（照「自行承擔風險」）。
+- 沒做：自動重起、`sleep`／`wake`、預設的 persists、底下的 stderr 收進 `reason`。`kill` 一台嵌套的 daemon，它底下的就沒人管（照「自行承擔風險」）。
 
 ## 12. 還沒定的（照我覺得該先談的排）
 
 1. 卡住那一塊剩的細節（多久查一次、期限多長）。
 2. 【定】基礎先用 C++ 做（第一塊：`proto9/cpp/aos-procfs/` 小庫，11-25 派出）。還沒定：掛載點放哪、daemon 與 agent 的身體放哪幾個夾。
 3. `procs_ctl` 要不要留 proto8 的 `sleep`／`wake`。
-4. `persist` 在目錄裡怎麼擺（真的夾、連結、還是 proc 當場回答）；proc 死了以後別人怎麼走到它的 persist（現在只有 `procs_status` 那一行路徑）。
+4. `persists` 在目錄裡怎麼擺（真的夾、連結、還是 proc 當場回答）；proc 死了以後別人怎麼走到它的 persists（現在只有 `procs_status` 那一行路徑）。
 6. 報 token 用量的檔。
 7. 只登記、不起的入口（`register`）：誰可以登記誰、登記後 daemon 對它有多少權力。
-8. agent 的身體怎麼搬過來。
+8. agent 的身體：【定】不搬 proto8 的 aos-loop、aos-fsm 那一整套；agent 就是一支簡單的程式，擺出這份介面（使用者 11-25：「我們就會變成一個簡單的程式，但是暴露相關介面」）。agent 專用的檔案布局與格式是另一份介面，使用者之後規劃。還沒定：那份介面的內容、用什麼語言寫、Claude Code 這種畫面型的怎麼包。
 9. 換 Linux 帳號的 proc 怎麼進樹。
