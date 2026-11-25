@@ -495,3 +495,14 @@
 - core 收工 DONE（`01795509849428739418.230720.2977865`，筆記 `6e3dfb2e4`）：沒開著的信；之後再排：fsm tools.json 壞的保底、tty_socket 搬家坑、過期 new_mail 通知；haiku 剩兩輪。
 - kb DONE `aec9c1940`（clock.md 那段換成實測原因；troubleshooting「Hooks and timers」加一條；live_mail 那條路沒寫，等 core 驗；程式改了這三處要再改，記在 kb 筆記）。
 - 16:45 push（`90994593a..bf04371b8`，84 個 commit；使用者五點下班，提早在 17:00 授權那次推）。今天收工。
+
+## 2026-11-25 開工：pull 家機 11-24 晚的 26 個 commit，使用者要 compact
+
+- 使用者（逐字）：「新的一天，先git pull，然後我要compact。」→ 本地多一個筆記 commit、origin 多 26 個 → `git pull --rebase` 乾淨接上（HEAD `78d07a270`，沒 push）。
+- 家機 11-24 晚做了的（看 commit 標題得知，細節沒讀）：
+  - **家機 stack 已搬進根**（19:05 重起時），文件由家機 kb 跟上（`4936939e5`），progress `home-stack-move-1124` 已刪（`36c237a97`）。兩台的 repo-aos stack 現在都在 `~/aos-home/.stack/procs/repo-aos`。
+  - 家機建了組織：main 底下掛 kb／templates／core，筆記與地盤跟公司共用；新地盤 `wf/ws/main/`（`5266a3ed5`）。
+  - core 交 home-listen-1124：`aa8bd9cef` aos-mcp 的 tools/call 同時跑、`bc8938198` listen／ask 認子用信回、`255d6da30` observed 記 reasoning_effort；progress narr-amber-fb-1124。
+  - HANDOFF 換成家機 11-24 晚那條（`6fa990e80`）；thinking `aos的目標-1124` 三輪、wf/user/advice/20261124.md、progress aos-goals-1124（等使用者）。
+- **這台還沒 install.py**：家機那批改了 py/（aos-mcp、subagent、agent-fsm），活樹要裝才會生效。compact 後先問使用者或照常設許可裝。
+- compact 後先做：讀這份筆記最後兩節 → 讀 HANDOFF → install.py → 派 core `eca-p-first-result-1124`（progress）。
