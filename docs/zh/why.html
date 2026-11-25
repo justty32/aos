@@ -18,9 +18,9 @@ summary{cursor:pointer;font-weight:600}
 a{color:#0b5cad}
 </style></head><body><header><a href="../index.html">aos 首頁</a></header><main><h1 id="為什麼做-aos">為什麼做 aos</h1>
 <p>aos 想做的是一套新時代的軟體技術棧。這頁分三大段說為什麼：重造計算模型、以往沒算進去的成本、新的寫軟體方式，最後用一個例子把前面串起來。</p>
-<!-- copy:TAG -->
+
 <p>原型 · demo 版</p>
-<!-- source: team/fable/structure-v5.md, structure-v11.md, paradigm-v1.md (skeleton of the four sections); user 11-14 13:36/14:06/14:09/14:11/14:23/14:35/14:36 via overview page (14:23 quoted from team/fable/structure-v7.md); proto8/user-advice/20261106.md, 20261113.md (line numbers below). Not verified: nothing on this page was run for it; "today" lines point to pages that were run. Demo lines (nesting, same-machine move, kernel rule, 100 agents) come from release-1114/08-示範.md (fake brain, HEAD 46d399149); scope kept within its 細節與限制 section. -->
+<!-- source: team/fable/structure-v5.md, structure-v11.md, paradigm-v1.md (skeleton of the four sections); team/fable/structure-v7.md; proto8/user-advice/20261106.md, 20261113.md (line numbers below). Not verified: nothing on this page was run for it; "today" lines point to pages that were run. Demo lines (nesting, same-machine move, kernel rule, 100 agents) come from release-1114/08-示範.md (fake brain, HEAD 46d399149); scope kept within its 細節與限制 section. -->
 <p>引文是作者（aos 的使用者兼設計者）的原話，一字不改，後面標出處：<code>user-advice/檔名:行</code>，或對話的時間。有些引文只取一行裡的一段。引文外的字是整理，不是原話。原話預設收起來，點「使用者原話」那一行就能打開。</p>
 <p><strong>頁上分三種話：</strong></p>
 <ul><li><strong>今天做到</strong>：照字跑過，有紀錄（照抄的頁面，或示範頁的實跑結果）。</li><li><strong>程式裡有、這版還沒實測</strong>：寫好了，還沒照字跑過。</li><li><strong>願景</strong>：方向，還沒做，也沒有時程。</li></ul>
@@ -31,7 +31,7 @@ a{color:#0b5cad}
 <blockquote><p>這塊我記得先前有講過，就是拿linux系統當硬體去模擬 ——<code>user-advice/20261113.md:5</code></p></blockquote>
 </details>
 <p>一般的作業系統坐在硬體上。aos 坐在 Linux 上：對 aos 來說，Linux 就是它跑在上面的硬體。</p>
-<!-- copy:P1 -->
+
 <p>aos 把 AI agent 當成一般的 Linux 行程，住在資料夾裡。每個工具、每隻 agent、每封信，都是你可以 ls、可以讀、可以設權限的資料夾或檔案。</p>
 <p><strong>照電腦來分。</strong> 作者先把一隻 agent 拆成「一個一直轉的迴圈」加「一台記著現在做到哪的狀態機」，再拿電腦來比：</p>
 <details>

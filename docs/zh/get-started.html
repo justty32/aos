@@ -18,7 +18,7 @@ summary{cursor:pointer;font-weight:600}
 a{color:#0b5cad}
 </style></head><body><header><a href="../index.html">aos 首頁</a></header><main><h1 id="開始用不用任何模型跑起第一棵樹">開始用：不用任何模型，跑起第一棵樹</h1>
 <p><strong>一句話</strong>：建好程式、起兩個資料夾、掛一隻叫 ann 的 agent、跟它說一句話——然後打開資料夾，看它剛剛做了什麼。全程不用模型帳號；aos 除了 <code>~/aos</code> 和 <code>~/aos-demo</code> 兩個資料夾，不寫你家目錄的任何地方（建置時 vcpkg 會在 <code>~/.cache/vcpkg</code> 放下載快取）。</p>
-<!-- copy:TRY --> 這頁用內建的「假腦」代替模型，不用任何 API 金鑰（安裝分級裡叫 L0）。假腦會照固定格式回話，但它走的路跟真腦一模一樣：收信、叫工具、寫紀錄、回信。
+ 這頁用內建的「假腦」代替模型，不用任何 API 金鑰（安裝分級裡叫 L0）。假腦會照固定格式回話，但它走的路跟真腦一模一樣：收信、叫工具、寫紀錄、回信。
 <!-- verified 11-14 (v3): blocks run literally with bin/run-doc.py in fresh empty HOMEs (home-doc5, home-doc7; clone of repo HEAD, build, steps 1-8), output equal to v2 apart from times/pids; logs ~/code/release-1114/logs/doc-gs-v3.log, doc-gs-v3b.log. The AOS_* check/unset blocks were added after that run and rerun separately. -->
 <!-- source: this page's bash blocks were run literally (bin/run-doc.py), 11-14 (v2 again in a fresh empty HOME, steps 1-8 passed, HOME afterwards held only aos/, aos-demo/, .cache/): clone from a local mirror, HOME = an empty folder, build + steps 2-7, then a second round in ~/aos-demo2; both passed, no process left; HOME afterwards held only aos/, aos-demo/, aos-demo2/ and .cache/vcpkg. Output: drafts/ref/get-started.out.txt -->
 <p>開始前：Linux（或 WSL2）、<code>git</code>、<code>bash</code>、Python 3.11 以上、CMake 3.21 以上、支援 C++20 的編譯器、<a href="https://vcpkg.io">vcpkg</a>。細節看<a href="setup/requirements.html">需求</a>。請開一個<strong>新的 bash</strong>。新開的 bash 還是會繼承外面已經設好的變數，所以先確認沒有舊的 <code>AOS_*</code>：</p>

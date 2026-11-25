@@ -53,7 +53,7 @@
 </style>
 </head>
 <body>
-<!-- v3 (11-14): user picked Argon's mix = B layout + A's two figures; subtitle H2b; WHO/BIG1/BIG2 not placed; tested only on Manjaro. Fixes 3-19, 3-20, 3-26, A line 157. -->
+<!-- v3 (11-14): Argon's mix = B layout + A's two figures; subtitle H2b; WHO/BIG1/BIG2 not placed; tested only on Manjaro. Fixes 3-19, 3-20, 3-26, A line 157. -->
 <div class="wrap">
 <header>
 <a class="brand" href="#top">aos</a>
@@ -74,7 +74,7 @@
 <section class="adv" aria-labelledby="adv-title">
 <p class="section-label">01 / 核心優勢</p>
 <h2 id="adv-title">四個核心優勢</h2>
-<!-- four words: user 11-14 13:36; sentences and ids: team/copy/landing-v5-text.md -->
+<!-- sentences and ids: team/copy/landing-v5-text.md -->
 <div class="adv-row">
 <div class="adv-item"><h3>精簡</h3><p>核心三支程式，約 7500 行；八個詞講完整套概念。</p></div>
 <div class="adv-item"><h3>完全可遷移</h3><p>整套東西都是資料夾，可以整個搬走。</p><span class="tag tag-ok">已實測（同一台機器）</span><span class="evidence"><a href="zh/demos.html#a-%E6%90%AC%E6%A8%B9">停下來，把整個資料夾複製到新位置，再起來，對話接著走。</a>換一台機器還沒驗。</span></div>
@@ -86,7 +86,7 @@
 <section class="intro" aria-labelledby="intro-title">
 <p class="section-label">02 / 介紹</p>
 <h2 id="intro-title">介紹</h2>
-<!-- W17: intro = three big sections with sub-sections (structure-v13 a, user 15:20); built by team/web/fig-pu/build-intro.py -->
+<!-- W17: intro = three big sections with sub-sections (structure-v13 a); built by team/web/fig-pu/build-intro.py -->
 <div class="intro-big" id="intro-a">
 <h3>重造計算模型</h3>
 <p class="intro-sum">aos 把 Linux 當成硬體，在上面重新分一次：誰是 CPU、誰是板子、什麼可以拿來算。</p>
@@ -136,15 +136,15 @@
 </div>
 <div class="intro-figs">
 <figure class="fig"><p class="section-label">圖 1 / 疊起來的樣子</p>
-<!-- W10: drawn from team/fable/structure-v10.md (user 14:33): hardware, Linux, aos kernel; above it agent | kernel -->
+<!-- W10: drawn from team/fable/structure-v10.md: hardware, Linux, aos kernel; above it agent | kernel -->
 <div class="fig1-wrap">
-<!-- W15: processing-unit row next to the agent block (fable pu-v1, user 15:02); labels set by ok-release, copy-1 may override -->
+<!-- W15: processing-unit row next to the agent block (fable pu-v1); labels set by ok-release, copy-1 may override -->
 <div class="pu-col"><ul class="pu-icons" aria-label="程式、模型、GPU、人"><li><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="5" width="22" height="18" stroke="currentColor" stroke-width="1.6" fill="none"></rect><path d="M11 10 l-3 4 3 4 M17 10 l3 4 -3 4" stroke="currentColor" stroke-width="1.6" fill="none"></path></svg><span>程式</span></li><li><svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="7" cy="8" r="3" stroke="currentColor" stroke-width="1.6" fill="none"></circle><circle cx="7" cy="20" r="3" stroke="currentColor" stroke-width="1.6" fill="none"></circle><circle cx="21" cy="14" r="3" stroke="currentColor" stroke-width="1.6" fill="none"></circle><path d="M10 8 L18 13 M10 20 L18 15" stroke="currentColor" stroke-width="1.6" fill="none"></path></svg><span>模型</span></li><li><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="6" y="6" width="16" height="16" stroke="currentColor" stroke-width="1.6" fill="none"></rect><rect x="10" y="10" width="8" height="8" fill="currentColor"></rect><path d="M10 2v4M14 2v4M18 2v4M10 22v4M14 22v4M18 22v4M2 10h4M2 14h4M2 18h4M22 10h4M22 14h4M22 18h4" stroke="currentColor" stroke-width="1.6" fill="none"></path></svg><span>GPU</span></li><li><svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="9" r="5" stroke="currentColor" stroke-width="1.6" fill="none"></circle><path d="M4 26 c0-7 4-10 10-10 s10 3 10 10" stroke="currentColor" stroke-width="1.6" fill="none"></path></svg><span>人</span></li></ul><p class="pu-cap">都可以是處理單元</p></div>
 <svg viewBox="0 0 360 330" role="img" aria-label="疊層：最下面是硬體，上面是 Linux，再上面是 aos kernel；aos kernel 上方分左右兩塊，左邊是做事的 agent，右邊是管事的 kernel；右邊那塊上方還能再分一次">
  <g font-family="Iosevka,'DejaVu Sans Mono',monospace" font-size="17" fill="#223b34" stroke-width="2">
   <rect x="10" y="10" width="120" height="130" fill="#fff" stroke="#223b34"></rect>
   <text x="26" y="40" font-weight="700">agent</text><text x="26" y="62" font-size="14">做事的</text>
-  <!-- fig1 nest layer: user to confirm (fable's addition). To remove: delete this <g> and set the kernel rect below to y="10" height="130" -->
+  <!-- fig1 nest layer (fable's addition). To remove: delete this <g> and set the kernel rect below to y="10" height="130" -->
   <g class="fig1-nest">
    <rect x="140" y="10" width="100" height="58" fill="#fff" stroke="#223b34" stroke-dasharray="6 5"></rect>
    <text x="152" y="36" font-size="15">agent</text>
@@ -214,7 +214,7 @@
 <p class="why-link">完整說明：<a href="zh/why.html#%E4%BA%8C%E4%BB%A5%E5%BE%80%E6%B2%92%E8%80%83%E6%85%AE%E9%81%8E%E7%9A%84%E6%88%90%E6%9C%AC">為什麼做 aos ↗</a>；示範（假模型）：<a href="zh/demos.html#b-%E5%BE%88%E5%A4%9A-agent-%E6%8E%92%E9%9A%8A%E5%85%B1%E7%94%A8%E4%B8%80%E5%80%8B%E7%AB%AF%E9%BB%9E">很多 agent 排隊 ↗</a>、<a href="zh/demos.html#c-%E6%8F%9B%E4%B8%80%E6%A2%9D%E6%8E%92%E9%9A%8A%E8%A6%8F%E5%89%87">換一條排隊規則 ↗</a></p>
 </div>
 <figure class="fig cost cost2"><p class="section-label">例 / 一行程式的成本</p>
-<!-- W14: picture per team/fable/cost-v1.md (user 14:59); labels set by ok-release, copy-1 may override -->
+<!-- W14: picture per team/fable/cost-v1.md; labels set by ok-release, copy-1 may override -->
 <pre class="cost-code">a = 1 + 2</pre>
 <div class="cost-cols">
 <div class="cost-col cost-old"><p class="cost-head">一般 kernel 看的</p><ul><li>CPU</li><li>記憶體</li><li>時間</li></ul></div>
@@ -254,7 +254,7 @@
 </div>
 </section>
 
-<!-- demo-sim: on the landing (user 14:31); words team/copy/demo-text.md; storyboard team/fable/demo-storyboard-v1.md). Self-contained: CSS in .sim-* rules, JS at the end. Without JS all steps show as a static list. -->
+<!-- demo-sim: on the landing; words team/copy/demo-text.md; storyboard team/fable/demo-storyboard-v1.md). Self-contained: CSS in .sim-* rules, JS at the end. Without JS all steps show as a static list. -->
 <section class="sim" id="sim" aria-labelledby="sim-title">
 <p class="section-label">03 / 示意演示</p>
 <h2 id="sim-title">看它怎麼走</h2>
@@ -483,7 +483,7 @@
 <div>
 <p>aos 還是原型：檔案格式和指令還會變。只支援 Linux（WSL2 可以）。一棵樹住一台機器；樹和樹之間現在還不會互相連線。</p>
 <p class="security">agent 會用你的帳號執行程式：你的帳號碰得到的檔案，它都碰得到。請在拋棄式帳號、虛擬機或容器裡試；換一個資料夾並不能隔離。沙箱是實驗功能。</p>
-<!-- source: release-1114 batch 0 + v2 runs; user 11-14: docker later, so say Manjaro only -->
+<!-- source: release-1114 batch 0 + v2 runs; docker later, so say Manjaro only -->
 <p class="tested">實測環境：只在一台 Manjaro 機器上照字跑過；Python 3.11 與 3.14 都通；建置走 vcpkg。其他發行版、不用 vcpkg 的建置還沒驗。</p>
 <div class="hero-links"><a class="button primary" href="zh/get-started.html">開始用 <span aria-hidden="true">↗</span></a><a class="button" href="zh/status.html">完整現況 <span aria-hidden="true">↗</span></a><a class="button" href="https://github.com/justty32/aos">GitHub <span aria-hidden="true">↗</span></a></div>
 </div>

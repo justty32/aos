@@ -20,15 +20,15 @@ a{color:#0b5cad}
 <p>常見問題先看結論：aos 是原型，目前能不用模型跑起一棵樹；多機連線與安全隔離都還沒有。</p>
 <!-- source: 06-草稿/文案表.json P1,FULL,S1,SEC; 08-批0實測.md; 03-計劃.md 第 2 節 -->
 <p><strong>aos 是什麼？</strong></p>
-<!-- copy:P1 -->
-<p>aos 把 AI agent 當成一般的 Linux 行程，住在資料夾裡。每個工具、每隻 agent、每封信，都是你可以 ls、可以讀、可以設權限的資料夾或檔案。 名字：<!-- copy:FULL -->aos：akatosh operating system。</p>
+
+<p>aos 把 AI agent 當成一般的 Linux 行程，住在資料夾裡。每個工具、每隻 agent、每封信，都是你可以 ls、可以讀、可以設權限的資料夾或檔案。 名字：aos：akatosh operating system。</p>
 <p><strong>需要模型帳號嗎？</strong> 不用。L0 用假腦，只要 Linux、git、Python 3.11 以上、CMake、C++ 編譯器與 nlohmann-json。要換真腦才需要 OpenAI 相容端點；金鑰是端點要的話才需要。見<a href="setup/index.html">安裝總覽</a>。</p>
 <p><strong>要裝 Python 套件嗎？</strong> 不用。Python 這一側零第三方套件，沒有 pip、沒有 venv。</p>
 <p><strong>支援 Windows 或 macOS 嗎？</strong></p>
-<!-- copy:S1 -->
+
 <p>只支援 Linux（WSL2 可以，但還沒實測）。Windows、macOS 原生版本目前沒有。</p>
 <p><strong>安全嗎？</strong></p>
-<!-- copy:SEC -->
+
 <p>agent 會用你的帳號執行程式：你的帳號碰得到的檔案，它都碰得到。請在拋棄式帳號、虛擬機或容器裡試；換一個資料夾並不能隔離。沙箱是實驗功能。見<a href="manual/security.html">安全說明</a>。</p>
 <p><strong>可以兩台機器同時跑同一棵樹嗎？</strong> 不行。一棵樹一次住一台；可以把整棵樹搬到另一台接著跑（輪流跑）。樹與樹之間沒有內建連線。同一台機器搬過去已驗；換一台機器還沒驗。</p>
 <p><strong>檔案格式會變嗎？</strong> 會。這是原型，檔案格式和指令還會變，也沒有舊版相容。</p>
