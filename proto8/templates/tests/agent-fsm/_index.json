@@ -23,6 +23,9 @@
  "test_compact_clear.py": {
   "description": "Verify that /compact clears old tool outputs into placeholders before asking for the summary (compact cut 1)."
  },
+ "test_compact_examples.py": {
+  "description": "Verify the example compact handlers in templates/docs/compact-examples (compact cut 5, 11-25) on agent-fsm's real cells with a fake brain: restore_to…"
+ },
  "test_compact_hooks.py": {
   "description": "Verify the before_compact / after_compact hooks of agent-fsm's /compact (compact cut 4): block, instructions, a hook's summary, changing the summary,…"
  },

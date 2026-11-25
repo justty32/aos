@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+# handoff_summary - before_compact hook for agent-fsm (example, not hooked by any template): no model call; the last section of handoff.md becomes the summary.
+# For an agent that keeps handoff.md in its stack up to date itself (its system text says so): compacting then costs nothing and loses only what that
+#   section does not say. No handoff.md, or an empty last section = change nothing (the brain writes the summary as usual).
+# eca-claude cannot use it: Claude Code writes its own summary there, before_compact has no summary key.
+# Hook it: aos-agent -t NAME hook add --event before_compact -n handoff_summary PATH/handoff_summary
+import json
+import os
+import sys
+
+ev = json.load(sys.stdin)
+try:
+    with open(os.path.join(ev["stack"], "handoff.md"), encoding="utf-8") as f:
+        text = f.read()
+except OSError:
+    sys.exit(0)
+sections = [[]]
+for line in text.splitlines():
+    if line.startswith("## "):                                   # compact appends "## compact <time> (N messages)"; agents may add their own
+        sections.append([])
+    else:
+        sections[-1].append(line)
+body = "\n".join(sections[-1]).strip()                         # the newest section (its heading dropped); no heading = the whole file
+if body:
+    print(json.dumps({"summary": body}))

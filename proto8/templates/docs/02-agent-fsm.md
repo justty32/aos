@@ -197,6 +197,7 @@ hook 格如下（pack 沒有 `context` 時可在 config 補 `"window": 272000`�
 - 多個 hook 照名字排，**後一個看得到前一個改過的值**；`restore` 是整段換掉，要接在後面就自己把收到的串上。
 - hook 失敗（退 0／10 以外、逾時、起不來、stdout 不是物件或鍵的型別不對）兩個點都只是一行 warning、跳過它、下一個照跑，壓縮照常做。
 - 攔下：idle 那次＝不清不摺不叫腦，那幾封得到一則 `compact blocked by hook H: <它的 stdout>; nothing was folded`（形狀同 `compact not needed`，`aos` 多 `blocked: H`）、記成答完；輪中那次＝信留在 queue 的 `cur/`、不認領，這輪照常做完，回 idle 時 idle 再發一次 `before_compact`（`mid_turn` false）。`compact.json` 記 `phase: "blocked"`。`context_wrap` 寄的那封被攔下也算答完，它就停在 compacted，等讀數降下來再升上門檻才會再寄。
+- **範例 handler**（11-25 compact 第 5 刀，給人抄、範本不掛）：[compact-examples/](compact-examples/README.md)——`restore_todo`、`restore_goal`（`before_compact` 交 `restore`，壓完補回待辦與目標）、`handoff_summary`（`before_compact` 交 `summary`，不叫模型、拿 `handoff.md` 最後一節）。
 - 交摘要：照舊加要求列再摺（同一條 `fold`，摺掉的原文照樣進 `history_removed.jsonl`、摘要照樣進 `handoff.md`），`compact.json` 的 `by` 記那個 hook 名。handler 可以自己叫便宜的模型寫，也可以完全不用模型。
 
 ### goal、do_task 與 task history

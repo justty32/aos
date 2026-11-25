@@ -269,6 +269,7 @@
     "test_clock_hook_daemon.py": "Acceptance on a real root daemon (no brain needed): after_start / after_stop on start, stop, sleep, wake, kill -9 + auto_restart, rm; on_clock with t…",
     "test_compact.py": "Verify compact requests, history folding, reply matching, and continued work with fake commands.",
     "test_compact_clear.py": "Verify that /compact clears old tool outputs into placeholders before asking for the summary (compact cut 1).",
+    "test_compact_examples.py": "Verify the example compact handlers in templates/docs/compact-examples (compact cut 5, 11-25) on agent-fsm's real cells with a fake brain: restore_to…",
     "test_compact_hooks.py": "Verify the before_compact / after_compact hooks of agent-fsm's /compact (compact cut 4): block, instructions, a hook's summary, changing the summary,…",
     "test_compact_short.py": "Verify a /compact with too little to fold is answered like a finished compact (user 11-20 \"當成正常做完\"), with fake commands.",
     "test_cooldown.py": "Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH.",

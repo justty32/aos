@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+# restore_todo - before_compact hook (example, not hooked by any template): after the summary, add this agent's todo list back to the conversation.
+# Works on agent-fsm and on eca-claude (both take restore at before_compact). Adds to the restore text earlier hooks gave, does not replace it.
+# Hook it: aos-agent -t NAME hook add --event before_compact -n restore_todo PATH/restore_todo  (an agent: self_hook add, same event).
+import json
+import os
+import sys
+
+MARK = {"completed": "[x]", "in_progress": "[>]", "pending": "[ ]"}
+
+ev = json.load(sys.stdin)
+path = os.path.join(ev["stack"], "tools", "todo", "todo.json")   # the todo tool's own cell in the agent's stack
+try:
+    with open(path, encoding="utf-8") as f:
+        items = json.load(f).get("items") or []
+except (OSError, ValueError, AttributeError):
+    sys.exit(0)                                                   # no list (or unreadable): change nothing
+lines = ["%s %s" % (MARK.get(i.get("status"), "[?]"), i.get("text", "")) for i in items if isinstance(i, dict)]
+if lines:
+    text = "Your todo list (from the todo tool, as it was before the compact):\n" + "\n".join(lines)
+    print(json.dumps({"restore": ((ev.get("restore") or "") + "\n\n" + text).strip()}))

@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+# restore_goal - before_compact hook (example, not hooked by any template): after the summary, say this agent's goal again when it is active or paused.
+# Works on agent-fsm and on eca-claude (both take restore at before_compact). Adds to the restore text earlier hooks gave, does not replace it.
+# Hook it: aos-agent -t NAME hook add --event before_compact -n restore_goal PATH/restore_goal  (an agent: self_hook add, same event).
+import json
+import os
+import sys
+
+ev = json.load(sys.stdin)
+try:
+    with open(os.path.join(ev["stack"], "goal.json"), encoding="utf-8") as f:   # what the goal tool and aos-agent goal keep
+        goal = json.load(f)
+except (OSError, ValueError):
+    sys.exit(0)
+if isinstance(goal, dict) and goal.get("status") in ("active", "paused") and str(goal.get("text", "")).strip():
+    text = "Your goal (%s): %s" % (goal["status"], goal["text"].strip())
+    print(json.dumps({"restore": ((ev.get("restore") or "") + "\n\n" + text).strip()}))
