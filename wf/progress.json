@@ -78,23 +78,12 @@
       ],
       "since": "2026-11-17"
     },
-    "codex-trust-company": {
-      "title": "公司 WSL Codex 設定檔的舊信任紀錄",
-      "status": "等使用者",
-      "flow": "",
-      "what": "公司 WSL `~/.codex/config.toml` 裡 11-13 測試夾的舊信任紀錄還沒查；W6 使用者已裁「清掉」（[wait-user-rewrite-1114](../proto8/thinking/2026-11/14/wait-user-rewrite-1114.md) 結案表 04 第 3 筆），是 agent 在公司機改前備份的雜活，動的是家目錄；同類的 `~/.claude.json`、`~/.claude/projects/` 測試子夾、`~/.codex/sessions/2026/11/13/` 11-17 已清（備份 `~/.claude.json.bak-20261117`）",
-      "next": "",
-      "see": [
-        "[待裁網頁答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)"
-      ],
-      "since": "2026-11-18"
-    },
     "workspace-stack-alloc": {
       "title": "_stack 那串收尾：線 8、題 4 已結，換機那套 11-23 退場；剩 home-cleanup 等使用者點頭",
       "status": "等使用者",
       "flow": "",
       "what": "線 6（家機搬家）、線 7（改現行文件）11-22 已完成。11-23：公司那台已起樹，題 4 使用者定「這台的llm kernel放~/aos-home/llm」，線 8 做完；同天使用者把 stack 改名 `.stack`、讓 git 忽略、不跟著機器搬（「直接變成.stack，然後把它git ignore，就這樣。換機那一套就不用了。」，線 dot-stack-1123），換機 commit 不做了，工具 `wf/tools/stack-commit`、`wf/tools/home-move-1122/` 與 `commit_queue.py` 的 `--stack-commit` 配套 11-23 已刪（使用者「換機工具那幾個檔、幾份 .bak-1123* 備份。 <- 都刪掉。」，線 rm-stack-commit-1123）。11-14 要的正規工作區與 stack 分配由 11-22 的規劃與線 1～5、9 做掉；併來的 rebuild-aos-home 被 11-22 決定 D 蓋過（`~/aos-home` 往後只裝這台的 llm kernel）。剩：併來的 home-cleanup：`~/.aos/scratch`（9.1 GB）、`~/.claude/projects`（2.5 GB）、`~/.cache/aos-*` 四夾、`~/.stack` 舊信箱，使用者 11-18 晚選項框「先不清」，`~/.aos/scratch` 用完怎麼收使用者 11-15 說之後自己定；跟搬家退路 `~/aos-home.old-1122/` 什麼時候刪一起等使用者點頭（刪檔要使用者本人說）",
-      "next": "家機 pull 之後停根、`mv _stack .stack`、改殼設定檔的 `AOS_DAEMON` 再起根（步驟在每台設定說明書「從舊名 _stack 改過來」）；home-cleanup 等使用者點頭",
+      "next": "使用者 11-25 早（逐字）「一、可以，都可以動手」→ 公司這台 11-25 已清：~/.aos/scratch 刪完成的五夾（ok-fsmwrap、switch-1124、tri-split-1124、tri-split-1124b、eca-aos-kb-1123；正在用的 core／kb／templates 三夾留著），2.8G→1.7G；~/.claude/projects 刪 35 個指向已不存在測試路徑的夾（/mnt/c 與 repo-aos 等真專案留著），1.2G→1.1G；~/.cache/aos-commit-queue 是 commit-request 在用，不刪；~/.stack、~/aos-home.old-1122 這台本來就沒有。家機那份（9.1G 那批與 aos-home.old-1122）等家機時照同一判準清。",
       "see": [
         "[_stack 規劃](../proto8/thinking/2026-11/22/工作區與stack-1122/02-規劃.md)",
         "[每台設定說明書](workflows/dev-env/03-換機.md)",
@@ -145,7 +134,7 @@
       "status": "等使用者",
       "flow": "",
       "what": "使用者給桌面「aos · 新時代的軟體技術棧.html」（11-14 另存網頁），首頁＋docs/zh 14 個子頁上線，試上線版（使用者「先不要用正式版，不要讓搜索引擎收錄」：每頁 noindex、草稿條保留；9211e9c58、69dd79ea2、d5f47c890）。正式發佈時要做：拿掉 noindex 與草稿條、首頁原始碼註解「quotes not yet confirmed」、子頁「草稿入口」字樣、zh/examples 與 zh/reference 沒有入口、repo 無 LICENSE（small-questions 原本的「Pages 正式發佈：拿 noindex、補 LICENSE」11-18 晚併進這條；11-18 查 `docs/index.html` 等仍有 noindex、repo 根沒有 LICENSE）；其他段互動只看了 03。另：使用者放的 proto8/templates/tests/kits/_index.json 一直沒進 git（commit-request 當生成物不收、生成器又不產它）。家機裸開 Claude Code 掛了 aos MCP（local scope，~/.cache/aos-mcp-repo/，12 支唯讀工具）",
-      "next": "等使用者說正式發佈",
+      "next": "使用者 11-25 早（逐字）「一、可以，都可以動手」（第 3 項正式發佈）。動手前要使用者答兩件：LICENSE 用哪一種；首頁引言（原始碼註解 quotes not yet confirmed）算確認了沒。發佈要 push 才上線。",
       "see": [
         "[首頁](../docs/index.html)"
       ],
@@ -160,33 +149,6 @@
       "see": [
         "[交接](../proto8/thinking/2026-11/18/交接-各線/eca-lab-1118.md)",
         "[交接-各線](../proto8/thinking/2026-11/18/交接-各線/README.md)"
-      ],
-      "since": "2026-11-18"
-    },
-    "decisions-1118-night": {
-      "title": "litellm 兩台版本要不要統一（11-18 晚裁定只剩這題）",
-      "status": "等使用者",
-      "flow": "",
-      "what": "11-18 晚使用者的裁定各項已落進別條或了結；還等的只剩 litellm 兩台版本要不要統一（使用者 11-18 晚：「先不統一，明天再看」；1.87.5 的釘版理由在 1.109.1 已不成立）。家機重建被 11-22 決定 D 與線 6 蓋過",
-      "next": "",
-      "see": [
-        "[改寫前逐字](progress/改寫前-decisions-1118-night.md)",
-        "[aos-llm 去留調查](../proto8/thinking/2026-11/18/aos-llm-去留調查/README.md)",
-        "[重建步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)",
-        "[litellm 1.109.1 實測](../proto8/thinking/2026-11/19/litellm-1.109.1-實測.md)"
-      ],
-      "since": "2026-11-18"
-    },
-    "default-stack": {
-      "title": "預設 stack 剩兩件小事：條文 N-63 加註、要不要在 stack 裡記定義夾",
-      "status": "等使用者",
-      "flow": "",
-      "what": "預設 stack（不給 -t、-d 時從 cwd 的 agent stack 找）11-21 已做；install.py 11-21 跑過多次，`e8d87d7cd` 在活樹驗過省略 -t／-d；站在 stack 外要 export AOS_DAEMON 已寫進換機說明書",
-      "next": "1. 條文 N-63 要不要加註（字在紀錄「要給條文加註的字」，第二輪後要改寫成「aos-agent 改從 agent stack 往上兩層找」；整理報告歸組 4 條文大修）。2. 想問使用者：要不要在 stack 裡記定義夾／工作區（daemon 表的 as_written 已經記了，可能不用另記；沒問、沒做）",
-      "see": [
-        "[aos-agent-預設目標-1121](../proto8/thinking/2026-11/21/aos-agent-預設目標-1121.md)",
-        "[05-使用者補充-1120](../proto8/thinking/2026-11/18/default-stack-1118/05-使用者補充-1120.md)",
-        "[aos-daemon-env-1121](../proto8/thinking/2026-11/21/aos-daemon-env-1121.md)"
       ],
       "since": "2026-11-18"
     },
@@ -242,10 +204,10 @@
     },
     "aos-ns": {
       "title": "aos 命名空間與標準庫：走 B 資料夾即命名空間",
-      "status": "等使用者",
+      "status": "open",
       "flow": "",
       "what": "第一刀做完（線 aos-ns-cut1-1119，11-19）：agent.py 有庫 std（std.pack／std.tool／std.fsm／std.hooks）與 defs.lib(名, 根)；包在編譯時展開成一支支工具寫進 tools.json，別的庫工具帶 庫名_、std 短名，展開後同名又不同、讀不到庫根都報 SpecBad；只改 agent_spec 與骨架、執行期一行沒動、沒搬檔。C-74／C-87 加註已做（線 aos-c74-c87-1119）。11-19 下午補裁：第 6 題明寫路徑（「先明寫，以後有需要再去弄-I。」，-I 不做、不留鉤子）；第 7 題兩種連結都有、做成編譯選項、預設靜態（「或者說，用選項吧，gcc那樣」「預設靜態 (Recommended)」），線 aos-defs-rename2-1119 做完：--compile [--static|--dynamic]、std.pack(名, link=)；要改名的包與 defs.load 的 TOOLS 只能靜態（整支 --dynamic 時 warning、明寫 link=dynamic 時 SpecBad）。",
-      "next": "等使用者：名詞表要不要多一列 std（庫）；std 算 C-74 哪一層先留著（使用者「先留著。以後搞不好可以統合，因為這些東西搞不好也可以在aos.py.std中找到。或是aos.std。」，想法不是裁定）。之後的刀：std 搬進 lib/std（第 4 題已裁先不搬）、agent_def new 收 std/名與 defs check 查手寫 json 的同名包（第三刀）。繼承深挖另外派。",
+      "next": "使用者 11-25 早（逐字）「15.要」：名詞表加一列 std（庫）派 kb（信 01795567730738655785.444116.319544）；std 算 C-74 哪一層仍先留著。之後的刀（std 搬 lib/std 先不搬、agent_def new 收 std/名、defs check 查同名包）沒排。",
       "see": [
         "[第一刀紀錄](../proto8/thinking/2026-11/19/aos-ns-第一刀.md)",
         "[07-使用者裁定](../proto8/thinking/2026-11/19/aos-ns-1119/07-使用者裁定.md)",
@@ -292,10 +254,10 @@
     },
     "aos-hook-iface": {
       "title": "hook 點的介面：剩看替你做的選擇與 gdb 岔路",
-      "status": "等使用者",
+      "status": "open",
       "flow": "",
       "what": "hook 介面各刀、新格式、總文件、gdb 讀宣告都已交；活樹換新格式已做（`62129fe49`），hook_handle.py、hook_flags.py 已刪（`370962554`），fsm-guard 已改 hookeds 格式。使用者 11-21：「剛剛那個hook我覺得OK，畢竟hook體系的唯一約定，就是要在interfaces.json中宣告，有宣告就能用，至於怎麽實作的，就是各家自己的事情。」",
-      "next": "使用者：1) 看 02 的替你做的選擇（尤其第 1 條：能攔的點 hook 失敗＝停、其餘只 warning；第 3 條：after 點退 10 也讓 loop 收工）；2) 條文要補的字（05：C-90、N-45、附錄 4…；整理報告歸組 4 條文大修）。gdb 岔路 11-21 已答：停法照 gdb 自己的（甲），當場改停法的口子「等以後真的要用到的時候再說」（85694d214），不做不排。agent-fsm 的壓縮兩點歸 compact-improve",
+      "next": "使用者 11-25 早（逐字）「11.可以」：02 替使用者做的選擇（能攔的點 hook 失敗＝停、其餘只 warning；after 點退 10 也讓 loop 收工）認可，不用改。剩條文要補的字（05：C-90、N-45、附錄 4…）跟條文大修一起（norms-text），這條等大修時一起收。",
       "see": [
         "[改寫前逐字](progress/改寫前-aos-hook-iface.md)",
         "[README](../proto8/thinking/2026-11/20/aos-hook-iface-1120/README.md)",
@@ -339,10 +301,10 @@
     },
     "compact-improve": {
       "title": "compact 改進：先清工具輸出、壓完補回走 hook",
-      "status": "等使用者",
+      "status": "open",
       "flow": "",
       "what": "第 1 刀（先清舊工具輸出再摘要）、第 4 刀（before_compact／after_compact，調補換都開，規矩在 templates/agent-fsm/compact.py、範本不掛）已交；第 2 刀因照叫不做。11-22 的 compact_reload.sh 指向 notes_path（e5903dc7a）與 eca-claude compact_hook 壓完先讀自己筆記（774fec243）是 subagent 筆記那件，不屬這條的刀",
-      "next": "第 3 刀 aos-agent history clear-tools、第 5 刀範例 handler 要不要做等使用者說（使用者 11-21 說過「compact這塊，反正各agent有需要的，可以自訂自己的compact程式和流程」，a0cb220a6）。原本的「活樹 ann 說明字等下次 install.py」已過時：第 4 刀（14c2de1de）之後 install.py 跑過多次（例 198719adc），而且 ann 11-22 沒搬進 _stack",
+      "next": "使用者 11-25 早（逐字）「10.做」：第 3 刀 aos-agent history clear-tools 派 core（信 01795567755565192304.446829.322025，排在 idle-polling 第 1 刀之後）；第 5 刀範例 handler 派 templates（信 01795567758741926270.447279.322344，排在 1125b 之後）。都交了刪這條。",
       "see": [
         "[第 4 刀紀錄](../proto8/thinking/2026-11/21/compact-第4刀-1121.md)",
         "[第 1 刀紀錄](../proto8/thinking/2026-11/21/compact-第1刀-1121.md)",
@@ -359,36 +321,6 @@
       "see": [
         "[agent-fsm-py-收進子夾-1120](../proto8/thinking/2026-11/20/agent-fsm-py-收進子夾-1120.md)",
         "[aos-home-瀏覽筆記-1120 第 11 則](../proto8/thinking/2026-11/20/aos-home-瀏覽筆記-1120.md)"
-      ],
-      "since": "2026-11-20"
-    },
-    "aos-home-browse-1120": {
-      "title": "start-eca 的 compact_hook 要不要也改成借的（11-20 瀏覽 ~/aos-home 剩的一題）",
-      "status": "暫停",
-      "flow": "",
-      "what": "使用者 11-20 晚瀏覽 ~/aos-home 時說「總之我接下來說的，都麻煩先記下來」。已了：起手範本的格程式改成借的（11-21 線 top-1121-borrow）、沒人引用的九個檔已刪（`dff53b667`）、hook 宣告格式使用者 11-21 已審、新格式已施工。整理報告把這條跟 agent-fsm-py-folder 歸同一組（格程式整理，整組暫停）。11-22 改 eca-claude 的 compact_hook（壓完先讀自己的筆記）時，start-eca 的 ann 那份照樣整份重抄一次（774fec243），仍是抄本、不是借的",
-      "next": "start-eca 的 compact_hook 要不要也改（是 Claude Code 設定裡的 shell 字串，不在現有寫法裡），等使用者說",
-      "see": [
-        "[aos-home-瀏覽筆記-1120](../proto8/thinking/2026-11/20/aos-home-瀏覽筆記-1120.md)",
-        "[agent-fsm-py-收進子夾-1120](../proto8/thinking/2026-11/20/agent-fsm-py-收進子夾-1120.md)",
-        "[起手範本-動態連結-1121](../proto8/thinking/2026-11/21/起手範本-動態連結-1121.md)"
-      ],
-      "since": "2026-11-20"
-    },
-    "prompt-cost-cache": {
-      "title": "agent-fsm 每輪問模型的輸入成本：aos 這側能修的都修完了，剩 B～E 方案等使用者定",
-      "status": "等使用者",
-      "flow": "",
-      "what": {
-        "$ref": "progress/prompt-cost-cache.md"
-      },
-      "next": "等使用者定 B～E（B 縮短 LiteLLM 自動加的 codex 指示、C 再縮預設工具、D 自加的工具排最後〔推薦不做〕、E 都不做）；11-22 重量（907ddecc9）與 A 實驗無效（22501d7af）、原本兩件文件 11-21 已做（949925842）、抄到 ~/aos-home/agents/ann 那步因 ann 沒搬進 _stack 不用做，細節在 what 那份 md",
-      "see": [
-        "[session-key-實測-1121](../proto8/thinking/2026-11/21/session-key-實測-1121.md)",
-        "[aos-home-瀏覽筆記-1120 第 10 則](../proto8/thinking/2026-11/20/aos-home-瀏覽筆記-1120.md)",
-        "[tool-desc-瘦身-1121](../proto8/thinking/2026-11/21/tool-desc-瘦身-1121/README.md)",
-        "[prompt-cost-1122](../proto8/thinking/2026-11/22/prompt-cost-1122/README.md)",
-        "[選項 A 實驗](../proto8/thinking/2026-11/22/prompt-cost-1122/02-選項A實驗.md)"
       ],
       "since": "2026-11-20"
     },
@@ -410,7 +342,7 @@
       "status": "等使用者",
       "flow": "",
       "what": "HANDOFF 11-21 深夜那條「等他說的」「他還在想的」裡，progress 原本沒有的：1. API agent（agent-fsm）要不要也認 /status、/usage、/exit；2. 新 index_check 他說過「之後要看看」；3. 知識庫換形狀比較醜的頁 wf/source/block-3.md、block-4.md；4. kernel 攔截 daemon 存取（他給了原則「只防走規矩的存取…真的要硬防，那就要多依賴linux的權限體系」，還在想）；5. 驗寄件人規劃：他答 1D、2C、3C、4A，要自己開沙箱試，頂層沒派施工，另五題沒念；6. 權限零件說明頁（桌面 aos-權限零件-1121/）給他看；7. 前端大修盤點 14 項沒念；8. 更早等他的：gpt 包預設走 /v1/responses、self history set 收不收 -n（eca 三包要不要瘦：使用者 11-22「是，就是這個。」，eca-claude 拿掉 events／def／jsonx，a7779de17，已了）。不催",
-      "next": "等使用者開口；~/.aos/scratch/top-1121-ownerplan/exp/owner/ 要 aos-asuser --fix 才清得掉（清 scratch 時記得）",
+      "next": "使用者 11-25 早（逐字）：第 1 題 API agent 認 /status、/usage、/exit「要認」→ 派 templates（信 01795567726773565625.443579.319147，連同 start-eca compact_hook 改借的〔原 aos-home-browse-1120，「17.要」〕）；第 7 題前端大修「前端大修之後再說」；驗寄件人那批「我現在沒空」。其餘不催。",
       "see": [
         "[HANDOFF](HANDOFF.md)",
         "[api-agent-clear-1121](../proto8/thinking/2026-11/21/api-agent-clear-1121.md)",
@@ -511,7 +443,7 @@
       "status": "open",
       "flow": "",
       "what": "信 01795484557450263667.853643.518765＋補充 01795484607007336637.861953.523507；已回 DONE（01795485122706629005.942821.573447）附判斷。查證：reserved 從 slots 扣（llm_rules.py:489-492），範本預設 2＋{high:1}；agent-fsm 每圈起 aos-fsm＋python3、閒著也起、aos-loop 不接 poke 無退避；subagent rm 留 stack 是本意但沒標記檔；遞迴 ls 已有 aos-comm board ls --deep（知識庫沒寫）；llm_http connect_timeout_s 預設 10、可設；repo 沒提 WSL_INTEROP。",
-      "next": "使用者 11-24 答三件「1.改。2.先記下來，這會是以後一段時間的我們的開發重點。3.刪」：① llm kernel 範本預設值要改（他沒給數字；我打算 slots 4、reserved {high:1}，跟活樹 eca_main 改的一樣，施工時跟他報）——改的是 templates/kernel/llm-kernel/kernel.json 與 start-api/llm/kernel.json、01-llm-kernel.md，**等三分切完才改**（現在改會讓補丁漂移）；② 閒置輪詢記成開發重點，另立 progress idle-polling；③ eca-aos-sol-1、-2 的 stack 已刪（11-24 10:2x）。切完後：kb 位子補知識庫（reserved、留下的 stack 怎麼認怎麼清、aos-comm board ls --deep、connect_timeout_s／鏡像網路、WSL_INTEROP）＋wf/dev-env/03 與 daemon-root README 各一句；core 位子：aos-llm ls／窗檔加總格保留格在飛排隊、rm 留 stack 寫標記或列出表外 stack、ctl ls --deep；templates 位子：①。做完回 eca_main。",
+      "next": "11-25 對過：① 範本 slots 4／reserved {high:1} 早在 cb24a2594；知識庫那半 6f7f32352、2d262f921，11-25 kb 補缺 c74a56b41；③ 已刪。剩 core 那三件要查做了沒：aos-llm ls／窗檔加總格保留格在飛排隊、rm 留 stack 寫標記或列出表外 stack（kb 說已有 aos-daemon-ctl leftovers）、ctl ls --deep（知識庫已寫有）。查完回 eca_main。",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],

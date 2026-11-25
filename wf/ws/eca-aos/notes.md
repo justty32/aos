@@ -506,3 +506,17 @@
   - HANDOFF 換成家機 11-24 晚那條（`6fa990e80`）；thinking `aos的目標-1124` 三輪、wf/user/advice/20261124.md、progress aos-goals-1124（等使用者）。
 - **這台還沒 install.py**：家機那批改了 py/（aos-mcp、subagent、agent-fsm），活樹要裝才會生效。compact 後先問使用者或照常設許可裝。
 - compact 後先做：讀這份筆記最後兩節 → 讀 HANDOFF → install.py → 派 core `eca-p-first-result-1124`（progress）。
+
+## 2026-11-25 上午（公司）：compact 後開工
+
+- 使用者（逐字）：「好，都去。aos目標這塊等下午。等使用者的舊題這塊，簡單跟我說說，我看看有哪些是我已經有想法的」→ 1～5 都派；aos-goals 下午談。
+- install.py 第十一次（家機那批 aa8bd9cef 等），exit 0，5 隻 running。
+- 派出：core `01795567411509989342.395306.287621`（eca-p-first-result，線 eca-aos-core-1125a）＋`01795567417173354241.396242.288187`（idle-polling 第 0、1 刀，1125b，做完上一封才開，第 1 刀後停）；templates `01795567421241699117.396904.288594`（llm kernel 範本 slots 4、reserved {high:1}）；kb `01795567427215503285.397703.289191`（eca-main-obs 知識庫五點）；打雜工 `eca-aos-sol-4`（gather2，ws temp/eca-aos-sol-4，subagents 4/4）say `000000000001.01795567442295283285.399931.290699`：tmpfs 量測＋相對路徑只讀盤點，兩份報告。
+- 還沒派：fsm 看圖工具（core，排在 idle-polling 之後）；core DONE 後派 kb 改 clock.md／eca_reading.md／troubleshooting。
+- 給使用者唸了「等使用者」舊題清單，等他挑。
+- templates DONE `01795567504708696562.411861.296941`：slots 4／reserved {high:1} 昨天 cb24a2594 已交，沒新 commit。kb 那半昨天也已交（6f7f32352、2d262f921）——我的 progress eca-main-obs-1124 的 next 沒跟上，已補信 kb 只補缺。**progress eca-main-obs-1124 要改寫**（①與知識庫已了，剩 core 那三件要查做了沒）。
+- kb DONE c74a56b41（eca-main-obs 知識庫只補缺；llm-team 範本 slots 4 沒 reserved）。
+- 使用者答舊題（逐字）：「一、可以，都可以動手。二、現在在公司，我得先忙公司的事情，之後有空再說(或是等回家)。四、15.要。16.不要。17.要。18.要認、我現在沒空、前端大修之後再說。五、以後再說。三、我想想」，接著「三、8.E。9.不統一。10.做。11.可以。12.先放著。13.先放著。14.先放這˙」。
+  - 一：Codex 信任紀錄刪 16 筆不存在的測試路徑（/mnt/c 的留著；備份 ~/.codex/config.toml.bak-20261125）；scratch 刪完成五夾、~/.claude/projects 刪 35 個測試夾（判準見 progress workspace-stack-alloc）。Pages 正式發佈卡兩題：LICENSE 哪種、首頁引言算確認了沒（要問使用者）；上線要 push。
+  - 派：templates 1125b `01795567726773565625.443579.319147`（agent-fsm /status /usage /exit＋start-eca compact_hook 借的）、1125c `01795567758741926270.447279.322344`（compact 第 5 刀範例 handler）；kb 1125b `01795567730738655785.444116.319544`（名詞表 std）；core 1125c `01795567755565192304.446829.322025`（compact 第 3 刀 clear-tools，排 idle-polling 後）。
+  - progress 刪 codex-trust-company、default-stack、prompt-cost-cache、decisions-1118-night、aos-home-browse-1120；改 aos-hook-iface、compact-improve、aos-ns、waiting-1121、workspace-stack-alloc、eca-main-obs-1124、pages-trial-1116。
