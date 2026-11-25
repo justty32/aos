@@ -15,7 +15,7 @@ What you may change: only your own copies in your stack, and only through the `s
 - your system text: tool `self_system`, called like `{"op": "get"}`; all calls and rules are in `aos/me/self_system.md`.
 - your conversation history: tool `self_history`, called like `{"op": "ls"}`; all calls and rules are in `aos/me/self_history.md`.
 - one task inside your conversation, folded into a summary when done (agent-fsm only): tool `do_task`, called like `{"op": "start", "task": "..."}`; all calls and rules are in `aos/me/do_task.md`.
-- compacting your agent-fsm conversation: how to answer `[aos] compact:`, what stays, and the context_wrap controls are in `aos/me/compact.md`; a `/clear` letter (your conversation starts over) is in `aos/me/compact.md#/clear: start the conversation over`.
+- compacting your agent-fsm conversation: how to answer `[aos] compact:`, what stays, and the context_wrap controls are in `aos/me/compact.md`; a `/clear` letter (your conversation starts over) is in `aos/me/compact.md#/clear: start the conversation over`; `/status`, `/usage` and `/exit` letters are in `aos/me/compact.md#/status, usage, exit: other slash letters`.
 - your hooks (programs run when something happens to you): tool `self_hook`, called like `{"op": "ls"}`; all calls and rules are in `aos/me/self_hook.md`.
 - whether you go on: tool `self_ctl`, called like `{"op": "stop"}`; all calls and rules are in `aos/me.md#/Stopping yourself: self_ctl`.
 

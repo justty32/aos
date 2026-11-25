@@ -33,3 +33,13 @@ For an agent-fsm body (a human's `aos-agent say` or a chat page can send it; it 
 - Every message in `history.jsonl` moves to `<stack>/history_removed.jsonl` as `{removed_at, op: "clear", line, message}` (a line that is not JSON is kept as `raw`). History becomes two messages: the user `/clear` letter and one assistant answer `[aos] slash: /clear: N messages moved to history_removed.jsonl; the next message starts a new conversation` (aos.answer_to the letter, aos.clear true); ask/listen get that answer. The next letter comes after those two; you no longer see anything before them.
 - Not changed: your goal (an active goal sends its reminder right after the /clear answer, as after any answer), todo, `handoff.md`, `compact.json`. Open do_task start marks move away with the rest, so a later do_task end says MarkerMissing, as after a compact. While a summary is being requested, idle takes no letters, so /clear waits until the compact is done.
 - If you see those two messages at the top of your history, the earlier conversation was cleared on purpose; the originals are in `<stack>/history_removed.jsonl` if you need to look something up.
+
+# status, usage, exit: other slash letters
+
+For an agent-fsm body, like `/clear`: a letter whose whole content, stripped, is `/status`, `/usage` or `/exit` is a body command, not a question for you. With more words after it, it is an ordinary letter.
+
+- It is a batch of its own, as `/clear` is. No brain call, no before_queue / after_queue hooks.
+- History gets the letter and one assistant answer `[aos] slash: /status: ...` (aos.answer_to the letter, aos.slash). ask/listen get that answer.
+- `/status`: your model (the definition's `llm.json` with your stack's on top) and reasoning_effort, history size, goal, compact phase, cooldown, and how many more letters wait.
+- `/usage`: token counts summed from `<stack>/observed.jsonl` (think and compact calls), the last call's counts, and the context reading. There is no quota or rate limit to report: the llm kernel gives none, and a pack's budget shows only as `BudgetMissing` when it is used up.
+- `/exit`: you stop (stop, not sleep). Letters do not start you again, nor does a daemon restart; they wait in your queue. `aos-agent ctl start NAME` brings you back. If the stop request cannot be sent, the answer says `could not stop` and you go on running.

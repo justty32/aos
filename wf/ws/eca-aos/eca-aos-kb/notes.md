@@ -129,6 +129,10 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 
 - 只改 `proto8/knowledge/`。發現範本、程式、`wf/` 寫錯（例：py/packs/README.md 寫錯 eca-pi 掛哪幾包）就回報 eca-aos，不自己改。
 - 不在活 daemon 上下指令；aos 工具只用自己的 self_*。
+- **範本有抄本**：`templates/daemons/daemon-root/README.md` 有兩份一模一樣的抄本，`templates/starts/start-api/root/README.md` 和 `templates/starts/start-eca/root/README.md`，test_start 會比對三份。
+  - 准我改 daemon-root README 時，兩份抄本一起改，改完用 `cmp` 確認三份一樣；或者交給 templates 位子改。
+  - 11-25 c74a56b41 只改了正本，test_start 因此紅了，templates 位子在 0b53cb6315 重抄。
+  - 改別的範本檔之前，也先 `grep -rl` 看 starts/ 裡有沒有同名的抄本。
 - 回報寫繁體中文，先寫結論：commit 雜湊、改了哪頁哪句、拿不準沒改的、替使用者做的選擇（逐條列）。
 - 知識庫存檔就生效：一頁一次寫完整，寫英文、短句、一句一件事，只寫核對過的事。
 
