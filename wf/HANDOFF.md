@@ -12,43 +12,38 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-25 17:0x（公司）——proto9：小庫＋信箱、daemon、aos-exec 都驗過交件；16:50 推過一次
+## 2026-11-25 23:0x（家機）——proto9 做減法：daemon 當容器、名字交給 kernel；睡前推一次
 
-**寫這條的是公司 repo-aos 樹的 `eca-aos`**（這個畫面用主帳號 `~/.claude`、模型 Fable；答信的 loop 走 `~/.claude-alt`）。細節在 [`wf/ws/eca-aos/notes.md`](ws/eca-aos/notes.md) 最後幾節（14:0x 起）。上一條（11-25 16:2x）在 git 歷史 `de28c59932`。
+**寫這條的是家機 repo-aos 樹的 `main`**（Claude Code，模型 Opus 5.5）。細節在 [`wf/ws/main/notes.md`](ws/main/notes.md)「2026-11-25 晚（家機）」那節。上一條是公司 `eca-aos` 的 11-25 17:0x（proto9 小庫、daemon、aos-exec 交件與下一批 1～6），全文在 git 歷史 `3cc5beb2e`；還有效的摘在下面「公司那條還有效的」。
 
-**接手先讀**：這條 → 筆記「2026-11-25 16:2x：compact 完，daemon 回來了」那節到底 → [proto9/README](../proto9/README.md)、[介面草稿](../proto9/docs/01-aos-proc介面草稿.md)（【定】【擬】【開】三種記號；第 12 節是還沒定的）。使用者原話全在 [9p-proc-1125](../proto8/thinking/2026-11/25/9p-proc-1125.md)（第 10～29 段是今天下午）。
+**接手先讀**：這條 → [daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md)（第一～九輪：每輪定了的、實測數據、提案）→ 原話在 [9p-proc-1125](../proto8/thinking/2026-11/25/9p-proc-1125.md) 第 30～39 段 → progress `proto9-sky-1125`。
 
-**授權（11-25 當場）**
-- **push 已經用掉**：使用者 16:50「好了，看起來都沒事了，現在就push」→ 推到 `243b6a9c5`。那之後的 commit 都沒推；**要再推得他再說**（16:55 的鐘來過，沒再推）。
-- 子 agent：proto9 的施工用 Claude Code 的 Agent 工具派 opus（背景），不 commit，回來 eca-aos 自己清 build 重編、跑測試、查殘留再交。
-- repo 根那個沒追蹤的檔 `ls`（內容「1」，來源不明）還在，沒問。
+**授權（11-25 晚當場）**
+- **push 用掉了**：使用者 23:0x「差不多了，我想睡覺了，東西收拾收拾 push吧」→ 推了今晚的 commit 和這條交接；小實驗回來、驗完的那批照同一句再推一次。**之後要推得他再說。**
+- 小實驗：「可以來做小實驗，隨意做」（第 34 段）。下一批四樣（就緒、事件、按需起 kernel、進天空的工具）他說「看起來都OK，就先這樣吧」（第 37 段），**還沒派**。
+- 子 agent：實驗用 Claude Code 的 Agent 工具派 opus（背景），不 commit，回來 main 重跑、查殘留再交。
 
-**proto9 現在有什麼**（都驗過、交件了）
-- `proto9/docs/01`（介面草稿）、`02`（可以抄的現成做法）、`pages/aos-proc.html`（artifact 原始檔，<https://claude.ai/artifact/CaD7a7bwGkh2WxLTRHfMVN>，使用者說通勤時看；頁面還寫 `persist`，改版時一起換成 `persists`）。
-- `proto9/cpp/aos-procfs/`：小庫，含 `failed`、`AOS_NAME_PID`、Maildir 式 `mailbox/`（proto8 的 `aos-post send` 原樣寄得進來）。測試 `tests/run.py` 40、`tests/mail.py` 36。
-- `proto9/cpp/aos-daemon/`：最小的 daemon，64 條。**已知一條會偶發失敗**：register 組「rm ext」——測試寫完 `procs_ctl` 沒等做完就看表（寫入回來＝收到、不是做完）；單獨跑都過。下一批修，順便查別的測試有沒有同樣的寫法。
-- `proto9/cpp/aos-exec/`：從 proto8 抄進來瘦身（拿掉 `AOS_STACK`、inst 單子；其餘照舊；不連 proto8），75 條；`proto9/cpp/third_party/` 是它用的 json 標頭。README 有一張「還能砍的」表（最大：指示詞約 1640 行，其中 `$ref` 指 `.md` 985 行）——**等使用者挑要砍什麼**（他說「可能要大改」）。
+**今晚使用者定的**（原話與理由在上面兩份）
+- **做減法**：`procs/<名>/` 底下不規定任何東西；ctl、sock、status、mailbox、ctl 的鎖都歸之後的 agent 界面；aos-procfs 變成寫 agent、kernel 時用的庫。**這動到下午草稿 01 的前提；草稿怎麼跟上，等他看過實驗再說，別先改。**
+- **界面**＝檔案布局＋格式內容正確＋在指定條件下存取得到（權限、限時回應），做得到就是那個東西；量得出來，量到的是 `_metainfo` 客觀那半。不提供界面的程式，daemon 也能粗管（訊號、cgroup freeze）。
+- **daemon 只管碰 Linux 權力的五樣**：起收行程（自己 PID namespace 的 1 號）、組天空（每隻 proc 一個 mount namespace）、給身分（uid）、起動前上鎖（丟 caps、Landlock、seccomp、cgroup 上限）、把開關發給 kernel。**kernel 管所有決定**（排程、額度、准不准、名字給誰）。起 proc 直接用 bwrap（或 runc／crun），我們只寫上面那層。
+- **攔截**：把名字交給 kernel（天空裡擺 stub、socket、FUSE 或靜態夾），不攔系統調用。靜態的夾也算 kernel（登記表標 `dir`／`exec`／`fuse`／`socket`）；要握呼叫者不該有的東西才需要自己的行程。
+- **登記與天空**：kernel 登記只代表「提供」，起 proc 的一方明寫才算「選用」；只能往下傳自己有的；天空起來時定好、記成表（可印出來，像 Plan 9 的 `ns`），跑的時候改得了，但要明確下指令。
+- **PID namespace 開**：daemon 一死，底下整片收掉（取代下午「daemon 掛了底下還活著的不管」）；推薦用名字、盡量不用 PID。
+- **繞圈不限制**（風險自負）；依賴鏈做軟性檢查（kernel 登記時寫依賴、起 proc 的人自己問 daemon；daemon 可開「不准成圈，有就拒絕登記」）。
+- **天空是共用的路由、不是牆**；要牆就另開一台 daemon（以後 daemon 也許能把 uid 分給 proc）。替別人做事花的資源，各 kernel 自己處理。
+- **之後訂「aos proc 界面」＝能跟著 daemon 一起重起**；不符合的也能當 proc，風險自負。（跟下午草稿 01 的「aos proc 介面」不是同一件：那份的 ctl、status 已搬去 agent 界面。）
+- /usr 先不管（可重現是很遠以後的事）。
 
-**今天下午使用者定的**（全文在草稿與 thinking）
-- 「落檔...不算，我們直接起proto9」；基礎用 C++；每隻 proc 用 FUSE 把自己的目錄掛出來。
-- phase 五個值；掛載點用 `%` 接名字路；`add` 的可執行檔那種留著；proto9 不給 `AOS_STACK`；proc 的入口先只收可執行檔與 argv 陣列；aos-exec 抄進 proto9 瘦身。
-- 外來登記的 proc 在自己的 `settings` 宣告服從程度、要擋冒名；`add` 不能只收絕對路徑（會害搬家）。
-- `persist` 改名 `persists`（草稿已改；**程式還沒改**）。
-- agent 的身體：不搬 aos-loop／aos-fsm 那一套，就是一支簡單的程式、擺出介面；agent 專用的檔案布局與格式是另一份介面，他之後規劃。
-- 自動重起：root daemon 掛 systemd，底下的另外設定（照現在的 auto restart）。
-- json 版：以程式裡的 struct 定義為主，衍生 json，再衍生純文字。
+**之後再談（不催）**：網路；每個呼叫者一條 socket；daemon當容器 第八輪第 7～11 條（合併目錄、天空表記是誰要的、界面怎麼寫與改版、上千隻的掛載傳播、persists 誰清）；aos proc 界面的內容；agent 界面；daemon 分 uid 給 proc。main 第九輪補的兩點（隔壁 daemon 要真隔開，得有自己的 network namespace、不掛外面的 `/proc`；「重起得了」用 kill -9 再照設定起回來量）他還沒回。
 
-**下一批**（都還沒派；小庫與 daemon 是同一批檔，不能同時兩隻改）
-1. daemon 的 `add` 改交給 proto9 的 aos-exec（資料夾、JSON、可執行檔）；相對路徑從 daemon 自己的目錄算；daemon 有自己的 `persists`、把表存進去；`auto_restart`；root 重起後照表把還活著的認回來。
-2. `settings` 的 `aos_obey`（列 daemon 可以對它用的字；【擬】）；登記時對它自己 `status` 的 `aos_name` 擋冒名。
-3. 程式裡 `persist` → `persists`（含 `aos_persists`、`名字.persists`，【擬】）。
-4. 修 daemon 測試的競態（上面那條）。
-5. 欄位表：每個檔一個 struct、欄位只宣告一次，json 與純文字都從它產生（純文字＝json 攤平，巢狀用 `.` 接）。
-6. 之後：plumber 式的 `msg`、socket 上一行一則加回條。
-- 1～4 使用者給了方向、細節是我擬的；他沒逐條點頭，派之前在回覆裡再講一次要做什麼。
+**還在跑**
+- 小實驗 `proto9/experiments/sky-1125/`（十項，Python 標準庫＋unshare／nsenter）：家機 opus 背景在做最後一遍驗證。回來 main 重跑、查殘留、交件（線 `home-proto9-1125`）、推。**origin 上沒有它的 commit，就是家機還沒收完；別在公司重做。**
 
-**還開著的**
-- **上網的幫手**（不在 aos 體系）：`tmux -L webref`，`~/.aos/scratch/web-ref-1125/launch.sh` 起的 Claude Code（`~/.claude-alt`、sonnet、dontAsk，放行上網、讀寫、Skill、Artifact）。送話：用 `proto8/lib` 的 `aos.agentlib.cli_a2a.wire` 包信封，寫 `/run/user/1000/cc-socks/<它的 PID>.sock`（PID：`pgrep -f "claude --model sonnet --permission-mode dontAsk"`）。使用者說先留著。改版 artifact：改 repo 的 html → 抄到 `~/.aos/scratch/web-ref-1125/artifact/aos-proc.html` → 請它對同一個檔再發佈。要收：`tmux -L webref kill-server`。
-- core：閒置輪詢做到第 3 刀就停（第 4～6 刀不做，已寄信）；1125f；compact 第 3 刀。工作樹裡 `proto8/cpp/aos-idle/` 等改動是它的。kb、templates 空。
+**公司那條（17:0x）還有效的**
+- 下一批 1～6（daemon 的 `add` 交給 aos-exec、`aos_obey` 擋冒名、程式裡 `persist`→`persists`、daemon 測試的競態、欄位表、plumber 式 `msg`）都還沒派。**今晚做減法動到其中幾條的前提**（ctl、status 不再是每隻 proc 必有），派之前先跟他確認，別照舊單子做。
+- 等使用者（不催）：artifact 哪裡要改；aos-exec 要砍什麼；agent 檔案布局；草稿第 12 節；小庫與 daemon 挑的保守做法。
+- 公司那台：上網的幫手 `tmux -L webref`（使用者說先留著，用法見 `3cc5beb2e` 那條）；core 閒置輪詢做到第 3 刀就停；repo 根的不明檔 `ls`。
+- 家機 sonnet 讀 proto9 程式看到的（main 只對過第一條那行，都沒改）：`aos-daemon/src/main.cpp:132` 靠「`AOS_ROOT` 沒設」判斷自己是不是根，殼裡殘留舊的 export 就會誤判；`procs/<名>` 的 symlink 帶 PID；stop 用 `hold_until_exit`，行程不結束，鎖就一直停在 doing。
 
-**等使用者（不催）**：看 artifact 哪裡要改；aos-exec 要砍什麼；agent 檔案布局那份介面（他規劃）；草稿第 12 節還沒定的（token 檔、`persists` 怎麼擺、sleep／wake、換 Linux 帳號）；小庫與 daemon 挑的保守做法（草稿第 11 節、各自 README）。
+**其他 open 的 progress**：`aos-goals-1124`（等使用者）；`narr-amber-fb-1124`（等某個 session 重開、用上新的 aos-mcp 後，實地試 listen 時叫 mailbox_peek，過了就刪）。今晚沒有新的規範條目。
