@@ -658,3 +658,6 @@
 - 草稿加「卡住」小節（第 8 節內）：我擬的——daemon 另開一條線帶期限去讀、`procs_status` 多一欄 `名字.stuck`、查到只記不收；問他兩題（查到之後只記還是可設成自動收；卡住的要不要從 procs/ 走不進去）。
 - 15:3x 使用者（逐字，thinking 第 14 段）：死掉的掛載由 daemon 收；卡住只記不收；卡住的從 procs/ 走不進去（「也是可以啦，就是跟大家說，至少留個thread/coroutine，定期回覆相關請求」）；被 Linux 暫停的算卡住。草稿「卡住」「死掉的掛載」兩小節改好。
 - 下一塊我提的：proto9 的程式放哪、用什麼語言、第一個正式的東西做什麼；socket。等他挑。
+- 15:4x 使用者（逐字，thinking 第 15 段）：擔心嵌套 daemon 連鎖卡住（dead lock）；「1.好，可以先用C++做基礎。2.細說」（2＝socket）。
+- 派了第二隻 Claude 子 agent（opus，背景）：C++ 小庫 `proto9/cpp/aos-procfs/`（掛載、回答的線、指令檔的鎖與回饋、demo、測試；順手實測 /sys/fs/fuse/connections/N/abort 能不能放開卡住的讀者、FUSE 目錄裡能不能放 unix socket）。只寫那個夾，暫存 `~/.aos/scratch/proto9-procfs-1125/`，不 commit。**回來後**：自己編一次、跑 tests、查殘留、交件、報使用者。daemon 還沒派（等連鎖卡住的規矩他點頭）。
+- 草稿第 8 節加「連鎖卡住與死結」（整節【擬】）：回答只用自己記憶裡的東西。回覆裡講了 socket 的全程與要定的八點，並攤一個岔路：有了 FUSE，訊息也可以是「寫一個檔」（當場收到／拒絕都有），socket 可以晚點當快速通道——等他定。
