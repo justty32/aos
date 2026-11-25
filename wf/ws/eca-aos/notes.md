@@ -678,3 +678,10 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - **daemon 回來後要再派的一批**（同一批檔，不能跟 daemon 那隻同時）：小庫加 `failed`；孫子行程認不出環境變數是不是給自己的（抄 LISTEN_PID）；小庫支援 Maildir 式的 `mailbox/`（要 MKDIR／CREATE／RENAME）；之後 plumber 式的 `msg`、socket。
 - artifact：我這個畫面沒有 Artifact 工具；幫手是一般的 Claude Code、但起的時候只放行了上網與讀寫（dontAsk），要掛 artifact 得重開它並放行那個工具。內容等使用者說。
 - 16:1x 使用者（逐字）：「2.對，就是這些」→ artifact 內容＝proto9 介面的一頁圖文（目錄長相、daemon 與底下的 proc、送訊息、卡住）。我寫了 `proto9/docs/pages/aos-proc.html`（照 Artifact 頁面規矩；四張行內 SVG 圖），抄一份到幫手的夾 `~/.aos/scratch/web-ref-1125/artifact/`。幫手重開過（launch.sh 的放行多了 Skill、Artifact、ArtifactCheck；新 PID 看 `pgrep -f "claude --model sonnet"`），a2a 送 `request2.md` 請它發佈（不改內容、只修真的壞掉的；網址寫 `artifact/url.txt`、失敗寫 `error.txt`、做完建 `DONE2`）。有一支背景等待。**回來後**：把網址給使用者；它若改過檔（changes.txt），把改動抄回 repo 那份。
+- 16:1x artifact 發佈了：https://claude.ai/artifact/CaD7a7bwGkh2WxLTRHfMVN（幫手沒改檔；repo 的原始檔 proto9/docs/pages/aos-proc.html 與發佈的一樣）。要改版：改 repo 那份 → 抄到幫手的夾 → a2a 請它對同一個檔再發佈一次（同一個網址）。幫手還開著。
+
+## 2026-11-25 16:2x：aos 叫收尾（context 38%，上限 35%）
+
+- aos通知中心的 context_wrap 來了：寫交接、不開新工作、回「wrap-up done」，aos 自己送 /compact。HANDOFF 換成 16:2x 這條（接手先讀它）。
+- 手上開著的：寫 daemon 的子 agent（背景；compact 後通知可能收不到，直接去 `proto9/cpp/aos-daemon/` 看、自己驗）；上網幫手 `tmux -L webref`；16:55 push（鐘 push-1655）；使用者還沒看 artifact。
+- compact 後先做：讀 HANDOFF → 看 daemon 那夾 → 16:55 鐘響了就推。
