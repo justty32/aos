@@ -520,3 +520,8 @@
   - 一：Codex 信任紀錄刪 16 筆不存在的測試路徑（/mnt/c 的留著；備份 ~/.codex/config.toml.bak-20261125）；scratch 刪完成五夾、~/.claude/projects 刪 35 個測試夾（判準見 progress workspace-stack-alloc）。Pages 正式發佈卡兩題：LICENSE 哪種、首頁引言算確認了沒（要問使用者）；上線要 push。
   - 派：templates 1125b `01795567726773565625.443579.319147`（agent-fsm /status /usage /exit＋start-eca compact_hook 借的）、1125c `01795567758741926270.447279.322344`（compact 第 5 刀範例 handler）；kb 1125b `01795567730738655785.444116.319544`（名詞表 std）；core 1125c `01795567755565192304.446829.322025`（compact 第 3 刀 clear-tools，排 idle-polling 後）。
   - progress 刪 codex-trust-company、default-stack、prompt-cost-cache、decisions-1118-night、aos-home-browse-1120；改 aos-hook-iface、compact-improve、aos-ns、waiting-1121、workspace-stack-alloc、eca-main-obs-1124、pages-trial-1116。
+- templates 問 /status 等要改 py/aos/apps/agent_fsm（三分後不在範本）→ 我放行 (a)（`01795567812059643760.456317.327676`），install.py 我跑；idle-polling 第 2 刀排在它之後。
+- sol-4 DONE：gather2 沒執行工具，tmpfs 沒量成；相對路徑報告三方案＋一題（整組搬 vs .stack 單獨搬）已唸給使用者。sol-4 已 rm（stack 留）。tmpfs 量測改開 Claude Code 背景子 agent 跑，報告寫 wf/ws/eca-aos/temp/bench-tmpfs-1125.md。
+- kb DONE c31f5ddb1：名詞表 proto8/docs/CONCEPTS/附錄1-名詞/03 加 std（庫）一列。progress aos-ns 的「名詞表」那題了結（下次改 progress 時刪那句）。
+- core BLOCKED→實為交件 6f8fd99a6（cli_print 第一個 result 就收、整群收、取第一個；測試 777＋229＋17 過；haiku 實測 52 秒→約 10 秒）。install.py 沒跑：工作樹有 templates 1125b 未交的 agent_fsm/idle.py、slash.py。我回：等 templates 交了我跑；live_mail 先不改（`01795568437749394211.574159.390245`）。派 kb 1125c 文件跟上（`01795568442624833714.574985.390733`）。**待辦：templates 1125b 交件後跑 install.py。**
+- 使用者定相對路徑（逐字）：「我希望是用具名錨點，一個最重要最根本的錨點就是離自己最近的頭上的那個daemon的stack。沒有的話那你就是root daemon，你是特殊存在。」→ 方案 2，記進 progress relative-paths-1124；施工規劃誰寫、何時寫，問使用者。

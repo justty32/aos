@@ -508,8 +508,8 @@
       "title": "日程：aos 盡量都用相對路徑（樹搬到哪個檔案系統、哪個路徑都撐得住）",
       "status": "open",
       "flow": "",
-      "what": "使用者 11-24（逐字）：「路徑這塊，我其實會希望盡量都用相對路徑，這塊紀錄進日程吧」。現況：daemon 的表（procs_state.json 的 def／stack／ws）、各 agent 的 on_clock.json、notes_path 以外的不少設定記的是絕對路徑（三分的盤點裡活樹 13 列的 def 都是 $AOS_HOME/templates/... 或展開後的絕對路徑）；樹一搬（換機、放 tmpfs、改路徑）就要改表。還沒盤點哪些檔、哪些程式寫絕對路徑。",
-      "next": "三分切完後派 core 只讀盤點：stack 與表裡哪些地方存絕對路徑、相對於什麼（stack 根？daemon 根？AOS_HOME？）才合理，出選項給使用者定。",
+      "what": "使用者 11-24（逐字）：「路徑這塊，我其實會希望盡量都用相對路徑，這塊紀錄進日程吧」。現況：daemon 的表（procs_state.json 的 def／stack／ws）、各 agent 的 on_clock.json、notes_path 以外的不少設定記的是絕對路徑（三分的盤點裡活樹 13 列的 def 都是 $AOS_HOME/templates/... 或展開後的絕對路徑）；樹一搬（換機、放 tmpfs、改路徑）就要改表。還沒盤點哪些檔、哪些程式寫絕對路徑。 11-25 只讀盤點（打雜工 sol-4，報告 wf/ws/eca-aos/temp/eca-aos-sol-4/report-relpaths.md）：daemon 表的 def／stack／ws／exec 存檔已相對 daemon stack、命令列顯示時才展開；notes_path、CLI 的 ws／stack 標記已相對；還存絕對的有父 daemon 狀態、鐘與事件 hook 的內容、eca 抄下的 env／MCP 設定、部分 exec 的 argv／envs。三方案：1 只補剩的、2 具名錨點（AOS_HOME／AOS_DAEMON／AOS_WS）、3 整棵一個根。使用者 11-25（逐字）：「我希望是用具名錨點，一個最重要最根本的錨點就是離自己最近的頭上的那個daemon的stack。沒有的話那你就是root daemon，你是特殊存在。」＝選方案 2；最根本的錨點是「往上最近的 daemon stack」，找不到的就是 root daemon（特殊）。",
+      "next": "方向已定（方案 2，錨點以往上最近的 daemon stack 為根本）。下一步：派人寫施工規劃（錨點有哪些、各自怎麼寫進檔、讀的地方怎麼認、root daemon 怎麼處理、哪些執行期產物算在範圍內、跟 fs-tmpfs-1124 的關係），給使用者看再做；排在 idle-polling 之後或另開 fable 寫，等使用者說。",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
