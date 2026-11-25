@@ -31,6 +31,11 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - 11-24 下午：eca 別用背景 Bash 排定時，寫在 `aos/clock.md` 的 which way 段尾、`aos/eca_reading.md` 的 clock 那行、`aos/troubleshooting.md` 的 Hooks and timers 段。原因照 core 實測（report-1124-bgmail.md 第 7 節）：`claude -p` 等背景任務結束才退出，回答取最後一個 result。
   - **待更新**：如果程式改成讀到第一個 result 就收（報告修法 7／8，eca-aos 在問使用者），這三處都要改。
   - 只寫了預設那條路。`"live_mail": true` 會一直開著 stdin，回答取每個 result；這種情況下信進不進得來沒驗，所以沒寫。互動畫面開著時也沒驗，也沒寫。
+- 11-25 線 `eca-aos-kb-1125`（eca-main-obs-1124 知識庫那半）：五項 11-24 都已寫過。這次只做了三件：
+  - 補 packs.md 的 board_ls `scope: deep`；
+  - 把 llm_kernel.md「template kernels」改成只指主 kernel 範本（llm-team 是 slots 4、沒有 reserved）；
+  - dev-env/03 錯誤表下、daemon-root README 子項 stack 那句後面，各補一段指向知識庫。
+  - 範本的 slots／reserved 數字如果再改，llm_kernel.md 那句要跟著對。
 - 我的信箱回信地址：eca-aos 在 `/home/guanyu/aos-home/.stack/procs/repo-aos/procs/eca-aos/mailbox`（stack 11-24 搬家後）。
 
 # 下次照做

@@ -117,7 +117,7 @@ Pack jsonx: For aos configuration files that use `$ref`/`$env`: jsonx_get, jsonx
 
 # comm
 
-Pack comm: boards, a short public note on your stack that says what you are doing and whom you are waiting for, so others (and the user's overview page) can read it before sending you letters: board_set (post your board: mode here, busy, dnd or away, what you are doing, when you are back), board_clear (take it down), board_wait (add or remove a line of who you are waiting for), board_read (read one board: an agent's, the user's or your own) and board_ls (everyone on your daemon table). In no stock definition; the kits add it (aos/kits.md). These tools have no page of their own yet: each tool's description says how to call it.
+Pack comm: boards, a short public note on your stack that says what you are doing and whom you are waiting for, so others (and the user's overview page) can read it before sending you letters: board_set (post your board: mode here, busy, dnd or away, what you are doing, when you are back), board_clear (take it down), board_wait (add or remove a line of who you are waiting for), board_read (read one board: an agent's, the user's or your own) and board_ls (everyone on your daemon table; `{"scope": "deep"}` also walks the tables below; a person: `aos-comm -d <root stack> board ls --deep`). In no stock definition; the kits add it (aos/kits.md). These tools have no page of their own yet: each tool's description says how to call it.
 
 # index
 
