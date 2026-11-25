@@ -572,14 +572,14 @@
       "since": "2026-11-24"
     },
     "proto9-sky-1125": {
-      "title": "proto9 做減法：daemon 當容器（給底下假的天空）、kernel 接住名字（使用者 11-25 晚，家機；聊想法）",
-      "status": "等使用者",
+      "title": "proto9 做減法：daemon 當容器（給底下假的天空）、kernel 接住名字（使用者 11-25 晚，家機）；小實驗 sky-1125 在做",
+      "status": "open",
       "flow": "",
-      "what": "使用者 11-25 晚（9p-proc-1125 第 30～33 段）已定：攔截用「把名字交給 kernel」；procs/<名>/ 底下不規定，ctl 等歸之後的 agent 界面；界面＝檔案布局＋格式＋在指定條件下存取得到（權限、限時回應），做得到就是那個東西；不提供界面 daemon 也能粗管；要當 kernel 就跟 daemon 登記、kernel 可疊；天空由起它的 proc 決定；PID namespace 開（daemon 的死活使用者保證）。他還在想 daemon 是不是只管權限／帳號切換。家機 main 的建議與實測在 daemon當容器-1125。等他：① 提供與選用分開 ② 只能往下傳自己有的 ③ 天空起來時定好 ④ kernel 之間不繞圈 ⑤ daemon 只管碰 Linux 權力的五樣、其餘歸 kernel ⑥ 先做小實驗、誰做。",
-      "next": "等使用者答；沒說做之前不開工、草稿 01 不動。",
+      "what": "使用者 11-25 晚（9p-proc-1125 第 30～34 段）已定：攔截用「把名字交給 kernel」；procs/<名>/ 底下不規定，ctl 等歸之後的 agent 界面；界面＝檔案布局＋格式＋在指定條件下存取得到；不提供界面 daemon 也能粗管；daemon 只管碰 Linux 權力的五樣（起收行程、組天空、給身分、起動前上鎖、發開關），其餘歸 kernel；kernel 向 daemon 登記（提供）、起的人明寫（選用）、只能往下傳自己有的、天空起來時定好要改明確下指令；PID namespace 開（daemon 的死活使用者保證）；推薦用名字不用 PID；kernel 回答繞圈不限制；依賴鏈軟性檢查、daemon 可選「不准成圈、拒登記」。「可以來做小實驗，隨意做」→ 家機 main 派 opus 子 agent 做 proto9/experiments/sky-1125/（十項），它不 commit。他還在想 daemon 層層疊疊。",
+      "next": "子 agent 回來後 main 重跑 run.sh、查殘留行程與掛載、交件（本地，沒 push 授權），向使用者報結果。",
       "see": [
         "[daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md)",
-        "[9p-proc-1125 第 30～33 段](../proto8/thinking/2026-11/25/9p-proc-1125.md)"
+        "[9p-proc-1125 第 30～34 段](../proto8/thinking/2026-11/25/9p-proc-1125.md)"
       ],
       "since": "2026-11-25"
     }
