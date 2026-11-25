@@ -58,6 +58,9 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
   - 知識庫 `aos/cli/parts/loop.md` 與 `daemon.md`；
   - troubleshooting 加一條「閒著也吃 CPU → idle_cost.py」（5e79d6f0b）。
   - 之後的刀（C++ 的 aos-idle 閘、範本掛上 gate）交件時，這幾處要跟著改。
+- 11-25 線 `eca-aos-kb-1125i`（templates 9178c40793）：`aos/me/compact.md` 的 hooks 那條後面，補了一條指向 compact 範例 handler。
+  - 措辭：eca 那邊寫成「為 eca-claude 寫的、測試只跑 agent-fsm」，沒寫成驗過。
+  - 順手補了 agent-fsm 的 before_compact 也收 `restore`（對過 compact.py 第 43 行）。
 - 我的信箱回信地址：eca-aos 在 `/home/guanyu/aos-home/.stack/procs/repo-aos/procs/eca-aos/mailbox`（stack 11-24 搬家後）。
 
 # 下次照做
