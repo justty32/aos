@@ -303,6 +303,18 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   - 收下了、做的時候失敗：小庫現在記 `done` 加原因；【定】（使用者 11-25）改成另開一種 `failed`，小庫要跟著改。
   - `aos_started_at` 用本地時間帶時差（`2026-11-25T15:48:45+08:00`）。
 
+### 最小的 daemon（11-25，[aos-daemon](../cpp/aos-daemon/README.md)）之後補的
+
+- **「回答只用自己記憶裡的東西」做得出來**：daemon 的 `status`、`procs_status` 只抄自己記著的表；凡是要碰底下 proc 目錄的事（讀它的 `settings`／`status`、寫它的 `ctl`、連讀 `add` 給的那份檔），都交給另起的小行程去做、帶期限、到期就放棄。實測底下一隻被暫停時，讀 daemon 的 `status`、`procs_status`、下 `procs_ctl` 都是幾毫秒；`procs_ctl` 最久鎖 1 秒（對卡住的那隻下 `stop`，放棄後回錯，接著 `kill` 下得進去）。
+- **`kill` 不碰那隻的目錄**：先斷開它的 FUSE 連線（被它拖住的人當場被放開）、再收行程、死掉的掛載用不跟它講話的方式卸。
+- **兩層嵌套通**：`$AOS_ROOT/procs/d1/procs/kid/status` 讀得到，`aos_name` 是 `d1/kid`；上面的 daemon `stop`，兩層的行程與掛載都收乾淨。
+- 它碰到【開】的地方都挑了保守的（【擬】，等使用者看；整張表在它的 README）。最該先看的四條：
+  1. `procs_status` 的 `phase` 用五個值：`starting`（起了、還沒登記）、`running`、`stopping`、`stopped`、`failed`（起動失敗）。
+  2. 掛載點放 `<mount-base>/<名字路把 / 換成 %>`，例 `d1%kid`。
+  3. 外來登記（`register`）的只收 `rm`；`stop`、`start`、`kill` 都拒；誰都能登記任何 PID、不驗身分。
+  4. `add` 只收絕對路徑；檔讀不到時那次寫入照樣成功、錯誤記在回饋裡（回答的線不去讀那個檔）。
+- 沒做：自動重起、`sleep`／`wake`、預設的 persist、底下的 stderr 收進 `reason`。`kill` 一台嵌套的 daemon，它底下的就沒人管（照「自行承擔風險」）。
+
 ## 12. 還沒定的（照我覺得該先談的排）
 
 1. 卡住那一塊剩的細節（多久查一次、期限多長）。

@@ -685,3 +685,13 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - aos通知中心的 context_wrap 來了：寫交接、不開新工作、回「wrap-up done」，aos 自己送 /compact。HANDOFF 換成 16:2x 這條（接手先讀它）。
 - 手上開著的：寫 daemon 的子 agent（背景；compact 後通知可能收不到，直接去 `proto9/cpp/aos-daemon/` 看、自己驗）；上網幫手 `tmux -L webref`；16:55 push（鐘 push-1655）；使用者還沒看 artifact。
 - compact 後先做：讀 HANDOFF → 看 daemon 那夾 → 16:55 鐘響了就推。
+
+## 2026-11-25 16:2x：compact 完，daemon 回來了
+
+- 回了 aos「wrap-up done」，/compact 過了。daemon 那隻的通知收到了（約 20 分鐘）。
+- `proto9/cpp/aos-daemon/`：src 1348 行、tests 三檔。**我清掉兩邊 build 重編（無警告）、`tests/run.py` 57/57、小庫 35/35、`/proc/mounts` 沒有 aosproc、沒有它起的行程**（`pgrep aos-daemon` 看到的 `--enable-logs daemon.json` 那些是 proto8 活樹的，不是它的）。scratch 只剩幾份測試用的 json。
+- 它只改了小庫的 `demo/main.cpp`（沒給參數時讀 `AOS_NAME`、`AOS_MOUNT`）。
+- 它挑的【開】最該給使用者看的四條：phase 五個值；掛載點 `d1%kid`；外來登記的只收 rm、不驗身分；add 只收絕對路徑、檔讀不到那次寫入照樣成功。記在草稿第 11 節末。
+- 沒做：自動重起、sleep／wake、預設 persist、stderr 進 reason。supervisor.cpp 303 行略過門檻。
+- 交件：aos-daemon 整夾、demo/main.cpp、proto9/README、草稿、HANDOFF、這份筆記。
+- 接下來：報使用者；下一批（failed、LISTEN_PID、mailbox/）等他說要不要現在派（鐵律：開新工作先問——這批他 16:0x 已經點過頭「都做、先 Maildir」「failed 好」，所以可以直接派；但 16:50–17:00 不交件，派出去的回來也要等 17:00 後才交）。16:55 push。

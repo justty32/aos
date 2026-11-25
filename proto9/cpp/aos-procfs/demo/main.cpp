@@ -5,6 +5,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <iostream>
@@ -21,12 +22,14 @@ namespace {
 
 namespace pf = aos::procfs;
 
-const char* USAGE = "aos-procfs-demo NAME MOUNTPOINT [--threads N] [--socket] [--persist PATH] | --cleanup PATH [--force]";
+const char* USAGE = "aos-procfs-demo [NAME MOUNTPOINT] [--threads N] [--socket] [--persist PATH] | --cleanup PATH [--force]";
 
 const char* HELP = R"(aos-procfs-demo - A minimal aos proc served over FUSE.
 
 usage: aos-procfs-demo NAME MOUNTPOINT [--threads N] [--socket] [--persist PATH]
        aos-procfs-demo --cleanup PATH [--force]
+
+Without NAME and MOUNTPOINT it uses $AOS_NAME and $AOS_MOUNT (set by aos-daemon).
 
 Mounts MOUNTPOINT, chdirs into it and prints "pid: N" and "AOS_ROOT=/proc/N/cwd".
 Files: status, ctl, settings, attrs, _metainfo.json, links/.
@@ -135,7 +138,11 @@ int main(int argc, char** argv) {
         }
     }
     if (!clean.empty()) return cleanup(clean, force);
-    if (pos.size() != 2) return fail("ArgumentsBad", "need NAME and MOUNTPOINT");
+    // daemon 起它時不給參數，名字路與掛載點走環境變數 AOS_NAME、AOS_MOUNT
+    const char* en = std::getenv("AOS_NAME");
+    const char* em = std::getenv("AOS_MOUNT");
+    if (pos.empty() && en && *en && em && *em) pos = {en, em};
+    if (pos.size() != 2) return fail("ArgumentsBad", "need NAME and MOUNTPOINT (or $AOS_NAME and $AOS_MOUNT)");
     const std::string name = pos[0], mnt = pos[1];
     const long pid = static_cast<long>(getpid());
     const std::string started_at = now_iso();

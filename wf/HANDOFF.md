@@ -36,8 +36,10 @@
 - `proto9/cpp/aos-procfs/`（C++ 小庫，35 條測試過；eca-aos 重編重跑過）。
 - Artifact：<https://claude.ai/artifact/CaD7a7bwGkh2WxLTRHfMVN>（用 `~/.claude-alt` 帳號發佈、預設私人；沒人預覽過，等使用者看了說哪裡要改；原始檔 `proto9/docs/pages/aos-proc.html`）。
 
+**16:2x 補（compact 之後）**：daemon 回來了，`proto9/cpp/aos-daemon/`（57 條測試）。eca-aos 清掉 build 重編（無警告）、兩邊測試重跑全過（57／57、35／35）、沒有殘留，已交件。它挑的保守做法記在草稿第 11 節末與它的 README，等使用者看。下一批（底下那四條）還沒派。
+
 **還在跑**
-- **寫 daemon 的子 agent**（opus，背景，16:0x 派出）：`proto9/cpp/aos-daemon/`，暫存 `~/.aos/scratch/proto9-daemon-1125/`，可小改 aos-procfs。回來後：`make`、跑 `proto9/cpp/aos-daemon/tests/run.py` 與 `proto9/cpp/aos-procfs/tests/run.py`、`grep aosproc /proc/mounts` 查殘留、看 README、交件、報使用者。**compact 之後它的完成通知可能收不到**：直接看那個夾有沒有 README 與 tests，自己驗。
+- （daemon 那隻 16:1x 回來了，見下一行「16:2x 補」。）
 - **上網的幫手**（不在 aos 體系）：`tmux -L webref`，`~/.aos/scratch/web-ref-1125/launch.sh` 起的 Claude Code（`~/.claude-alt`、sonnet、dontAsk，放行上網、讀寫、Skill、Artifact）。送話：用 `proto8/lib` 的 `aos.agentlib.cli_a2a.wire` 包信封，寫 `/run/user/1000/cc-socks/<它的 PID>.sock`（PID：`pgrep -f "claude --model sonnet --permission-mode dontAsk"`）。使用者說先留著。改版 artifact：改 repo 的 html → 抄到 `~/.aos/scratch/web-ref-1125/artifact/aos-proc.html` → 請它對同一個檔再發佈。
 - core：閒置輪詢做到第 3 刀就停（第 4～6 刀不做，已寄信）；1125f（摘要慢一拍＋人先開口不補送前情）；compact 第 3 刀。工作樹裡 `proto8/cpp/aos-idle/` 等改動是它的。kb、templates 空。
 
