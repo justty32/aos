@@ -661,3 +661,5 @@
 - 15:4x 使用者（逐字，thinking 第 15 段）：擔心嵌套 daemon 連鎖卡住（dead lock）；「1.好，可以先用C++做基礎。2.細說」（2＝socket）。
 - 派了第二隻 Claude 子 agent（opus，背景）：C++ 小庫 `proto9/cpp/aos-procfs/`（掛載、回答的線、指令檔的鎖與回饋、demo、測試；順手實測 /sys/fs/fuse/connections/N/abort 能不能放開卡住的讀者、FUSE 目錄裡能不能放 unix socket）。只寫那個夾，暫存 `~/.aos/scratch/proto9-procfs-1125/`，不 commit。**回來後**：自己編一次、跑 tests、查殘留、交件、報使用者。daemon 還沒派（等連鎖卡住的規矩他點頭）。
 - 草稿第 8 節加「連鎖卡住與死結」（整節【擬】）：回答只用自己記憶裡的東西。回覆裡講了 socket 的全程與要定的八點，並攤一個岔路：有了 FUSE，訊息也可以是「寫一個檔」（當場收到／拒絕都有），socket 可以晚點當快速通道——等他定。
+- 15:5x 使用者（逐字，thinking 第 16 段）：「好，總之就是要守規矩，就是要自己承擔風險，就是這樣。socket這塊我覺得OK，這是aos post以外的另一個基礎通訊協定。FUSE寫檔這塊也可以做...第二套基礎通訊協定。」→ 連鎖卡住那節改【定】；草稿第 9 節重寫（三套基礎通訊：寄信、socket、寫檔；socket 八點【定】；寫檔 `msg` 細節與 attrs 的 `aos_msg`／`aos_sock` 是我擬的）。
+- 接下來：小庫回來 → 我編、跑測試、查殘留、交件 → 派 daemon（procs/、procs_ctl、procs_status、收屍卸掛載、查卡住、守「回答只用記憶」）＋小庫加 `msg` 檔 → 之後 socket。16:55 push 照舊。
