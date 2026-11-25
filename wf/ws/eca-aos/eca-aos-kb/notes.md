@@ -43,6 +43,11 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
   - 名詞表只有一份：`docs/CONCEPTS/附錄1-名詞/03-aos-exec到最小實作.md`，加在「標準庫」那列之後；`附錄1-名詞.md` 的分檔目錄也補了詞。知識庫沒有名詞表。
   - std 算 C-74 哪一層照使用者「先留著」，沒寫死。
   - 如果之後 std 搬進 `lib/std/`（03 的第二刀，還沒排），那列的「放哪」要改。
+- 11-25 線 `eca-aos-kb-1125d`（Pages 正式發佈，使用者 11-25「可以動手」「LICENSE用MIT，引言算確認了」）：
+  - 改了什麼：repo 根 docs/ 15 頁拿掉 noindex 與草稿條；子頁的「草稿入口」改成「aos 首頁」；get-started、first-tree 的下一步補了範例、參考的入口；repo 根加上 MIT LICENSE。
+  - 沒 push（上線要 push，eca-aos 會問使用者）。
+  - 工具：剝草稿的腳本、查連結的腳本放在 `~/.aos/scratch/eca-aos-kb-1125d/`（links.py 會查相對連結與錨點）。
+  - 回報了沒改的：首頁頁尾寫「CC BY 4.0（文件）」，但使用者只說 MIT；首頁原始碼裡還有很多「copy:… draft, user unseen」註解。
 - 我的信箱回信地址：eca-aos 在 `/home/guanyu/aos-home/.stack/procs/repo-aos/procs/eca-aos/mailbox`（stack 11-24 搬家後）。
 
 # 下次照做
