@@ -24,6 +24,7 @@ proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc �
 | [cpp/aos-daemon/](cpp/aos-daemon/README.md) | 第二塊：一台最小的 daemon（建在 aos-procfs 上）。自己是一隻 proc，另外擺出 `procs/`、`procs_ctl`（add／rm／stop／start／kill／register）、`procs_status`；收屍、清死掉的掛載、定期查卡住；底下的 proc 卡住時拖不住它（碰底下的事都交給帶期限的小行程）；可以嵌套。64 條測試。還沒有自動重起、sleep／wake |
 | [cpp/aos-exec/](cpp/aos-exec/README.md) | 從 proto8 的 aos-exec 抄進來瘦身的「執行一個資料夾程式」小工具：拿掉 `AOS_STACK` 與 inst 單子，其餘行為照舊，不連 proto8；75 條測試。README 有一張「還能砍的」表，等使用者挑。還沒接上 daemon 的 `add`。用到的 json 標頭在 `cpp/third_party/` |
 | [experiments/fuse-proc-1125/](experiments/fuse-proc-1125/README.md) | FUSE 小實驗（玩具 proc 與玩具 daemon，Python 標準庫）：這台不靠函式庫掛得起來、鎖做得出來；坑在死掉的掛載要有人卸、proc 卡住會拖住讀它的人 |
+| [experiments/sky-1125/](experiments/sky-1125/README.md) | 天空小實驗（玩具 daemon 當 PID namespace 的 1 號，Python 標準庫加 unshare／setpriv，不用 root）：照純文字設定替每隻 proc 從零組天空、表跟 mountinfo 一對一；名字交給 kernel、只能往下傳自己有的、依賴鏈、llm proxy 當唯一出口、跑的時候改、上鎖、一起死、subuid、cgroup 凍結，`python3 run.py` 十項全過；發現同 uid 的 proc 會走 /proc/<PID>/root 看進 daemon 與別人的天空（daemon 自己 non-dumpable 擋得住；兄弟之間要不要每隻加 Landlock，等使用者選） |
 
 ## 跟 proto8 的關係
 

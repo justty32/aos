@@ -1,0 +1,3 @@
+# leader.sky: leader's sky: base plus the daemon's socket, so leader can start procs and ask about kernels.
+include base.sky
+bind -w $DAEMON /srv/daemon

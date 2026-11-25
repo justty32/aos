@@ -12,14 +12,14 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-25 23:0x（家機）——proto9 做減法：daemon 當容器、名字交給 kernel；睡前推一次
+## 2026-11-25 23:0x（家機）——proto9 做減法：daemon 當容器、名字交給 kernel；小實驗十項全過；睡前推了
 
 **寫這條的是家機 repo-aos 樹的 `main`**（Claude Code，模型 Opus 5.5）。細節在 [`wf/ws/main/notes.md`](ws/main/notes.md)「2026-11-25 晚（家機）」那節。上一條是公司 `eca-aos` 的 11-25 17:0x（proto9 小庫、daemon、aos-exec 交件與下一批 1～6），全文在 git 歷史 `3cc5beb2e`；還有效的摘在下面「公司那條還有效的」。
 
 **接手先讀**：這條 → [daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md)（第一～九輪：每輪定了的、實測數據、提案）→ 原話在 [9p-proc-1125](../proto8/thinking/2026-11/25/9p-proc-1125.md) 第 30～39 段 → progress `proto9-sky-1125`。
 
 **授權（11-25 晚當場）**
-- **push 用掉了**：使用者 23:0x「差不多了，我想睡覺了，東西收拾收拾 push吧」→ 推了今晚的 commit 和這條交接；小實驗回來、驗完的那批照同一句再推一次。**之後要推得他再說。**
+- **push 用掉了**：使用者 23:0x「差不多了，我想睡覺了，東西收拾收拾 push吧」→ 推了今晚的 commit 和這條交接；小實驗回來、驗完的那批照同一句又推了一次。**之後要推得他再說。**
 - 小實驗：「可以來做小實驗，隨意做」（第 34 段）。下一批四樣（就緒、事件、按需起 kernel、進天空的工具）他說「看起來都OK，就先這樣吧」（第 37 段），**還沒派**。
 - 子 agent：實驗用 Claude Code 的 Agent 工具派 opus（背景），不 commit，回來 main 重跑、查殘留再交。
 
@@ -37,8 +37,11 @@
 
 **之後再談（不催）**：網路；每個呼叫者一條 socket；daemon當容器 第八輪第 7～11 條（合併目錄、天空表記是誰要的、界面怎麼寫與改版、上千隻的掛載傳播、persists 誰清）；aos proc 界面的內容；agent 界面；daemon 分 uid 給 proc。main 第九輪補的兩點（隔壁 daemon 要真隔開，得有自己的 network namespace、不掛外面的 `/proc`；「重起得了」用 kill -9 再照設定起回來量）他還沒回。
 
-**還在跑**
-- 小實驗 `proto9/experiments/sky-1125/`（十項，Python 標準庫＋unshare／nsenter）：家機 opus 背景在做最後一遍驗證。回來 main 重跑、查殘留、交件（線 `home-proto9-1125`）、推。**origin 上沒有它的 commit，就是家機還沒收完；別在公司重做。**
+**小實驗回來了**（23:0x，已交件、已推）
+- [`proto9/experiments/sky-1125/`](../proto9/experiments/sky-1125/README.md)：玩具 daemon 當 PID namespace 的 1 號（Python 標準庫＋unshare／setpriv，不用 root），十項全過；main 重跑一次也是 10 PASS，跑完沒留下行程、掛載、cgroup、systemd unit。重跑：`cd proto9/experiments/sky-1125 && python3 run.py`。**公司 WSL 沒跑過**（Landlock 版本可能較舊、subuid 與 systemd --user 沒查），README「還沒測的」有寫會怎樣。
+- 主要發現（摘進 daemon當容器-1125 第四輪「結果」）：daemon 是 1 號，同 uid 的 proc 讀 `/proc/1/root` 就看到整台機器，daemon 自己 non-dumpable 一行擋掉；兄弟之間每隻進一個 Landlock domain 就全擋；「只能往下傳自己有的」要拿真實的檔判（symlink 會把 daemon 帶出去）；根要從零組；跑的時候改要用 open_tree＋move_mount；1 號要自己裝 SIGTERM 的處理。
+- **四題等使用者**（README 最後）：每隻 proc 預設進 Landlock 嗎；准不准天空裡的 proc 自己再開 user namespace；選用 kernel 要不要起的一方自己先有；天空裡預設 uid 0 還是各用一個 subuid。
+- 實驗 agent 自己報的兩個錯：跟 main 共用 scratchpad，收尾 `rm -f *.txt` 刪了 main 已用過的 commit 訊息檔（都交過了，沒損失）；用過一次 `pkill -f -x 'sleep 60' -u lorkhan`（規矩卡禁 pkill）。下次派時給它自己的子夾。
 
 **公司那條（17:0x）還有效的**
 - 下一批 1～6（daemon 的 `add` 交給 aos-exec、`aos_obey` 擋冒名、程式裡 `persist`→`persists`、daemon 測試的競態、欄位表、plumber 式 `msg`）都還沒派。**今晚做減法動到其中幾條的前提**（ctl、status 不再是每隻 proc 必有），派之前先跟他確認，別照舊單子做。

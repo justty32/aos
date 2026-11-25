@@ -572,14 +572,15 @@
       "since": "2026-11-24"
     },
     "proto9-sky-1125": {
-      "title": "proto9 做減法：daemon 當容器（給底下假的天空）、kernel 接住名字（使用者 11-25 晚，家機）；小實驗 sky-1125 在做",
+      "title": "proto9 做減法：daemon 當容器（給底下假的天空）、kernel 接住名字（使用者 11-25 晚，家機）；小實驗 sky-1125 十項全過",
       "status": "open",
       "flow": "",
-      "what": "使用者 11-25 晚（9p-proc-1125 第 30～39 段，整理在 daemon當容器-1125 第一～九輪）已定：攔截用「把名字交給 kernel」；procs/<名>/ 底下不規定，ctl 等歸之後的 agent 界面；界面＝檔案布局＋格式＋在指定條件下存取得到；daemon 只管碰 Linux 權力的五樣（起收行程、組天空、給身分、起動前上鎖、發開關），其餘歸 kernel；daemon 起 proc 直接用 bwrap（或 runc）；kernel 登記＝提供、起的人明寫＝選用、只能往下傳自己有的、天空起來時定好（跑的時候改得了，要明確下指令）；PID namespace 開；推薦用名字不用 PID；kernel 回答繞圈不限制，依賴鏈軟性檢查；靜態的夾也算 kernel（表上標 dir／exec／fuse／socket）；就緒、事件、按需起 kernel、進天空的工具照提案；天空是共用的路由，要牆去隔壁 daemon；替別人花的資源各自處理；之後要訂「aos proc 界面」＝能跟著 daemon 一起重起，不符合的也能當 proc、自己承擔；/usr 先不管；網路、每人一條 socket、第八輪 7～11 之後再談。",
-      "next": "小實驗 proto9/experiments/sky-1125（opus 子 agent，十項）回來後 main 重跑、查殘留、交件並報使用者；下一批加就緒、事件、按需起 kernel、進天空的工具。proto9 介面草稿 01 怎麼跟上今晚的方向，等使用者看過實驗再說。",
+      "what": "使用者 11-25 晚（9p-proc-1125 第 30～39 段，整理在 daemon當容器-1125 第一～九輪）已定：攔截用「把名字交給 kernel」；procs/<名>/ 底下不規定，ctl 等歸之後的 agent 界面；界面＝檔案布局＋格式＋在指定條件下存取得到；daemon 只管碰 Linux 權力的五樣（起收行程、組天空、給身分、起動前上鎖、發開關），其餘歸 kernel；daemon 起 proc 直接用 bwrap（或 runc）；kernel 登記＝提供、起的人明寫＝選用、只能往下傳自己有的、天空起來時定好（跑的時候改得了，要明確下指令）；PID namespace 開；推薦用名字不用 PID；kernel 回答繞圈不限制，依賴鏈軟性檢查；靜態的夾也算 kernel（表上標 dir／exec／fuse／socket）；就緒、事件、按需起 kernel、進天空的工具照提案；天空是共用的路由，要牆去隔壁 daemon；替別人花的資源各自處理；之後要訂「aos proc 界面」＝能跟著 daemon 一起重起，不符合的也能當 proc、自己承擔；/usr 先不管；網路、每人一條 socket、第八輪 7～11 之後再談。小實驗 proto9/experiments/sky-1125 十項全過（家機 opus 做，main 重跑 10 PASS、查過沒留下東西，已交件），發現摘進 daemon當容器-1125 第四輪「結果」。",
+      "next": "sky-1125 README 最後四題等使用者（每隻 proc 預設進 Landlock 嗎、准不准天空裡的 proc 自己再開 user namespace、選用 kernel 要不要起的一方自己先有、天空裡預設 uid 0 還是各用一個 subuid）。下一批小實驗（就緒、事件、按需起 kernel、進天空的工具；使用者第 37 段同意）還沒派，等他回來再派、看在哪台跑；派 Claude Code 子 agent 要給它自己的暫存子夾。草稿 01 怎麼跟上今晚的方向，等使用者看過實驗再說。公司 WSL 沒跑過這個實驗。",
       "see": [
         "[daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md)",
-        "[9p-proc-1125 第 30～39 段](../proto8/thinking/2026-11/25/9p-proc-1125.md)"
+        "[9p-proc-1125 第 30～39 段](../proto8/thinking/2026-11/25/9p-proc-1125.md)",
+        "[sky-1125 實驗](../proto9/experiments/sky-1125/README.md)"
       ],
       "since": "2026-11-25"
     }

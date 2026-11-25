@@ -1,0 +1,3 @@
+# perm.sky: perm-kernel's sky: a kernel sky that also uses draw from draw-kernel (a kernel stacked on a kernel).
+include kernel.sky
+mount draw-kernel /usr/bin/draw

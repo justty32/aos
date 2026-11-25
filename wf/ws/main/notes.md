@@ -15,6 +15,7 @@
 - **第八輪（第 38 段）**：靜態的夾算 kernel（定）。他問還有沒想到的：我實測同帳號兄弟讀得到對方 environ、走得進 /proc/<PID>/root，non-dumpable 擋得住，abstract socket 跨天空連得上、新 netns 才斷，自己的 PID ns 只看到 3 支；列十一條（會咬人的：兄弟沒隔開、kernel 怎麼知道誰在叫、替別人花的資源算誰、整片重起是常態；好處：鐵律變天空設定、假天空拿來測；之後談的五條）。第 1 題（路由還是牆）最該先定，記在同一夾「第八輪」。
 - **第九輪（第 39 段）**：天空＝共用的路由，要牆去隔壁 daemon（以後 daemon 也許能把 uid 分給 proc）；每人一條 socket 之後再說；替別人花的資源各自處理；之後訂「aos proc 界面」＝能跟著 daemon 一起重起，不符合的也能當 proc、自己承擔；其餘之後再說。記在同一夾「第九輪」。
 - **收工（23:0x）**：使用者「差不多了，我想睡覺了，東西收拾收拾 push吧」。HANDOFF 整條換成家機這條（公司 17:0x 那條還有效的摘進去，全文在 `3cc5beb2e`）；收進別棵樹的 main 寫的一筆 aos-agent 意見（`wf/advices/feedback/aos-agent.jsonl`，照 11-24 收意見的前例）；寫了 `user-seen.json`（wf/user 自 11-24 我代寫那份之後沒變）；推 origin main。小實驗回來、驗完那批照同一句再推一次；**之後沒有 push 授權**。
+- **小實驗回來（23:0x）**：`proto9/experiments/sky-1125/` 十項全過；我重跑也是 10 PASS，跑前跑後比 cgroup、systemd unit、/tmp、掛載都一樣，沒留下行程。發現摘進 daemon當容器-1125 第四輪「結果」，四題（Landlock、天空裡准不准開 user namespace、選用 kernel 要不要先有、uid 0 還是 subuid）等使用者。proto9/README 那列把「上鎖要加 Landlock」改成「要不要加等使用者選」（第九輪定了天空不是牆）。**教訓**：派 Claude Code 子 agent 時要給它自己的暫存子夾——這隻跟我共用 scratchpad，收尾 `rm -f *.txt` 刪了我用過的 msg 檔；它也用過一次 `pkill -f -x 'sleep 60'`（規矩卡禁 pkill），提示裡要再寫一次。
 
 ## 2026-11-24 晚（家機）
 

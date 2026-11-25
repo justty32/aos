@@ -281,6 +281,15 @@ kernel 做的全是決定：排程（誰醒、誰凍住）、額度（token、CP
 9. 加做（做得到才做）：用 subuid 讓兩隻 proc 各用一個帳號，互相讀不到對方的檔。
 10. 加做（做得到才做）：用 cgroup 凍住、解凍一隻沒提供界面的 proc，示範「粗的手段」。
 
+**結果**（11-25 23:0x 回來，十項全過；main 自己重跑一次也是 10 PASS，跑完沒留下行程、掛載、cgroup、systemd unit）。做法、量到的數字、撞到的坑都在 [sky-1125 README](../../../../proto9/experiments/sky-1125/README.md)。跟前後幾輪接得上的發現：
+
+- daemon 是 1 號，同 uid 的 proc 讀 `/proc/1/root` 就看到整台機器；daemon 自己設 non-dumpable，一行就擋掉。兄弟之間的那幾條（`/proc/<PID>/root`、environ、送訊號、abstract socket，第八輪量到的）每隻 proc 進一個自己的 Landlock domain 就全擋，不用 root。第九輪定了天空不是牆，所以加不加是選項。
+- 「只能往下傳自己有的」要拿真實的檔來判，不能只比路徑：起的一方放一個 symlink，就能把 daemon 帶出去（實測把整個 home 交出去過）。身分、網路、/proc、/dev 也要判。
+- 根要從零組（pivot_root），表才答得出天空裡「沒有什麼」。這樣的天空要在跑的時候改，得用 open_tree＋move_mount；第四輪試過的 `nsenter + mount --bind` 對它不管用（EINVAL）。
+- daemon 當 1 號要自己裝 SIGTERM 的處理，不然只有 SIGKILL 停得掉它。
+
+README 最後列了四題等使用者：每隻 proc 預設進 Landlock 嗎；准不准天空裡的 proc 自己再開 user namespace；選用 kernel 要不要起的一方自己先有；天空裡預設用 uid 0，還是每隻各用一個 subuid。
+
 ## 第五輪（11-25 晚，第 35 段）：跟現有的 container 比
 
 原話在 [9p-proc-1125 第 35 段](9p-proc-1125.md)。以下由家機 main 憑記憶比較，沒有上網查證；要查證可以請上網幫手。家機上有 docker、runc、bwrap 0.13、systemd-nspawn，systemd 使用者 session 有在跑；沒有 podman、crun、pasta、slirp4netns、criu。

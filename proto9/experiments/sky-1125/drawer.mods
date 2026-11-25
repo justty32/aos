@@ -1,0 +1,5 @@
+# drawer.mods: what leader writes when it starts drawer; drawer's sky = leader's own sky plus these changes.
+mount draw-kernel /usr/bin/draw
+mount llm-proxy /srv/llm
+unmount /srv/daemon
+net none

@@ -1,0 +1,14 @@
+# base.sky: the plain sky every toy proc starts from: the system read-only, a private /tmp, its own /self.
+# One line per entry. Sources are paths as the starter sees them; $NAMES are only for the user's own configs.
+tmpfs /
+bind /usr /usr
+bind /etc /etc
+symlink usr/bin /bin
+symlink usr/bin /sbin
+symlink usr/lib /lib
+symlink usr/lib /lib64
+dev /dev
+proc /proc
+tmpfs /tmp
+bind $TOYS /toys
+bind -w $SELF /self

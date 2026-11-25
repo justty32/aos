@@ -1,0 +1,3 @@
+# kernel.sky: a kernel's sky: base plus the daemon's socket (to register on the board and to ask who is calling).
+include base.sky
+bind -w $DAEMON /srv/daemon
