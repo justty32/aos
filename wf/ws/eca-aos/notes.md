@@ -677,3 +677,4 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 16:0x 使用者（逐字，thinking 第 21 段）：寫檔收信兩種都做、先 Maildir、各 proc 自己選；`failed` 好；procs_ctl 的做完照我擬的；幫手「先等等，我還想請你弄個artifact請他掛上去」。草稿已改。
 - **daemon 回來後要再派的一批**（同一批檔，不能跟 daemon 那隻同時）：小庫加 `failed`；孫子行程認不出環境變數是不是給自己的（抄 LISTEN_PID）；小庫支援 Maildir 式的 `mailbox/`（要 MKDIR／CREATE／RENAME）；之後 plumber 式的 `msg`、socket。
 - artifact：我這個畫面沒有 Artifact 工具；幫手是一般的 Claude Code、但起的時候只放行了上網與讀寫（dontAsk），要掛 artifact 得重開它並放行那個工具。內容等使用者說。
+- 16:1x 使用者（逐字）：「2.對，就是這些」→ artifact 內容＝proto9 介面的一頁圖文（目錄長相、daemon 與底下的 proc、送訊息、卡住）。我寫了 `proto9/docs/pages/aos-proc.html`（照 Artifact 頁面規矩；四張行內 SVG 圖），抄一份到幫手的夾 `~/.aos/scratch/web-ref-1125/artifact/`。幫手重開過（launch.sh 的放行多了 Skill、Artifact、ArtifactCheck；新 PID 看 `pgrep -f "claude --model sonnet"`），a2a 送 `request2.md` 請它發佈（不改內容、只修真的壞掉的；網址寫 `artifact/url.txt`、失敗寫 `error.txt`、做完建 `DONE2`）。有一支背景等待。**回來後**：把網址給使用者；它若改過檔（changes.txt），把改動抄回 repo 那份。

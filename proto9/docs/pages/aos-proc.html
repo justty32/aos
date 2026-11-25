@@ -1,0 +1,443 @@
+<!-- aos proc 介面的一頁圖文說明（給 Artifact 發佈用的原始檔）：proc 的目錄長相、怎麼走進去、ctl 的鎖、daemon、卡住、送訊息；內容照 01-aos-proc介面草稿 第 1 版（11-25） -->
+<title>aos proc 介面</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* 版面：一欄文件（約 44rem），圖與表可以用滿欄寬；目錄清單與終端機輸出是這個主題自己的材料，用等寬字排 */
+:root {
+  --bg: #f5f7f9;
+  --surface: #ffffff;
+  --fg: #16212b;
+  --muted: #5a6b79;
+  --line: #d3dce3;
+  --accent: #0a6c88;
+  --accent-soft: #dff0f5;
+  --warn: #a85208;
+  --warn-soft: #fbeedd;
+  --code-bg: #ebf0f4;
+  --font-body: "IBM Plex Sans", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151a; --surface: #161e25; --fg: #e2e9ee; --muted: #93a4b1; --line: #2a3640;
+    --accent: #62c3dd; --accent-soft: #14323d; --warn: #efa75c; --warn-soft: #3a2a17; --code-bg: #1a242c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151a; --surface: #161e25; --fg: #e2e9ee; --muted: #93a4b1; --line: #2a3640;
+  --accent: #62c3dd; --accent-soft: #14323d; --warn: #efa75c; --warn-soft: #3a2a17; --code-bg: #1a242c;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 1rem; line-height: 1.75;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 2.5rem 4rem;
+}
+main { max-width: 44rem; margin: 0 auto; display: flex; flex-direction: column; gap: 2.75rem; }
+section { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; font-weight: 700; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p, ul, ol { margin: 0; }
+ul, ol { padding-left: 1.3rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.lede { font-size: 1.1rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; }
+code, pre, .mono { font-family: var(--font-mono); font-size: 0.9em; }
+code { background: var(--code-bg); padding: 0.08em 0.35em; border-radius: 4px; overflow-wrap: anywhere; }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 0.9rem 1rem; margin: 0; overflow-x: auto; line-height: 1.6; font-size: 0.85rem; }
+pre .dim { color: var(--muted); }
+pre .hl { color: var(--accent); font-weight: 500; }
+pre .bad { color: var(--warn); font-weight: 500; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 500; font-size: 0.82rem; letter-spacing: 0.04em; white-space: nowrap; }
+td:first-child { white-space: nowrap; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+.pair > div { min-width: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.tag { display: inline-block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; padding: 0.05rem 0.45rem; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.tag.open { border-color: var(--warn); color: var(--warn); }
+figure { margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+figure .scroll { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem; }
+figure svg { display: block; width: 100%; min-width: 34rem; height: auto; color: var(--fg); font-family: var(--font-body); }
+figcaption { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+svg .box { fill: var(--surface); stroke: currentColor; stroke-width: 1.2; }
+svg .soft { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.2; }
+svg .warnbox { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 1.4; }
+svg .ln { stroke: currentColor; stroke-width: 1.3; fill: none; }
+svg .lnw { stroke: var(--warn); stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+svg .t { fill: currentColor; font-size: 12.5px; }
+svg .tb { fill: currentColor; font-size: 12.5px; font-weight: 600; }
+svg .tm { fill: currentColor; font-size: 11.5px; font-family: var(--font-mono); }
+svg .ta { fill: var(--accent); font-size: 11.5px; font-family: var(--font-mono); font-weight: 500; }
+svg .tw { fill: var(--warn); font-size: 12px; font-weight: 600; }
+svg .tmu { fill: var(--muted); font-size: 11.5px; }
+svg .ah { fill: currentColor; }
+svg .ahw { fill: var(--warn); }
+.note { border-left: 3px solid var(--accent); padding: 0.1rem 0 0.1rem 0.9rem; color: var(--fg); }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<main>
+
+<header style="display:flex;flex-direction:column;gap:0.9rem">
+  <p class="meta">proto9 · 草稿第 1 版 · 2026-11-25</p>
+  <h1>aos proc 介面</h1>
+  <p class="lede">一個 aos proc 是一個活著的行程，加上它擺出來的一個目錄。要控制它、看它的狀態、找它的東西，都是讀寫那個目錄裡的檔。</p>
+<pre><span class="dim">$</span> ls $AOS_ROOT/procs/repo/procs/agent/
+<span class="hl">ctl</span>  <span class="hl">status</span>  settings  attrs  _metainfo.json  mailbox/  sock  persist
+<span class="dim">$</span> cat $AOS_ROOT/procs/repo/procs/agent/status
+aos_name: repo/agent
+aos_phase: running
+aos_pid: 1502
+<span class="dim">…</span>
+<span class="dim">$</span> echo pause > $AOS_ROOT/procs/repo/procs/agent/ctl</pre>
+  <p>擺得出這個目錄、照這頁的格式回答的，就是 aos proc。是誰寫的、用什麼語言都不管。檔案不在硬碟上：有一支活著的程式在你讀寫的那一刻當場回答（第一步用 FUSE 做）。行程一死，目錄就走不進去了。</p>
+</header>
+
+<section>
+  <h2>目錄裡有什麼</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>名字</th><th>讀寫</th><th>是什麼</th></tr></thead>
+    <tbody>
+      <tr><td><code>ctl</code></td><td>只寫</td><td>控制它。純文字，一行一道指令</td></tr>
+      <tr><td><code>status</code></td><td>只讀</td><td>它現在怎樣。純文字，一行一個「名稱: 值」</td></tr>
+      <tr><td><code>settings</code></td><td>只讀</td><td>它的東西放哪。起來時就定，之後不變</td></tr>
+      <tr><td><code>attrs</code></td><td>只讀</td><td>它是哪一種身體、能不能當場回答、收哪幾種訊息。要用它的人看了自己決定怎麼做</td></tr>
+      <tr><td><code>_metainfo.json</code></td><td>只讀</td><td>它是什麼（定義帶來的那份，json）</td></tr>
+      <tr><td><code>persist</code></td><td>—</td><td>走到它要留下來的東西。身體沒了，這裡還在</td></tr>
+      <tr><td><code>mailbox/</code>、<code>msg</code>、<code>sock</code></td><td>寫</td><td>活著時收訊息的三個口，提供哪幾個自己選（見「送訊息」）</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>daemon 也是一隻 aos proc，另外多三樣：</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>名字</th><th>讀寫</th><th>是什麼</th></tr></thead>
+    <tbody>
+      <tr><td><code>procs/</code></td><td>讀</td><td>底下每隻 proc 一項，走進去就是它的目錄。只有活著而且會回答的走得進去。別名 <code>proc/</code></td></tr>
+      <tr><td><code>procs_ctl</code></td><td>只寫</td><td>管底下的 proc：加、拿掉、起、停、強制收</td></tr>
+      <tr><td><code>procs_status</code></td><td>只讀</td><td>底下每隻 proc 的狀態。死了、停著、卡住的也在這張表上</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><code>aos_</code> 開頭的名稱是 aos 標準的，意思照這份介面。其餘的名稱 proc 自己用，愛叫什麼叫什麼。不認得的行跳過。</p>
+</section>
+
+<section>
+  <h2>怎麼走進去</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 760 300" role="img" aria-label="從根 daemon 的 PID 進去，沿 procs 一層一層走到任何一隻 proc 的目錄">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker>
+      </defs>
+      <rect class="soft" x="20" y="16" width="230" height="46" rx="5"/>
+      <text class="tb" x="34" y="35">樹外的殼</text>
+      <text class="ta" x="34" y="52">AOS_ROOT=/proc/1221/cwd</text>
+      <line class="ln" x1="125" y1="62" x2="125" y2="108" marker-end="url(#a1)"/>
+      <text class="tmu" x="134" y="82">核心給的連結，指到根站的資料夾</text>
+
+      <rect class="box" x="20" y="110" width="210" height="130" rx="5"/>
+      <text class="tb" x="34" y="132">根 daemon</text>
+      <text class="tmu" x="34" y="149">PID 1221</text>
+      <text class="tm" x="34" y="176">ctl  status</text>
+      <text class="tm" x="34" y="194">settings  attrs</text>
+      <text class="ta" x="34" y="220">procs/  procs_ctl</text>
+
+      <rect class="box" x="275" y="110" width="210" height="130" rx="5"/>
+      <text class="tb" x="289" y="132">daemon「repo」</text>
+      <text class="tmu" x="289" y="149">PID 1340</text>
+      <text class="tm" x="289" y="176">ctl  status</text>
+      <text class="tm" x="289" y="194">settings  attrs</text>
+      <text class="ta" x="289" y="220">procs/  procs_ctl</text>
+
+      <rect class="box" x="530" y="110" width="210" height="130" rx="5"/>
+      <text class="tb" x="544" y="132">proc「agent」</text>
+      <text class="tmu" x="544" y="149">PID 1502</text>
+      <text class="tm" x="544" y="176">ctl  status</text>
+      <text class="tm" x="544" y="194">settings  attrs</text>
+      <text class="tm" x="544" y="220">mailbox/  sock</text>
+
+      <line class="ln" x1="230" y1="175" x2="273" y2="175" marker-end="url(#a1)"/>
+      <text class="ta" x="252" y="103" text-anchor="middle">procs/repo</text>
+      <line class="ln" x1="485" y1="175" x2="528" y2="175" marker-end="url(#a1)"/>
+      <text class="ta" x="507" y="103" text-anchor="middle">procs/agent</text>
+
+      <text class="tm" x="20" y="278">$AOS_ROOT/procs/repo/procs/agent/status</text>
+      <text class="tmu" x="20" y="295">名字路 repo/agent 就是這隻 proc 的身分。PID 每次重起都會變，名字不變。</text>
+    </svg>
+    </div>
+    <figcaption>入口只有一個：根 daemon 的 PID。每隻 proc 都站在自己的目錄裡，所以 Linux 本來就有的 <code>/proc/&lt;PID&gt;/cwd</code> 走得進去，系統不用加任何東西。</figcaption>
+  </figure>
+  <ul>
+    <li><code>AOS_ROOT</code> 由人維護：根重開後提示自己的 PID，人自己 export。樹裡的 proc 由 daemon 起，daemon 直接交給它。</li>
+    <li>別看錯層：Linux 自己的 <code>/proc/1221/status</code> 講的是那支 Linux 行程；aos 的在再下一層 <code>/proc/1221/cwd/status</code>。</li>
+    <li>沙箱裡走不進來是本來就要的，有需要再把那個目錄開給它。</li>
+  </ul>
+</section>
+
+<section>
+  <h2>ctl：一次一個人，從寫進去到做完都鎖住</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 760 240" role="img" aria-label="甲寫 pause 之後 ctl 鎖住到做完，這段時間乙寫 resume 當場失敗，做完之後再寫才收下">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker>
+        <marker id="a2w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ahw"/></marker>
+      </defs>
+      <text class="tb" x="20" y="44">甲</text>
+      <text class="tb" x="20" y="124">proc</text>
+      <text class="tb" x="20" y="204">乙</text>
+      <line class="ln" x1="80" y1="40" x2="740" y2="40" stroke-dasharray="2 5"/>
+      <line class="ln" x1="80" y1="200" x2="740" y2="200" stroke-dasharray="2 5"/>
+
+      <rect class="soft" x="150" y="104" width="340" height="32" rx="4"/>
+      <text class="t" x="164" y="125">在做 pause，鎖著</text>
+      <text class="ta" x="300" y="125">aos_ctl_state: doing</text>
+      <rect class="box" x="490" y="104" width="250" height="32" rx="4"/>
+      <text class="t" x="504" y="125">做完，鎖放開</text>
+      <text class="tm" x="604" y="125">done</text>
+
+      <line class="ln" x1="150" y1="44" x2="150" y2="102" marker-end="url(#a2)"/>
+      <text class="t" x="160" y="68">寫 pause</text>
+      <text class="tmu" x="160" y="86">寫回來＝收到，不等做完</text>
+
+      <line class="lnw" x1="320" y1="196" x2="320" y2="140" marker-end="url(#a2w)"/>
+      <text class="tw" x="330" y="166">寫 resume：當場失敗（忙）</text>
+      <text class="tmu" x="330" y="184">回饋不被動到</text>
+
+      <line class="ln" x1="560" y1="196" x2="560" y2="138" marker-end="url(#a2)"/>
+      <text class="t" x="570" y="166">再寫 resume：收到</text>
+    </svg>
+    </div>
+    <figcaption>鎖是 proc 自己拿著的，不是排隊：搶不到的人當場知道，自己決定要不要再試。所以這把鎖不會讓人互相等到死。</figcaption>
+  </figure>
+  <div class="pair">
+    <div>
+      <h3>基礎的三個字</h3>
+      <p><code>stop</code> 做完手上這一步就結束；<code>pause</code> 停住，行程還在；<code>resume</code> 繼續。字表不訂死，其餘各 proc 想收什麼收什麼。</p>
+      <p>不認得的字：那次寫入失敗，原因記在回饋裡。一次寫入只收一道。</p>
+    </div>
+    <div>
+      <h3>回饋在 status 裡</h3>
+<pre>aos_ctl_cmd: pause
+aos_ctl_state: done
+aos_ctl_error: -
+aos_ctl_count: 3</pre>
+      <p class="meta"><code>state</code> 有四種：<code>doing</code>、<code>done</code>、<code>failed</code>（收下了但沒做成）、<code>rejected</code>（不收）。講的一定是最後收下的那一道。</p>
+    </div>
+  </div>
+  <p>鎖著的時候要強制收，不寫它自己的 <code>ctl</code>，寫它 daemon 的 <code>procs_ctl</code>。</p>
+</section>
+
+<section>
+  <h2>status、settings、attrs</h2>
+  <p>三個檔照「誰決定、什麼時候會變」分：<code>status</code> 一直變；<code>settings</code> 起來時定；<code>attrs</code> 是這種身體天生的。</p>
+  <div class="pair">
+    <div>
+      <h3>status</h3>
+<pre>aos_name: repo/agent
+aos_phase: running
+aos_pid: 1502
+aos_started_at: 2026-11-25T15:48:45+08:00
+aos_ctl_cmd: -
+aos_ctl_state: -
+aos_ctl_error: -
+aos_ctl_count: 0
+<span class="dim">stage: think</span></pre>
+      <p class="meta">最後一行不帶 <code>aos_</code>，是這隻 proc 自己加的。</p>
+    </div>
+    <div>
+      <h3>settings</h3>
+<pre>aos_persist: /tmp/aos/persist/repo/agent
+aos_mailbox: /tmp/aos/persist/repo/agent/mailbox</pre>
+      <h3>attrs</h3>
+<pre>aos_kind: fuse
+aos_live: yes
+aos_mailbox: yes
+aos_sock: yes</pre>
+      <p class="meta"><code>aos_live: no</code> 的 proc 沒人當場接：寫 ctl 回來不代表收到、鎖也擋不住，要用的人自己小心。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>daemon：Linux 與 aos 之間的橋</h2>
+  <p>起行程、收屍、送訊號這些 Linux 的事，只有 daemon 做。它記著底下每一隻的樣子，所以 proc 死了以後，還答得出來的只有它。</p>
+  <div class="pair">
+    <div>
+      <h3>procs_ctl 的字</h3>
+      <div class="scroll">
+      <table>
+        <tbody>
+          <tr><td><code>add 名字 路徑</code></td><td>加一隻並起它</td></tr>
+          <tr><td><code>rm 名字</code></td><td>收掉、從表上拿掉</td></tr>
+          <tr><td><code>stop</code>／<code>start</code></td><td>叫它好好收尾後留在表上／再起</td></tr>
+          <tr><td><code>kill 名字</code></td><td>現在就收。卡住、鎖著時用</td></tr>
+          <tr><td><code>register 名字 PID</code></td><td>只登記、不起：已經在跑的行程來報到</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="meta">這裡的「做完」是 daemon 這邊的動作做完，不等那隻 proc 真的結束；結果看 <code>procs_status</code>。</p>
+    </div>
+    <div>
+      <h3>procs_status</h3>
+<pre>agent.phase: running
+agent.want: up
+agent.pid: 1502
+agent.stuck: no
+agent.mailbox: /tmp/aos/persist/repo/agent/mailbox
+arena.phase: stopped
+arena.want: up
+arena.code: 1
+arena.reason: exited within 3s of start</pre>
+      <p class="meta"><code>want</code> 是人要它怎樣，<code>phase</code> 是它實際怎樣。</p>
+    </div>
+  </div>
+  <ul>
+    <li>「登記」＝daemon 讀得到這隻 proc 的 <code>settings</code>。期限內讀不到就收掉，記成起動失敗。</li>
+    <li>proc 死掉後留下的掛載，daemon 收屍時順手清掉。</li>
+    <li>daemon 自己掛了，底下還活著的它不管，自行承擔風險。</li>
+  </ul>
+</section>
+
+<section>
+  <h2>卡住，以及不讓它傳染</h2>
+  <p>「卡住」＝行程還在，但不回答了，讀它的 <code>status</code> 不會回來。讀的人會跟著卡住。被 Linux 暫停的行程也算。忙不算卡住：手上一直在做事、但讀得到 <code>status</code> 的是正常的。</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 760 290" role="img" aria-label="daemon 帶期限檢查底下的 proc，卡住的那隻從 procs 拿掉，別人改問 daemon">
+      <defs>
+        <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker>
+      </defs>
+      <rect class="soft" x="20" y="20" width="190" height="62" rx="5"/>
+      <text class="tb" x="34" y="44">想看 kid2 的人</text>
+      <text class="tmu" x="34" y="64">不直接去讀它</text>
+      <line class="ln" x1="210" y1="51" x2="298" y2="51" marker-end="url(#a3)"/>
+      <text class="ta" x="254" y="42" text-anchor="middle">讀</text>
+
+      <rect class="box" x="300" y="20" width="220" height="62" rx="5"/>
+      <text class="tb" x="314" y="44">daemon</text>
+      <text class="tm" x="314" y="64">procs_status</text>
+      <text class="ta" x="534" y="44">kid2.stuck: 16:02:11</text>
+      <text class="tmu" x="534" y="64">從自己記的表回答，不會卡</text>
+
+      <rect class="box" x="40" y="200" width="190" height="62" rx="5"/>
+      <text class="tb" x="54" y="224">kid1</text>
+      <text class="tmu" x="54" y="244">會回答</text>
+      <rect class="warnbox" x="285" y="200" width="190" height="62" rx="5"/>
+      <text class="tb" x="299" y="224">kid2</text>
+      <text class="tw" x="299" y="244">不回答了</text>
+      <rect class="box" x="530" y="200" width="190" height="62" rx="5"/>
+      <text class="tb" x="544" y="224">kid3</text>
+      <text class="tmu" x="544" y="244">會回答</text>
+
+      <line class="ln" x1="350" y1="82" x2="150" y2="198" marker-end="url(#a3)"/>
+      <text class="ta" x="150" y="140">procs/kid1</text>
+      <line class="lnw" x1="400" y1="82" x2="385" y2="198"/>
+      <text class="tw" x="402" y="134">試讀，期限內沒回</text>
+      <text class="tw" x="402" y="152">procs/kid2 拿掉</text>
+      <line class="ln" x1="470" y1="82" x2="610" y2="198" marker-end="url(#a3)"/>
+      <text class="ta" x="600" y="140">procs/kid3</text>
+    </svg>
+    </div>
+    <figcaption>daemon 定期帶期限檢查底下的 proc。查到卡住只記、不收，並把它從 <code>procs/</code> 拿掉，免得後來的人再踩進去。之後又讀得到了就恢復。要收，寫 <code>procs_ctl</code> 的 <code>kill</code>。</figcaption>
+  </figure>
+  <p class="note"><strong>一條規矩斷掉連鎖：回答只用自己記憶裡的東西。</strong>每隻 proc 至少留一條線專門回答別人，這條線上不做久的事、不去讀寫任何別的 proc。要問別人，放在做事的線上問，而且帶期限。</p>
+  <p>守這條規矩的上層，不會被壞掉的下層拖住。一台 daemon 卡住，代價是它底下那一整棵從名字路走不到了：底下的 proc 沒卡住、照樣在跑，只是被隔開。不守規矩的，自己承擔風險。</p>
+</section>
+
+<section>
+  <h2>送訊息</h2>
+  <p>基礎的走法分兩類：<strong>寫檔</strong>（普通檔案、FUSE 擺出來的檔）和<strong>串流</strong>（unix socket）。寄信（aos post）是建在寫檔之上的。不管走哪條，送的都是同一封信（一份 json：寄件人、標題、內文、回信位址）。</p>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 760 300" role="img" aria-label="對方活著時有三個口可以送：信箱資料夾、msg 檔、socket；對方不在時問它的 daemon 信箱在哪，把信放進它留在硬碟上的信箱">
+      <defs>
+        <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker>
+      </defs>
+      <rect class="soft" x="20" y="36" width="130" height="224" rx="5"/>
+      <text class="tb" x="34" y="60">寄的人</text>
+
+      <rect class="box" x="440" y="16" width="300" height="150" rx="5"/>
+      <text class="tb" x="454" y="38">對方活著：它的目錄</text>
+      <rect class="soft" x="454" y="50" width="110" height="26" rx="4"/>
+      <text class="ta" x="466" y="67">mailbox/</text>
+      <rect class="soft" x="454" y="88" width="110" height="26" rx="4"/>
+      <text class="ta" x="466" y="105">msg</text>
+      <rect class="soft" x="454" y="126" width="110" height="26" rx="4"/>
+      <text class="ta" x="466" y="143">sock</text>
+      <text class="tmu" x="580" y="67">寫檔（照 Maildir）</text>
+      <text class="tmu" x="580" y="105">寫檔（寫一則）</text>
+      <text class="tmu" x="580" y="143">串流</text>
+
+      <line class="ln" x1="150" y1="63" x2="452" y2="63" marker-end="url(#a4)"/>
+      <text class="t" x="296" y="55" text-anchor="middle">把信放進資料夾</text>
+      <line class="ln" x1="150" y1="101" x2="452" y2="101" marker-end="url(#a4)"/>
+      <text class="t" x="296" y="93" text-anchor="middle">寫進去＝送一則，被拒＝寫入失敗</text>
+      <line class="ln" x1="150" y1="139" x2="452" y2="139" marker-end="url(#a4)"/>
+      <text class="t" x="296" y="131" text-anchor="middle">一行一則，對方回一行回條</text>
+
+      <rect class="box" x="230" y="210" width="170" height="60" rx="5"/>
+      <text class="tb" x="244" y="233">對方的 daemon</text>
+      <text class="tm" x="244" y="253">procs_status</text>
+      <rect class="box" x="470" y="210" width="270" height="60" rx="5"/>
+      <text class="tb" x="484" y="233">對方留在硬碟上的信箱</text>
+      <text class="tmu" x="484" y="253">在它的 persist 裡，它不在也收得下</text>
+      <line class="ln" x1="150" y1="240" x2="228" y2="240" marker-end="url(#a4)"/>
+      <text class="t" x="160" y="200">對方不在：</text>
+      <text class="t" x="160" y="228">① 問</text>
+      <line class="ln" x1="400" y1="240" x2="468" y2="240" marker-end="url(#a4)"/>
+      <text class="t" x="412" y="228">② 放信</text>
+    </svg>
+    </div>
+    <figcaption>對方活著，寄的人直接送到它的目錄，當場知道收到沒有。對方掛了、睡了、卡住，就讀它 daemon 的 <code>procs_status</code> 找到信箱位置，照同一套寄信的做法把信放進去。</figcaption>
+  </figure>
+  <ul>
+    <li>一隻 proc 提供哪幾個口自己選，寫在 <code>attrs</code>。</li>
+    <li>socket 上送來的算直接進對話的話，還是信，proc 自己決定，預設是進對話。</li>
+    <li>socket 的回條意思是「收到」，跟 ctl 同一級。連不上、對方沒先開口、期限內沒回條，就改走寄信，用同一個信名，收的人照信名擋重複。</li>
+    <li>問信箱在哪的時候要不要順手叫醒對方，是 daemon 自己的可選設定。</li>
+  </ul>
+</section>
+
+<section>
+  <h2>留下來的東西</h2>
+  <p>身體是活的：行程在，目錄才在。要留的東西各自處理，推薦的位置是 <code>persist</code>，在哪以 proc 自己在 <code>settings</code> 說的為準；daemon 可以給預設位置。</p>
+  <p>遠期目標是把根的目錄整個複製走，就能把一切搬走。為了這個，現在先守兩條：每隻 proc 要留的東西從它自己的目錄走得到；留下來的檔裡指別人用名字路，不用絕對路徑、不用 PID。</p>
+</section>
+
+<section>
+  <h2>做到哪了</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>東西</th><th>狀態</th></tr></thead>
+    <tbody>
+      <tr><td>介面草稿</td><td>第 1 版。這頁寫的大多已經定了，沒定的列在下面</td></tr>
+      <tr><td>C++ 小庫 aos-procfs</td><td>做好了：掛出目錄、<code>status</code>、<code>ctl</code> 的鎖與回饋、目錄裡的 socket。35 條測試過。讀一次 <code>status</code> 約 0.045 毫秒，一隻 proc 約 4 MB</td></tr>
+      <tr><td>最小的 daemon</td><td>正在寫</td></tr>
+      <tr><td>活著時收信、agent 的身體</td><td>還沒開始</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>還沒定的 <span class="tag open">待談</span></h3>
+  <ul>
+    <li>報 token 用量的檔叫什麼、報哪些數字。</li>
+    <li><code>persist</code> 在目錄裡怎麼擺；proc 死了以後別人怎麼走到它的 persist。</li>
+    <li>只登記、不起的行程：誰可以登記誰，daemon 對它有多少權力。</li>
+    <li>換了 Linux 帳號的 proc 怎麼進樹。</li>
+    <li>每個純文字檔的 json 版（<code>status.json</code>…）之後才做。</li>
+  </ul>
+  <h3>抄了誰</h3>
+  <p>沒有找到一模一樣的現成系統，最像的是 Plan 9 的 <code>/proc</code>（那邊由系統核心統一回答，這裡是每隻 proc 自己回答）。零件各有出處：<code>ctl</code> 與 <code>status</code> 的想法來自 Plan 9；信箱是 Maildir；寫一個檔就送出訊息是 Plan 9 的 plumber；socket 上一行一則照 JSON Lines；交給孩子的環境變數怎麼防誤認照 systemd；查卡住與放開卡住的人用的是 Linux 給 FUSE 的開關。</p>
+</section>
+
+</main>
