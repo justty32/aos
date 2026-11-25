@@ -528,3 +528,21 @@
 - kb DONE b874277cd：clock.md、troubleshooting、eca_reading.md、cli/eca.md 四處跟上 -p 第一個 result 就收（live_mail 分開寫）。eca-p-first-result-1124 只剩 install.py（等 templates 1125b）。
 - 使用者對相對路徑規劃（逐字）：「先不寫。因為整個aos體系可能會有大改動。就是以昨天講的那些為基礎，現有的aos-loop/daemon等實作都會變成普通實作，我們會規劃一套基於p9介面的aos proc介面，能支援這套的就是aos proc，這套介面昨天是說都用json。不過我可能會稍微改一下，改成部分用json」→ relative-paths 暫停、proc-interface-spec 記原話；下午跟 aos-goals 一起談。
 - tmpfs 量測交了（wf/ws/eca-aos/temp/bench-tmpfs-1125.md）：省的是 fsync 每次約 10 ms；agent 寄信整條 1.25～1.4 倍；CPU 在起行程。記進 fs-tmpfs-1124。
+- 使用者（逐字）：「照做，閒置輪詢繼續。」→ aos 可能大改也不影響 idle-polling，core 照刀序做。
+- 使用者（逐字）：「LICENSE用MIT，引言算確認了」→ 派 kb 1125d Pages 正式發佈（拿 noindex／草稿條、MIT LICENSE〔justty32, 2026〕、補 examples／reference 入口），不 push；上線要問使用者 push。
+- 使用者（逐字）：「今天四點五十五push」→ 鐘 push-1655（2026-11-25 16:55，寄進自己 queue）；只這一次；推前看工作樹乾淨、沒人在交件。
+- kb DONE f3254c577（Pages 15 頁拿 noindex／草稿條、MIT LICENSE、補範例／參考入口、116 連結全對；沒 push）。問使用者：首頁頁尾「MIT（程式）、CC BY 4.0（文件）」留不留；首頁原始碼 copy 註解要不要清。
+- 使用者（逐字）：「b。清掉」→ 文件另授 CC BY 4.0（只 docs/），首頁 copy 註解清掉；派 kb 1125e，16:55 前交。
+- kb DONE 587fa9c3b（LICENSE-docs CC BY 4.0 只 docs/、README 加授權節、LICENSE 保持標準 MIT、首頁 58 個 copy 註解清）。派 1125f：子頁 copy 註解與 user 時間記號也清。
+- kb DONE aad6a2054（子頁 19 個 copy 註解清、user 時間記號拿掉；116 連結通）。問使用者：首頁圖 1 右上虛線那層「agent｜kernel 還能再分一次」（fable 加的，原標 user to confirm）留不留。
+- 使用者：圖 1 嵌套層「留著」。Pages 這批（f3254c577、587fa9c3b、aad6a2054）等 16:55 push。
+- templates DONE 0b53cb6315（start-eca 借 compact_hook）、d64aec3c06（/status /usage /exit，/exit＝stop；紀錄 thinking/2026-11/25/api-agent-slash-1125.md）。install.py 我沒跑：工作樹有 core 第 0／1 刀未交（cpp、install.py）→ 請 core 交件時那次 install 一併裝（1125d，也修 test_cli_settings glob）；kb 1125g 補知識庫＋daemon-root 抄本規矩。
+- kb DONE 10a3456ec（me/compact.md 新節 /status /usage /exit、me.md、definition.md 補 slash.py；抄本規矩記進 kb 筆記）。templates 1125c 開工（範例 handler 放 templates/docs/compact-examples/），index_gen_desc.json 那行我補在工作樹、它交件併。
+- core DONE：install.py（第十二次）裝進 6f8fd99a6、d64aec3c0、idle-polling 第 0 刀 5e79d6f0b（.pyc，起動 CPU 約減半；常備量法 py/scripts/idle_cost.py；基準 aos-loop 4.70 核）、第 1 刀 c2eb8f3fe（aos-loop／daemon 認 gate，沒寫 gate 行為不變）。活樹 lib 有 slash.py、cli_print 新版（我驗過）。等 core 第 1 刀那封說明，再決定第 2 刀。progress eca-p-first-result-1124 可刪。
+- core 第 0／1 刀說明：.pyc 每拍省一半但閒置總核數沒降（一拍短→拍更勤，4.70→4.86 核）；省要等第 3 刀掛閘。我定閘壞＝照跑（第 4 題照推薦），派第 2、3 刀（1125e，第 3 刀掛範本前先回 PROGRESS 等我一句）；kb 1125h 補 NORMS/04 gate 條文＋idle_cost.py 一句。
+- kb DONE 9c806049f（NORMS/04 加閘一段、知識庫 loop.md／daemon.md／troubleshooting idle_cost 一條）。
+- core DONE 3cf9471df（test_cli_settings glob 改 templates/**/cli.json，加至少 4 份斷言）；接第 2 刀。
+- templates DONE 9178c40793（compact 範例 handler 三支＋README、測試 5 條；index_gen_desc 那行併入）。今天 templates 三封全交、手上空。派 kb 1125i 指向範例。compact-improve 只剩 core 第 3 刀 clear-tools。
+- kb DONE 49d78e025（me/compact.md 加範例 handler 一條、補 before_compact 也收 restore；eca 兩支 restore 一起掛只有排後面那支算數——eca compact_hook 後蓋前，記一下，之後要不要讓 eca 也串接再說）。
+- 10:4x 使用者（逐字）：「那你這邊整理一下，我compact。compact後來聊9p proc。」→ HANDOFF 換成 11-25 這條；progress 刪 eca-p-first-result-1124，改 idle-polling、compact-improve、aos-ns、waiting-1121、pages-trial-1116。
+- **compact 後**：讀 HANDOFF → 聊 9P proc（聽、整理、記 thinking，不派工）；core 第 3 刀 PROGRESS 來時看影響再放行；16:55 鐘 push-1655 響了就推（先看 claims）。

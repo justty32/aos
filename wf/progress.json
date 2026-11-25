@@ -131,10 +131,10 @@
     },
     "pages-trial-1116": {
       "title": "GitHub Pages 試上線版的剩項（11-16 晚換新頁）",
-      "status": "等使用者",
+      "status": "open",
       "flow": "",
       "what": "使用者給桌面「aos · 新時代的軟體技術棧.html」（11-14 另存網頁），首頁＋docs/zh 14 個子頁上線，試上線版（使用者「先不要用正式版，不要讓搜索引擎收錄」：每頁 noindex、草稿條保留；9211e9c58、69dd79ea2、d5f47c890）。正式發佈時要做：拿掉 noindex 與草稿條、首頁原始碼註解「quotes not yet confirmed」、子頁「草稿入口」字樣、zh/examples 與 zh/reference 沒有入口、repo 無 LICENSE（small-questions 原本的「Pages 正式發佈：拿 noindex、補 LICENSE」11-18 晚併進這條；11-18 查 `docs/index.html` 等仍有 noindex、repo 根沒有 LICENSE）；其他段互動只看了 03。另：使用者放的 proto8/templates/tests/kits/_index.json 一直沒進 git（commit-request 當生成物不收、生成器又不產它）。家機裸開 Claude Code 掛了 aos MCP（local scope，~/.cache/aos-mcp-repo/，12 支唯讀工具）",
-      "next": "使用者 11-25 早（逐字）「一、可以，都可以動手」（第 3 項正式發佈）。動手前要使用者答兩件：LICENSE 用哪一種；首頁引言（原始碼註解 quotes not yet confirmed）算確認了沒。發佈要 push 才上線。",
+      "next": "使用者 11-25「LICENSE用MIT，引言算確認了」「b。清掉」「留著」：kb 交 f3254c577（拿 noindex／草稿條、補範例／參考入口、MIT LICENSE）、587fa9c3b（LICENSE-docs CC BY 4.0 只 docs/、README 授權節、首頁 copy 註解清）、aad6a2054（子頁 copy 註解與 user 時間記號清）；圖 1 嵌套層留著。剩 16:55 push（使用者授權「今天四點五十五push」，鐘 push-1655）——推了就上線，上線後確認 Pages 頁面可開、刪這條。",
       "see": [
         "[首頁](../docs/index.html)"
       ],
@@ -207,7 +207,7 @@
       "status": "open",
       "flow": "",
       "what": "第一刀做完（線 aos-ns-cut1-1119，11-19）：agent.py 有庫 std（std.pack／std.tool／std.fsm／std.hooks）與 defs.lib(名, 根)；包在編譯時展開成一支支工具寫進 tools.json，別的庫工具帶 庫名_、std 短名，展開後同名又不同、讀不到庫根都報 SpecBad；只改 agent_spec 與骨架、執行期一行沒動、沒搬檔。C-74／C-87 加註已做（線 aos-c74-c87-1119）。11-19 下午補裁：第 6 題明寫路徑（「先明寫，以後有需要再去弄-I。」，-I 不做、不留鉤子）；第 7 題兩種連結都有、做成編譯選項、預設靜態（「或者說，用選項吧，gcc那樣」「預設靜態 (Recommended)」），線 aos-defs-rename2-1119 做完：--compile [--static|--dynamic]、std.pack(名, link=)；要改名的包與 defs.load 的 TOOLS 只能靜態（整支 --dynamic 時 warning、明寫 link=dynamic 時 SpecBad）。",
-      "next": "使用者 11-25 早（逐字）「15.要」：名詞表加一列 std（庫）派 kb（信 01795567730738655785.444116.319544）；std 算 C-74 哪一層仍先留著。之後的刀（std 搬 lib/std 先不搬、agent_def new 收 std/名、defs check 查同名包）沒排。",
+      "next": "名詞表 std（庫）一列 11-25 已加（kb c31f5ddb1）。std 算 C-74 哪一層仍先留著。之後的刀（std 搬 lib/std 先不搬、agent_def new 收 std/名、defs check 查同名包）沒排。",
       "see": [
         "[第一刀紀錄](../proto8/thinking/2026-11/19/aos-ns-第一刀.md)",
         "[07-使用者裁定](../proto8/thinking/2026-11/19/aos-ns-1119/07-使用者裁定.md)",
@@ -304,7 +304,7 @@
       "status": "open",
       "flow": "",
       "what": "第 1 刀（先清舊工具輸出再摘要）、第 4 刀（before_compact／after_compact，調補換都開，規矩在 templates/agent-fsm/compact.py、範本不掛）已交；第 2 刀因照叫不做。11-22 的 compact_reload.sh 指向 notes_path（e5903dc7a）與 eca-claude compact_hook 壓完先讀自己筆記（774fec243）是 subagent 筆記那件，不屬這條的刀",
-      "next": "使用者 11-25 早（逐字）「10.做」：第 3 刀 aos-agent history clear-tools 派 core（信 01795567755565192304.446829.322025，排在 idle-polling 第 1 刀之後）；第 5 刀範例 handler 派 templates（信 01795567758741926270.447279.322344，排在 1125b 之後）。都交了刪這條。",
+      "next": "11-25：第 5 刀範例 handler 已交（templates 9178c40793，templates/docs/compact-examples/；知識庫 49d78e025；eca 上兩支 restore 同掛只有排後面那支算數）。剩第 3 刀 aos-agent history clear-tools 派 core（信 01795567755565192304.446829.322025），排在 idle-polling 第 3 刀之後。",
       "see": [
         "[第 4 刀紀錄](../proto8/thinking/2026-11/21/compact-第4刀-1121.md)",
         "[第 1 刀紀錄](../proto8/thinking/2026-11/21/compact-第1刀-1121.md)",
@@ -342,7 +342,7 @@
       "status": "等使用者",
       "flow": "",
       "what": "HANDOFF 11-21 深夜那條「等他說的」「他還在想的」裡，progress 原本沒有的：1. API agent（agent-fsm）要不要也認 /status、/usage、/exit；2. 新 index_check 他說過「之後要看看」；3. 知識庫換形狀比較醜的頁 wf/source/block-3.md、block-4.md；4. kernel 攔截 daemon 存取（他給了原則「只防走規矩的存取…真的要硬防，那就要多依賴linux的權限體系」，還在想）；5. 驗寄件人規劃：他答 1D、2C、3C、4A，要自己開沙箱試，頂層沒派施工，另五題沒念；6. 權限零件說明頁（桌面 aos-權限零件-1121/）給他看；7. 前端大修盤點 14 項沒念；8. 更早等他的：gpt 包預設走 /v1/responses、self history set 收不收 -n（eca 三包要不要瘦：使用者 11-22「是，就是這個。」，eca-claude 拿掉 events／def／jsonx，a7779de17，已了）。不催",
-      "next": "使用者 11-25 早（逐字）：第 1 題 API agent 認 /status、/usage、/exit「要認」→ 派 templates（信 01795567726773565625.443579.319147，連同 start-eca compact_hook 改借的〔原 aos-home-browse-1120，「17.要」〕）；第 7 題前端大修「前端大修之後再說」；驗寄件人那批「我現在沒空」。其餘不催。",
+      "next": "11-25：第 1 題 /status /usage /exit 已做（templates d64aec3c0，/exit＝stop；知識庫 10a3456ec；已裝），start-eca compact_hook 借的已做（0b53cb6315）。第 7 題前端大修「前端大修之後再說」；驗寄件人那批「我現在沒空」。其餘不催。",
       "see": [
         "[HANDOFF](HANDOFF.md)",
         "[api-agent-clear-1121](../proto8/thinking/2026-11/21/api-agent-clear-1121.md)",
@@ -454,7 +454,7 @@
       "status": "open",
       "flow": "",
       "what": "使用者 11-24（逐字）：「先記下來，這會是以後一段時間的我們的開發重點。」起因 eca_main 11-24 回報（信 01795484557450263667.853643.518765、補充 01795484607007336637.861953.523507）：8 核 load 16～17、閒置 3%（us 78% sy 18%），每秒約 200 個新 PID，沒有大戶、全是短命 python3；記憶體不緊。現況（11-24 只讀查證）：agent-fsm 每圈（loop.json interval 300ms）起 aos-fsm＋一支 python3，閒著停在 idle 格也照起（templates/agent-fsm/fsm.json）；eca 每圈起一支 aos-eca-turn（知識庫 me/self_hook.md 寫「about three a second, also with an empty queue」）；aos-loop 不接 poke（cpp/aos-daemon/docs/04、cpp/aos-loop/README）、沒有退避、信到不叫醒（mail_notify 每分鐘查）；thinking／docs 沒有常駐 Python 的討論，只有 11-05 edge-round2 記過閒著 82% CPU、當時只寫文件。現成的設定手段：loop.json interval_ms 拉長（重起生效、wait 格跟著慢）、ctl.json interval_ms 執行中改（沒指令包裝）、ctl pause／sleep（不收信或不會被叫醒）。候選方向（方向由使用者定，還沒定）：aos-loop 依回碼退避；aos-loop 接 poke、信寄進 queue 時叫醒收件那隻（cpp/aos-loop/src/engine/loop.cpp 已有 wake 掛鉤）；aos-fsm 格加「資料夾空就不起行程」的前置判斷；常駐 Python 格；aos-agent ctl 加改 interval 的指令；知識庫與 troubleshooting 寫每圈成本。 範圍（使用者 11-24 逐字）：「然後不停起python這件事，除去一些常用通用的aos基礎東西之外，那就是使用者要自己管理的。」＝aos 只負責基礎共用的部分（loop、閒置閘、範本格等）不空起行程；使用者自己加的工具與格起多少行程由使用者管。",
-      "next": "施工規劃已交（7b7a1829e，proto8/thinking/2026-11/24/閒置輪詢C++重寫-1124/）。使用者答五題「1.a 2.收 3.60秒 4.照推薦 5.a。不用調整間隔」：C++ 閘＋小程式、行為差異收（保底 60 秒）、context_wrap 60 秒、kernel 先只掛閘、.pyc 放 lib/（第 0 刀，改慣例）；不做止血。三分切完後照 04 刀序開工：第 0 刀 .pyc＋把量法包成常備腳本 → 第 1 刀 aos-loop／aos-daemon 認 gate → 第 2 刀 aos-idle（eca／fsm）＋對等測試 → 第 3 刀範本掛 gate＋context_wrap 60 秒 → 第 4 刀 kernel → 第 5 刀 wait 格（開工前逐條對 wait.py）→ 第 6 刀。通用 kernel（py/tools/aos/kernel）的閒置條件還沒列。",
+      "next": "11-25：第 0 刀 5e79d6f0b（.pyc；起動 CPU 約減半；常備量法 py/scripts/idle_cost.py）、第 1 刀 c2eb8f3fe（aos-loop／daemon 認 gate；閘壞＝照跑，eca-aos 照第 4 題推薦定）已交已裝；量到閒置總核數沒降（4.70→4.86：一拍變短就拍更勤），要第 3 刀掛閘才降。條文 NORMS/04 與知識庫 9c806049f。core 在做第 2 刀 aos-idle（信 01795571361585507560.1015252.682629），第 3 刀範本掛 gate 前先回 PROGRESS 等 eca-aos 一句；裝後用 idle_cost.py 量 60 秒對比 ~/.aos/scratch/idle-1125/base-0、after-0。之後第 4～6 刀再派。",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
@@ -544,18 +544,6 @@
       "what": "信 01795507349728125121.4089102.2727893（11-24 16:02，使用者叫它寄的）：13:29 開 background sleep 7000 後回合結束，13:30～13:54 七封信、15:28～15:39 六封信都沒叫醒，直到背景任務結束或被 kill、task-notification 進來才醒，信延遲最多約 2 小時。它的推測（未證實）：有背景任務時 aos-eca-turn 當成忙、new_mail 被延後。建議：背景任務時照送或看得到延後狀態；eca 說明寫別用背景 sleep 排程；原生定時喚醒（已有 clock_register，範本沒帶）。另：kb 收到一次過期的「main 有 2 封新信」通知。我的對照：開 Agent 背景子 agent 時 new_mail 照進（11-24 16:0x 收這封時就是），可能只有 Bash run_in_background 中招（一次觀察）。回了 PROGRESS（01795507401051055371.4095392.2733027）：先用 clock_register、原因三分後查。 使用者補（逐字）：「喔，那是因為我用aos-agent open，開了claude code cli。不然平常沒open的時候都是-p方式跑的。」＝出事的是 open 的互動畫面（新信走 cross-session message 送進畫面）；平常沒 open 是 -p 一輪一支。我也是 open 的互動畫面，開著 Agent 背景時照收得到。",
       "next": "三分切完派 core 查：open 互動畫面下，Claude Code 有背景 Bash 時 cross-session 的新信通知為什麼沒送進來（對照 Agent 背景照收）；-p 模式下背景 Bash 會不會讓 claude -p 不結束、一輪卡住；過期通知。修＋eca 說明（kb）；回 main DONE。",
       "see": [
-        "[eca-aos 筆記](ws/eca-aos/notes.md)"
-      ],
-      "since": "2026-11-24"
-    },
-    "eca-p-first-result-1124": {
-      "title": "eca 的 claude -p 收到第一個 result 就算答完、收掉行程（背景任務跟著收）；回答取第一個 result",
-      "status": "open",
-      "flow": "",
-      "what": "core 11-24 實測（報告 wf/ws/eca-aos/eca-aos-core/report-1124-bgmail.md 第 7 節，bdcef2272）：沒開畫面時 claude -p 回完第一個答案不退出，等背景 Bash 結束、CLI 自開一輪才退；aos 的 run_claude_stream 讀 stdout 到 EOF 才收，lock 被佔、新信排 queue；aos 取最後一個 result，真回答丟了。使用者 11-24（逐字）：「好，但是先記著，我五點要下班...」——答的是 eca-aos 的推薦：修 ⑦⑧，收工時背景任務跟著收掉（放著跑會在 -p 結束後自己再開一輪寫同一段對話，跟下一次 --resume 撞）。",
-      "next": "下次開工派 core：改 py/aos/agentlib/cli_print.py（第一個 result 就收、收掉行程群組、回答取第一個 result），測試、install.py；kb 跟上 clock.md／eca_reading.md／troubleshooting 那段（現在寫的是 -p 會等背景）。互動畫面開著背景 Bash 時的行為沒驗（core 還有兩輪 haiku 額度）。",
-      "see": [
-        "[core 報告](ws/eca-aos/eca-aos-core/report-1124-bgmail.md)",
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
       "since": "2026-11-24"
