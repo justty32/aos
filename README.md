@@ -29,3 +29,7 @@ AGENTS.md   agent 的最頂層入口（CLAUDE.md 指向它）
 | [proto8/README.md](proto8/README.md) | 各夾一覽、入口（CONCEPTS／NORMS／CONVENTION）、現況 |
 | [proto8/cpp/README.md](proto8/cpp/README.md) | C／C++ 各專案與建置 |
 | [AGENTS.md](AGENTS.md) → [wf/](wf/INDEX.md) | 開發流程（不是給使用者看的）|
+
+## 授權
+
+程式與 repo 裡其他內容用 MIT（[LICENSE](LICENSE)）；`docs/` 的網站（GitHub Pages）另用 CC BY 4.0（[LICENSE-docs](LICENSE-docs)）。

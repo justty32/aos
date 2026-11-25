@@ -48,6 +48,10 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
   - 沒 push（上線要 push，eca-aos 會問使用者）。
   - 工具：剝草稿的腳本、查連結的腳本放在 `~/.aos/scratch/eca-aos-kb-1125d/`（links.py 會查相對連結與錨點）。
   - 回報了沒改的：首頁頁尾寫「CC BY 4.0（文件）」，但使用者只說 MIT；首頁原始碼裡還有很多「copy:… draft, user unseen」註解。
+  - 續（線 `eca-aos-kb-1125e`，使用者「b。清掉」）：
+    - 新加 `LICENSE-docs`：CC BY 4.0，只涵蓋 docs/ 那個網站，內容是聲明＋官方連結；其他文件照 MIT。
+    - `LICENSE` 維持 MIT 全文，一個字都不加，免得 GitHub 認不出授權；「文件另見 LICENSE-docs」那句改放進根 README 新加的「## 授權」節。
+    - 首頁的 58 個 `<!-- copy:… -->` 註解清掉了；子頁的 copy: 註解沒清，回報了。
 - 我的信箱回信地址：eca-aos 在 `/home/guanyu/aos-home/.stack/procs/repo-aos/procs/eca-aos/mailbox`（stack 11-24 搬家後）。
 
 # 下次照做
