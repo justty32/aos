@@ -146,7 +146,9 @@ class Settings(unittest.TestCase):
         # 11-23 再加 tui，只准 "fullscreen"：--setting-sources 讓使用者那層的 tui 不算，主帳號的畫面退回舊式畫法、滑鼠滾輪沒人接
         # （使用者 11-23 聽完三個修法選「1」＝範本 settings 加 "tui": "fullscreen"）。
         proto = LIB.parent
-        for path in sorted(list(proto.glob("templates/*/cli.json")) + list(proto.glob("py/tools/agent/*/cli.json"))):
+        found = sorted(proto.glob("templates/**/cli.json"))
+        self.assertGreaterEqual(len(found), 4, found)   # 11-25：三分後範本在 templates/<類>/…，舊的 templates/*/cli.json 一份都比不到
+        for path in sorted(list(proto.glob("templates/**/cli.json")) + list(proto.glob("py/tools/agent/*/cli.json"))):
             with self.subTest(path=str(path)):
                 cfg = json.loads(path.read_text())
                 if "settings" not in cfg:
