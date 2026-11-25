@@ -714,3 +714,5 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 17:00 後交件：信箱那批（小庫、daemon）＋草稿（第 9、10、11 節）＋proto9/README＋thinking 第 29 段＋這份筆記。aos-exec 那隻還在跑（`proto9/cpp/aos-exec/`、`proto9/cpp/third_party/` 是它的，回來另外交）。
 - 16:5x aos-exec 那隻回來了（`proto9/cpp/aos-exec/`，約 3200 行，75 條）。我清 build 重編無警告、`make test` 75／75。「還能砍的」表講給使用者了（指示詞 1640 行最大）。接 daemon 時要處理：沒給工作區時它拿呼叫者站的地方當工作區，而 daemon 站在自己掛出來的目錄裡。
 - 16:55 鐘 push-1655 來了：已經推過，沒再推，回了一句。HANDOFF 換成 17:0x 這條。
+- 17:00 交件：`c40e198343`（小庫與 daemon 第二批＋草稿）、`3cc5beb2eb`（aos-exec、third_party、proto9/README、HANDOFF）。**都沒推**（本地比遠端多這幾個；要推等使用者說）。
+- 17:0x 使用者（逐字）：「好，我要下班了」。沒有東西在背景跑；下一批（HANDOFF「下一批」1～4）沒派，他沒說派。上網的幫手照他說的留著。明天接：先讀 HANDOFF；等他對 artifact、aos-exec 要砍什麼的話；他說派才派下一批。
