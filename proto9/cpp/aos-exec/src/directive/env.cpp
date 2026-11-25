@@ -1,0 +1,23 @@
+// directive/env.cpp: {"$env": "NAME"} becomes the value of NAME (copy of proto8 aos-directive src/env.cpp).
+//
+// NAME 不是字串或是空字串＝寫法不合，回 nullopt（物件原封不動留著，10-20 ideas D15）；
+// 環境裡沒有這個變數＝DirectiveBad（設成空字串的變數算有，值就是 ""）。$path／$prefix 由 resolve.cpp 接。
+#include "internal.hpp"
+
+#include <cstdlib>
+
+namespace aos::directive {
+
+std::optional<Json> resolve_env(const Json& d) {
+    const Json& name = d["$env"];
+    if (!name.is_string() || name.get<std::string>().empty()) {
+        return std::nullopt;
+    }
+    const char* val = std::getenv(name.get<std::string>().c_str());
+    if (val == nullptr) {
+        throw Error{code::DirectiveBad, "environment variable " + name.get<std::string>() + " is not set"};
+    }
+    return Json(val);
+}
+
+}  // namespace aos::directive

@@ -706,3 +706,11 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 再下一批（等現在兩隻都回來）：daemon 的 `add` 改交給 proto9 的 aos-exec（資料夾、JSON、可執行檔）、相對路徑從 daemon 自己的目錄算、daemon 自己的 persist、`aos_obey`、登記時對 `aos_name`。
 - 16:4x 使用者（逐字，thinking 第 26、27 段）：agent 不用 aos-loop／fsm 那一堆，是一支簡單的程式、擺出介面；agent 的檔案布局／格式另有一份介面、他之後規劃。`persist` 改名 `persists`。草稿已改（全文換名；settings 的 `aos_persists`、procs_status 的 `名字.persists` 是我擬的跟著改）。**程式還沒改**（小庫、daemon 有人在改，排進再下一批）；artifact 的頁面也還寫 persist（等他看完一起改版）。
 - 16:4x 使用者（逐字，thinking 第 28 段）：root daemon 的自動重起掛 systemd，底下的另外設定（照現在的 auto restart）；json 版以 struct 定義為主→json→純文字。我的讀法（當則回覆）：每個檔一個 struct、欄位只宣告一次（C++ 沒有反射，要一張欄位表），json 與純文字都從它產生；純文字＝json 攤平（巢狀用 `.` 接、跟 procs_status 的 `名字.欄` 同一條規則）。帶出的邊角：root 被 systemd 重起後舊的底下還活著（要存表＋認回來）。都排進之後的批次，沒開工。
+- 16:5x 信箱那批回來了（procfs run 40、mail 36、daemon 64，它說全過；有一次 daemon 的 lock 組偶發失敗）。我清 build 重編重跑（17:00 後交件）。
+- 16:5x 使用者（逐字，thinking 第 29 段）：「cp -r抄不到persist，那可能就是在另外做一個簡單的，會解symlink的cp程式...=_=。」「或是現在已經有了？」→ 已經有：`cp -rL`。實測一棵活的樹（daemon＋demo）看 ctl（只寫）、別名 proc、socket、mailbox、大小報 0 的檔各會怎樣，結果寫進草稿第 10 節。
+- **16:50 push 了**：使用者（逐字）「好了，看起來都沒事了，現在就push」→ claims 空、fetch 後 origin 沒有新東西，`git push origin main`：`150c72bee..243b6a9c5`，本地與遠端一樣。**今天那一次 push 用掉了**；16:55 的鐘（與我掛的兩支計時）響了不再推。再要推得他再說。
+- 信箱那批我的驗證：清 build 重編無警告；procfs run 40／40、mail 36／36；daemon 63／64——沒過的是 register 組「rm ext」那條，單獨重跑 5 次全過。原因（我讀測試）：`procs_ctl` 寫入回來＝收到、不是做完，測試沒等就看表。**下一批要修**：t_register 等做完再看；順便查其他測試有沒有同樣的寫法（子 agent 自己也遇過一次 lock 組偶發失敗）。
+- cp 實測（scratch `~/.aos/scratch/proto9-cp-1125/`，已收乾淨）：`cp -r $AOS_ROOT` 只抄到一個連結；加 `/` 抄一層；`cp -rL` 整棵都抄到，ctl 抄不了、別名抄兩份、抄出來唯讀。寫進草稿第 10 節。
+- 17:00 後交件：信箱那批（小庫、daemon）＋草稿（第 9、10、11 節）＋proto9/README＋thinking 第 29 段＋這份筆記。aos-exec 那隻還在跑（`proto9/cpp/aos-exec/`、`proto9/cpp/third_party/` 是它的，回來另外交）。
+- 16:5x aos-exec 那隻回來了（`proto9/cpp/aos-exec/`，約 3200 行，75 條）。我清 build 重編無警告、`make test` 75／75。「還能砍的」表講給使用者了（指示詞 1640 行最大）。接 daemon 時要處理：沒給工作區時它拿呼叫者站的地方當工作區，而 daemon 站在自己掛出來的目錄裡。
+- 16:55 鐘 push-1655 來了：已經推過，沒再推，回了一句。HANDOFF 換成 17:0x 這條。

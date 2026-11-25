@@ -1,0 +1,52 @@
+// directive/internal.hpp: declarations shared by resolve.cpp, ref.cpp, spot.cpp and env.cpp (copy of proto8 aos-directive src/internal.hpp).
+//
+//   resolve.cpp  走遍整份 JSON、認出指示詞（有 $ref 看 $ref、否則有 $env 看 $env）、換完再接 $path／$prefix
+//   ref.cpp      {"$ref": "路徑"}（讀檔、繞圈、合併）；檔是 .md 時交給 md_*.cpp
+//   spot.cpp     「字串→位置」ref_spot、指標 token（proto9 從 ref.cpp 拆出，為了每檔 ≤ 300 行）
+//   md_*.cpp     把 markdown 讀成 json 值（md_get，公開在 directive/directive.hpp）
+//   env.cpp      {"$env": "NAME"}
+#pragma once
+
+#include "directive/directive.hpp"
+
+#include <optional>
+#include <utility>
+#include <vector>
+
+namespace aos::directive {
+
+// 正在解的 $ref 鏈：每一層是「實際的檔（realpath）＋指標」。指回鏈上同一個位置＝繞圈。
+using Chain = std::vector<std::pair<std::string, std::string>>;
+
+// 走一個值（遇到指示詞就換掉）。base＝這一層相對 $ref 的起點、寫著它的那份檔、這個值在那份檔裡的位置。
+Json walk(const Json& v, const RefBase& base, Chain& chain);
+
+// 被 $ref 進來的那份檔（realpath）往下解時的起點：它的資料夾＋它自己（`#/…` 指它）＋取的那個指標（`#./`、`#../` 從那裡算）。
+RefBase base_of(const std::string& file, const std::string& ptr);
+
+// {"$ref": …}（整個物件 d）→ 每一份的原文（還沒往下解）＋位置（檔＋指標，推上鏈用）：$ref 是字串＝一份；
+// 是陣列（10-23 使用者）＝照順序每個元素一份。寫法不合（含空陣列、有一個元素不合）回 nullopt。
+// 讀不到、指不到、繞圈（here 已在 chain 上）丟 DirectiveBad。
+// md＝那份檔是 .md（值照 md 的規則取來，不再往下解指示詞）。
+struct Fetched {
+    Json value;
+    std::pair<std::string, std::string> here;
+    bool md = false;
+};
+std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const RefBase& base, const Chain& chain);
+
+// {"$ref": …}（整個物件 d）→ 那個位置的值（每一份接著解完、再合成一份）；寫法不合回 nullopt（物件原封不動留著）。
+std::optional<Json> resolve_ref(const Json& d, const RefBase& base, Chain& chain);
+
+// $ref 陣列的幾份合成一份（10-23 使用者）：只有一份＝它本身；都是物件＝合 key（同名後面的蓋前面的，淺層、位置留在第一次出現的地方）；
+// 都是陣列＝照順序接起來；其他（種類混在一起、兩份以上卻不是物件也不是陣列）＝DirectiveBad。
+// 回的 Resolved 記著每個 key／元素來自哪份檔的資料夾（resolve_shallow 的呼叫者往下解時用）。
+Resolved merge(std::vector<Resolved>& parts, const std::string& where);
+
+// $path／$prefix：換出來的 got 是字串時照 d 的 $path 接上去、再加 $prefix；不是字串原樣回（D11）。
+Json decorate(const Json& d, const Json& got);
+
+// {"$env": …}（整個物件 d）→ 環境變數的值；名字不是非空字串回 nullopt；沒設丟 DirectiveBad。
+std::optional<Json> resolve_env(const Json& d);
+
+}  // namespace aos::directive

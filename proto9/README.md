@@ -1,4 +1,4 @@
-proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc 的目錄長什麼樣、每個檔的格式）為中心從頭做；目前有介面草稿、一個 FUSE 小實驗（玩具）、C++ 小庫 aos-procfs 與一台最小的 daemon（aos-daemon）；還沒有信箱、沒有 agent。
+proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc 的目錄長什麼樣、每個檔的格式）為中心從頭做；目前有介面草稿、一個 FUSE 小實驗（玩具）、C++ 小庫 aos-procfs（含活著收信的信箱）、一台最小的 daemon（aos-daemon）與瘦身過的 aos-exec；還沒有 agent。
 
 # proto9
 
@@ -20,8 +20,9 @@ proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc �
 |---|---|
 | [docs/01-aos-proc介面草稿.md](docs/01-aos-proc介面草稿.md) | 草稿第 1 版：兩輪談話定下來的寫成一頁，沒定的標出來；含小實驗查到的 |
 | [docs/02-可以抄的現成做法.md](docs/02-可以抄的現成做法.md) | 介面每一塊可以抄哪個現成做法（Plan 9、Maildir、cgroup、varlink、s6、systemd、FUSE 實務）；原始報告在 `docs/refs/` |
-| [cpp/aos-procfs/](cpp/aos-procfs/README.md) | 第一塊正式程式：C++20 小庫（不靠 FUSE 的函式庫），讓一支行程把自己的目錄掛出來、照介面回答（`status`、`ctl` 的鎖與回饋、symlink、目錄裡的 unix socket）；附範例 proc 與 35 條測試 |
-| [cpp/aos-daemon/](cpp/aos-daemon/README.md) | 第二塊：一台最小的 daemon（建在 aos-procfs 上）。自己是一隻 proc，另外擺出 `procs/`、`procs_ctl`（add／rm／stop／start／kill／register）、`procs_status`；收屍、清死掉的掛載、定期查卡住；底下的 proc 卡住時拖不住它（碰底下的事都交給帶期限的小行程）；可以嵌套。57 條測試。還沒有自動重起、sleep／wake、信箱 |
+| [cpp/aos-procfs/](cpp/aos-procfs/README.md) | 第一塊正式程式：C++20 小庫（不靠 FUSE 的函式庫），讓一支行程把自己的目錄掛出來、照介面回答（`status`、`ctl` 的鎖與回饋、symlink、目錄裡的 unix socket）；另有 Maildir 式的信箱 `mailbox/`（proto8 的 `aos-post send` 原樣寄得進來）；附範例 proc 與 76 條測試 |
+| [cpp/aos-daemon/](cpp/aos-daemon/README.md) | 第二塊：一台最小的 daemon（建在 aos-procfs 上）。自己是一隻 proc，另外擺出 `procs/`、`procs_ctl`（add／rm／stop／start／kill／register）、`procs_status`；收屍、清死掉的掛載、定期查卡住；底下的 proc 卡住時拖不住它（碰底下的事都交給帶期限的小行程）；可以嵌套。64 條測試。還沒有自動重起、sleep／wake |
+| [cpp/aos-exec/](cpp/aos-exec/README.md) | 從 proto8 的 aos-exec 抄進來瘦身的「執行一個資料夾程式」小工具：拿掉 `AOS_STACK` 與 inst 單子，其餘行為照舊，不連 proto8；75 條測試。README 有一張「還能砍的」表，等使用者挑。還沒接上 daemon 的 `add`。用到的 json 標頭在 `cpp/third_party/` |
 | [experiments/fuse-proc-1125/](experiments/fuse-proc-1125/README.md) | FUSE 小實驗（玩具 proc 與玩具 daemon，Python 標準庫）：這台不靠函式庫掛得起來、鎖做得出來；坑在死掉的掛載要有人卸、proc 卡住會拖住讀它的人 |
 
 ## 跟 proto8 的關係
