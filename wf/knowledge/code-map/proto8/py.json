@@ -322,6 +322,9 @@
     }
    }
   },
+  "scripts": {
+   "idle_cost.py": "how much CPU each aos-loop of a running tree costs (read only)."
+  },
   "tests": {
    "agent_spec_helpers.py": "Shared helpers of the test_agent_spec*.py tests: the agent.py head and example bodies, a fake AOS_HOME, running an agent.py, snapshots.",
    "apps": {

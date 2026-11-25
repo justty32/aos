@@ -172,9 +172,11 @@ class InstallTest(unittest.TestCase):
         self.assertEqual(os.readlink(got), "../../../../tools/base/t")
         self.assertTrue((got / "_entry").is_file())
 
-    def lib_files(self):
+    def lib_files(self, pyc=False):
+        """lib/ 的檔（相對路徑）；pyc＝False 不列 __pycache__（第 0 刀起 install.py 編的 .pyc 另由 test_lib_is_compiled… 驗）。"""
         lib = self.home / "lib"
-        return sorted(str(p.relative_to(lib)) for p in lib.rglob("*") if p.is_file())
+        return sorted(str(p.relative_to(lib)) for p in lib.rglob("*")
+                      if p.is_file() and (pyc or "__pycache__" not in p.relative_to(lib).parts))
 
     def test_py_missing(self):
         shutil.rmtree(self.home / "py")
@@ -209,27 +211,54 @@ class InstallTest(unittest.TestCase):
         lib = self.home / "lib"
         (self.home / "py" / "aos" / "tool_io.py").write_text("x = 2\n")
         shutil.rmtree(self.home / "py" / "aos" / "agentlib")                         # a whole module folder deleted from py/
-        (self.home / "lib" / "aos" / "__pycache__").mkdir()
+        (self.home / "lib" / "aos" / "__pycache__").mkdir(exist_ok=True)
         (self.home / "lib" / "aos" / "__pycache__" / "x.pyc").write_text("old\n")
         init_ino = (lib / "aos" / "__init__.py").stat().st_ino
         r = self.run_install(env={"FAKE_MAKE_UPTODATE": "1"})
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("removed 3 left over", r.stdout)
+        self.assertIn("removed 5 left over", r.stdout)                                # + the two .pyc of the deleted folder (第 0 刀)
         self.assertEqual((lib / "aos" / "__init__.py").stat().st_ino, init_ino)        # untouched
         self.assertEqual((lib / "aos" / "tool_io.py").read_text(), "x = 2\n")
         self.assertFalse((lib / "aos" / "agentlib").exists())                         # file and folder gone
-        self.assertFalse((lib / "aos" / "__pycache__").exists())
+        self.assertFalse((lib / "aos" / "__pycache__" / "x.pyc").exists())            # a .pyc without its .py is removed
         self.assertEqual(sorted(p.name for p in (self.home / "bin").iterdir()), ["aos-x", "aos-y"])   # make made nothing new
         self.assertTrue((lib / "libaos-x.a").exists())
         self.assertEqual([p for p in lib.rglob(".*install-tmp")], [])
 
+    def test_lib_is_compiled_and_stale_bytecode_goes(self):
+        """idle-polling 第 0 刀（使用者 11-24 第 5 題「a」）：install.py 把 lib/ 的 .py 編成 .pyc（放 lib/ 的 __pycache__）；
+        py/ 改了重裝＝.pyc 跟著新的；py/ 刪了的模組，它的 .pyc 一起清；py/ 本身不會多出 __pycache__。"""
+        import importlib.util
+        self.assertEqual(self.run_install().returncode, 0)
+        lib = self.home / "lib"
+        src = lib / "aos" / "tool_io.py"
+        pyc = Path(importlib.util.cache_from_source(str(src)))
+        self.assertTrue(pyc.is_file())
+        self.assertIn("compiled to .pyc", self.run_install(env={"FAKE_MAKE_UPTODATE": "1"}).stdout)
+        (self.home / "py" / "aos" / "tool_io.py").write_text("x = 3\n")
+        self.assertEqual(self.run_install(env={"FAKE_MAKE_UPTODATE": "1"}).returncode, 0)
+        r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, %r); import aos.tool_io as t; print(t.x, t.__cached__)"
+                            % str(lib)], capture_output=True, text=True, env={"PYTHONDONTWRITEBYTECODE": "1"})
+        self.assertEqual(r.stdout.split()[0], "3", r.stderr)                          # the new source, not a stale .pyc
+        (self.home / "py" / "aos" / "tool_io.py").unlink()
+        self.assertEqual(self.run_install(env={"FAKE_MAKE_UPTODATE": "1"}).returncode, 0)
+        self.assertFalse(pyc.exists())
+        self.assertFalse(any(p.name == "__pycache__" for p in (self.home / "py").rglob("*")))
+
+    def test_a_module_that_does_not_compile_is_a_warning(self):
+        (self.home / "py" / "aos" / "broken.py").write_text("def (\n")
+        r = self.run_install()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("install.py: warning: cannot compile aos/broken.py", r.stderr)
+        self.assertTrue((self.home / "lib" / "aos" / "broken.py").is_file())
+
     def test_failed_rebuild_keeps_the_old_install(self):
         self.assertEqual(self.run_install().returncode, 0)
-        before = self.lib_files()
+        before = self.lib_files(pyc=True)
         (self.home / "py" / "aos" / "tool_io.py").unlink()
         r = self.run_install(env={"FAKE_MAKE_FAIL": "1"})
         self.assertEqual(r.returncode, 1)
-        self.assertEqual(self.lib_files(), before)                                    # nothing removed, nothing half-copied
+        self.assertEqual(self.lib_files(pyc=True), before)                            # nothing removed, nothing half-copied
         self.assertEqual(sorted(p.name for p in (self.home / "bin").iterdir()), ["aos-x", "aos-y"])
 
     def test_dry_run_naming_nothing_removes_nothing(self):
