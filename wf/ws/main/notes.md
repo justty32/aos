@@ -6,6 +6,8 @@
 
 - **開場 pull**：公司 51 個 commit（proto9 開了：介面草稿、aos-procfs、aos-daemon、aos-exec）；家機沒推的 core 筆記 commit 跟公司同檔衝突，兩邊都留、rebase 接上。本地比 origin 多那 1 個（加上之後的）；**沒有 push 授權**。
 - **proto9 做減法（線 home-proto9-1125）**：使用者「我決定做減法」——procs/<名>/ 底下不規定（ctl、sock 歸之後的 agent 界面）、daemon 當沙箱／container 給底下假的天空、kernel 接特定呼叫。我派兩隻 sonnet 蒐集（程式、報告與前例），實測不用 root 讓天空裡多一支 /usr/bin/draw 接到外面的 kernel 行程；回答與三題（讀法對不對、PID namespace 開不開、先做小實驗、誰做）記在 [daemon當容器-1125](../../../proto8/thinking/2026-11/25/daemon當容器-1125.md)，原話補進 9p-proc-1125 第 30 段；progress `proto9-sky-1125`（等使用者）。只是討論，沒開工、草稿沒動。
+- **第二輪（第 31 段）**：使用者定——攔截用第一種；界面＝檔案布局＋格式＋在指定條件下存取得到（權限、限時回應），做得到就是那個東西；不提供界面 daemon 也能粗管；要當 kernel 就跟 daemon 登記、kernel 可疊；天空由起它的 proc 決定。我回：界面是量出來的（`_metainfo` 客觀那半）、卡住收進「不再符合界面」、daemon 手段分兩級；建議三條（提供與選用分開、只能往下傳自己有的、起來時定好記成表）；kernel 疊 kernel 跟「回答只用記憶」衝突→改「只能往下問、不繞圈、帶期限」。四題＋perm-kernel 是哪種，記在同一夾「第二輪」。
+- **第三輪（第 32、33 段）**：使用者定 PID namespace 開（「daemon的死活是使用者必須保証的東西，也是他必須承擔的風險」，取代下午「daemon 掛了底下還活著的不管」）；他還在想 daemon 是不是只管權限／帳號切換、資源與排程歸 kernel。我實測 PID ns 1 號死整片收、subuid 100000:65536 加 newuidmap 在、user@1000 的 cgroup 可寫；回：daemon＝唯一碰 Linux 權力的五樣（起收行程、組天空、給身分、起動前上鎖、發開關），kernel＝所有決定（機制與政策分開）；跨權力邊界才疊 daemon。記在同一夾「第三輪」。
 
 ## 2026-11-24 晚（家機）
 
