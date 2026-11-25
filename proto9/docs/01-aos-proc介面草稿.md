@@ -105,7 +105,7 @@ daemon 另外多：
   | 行 | 值 |
   |---|---|
   | `aos_ctl_cmd` | 最後收下的那一道，原樣；還沒收過＝`-` |
-  | `aos_ctl_state` | `doing`（在做，鎖著）／`done`（做完）／`rejected`（不做，原因看下一行） |
+  | `aos_ctl_state` | `doing`（在做，鎖著）／`done`（做完）／`failed`（收下了，做的時候失敗，原因看下一行）／`rejected`（不收，原因看下一行） |
   | `aos_ctl_error` | `代號 原因`，例 `CommandUnknown frobnicate`；沒事＝`-` |
   | `aos_ctl_count` | 起來之後收下過幾道；下指令的人記著自己那道是第幾，就知道回饋有沒有被後來的人換掉 |
 
@@ -165,6 +165,8 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   | `register 名字 PID` | 只登記、不起：一支已經在跑的行程來說「我是 aos proc」 |
 
   proto8 的 `sleep`／`wake` 要不要留【開】。鎖與回饋的規則同第 6 節。
+
+  【定】`procs_ctl` 的「做完」＝daemon 這邊的動作做完（例：`stop arena` 是把字送給 arena 了），不等那隻 proc 真的結束；結果看 `procs_status`。這樣 `stop` 很久的時候，`kill` 才下得進去。
 
 - 【定】`procs_status`：底下每隻 proc 的狀態，純文字。proc 死了，它自己的 `status` 就沒了，這張表是唯一還答得出來的地方。
 - 【定】行名是 `名字.欄名`，欄有 `phase`、`want`、`pid`、`code`、`reason`、`persist`、`mailbox`：
@@ -229,11 +231,10 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 | 寫檔 | 普通檔案（硬碟、tmp）、FUSE 的檔 | **aos post**（寄信）是建在「寫檔」之上的 |
 | 串流 | unix socket（它不只是寫檔，跟串流分在一起） | 一行一則加回條那一套（下面「socket」） |
 
-【擬】eca-aos 的讀法與後果（等使用者的話）：
-
-- 機制＝東西怎麼過去；aos post、socket 上那套話是機制之上的約定。信的內容（那份 json）各種走法共用。
-- 寄信不分對方活著沒：同一套 aos post，信箱是普通資料夾（對方掛了，放在它的 persist）或 FUSE 擺出來的（對方活著，當場知道、當場可以拒收），寄的人做的事一樣。這樣下面「寫檔」小節擬的 `msg` 檔就不需要另外發明，活著的 proc 把信箱擺在自己的目錄裡就好。
+- 機制＝東西怎麼過去；aos post、socket 上那套話是機制之上的約定。
 - `ctl`、`status` 也都是「寫檔」這一類；`attrs` 的 `aos_kind`（`fuse`／`file`／`tmp`）說的就是這一類裡的哪一種。
+
+【定】送的都是同一份東西：今天那封信原樣（json：寄件人、標題、內文、回信位址…）。所以從活著的走法退到寄信，不用改一個字。
 
 【定】socket 上送來的，算進對話的話（queue）還是信（mailbox），proc 自己決定；預設希望是 queue。
 
@@ -249,12 +250,14 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 - 放哪：proc 的目錄裡，叫 `sock`。（C++ 小庫實測：FUSE 擺出來的目錄裡放得了 unix socket，從 `/proc/<PID>/cwd/sock` 連得上。）
 - 對面是誰：socket 上拿得到對方的 PID（系統填的，改不了），先只記、不擋。
 
-**寫檔**（【定】FUSE 寫檔要做；怎麼擺【擬】，等使用者對上面的讀法點頭）
+**寫檔**（【定】，使用者 11-25：「不能都做嗎？可以先把maildir弄好，因為這個我們有經驗。啊至於要提供哪種都可以，各自選。」）
 
-- 原先擬的：一個只寫的檔 `msg`，一次開檔到關檔＝一則。
-- 照新的分層比較順的：活著的 proc 在自己的目錄裡擺出信箱（`mailbox/`，要不要也擺 `queue/` 待談），別人照 aos post 原樣把信放進去；被拒＝那次放信失敗。
+活著的 proc 用寫檔收信，有兩種做法，兩種都做，一隻 proc 提供哪種自己選：
 
-【擬】一隻 proc 有沒有 socket，寫在 `attrs`：`aos_sock: yes`。
+- **信箱資料夾**（照 Maildir，先做這個）：proc 在自己的目錄裡擺出 `mailbox/`，別人照 aos post 原樣把信放進去（先在 `tmp/` 寫好，再搬進 `new/`）。寄的人做的事跟寄給掛掉的 proc 一樣，只是這次對面是活的：信一放進去它當場知道，也可以當場拒收（那次放信失敗）。
+- **一個只寫的檔**（照 Plan 9 的 plumber）：寫進去就是送一則，沒人收就讓寫入失敗。檔名【擬】`msg`。
+
+【擬】一隻 proc 提供哪幾樣，寫在 `attrs`：`aos_mailbox: yes`、`aos_msg: yes`、`aos_sock: yes`；都沒寫就是活著時不直接收，只能寄到它 persist 的信箱。
 
 要知道的一點：預設 queue 的話，同一句話活著時是直接進對話，掛了改寄信則是進信箱等它自己看，兩邊意思不一樣。
 
@@ -297,7 +300,7 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   - 被拒的那一道也算進 `aos_ctl_count`、也寫進 `aos_ctl_cmd`（回饋講的是最後一次）；只有鎖著被擋的不算。
   - 被拒時那次寫入的錯誤是「參數不對」（`Invalid argument`）；鎖著是「忙」（`Device or resource busy`）。
   - 空的寫入（`echo > ctl`）什麼都不動、算成功。
-  - 收下了、做的時候失敗：`aos_ctl_state: done`，原因寫在 `aos_ctl_error`（沒有另開一種 `failed`）。
+  - 收下了、做的時候失敗：小庫現在記 `done` 加原因；【定】（使用者 11-25）改成另開一種 `failed`，小庫要跟著改。
   - `aos_started_at` 用本地時間帶時差（`2026-11-25T15:48:45+08:00`）。
 
 ## 12. 還沒定的（照我覺得該先談的排）

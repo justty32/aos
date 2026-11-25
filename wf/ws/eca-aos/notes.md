@@ -674,3 +674,6 @@
 daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`，暫存 `~/.aos/scratch/proto9-daemon-1125/`，可小改 aos-procfs（要重跑它的 35 條）；不 commit。我擬的一條：procs_ctl 的「做完」＝daemon 這邊動作做完、不等底下的 proc 結束。回來後：重編、跑兩邊測試、查殘留、交件。
 - 16:0x 上網小幫手 4 分多鐘交了 `report.md`（279 行）。我整理成 `proto9/docs/02-可以抄的現成做法.md`（對照表＋小心的地方＋本機實測五項），原始報告連同查詢請求原樣收進 `proto9/docs/refs/前例調查-1125.md`。要帶給使用者的：沒有一模一樣的現成系統（最像 Plan 9 /proc）；要補的一條＝孫子行程會原樣拿到 AOS_NAME／AOS_MOUNT（抄 systemd 的 LISTEN_PID）；查卡住可以加讀 `waiting`；等狀態變、等到做完才回是以後可抄的兩樣。
 - 小幫手還開著（`tmux -L webref`，PID 298742），問使用者要不要留；要收：`tmux -L webref kill-server`。
+- 16:0x 使用者（逐字，thinking 第 21 段）：寫檔收信兩種都做、先 Maildir、各 proc 自己選；`failed` 好；procs_ctl 的做完照我擬的；幫手「先等等，我還想請你弄個artifact請他掛上去」。草稿已改。
+- **daemon 回來後要再派的一批**（同一批檔，不能跟 daemon 那隻同時）：小庫加 `failed`；孫子行程認不出環境變數是不是給自己的（抄 LISTEN_PID）；小庫支援 Maildir 式的 `mailbox/`（要 MKDIR／CREATE／RENAME）；之後 plumber 式的 `msg`、socket。
+- artifact：我這個畫面沒有 Artifact 工具；幫手是一般的 Claude Code、但起的時候只放行了上網與讀寫（dontAsk），要掛 artifact 得重開它並放行那個工具。內容等使用者說。
