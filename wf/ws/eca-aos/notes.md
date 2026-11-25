@@ -671,3 +671,6 @@
 - 還在跑：C++ 小庫那隻子 agent。16:55 push。
 - 15:5x C++ 小庫回來（子 agent，約 13 分鐘）：`proto9/cpp/aos-procfs/`（庫 1233 行、demo、tests）。**我自己清掉 build 重編（無警告）、跑 `tests/run.py` 35/35 過、查無殘留**。新事實：abort 開關放得開卡住的讀者（不用 root）；被暫停時卡住的人殺得掉（玩具的「殺不掉」是請求被拿走不回那種）；FUSE 目錄裡放得了 unix socket；C++ 讀 status 約 45 µs、寫 ctl 約 35 µs、一隻 4 MB。它挑的保守做法六條記進草稿第 11 節（【擬】），其中「做的時候失敗記 done＋error」我想問使用者要不要另開 `failed`。answer.cpp 391 行超過 300 行門檻（之後拆）。
 - 下一步：派 daemon（要先看使用者對 aos post／信箱那題的話；daemon 本身不依賴它，可以先派）。
+daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`，暫存 `~/.aos/scratch/proto9-daemon-1125/`，可小改 aos-procfs（要重跑它的 35 條）；不 commit。我擬的一條：procs_ctl 的「做完」＝daemon 這邊動作做完、不等底下的 proc 結束。回來後：重編、跑兩邊測試、查殘留、交件。
+- 16:0x 上網小幫手 4 分多鐘交了 `report.md`（279 行）。我整理成 `proto9/docs/02-可以抄的現成做法.md`（對照表＋小心的地方＋本機實測五項），原始報告連同查詢請求原樣收進 `proto9/docs/refs/前例調查-1125.md`。要帶給使用者的：沒有一模一樣的現成系統（最像 Plan 9 /proc）；要補的一條＝孫子行程會原樣拿到 AOS_NAME／AOS_MOUNT（抄 systemd 的 LISTEN_PID）；查卡住可以加讀 `waiting`；等狀態變、等到做完才回是以後可抄的兩樣。
+- 小幫手還開著（`tmux -L webref`，PID 298742），問使用者要不要留；要收：`tmux -L webref kill-server`。
