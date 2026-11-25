@@ -53,6 +53,11 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
     - `LICENSE` 維持 MIT 全文，一個字都不加，免得 GitHub 認不出授權；「文件另見 LICENSE-docs」那句改放進根 README 新加的「## 授權」節。
     - 首頁的 58 個 `<!-- copy:… -->` 註解清掉了；子頁的 19 個也清掉了（線 `eca-aos-kb-1125f`）。
     - 留下的功能性註解裡，「user 時間」這類記號也拿掉了；判準是 docs/ 不留審稿紀錄。
+- 11-25 線 `eca-aos-kb-1125h`（idle-polling 第 1 刀，core c2eb8f3fe）：`gate`／`gate_timeout_ms` 寫進了這幾處：
+  - `docs/NORMS/04` 開頭的引文段（只加一段，別的條文沒動）；
+  - 知識庫 `aos/cli/parts/loop.md` 與 `daemon.md`；
+  - troubleshooting 加一條「閒著也吃 CPU → idle_cost.py」（5e79d6f0b）。
+  - 之後的刀（C++ 的 aos-idle 閘、範本掛上 gate）交件時，這幾處要跟著改。
 - 我的信箱回信地址：eca-aos 在 `/home/guanyu/aos-home/.stack/procs/repo-aos/procs/eca-aos/mailbox`（stack 11-24 搬家後）。
 
 # 下次照做

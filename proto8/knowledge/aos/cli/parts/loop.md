@@ -12,6 +12,14 @@ Each run's exit code: 0 = run again, 10 = stop with exit 0, other = stop with th
 - `on_before_run_if` / `on_after_run_if`: a file path; that point runs only while the file exists.
 - A failing point (non-zero, timed out, cannot run) stops the loop with `PointFailed` and the point's code: on_start failing = the body never runs; on_stop failing changes the exit code only when it would have been 0.
 
+A gate (optional `gate`, written like exec) asks before each run whether to run at all. aos-loop asks it when not paused and the time has come, before on_before_run.
+
+- Exit 10 skips this run: no body, not counted (`max`, counter_runs), neither run point fires, and the state stays `waiting` without being rewritten. The next try is after interval_ms.
+- Exit 0: aos-loop reads the ctl window again (a stop or pause sent meanwhile counts), then runs as usual.
+- Any other code, a timeout or a gate that cannot start: one warning line (once per cause), and the body runs anyway.
+- `gate_timeout_ms`: the gate's limit (default 1000, 0 = no limit; then SIGTERM, SIGKILL 1 s later). `gate_timeout_ms` without `gate` is `CfgBad`.
+- No `gate` = nothing is asked.
+
 The stock templates fill these points with `aos-hook fire` (aos/cli/offer_hooks.md). `--ctl`, `--state`, `--state-flux` choose the windows; `{"cmd": "pause"}`, resume and stop in the ctl window control it (that is what aos-daemon-ctl pause writes). `--enable-logs` prints one JSON line per run; `--enable-counters` writes counter_runs.txt next to the state window. Agents and daemon rows are loops started by a daemon; you seldom start one yourself.
 
 More flags: run `aos-loop --help`.
