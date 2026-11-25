@@ -146,3 +146,12 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - ③ 255d6da30：agent_fsm/wait.py observed think 列加 reasoning_effort（sent.json 也記），templates/tests/agent-fsm/test_cells 加一條。
 - 測：乾淨複本 `~/.aos/scratch/core-listen-1124/`（bin/mk.sh、run.sh、suite.sh；l0＝HEAD 基準、l5＝全部改動）：apps/agent、apps/mcp、subagent tests、apps/tools、apps/eca、templates/tests/agent-fsm（253）、py/tests 頂層、defs 全綠，跟基準比沒新紅。repo 跑過 install.py（main 准）。
 - 沒做：claude 真 session 端到端（Claude Code 實際並發叫兩個 aos 工具）沒跑；並發 add 搶配額沒寫測試（鎖有、測不到窗）。已在跑的 aos-mcp 要 session 重開才吃到新碼。
+
+### 11-25（線 eca-aos-core-1125a／b）
+
+- -p 第一個 result 就收：6f8fd99a6（cli_print.run_claude_stream：RESULT_GRACE_S 3、stop_group 收群組＋子孫、回答取第一個）；live_mail 那條沒動（等 eca-aos 定）。haiku 三輪額度用完。
+- idle-polling 第 0 刀 5e79d6f0b（install.py compile_lib；py/scripts/idle_cost.py 常備量測）、第 1 刀 c2eb8f3fe（gate 鍵：Loop::ask_gate，aos-loop 在 before_point 前、aos-daemon 在 run_body 前，poke --all 不問）。repo install.py 跑過（exit 0），我現在可以自己跑 install.py（eca-aos 11-25 兩封都這樣說）。
+- **第 0 刀的教訓**：一拍 CPU 降一半（eca 170～200→80 ms），但 interval_ms 從一拍結束算，拍變短就拍得更勤（每秒 1.2～1.7→2.0），閒置總核數沒降。要省核數得靠閘不起 Python（第 3 刀）。規劃 06 的「4.3→2.6」估法不成立。
+- 量法：`python3 -I proto8/py/scripts/idle_cost.py --seconds 60 --json …`；每拍 CPU 用 `~/.aos/scratch/eca-aos-core-1124/sample.py`＋`analyze.py`（取樣器自己約 0.2 核）。數字在 `~/.aos/scratch/idle-1125/`。
+- 坑：Bash 工具是 zsh，沒有 mapfile；多檔 commit 一律 `bash -c '…mapfile…'`，不然 claim 到 "."（要 release）。
+- 等 eca-aos：第 2 刀以後再派；閘失敗照跑或收工；live_mail 要不要也改。
