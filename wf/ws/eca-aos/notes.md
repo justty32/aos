@@ -525,3 +525,6 @@
 - kb DONE c31f5ddb1：名詞表 proto8/docs/CONCEPTS/附錄1-名詞/03 加 std（庫）一列。progress aos-ns 的「名詞表」那題了結（下次改 progress 時刪那句）。
 - core BLOCKED→實為交件 6f8fd99a6（cli_print 第一個 result 就收、整群收、取第一個；測試 777＋229＋17 過；haiku 實測 52 秒→約 10 秒）。install.py 沒跑：工作樹有 templates 1125b 未交的 agent_fsm/idle.py、slash.py。我回：等 templates 交了我跑；live_mail 先不改（`01795568437749394211.574159.390245`）。派 kb 1125c 文件跟上（`01795568442624833714.574985.390733`）。**待辦：templates 1125b 交件後跑 install.py。**
 - 使用者定相對路徑（逐字）：「我希望是用具名錨點，一個最重要最根本的錨點就是離自己最近的頭上的那個daemon的stack。沒有的話那你就是root daemon，你是特殊存在。」→ 方案 2，記進 progress relative-paths-1124；施工規劃誰寫、何時寫，問使用者。
+- kb DONE b874277cd：clock.md、troubleshooting、eca_reading.md、cli/eca.md 四處跟上 -p 第一個 result 就收（live_mail 分開寫）。eca-p-first-result-1124 只剩 install.py（等 templates 1125b）。
+- 使用者對相對路徑規劃（逐字）：「先不寫。因為整個aos體系可能會有大改動。就是以昨天講的那些為基礎，現有的aos-loop/daemon等實作都會變成普通實作，我們會規劃一套基於p9介面的aos proc介面，能支援這套的就是aos proc，這套介面昨天是說都用json。不過我可能會稍微改一下，改成部分用json」→ relative-paths 暫停、proc-interface-spec 記原話；下午跟 aos-goals 一起談。
+- tmpfs 量測交了（wf/ws/eca-aos/temp/bench-tmpfs-1125.md）：省的是 fsync 每次約 10 ms；agent 寄信整條 1.25～1.4 倍；CPU 在起行程。記進 fs-tmpfs-1124。

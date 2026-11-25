@@ -497,8 +497,8 @@
       "title": "短期目標：樹（.stack）放記憶體（tmpfs），定期同步回硬碟",
       "status": "open",
       "flow": "",
-      "what": "使用者 11-24（逐字）：「我原本就打算讓現有的這套樹，放到/tmp上，也就是記憶體內，確保效能，然後可能每隔一段時間，比如關機前，再去把它cp到硬碟內。並且還可以配合git，比如.git就放在硬碟。」後來補：「或許短期目標會是我說的，把東西放/tmp，定期同步到硬碟。」原則（逐字）：「我會希望aos就是依靠檔案系統，那這個檔案系統，不管是硬碟、/tmp，還是fuse，都可以撐著。」事實（11-24 查）：這台 /tmp 已是 tmpfs（2G）；兩棵 .stack 約 34M＋13M；aos 的原子寫入會 fsync（cpp/aos-util/src/files.cpp、cpp/aos-json/src/doc/file.cpp、py/aos/ws.py 等），tmpfs 上 fsync 近乎免費＝寫入有感，讀取 ext4 已有頁快取、差不多；閒置 CPU 是起行程的成本，tmpfs 不解（歸 idle-polling）。要注意：表與 on_clock.json 記絕對路徑——在相對路徑做好之前，tmpfs 要掛在原路徑上（不要 symlink，有程式會解開記真路徑）；只在關機前存會被 wsl --shutdown／更新／當機吃掉，要每幾分鐘 rsync、關機前停樹再存一次；開機先抄回再起 daemon。",
-      "next": "三分切完後：在暫存樹量 ext4 與 tmpfs 的收發＋原子寫入差多少，再定掛法與同步腳本（給使用者看再做）。",
+      "what": "使用者 11-24（逐字）：「我原本就打算讓現有的這套樹，放到/tmp上，也就是記憶體內，確保效能，然後可能每隔一段時間，比如關機前，再去把它cp到硬碟內。並且還可以配合git，比如.git就放在硬碟。」後來補：「或許短期目標會是我說的，把東西放/tmp，定期同步到硬碟。」原則（逐字）：「我會希望aos就是依靠檔案系統，那這個檔案系統，不管是硬碟、/tmp，還是fuse，都可以撐著。」事實（11-24 查）：這台 /tmp 已是 tmpfs（2G）；兩棵 .stack 約 34M＋13M；aos 的原子寫入會 fsync（cpp/aos-util/src/files.cpp、cpp/aos-json/src/doc/file.cpp、py/aos/ws.py 等），tmpfs 上 fsync 近乎免費＝寫入有感，讀取 ext4 已有頁快取、差不多；閒置 CPU 是起行程的成本，tmpfs 不解（歸 idle-polling）。要注意：表與 on_clock.json 記絕對路徑——在相對路徑做好之前，tmpfs 要掛在原路徑上（不要 symlink，有程式會解開記真路徑）；只在關機前存會被 wsl --shutdown／更新／當機吃掉，要每幾分鐘 rsync、關機前停樹再存一次；開機先抄回再起 daemon。 11-25 量測（Claude Code 子 agent，報告 wf/ws/eca-aos/temp/bench-tmpfs-1125.md；機器負載 14～26，比例跳動大）：Python 寫＋fsync＋改名 ext4 約 8 ms、tmpfs 約 0.02 ms；aos-json set 中位數 ext4 11～17 ms、tmpfs 1.9～6.7 ms；aos-post send ext4 9.6～19 ms、tmpfs 1.9～7.6 ms；agent 真正走的 aos-mailbox send（先起 Python）ext4 148～158 ms、tmpfs 113～118 ms（1.25～1.4 倍）；唯讀 aos-json get 沒差。結論：tmpfs 省的是每次等 fsync 約 10 ms，不是 CPU；閒置 CPU 在起行程，歸 idle-polling。",
+      "next": "數字給使用者看了，要不要掛 tmpfs 等使用者說；掛的話要等相對路徑／proc 介面定（目前要掛在原路徑上）。",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
@@ -506,10 +506,10 @@
     },
     "relative-paths-1124": {
       "title": "日程：aos 盡量都用相對路徑（樹搬到哪個檔案系統、哪個路徑都撐得住）",
-      "status": "open",
+      "status": "暫停",
       "flow": "",
       "what": "使用者 11-24（逐字）：「路徑這塊，我其實會希望盡量都用相對路徑，這塊紀錄進日程吧」。現況：daemon 的表（procs_state.json 的 def／stack／ws）、各 agent 的 on_clock.json、notes_path 以外的不少設定記的是絕對路徑（三分的盤點裡活樹 13 列的 def 都是 $AOS_HOME/templates/... 或展開後的絕對路徑）；樹一搬（換機、放 tmpfs、改路徑）就要改表。還沒盤點哪些檔、哪些程式寫絕對路徑。 11-25 只讀盤點（打雜工 sol-4，報告 wf/ws/eca-aos/temp/eca-aos-sol-4/report-relpaths.md）：daemon 表的 def／stack／ws／exec 存檔已相對 daemon stack、命令列顯示時才展開；notes_path、CLI 的 ws／stack 標記已相對；還存絕對的有父 daemon 狀態、鐘與事件 hook 的內容、eca 抄下的 env／MCP 設定、部分 exec 的 argv／envs。三方案：1 只補剩的、2 具名錨點（AOS_HOME／AOS_DAEMON／AOS_WS）、3 整棵一個根。使用者 11-25（逐字）：「我希望是用具名錨點，一個最重要最根本的錨點就是離自己最近的頭上的那個daemon的stack。沒有的話那你就是root daemon，你是特殊存在。」＝選方案 2；最根本的錨點是「往上最近的 daemon stack」，找不到的就是 root daemon（特殊）。",
-      "next": "方向已定（方案 2，錨點以往上最近的 daemon stack 為根本）。下一步：派人寫施工規劃（錨點有哪些、各自怎麼寫進檔、讀的地方怎麼認、root daemon 怎麼處理、哪些執行期產物算在範圍內、跟 fs-tmpfs-1124 的關係），給使用者看再做；排在 idle-polling 之後或另開 fable 寫，等使用者說。",
+      "next": "施工規劃先不寫。使用者 11-25（逐字）：「先不寫。因為整個aos體系可能會有大改動。就是以昨天講的那些為基礎，現有的aos-loop/daemon等實作都會變成普通實作，我們會規劃一套基於p9介面的aos proc介面，能支援這套的就是aos proc，這套介面昨天是說都用json。不過我可能會稍微改一下，改成部分用json」。等 aos proc 介面（proc-interface-spec、aos-goals-1124）定了，錨點規則跟著那套介面一起定。",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
@@ -528,10 +528,10 @@
     },
     "proc-interface-spec": {
       "title": "之後做：把「proc 介面」寫成規格（stack 目錄的檔案契約）",
-      "status": "暫停",
+      "status": "等使用者",
       "flow": "",
-      "what": "從 plan9-ns-1124 的討論來：proc＝一份目錄介面，aos-loop 落檔是一種實作、常駐行程用 FUSE 掛在自己 stack 上是另一種，兩種共存。規格要寫：daemon 與別人讀寫 stack 裡哪些檔（ctl.json、state、mailbox/、queue/、stderr.txt、exec.json…）、誰寫、要不要原子、信怎麼投、哪些檔帶路徑。也服務 relative-paths-1124（盤點帶路徑的檔）與 fs-tmpfs-1124。使用者 11-24：「不急，先記下來吧」。",
-      "next": "排在三分切完之後、relative-paths-1124 盤點之前或一起；開工前問使用者。",
+      "what": "從 plan9-ns-1124 的討論來：proc＝一份目錄介面，aos-loop 落檔是一種實作、常駐行程用 FUSE 掛在自己 stack 上是另一種，兩種共存。規格要寫：daemon 與別人讀寫 stack 裡哪些檔（ctl.json、state、mailbox/、queue/、stderr.txt、exec.json…）、誰寫、要不要原子、信怎麼投、哪些檔帶路徑。也服務 relative-paths-1124（盤點帶路徑的檔）與 fs-tmpfs-1124。使用者 11-24：「不急，先記下來吧」。 使用者 11-25（逐字）：「先不寫。因為整個aos體系可能會有大改動。就是以昨天講的那些為基礎，現有的aos-loop/daemon等實作都會變成普通實作，我們會規劃一套基於p9介面的aos proc介面，能支援這套的就是aos proc，這套介面昨天是說都用json。不過我可能會稍微改一下，改成部分用json」＝aos-loop／daemon 退成普通實作之一；介面基於 9P、支援這套的就是 aos proc；格式昨天說全 json，他可能改成部分 json。相對路徑的錨點（relative-paths-1124：最根本的是往上最近的 daemon stack、沒有就是 root daemon）跟著這套定。",
+      "next": "等使用者主導；跟 aos-goals-1124 下午的談話一起。",
       "see": [
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
