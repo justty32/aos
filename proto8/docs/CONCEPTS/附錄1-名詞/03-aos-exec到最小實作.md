@@ -13,5 +13,6 @@
 | 基礎層 | 分層的最下層：核心 aos-exec（含 inst 庫、指示詞、旗標）＋ loop、daemon（C-74） | 10-22 |
 | 核心（分層） | 基礎層中的核心＝aos-exec（使用者「aos-exec是core，是基礎中的基礎」）；C-74 分層裡說的核心就是它，C-12、C-18 的「核心」是「核心（aos 作業系統核心）」那列；kernel 不叫核心（C-74） | 10-22 |
 | 標準庫 | 基礎層之上：fsm、tasks、其他；再上去是 agent／kernel（C-74）。跟「純標準庫 Python」（只用 Python 自帶的庫）是兩回事 | 10-22 |
+| std（庫） | `agent.py` 裡**隨 aos 發的那一份庫**（`std = defs.std`），根是 `$AOS_HOME`。<br>用法：`std.pack("look")` 一個工具包、`std.tool("base/read")` 一支工具、`std.fsm()` agent-fsm 的四格、`std.hooks()` 某個範本的 hook 組。<br>放哪：包在 `lib/packs`、工具在 `lib/tools`、fsm 格在 `lib/aos/apps/agent_fsm`，hook 組從 `templates/agents/<範本>/` 抄。<br>工具名：std 的工具腦看到短名（`read`）。別的庫用 `defs.lib("名", 根)` 宣告，根只收絕對路徑或指示詞，庫名不能叫 std；它的工具自動帶「名_」（`my_read`）。<br>編譯：`python3 agent.py --compile` 把包展開成一支支工具寫進 `tools.json`，預設 `--static`。`--dynamic`，或逐包 `link="dynamic"`，是讓 `tools.json` 指向包檔（`$override`）。<br>跟上一列「標準庫」（C-74 的一層）是兩回事。std 算 C-74 哪一層**先留著**：使用者 11-19「先留著。以後搞不好可以統合，因為這些東西搞不好也可以在aos.py.std中找到。或是aos.std。」，這是想法，不是裁定。<br>設計與裁定：[aos-ns-1119/07](../../../thinking/2026-11/19/aos-ns-1119/07-使用者裁定.md)、[第一刀](../../../thinking/2026-11/19/aos-ns-第一刀.md) | 11-19、11-25 |
 | 基礎設施 | **主題**名（CONCEPTS 03、NORMS 03～07、10），不是層：橫跨基礎層與標準庫 | 10-22 |
 | 最小實作／完整實作 | 實作兩級：最小實作只做最少步驟、確保合規（aos-exec＝cd → 設環境變數 → 跑檔）；完整實作顧邊緣狀況、精修過（`proto8/cpp` 的 C++ 那幾支）。名字免得跟基礎層撞（新詞頂層代定；N-18） | 10-14、10-21、10-22 |

@@ -36,6 +36,10 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
   - 把 llm_kernel.md「template kernels」改成只指主 kernel 範本（llm-team 是 slots 4、沒有 reserved）；
   - dev-env/03 錯誤表下、daemon-root README 子項 stack 那句後面，各補一段指向知識庫。
   - 範本的 slots／reserved 數字如果再改，llm_kernel.md 那句要跟著對。
+- 11-25 線 `eca-aos-kb-1125b`（aos-ns，使用者 11-25「要」）：在名詞表加了一列「std（庫）」。
+  - 名詞表只有一份：`docs/CONCEPTS/附錄1-名詞/03-aos-exec到最小實作.md`，加在「標準庫」那列之後；`附錄1-名詞.md` 的分檔目錄也補了詞。知識庫沒有名詞表。
+  - std 算 C-74 哪一層照使用者「先留著」，沒寫死。
+  - 如果之後 std 搬進 `lib/std/`（03 的第二刀，還沒排），那列的「放哪」要改。
 - 我的信箱回信地址：eca-aos 在 `/home/guanyu/aos-home/.stack/procs/repo-aos/procs/eca-aos/mailbox`（stack 11-24 搬家後）。
 
 # 下次照做
