@@ -575,11 +575,11 @@
       "title": "proto9 做減法：daemon 當容器（給底下假的天空）、kernel 接住名字（使用者 11-25 晚，家機）；小實驗 sky-1125 在做",
       "status": "open",
       "flow": "",
-      "what": "使用者 11-25 晚（9p-proc-1125 第 30～34 段）已定：攔截用「把名字交給 kernel」；procs/<名>/ 底下不規定，ctl 等歸之後的 agent 界面；界面＝檔案布局＋格式＋在指定條件下存取得到；不提供界面 daemon 也能粗管；daemon 只管碰 Linux 權力的五樣（起收行程、組天空、給身分、起動前上鎖、發開關），其餘歸 kernel；kernel 向 daemon 登記（提供）、起的人明寫（選用）、只能往下傳自己有的、天空起來時定好要改明確下指令；PID namespace 開（daemon 的死活使用者保證）；推薦用名字不用 PID；kernel 回答繞圈不限制；依賴鏈軟性檢查、daemon 可選「不准成圈、拒登記」。「可以來做小實驗，隨意做」→ 家機 main 派 opus 子 agent 做 proto9/experiments/sky-1125/（十項），它不 commit。他還在想 daemon 層層疊疊。",
-      "next": "子 agent 回來後 main 重跑 run.sh、查殘留行程與掛載、交件（本地，沒 push 授權），向使用者報結果。",
+      "what": "使用者 11-25 晚（9p-proc-1125 第 30～39 段，整理在 daemon當容器-1125 第一～九輪）已定：攔截用「把名字交給 kernel」；procs/<名>/ 底下不規定，ctl 等歸之後的 agent 界面；界面＝檔案布局＋格式＋在指定條件下存取得到；daemon 只管碰 Linux 權力的五樣（起收行程、組天空、給身分、起動前上鎖、發開關），其餘歸 kernel；daemon 起 proc 直接用 bwrap（或 runc）；kernel 登記＝提供、起的人明寫＝選用、只能往下傳自己有的、天空起來時定好（跑的時候改得了，要明確下指令）；PID namespace 開；推薦用名字不用 PID；kernel 回答繞圈不限制，依賴鏈軟性檢查；靜態的夾也算 kernel（表上標 dir／exec／fuse／socket）；就緒、事件、按需起 kernel、進天空的工具照提案；天空是共用的路由，要牆去隔壁 daemon；替別人花的資源各自處理；之後要訂「aos proc 界面」＝能跟著 daemon 一起重起，不符合的也能當 proc、自己承擔；/usr 先不管；網路、每人一條 socket、第八輪 7～11 之後再談。",
+      "next": "小實驗 proto9/experiments/sky-1125（opus 子 agent，十項）回來後 main 重跑、查殘留、交件並報使用者；下一批加就緒、事件、按需起 kernel、進天空的工具。proto9 介面草稿 01 怎麼跟上今晚的方向，等使用者看過實驗再說。",
       "see": [
         "[daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md)",
-        "[9p-proc-1125 第 30～34 段](../proto8/thinking/2026-11/25/9p-proc-1125.md)"
+        "[9p-proc-1125 第 30～39 段](../proto8/thinking/2026-11/25/9p-proc-1125.md)"
       ],
       "since": "2026-11-25"
     }
