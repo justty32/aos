@@ -651,3 +651,6 @@
   - 新開 `proto9/`：README、`docs/01-aos-proc介面草稿.md`（【定】【擬】【開】三種記號；第 11 節是還沒定的）。AGENTS.md 第一段加一句指過去。progress proc-interface-spec 改成 open、idle-polling 記停在第 3 刀。
 - 等使用者看草稿。我擬的、要他點頭的主要幾樣：`aos_` 開頭推到所有標準行、status 第一批、attrs 的 `aos_kind`／`aos_live`、procs_ctl 的字（含 kill、register）、procs_status 的欄（含 want）。
 - 還要問他的一點：attrs 讓「普通檔案」的 proc 也能表明自己——跟「proto9 裡只有當場回答的才算」怎麼擺（我的讀法：proto9 自己做的都當場回答；attrs 是留給別人做的別種身體表明自己用的）。
+- 15:0x 使用者（逐字，thinking 第 12 段）：「好，我覺得都可以。」→ attrs 的讀法＋我挑的五樣都定了；草稿改成第 1 版（那幾條改標【定】）。
+- FUSE 小實驗回來（子 agent，約 16 分鐘）：掛得起來、鎖做得出來（開檔與寫入兩步都要擋）、連穿兩層通、閒著 0 CPU、Python 版一次 cat 約 1 ms。坑：死掉的掛載要有人卸（這台 auto_unmount 沒作用）、proc 卡住會拖住讀的人且殺不掉、bwrap 裡走不進 /proc/<PID>/cwd（真實路徑可以）。我重跑 `try.py 2 3` 對過；撞到 try.py 部分跑時收尾有洞（三隻 kid 沒收，掛載被 lazy 卸但行程還在回答）→ 我用寫它們的 ctl 收掉，記進實驗 README「eca-aos 複核」與草稿第 11 節第 2 點（daemon 死了底下的怎麼辦【開】）。現在沒有殘留。
+- 草稿第 12 節是接下來要談的：daemon 死了底下的怎麼辦／不認得的字要不要讓寫入失敗／一次寫入收不收多行；proto9 程式放哪與語言、掛載點放哪；sleep／wake；persist 怎麼擺；socket；token 檔；register；agent 身體；換帳號。

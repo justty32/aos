@@ -1,4 +1,4 @@
-proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc 的目錄長什麼樣、每個檔的格式）為中心從頭做；目前只有介面草稿與一個 FUSE 小實驗，還沒有任何實作。
+proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc 的目錄長什麼樣、每個檔的格式）為中心從頭做；目前只有介面草稿與一個 FUSE 小實驗（玩具），還沒有任何正式的實作。
 
 # proto9
 
@@ -18,8 +18,8 @@ proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc �
 
 | 東西 | 狀態 |
 |---|---|
-| [docs/01-aos-proc介面草稿.md](docs/01-aos-proc介面草稿.md) | 草稿第 0 版：把兩輪談話定下來的寫成一頁，沒定的標出來 |
-| `experiments/fuse-proc-1125/` | FUSE 小實驗（這台不靠函式庫做不做得順）；11-25 下午派出，做完才有 |
+| [docs/01-aos-proc介面草稿.md](docs/01-aos-proc介面草稿.md) | 草稿第 1 版：兩輪談話定下來的寫成一頁，沒定的標出來；含小實驗查到的 |
+| [experiments/fuse-proc-1125/](experiments/fuse-proc-1125/README.md) | FUSE 小實驗（玩具 proc 與玩具 daemon，Python 標準庫）：這台不靠函式庫掛得起來、鎖做得出來；坑在死掉的掛載要有人卸、proc 卡住會拖住讀它的人 |
 
 ## 跟 proto8 的關係
 

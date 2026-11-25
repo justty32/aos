@@ -1,6 +1,6 @@
-aos proc 介面草稿第 0 版：一個 aos proc 的目錄長什麼樣、每個檔怎麼讀寫、daemon 多哪幾樣；把使用者 11-25 兩輪談話定下來的寫成一頁，沒定的與 eca-aos 自己擬的都標出來。
+aos proc 介面草稿第 1 版：一個 aos proc 的目錄長什麼樣、每個檔怎麼讀寫、daemon 多哪幾樣；把使用者 11-25 兩輪談話定下來的寫成一頁，沒定的與 eca-aos 自己擬的都標出來。
 
-# aos proc 介面（草稿第 0 版，11-25）
+# aos proc 介面（草稿第 1 版，11-25）
 
 ← [proto9](../README.md)｜原話與每輪定了什麼：[9P proc 談話紀錄](../../proto8/thinking/2026-11/25/9p-proc-1125.md)
 
@@ -10,7 +10,9 @@ aos proc 介面草稿第 0 版：一個 aos proc 的目錄長什麼樣、每個�
 - 【擬】eca-aos 自己挑的，還沒有使用者的話；他看了不對就改。
 - 【開】還沒談。
 
-寫這頁的是 `eca-aos`。還沒有任何程式照這頁做。
+寫這頁的是 `eca-aos`。還沒有任何正式的程式照這頁做；只有一個玩具實驗（[fuse-proc-1125](../experiments/fuse-proc-1125/README.md)），第 11 節是它查到的。
+
+第 1 版（11-25 下午）：使用者看過第 0 版裡 eca-aos 挑的幾樣，答「好，我覺得都可以。」——`aos_` 開頭推到所有標準行、`status` 第一批、ctl 回饋四行、`procs_ctl` 的字、`procs_status` 的欄、`attrs` 的兩行與讀法，都改標【定】；加進 FUSE 小實驗的結果。
 
 ## 1. 一句話
 
@@ -51,7 +53,7 @@ aos proc 介面草稿第 0 版：一個 aos proc 的目錄長什麼樣、每個�
 | `ctl` | 控制它 | 只寫 | 純文字，一行一道 | 【定】 |
 | `status` | 它現在怎樣 | 只讀 | 純文字，一行一個「名稱: 值」 | 【定】 |
 | `settings` | 它的東西放哪（起來時就定的） | 只讀 | 同 `status` | 【定】 |
-| `attrs` | 它是哪一種身體、能不能當場回答；要用它的人看了自己決定怎麼做 | 只讀 | 同 `status` | 【定】有這個檔；裡面的行【擬】 |
+| `attrs` | 它是哪一種身體、能不能當場回答；要用它的人看了自己決定怎麼做 | 只讀 | 同 `status` | 【定】 |
 | `_metainfo.json` | 它是什麼（定義帶來的那份） | 只讀 | json，照 aos 現有的 | 【定】 |
 | `persist` | 走到它要留的東西 | — | 一個夾（或指過去的連結） | 【定】推薦位置；怎麼擺【開】 |
 
@@ -76,7 +78,7 @@ daemon 另外多：
 【定】一行一個「名稱: 值」。以下細節【擬】：
 
 - 名稱：小寫英文字母、數字、底線。冒號後一個空白，之後到行尾都是值，原樣。沒有值寫 `-`。
-- **`aos_` 開頭的名稱是 aos 標準的**，意思照這頁；其餘的名稱 proc 自己用，愛叫什麼叫什麼。（【定】`aos_ctl_` 開頭的是標準；把同一條規則推到所有標準行是【擬】。）
+- 【定】**`aos_` 開頭的名稱是 aos 標準的**，意思照這頁；其餘的名稱 proc 自己用，愛叫什麼叫什麼。`status`、`settings`、`attrs` 都照這條。
 - 不認得的行跳過。現在不標版本。
 - 行的先後沒有意思，照名稱找。
 
@@ -98,7 +100,7 @@ daemon 另外多：
   - 「做完」：`pause` 是停住了就算做完（鎖放開，才收得了 `resume`）；`stop` 是行程結束。
   - 鎖著的時候要強制收：寫它 daemon 的 `procs_ctl`（第 8 節）。proc 自己的 ctl 只有客氣的字。
 - 【定】**回饋放 `status`，行名 `aos_ctl_` 開頭**，講的一定是最後一次 ctl。被拒的原因也在這裡。
-- 【擬】回饋的四行：
+- 【定】回饋的四行：
 
   | 行 | 值 |
   |---|---|
@@ -113,7 +115,7 @@ daemon 另外多：
 
 三個檔照「誰決定、什麼時候會變」分：`settings` 是起來時定的，之後不變；`attrs` 是這種身體天生的；`status` 一直變。
 
-**`status` 第一批**（【定】由 eca-aos 定；所以整張【擬】）
+**`status` 第一批**（【定】）
 
 | 行 | 值 |
 |---|---|
@@ -136,20 +138,22 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 
 【定】persist 在哪，以 proc 自己在 `settings` 說的為準；daemon 起它之後來讀。daemon 可以給預設位置，在 `/tmp` 開一塊。proc 沒說就死了，daemon 就不知道。
 
-**`attrs`**（【定】有這個檔、用途；行【擬】）
+**`attrs`**（【定】）
 
 | 行 | 值 |
 |---|---|
 | `aos_kind` | 這個目錄是怎麼擺出來的：`fuse`／`file`（硬碟上的普通檔）／`tmp`（記憶體裡的普通檔）／… |
 | `aos_live` | `yes`＝當場回答（寫 ctl 回來就是收到、鎖擋得住）；`no`＝沒人當場接，寫進去只是放著 |
 
-【擬】要用它的人照 `aos_live` 決定怎麼做，`aos_kind` 只是說明（以後會有新的種類）。沒有 `attrs` 就當 `aos_live: no`。
+【定】要用它的人照 `aos_live` 決定怎麼做，`aos_kind` 只是說明（以後會有新的種類）。沒有 `attrs` 就當 `aos_live: no`。
+
+【定】proto9 自己做的 proc 全部當場回答。`attrs` 是留給別人做的別種身體（普通檔、記憶體裡的普通檔…）表明自己用的：它們也算 aos proc，只是要用的人得自己小心（寫 ctl 回來不代表收到、鎖擋不住）。
 
 ## 8. daemon 多的三樣
 
 - 【定】`procs/<名>`：走進去是那隻 proc 的目錄。只有活著的走得進去。
 - 【定】`procs_ctl`：管底下的 proc 的字寫這裡，不寫 daemon 自己的 `ctl`（那個只管 daemon 自己）。
-- 【擬】`procs_ctl` 的字：
+- 【定】`procs_ctl` 的字：
 
   | 字 | 做什麼 |
   |---|---|
@@ -162,7 +166,7 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   proto8 的 `sleep`／`wake` 要不要留【開】。鎖與回饋的規則同第 6 節。
 
 - 【定】`procs_status`：底下每隻 proc 的狀態，純文字。proc 死了，它自己的 `status` 就沒了，這張表是唯一還答得出來的地方。
-- 【擬】行名是 `名字.欄名`：
+- 【定】行名是 `名字.欄名`，欄有 `phase`、`want`、`pid`、`code`、`reason`、`persist`、`mailbox`：
 
   ```
   arena.phase: stopped
@@ -199,14 +203,36 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   - 每隻 proc 要留的東西，從它自己的目錄走得到（`persist`）。
   - 留下來的檔裡，指別人用名字路，不用絕對路徑、不用 PID。
 
-## 11. 還沒定的（照我覺得該先談的排）
+## 11. FUSE 小實驗查到的（11-25，[報告](../experiments/fuse-proc-1125/README.md)）
 
-1. FUSE 小實驗的結果（`../experiments/fuse-proc-1125/`）：這台做不做得順、掛載點放哪、行程被強制收掉後掛載怎麼收。
-2. `aos_` 開頭這條規則要不要推到所有標準行（第 5 節），還是只有 `aos_ctl_*`。
-3. `status` 第一批、`attrs` 的兩行、`procs_ctl` 的字、`procs_status` 的欄——都是我擬的，等使用者看。
+一隻玩具 proc 加一台玩具 daemon，Python 標準庫、不靠 FUSE 的函式庫。eca-aos 重跑過第 2、3 題，結果一樣。
+
+做得到的：
+
+- 掛得起來。殼裡的 `ls`、`cat status`、`echo stop > ctl`、`cd` 都正常；從 `$AOS_ROOT/procs/<名>/status` 連穿兩層讀得到。
+- 鎖做得出來：鎖著時別人 `echo pause > ctl` 當場失敗（`Device or resource busy`，退出碼 1），`aos_ctl_*` 沒被動到。要在「開檔」與「寫入」兩步都擋，只擋開檔會漏。
+- 行程被強制收掉，`/proc/<PID>/cwd` 那條路馬上不見。
+- 閒著不吃 CPU。Python 版一隻約 14 MB、讀一次 `status` 約 0.4～1.7 毫秒（普通檔約 0.015 毫秒）：給人與 agent 看夠用，當高頻的訊息管道不行。
+
+會影響介面或做法的：
+
+1. **死掉的掛載會留下來**。行程被強制收掉後，掛載點還在（進去是 `Transport endpoint is not connected`），要有人卸。這台 FUSE 自帶的「死了自動卸」實測沒作用。做法：daemon 替底下的 proc 收屍時順手卸；根自己死掉留下的，下次起來時清。
+2. **daemon 死了，底下的 proc 還活著**（eca-aos 重跑時撞到）：掛載被卸掉之後它們照樣回答，從 `/proc/<PID>/cwd` 還走得進去，只是沒有任何 `procs/<名>` 指到它們了。要定：daemon 死了底下的要不要跟著收、新 daemon 起來接不接回。【開】
+3. **proc 的程式卡住，讀它的人會一起卡住，而且殺不掉**（只能收掉那隻 proc）。所以 daemon 自己去讀底下 proc 的 `settings`、`status` 時要防這個；`procs_ctl` 的 `kill` 是解法。
+4. **`status` 的內容在開檔那一刻定下來**，一次讀到的是同一份，不會讀到一半變。
+5. **不認得的 ctl 字**：玩具的做法是那次寫入照樣成功（收到了），錯誤只記在 `aos_ctl_*`。要不要同時讓寫入失敗【開】。
+6. **一次寫入幾道**：玩具一次只收一道，多行就拒。要不要收多行【開】。
+7. **沙箱**：這台的沙箱（bwrap）裡走不進 `/proc/<PID>/cwd`，但把掛載點的真實路徑開給它就讀得到。這就是「有需要再開口子」的口子。
+8. **沒測的**：別的 Linux 帳號；收訊息的 unix socket 能不能放在 FUSE 的目錄裡（退路：放在外面，`settings` 寫位置）；改寫成 C++（估 600～800 行）。
+
+## 12. 還沒定的（照我覺得該先談的排）
+
+1. 第 11 節標【開】的三樣：daemon 死了底下的怎麼辦、不認得的字要不要讓寫入失敗、一次寫入收不收多行。
+2. proto9 的程式放哪幾個夾、用什麼語言（玩具是 Python；正式的基礎層照慣例是 C++）、掛載點放哪。
+3. `procs_ctl` 要不要留 proto8 的 `sleep`／`wake`。
 4. `persist` 在目錄裡怎麼擺（真的夾、連結、還是 proc 當場回答）；proc 死了以後別人怎麼走到它的 persist（現在只有 `procs_status` 那一行路徑）。
 5. socket 那一塊（第 9 節的【開】）。
 6. 報 token 用量的檔。
 7. 只登記、不起的入口（`register`）：誰可以登記誰、登記後 daemon 對它有多少權力。
-8. proto9 的程式放哪幾個夾、用什麼語言、agent 的身體怎麼搬過來。
+8. agent 的身體怎麼搬過來。
 9. 換 Linux 帳號的 proc 怎麼進樹。

@@ -527,11 +527,11 @@
       "since": "2026-11-24"
     },
     "proc-interface-spec": {
-      "title": "proto9：aos proc 介面（草稿第 0 版已寫，等使用者看；FUSE 小實驗在跑）",
+      "title": "proto9：aos proc 介面（草稿第 1 版；FUSE 小實驗做完；等跟使用者談草稿第 12 節）",
       "status": "open",
       "flow": "",
       "what": "從 plan9-ns-1124 的討論來：proc＝一份目錄介面，aos-loop 落檔是一種實作、常駐行程用 FUSE 掛在自己 stack 上是另一種，兩種共存。規格要寫：daemon 與別人讀寫 stack 裡哪些檔（ctl.json、state、mailbox/、queue/、stderr.txt、exec.json…）、誰寫、要不要原子、信怎麼投、哪些檔帶路徑。也服務 relative-paths-1124（盤點帶路徑的檔）與 fs-tmpfs-1124。使用者 11-24：「不急，先記下來吧」。 使用者 11-25（逐字）：「先不寫。因為整個aos體系可能會有大改動。就是以昨天講的那些為基礎，現有的aos-loop/daemon等實作都會變成普通實作，我們會規劃一套基於p9介面的aos proc介面，能支援這套的就是aos proc，這套介面昨天是說都用json。不過我可能會稍微改一下，改成部分用json」＝aos-loop／daemon 退成普通實作之一；介面基於 9P、支援這套的就是 aos proc；格式昨天說全 json，他可能改成部分 json。相對路徑的錨點（relative-paths-1124：最根本的是往上最近的 daemon stack、沒有就是 root daemon）跟著這套定。 使用者 11-25 上午接著口述了形狀（原話六段、定了的、實測、邊緣都在 thinking 9p-proc-1125）：ctl／status 用純文字（寫 ctl 回來＝收到；status 一行一個「名稱: 值」，目前只給 status），_metainfo 照現有的 json；token 用量 proc 自己報、kernel 的帳在 kernel 自己那裡；daemon＝Linux 與 aos 之間的橋、也是 aos proc、多一個 procs 夾（proc／procs 兩個名字指同一處）連到各 proc 的目錄；kernel＝普通 aos proc；入口是根 daemon 的 PID（實測要寫成 /proc/<PID>/cwd，連穿兩層讀得到 status、連得上 unix socket，死了馬上讀不到）；.stack 以後沒有了，stack＝活著的 proc 的身體，要留硬碟的放 procs/<名>/persist（各自處理，這是推薦位置）；活著走 unix socket，掛了就問 daemon 或某個 kernel 信箱在哪、改走寄信；問的時候要不要叫醒是 daemon 的可選設定、以後再說。 使用者 11-25 下午（第二輪，原話第 10、11 段在 thinking 9p-proc-1125）：AOS_ROOT 由人手動 export、身分用名字路、ctl 字表不訂死、回饋放 status 的 aos_ctl_*（講最後一次 ctl）、ctl 從寫進到做完都鎖住、procs_ctl／procs_status、settings 純文字（json 版叫 settings.json，之後再做）、proc 目錄多一個 attrs（說自己能不能當場回答、是哪種）、socket 來的預設算 queue、可遷移性遠期目標是 cp AOS_ROOT；「落檔...不算，我們直接起proto9」＝proto8 的 aos-loop／daemon 不改造，新介面在 proto9/ 從頭做，第一步每隻 proc 用 FUSE 把自己的目錄掛出來。",
-      "next": "① 使用者看 proto9/docs/01-aos-proc介面草稿.md（標【擬】的是 eca-aos 挑的，第 11 節是還沒定的）。② FUSE 小實驗（proto9/experiments/fuse-proc-1125/，11-25 下午派 Claude 子 agent）回來後 eca-aos 看過、交件、把結果講給使用者。③ 之後談：socket 那塊、token 檔、proto9 的程式放哪與語言。relative-paths-1124、plan9-ns-1124、fs-tmpfs-1124 都跟著這條。",
+      "next": "使用者 11-25 15:0x 看過草稿裡 eca-aos 挑的幾樣，答「好，我覺得都可以。」（已改標【定】）。FUSE 小實驗做完、eca-aos 複核過（proto9/experiments/fuse-proc-1125/README.md）。接下來照草稿第 12 節跟使用者談：daemon 死了底下的 proc 怎麼辦、不認得的 ctl 字要不要讓寫入失敗、一次寫入收不收多行；proto9 的程式放哪與用什麼語言、掛載點放哪；sleep／wake；persist 怎麼擺；socket；token 檔；register；agent 的身體；換帳號。relative-paths-1124、plan9-ns-1124、fs-tmpfs-1124 都跟著這條。",
       "see": [
         "[proto9 入口](../proto9/README.md)",
         "[介面草稿](../proto9/docs/01-aos-proc介面草稿.md)",
