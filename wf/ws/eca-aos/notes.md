@@ -705,3 +705,4 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 16:4x 派出第五隻子 agent（opus，背景）：`proto9/cpp/aos-exec/`（從 proto8/cpp/aos-exec 抄、自成一夾不連 proto8 的庫；只砍定了的兩樣：AOS_STACK 與兩個旗標、inst 單子；其餘行為先照舊、測試搬過來；另外回報「還能砍什麼、各幾行」給使用者談大改）。不碰 daemon（另一隻在改）。**回來後**：重編、跑測試、交件、把「還能砍的清單」給使用者。
 - 再下一批（等現在兩隻都回來）：daemon 的 `add` 改交給 proto9 的 aos-exec（資料夾、JSON、可執行檔）、相對路徑從 daemon 自己的目錄算、daemon 自己的 persist、`aos_obey`、登記時對 `aos_name`。
 - 16:4x 使用者（逐字，thinking 第 26、27 段）：agent 不用 aos-loop／fsm 那一堆，是一支簡單的程式、擺出介面；agent 的檔案布局／格式另有一份介面、他之後規劃。`persist` 改名 `persists`。草稿已改（全文換名；settings 的 `aos_persists`、procs_status 的 `名字.persists` 是我擬的跟著改）。**程式還沒改**（小庫、daemon 有人在改，排進再下一批）；artifact 的頁面也還寫 persist（等他看完一起改版）。
+- 16:4x 使用者（逐字，thinking 第 28 段）：root daemon 的自動重起掛 systemd，底下的另外設定（照現在的 auto restart）；json 版以 struct 定義為主→json→純文字。我的讀法（當則回覆）：每個檔一個 struct、欄位只宣告一次（C++ 沒有反射，要一張欄位表），json 與純文字都從它產生；純文字＝json 攤平（巢狀用 `.` 接、跟 procs_status 的 `名字.欄` 同一條規則）。帶出的邊角：root 被 systemd 重起後舊的底下還活著（要存表＋認回來）。都排進之後的批次，沒開工。
