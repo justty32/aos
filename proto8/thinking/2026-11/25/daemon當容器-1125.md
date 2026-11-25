@@ -280,3 +280,73 @@ kernel 做的全是決定：排程（誰醒、誰凍住）、額度（token、CP
 8. **PID namespace。** daemon 是 1 號，它一死，底下的全部被收掉。
 9. 加做（做得到才做）：用 subuid 讓兩隻 proc 各用一個帳號，互相讀不到對方的檔。
 10. 加做（做得到才做）：用 cgroup 凍住、解凍一隻沒提供界面的 proc，示範「粗的手段」。
+
+## 第五輪（11-25 晚，第 35 段）：跟現有的 container 比
+
+原話在 [9p-proc-1125 第 35 段](9p-proc-1125.md)。以下由家機 main 憑記憶比較，沒有上網查證；要查證可以請上網幫手。家機上有 docker、runc、bwrap 0.13、systemd-nspawn，systemd 使用者 session 有在跑；沒有 podman、crun、pasta、slirp4netns、criu。
+
+### 一句話
+
+container 做的是「隔離＋打包」：把一個凍好的世界帶著走，自己關起來跑。我們這套做的是「組合＋往下授權」：每隻 proc 的世界，由起它的 proc 用一個個有名字的服務（kernel）組出來，一層一層往下。所以最像我們的不是 Docker，是 Plan 9、Hurd、Genode、Fuchsia 這幾個作業系統。我們缺的，大多是 container 圈磨了十年的底層雜事，外加幾個概念。
+
+### 對照
+
+| | 我們 | container（Docker、Podman、Kubernetes） | 最像我們的 |
+|---|---|---|---|
+| 一個單位 | 一隻 proc 加它的天空；一台 daemon 是一起死的一群 | 一個 container（映像＋設定）；k8s 的 Pod 是一起排程的一群 | Plan 9：行程＋名字空間 |
+| 世界長什麼樣誰定 | 起它的 proc，一層層往下，只能給自己有的 | 寫 run 指令或 spec 的人，只有一層 | Genode、Fuchsia：parent 替 child 接線 |
+| 服務怎麼接進來 | 一個名字交給一個 kernel | volume、port、sidecar（共用網路） | Hurd 的 translator（掛在一個檔名上的程式）、Plan 9 的檔案伺服器 |
+| 跑的時候改 | 可以，要明確下指令 | Docker、k8s 不行（要重建）；LXD 可以熱插 | Plan 9 隨時可以 bind |
+| 嵌套 | 本來就支援 | 勉強（Docker-in-Docker） | Genode、Plan 9 本來就支援 |
+| 策略放哪 | kernel，是可以換的 proc | 內建在 runtime 或 orchestrator 裡（k8s 有 webhook、scheduler plugin，可以外掛一部分） | Genode：parent；Fuchsia：component manager |
+| 資源 | cgroup，再加 token（kernel 在出口量） | cgroup（CPU、記憶體、IO、pids） | Genode：parent 把自己的記憶體額度讓一塊給 child |
+| 健不健康 | 符不符合界面（布局＋格式＋限時回應） | 健康檢查（跑一個指令或打一個 HTTP） | — |
+| 帶走 | 設定＋persists；/usr 用機器自己的 | 映像（分層、內容定址、放 registry） | — |
+
+### 我們有、他們沒有的
+
+1. **服務按名字組合，由起的人挑**：container 沒有「你這個路徑由那隻程式回答，而且是起你的人挑的」這種一等公民。
+2. **遞迴授權**：每隻 proc 都能起一隻更窄的 child；container 基本是平的，由一個中央的 daemon 或 orchestrator 管。
+3. **界面是結構型別，而且量得出來**：container 只有標籤和健康檢查；我們是「做得到就是那個東西」，量到的結果記進 `_metainfo`。
+4. **策略是可以換的 proc**：排程、額度、准不准，都是 kernel。
+5. **跑的時候可以改天空。**
+6. **token 是一種資源。**
+
+### 他們有、我們缺的
+
+**底層雜事：一定要補，照抄就好**
+
+- **/dev、/proc、/sys 的最小擺法**：/dev 只給 null、zero、random、urandom、tty、pts；/proc 要配合 PID namespace 重掛，並遮掉幾個敏感的檔；/sys 唯讀。
+- **終端機**：天空裡要有自己的 pts。tmux 的 socket 如果放在私有的 /tmp 裡，你從外面 attach 不到。
+- **stdout、stderr 要收下來、要輪替**：proto9 的 daemon 也還沒做「把底下的 stderr 收進 reason」。
+- **預設的防護**：Docker 的預設 seccomp 表擋掉四十多個少用又危險的系統調用；還有一份預設要丟掉的權限清單，以及 `no_new_privs`。
+- **這些 bwrap、runc 都做好了，家機兩個都有。** 建議 daemon 起 proc 的那一步直接叫 bwrap（或照 OCI 的 config.json 叫 runc／crun）。我們自己的程式只寫上面那層：kernel 的登記表、天空表、依賴鏈、跑的時候改、發開關。
+
+**概念：值得補**
+
+- **就緒和活著分開**：起了不等於能用（k8s 的 readiness、systemd 的 sd_notify）。報告 10 提過，草稿裡還沒有。
+- **事件**：狀態一變就通知，不必一直去讀（cgroup 的 `cgroup.events`、inotify、FUSE 的 poll）。這跟 proto8「閒置輪詢吃 CPU」那條是同一件事。
+- **按需起 kernel**：天空裡先擺好 socket，第一次有人連才把 kernel 起起來（systemd 的 socket activation、inetd 都是這樣）。kernel 一多，閒置成本就靠這招壓下來。
+- **進到某個天空的工具**：像 `docker exec`、`machinectl shell`，讓人能站在 agent 的位置看。
+
+**看需求再說**
+
+- **可重現的 /usr**：現在天空的 /usr 是機器自己的，搬到別台機器，/usr 不一樣就可能壞。container 用映像解決，Nix 用內容定址的 store 解決。要不要管，取決於「cp AOS_ROOT 搬走一切」搬去的是不是同一種機器。
+- **網路**：現在只有「沒網路＋proxy」一種。要讓 agent 自己上網，就得有不用 root 的網路（pasta、slirp4netns，家機都沒裝），或做一個通用的 proxy kernel。
+- **跨機器**：你有兩台。Plan 9 的做法是把 9P 跑在網路上（import／exportfs），把一台的名字掛進另一台的天空裡。
+- **把跑著的整片凍起來帶走**：CRIU 的 checkpoint／restore。
+
+**不用**：registry、跨多台機器的排程、GPU。
+
+### container 圈踩過、我們也會踩的坑
+
+- **帳號和共用的 repo**：用 subuid 給每隻 proc 一個帳號，它在 repo 裡寫的檔，從外面看是 100xxx 擁有的，你自己的帳號改不了也刪不掉。Podman 用 `keep-id`（把你自己對應到天空裡的同一個 uid）解決；idmapped mount 則要 root。所以會寫 repo 的 agent 先用你自己的 uid，需要隔開的才給 subuid。
+- **掛載傳播**：預設要設成不往外傳（private 或 slave），否則天空裡掛的東西會漏回外面，或在兄弟 proc 之間互漏。真的要傳播的（例如第四輪說的 /srv），再明確設定。
+- **公司那台**：WSL 有沒有開 systemd（沒有就拿不到 cgroup 委派）、不用 root 開 user namespace 行不行，都要在公司實測一次。
+- **Claude Code 自己的沙箱**：它的 bwrap 會疊在我們的天空裡面，要實測。
+
+### 等使用者的三題
+
+1. daemon 起 proc 那一步直接用 bwrap（或 runc／crun），我們只寫上面那層？（推薦）
+2. 「概念：值得補」那四樣（就緒、事件、按需起 kernel、進天空的工具）排進下一批？
+3. /usr 要不要管：先只搬到同一種機器、不管它（推薦先這樣），還是要做到可重現（映像或 Nix）？
