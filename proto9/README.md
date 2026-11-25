@@ -1,4 +1,4 @@
-proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc 的目錄長什麼樣、每個檔的格式）為中心從頭做；目前只有介面草稿與一個 FUSE 小實驗（玩具），還沒有任何正式的實作。
+proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc 的目錄長什麼樣、每個檔的格式）為中心從頭做；目前有介面草稿、一個 FUSE 小實驗（玩具）與第一塊 C++ 小庫 aos-procfs；還沒有 daemon、沒有 agent。
 
 # proto9
 
@@ -19,9 +19,10 @@ proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc �
 | 東西 | 狀態 |
 |---|---|
 | [docs/01-aos-proc介面草稿.md](docs/01-aos-proc介面草稿.md) | 草稿第 1 版：兩輪談話定下來的寫成一頁，沒定的標出來；含小實驗查到的 |
+| [cpp/aos-procfs/](cpp/aos-procfs/README.md) | 第一塊正式程式：C++20 小庫（不靠 FUSE 的函式庫），讓一支行程把自己的目錄掛出來、照介面回答（`status`、`ctl` 的鎖與回饋、symlink、目錄裡的 unix socket）；附範例 proc 與 35 條測試。還沒有 daemon |
 | [experiments/fuse-proc-1125/](experiments/fuse-proc-1125/README.md) | FUSE 小實驗（玩具 proc 與玩具 daemon，Python 標準庫）：這台不靠函式庫掛得起來、鎖做得出來；坑在死掉的掛載要有人卸、proc 卡住會拖住讀它的人 |
 
 ## 跟 proto8 的關係
 
 - proto8 照常跑、照常修；不為新介面改造它（使用者 11-25）。
-- proto9 的程式放哪幾個夾、用什麼語言、怎麼裝，都還沒談。
+- 基礎先用 C++ 做（使用者 11-25），放 `cpp/<專案>/`，各夾自己的 Makefile；怎麼裝、agent 的身體放哪還沒談。

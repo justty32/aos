@@ -669,3 +669,5 @@
 - **上網小幫手**（不在 aos 體系）：tmux 另一台伺服器 `tmux -L webref`（session `webref`），`~/.aos/scratch/web-ref-1125/launch.sh` 起的 claude（第二帳號 ~/.claude-alt、sonnet、dontAsk，只開 WebSearch／WebFetch／Read／Write／Edit／Glob／Grep，`crossSessionInbound: accept`），PID 298742，收件 socket `/run/user/1000/cc-socks/298742.sock`。我用 `cli_a2a.wire` 包信封、直接寫那條 socket 把 `request.md`（六大項）送過去（回執 id 526427dde3b3，畫面顯示 Message from @eca-aos）。它寫 `report.md`，做完建 `DONE`；我有一支背景等待（最多 50 分鐘）。看畫面：`tmux -L webref capture-pane -p -t webref`。
 - **回來後**：讀 report.md → 挑值得抄的整理進 `proto9/docs/`（一頁「參考的現成做法」，出處照它給的）→ 對草稿有影響的講給使用者 → 用完 `tmux -L webref kill-server` 收掉（問一下使用者要不要留著）。坑：PATH 帶空白的 Windows 路徑會把 `env -i … PATH=$PATH` 切壞；新夾第一次開要過「信任這個資料夾」那一關（Down＋Enter）。
 - 還在跑：C++ 小庫那隻子 agent。16:55 push。
+- 15:5x C++ 小庫回來（子 agent，約 13 分鐘）：`proto9/cpp/aos-procfs/`（庫 1233 行、demo、tests）。**我自己清掉 build 重編（無警告）、跑 `tests/run.py` 35/35 過、查無殘留**。新事實：abort 開關放得開卡住的讀者（不用 root）；被暫停時卡住的人殺得掉（玩具的「殺不掉」是請求被拿走不回那種）；FUSE 目錄裡放得了 unix socket；C++ 讀 status 約 45 µs、寫 ctl 約 35 µs、一隻 4 MB。它挑的保守做法六條記進草稿第 11 節（【擬】），其中「做的時候失敗記 done＋error」我想問使用者要不要另開 `failed`。answer.cpp 391 行超過 300 行門檻（之後拆）。
+- 下一步：派 daemon（要先看使用者對 aos post／信箱那題的話；daemon 本身不依賴它，可以先派）。

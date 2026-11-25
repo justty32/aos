@@ -1,0 +1,138 @@
+// aos/procfs.hpp：aos-procfs 公開介面——讓一支行程用 FUSE（不靠 libfuse）把自己的目錄掛出來，照 aos proc 介面回答。
+//
+// 規矩（整個庫的設計都繞著它）：回答的線（讀寫 /dev/fuse 的執行緒）只用行程自己記憶裡的東西，
+// 不做久的事、不碰任何檔案系統路徑，尤其不碰自己的掛載點——否則讀它的人會跟著卡住，而且殺不掉。
+// 所以：只讀檔的內容由「當場產生字串」的 Producer 給（在回答的線上跑）；ctl 的指令交給另一條做事的線跑。
+#pragma once
+
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace aos::procfs {
+
+// ---------- 「名稱: 值」文字 ----------
+
+// 一行 "name: value\n"；值裡的換行換成空白，空值寫 "-"（草稿第 5 節）。
+std::string kv_line(std::string_view name, std::string_view value);
+
+// 一行一行疊起來的小工具：Kv().add("aos_pid", 123).add("aos_phase", "running").str()
+class Kv {
+public:
+    Kv& add(std::string_view name, std::string_view value);
+    Kv& add(std::string_view name, const char* value) { return add(name, std::string_view(value ? value : "")); }
+    Kv& add(std::string_view name, long long value);
+    Kv& add(std::string_view name, int value) { return add(name, static_cast<long long>(value)); }
+    Kv& raw(std::string_view lines);   // 已經是 "name: value\n" 的整段（例：Ctl::feedback()）
+    const std::string& str() const { return out_; }
+
+private:
+    std::string out_;
+};
+
+// ---------- 指令檔（ctl、procs_ctl） ----------
+
+struct Command {
+    std::string line;                  // 收下的那一道（去掉行尾換行）
+    std::vector<std::string> words;    // 依空白切開；words[0] 是字
+};
+
+// 做事的線跑完一道指令的結果。
+struct Result {
+    std::string error;                 // 空＝沒事；否則 "代號 原因"，記進 *_error
+    bool hold = false;                 // true＝不放鎖、state 停在 doing（stop：做完＝行程結束）
+
+    static Result done() { return {}; }
+    static Result failed(std::string code_and_reason) { return {std::move(code_and_reason), false}; }
+    static Result hold_until_exit() { return {"", true}; }
+};
+
+// 在做事的線上跑（每個指令檔一條）；可以久、可以碰檔案。跑完才放鎖。
+using Action = std::function<Result(const Command&)>;
+// 在回答的線上跑：只看參數、只讀記憶體、不可阻塞。回 "" 收下；回 "代號 原因" 就拒（rejected、寫入失敗）。
+using Check = std::function<std::string(const Command&)>;
+
+class Ctl {
+public:
+    // 註冊一個字。要在 Fs::mount 之前註冊完（之後不再改表，回答的線讀它不用鎖）。
+    void on(std::string word, Action action, Check check = {});
+    // 回饋四行 <prefix>cmd／state／error／count；在 Producer 裡叫，只拿一下鎖、不阻塞。
+    std::string feedback() const;
+    bool locked() const;
+
+    struct Impl;
+    explicit Ctl(std::string prefix);
+    ~Ctl();
+    Ctl(const Ctl&) = delete;
+    Ctl& operator=(const Ctl&) = delete;
+    const std::shared_ptr<Impl>& impl() const { return impl_; }
+
+private:
+    // shared：做事的線手上也拿一份，結束時那道指令還在跑就讓它自己跑完，不卡住 unmount
+    std::shared_ptr<Impl> impl_;
+};
+
+// ---------- 掛出來的目錄 ----------
+
+// 在回答的線上跑：只用記憶體裡的東西組字串，不可阻塞、不可碰任何檔案系統路徑
+//（連 localtime 都可能去讀 /etc/localtime，時間字串請先在別處算好）。
+using Producer = std::function<std::string()>;
+
+struct Options {
+    std::string fsname = "aosproc";    // /proc/mounts 第一欄的字首；實際是 "<fsname>:<PID>"，收屍時靠 PID 認活不活
+    int threads = 1;                   // 回答的線幾條；一條就夠，多開只為了很多人同時讀
+    bool root_sockets = false;         // 根夾允許 bind unix socket（同 add_dir 的 sockets）
+    std::function<void()> on_gone;     // 連線沒了（被卸、被 abort）時，從最後一條回答的線叫一次；別在裡面做久的事
+};
+
+class Fs {
+public:
+    explicit Fs(Options opt = {});
+    ~Fs();   // 還掛著就 unmount()
+    Fs(const Fs&) = delete;
+    Fs& operator=(const Fs&) = delete;
+
+    // 節點；path 用 "/" 分層、相對於掛載點根（例 "procs/kid1"），上層夾要先加。重名丟 std::runtime_error。
+    void add_dir(const std::string& path, bool sockets = false);   // sockets＝允許在裡面 bind unix socket（MKNOD S_IFSOCK）
+    void add_text(const std::string& path, Producer produce);     // 只讀純文字：開檔那刻產生一份，整次讀都讀那份
+    void add_json(const std::string& path, std::string content);  // 只讀、內容不變（_metainfo.json）
+    Ctl& add_ctl(const std::string& path, std::string prefix);    // 只寫指令檔；prefix 例 "aos_ctl_"、"aos_procs_ctl_"
+    void add_symlink(const std::string& path, std::string target); // 隨時可加；名字不快取（entry_valid＝0）
+    bool remove(const std::string& path);                         // 拿掉 symlink 或 socket 節點（其他種類不給拿）
+
+    // 掛上並起回答的線與每個 ctl 的做事的線。夾不在就建（unmount 時刪）。失敗丟 std::runtime_error。
+    void mount(const std::string& mountpoint);
+    // 正常結束：自己站在裡面先 chdir("/")、fusermount3 -u，失敗才 -u -z（此時順手 abort 連線好讓回答的線醒來）。
+    void unmount();
+    bool mounted() const;
+    const std::string& mountpoint() const;
+
+    struct Impl;
+
+private:
+    std::unique_ptr<Impl> impl_;
+};
+
+// ---------- 給 daemon 用的 ----------
+
+// /proc/self/mountinfo 裡掛在 path 的 FUSE 掛載的連線編號（=/sys/fs/fuse/connections/<編號>），沒有回 -1。
+// 只讀 mountinfo、不碰 path 本身（碰卡住的掛載會跟著卡住）。
+long connection_id(const std::string& path);
+
+// 對 path 上的 FUSE 連線寫 abort：卡在裡面的人當場拿到錯誤放開，之後那個掛載只剩死殼（要再 cleanup）。
+bool abort_connection(const std::string& path);
+
+enum class Cleanup { NotMounted, Unmounted, Alive, Foreign, Failed };
+// 清掉 path 上死掉的 aos-procfs 掛載（fusermount3 -u -z），給 daemon 收屍用。
+// 從 fsname 認出伺服器 PID；那個 PID 還在（活著或被暫停；殭屍不算）就回 Alive 不動，force 才硬卸。
+// 不是 aos-procfs 掛的（subtype 不是 aosproc）回 Foreign，一律不動。掛載點的空夾不刪，留給呼叫的人。
+// 不碰 path 本身，所以伺服器卡住也不會拖住呼叫的人。
+Cleanup cleanup_dead_mount(const std::string& path, bool force = false);
+
+// 呼叫的線是不是 aos-procfs 的回答的線；庫裡會碰檔案系統的函數在回答的線上叫就丟 std::logic_error。
+bool on_answer_thread();
+
+}  // namespace aos::procfs
