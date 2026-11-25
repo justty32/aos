@@ -452,3 +452,82 @@ container 做的是「隔離＋打包」：把一個凍好的世界帶著走，�
 ### 等使用者的
 
 靜態的夾也算 kernel 嗎？我推薦算：照「kernel 是 daemon 表上的角色」的說法，登記表裡標一欄種類（`dir`、`exec`、`fuse`、`socket`）就好。
+
+## 第八輪（11-25 晚，第 38 段）：還有沒想到的
+
+原話在 [9p-proc-1125 第 38 段](9p-proc-1125.md)。
+
+### 定了的
+
+- **靜態的夾也算 kernel**（「很好，就是這樣」）。登記表上標一欄種類：`dir`、`exec`、`fuse`、`socket`。
+
+### 會咬人的（建議先想）
+
+**1. 兄弟之間其實沒隔開**（家機實測）
+
+| 試什麼 | 結果 |
+|---|---|
+| 同一個帳號，讀兄弟的環境變數 | 讀得到（`SECRET=hunter2`） |
+| 同一個帳號，走兄弟的 `/proc/<PID>/root` | 走得進去，也就是進了它的天空 |
+| 兄弟設成 non-dumpable（`prctl(PR_SET_DUMPABLE, 0)`） | 讀不到了：`permission denied` |
+| 換了天空（新的 mount namespace）去連 abstract socket（不在檔案系統上的那種） | 連得上，天空擋不住 |
+| 再加一個新的 network namespace | 連不上：`Connection refused` |
+| 自己一個 PID namespace | 只看得到 3 支行程（外面看得到 462 支） |
+
+- 天空本身只管「名字怎麼找」，它不是一道牆。同一台 daemon 底下、用同一個帳號的兄弟，可以讀到對方的環境變數（API key 常常放這裡），也能走進對方的天空。abstract socket 完全不看天空；X11、部分 D-Bus 用的就是這種。
+- 要先講好一句承諾：天空是「合作用的路由」，還是「安全的牆」。
+- 如果要當牆，有三件便宜的事可做：
+  - 每隻 proc 各給一個 PID namespace，就看不到兄弟。
+  - 握有秘密的 kernel 設成 non-dumpable，或改用別的帳號跑。
+  - 需要隔開的，給它自己的 network namespace，abstract socket 就斷了。
+- 附帶要注意：每隻 proc 都當自己 namespace 裡的 1 號時，Linux 會吞掉它沒處理的訊號（例如 SIGTERM），所以裡面要放一支小的 1 號，負責收屍、轉送訊號（tini 就是在做這件事；bwrap 怎麼處理要實測）。
+
+**2. kernel 怎麼知道是誰在呼叫它**
+
+- socket 上拿得到對方的 PID，但開了 PID namespace 之後，每一層看到的號碼都不同，而且我們本來就推薦不用 PID。
+- 建議：daemon 替每個呼叫者各開一條自己的 socket 接到 kernel。kernel 從哪一條收到請求，就知道是誰；通道本身就是身分，冒充不了。Genode、Fuchsia 都是每個 client 一條通道。
+- 要按 agent 記 token、按 agent 判 perm，都得靠這一條。
+
+**3. 替別人做事花掉的資源，要算在誰頭上**
+
+- 例如 draw-kernel 替一百隻 proc 畫圖，CPU 全記在 draw-kernel 自己的 cgroup 上，額度就沒辦法按人計。
+- 可以參考的做法：
+  - Genode：client 開連線時，把自己的一塊額度讓給 server。
+  - 可執行檔那種提供者，本來就在呼叫者身上跑，自然記在呼叫者頭上。
+  - token 在 proxy 那邊按通道記。
+
+**4. 整片一起重起會是常態**
+
+PID namespace 開了之後，daemon 一重起，底下的全部跟著重起。所以：
+
+- 每隻 proc 都要能隨時被收掉，重起後接著做（狀態全放在 persists）。設計 agent 的身體時要把這當成前提。
+- 升級 daemon 不能靠重起，要用 re-exec：1 號原地換成新程式，PID 不變，底下的也不會死。systemd 的 daemon-reexec 就是這樣做的。
+- kernel 的 socket 由 daemon 握著。kernel 重起或升級的時候，進來的連線會在 socket 裡排隊等，呼叫者感覺不到。
+
+### 可能沒想到的好處
+
+**5. 鐵律可以變成天空的設定**
+
+今天「push 要使用者本人說」「wf/user 只讀」「別棵樹的 stack 不讀」，都是靠 agent 自己守。放進天空之後：
+
+- push 用的 key 只放在一個 push kernel 手上，要有你的授權才推。
+- wf/user 用唯讀掛進去。
+- 別棵樹根本不出現在天空裡。
+
+規矩就從「請你守」變成「你做不到」。
+
+**6. 假的天空可以拿來測試**
+
+給 agent 一個假的 llm kernel，讓它回固定的答案，整個組織就能一個 token 都不花地跑一遍。昨晚提的「上千個 agent 實測」，就可以用這個方法做。
+
+### 技術題，之後再談
+
+7. **合併目錄**：兩個提供者都要往同一個夾放東西時（例如 host 的 /usr/bin 加上 draw 再加上別的），要有誰蓋誰的規則。overlay 不能在跑的時候再加一層，所以跑的時候想往唯讀的夾加一個檔，要另想辦法：改用 FUSE 合併目錄，或是一開始就留一個可以加東西的夾。
+8. **天空表的每一筆，都記下是誰要的、什麼時候要的**：之後有人問「它為什麼看得到這個」，才答得出來。
+9. **界面本身怎麼寫下來、怎麼改版、誰來量**：跟 agent 界面一起談。
+10. **上千隻 proc 時，掛載傳播的成本**：只讓 /srv 這類少數幾個掛載點傳播，或改用 FUSE 目錄當登記表，就不必動掛載。
+11. **persists 誰來清**：rm 不會刪 persists，久了會越堆越多。
+
+### 等使用者的
+
+第 1 題最該先定：天空是合作用的路由，還是安全的牆？我的傾向：預設當牆，但只做那三件便宜的事（各自的 PID namespace、握秘密的 kernel 設 non-dumpable、需要隔開的給 network namespace）；分帳號（subuid）留給真正需要的情況。
