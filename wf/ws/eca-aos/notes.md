@@ -644,3 +644,10 @@
 - 他問的三個詞：落檔、列、token 檔——都是我跟報告的用詞，回覆裡解釋了；以後說「底下的 proc」不說「列」。
 - 我攤的與問的（等他答）：① proto9 的範圍——proto8 的 aos-loop 不改造、新介面在 proto9 從頭做，對不對；proto9 裡「普通檔、沒人當場回答」的做法是不是也不算（鎖的要求等於要當場回答）；② 第一步用哪種當場回答的做法（FUSE／socket 上講 9P），我建議先做一個小實驗（09 沒做出來）；③ json 版的名字（`settings/json` 做不出來，`settings.json` 或 `json/settings`）；④ proto8 這邊：core 的閒置輪詢做到第 3 刀停、第 4～6 刀不做，上一輪建議的 a～e 不做，對不對；⑤ 下一步要不要我寫 proto9 的介面草稿。
 - 還沒交件：thinking 9p-proc-1125（第二輪）、這份筆記。progress proc-interface-spec 等他答完 proto9 範圍再改。
+- 使用者答（逐字，thinking 第 11 段）：「1.對。2.好，先用a.。3.前者好。4.好。5.好啊。然後鎖這塊，Hmmm，我覺得可以添加/procs/xxx/attrs，裡面描述他是否能當場回答，或是直接表明他是tmp, fuse, 普通檔案之類，然後讓需求者自行決定行為」；中途又問「attrs不會撞名吧。感覺/proc/<PID>/底下，一堆東西」（答：不同層，aos 的在 cwd/ 底下；Linux 那層有 status、attr、stack 長得像）。
+- 做了：
+  - 寄 core `01795589579494576790.3904103.2492590`（閒置輪詢做到第 3 刀停、4～6 不做；1125f 與 compact 第 3 刀照舊；不為新介面動 proto8）。
+  - 派一隻 Claude 子 agent（opus，背景）做 FUSE 小實驗：只寫 `proto9/experiments/fuse-proc-1125/`，掛載放 `~/.aos/scratch/proto9-fuse-1125/`，不 commit。**回來後**：看 README 與程式、`grep fuse /proc/mounts` 確認沒留掛載、交件、把結果講給使用者、更新 proto9/README 那格。
+  - 新開 `proto9/`：README、`docs/01-aos-proc介面草稿.md`（【定】【擬】【開】三種記號；第 11 節是還沒定的）。AGENTS.md 第一段加一句指過去。progress proc-interface-spec 改成 open、idle-polling 記停在第 3 刀。
+- 等使用者看草稿。我擬的、要他點頭的主要幾樣：`aos_` 開頭推到所有標準行、status 第一批、attrs 的 `aos_kind`／`aos_live`、procs_ctl 的字（含 kill、register）、procs_status 的欄（含 want）。
+- 還要問他的一點：attrs 讓「普通檔案」的 proc 也能表明自己——跟「proto9 裡只有當場回答的才算」怎麼擺（我的讀法：proto9 自己做的都當場回答；attrs 是留給別人做的別種身體表明自己用的）。
