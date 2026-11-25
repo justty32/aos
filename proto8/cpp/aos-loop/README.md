@@ -36,6 +36,8 @@ aos-loop --max 2 loop.json # 每次 `aos-exec -- idle`，旗標蓋過 loop.json 
 
 **身體每跑一次的前後（`on_before_run`／`on_after_run`）**：hook 介面第 5 刀（[設計 06](../../thinking/2026-11/20/aos-hook-plan-1120/06-loop層的點.md)；使用者 11-20 選「在 loop 層加通用的點」「before_run / after_run」「能攔」「用旗標檔」「四個點都跟著停」；旗標檔 11-21 起範本不用了）。loop.json 選填，寫法同 `exec`，不吃 `on_timeout_ms`（要限時寫單子的 `timeout_ms`）。`on_before_run` 在「沒暫停、到時間了」之後跑：退 0＝先再讀一次 ctl（期間下的 stop／pause 照它），沒事才跑身體；**退 10＝跳過這一圈**（不跑、不算一次、不發 after，下一次＝現在加 `interval_ms`）；其他＝`aos-loop: error: PointFailed …`、以它的碼收工。`on_after_run` 在身體跑完、log 與 `RunFailed` 那行印完之後跑（身體起不來、這一圈收到訊號就不跑）；失敗時身體是 0＝以它的碼收工，身體本來就要收工＝一行 warning、照身體的結果。環境 `AOS_LOOP_RUNS`（兩格同一個數），after 多 `AOS_LOOP_RUN_CODE`、`AOS_LOOP_RUN_SIGNAL`（沒有＝空字串）、`AOS_LOOP_RUN_MS`，跑完還原。**`on_before_run_if`／`on_after_run_if`＝一個檔的路徑**：寫了就只在那個檔在時才跑，每圈只看一次在不在（aos 自己的範本 11-21 起不用它：編譯時有 hook 掛才接那個點）。四個點跑的期間收到訊號＝照收到訊號收工，不算失敗。aos-daemon 不收這四個鍵（寫了＝`CfgBad`）。範本與編譯出的 loop.json 用 `aos-hook fire -q --stop-on-nonzero --def $AOS_CD before_run|after_run` 接，只在編譯時有 hook 掛那個點才寫。細節 [01 用法](docs/01-用法.md)。
 
+**閘（`gate`，11-25 idle-polling 第 1 刀）**：跑身體之前先問的小程式，退 10＝這拍跳過（不跑身體、不算次數、不發前後兩點、state 不重寫），退 0＝照跑，壞了＝一行 warning、照跑；`gate_timeout_ms` 預設 1000。閒著的 agent 不必每拍起 Python（閘本身是 C++ 的 `aos-idle`，第 2 刀）。細節見 [docs/01 的 gate](docs/01-用法.md)。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。

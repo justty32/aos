@@ -155,6 +155,21 @@ int Loop::main_loop() {
             nap(paused ? 1.0 : wait);
             continue;
         }
+        if (has_exec_ && gate_) {   // 11-25 idle-polling 第 1 刀：閘說這拍沒事（10）＝跳過，不跑身體、不算一次、不發兩個點
+            GateAnswer g = ask_gate();
+            if (g.received != 0 || signal_got() != 0) {
+                continue;   // 頂端照「收到訊號」收工
+            }
+            if (g.skip) {
+                next_at = Clock::now() + std::chrono::milliseconds(interval_ms_);
+                continue;
+            }
+            read_ctl();     // 問閘期間下的 stop／pause 要生效
+            if (stopping_ || paused_ || (max_ && runs_ >= *max_)) {
+                continue;
+            }
+            iv = interval_ms_;
+        }
         if (has_exec_) {   // 11-20：身體之前的點（沒寫、旗標檔不在＝go）
             int r = before_point();
             if (r == skip) {

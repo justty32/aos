@@ -99,6 +99,30 @@ int Loop::stop_side(int code, const char* own) {
     return code;
 }
 
+// idle-polling 第 1 刀（11-25）：閘。10＝跳過；0＝照跑；其他（退別的碼、逾時、起不來）＝warning、照跑（同一個原因只印一次）。
+Loop::GateAnswer Loop::ask_gate() {
+    GateAnswer a;
+    if (!gate_) {
+        return a;
+    }
+    PointRun p = run_point(*gate_, "gate", gate_timeout_ms_);
+    a.received = p.received;
+    if (p.received != 0) {
+        return a;
+    }
+    if (p.code == 10 || p.code == 0) {
+        a.skip = p.code == 10;
+        gate_warned_.clear();
+        return a;
+    }
+    std::string why = p.why.empty() ? "gate " + gate_->label() + " exited " + std::to_string(p.code) : p.why;
+    if (why != gate_warned_) {
+        warn(why + "; running the body anyway (the gate only saves rounds; 10 = skip, 0 = run)");
+        gate_warned_ = why;
+    }
+    return a;
+}
+
 int Loop::before_point() {
     if (!on_before_run_ || !point_on(before_run_if_)) {
         return go;

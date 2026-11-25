@@ -17,6 +17,9 @@
  "test_err_tail.py": {
   "description": "Verify a failing proc with a huge stderr.txt (sparse) leaves the daemon alive, its memory flat, and the reason taken from the file's tail."
  },
+ "test_gate.py": {
+  "description": "daemon.json gate (idle-polling cut 1, 11-25): before the daemon's own body (llm kernel, kernel station) runs, the gate is asked;"
+ },
  "test_lifecycle.py": {
   "description": "Verify proc lifecycle, damaged-state adoption and owned-state recovery against real daemons."
  },

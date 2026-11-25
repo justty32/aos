@@ -15,9 +15,21 @@ using Clock = std::chrono::steady_clock;
 // 下一圈（interval_ms 後）再跑。照 Loop 的：到時間才跑（Loop 一輪可能 tend 好幾次）、max 照算、每跑完一次印 log 一行（--enable-logs）、
 // 跑前寫一份 running；退 10＝daemon 收工（同 ctl 的 stop：stopping_，state phase stopped、碼 0）；跑的期間收到訊號＝原樣排回自己（kill），
 // Loop 下一次取訊號就以 128＋N 收工。要整台停用 ctl 的 stop 或 Ctrl-C。
+// 11-25：有 gate＝跑之前先問（ask_gate；退 10＝跳過這拍、body_next_ 推一個 interval_ms；壞了＝warning、照跑）；force（poke --all）不問。
 void Daemon::run_body(bool force) {
     if (!has_body_ || (max_ && body_runs_ >= *max_) || (!force && Clock::now() < body_next_)) {
         return;
+    }
+    if (!force) {   // 11-25 idle-polling 第 1 刀：閘（daemon.json 的 gate）說這拍沒事＝不跑身體、不算一次；poke --all 不問
+        GateAnswer g = ask_gate();
+        if (g.received != 0) {
+            kill(getpid(), g.received);   // 同身體：排回去，Loop 兩次之間取出
+            return;
+        }
+        if (g.skip) {
+            body_next_ = Clock::now() + std::chrono::milliseconds(interval_ms_);
+            return;
+        }
     }
     body_runs_ += 1;
     write_state("running", Json());

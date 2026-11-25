@@ -249,6 +249,12 @@ struct Defaults {
 //   on_before_run_if, on_after_run_if  一個檔的路徑（相對＝照 cwd）：有寫＝那個檔在才跑對應的點（每圈看一次在不在，沒人掛時的成本）；沒寫＝每圈都跑；
 //                 寫了卻沒寫對應的點＝CfgBad
 //   on_timeout_ms on_start／on_stop 的期限（非負整數，0＝不限，沒寫＝5000；aos-daemon 收工只給子項 10 秒）
+//   gate          閘（idle-polling 第 1 刀，11-25；寫法同 exec；沒寫＝不問、每拍照舊跑身體）：沒暫停、到時間了、要跑身體之前先跑它一次
+//                 （在 on_before_run 之前；aos-daemon 在跑身體之前，poke --all 的提前一圈不問）。退 10＝這拍跳過：不跑身體、不算一次
+//                 （max 不扣、counter_runs 不加）、on_before_run／on_after_run 不發、state 維持 waiting，下一次＝現在加 interval_ms；
+//                 退 0＝照跑；其他碼、逾時、起不來＝stderr 一行 warning（同一個原因只印一次）、照跑身體。ctl 照舊每拍讀。
+//                 閘的 stdout／stderr 跟身體一樣接這支程式的。aos-loop 與 aos-daemon 都收
+//   gate_timeout_ms 閘的期限（非負整數，0＝不限，沒寫＝1000）：到了 SIGTERM、1 秒後 SIGKILL，當成「照跑」
 //   ctl, state, state_flux 三扇窗的檔名，在 $AOS_STACK 底下（11-04 起沒寫＝ctl.json／state.json／state_flux.json、寫 null＝不開；要開卻沒設 AOS_STACK＝StackMissing）
 // log 不是 key（11-02 使用者「把log輸出到stdout」；11-02 晚「應該要改成默認不印」）：預設不印，命令列 --enable-logs 才印到 stdout；不寫任何 log 檔。
 // --enable-counters 也是命令列開關：開了 state 窗才每輪寫同資料夾的 counter_runs.txt（本行程起來後跑過幾次）；預設不碰檔。
@@ -350,6 +356,16 @@ protected:
     std::optional<Target> on_after_run_;    // 11-20：每跑一次身體之後
     std::string before_run_if_;             // 11-20：on_before_run_if（空＝沒寫＝每圈都跑）
     std::string after_run_if_;              // 11-20：on_after_run_if
+    // idle-polling 第 1 刀（11-25，使用者 11-24「閒置輪詢這塊就是乖乖用C++重寫」、「1.a」＝C++ 閘＋小程式）：
+    // gate＝跑身體之前先問的小程式（寫法同 exec；沒寫＝nullopt＝照舊每拍跑）。退 10＝這拍跳過；退 0＝照跑；
+    // 其他碼、逾時、起不來＝warning（同一個原因只印一次）、照跑（閘是省錢用的，壞了不該讓 agent 停）。
+    std::optional<Target> gate_;
+    long long gate_timeout_ms_ = 1000;      // gate_timeout_ms（0＝不限）
+    struct GateAnswer {
+        bool skip = false;                  // true＝閘退 10，這拍不跑身體
+        int received = 0;                   // 問的期間收到的訊號（也記進 got_）；非 0＝呼叫的人照收到訊號處理
+    };
+    GateAnswer ask_gate();                  // 沒寫 gate＝{false, 0}（points.cpp；aos-loop 的 main_loop 與 aos-daemon 的 run_body 共用）
     Json responded_at_;           // 最近一次有反應的時間（null＝起來後還沒有）
 
 private:
@@ -383,6 +399,7 @@ private:
     int end(int code, const std::string& phase, const char* own);
     std::string stop_cause(const char* own);       // 11-14 B7：照判斷順序算 AOS_LOOP_CAUSE（見上面 on_stop）
     std::optional<std::string> cause_file();       // 原因檔可用＝檔裡的 cause；不在、舊的＝nullopt（不在不印，壞的印一行 warning）
+    std::string gate_warned_;     // 上一次印過的閘失敗原因（一樣就不再印；閘回 0／10 就清掉）
     bool served_ = false;         // main_loop 開始了沒（沒開始＝不跑 on_stop）
     bool stop_ran_ = false;
 

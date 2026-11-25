@@ -3,6 +3,7 @@
 // 設定檔後面的 `-- 參數...`）、add_args（附加參數接到 exec 後面）
 // （10-21 傍晚 ideas § 9）；錯誤分代號。11-11：on_start／on_stop（寫法同 exec）與 on_timeout_ms。
 // 11-20 hook 第 5 刀：on_before_run／on_after_run（寫法同 exec）與 on_before_run_if／on_after_run_if（旗標檔路徑）；Defaults::run_points 是 false（aos-daemon）＝寫了就 CfgBad。
+// 11-25 idle-polling 第 1 刀：gate（寫法同 exec）與 gate_timeout_ms；aos-loop、aos-daemon 都收。
 #include "engine/engine.hpp"
 
 #include "aos/util/files.hpp"
@@ -174,9 +175,9 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45；捷徑解開，10-24 審後，config_file）
         std::string cf = config_file(spec);   // `{"$ref": "#/…"}`＝這份設定檔自己（11-12）
         aos::Resolved r = aos::loop::resolve_keys(cfg_, aos::RefBase{aos::dirname(cf), cf},
-                                       {"max", "interval_ms", "on_timeout_ms", CtlWindow::config_key, StateWindow::config_key, StateFluxWindow::config_key,
-                                        run_keys[2], run_keys[3]});
-        for (const char* k : {"exec", "on_start", "on_stop", run_keys[0], run_keys[1]}) {   // 是單子時裡面不解（10-24，resolve_exec；11-11 起停兩格同 exec）
+                                       {"max", "interval_ms", "on_timeout_ms", "gate_timeout_ms", CtlWindow::config_key, StateWindow::config_key,
+                                        StateFluxWindow::config_key, run_keys[2], run_keys[3]});
+        for (const char* k : {"exec", "on_start", "on_stop", run_keys[0], run_keys[1], "gate"}) {   // 是單子時裡面不解（10-24，resolve_exec；11-11 起停兩格同 exec）
             if (r.value.is_object() && r.value.contains(k) && !r.value[k].is_null()) {
                 aos::Resolved ex = resolve_exec(r.value[k], r.dir_of(k));
                 r.value[k] = std::move(ex.value);
@@ -254,6 +255,22 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
             throw Error{code::CfgBad, std::string(run_keys[2 + i]) + " without " + run_keys[i]};
         }
         *flags[i] = v.get<std::string>();
+    }
+    // idle-polling 第 1 刀（11-25）：閘，寫法同 exec；null＝沒有
+    Json gv = cfg_.value("gate", Json());
+    if (!gv.is_null()) {
+        Target t = parse_target(gv, "gate");
+        place_inline(t, spec, "/gate", side_base["gate"]);
+        gate_ = std::move(t);
+    }
+    if (cfg_.contains("gate_timeout_ms")) {
+        if (!aos::is_count(cfg_["gate_timeout_ms"])) {
+            throw Error{code::CfgBad, "gate_timeout_ms must be an integer >= 0 (0 = no limit)"};
+        }
+        if (!gate_) {
+            throw Error{code::CfgBad, "gate_timeout_ms without gate"};
+        }
+        gate_timeout_ms_ = as_ll(cfg_["gate_timeout_ms"]);
     }
     if (cfg_.contains("on_timeout_ms")) {
         if (!aos::is_count(cfg_["on_timeout_ms"])) {
