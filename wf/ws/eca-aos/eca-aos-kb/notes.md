@@ -29,8 +29,11 @@ eca-aos-kb 的工作筆記：使用者交代的知識庫（proto8/knowledge/）�
 - ~~還開著：家機 stack 搬完後改文件~~ → 家機 11-24 晚做完，見下面「家機 11-24 晚」。
 - core 說之後會改的：沒有還欠的句子（aos-llm ls 整台行、leftovers、ctl ls --deep 都已寫進知識庫）。
 - 11-24 下午：eca 別用背景 Bash 排定時，寫在 `aos/clock.md` 的 which way 段尾、`aos/eca_reading.md` 的 clock 那行、`aos/troubleshooting.md` 的 Hooks and timers 段。原因照 core 實測（report-1124-bgmail.md 第 7 節）：`claude -p` 等背景任務結束才退出，回答取最後一個 result。
-  - **待更新**：如果程式改成讀到第一個 result 就收（報告修法 7／8，eca-aos 在問使用者），這三處都要改。
-  - 只寫了預設那條路。`"live_mail": true` 會一直開著 stdin，回答取每個 result；這種情況下信進不進得來沒驗，所以沒寫。互動畫面開著時也沒驗，也沒寫。
+  - 11-25 已更新（線 `eca-aos-kb-1125c`，core 6f8fd99a6）：
+    - 改成「第一個 result 就收；3 秒後 CLI 還沒退出，就整群收掉（SIGTERM，2 秒後 SIGKILL，連 setsid 出去的也收）」，所以背景任務撐不過那一輪；
+    - `aos/cli/eca.md` 的 aos-eca-turn 段也補了一句；
+    - 三處都註明 `live_mail` 照舊會等背景任務。
+  - 互動畫面開著時的情況沒驗，沒寫。
 - 11-25 線 `eca-aos-kb-1125`（eca-main-obs-1124 知識庫那半）：五項 11-24 都已寫過。這次只做了三件：
   - 補 packs.md 的 board_ls `scope: deep`；
   - 把 llm_kernel.md「template kernels」改成只指主 kernel 範本（llm-team 是 slots 4、沒有 reserved）；

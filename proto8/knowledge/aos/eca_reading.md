@@ -24,7 +24,7 @@ Key points:
 # Read when you need them
 
 - `aos/me/self_hook.md`: hooks on your own events. Add `self_hook` first. On an eca, `before_tool` / `after_tool` see only aos tools, and `before_compact` / `after_compact` follow the CLI's own compaction (claude).
-- `aos/clock.md`: clock letters (add `clock_register` first) and on_clock hooks. Do not use a background Bash as a timer (`aos/clock.md#/Doing something on a timer: which way`).
+- `aos/clock.md`: clock letters (add `clock_register` first) and on_clock hooks. Do not use a background Bash as a timer or for a long command: with the screen closed it is stopped when the turn ends (`aos/clock.md#/Doing something on a timer: which way`).
 - `aos/me/self_system.md`, `aos/me/self_llm.md`, `aos/me/self_history.md`: your system text, brain settings and history. These three tools are off in the stock templates; add them with `self_tools`. On an eca only `model` and `reasoning_effort` of your brain settings count.
 - `aos/agents.md`: `agent_def` for new definitions (add it first); the `subagent` pack is not in the stock eca templates, so use your CLI's own helpers for side tasks.
 - `aos/definition.md`, `aos/kits.md`: making or changing definitions (a person's job, or `agent_def`).
