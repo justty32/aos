@@ -546,3 +546,42 @@
 - kb DONE 49d78e025（me/compact.md 加範例 handler 一條、補 before_compact 也收 restore；eca 兩支 restore 一起掛只有排後面那支算數——eca compact_hook 後蓋前，記一下，之後要不要讓 eca 也串接再說）。
 - 10:4x 使用者（逐字）：「那你這邊整理一下，我compact。compact後來聊9p proc。」→ HANDOFF 換成 11-25 這條；progress 刪 eca-p-first-result-1124，改 idle-polling、compact-improve、aos-ns、waiting-1121、pages-trial-1116。
 - **compact 後**：讀 HANDOFF → 聊 9P proc（聽、整理、記 thinking，不派工）；core 第 3 刀 PROGRESS 來時看影響再放行；16:55 鐘 push-1655 響了就推（先看 claims）。
+
+## 2026-11-25 11:0x：使用者換帳號（CLAUDE_CONFIG_DIR=~/.claude-alt）重開我的畫面，叫我看 self history
+
+- 使用者（逐字）：「嗨，先看看self history。」「就是說，剛剛我是用另一個CLAUDE_CONFIG_DIR，另一個帳號。」「所以這邊...你能接上嗎」
+- 現況：新 session `830121d0…`（home ~/.claude-alt），Claude 那邊是全新對話，舊 transcript 在 ~/.claude/…/93e7c7ab….jsonl（另一個帳號的夾，--resume 接不到）。接得上靠三樣：這份筆記最後一節、wf/HANDOFF.md、舊 transcript 裡 10:57 那則摘要（第 1686 行）。
+- **查到的錯：aos history 的 compact 摘要慢一拍。** history.jsonl 只剩一則「[aos] summary: lines 1-118」，內文卻是 **08:41 那次**的摘要（只寫到「新的一天，先git pull，然後我要compact」），今天上午整段沒在裡面；原文 118 則在 history_removed.jsonl（op compact，removed_at 02:57:04.488Z）。
+  - 原因：`cli_hook.py` 第 283 行在 SessionStart(source=compact) 時叫 `compact_history`，`compact_summary` 讀 transcript 最後一則 isCompactSummary；但 Claude Code 這時還沒把新摘要寫進 transcript（檔內順序：hook 在 04.44 跑、aos 04.488 換 history、compact_boundary 04.737 與新摘要列排在它之後才落檔）。所以讀到的是上一次的。
+  - 佐證：08:41 那次 transcript 裡還沒有任何摘要 → 回 None → history 沒動（history_removed 沒有 00:41 的 compact），所以 10:57 才會一次搬 118 則、跨 11-24 08:45 到今天。
+  - 修法方向（還沒派）：PostCompact 的 payload 本來就帶 `compact_summary`（範本 compact_hook 的 post 已收到、只拿去發 after_compact），改在那裡換 history；或 SessionStart 時認 compact_boundary 之後的那則才算。屬 core（py/aos/agentlib/cli_hook.py）＋templates（compact_hook）。slash.py 第 294 行（-p 的 /compact）是等 CLI 結束才讀，應該沒這問題，修時順手驗。
+  - 我的 history.jsonl 沒動（留給使用者看現場）。
+- 其他都在：信箱空；鐘 push-1655 還在登記；本地領先 origin 23 個 commit；工作樹是 core 第 2 刀未交的檔（cpp/aos-idle、Makefile、hook_clock.py 等）；claims 空。
+- 接下來照 HANDOFF：聊 9P proc（聽、整理、不派工）。
+- 使用者（逐字）：「要」→ 派 core 1125f `01795575799313822211.1618690.1114573`（摘要慢一拍；排第 2 刀後、第 3 刀前；放行它直接改範本 compact_hook；16:50～17:00 不交件）。core DONE 後：知識庫要跟的轉 kb；跟 templates 說一聲 compact_hook 被 core 動過。
+
+## 2026-11-25 11:1x：帳號、掛兩台子 daemon、9P proc 開聊
+
+- 使用者（逐字）：「話說，~/aos-home/.stack/procs/repo-aos這個，他是用CLAUDE_CONFIG_DIR=~/.claude-alt啟動的嗎？我會希望是。除了這個之外，mine_paper,mine_arena,mine_mecha我也希望是。對了，幫我掛一個mine_skyrim，這個要。」「在幫我掛一個mod_tome4。工作區在/mnt/c/code/mine/modding_tome4」
+- 查到：repo-aos 那列 `exec.json` 的 envs 帶 `CLAUDE_CONFIG_DIR=/home/guanyu/.claude-alt`（底下四隻的 loop 都是 alt）；但我們四隻的定義是 `eca-claude`（不是 `-alt`），畫面跟開畫面的殼走——上午的畫面在 ~/.claude、答信在 alt，所以兩邊一換就斷成新對話。mine_paper／mine_mecha／mine_arena／guanyu 原本都沒設。
+- 做了：
+  - 新掛 `mine_skyrim`（定義 ~/aos-home/mine_skyrim，ws /mnt/c/code/mine/modding_skyrim）、`mod_tome4`（定義 ~/aos-home/mod_tome4，ws /mnt/c/code/mine/modding_tome4）：抄 `templates/daemons/daemon-sub`、`.env` 加 `CLAUDE_CONFIG_DIR=${HOME}/.claude-alt`，`aos-daemon-ctl -d ~/aos-home/.stack add --auto-restart`。兩台 running、只有 `_sweeper`、行程 env 驗過是 alt。底下還沒掛 agent（使用者沒說要什麼）。定義夾裡範本的 README.md 沒刪（連結是斷的，無害）。
+  - `~/aos-home/mine_paper/.env`、`~/aos-home/mine_mecha/.env` 加同一行。mine_paper 當時閒著（queue 空）→ stop／start 重起，驗過 alt、main running。**mine_mecha/main 在忙（cur 有 5 封）沒重起**，那行下次起樹才生效。
+  - mine_arena 的定義在它自己 repo → 寄 main REQUEST `01795576349547339024.1699566.1169595`（加那行、不用現在重起、16:30 收尾寫好交接、生效後它的 Claude 對話會重開）。等它回。
+  - guanyu 那棵（ops 等六隻 eca-claude）使用者沒提，沒動，還在主帳號。
+- 9P proc，使用者（逐字）：
+  - 「然後9p proc這塊，我會覺得，就是9p現有的實作上，比如stat那些，他們給的不是json，那就按照他們的來。只是說，你知道的，cat /proc/<PID>/stat,status,statm，他就是給出不同東西，我在想，能否給出別的？比如token消耗量之類，至於metainfo，我則是傾向於普通的/proc/<PID>/_metainfo，就是按照aos現有的來」
+  - 「然後aos loop最重要的就兩個，一個是ctl，一個是state。state這塊9p已經有了，並且是非json，我覺得ctl也應該對應，也吃非json。」
+  - 我整理給他的：Plan 9 的 /proc/n/ctl 本來就吃純文字（stop／start／kill）、status 是純文字欄位；9P 的寫是一次有回應的呼叫（Rwrite／Rerror）→ seq 與「活著」判斷在 9P 這條可以不用，落檔實作才要；狀態分幾個檔（status、usage…）；問了三題（ctl 寫回來算收到還是做完、文字格式用哪種、token 誰算）。
+- 待辦：談到一段落把原話記進 progress `proc-interface-spec`（commit-request）與 thinking 11-25。
+- mine_arena/main DONE `01795576557202205409.1726889.1190361`：.env 已加那行（.env 被它們 gitignore，沒 commit）、沒重起、交接寫在它的 wf/SESSION-LOG.md。它問上層有沒有傳 CLAUDE_CONFIG_DIR——我驗過根 daemon（pid 2223）與它那列（2232）的 env 都沒有，所以 .env 會生效；下次起樹後驗一次。
+- 使用者（逐字）：「可以用eca-claude-alt，去吧。1.寫ctl回來，算是收到。2.好，那目前就只先給status。3.這個就是值得討論的地方了，這會牽扯到daemon和kernel，就是說，我原本想說，daemon會是介於linux和aos之間的橋樑，而kernel就是底下的一個具備相關功能的aos proc。所以daemon就是一個普通的linux proc，我會覺得，他的特殊點在於它會有一個procs資料夾，底下就是各aos proc，並且或許可以是類似symlink，比如cd /proc/daemon-1的PID/proc/arena，會進入/proc/arena的PID。而kernel就只是普通的aos proc」
+  - 掛了 `mine_skyrim/main`、`mod_tome4/main`：範本 `templates/agents/eca-claude-alt`（絕對路徑）、`--auto-restart`、ws 各自專案夾；running，env 驗過 alt。沒設 system 文字、沒寫 notes_path（預設）。
+  - 9P 已定：① 寫 ctl 回來＝收到（做完看 status）；② 文字格式一行一個「名稱: 值」，目前只給 status 一個檔；③ daemon＝Linux 與 aos 之間的橋、普通 Linux 行程，特別處是有 procs 夾、底下各 aos proc（像 symlink 連到那個 proc 自己的目錄）；kernel＝普通 aos proc。
+  - 我攤的邊緣：Linux 的 /proc/<PID> 使用者空間加不了東西→樹根放哪（今天的 daemon stack/procs/<名> 版面已經長這樣）；proc 睡著或死了時信箱誰收（活的檔 vs 留下的檔）；用名字不用 PID（重起會變、遠端沒有）；token＝proc 自己報在自己目錄、kernel 的帳在 kernel 目錄。問：daemon 自己是不是也是 aos proc；睡著的 proc 信箱誰顧。
+- 使用者（逐字）：「對的，token這塊就是你想的那樣。然後或許proc和procs都可以，也就是不同名，但是都指向同個目標...FUSE那邊應該很好處理。linux的/proc/<PID>不用加東西，我們就是給根daemon的PID，然後讓大家自己去訪問/proc/<PID>。剩下的，比如root daemon的PID是12321，那我們就是指定AOS_ROOT=/proc/12321，然後就可以用這個去訪問比如AOS_DAEMON=AOS_ROOT/procs/repo-aos，這會指向/proc/11111，也就是repo-aos這個daemon的。然後proc睡著或死掉的...那自然就收不到，就是說，如果proc活著，那我們就直接走unix socket了，然後如果proc掛掉，那有需求者就沒辦法透過unix socket直接傳送訊息，他就只能退而求其次，去問他的daemon或特定kernel，某個proc的信箱在哪，然後走寄信這條路，寄信，就是持續性的...除非是在tmpfs，這個就後續再看了。」（中途還說了半句「至於要用procs還是proc...」）
+  - 已定：token＝proc 自己報在自己目錄、kernel 的帳在 kernel 目錄；`proc`、`procs` 兩個名字都留、指同一個；daemon 也是 aos proc（多一個 procs 夾）；活著走 unix socket（不落檔），掛了／睡了就問它的 daemon 或某個 kernel 信箱在哪、改走寄信（落檔；tmpfs 以後再看）。
+  - **我實測（這台，scratchpad/proc_cwd_test.py，暫存夾已刪）**：`/proc/<PID>/procs` 不存在（Linux 的 /proc 加不了東西），但 `/proc/<PID>/cwd` 是核心給的連結、指到那個行程站的資料夾 → `AOS_ROOT=/proc/12321/cwd`、`$AOS_ROOT/procs/kid`（一個指到 `/proc/<kid>/cwd` 的 symlink）連走兩層讀得到 status、連得上 unix socket。行程被 kill -9 後**還沒收屍**那條路就 ENOENT（不用問任何人就知道死了）；symlink 檔自己留在硬碟上（懸空）。真實路徑 160 bytes 的 socket 直接連會 `AF_UNIX path too long`（上限 108），走 /proc 那條只有 32 bytes 連得上。死掉行程留下的 socket 檔 connect＝ECONNREFUSED。pid_max 4194304、yama ptrace_scope 1（同帳號讀不受影響）。
+  - 現況對照：今天 daemon 與 agent 的 cwd 是**定義夾**不是 stack（根 2223 的 cwd＝~/aos-home/root）。
+  - 沒測、憑 Linux 規則說的：`/proc/<PID>/cwd` 要過 ptrace 讀權限檢查，**不同 Linux 帳號走不進去**（以後 agent 分帳號做權限時會擋）；跨機器沒有 /proc。
+  - 我攤的邊緣與問題：外面的殼怎麼知道根的 PID（根起來時寫一個固定名字的連結）；`procs/<名>` 連到活行程後，留在硬碟的信箱／歷史掛在哪個名字（可選：兩個名字分工，`proc/`＝活的、`procs/`＝留下的）；socket 那條收到但沒處理完就死＝丟（照他 11-24「定期保存」算可接受，待他確認）；兩條路的順序（醒來先清信箱）；問 daemon 信箱在哪的那一下要不要順手叫醒。

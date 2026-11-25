@@ -530,9 +530,10 @@
       "title": "之後做：把「proc 介面」寫成規格（stack 目錄的檔案契約）",
       "status": "等使用者",
       "flow": "",
-      "what": "從 plan9-ns-1124 的討論來：proc＝一份目錄介面，aos-loop 落檔是一種實作、常駐行程用 FUSE 掛在自己 stack 上是另一種，兩種共存。規格要寫：daemon 與別人讀寫 stack 裡哪些檔（ctl.json、state、mailbox/、queue/、stderr.txt、exec.json…）、誰寫、要不要原子、信怎麼投、哪些檔帶路徑。也服務 relative-paths-1124（盤點帶路徑的檔）與 fs-tmpfs-1124。使用者 11-24：「不急，先記下來吧」。 使用者 11-25（逐字）：「先不寫。因為整個aos體系可能會有大改動。就是以昨天講的那些為基礎，現有的aos-loop/daemon等實作都會變成普通實作，我們會規劃一套基於p9介面的aos proc介面，能支援這套的就是aos proc，這套介面昨天是說都用json。不過我可能會稍微改一下，改成部分用json」＝aos-loop／daemon 退成普通實作之一；介面基於 9P、支援這套的就是 aos proc；格式昨天說全 json，他可能改成部分 json。相對路徑的錨點（relative-paths-1124：最根本的是往上最近的 daemon stack、沒有就是 root daemon）跟著這套定。",
-      "next": "等使用者主導；跟 aos-goals-1124 下午的談話一起。",
+      "what": "從 plan9-ns-1124 的討論來：proc＝一份目錄介面，aos-loop 落檔是一種實作、常駐行程用 FUSE 掛在自己 stack 上是另一種，兩種共存。規格要寫：daemon 與別人讀寫 stack 裡哪些檔（ctl.json、state、mailbox/、queue/、stderr.txt、exec.json…）、誰寫、要不要原子、信怎麼投、哪些檔帶路徑。也服務 relative-paths-1124（盤點帶路徑的檔）與 fs-tmpfs-1124。使用者 11-24：「不急，先記下來吧」。 使用者 11-25（逐字）：「先不寫。因為整個aos體系可能會有大改動。就是以昨天講的那些為基礎，現有的aos-loop/daemon等實作都會變成普通實作，我們會規劃一套基於p9介面的aos proc介面，能支援這套的就是aos proc，這套介面昨天是說都用json。不過我可能會稍微改一下，改成部分用json」＝aos-loop／daemon 退成普通實作之一；介面基於 9P、支援這套的就是 aos proc；格式昨天說全 json，他可能改成部分 json。相對路徑的錨點（relative-paths-1124：最根本的是往上最近的 daemon stack、沒有就是 root daemon）跟著這套定。 使用者 11-25 上午接著口述了形狀（原話六段、定了的、實測、邊緣都在 thinking 9p-proc-1125）：ctl／status 用純文字（寫 ctl 回來＝收到；status 一行一個「名稱: 值」，目前只給 status），_metainfo 照現有的 json；token 用量 proc 自己報、kernel 的帳在 kernel 自己那裡；daemon＝Linux 與 aos 之間的橋、也是 aos proc、多一個 procs 夾（proc／procs 兩個名字指同一處）連到各 proc 的目錄；kernel＝普通 aos proc；入口是根 daemon 的 PID（實測要寫成 /proc/<PID>/cwd，連穿兩層讀得到 status、連得上 unix socket，死了馬上讀不到）；.stack 以後沒有了，stack＝活著的 proc 的身體，要留硬碟的放 procs/<名>/persist（各自處理，這是推薦位置）；活著走 unix socket，掛了就問 daemon 或某個 kernel 信箱在哪、改走寄信；問的時候要不要叫醒是 daemon 的可選設定、以後再說。",
+      "next": "使用者主導，還在談；還沒談到的列在 thinking 9p-proc-1125 最後一節。他說「先不寫」規格，沒說做之前不開工。",
       "see": [
+        "[9P proc 第一輪談話](../proto8/thinking/2026-11/25/9p-proc-1125.md)",
         "[eca-aos 筆記](ws/eca-aos/notes.md)"
       ],
       "since": "2026-11-24"
