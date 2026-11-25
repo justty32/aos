@@ -570,6 +570,18 @@
         "[入口](../proto8/thinking/2026-11/24/aos的目標-1124/README.md)"
       ],
       "since": "2026-11-24"
+    },
+    "proto9-sky-1125": {
+      "title": "proto9 做減法：daemon 當容器（給底下假的天空）、kernel 接住名字（使用者 11-25 晚，家機；聊想法）",
+      "status": "等使用者",
+      "flow": "",
+      "what": "使用者 11-25 晚：procs/<名>/ 底下不規定（ctl、sock 歸之後的 agent 界面）；daemon 可不可以是沙箱／container，讓底下看到它指定的 /usr、/lib；kernel 是攔特定呼叫的 proc（例 /usr/bin/draw turtle）。家機 main 實測可行（user＋mount namespace、overlay、socket 傳 fd），建議用「把名字交給 kernel」，seccomp user notification 留著、全部攔不做。三題等他：① aos proc 的規定是否只剩 daemon 那側 ② PID namespace 開不開（開了 daemon 一死整片收，跟今天定的相反）③ 先做小實驗再改草稿、誰做。",
+      "next": "等使用者答三題；沒說做之前不開工、草稿 01 不動。",
+      "see": [
+        "[daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md)",
+        "[9p-proc-1125 第 30 段](../proto8/thinking/2026-11/25/9p-proc-1125.md)"
+      ],
+      "since": "2026-11-25"
     }
   }
 }

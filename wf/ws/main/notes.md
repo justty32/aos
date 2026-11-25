@@ -2,6 +2,11 @@
 
 ← [地盤](README.md)
 
+## 2026-11-25 晚（家機）
+
+- **開場 pull**：公司 51 個 commit（proto9 開了：介面草稿、aos-procfs、aos-daemon、aos-exec）；家機沒推的 core 筆記 commit 跟公司同檔衝突，兩邊都留、rebase 接上。本地比 origin 多那 1 個（加上之後的）；**沒有 push 授權**。
+- **proto9 做減法（線 home-proto9-1125）**：使用者「我決定做減法」——procs/<名>/ 底下不規定（ctl、sock 歸之後的 agent 界面）、daemon 當沙箱／container 給底下假的天空、kernel 接特定呼叫。我派兩隻 sonnet 蒐集（程式、報告與前例），實測不用 root 讓天空裡多一支 /usr/bin/draw 接到外面的 kernel 行程；回答與三題（讀法對不對、PID namespace 開不開、先做小實驗、誰做）記在 [daemon當容器-1125](../../../proto8/thinking/2026-11/25/daemon當容器-1125.md)，原話補進 9p-proc-1125 第 30 段；progress `proto9-sky-1125`（等使用者）。只是討論，沒開工、草稿沒動。
+
 ## 2026-11-24 晚（家機）
 
 - **聊 aos 的目標（compact 後，模型換 fable）**：使用者口述六層目標（尋址與 index、_entry、_metainfo 與九軸、aos proc 界面、agent、kernel），要我派 opus 帶 sonnet 蒐集後再想。原話照他交代整理進 `wf/user/advice/`（`3cbaa0d34`）。蒐集報告、我的第一輪反饋、原話都在 [aos的目標-1124](../../../proto8/thinking/2026-11/24/aos的目標-1124/README.md)；**三題等他**（proc 界面要不要先寫一頁規格、九軸定不定稿、kernel 要不要拿非 LLM 的資源實測），progress `aos-goals-1124`。他 23:10 睡，回來接著談；這是聊想法，沒派工，別自己開工。

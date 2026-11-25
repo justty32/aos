@@ -27,4 +27,4 @@
 | [2026-11-22](22/README.md) | 8 | 工作區與 _stack 規劃：私有地盤 wf/ws 與 repo 裡的 _stack 取代 ~/aos-home，分八條線、三題待決 |
 | [2026-11-23](23/README.md) | 2 | 公司 WSL 重建、repo aos 的樹用第二個 Claude 帳號、_stack 改名 .stack 不跟機器搬、換機那套退場；要改成兩棵樹；org 範本與 templates 分層的規劃（五題等使用者） |
 | [2026-11-24](24/README.md) | 4 | eca 自產工具與 MCP 的發想（結論不另弄一台，五題等使用者）；閒置輪詢 C++ 重寫的施工規劃（五題等使用者）；aos 的整體目標：使用者口述六層、蒐集現況與差距、第一輪反饋（三題等使用者） |
-| [2026-11-25](25/README.md) | 3 | API agent（agent-fsm）也認 /status、/usage、/exit（照 /clear 的做法；/exit 選 stop）；9P 的 aos proc 介面第一輪談話（實測 /proc/<PID>/cwd）；aos proc 介面架構規劃第一波十六份報告 |
+| [2026-11-25](25/README.md) | 4 | API agent（agent-fsm）也認 /status、/usage、/exit（照 /clear 的做法；/exit 選 stop）；9P 的 aos proc 介面第一輪談話（實測 /proc/<PID>/cwd）；aos proc 介面架構規劃第一波十六份報告；proto9 做減法：daemon 當容器、kernel 接住名字（家機實測） |
