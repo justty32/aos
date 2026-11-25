@@ -309,8 +309,8 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 - **`kill` 不碰那隻的目錄**：先斷開它的 FUSE 連線（被它拖住的人當場被放開）、再收行程、死掉的掛載用不跟它講話的方式卸。
 - **兩層嵌套通**：`$AOS_ROOT/procs/d1/procs/kid/status` 讀得到，`aos_name` 是 `d1/kid`；上面的 daemon `stop`，兩層的行程與掛載都收乾淨。
 - 它碰到【開】的地方都挑了保守的（【擬】，等使用者看；整張表在它的 README）。最該先看的四條：
-  1. `procs_status` 的 `phase` 用五個值：`starting`（起了、還沒登記）、`running`、`stopping`、`stopped`、`failed`（起動失敗）。
-  2. 掛載點放 `<mount-base>/<名字路把 / 換成 %>`，例 `d1%kid`。
+  1. `procs_status` 的 `phase` 用五個值：`starting`（起了、還沒登記）、`running`、`stopping`、`stopped`、`failed`（起動失敗）。**【定】**（使用者 11-25「1.可以。」）
+  2. 掛載點放 `<mount-base>/<名字路把 / 換成 %>`，例 `d1%kid`。**【定】**（使用者 11-25「2.可以...不過%不會有問題吧。」——功能上沒問題；`%` 在 crontab、systemd 的 unit 檔、printf 的格式字串裡有特別意思，把這個路徑寫進那三種地方時要小心。平常走 `$AOS_ROOT/procs/…`，不會打到這個路徑。）
   3. 外來登記（`register`）的只收 `rm`；`stop`、`start`、`kill` 都拒；誰都能登記任何 PID、不驗身分。
   4. `add` 只收絕對路徑；檔讀不到時那次寫入照樣成功、錯誤記在回饋裡（回答的線不去讀那個檔）。
 - 沒做：自動重起、`sleep`／`wake`、預設的 persist、底下的 stderr 收進 `reason`。`kill` 一台嵌套的 daemon，它底下的就沒人管（照「自行承擔風險」）。

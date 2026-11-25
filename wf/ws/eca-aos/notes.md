@@ -695,3 +695,7 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 沒做：自動重起、sleep／wake、預設 persist、stderr 進 reason。supervisor.cpp 303 行略過門檻。
 - 交件：aos-daemon 整夾、demo/main.cpp、proto9/README、草稿、HANDOFF、這份筆記。
 - 接下來：報使用者；下一批（failed、LISTEN_PID、mailbox/）等他說要不要現在派（鐵律：開新工作先問——這批他 16:0x 已經點過頭「都做、先 Maildir」「failed 好」，所以可以直接派；但 16:50–17:00 不交件，派出去的回來也要等 17:00 後才交）。16:55 push。
+- 16:2x daemon 交件了：`4b355d5dbf`（沒 push）。
+- 16:2x 派出下一批（第四隻子 agent，opus，背景）：A 小庫加 `failed`、daemon 跟上；B 環境變數多一個 `AOS_NAME_PID`（【擬】，抄 LISTEN_PID；不符就當沒給；`AOS_ROOT` 不擋）；C Maildir 式的 `mailbox/`（信放記憶體、有上限、搬進 `new/` 才算到、撞名 EEXIST、proc 用 take() 取、可當場拒收；先查 proto8 寄信實際怎麼放再照著擺）；順手把 answer.cpp、supervisor.cpp 拆到 300 行內。只寫 `proto9/cpp/aos-procfs/`、`proto9/cpp/aos-daemon/`，暫存 `~/.aos/scratch/proto9-mailbox-1125/`，不 commit。**回來後**：清 build 重編、兩邊測試重跑、查殘留、看 README 的【開】、交件（16:50～17:00 不交）、報使用者。
+- 16:55 push 的保險：我自己掛了一支背景計時（到 16:55 叫我）；鐘 push-1655 若寄到別的對話也不怕。推法：子 agent 在改檔，**不用 `pull --rebase --autostash`**（會把它的檔暫時收走）；先 `git fetch`，origin 沒有新東西就直接 `git push origin main`；有新東西再想。
+- 16:2x 使用者（逐字，thinking 第 22 段）：「artifact我等一下下班通勤時看。1.可以。2.可以...不過%不會有問題吧。3.細說。4.add...細說。」→ phase 五個值、掛載點 `%` 定了（草稿已標）；register、add 我細說了（當則回覆），等他定。我提的岔路：register 維持只收 rm（我的建議）／也收 stop、kill／只准自己登記自己；add 的「定義夾」還沒做（草稿寫路徑是定義夾或 json，daemon 現在收的是可執行檔或 json）。
