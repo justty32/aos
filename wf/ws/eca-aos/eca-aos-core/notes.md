@@ -146,6 +146,7 @@ eca-aos-core 的工作筆記：這個位子是什麼、開工先讀哪幾份，�
 - ③ 255d6da30：agent_fsm/wait.py observed think 列加 reasoning_effort（sent.json 也記），templates/tests/agent-fsm/test_cells 加一條。
 - 測：乾淨複本 `~/.aos/scratch/core-listen-1124/`（bin/mk.sh、run.sh、suite.sh；l0＝HEAD 基準、l5＝全部改動）：apps/agent、apps/mcp、subagent tests、apps/tools、apps/eca、templates/tests/agent-fsm（253）、py/tests 頂層、defs 全綠，跟基準比沒新紅。repo 跑過 install.py（main 准）。
 - 沒做：claude 真 session 端到端（Claude Code 實際並發叫兩個 aos 工具）沒跑；並發 add 搶配額沒寫測試（鎖有、測不到窗）。已在跑的 aos-mcp 要 session 重開才吃到新碼。
+- kb 跟上（11-24 晚收到）：知識庫 37a101e9a（mcp.md、talk_settings.md、subagent.md、me.md 的 observed 三種列），NORMS 種類表加 listen e7a73061f（main 准）；對過 me.md 的句子與程式一致。這件收完。
 
 ### 11-25（線 eca-aos-core-1125a／b）
 
