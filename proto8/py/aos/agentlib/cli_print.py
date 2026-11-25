@@ -1,5 +1,5 @@
 # cli_print.py - cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session
-import json, os, signal, subprocess, sys, threading, time, uuid
+import json, os, selectors, signal, subprocess, sys, threading, time, uuid
 
 from aos.agentlib import cli_base, cli_fault
 from aos.agentlib.cli_cell import codex_main_thread, drop_session, mark_session, transcripts
@@ -62,37 +62,124 @@ def tail(text, n=300):
     return (text or "").strip()[-n:]
 
 
+RESULT_GRACE_S = 3          # 第一個 result 之後等 CLI 自己退出的秒數；還沒退＝它在等背景任務（11-24 bgmail 報告第 7 節），整群收掉
+STOP_GRACE_S = 2            # 收的時候 SIGTERM 之後等多久才 SIGKILL
+
+
+def _descendants(pid):
+    """pid 底下所有子孫（讀 /proc/*/stat 的 ppid）；背景任務可能自己開了新的行程群組，所以除了群組也逐支收。"""
+    kids = {}
+    for name in os.listdir("/proc") if os.path.isdir("/proc") else []:
+        if not name.isdigit():
+            continue
+        try:
+            with open("/proc/%s/stat" % name, encoding="utf-8", errors="replace") as f:
+                text = f.read()
+            ppid = int(text[text.rindex(")") + 2:].split()[1])
+        except (OSError, ValueError, IndexError):
+            continue
+        kids.setdefault(ppid, []).append(int(name))
+    out, todo = [], [pid]
+    while todo:
+        for c in kids.get(todo.pop(), []):
+            if c not in out:
+                out.append(c)
+                todo.append(c)
+    return out
+
+
+def stop_group(p):
+    """收掉 claude 與它開的一切（背景 Bash 等）：它的行程群組（start_new_session 開的）加上逐支的子孫，先 SIGTERM，
+    STOP_GRACE_S 秒後還在的 SIGKILL，最後 wait 收屍（不留殭屍）。本來就退了＝只收屍。"""
+    if p.poll() is not None:
+        return
+    targets = _descendants(p.pid)
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(p.pid, sig)
+        except OSError:
+            pass
+        for pid in targets:
+            try:
+                os.kill(pid, sig)
+            except OSError:
+                pass
+        try:
+            p.wait(timeout=STOP_GRACE_S)
+            if sig == signal.SIGTERM and not any(os.path.exists("/proc/%d" % t) for t in targets):
+                return
+        except subprocess.TimeoutExpired:
+            pass
+    p.wait()
+
+
 def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None, env=None):
     """claude -p --output-format stream-json：每行一邊寫進 live.jsonl（人可以 tail 著看），一邊收起來；回 (結束碼, 全部行)。
-    題目寫進 stdin、關掉之後叫 handed（交出去了，11-03）。claude 的 stderr 不攔、原樣透出（R10）。"""
+    題目寫進 stdin、關掉之後叫 handed（交出去了，11-03）。claude 的 stderr 不攔、原樣透出（R10）。
+    11-25（使用者 11-24 批 bgmail 報告 ⑦⑧）：讀到第一個 type=result 就算這輪答完，不等 EOF——claude -p 開了背景任務會等它做完
+    才退、還自己多開一輪寫同一段對話（實測）。result 之後 RESULT_GRACE_S 秒內自己退了＝照常；還沒退＝stop_group 整群收掉
+    （背景任務跟著收），結束碼當 0（答完了才收的）。逾時也整群收。行程在自己的行程群組裡起（start_new_session）。"""
     try:
         p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             text=True, cwd=ws, preexec_fn=parent_death_term(),
+                             cwd=ws, preexec_fn=parent_death_term(), start_new_session=True,
                              env=dict(os.environ, **env) if env else None)
     except FileNotFoundError:
         cli_base.die("CliMissing", "%s is not on PATH" % argv[0])
-    p.stdin.write(prompt)
+    p.stdin.write(prompt.encode("utf-8"))
     p.stdin.close()
     if handed:
         handed()
     seconds = timeout_seconds(timeout_ms)
     deadline, lines = None if seconds is None else time.time() + seconds, []
-    timer = None if seconds is None else threading.Timer(seconds, p.kill)
-    if timer is not None:
-        timer.start()
+    stopped, result_at, buf, fd = False, None, b"", p.stdout.fileno()
+    sel = selectors.DefaultSelector()
+    sel.register(fd, selectors.EVENT_READ)
     try:
         with open(live_path, "a", encoding="utf-8") as live:      # 10-28：只接不重寫（副產物留著）
-            for line in p.stdout:
+            def got(raw):
+                nonlocal result_at
+                line = raw.decode("utf-8", errors="replace")
                 lines.append(line)
                 live.write(line)
                 live.flush()
-        p.wait()
+                if result_at is None and '"result"' in line:
+                    try:
+                        ev = json.loads(line)
+                    except ValueError:
+                        ev = None
+                    if isinstance(ev, dict) and ev.get("type") == "result":
+                        result_at = time.time()
+            while True:
+                now = time.time()
+                if deadline is not None and now > deadline:
+                    break
+                if result_at is not None and now - result_at > RESULT_GRACE_S:
+                    stopped = True                        # 答完了、它還在（等背景任務）：不再讀，整群收掉
+                    break
+                if not sel.select(0.5):
+                    continue
+                chunk = os.read(fd, 65536)
+                if not chunk:
+                    if buf and result_at is None:
+                        got(buf)                          # 最後一段沒換行也算一行
+                    break
+                if result_at is not None:
+                    continue                              # 第一個 result 之後的輸出不收（不是這封信的回答），只等它退出
+                buf += chunk
+                while b"\n" in buf and result_at is None:
+                    raw, buf = buf.split(b"\n", 1)
+                    got(raw + b"\n")
     finally:
-        if timer is not None:
-            timer.cancel()
-    if deadline is not None and time.time() > deadline:
+        sel.close()
+        late = deadline is not None and time.time() > deadline
+        if stopped or late or p.poll() is None:
+            stop_group(p)
+        else:
+            p.wait()
+        p.stdout.close()
+    if late and result_at is None:
         cli_base.die("CliFailed", "%s did not finish within %d s" % (argv[0], timeout_ms // 1000))
-    return p.returncode, lines
+    return (0 if result_at is not None and (stopped or p.returncode < 0) else p.returncode), lines
 
 
 def warn_unconnected(init, external):
@@ -136,7 +223,7 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None, more=None)
     sid = cell.read("session.txt") if sid is None else sid
     new = "" if sid else str(uuid.uuid4())
     # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-agent watch 看得到它正在做什麼；
-    # 回答取最後一個帶 result 的那行（type: result）
+    # 回答取第一個帶 result 的那行（type: result；11-25 起，之前取最後一個）
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
     argv += MID_FLAGS if live else []
     ext, env, _ = external_claude(cfg)
@@ -164,8 +251,8 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None, more=None)
             ev = json.loads(line)
         except ValueError:
             continue
-        if isinstance(ev, dict) and "result" in ev:
-            out = ev
+        if isinstance(ev, dict) and "result" in ev and out is None:
+            out = ev                              # 第一個 result（11-25 ⑧：之後的是 CLI 自己為背景任務多開的那輪）
         elif isinstance(ev, dict) and ev.get("type") == "system" and ev.get("subtype") == "init":
             warn_unconnected(ev, ext)
     stdout = "".join(lines)

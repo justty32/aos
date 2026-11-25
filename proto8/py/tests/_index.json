@@ -81,6 +81,9 @@
  "test_cli_linger.py": {
   "description": "驗延後關畫面的到期單、假 tmux 排程、token 與本機身分、小格鎖及 hook 事件入口。"
  },
+ "test_cli_print_first_result.py": {
+  "description": "11-25 (user's ruling on bgmail report items 7 and 8): claude -p is done at its first type=result. A fake claude that keeps running"
+ },
  "test_cli_print_mid.py": {
   "description": "驗 print_claude 的開關（wake-1114 主案 S）：cli.json 寫 \"live_mail\": true 又給了 more＝走 cli_stream（argv 多 MID_FLAGS、"
  },

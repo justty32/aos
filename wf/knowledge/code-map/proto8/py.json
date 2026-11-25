@@ -494,6 +494,7 @@
    "test_cli_fault.py": "驗證 claude API 失敗分類表的優先順序、壞型別容錯與工具計數。",
    "test_cli_hook_follow.py": "驗畫面 hook 跟上 CLI 的對話（11-12 eca-slash）：id 換了就改記 session.txt；claude 的 /clear（SessionStart source clear）連 aos 的 history 一起清、原文搬到旁邊；codex 取標題的旁支 thread 不記。",
    "test_cli_linger.py": "驗延後關畫面的到期單、假 tmux 排程、token 與本機身分、小格鎖及 hook 事件入口。",
+   "test_cli_print_first_result.py": "11-25 (user's ruling on bgmail report items 7 and 8): claude -p is done at its first type=result. A fake claude that keeps running",
    "test_cli_print_mid.py": "驗 print_claude 的開關（wake-1114 主案 S）：cli.json 寫 \"live_mail\": true 又給了 more＝走 cli_stream（argv 多 MID_FLAGS、",
    "test_cli_reasoning_effort.py": "Test that reasoning_effort in an eca definition's llm.json (11-21 line top-1121-ecaeffort) becomes claude's --effort or pi's --thinking, read again e…",
    "test_cli_reserved_flags.py": "驗 cli.json 的 flags／print_flags 不准再寫 aos 自己會加的旗標（11-13 eca_main 第 6 項：codex 的 --skip-git-repo-check 寫第二次＝codex 退 2、信被丟）：讀設定時就 CfgBad。",
