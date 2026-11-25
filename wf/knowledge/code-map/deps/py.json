@@ -78,7 +78,7 @@
    "module": "aos.apps.agent_fsm",
    "unit": "proto8/py/aos/apps/agent_fsm",
    "used_by": "",
-   "uses": "aos.agentlib.agent_hooks aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.agentlib.tool_clear aos.declared_files aos.flags aos.hook_run aos.metainfo aos.observed aos.observed_children aos.ws"
+   "uses": "aos.agentlib.agent_hooks aos.agentlib.context_use aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.quiet aos.agentlib.tool_clear aos.declared_files aos.flags aos.hook_run aos.metainfo aos.observed aos.observed_children aos.ws"
   },
   {
    "kind": "app",

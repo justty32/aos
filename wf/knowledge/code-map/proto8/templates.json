@@ -286,7 +286,8 @@
     "test_reply_match.py": "回答配對（thinking/2026-11/14/reply-match-1114/03）的 agent-fsm 寫的一方：idle 記 aos.letter／pending／dropped，wait 記 aos.answer_to、清 pending，brain／stale_request 剝 …",
     "test_same_turn_tools.py": "Pin when a tool added in the middle of a turn works in agent-fsm (11-10 tools-def, user \"3.同一輪就生效\"): brain and act re-read the registry on every step…",
     "test_selfheal.py": "Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools.",
-    "test_slash_clear.py": "Verify an agent-fsm /clear letter (line top-1121-apiclear) empties history into history_removed.jsonl without a brain call, with fake commands."
+    "test_slash_clear.py": "Verify an agent-fsm /clear letter (line top-1121-apiclear) empties history into history_removed.jsonl without a brain call, with fake commands.",
+    "test_slash_cmds.py": "Verify agent-fsm's /status, /usage and /exit letters (line eca-aos-templates-1125b, user 11-25 \"18.要認\"): answered in idle without a brain call, a bat…"
    },
    "image-move-check": {
     "check.py": "Verify a sleeping fake-brain daemon tree survives copying and a local git clone.",

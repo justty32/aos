@@ -57,6 +57,7 @@ lib/aos/apps/agent_fsm/
   atomic_file.py  idle、wait 共用的寫檔（先寫暫存再改名；寫不成＝那格的 WriteFailed）
   cell_common.py  四格共用的開頭幾步：on_clock 看時鐘（四格）；讀 history.jsonl、決定用哪份工具登記檔（brain、act）；錯誤交那格的 die
   compact.py   /compact 與 /clear（idle、brain、wait 用；before_compact／after_compact 的規矩也在這支）
+  slash.py     /status、/usage、/exit 的回答字與 /exit 要叫的指令（idle 用，11-25）
   llm_settings.py  腦設定（llm.json 疊 stack 那份）轉成請求信的 body（brain、wait 用；defs check 也照它查）
   hooks.json   這幾格會發哪些 hook 點（宣告，只是參考）
 ```
@@ -120,6 +121,15 @@ aos-agent ctl resume         # ctl 下也有 stop／start、sleep／wake（同�
 - **輪到它**：不叫腦、不跑 `before_queue`／`after_queue`（同 `/compact`）；`history.jsonl` 的每一則搬進 `<stack>/history_removed.jsonl`（`{removed_at, op: "clear", line, message}`，讀不懂的行記 `raw`；行號照 `aos-agent history` 數），history 換成這一問一答兩則：user `/clear`（帶 `aos.letter`）、assistant `[aos] slash: /clear: N messages moved to history_removed.jsonl; the next message starts a new conversation`（帶 `aos.answer_to` 與 `aos.clear: true`），信記成答完，`aos-agent ask`／`listen` 拿到這句；寫法同摺（寫暫存、history 沒變才改名，一直在變三次＝`WriteFailed`）。
 - **之後**：下一封信接在這兩則後面交給腦，前面的對話腦看不到了。`goal.json`、todo、`handoff.md`、`compact.json` 都不動——goal 還是 active 的話，這則回答之後 idle 照常接 goal 提醒；做到一半的 `do_task` 開頭標記被搬走，之後 `do_task end` 報 `MarkerMissing`（同 compact）。壓縮進行中（`compact.json` 是 asked）idle 不收信，`/clear` 等壓完。
 - 程式在 `compact.py` 的 `clear()`（跟摺共用改 history 的那段）與 `idle.py`。
+
+## 寄 /status、/usage、/exit
+
+11-25 線 eca-aos-templates-1125b（使用者 11-25「18.要認」；細節是範本位子照 eca-aos 的推薦替使用者定的，[紀錄](../../thinking/2026-11/25/api-agent-slash-1125.md)），照 eca 的同名指令做。內容（去頭尾空白）**剛好是** `/status`、`/usage` 或 `/exit` 的信，跟 `/clear` 一樣**一定自己一批**、在 idle 做、不叫腦、不跑 `before_queue`／`after_queue`；history 接這一問一答兩則（user 那封帶 `aos.letter`，assistant `[aos] slash: …` 帶 `aos.answer_to` 與 `aos.slash`），信記成答完，`ask`／`listen` 拿到那句。後面還帶字（例 `/status please`）＝普通的信。goal 還是 active 的話，回答之後 idle 照常接 goal 提醒。
+
+- **`/status`**：從 stack 拼一行——`agent-fsm, model …`（定義的 `llm.json` 疊 stack 那份，同 brain；有 `reasoning_effort` 也列）、history 幾則（這一問一答之前）、goal（狀態與前 80 字，沒有＝none）、`compact.json` 的 phase（沒有＝none）、冷卻（`cooldown.json`：cooling／due、到什麼時候、連續幾次失敗、錯誤代號；沒有＝none）、queue 裡還有幾封等著。
+- **`/usage`**：只報手上有的——`observed.jsonl` 裡每次問腦（kind think、compact）有 usage 的那幾列：幾次、各欄加總、最後一次（欄名照端點原樣，例 `prompt_tokens`、`completion_tokens`）；context 讀數（同 `context_wrap` 的讀法，讀不到就說為什麼）。llm kernel 沒有額度或速率限制的介面，回答明說沒有（包的 `budget` 用完時只會以 `BudgetMissing` 出現）。
+- **`/exit`**：這隻**停下**（`aos-agent ctl who` 認出自己、`aos-agent ctl stop --target 自己 --no-wait`，同工具 `self_ctl` 的 stop；在 `$AOS_WS` 跑），這一步結束才停，所以回答來得及寫。回答說它會停、信照樣排在 queue、`aos-agent ctl start <名>` 再起；stop 送不出去（例 不在 daemon 底下）＝回答 `could not stop (<錯誤行>); still running`，照常跑。選 stop 不選 sleep：兩種都不會因為來信自己起來（信箱不叫醒睡著的），而 daemon 重啟會叫醒睡著的、不會叫醒停下的，「離開」比較像 stop。eca 的 `/exit` 是關畫面，API 這邊沒有畫面。
+- 程式在 `slash.py` 與 `idle.py`；測試 `tests/agent-fsm/test_slash_cmds.py`。
 
 ## context 快滿與 /compact
 

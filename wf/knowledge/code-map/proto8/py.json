@@ -89,6 +89,7 @@
      "hooks.json": "Hook points fired by the agent-fsm cells (idle, think, wait, act); before_compact / after_compact keep their own rules in compact.py (said in their d…",
      "idle.py": "idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。",
      "llm_settings.py": "agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。",
+     "slash.py": "agent-fsm 的 /status、/usage、/exit（線 eca-aos-templates-1125b，使用者 11-25「18.要認」；/clear 在 compact.py）：idle 收信時認，不叫腦、不跑 before_queue／after_queue，回一則「[aos] …",
      "wait.py": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
     },
     "asuser": {

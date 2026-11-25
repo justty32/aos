@@ -26,6 +26,9 @@
 # /clear（線 top-1121-apiclear，使用者 11-21「做」；照 eca 的 /clear）：內容去頭尾空白剛好是 /clear 的信一定自己一批——前面有好信或 /compact 就先處理它們、
 #   它跟後面的留在 cur/；輪到它＝不叫腦、不跑 before_queue／after_queue，history 全部搬到 history_removed.jsonl（op clear），換成這一問一答
 #   （user「/clear」＋ assistant「[aos] slash: /clear: N messages moved …」，aos.clear），信記成答完；後面的信下一次 idle 從乾淨的對話收（compact.clear）。
+# /status、/usage、/exit（線 eca-aos-templates-1125b，使用者 11-25「18.要認」；slash.py）：同 /clear 自己一批、不叫腦、不跑 queue hook，history 接這一問一答
+#   （assistant「[aos] slash: /status: …」帶 aos.slash）。/status＝從 stack 拼；/usage＝observed.jsonl 的 token 與 context 讀數、沒有額度介面；
+#   /exit＝aos-agent ctl stop --target 自己 --no-wait（停下、不是睡；來信不會叫醒，ctl start 再起），回答說停成沒有。
 import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
@@ -74,6 +77,11 @@ While a summary is already requested, take no mail and return to think.
 first and it waits in cur/. Its turn: no brain call, no queue hooks; every message in history
 moves to history_removed.jsonl (op clear) and history becomes the /clear letter plus one answer
 "[aos] slash: /clear: N messages moved ..."; letters after it start from that clean history.
+/status, /usage and /exit (the whole letter, stripped) are batches of their own the same way,
+with no brain call and no queue hooks; history gets the letter and one answer "[aos] slash: ...".
+/status: model, history size, goal, compact phase, cooldown, letters waiting. /usage: token
+counts from observed.jsonl and the context reading (the llm kernel gives no quota). /exit: stop
+this agent (aos-agent ctl stop on itself, --no-wait; letters do not start it again; ctl start does).
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -167,6 +175,7 @@ def body_of(sig):
 def take():
     """這一批＝cur/ 全部（上次認領了還沒接完的）＋ new/ 全部（aos-post take-all）；照處理順序。回接進 history 的封數。"""
     import compact
+    import slash
     if compact.state(stack).get("phase") == "asked":
         history = cell_common.read_history(history_path, die)
         if compact.asking(stack, history):
@@ -189,10 +198,14 @@ def take():
             write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")), die)
             continue
         content = body["content"]
-        if compact.is_clear(content):            # /clear 一定自己一批（同 eca）：前面有好信或 /compact＝這次先處理它們，它跟後面的留在 cur/
+        command = "/clear" if compact.is_clear(content) else slash.which(content)
+        if command:                              # /clear、/status、/usage、/exit 一定自己一批（同 eca）：前面有好信或 /compact＝這次先處理它們，它跟後面的留在 cur/
             if not (good or compact_letters):
-                clear_letter(compact, sig, content)
-            break                                # 做完也停：後面的信留在 cur/，下一次 idle（退 10 回 idle）從乾淨的對話收
+                if command == "/clear":
+                    clear_letter(compact, sig, content)
+                else:
+                    slash_letter(compact, slash, command, sig, content)
+            break                                # 做完也停：後面的信留在 cur/，下一次 idle（退 10 回 idle）收
         is_c, extra = compact.is_compact(content)
         if is_c:
             compact_letters.append(sig)
@@ -269,6 +282,54 @@ def clear_letter(compact, sig, content):
         aos_ws.letters_answered(stack, [sig])
     except OSError as e:
         aos_flags.warn("agent-fsm", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
+
+
+def slash_letter(compact, slash, command, sig, content):
+    """/status、/usage、/exit（slash.py）：不叫腦、不跑 before_queue／after_queue（同 /clear）；history 接這一問一答（assistant 帶 aos.slash），
+    回答配對同 clear_letter：pending → history → done → 清 pending。/exit 先送 stop（--no-wait），回答照送成沒送成寫。"""
+    try:
+        aos_ws.letters_take(stack, [sig])
+    except OSError as e:
+        die("WriteFailed", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
+    if command == "/status":
+        text = slash.status(os.environ.get("AOS_CD") or ".", stack, compact.state(stack))
+    elif command == "/usage":
+        text = slash.usage(stack)
+    else:
+        text = exit_self(slash)
+    done = aos_ws.mark_answer({"role": "assistant", "content": aos_flags.aos_note("slash", text)}, [sig])
+    done.setdefault("aos", {})["slash"] = command
+    rows = [aos_ws.mark_letter({"role": "user", "content": content}, sig), done]
+    try:
+        with open(history_path, "a", encoding="utf-8") as f:     # 一次寫完兩行，只附加（P-41）
+            f.write("".join(json.dumps(m, ensure_ascii=False) + "\n" for m in rows))
+    except OSError as e:
+        die("WriteFailed", "cannot append to history.jsonl: %s" % e)
+    post(["done", box, sig])
+    try:
+        aos_ws.letters_answered(stack, [sig])
+    except OSError as e:
+        aos_flags.warn("agent-fsm", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
+
+
+def exit_self(slash):
+    """/exit：aos-agent ctl who 認出自己，再 ctl stop --target 自己 --no-wait（同工具 self_ctl 的 stop；這一步結束才停，回答來得及寫）。
+    aos-agent 在 $AOS_WS 跑；叫不起來或退非 0＝回答說沒停成、照常跑。回 /exit 的回答字。"""
+    def agent(*args):
+        try:
+            r = subprocess.run(["aos-agent", *args], cwd=os.environ.get("AOS_WS") or None,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=60)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            return None, "aos-agent %s: %s" % (args[1], e)
+        if r.returncode != 0:
+            lines = [l for l in r.stderr.splitlines() if l.strip()]
+            return None, lines[-1] if lines else "aos-agent %s exited %d" % (args[1], r.returncode)
+        return r.stdout.strip(), None
+    me, why = agent("ctl", "who")
+    if me is None:
+        return slash.exit_note(False, None, why)
+    _, why = agent("ctl", "stop", "--target", me, "--no-wait")
+    return slash.exit_note(why is None, me, why)
 
 
 def drop(sig, reason):
