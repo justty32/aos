@@ -821,3 +821,6 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 104 段：改叫 init（範圍照 core 那張表換成 init）。等 daemon.json 那隻回來，跟五個可選設定一起派。
 - 第 105 段：先談網路；舊 proto9/cpp/aos-daemon 要收掉 → 問範圍（刪夾、git 歷史留著、daemon2 改名回 aos-daemon？）。引用它的：proto9/README、aos-procfs README、aos-daemon2 README、proto9/docs/01（proto8 thinking 裡的 aos-daemon 多半是 proto8 那支，不動）。
 - daemon.json 那隻回來：我清 build 重跑 280／280、無殘留。交件。它的 11 條【擬】待給使用者看（重點：寬限中第二次 SIGTERM 不理、stay 時 SIGHUP 還是會收掉 daemon、forget 沒 -k 是 EIO 不是 EINVAL）。
+- 第 106 段：收掉舊的。我刪了舊夾（最後一版 068bfb2fb，14 個檔，清單在 scratchpad/old-daemon-files.txt）、把 aos-daemon2 搬成 aos-daemon；派 sonnet 子 agent 改內部名字與引用。注意 proto8 的 aos-daemon 行程同名，leftover 檢查要改成看 exe 路徑。回來後：兩支重跑、交件（commit 用 --rm 列舊檔與 aos-daemon2 舊路徑）、再派 init 改名＋五個可選設定。
+- 第 107 段：net 預設 none（host 要寫）。跟 init 改名、五個可選設定一起派（等改名那隻回來）。下一題：seccomp。
+- 改名那隻回來：我兩支清 build 重跑（aos-daemon 280、aos-procfs 5+40+37+36+36）、無殘留（看 exe 路徑）。交件。

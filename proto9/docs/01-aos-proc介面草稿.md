@@ -325,7 +325,9 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
   - 收下了、做的時候失敗：小庫現在記 `done` 加原因；【定】（使用者 11-25）改成另開一種 `failed`，小庫要跟著改。
   - `aos_started_at` 用本地時間帶時差（`2026-11-25T15:48:45+08:00`）。
 
-### 最小的 daemon（11-25，[aos-daemon](../cpp/aos-daemon/README.md)）之後補的
+### 最小的 daemon（11-25，舊的 aos-daemon）之後補的
+
+> 11-26 這支舊 daemon 使用者說收掉，最後一版在 commit `068bfb2fb`；現在的 [aos-daemon](../cpp/aos-daemon/README.md)（原本叫 aos-daemon2）是照「daemon 只給資訊與工具」重做的。下面是舊 daemon 當時的記錄，不改。
 
 - **「回答只用自己記憶裡的東西」做得出來**：daemon 的 `status`、`procs_status` 只抄自己記著的表；凡是要碰底下 proc 目錄的事（讀它的 `settings`／`status`、寫它的 `ctl`、連讀 `add` 給的那份檔），都交給另起的小行程去做、帶期限、到期就放棄。實測底下一隻被暫停時，讀 daemon 的 `status`、`procs_status`、下 `procs_ctl` 都是幾毫秒；`procs_ctl` 最久鎖 1 秒（對卡住的那隻下 `stop`，放棄後回錯，接著 `kill` 下得進去）。
 - **`kill` 不碰那隻的目錄**：先斷開它的 FUSE 連線（被它拖住的人當場被放開）、再收行程、死掉的掛載用不跟它講話的方式卸。

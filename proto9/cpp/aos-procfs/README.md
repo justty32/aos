@@ -66,7 +66,7 @@ $ echo stop > /proc/12345/cwd/ctl          # 行程退出、掛載與掛載點�
 $ build/bin/aos-procfs-demo --cleanup <掛載點>   # 收 kill -9 之後留下的死掛載
 ```
 
-demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--ctl-wait] [--persists PATH] [--obey WORDS] [--mail-max-bytes N] [--mail-max-letters N] [--mail-max-total N] [--mail-stale S]`，或 `--cleanup PATH [--force]`。不給 NAME、MOUNTPOINT 時用 `$AOS_NAME`、`$AOS_MOUNT`，但只在 `$AOS_NAME_PID` 等於自己的 PID 時（見下面「環境變數」）。ctl 收 `stop`、`pause`、`resume`，測試用另有 `slow N`（做 N 秒）、`link 名 目標`／`unlink 名`（在 `links/` 底下隨時加、拿掉 symlink）、`tree 名`（在 `trees/` 底下加一整棵 `trees/<名>/`：`info`、`count`〔每開一次加 1〕、`sub/deep`、`link` → `info`，模擬 daemon 的 `procs/<名>/`）、`rmtree 路徑`（拿掉任何路徑連同底下；不給拿＝`failed`＋`RemoveRefused`）、`take`（從 `mailbox/new/` 拿走最早的一封；沒有信＝`failed`＋`MailEmpty`）、`refuse on|off`（拒收開關：開著時搬進 `new/` 那一步失敗、`EPERM`）。`--socket` 讓根夾可以放 unix socket，並在裡面 bind 一個 echo socket `sock`。`--ctl-wait` 讓 ctl 變成「做完才回」（見下面那一節；不給＝原本的「寫回來＝收到」）。`--persists PATH` 是 `settings` 的 `aos_persists`（沒給寫 `-`）；`--obey WORDS` 讓 `settings` 多一行 `aos_obey: WORDS`（例 `--obey "stop kill"`：被 register 進 daemon 時准 daemon 下這幾個字，見 aos-daemon 的 README；沒給就沒有這行）。demo 一律擺 `mailbox/`，`attrs` 多一行 `aos_mailbox: yes`；`status` 多幾行不帶 `aos_` 的：`mail_waiting`（`new/` 幾封）、`mail_writing`（`tmp/` 幾項）、`mail_bytes`、`mail_delivered`、`mail_taken`、`mail_refused`、`mail_dropped_stale`、`mail_last_refusal`、`mail_refusing`、`mail_last_name`、`mail_last_bytes`（最後 `take` 的那封）。demo 不讀 eventfd，信等 ctl 的 `take` 才拿。
+demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--ctl-wait] [--persists PATH] [--obey WORDS] [--mail-max-bytes N] [--mail-max-letters N] [--mail-max-total N] [--mail-stale S]`，或 `--cleanup PATH [--force]`。不給 NAME、MOUNTPOINT 時用 `$AOS_NAME`、`$AOS_MOUNT`，但只在 `$AOS_NAME_PID` 等於自己的 PID 時（見下面「環境變數」）。ctl 收 `stop`、`pause`、`resume`，測試用另有 `slow N`（做 N 秒）、`link 名 目標`／`unlink 名`（在 `links/` 底下隨時加、拿掉 symlink）、`tree 名`（在 `trees/` 底下加一整棵 `trees/<名>/`：`info`、`count`〔每開一次加 1〕、`sub/deep`、`link` → `info`，模擬 daemon 的 `procs/<名>/`）、`rmtree 路徑`（拿掉任何路徑連同底下；不給拿＝`failed`＋`RemoveRefused`）、`take`（從 `mailbox/new/` 拿走最早的一封；沒有信＝`failed`＋`MailEmpty`）、`refuse on|off`（拒收開關：開著時搬進 `new/` 那一步失敗、`EPERM`）。`--socket` 讓根夾可以放 unix socket，並在裡面 bind 一個 echo socket `sock`。`--ctl-wait` 讓 ctl 變成「做完才回」（見下面那一節；不給＝原本的「寫回來＝收到」）。`--persists PATH` 是 `settings` 的 `aos_persists`（沒給寫 `-`）；`--obey WORDS` 讓 `settings` 多一行 `aos_obey: WORDS`（例 `--obey "stop kill"`：被 register 進 daemon 時准 daemon 下這幾個字，見舊 aos-daemon 的 README（11-26 收掉，最後一版在 commit `068bfb2fb`）；沒給就沒有這行）。demo 一律擺 `mailbox/`，`attrs` 多一行 `aos_mailbox: yes`；`status` 多幾行不帶 `aos_` 的：`mail_waiting`（`new/` 幾封）、`mail_writing`（`tmp/` 幾項）、`mail_bytes`、`mail_delivered`、`mail_taken`、`mail_refused`、`mail_dropped_stale`、`mail_last_refusal`、`mail_refusing`、`mail_last_name`、`mail_last_bytes`（最後 `take` 的那封）。demo 不讀 eventfd，信等 ctl 的 `take` 才拿。
 
 ## 庫的介面一覽
 
@@ -129,7 +129,7 @@ demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--ctl-wait] [--persi
 
 **先開好檔的第二個人**：核心在做 FUSE 的 direct_io 寫入時拿著那個檔的鎖，寫過檔尾時是獨佔的。ctl 報的大小是 0，每次寫都過檔尾，於是先開好 ctl 的第二個人寫的時候會排在第一個人的鎖後面（排的時候殺不掉），等第一道做完、鎖放了，他的指令再被收下——不是當場 `EBUSY`（實測過：不報大的大小時，測試的「兩人先開好檔」那條沒過，第二個人等了 2 秒後寫入成功）。所以「做完才回」的 ctl：開檔時多給核心 `FOPEN_PARALLEL_DIRECT_WRITES`（准同一個檔並行寫），大小報成 1 GiB【擬】（寫入不過檔尾，核心才真的並行），第二個人的寫入進得來、當場 `EBUSY`。後果：`stat`、`ls -l` 看到這種 ctl 的大小是 1073741824；預設的 ctl 照舊是 0。`echo x > ctl` 這種每次開檔的不受影響（開檔那步就 `EBUSY`）。還剩一個很窄的縫：第二個人開檔剛好在第一個人上鎖之前、`O_TRUNC` 的截短排在第一個人的寫入後面，那時他會等到第一道做完。
 
-**`Action` 一直不回**：寫的人一直等（可以 Ctrl-C、`kill` 放開，見上），ctl 一直鎖著。沒做逾時【擬】：該等多久只有 `Action` 自己知道（例 aos-daemon2 叫主執行緒做事有自己的 60 秒），庫不替它猜。
+**`Action` 一直不回**：寫的人一直等（可以 Ctrl-C、`kill` 放開，見上），ctl 一直鎖著。沒做逾時【擬】：該等多久只有 `Action` 自己知道（例 aos-daemon 叫主執行緒做事有自己的 60 秒），庫不替它猜。
 
 **卸載**：`unmount()` 一開始先把還留著的寫入回 `ECONNABORTED`（不然那人拿著開著的檔，`fusermount3 -u` 會失敗、只能 lazy＋abort）；關 `/dev/fuse` 之前讓 ctl 不再回覆（之後才做完的指令，回覆不會寫進已經關掉、可能被別人拿去用的 fd）。
 
@@ -174,13 +174,13 @@ C++ 沒有反射，所以一個有結構的檔（`status`、`settings`、`attrs`
 | demo `status` | `DemoStatus`（四行＋`Feedback`＋`DemoMailStatus` 的 `mail_*` 十一行） | `demo/files.hpp` |
 | demo `settings` | `DemoSettings`（`aos_persists`、`aos_mailbox`、`aos_obey`〔OmitEmpty〕） | 同上 |
 | demo `attrs` | `DemoAttrs`（`aos_kind`、`aos_live`、`aos_mailbox`） | 同上 |
-| daemon 的四個 | `DaemonStatus`、`DaemonSettings`、`DaemonAttrs`、`ProcRow`（`procs_status` 的一隻） | `../aos-daemon/src/daemon.hpp` |
+| daemon 的四個 | `DaemonStatus`、`DaemonSettings`、`DaemonAttrs`、`ProcRow`（`procs_status` 的一隻） | 舊 aos-daemon 的 `src/daemon.hpp`（11-26 收掉，最後一版在 commit `068bfb2fb`；新的 aos-daemon 沒用這幾個） |
 
 `_metainfo.json` 本來就是 json、信箱裡的信是寄的人寫的，都不走欄位表。改成欄位表之前與之後各跑一次、逐 byte 比過 demo 與 daemon 的 `status`、`settings`、`attrs`、`procs_status`：除了 `persist`→`persists` 改名與外來登記多一行 `名字.obey`，一樣。json 版的檔（`status.json`…）還沒擺出來（草稿第 4 節「之後再做」）；現在只有 `fields_test` 驗 json 的樣子。
 
 ## 環境變數：只認給自己的（照 systemd 的 `LISTEN_PID`）
 
-daemon 起一支底下的 proc 時給 `AOS_NAME`、`AOS_MOUNT`、`AOS_ROOT`。孫子行程會原樣繼承前兩個，以為是給自己的。現在 daemon 另給 `AOS_NAME_PID=<那一支的 PID>`（fork 之後、exec 之前由孩子自己填），庫的 `env_assignment()` 只在 `AOS_NAME_PID` 等於 `getpid()` 時把名字與掛載點交出來，否則當沒給。demo 與 aos-daemon 起來時都走它。`AOS_ROOT` 不在此限：底下每一支都該知道根。
+（舊 aos-daemon，11-26 收掉）daemon 起一支底下的 proc 時給 `AOS_NAME`、`AOS_MOUNT`、`AOS_ROOT`。孫子行程會原樣繼承前兩個，以為是給自己的。現在 daemon 另給 `AOS_NAME_PID=<那一支的 PID>`（fork 之後、exec 之前由孩子自己填），庫的 `env_assignment()` 只在 `AOS_NAME_PID` 等於 `getpid()` 時把名字與掛載點交出來，否則當沒給。demo 與 aos-daemon 起來時都走它。`AOS_ROOT` 不在此限：底下每一支都該知道根。
 
 **後果**：包一層殼的（例 `sh -c '...; demo'`）要 `exec` 真的程式，PID 才會不變；不 exec 的話真的程式是孫子，會不理這兩個變數（demo 退 1、說 `need NAME and MOUNTPOINT (or $AOS_NAME and $AOS_MOUNT with $AOS_NAME_PID = own pid)`）。測試：`run.py` 的 `env` 組（沒有 `AOS_NAME_PID` 不認；殼設成殼自己的 `$$` 再 fork 出 demo 不認；`exec` 的認）、aos-daemon 的 `envpid` 組。
 
@@ -361,7 +361,7 @@ C++ 讀 `status` 比玩具快 5～8 倍，寫 ctl 快約 50 倍（玩具每道�
 
 ## 還沒做的
 
-- daemon 的部分（`procs/`、`procs_ctl`、`procs_status`、卡住的檢查）：庫備好了零件（symlink 隨時加拿、夾與檔隨時加、整棵拿掉、ctl 可設字首、`connection_id`／`abort_connection`／`cleanup_dead_mount`）；用上的 daemon 見 `../aos-daemon`（舊）與 `../aos-daemon2`。
+- daemon 的部分（`procs/`、`procs_ctl`、`procs_status`、卡住的檢查）：庫備好了零件（symlink 隨時加拿、夾與檔隨時加、整棵拿掉、ctl 可設字首、`connection_id`／`abort_connection`／`cleanup_dead_mount`）；舊的 aos-daemon（用過這些零件）11-26 收掉，最後一版在 commit `068bfb2fb`；現在的 [aos-daemon](../aos-daemon/README.md)（原本叫 aos-daemon2）用 FUSE 掛 `/aos` 給主 kernel 時才用這個庫。
 - `remove_tree`：拿不掉 ctl 與信箱（含底下有的）；拿掉後核心手上的舊節點直到 FORGET 才放，庫不記（編號不回收，所以不會錯）。通知只送那個名字的上一層一個，底下的名字靠核心自己跟著丟。
 - 各檔的 json 版（`status.json`…）：欄位表生得出來，檔還沒擺；`persists` 在目錄裡怎麼擺（草稿第 12 節第 4 條）。
 - 卸載時回答的線 2 秒內醒不來（abort 也失敗）就只 detach、不關 fd；這時 `Fs` 若被解構，線會碰到已經釋放的記憶體——現在只有行程馬上要結束的情形會走到，沒處理。

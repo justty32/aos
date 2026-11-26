@@ -64,6 +64,8 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
     - 第 101 段照擬的：`daemon.json` 的 `kernel` 可不寫、`on_restart_limit exit|stay`、`exit_code kernel|own`；主 kernel 設定的 `daemon_path`（預設 `/aos`，cgroup 夾跟著放同一層的 `cgroup`）、`locks.landlock`（預設不進）。主 kernel 的 uid 照舊要 0。
 23. **天空裡的 uid 最多到 65535**（第 102 段）：0＝使用者本人，N＝subuid 範圍第 N 個；範圍小就照實際，超過 `start` 失敗。
 24. **「主 kernel」正式叫 `init`**（第 103、104 段；先說 core，看到改名範圍後改 init）：角色像 Linux 的 1 號——daemon 起來第一個起它、其他 proc 都由它下 `start`。程式與文件凡是「主 kernel」都換：`daemon.json` 的 `init`、`--init`、`on_init_exit`、status 的 `init`／`init_access`／`init_restarts`／`init_last_exit`…、`exit_code` 的值 `init`。它在 `procs/` 底下的名字照它設定的 `name`。這份紀錄前面寫的「主 kernel」不改（當時的紀錄）。
+25. **舊的 proto9 aos-daemon 收掉，aos-daemon2 改名回 aos-daemon**（第 105、106 段）：舊夾刪掉，最後一版在 `068bfb2fb`；proto8 那支不動。
+26. **網路：設定檔加 `net`，預設 `none`**（第 107 段）：`none`＝自己一個空的 network namespace、只有 loopback，外面連不到；`host`＝共用外面的網路（要上網的寫這個）。init 也一樣照設定。能連外網但看不到本機服務的那種要 pasta 之類，以後再說。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 

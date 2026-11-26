@@ -97,7 +97,7 @@ double mono_now() {
 }
 
 void log(const std::string& msg) {
-    std::string line = "aos-daemon2: " + msg + "\n";
+    std::string line = "aos-daemon: " + msg + "\n";
     if (write(2, line.data(), line.size()) < 0) {}
 }
 

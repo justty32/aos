@@ -1,4 +1,4 @@
-# Builds aos-daemon (src/*.cpp) under build/, linked against ../aos-procfs/build/libaos-procfs.a (build that first).
+# Builds aos-daemon (src/*.cpp) under build/; the aos-procfs library sources are compiled here too (into build/obj/procfs/), so ../aos-procfs is only read.
 #
 # Usage:
 #   make            build/bin/aos-daemon
@@ -9,11 +9,12 @@ BUILD    := build
 CXX      ?= g++
 OPT      ?= -O2
 PROCFS   := ../aos-procfs
-XFLAGS   := -std=c++20 -Wall -Wextra -MMD -MP -I$(PROCFS)/include -pthread
+XFLAGS   := -std=c++20 -Wall -Wextra -MMD -MP -I$(PROCFS)/include -I../third_party -pthread
 
 SRC      := $(wildcard src/*.cpp)
 OBJ      := $(patsubst %.cpp,$(BUILD)/obj/%.o,$(SRC))
-LIB      := $(PROCFS)/build/libaos-procfs.a
+PF_SRC   := $(wildcard $(PROCFS)/src/*.cpp)
+PF_OBJ   := $(patsubst $(PROCFS)/src/%.cpp,$(BUILD)/obj/procfs/%.o,$(PF_SRC))
 BIN      := $(BUILD)/bin/aos-daemon
 
 all: $(BIN)
@@ -22,13 +23,13 @@ $(BUILD)/obj/%.o: %.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(XFLAGS) $(OPT) -c $< -o $@
 
-# 只編這一夾；庫沒編好就說一聲，不替它編
-$(LIB):
-	@echo "missing $(LIB): run make -C $(PROCFS) first" >&2; exit 1
-
-$(BIN): $(OBJ) $(LIB)
+$(BUILD)/obj/procfs/%.o: $(PROCFS)/src/%.cpp
 	@mkdir -p $(@D)
-	$(CXX) -pthread $(OBJ) $(LIB) -o $@
+	$(CXX) $(XFLAGS) $(OPT) -c $< -o $@
+
+$(BIN): $(OBJ) $(PF_OBJ)
+	@mkdir -p $(@D)
+	$(CXX) -pthread $(OBJ) $(PF_OBJ) -o $@
 
 test: all
 	python3 tests/run.py
@@ -38,4 +39,4 @@ clean:
 
 .PHONY: all test clean
 
--include $(OBJ:.o=.d)
+-include $(OBJ:.o=.d) $(PF_OBJ:.o=.d)

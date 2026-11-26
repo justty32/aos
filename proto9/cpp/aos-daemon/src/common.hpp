@@ -1,4 +1,4 @@
-// common.hpp：aos-daemon2 各檔共用的型別與小工具（設定、天空、proc 表、起動時握住的 fd）。
+// common.hpp：aos-daemon 各檔共用的型別與小工具（設定、天空、proc 表、起動時握住的 fd）。
 #pragma once
 
 #include <string>
@@ -112,7 +112,7 @@ std::string read_host_file(const std::string& path, std::string& err);   // 經 
 std::string read_fd_at(int dirfd, const std::string& rel);              // 讀不到回空字串
 std::string iso_now();
 double mono_now();
-void log(const std::string& msg);   // "aos-daemon2: msg" 寫到 stderr
+void log(const std::string& msg);   // "aos-daemon: msg" 寫到 stderr
 int signal_number(const std::string& s);   // 認 9、KILL、SIGKILL；不認得回 0
 std::string signal_name(int sig);
 std::string errstr(int e);

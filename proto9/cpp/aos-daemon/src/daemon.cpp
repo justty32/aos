@@ -562,16 +562,16 @@ void must(int r, const std::string& what) {
     must(mount(nullptr, "/", nullptr, MS_REC | MS_PRIVATE, nullptr), "make mounts private");
     W.hostprocfd = open("/proc", O_PATH | O_DIRECTORY | O_CLOEXEC);
     W.rootfd = open("/", O_PATH | O_DIRECTORY | O_CLOEXEC);
-    const char* cg = getenv("AOS_DAEMON2_CGROUP");
-    W.cg_note = getenv("AOS_DAEMON2_CGROUP_NOTE") ? getenv("AOS_DAEMON2_CGROUP_NOTE") : "";
+    const char* cg = getenv("AOS_DAEMON_CGROUP");
+    W.cg_note = getenv("AOS_DAEMON_CGROUP_NOTE") ? getenv("AOS_DAEMON_CGROUP_NOTE") : "";
     if (cg && *cg) {
         W.cg_host = cg;
         W.cgfd = open(cg, O_PATH | O_DIRECTORY | O_CLOEXEC);
         if (W.cgfd < 0) fatal("open cgroup " + W.cg_host + ": " + errstr(errno));
     }
-    unsetenv("AOS_DAEMON2_CGROUP");
-    unsetenv("AOS_DAEMON2_CGROUP_NOTE");
-    unsetenv("AOS_DAEMON2_IN_SCOPE");
+    unsetenv("AOS_DAEMON_CGROUP");
+    unsetenv("AOS_DAEMON_CGROUP_NOTE");
+    unsetenv("AOS_DAEMON_IN_SCOPE");
     long abi = syscall(SYS_landlock_create_ruleset, nullptr, 0, LANDLOCK_CREATE_RULESET_VERSION);
     W.landlock_abi = abi > 0 ? static_cast<int>(abi) : 0;
     {
@@ -613,7 +613,7 @@ void must(int r, const std::string& what) {
     EFD = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 
     pf::Options opt;
-    opt.fsname = "aosdaemon2";
+    opt.fsname = "aosdaemon";
     opt.on_gone = [] {
         gone = true;
         wake();
