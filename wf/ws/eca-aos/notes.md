@@ -869,3 +869,10 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 139 段：天空＝看得到什麼是路由、行程之間是牆（第 46 條；daemon當容器第九輪那句加了指向）。PID ns 先不做。值得想剩：5 start 路徑照誰的天空解、6 events、7 FUSE kernel。
 - 第 140 段：47 路徑照寫的人的天空解、48 events、49 FUSE kernel 待辦。值得想看完。剩「小事」14 條。待派清單：38、40～45、47、48（等 fix 那隻回來）。
 - 第 141 段：小事照擬（第 50 條）。審查全部看完。待派：38、40～45、47、48、50（背景 fix 那隻回來、驗、交之後）。kernel 下一題：登記表。
+
+## 2026-11-26 傍晚：使用者「你這邊整理一下吧，我compact」
+
+- **背景在跑**：opus 一隻，做 daemon職責第 35～37 條（訊號看寄件人、ctl 只靠 Landlock 的測試、bind 卡住不等）＋下一批五樣（by/at、overlay、B 測試、restart-init、介面宣告 `aos/ctl` 夾＋`aos/jsonpath`＋`aos/proc`）。暫存 ~/.aos/scratch/proto9-daemon-fix-1126/。它第 2 條測出「寫得到 ctl」會停下回報。
+- **compact 後接**：等它通知 → 清 build、跑三次、查殘留（exe 路徑／dev+inode）→ 改 proto9/README 條數 → 交件 → 它的【擬】一次三條給使用者 → 派下一批：daemon職責第 38、40～45、47、48、50 條（同一夾，一隻 opus）。
+- kernel 下一題：登記表（kernel-1126 第 3 題）。
+- 本地比遠端多 33 個 commit，沒推。
