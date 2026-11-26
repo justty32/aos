@@ -16,13 +16,15 @@
 
 **寫這條的是家機 repo-aos 樹的 `main`**（Claude Code，模型 Opus 5.5）。細節在 [`wf/ws/main/notes.md`](ws/main/notes.md)「2026-11-25 晚（家機）」那節。上一條是公司 `eca-aos` 的 11-25 17:0x（proto9 小庫、daemon、aos-exec 交件與下一批 1～6），全文在 git 歷史 `3cc5beb2e`；還有效的摘在下面「公司那條還有效的」。
 
-**11-26 公司（`eca-aos`，模型 Opus 5.5，到午後）**——細節在 [`wf/ws/eca-aos/notes.md`](ws/eca-aos/notes.md) 最後三節。
+**11-26 公司（`eca-aos`，模型 Opus 5.5，到 13:00）**——細節在 [`wf/ws/eca-aos/notes.md`](ws/eca-aos/notes.md) 最後幾節。**沒推**：本地比遠端多 20 個 commit（含這條交接）（11-26 全部），push 等使用者說。
 - **sky-1125 在公司跑通**（`2ab7e45c1`）：10 PASS。修了三樣：util-linux 2.39 的對應參數、WSL 在 `/usr` 底下鎖住的子掛載要一起 bind、`/lib64` 改指 `usr/lib64`。**改到兩台共用的只有 `/lib64` 那行，家機 pull 後跑一次 `python3 run.py` 確認。**
 - **下一批 2～5 做完**（`068bfb2fb`）：外來登記擋冒名＋`aos_obey`（【擬】）、程式裡 persist→persists、測試等做完再看＋改 monotonic（WSL2 牆上時鐘會倒跳）、欄位表 `fields.hpp`；procfs 81、daemon 73，eca-aos 重編重跑全過。子 agent 碰到的【開】記在 [aos-daemon README「碰到的【開】」](../proto9/cpp/aos-daemon/README.md)，等使用者看。第 1 條（`add` 交給 aos-exec）沒做，第 6 條本來就是之後。
 - **aoslua 與介面談完一段**（談話紀錄 9p-proc-1125 第 40～63 段逐字；整理在 [aospl循址與元介面-1126](../proto8/thinking/2026-11/26/aospl循址與元介面-1126.md)，定了 44 條；檔名還是 aospl，名字已改用 aoslua）：Unix 路徑＝aos 通用循址格式；存取得到的都是 aoslua 的基礎，table／元素；存在＝存取得到；元表 `xxx/__meta`，基礎八個（`__index`、`__newindex`、`__call`、`__pairs`、`__stat`、`__metatable`、`__gc`、`__mode`），全是靜態檔；基本操作八個，其餘全在介面宣告。**介面宣告＝能存取到 `xxx/__meta/__interfaces/<介面名>`**，哪層算介面、要不要繼承各自決定。共同介面定了 `aos/utilpath`（以下可用 `#`，後面 JSON Pointer，只保證讀）、`aos/name`、`aos/description`（內容直接放宣告位置）、`aos/rename`（`rename/exec` 吃 stdin 一行 `舊 新`、錯誤寫 stderr、子樹可跨層）；`exec`／`before`／`after` 加 stdin／stdout／stderr 的用法記成可通用的做法，之後可能改進。
-- **使用者收尾時說**（逐字）：「aos-exec先不管。介面這塊差不多了，你整理收尾一下，我要compact，然後回頭來聊daemon。」→ **compact 後接 daemon**。可拿出來的：aos-daemon README 的【開】；[daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md) 第八輪第 7～11 條與第九輪兩點；sky-1125 README 最後四題（Landlock、天空裡開 user namespace、選用 kernel、天空裡的 uid）；下面「公司那條還有效的」裡家機 sonnet 看到的三點。都不催，等他開題。
-- **還開著（不催）**：`__metatable`、`__mode`（先不管）；`__index` 整條路；`aos/utilpath` 細節；exec／before／after 兩個邊角；aos-exec 瘦身（之後改看 `__meta/__call`，先不管）。**草稿 01 還沒跟上這些概念**，等使用者說。
-- **沒推**：本地比遠端多 14 個 commit（11-26 全部）。push 要等使用者說。沒有東西在背景跑。
+- **compact 後（午後）談 daemon 的職責**（逐字 9p-proc-1125 第 64～76 段；整理在 [daemon職責-1126](../proto8/thinking/2026-11/26/daemon職責-1126.md)）。使用者嫌一次列太多：「我們一個一個來」→ **一次只問一題**。定了：daemon 只提供資訊與工具、判斷與使用交給 kernel；資訊與工具在 `/proc/<daemon PID>/cwd`、daemon 住進只有資訊與工具的小世界；只開給起動參數指定的**主 kernel**（地位像 Linux kernel、唯一不進 Landlock；死了照參數 `restart`（60 秒 5 次上限）或 `exit`）；其他 proc 用 Landlock 擋（6.6 擋不住訊號，之後要求較新的 Linux）；工具是一個可寫檔 `ctl`（`start 設定檔`、`kill`、`mount`、`umount`、`forget`），cgroup 資料夾直接當開關；自動重起、判卡住、准不准、kernel 登記表都不在 daemon。實作時又定：`ctl` 做完才回（失敗回 EIO）、主 kernel 從天空裡的 `/aos` 讀 daemon 目錄且零權限（保留給 CAP_SYS_PTRACE 走 `/proc/1/cwd` 的選項）、小世界留 `cgroup/`、`procs/<名字>/` 是真的夾。
+- **實作**：使用者「你能先開始實作嗎」→ [`proto9/cpp/aos-daemon2/`](../proto9/cpp/aos-daemon2/README.md)（新夾，舊 aos-daemon 不動）。已交：第一版 `af2c8a5f5`（110 條）、做完才回 `23ebbef7e`（aos-procfs 加 `reply_when_done`，procfs 5+40+37+36、舊 daemon 73、daemon2 112，eca-aos 清 build 重跑全過、無殘留）。
+- **背景還在跑一隻子 agent**（12:47 派）：主 kernel 掛 `/aos`＋零權限（保留 ptrace 選項）、aos-procfs 能拿掉資料夾、`procs/<名字>/` 真的夾；暫存 `~/.aos/scratch/proto9-daemon2b-1126/`。**回來後**：aos-procfs、aos-daemon、aos-daemon2 三支 `make clean && make && make test`、查殘留（行程、掛載、cgroup、unit；`proto8/bin/aos-daemon --enable-logs daemon.json` 那幾支不是我們的）、交件、把新的【擬】一條一條給使用者。
+- **daemon 還沒談的**（一次拿一題）：daemon2 的【擬】（設定檔格式、天空表格式、EIO…，見其 README）；資訊與工具用 aoslua 怎麼描；主 kernel 正式名字；網路隔離、seccomp；sky-1125 四題剩「天空裡開 user namespace」「選用 kernel 要不要先有」「uid」；daemon當容器第八輪 7～11、第九輪兩點；舊 aos-daemon 要不要收掉。
+- **還開著（不催）**：`__metatable`、`__mode`；`__index` 整條路；`aos/utilpath` 細節；exec／before／after 兩個邊角；aos-exec 瘦身；草稿 01 還沒跟上這些概念。
 
 **接手先讀**：這條 → [daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md)（第一～九輪：每輪定了的、實測數據、提案）→ 原話在 [9p-proc-1125](../proto8/thinking/2026-11/25/9p-proc-1125.md) 第 30～39 段 → progress `proto9-sky-1125`。
 

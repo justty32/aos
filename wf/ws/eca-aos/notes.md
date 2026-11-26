@@ -776,3 +776,10 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 75 段：`cgroup/` 照現在留著。第 76 段選 B：aos-procfs 能拿掉資料夾、`procs/<名字>/` 真的夾 → 跟第 73、74 段那件一起，**等做完才回那隻回來再派**。
 - 12:3x 使用者（逐字）：「我剛吃完飯，想睡午覺休息一下，你弄一弄，大約13:00整理收尾，我13:10休息好，幫你compact」→ 掛 12:57 的計時；等做完才回那隻、驗、交、派下一隻（第 73～76 段那件）；13:00 整理 HANDOFF 收尾。
 - 12:4x 做完才回那隻回來：`Ctl::reply_when_done()`、失敗回 EIO、等的時候 Ctrl-C／kill 放得掉（EINTR）、卸載回 ECONNABORTED、這種 ctl stat 報 1 GiB（避開 kernel 鎖）。我清 build 重跑：procfs 5+40+37+36、舊 daemon 73、daemon2 112，無警告、無殘留。交件。
+- 12:4x 派下一隻（opus 背景）：aos-daemon2 主 kernel 掛 `/aos`、預設零權限、保留 ptrace 選項；aos-procfs 能拿掉資料夾、`procs/<名字>/` 真的夾。暫存 `~/.aos/scratch/proto9-daemon2b-1126/`。**回來後**：三支清 build 重跑、查殘留、交件。注意 `proto8/bin/aos-daemon --enable-logs daemon.json` 那幾支（07:40 起的）不是我們的。
+
+## 2026-11-26 13:00：午覺前收尾、準備 compact
+
+- HANDOFF 公司段換新（daemon 職責定了的、daemon2 兩次交件、背景那隻回來要做的、還沒談的題目）。
+- 狀態：本地比遠端多 20 個 commit，全沒推；背景有一隻子 agent 在做 `/aos`＋真的 `procs/<名字>/`（12:47 派）。
+- compact 後接：讀這節與 HANDOFF 公司段 → 等那隻的通知 → 三支重跑、查殘留、交件 → 新的【擬】一次一條給使用者。
