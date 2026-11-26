@@ -9,8 +9,7 @@
 namespace d2 {
 
 const char* const DEV_NODES[5] = {"null", "zero", "full", "random", "urandom"};
-const char* const KERNEL_AOS = "/aos";
-const char* const KERNEL_CGROUP = "/cgroup";
+const char* const DEFAULT_DAEMON_PATH = "/aos";
 
 namespace {
 
@@ -111,13 +110,22 @@ std::vector<Mount> plan_mounts(const std::vector<NsEntry>& ns) {
     return out;
 }
 
-std::string kernel_ns_conflict(const ProcConfig& c, bool cgroup_on) {
-    if (!kernel_mounts(c)) return "";
+std::string init_daemon_path(const ProcConfig& c) { return c.daemon_path.empty() ? DEFAULT_DAEMON_PATH : c.daemon_path; }
+
+std::string init_cgroup_path(const ProcConfig& c) {
+    std::string dp = init_daemon_path(c);
+    std::string up = dp.substr(0, dp.rfind('/'));
+    return up + "/cgroup";
+}
+
+std::string init_ns_conflict(const ProcConfig& c, bool cgroup_on) {
+    if (!init_mounts(c)) return "";
+    std::string dp = init_daemon_path(c), cp = init_cgroup_path(c);
     auto under = [](const std::string& p, const std::string& top) { return p == top || p.rfind(top + "/", 0) == 0; };
     for (const auto& e : c.ns) {
-        if (under(e.dst, KERNEL_AOS) || (cgroup_on && under(e.dst, KERNEL_CGROUP)))
-            return "ConfigBad ns entry for " + e.dst + ": " + KERNEL_AOS + (cgroup_on ? std::string(" and ") + KERNEL_CGROUP : "") +
-                   " are where the daemon puts its directory in the main kernel's ns (or set \"daemon_access\": \"ptrace\")";
+        if (under(e.dst, dp) || (cgroup_on && under(e.dst, cp)))
+            return "ConfigBad ns entry for " + e.dst + ": " + dp + (cgroup_on ? " and " + cp : std::string()) +
+                   " are where the daemon puts its directory in init's ns (choose another \"daemon_path\", or set \"daemon_access\": \"ptrace\")";
     }
     return "";
 }
@@ -163,7 +171,8 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
             if (!v.is_object()) bad("locks must be an object");
             for (const auto& [lk, lv] : v.items()) {
                 if (lk == "landlock") {
-                    if (lv != true) bad("locks.landlock cannot be turned off (only the main kernel runs without it)");
+                    if (lv != true) bad("locks.landlock cannot be turned off (only init runs without it, and init only when it does not ask for it)");
+                    c.landlock = true;
                 } else if (lk == "cgroup") {
                     if (!lv.is_object()) bad("locks.cgroup must be an object of file -> value");
                     for (const auto& [ck, cv] : lv.items()) {
@@ -183,12 +192,23 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
         } else if (k == "daemon_access") {
             c.daemon_access = str(v, "daemon_access");
             if (c.daemon_access != "mount" && c.daemon_access != "ptrace") bad("daemon_access must be \"mount\" or \"ptrace\"");
+        } else if (k == "daemon_path") {
+            c.daemon_path = str(v, "daemon_path");
+            if (!abs_path_ok(c.daemon_path) || c.daemon_path == "/")
+                bad("daemon_path must be a clean absolute path other than / (no . or .., no empty part, no trailing /): " + c.daemon_path);
+            if (init_cgroup_path(c) == c.daemon_path)
+                bad("daemon_path " + c.daemon_path + " is where the cgroup directory goes (dirname(daemon_path)/cgroup); choose another");
+        } else if (k == "net") {
+            c.net = str(v, "net");
+            if (c.net != "none" && c.net != "host") bad("net must be \"none\" (own network namespace, loopback only) or \"host\"");
         } else if (k == "stdout" || k == "stderr") {
             (k == "stdout" ? c.stdout_path : c.stderr_path) = clean_path(str(v, k), k);
         } else {
-            bad("unknown key " + k + " (name, argv, env, cwd, ns, uid, locks, stdout, stderr, daemon_access)");
+            bad("unknown key " + k + " (name, argv, env, cwd, ns, uid, locks, net, stdout, stderr, daemon_access, daemon_path)");
         }
     }
+    if (!c.daemon_path.empty() && c.daemon_access == "ptrace")
+        bad("daemon_path is only for \"daemon_access\": \"mount\" (with ptrace the directory is /proc/1/cwd)");
     if (c.name.empty()) bad("name is missing");
     if (c.argv.empty()) bad("argv is missing");
     return c;

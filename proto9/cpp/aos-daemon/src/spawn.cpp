@@ -9,10 +9,13 @@
 #include <linux/capability.h>
 #include <linux/landlock.h>
 #include <linux/openat2.h>
+#include <net/if.h>
 #include <poll.h>
 #include <sched.h>
 #include <sys/mount.h>
+#include <sys/ioctl.h>
 #include <sys/prctl.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
@@ -143,8 +146,20 @@ struct LandlockAttr {
     uint64_t fs, net, scoped;
 };
 
+// net none：剛開的 network namespace 裡只有 lo、而且是關的；打開它（127.0.0.1、::1 由核心自己加上）。要 CAP_NET_ADMIN，所以在丟 caps 之前做
+void loopback_up() {
+    int s = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    if (s < 0) die("socket for lo", errno);
+    ifreq r{};
+    strncpy(r.ifr_name, "lo", IFNAMSIZ - 1);
+    if (ioctl(s, SIOCGIFFLAGS, &r) != 0) die("get lo flags", errno);
+    r.ifr_flags = static_cast<short>(r.ifr_flags | IFF_UP | IFF_RUNNING);
+    if (ioctl(s, SIOCSIFFLAGS, &r) != 0) die("bring lo up", errno);
+    close(s);
+}
+
 // 子行程：exec 之前全部在這裡做；失敗就把原因寫回 report_fd、_exit(127)
-[[noreturn]] void child(const ProcConfig& cfg, bool main_kernel, const std::vector<Mount>& mounts,
+[[noreturn]] void child(const ProcConfig& cfg, bool init, const std::vector<Mount>& mounts,
                         const std::string& cgroup, std::vector<char*>& argv, std::vector<char*>& envp, int go) {
     sigset_t none;
     sigemptyset(&none);
@@ -152,13 +167,13 @@ struct LandlockAttr {
     for (int s = 1; s < 32; ++s)
         if (s != SIGKILL && s != SIGSTOP) signal(s, SIG_DFL);
     setsid();
-    // 主 kernel（mount 模式）：daemon 的目錄（與 cgroup 夾）只在 daemon 的小世界裡，趁還在這裡先複製成還沒掛上的掛載
-    bool give_aos = main_kernel && kernel_mounts(cfg);
+    // init（mount 模式）：daemon 的目錄（與 cgroup 夾）只在 daemon 的小世界裡（/aos、/cgroup），趁還在這裡先複製成還沒掛上的掛載
+    bool give_aos = init && init_mounts(cfg);
     int aos_clone = -1, cg_clone = -1;
     if (give_aos) {
-        aos_clone = open_tree(AT_FDCWD, KERNEL_AOS, OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC);
+        aos_clone = open_tree(AT_FDCWD, "/aos", OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC);
         if (aos_clone < 0) die("clone the daemon's directory", errno);
-        if (W.cgfd >= 0 && (cg_clone = open_tree(AT_FDCWD, KERNEL_CGROUP, OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC)) < 0)
+        if (W.cgfd >= 0 && (cg_clone = open_tree(AT_FDCWD, "/cgroup", OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC)) < 0)
             die("clone the cgroup directory", errno);
     }
 
@@ -181,8 +196,12 @@ struct LandlockAttr {
     for (size_t i = 0; i < mounts.size(); ++i)
         if (mounts[i].kind == "bind" && (clones[i] = clone_src(mounts[i].src)) < 0) die("bind source " + mounts[i].src, errno);
 
-    // 3. 自己一份 mount namespace，根從一塊新的 tmpfs 組起
+    // 3. 自己一份 mount namespace，根從一塊新的 tmpfs 組起；net none 時順便開自己的 network namespace、打開 lo
     if (unshare(CLONE_NEWNS) != 0) die("unshare mount namespace", errno);
+    if (cfg.net == "none") {
+        if (unshare(CLONE_NEWNET) != 0) die("unshare network namespace", errno);
+        loopback_up();
+    }
     if (mount("tmpfs", STAGE, "tmpfs", MS_NOSUID | MS_NODEV, "mode=0755") != 0) die("mount root tmpfs", errno);
     int root = open(STAGE, O_PATH | O_DIRECTORY | O_CLOEXEC);
     if (root < 0) die("open root", errno);
@@ -220,9 +239,9 @@ struct LandlockAttr {
         }
     }
     if (give_aos) {
-        // 天空裡的固定位置：/aos＝daemon 的目錄（可寫：ctl 要寫），/cgroup＝cgroup 夾（procs/<名>/cgroup 的相對連結才通）
-        attach(aos_clone, root, KERNEL_AOS, true, true, "the daemon's directory");
-        if (cg_clone >= 0) attach(cg_clone, root, KERNEL_CGROUP, true, true, "the cgroup directory");
+        // 天空裡的位置：daemon_path（預設 /aos）＝daemon 的目錄（可寫：ctl 要寫），旁邊的 cgroup＝cgroup 夾（procs/<名>/cgroup 的相對連結才通）
+        attach(aos_clone, root, init_daemon_path(cfg), true, true, "the daemon's directory");
+        if (cg_clone >= 0) attach(cg_clone, root, init_cgroup_path(cfg), true, true, "the cgroup directory");
     }
     if (set_attr(root, "", AT_EMPTY_PATH, MOUNT_ATTR_RDONLY) != 0) die("make root read-only", errno);
 
@@ -247,9 +266,9 @@ struct LandlockAttr {
 
     // 7. 上鎖
     if (W.setgroups_ok && setgroups(0, nullptr) != 0) die("setgroups", errno);
-    bool ptrace = main_kernel && !give_aos;
+    bool ptrace = init && !give_aos;
     if (ptrace) {
-        // ptrace 模式：主 kernel 留 CAP_SYS_PTRACE 一個——daemon 的 caps 比它多，沒有這個就讀不到 /proc/1/cwd
+        // ptrace 模式：init 留 CAP_SYS_PTRACE 一個——daemon 的 caps 比它多，沒有這個就讀不到 /proc/1/cwd
         __user_cap_header_struct h{_LINUX_CAPABILITY_VERSION_3, 0};
         __user_cap_data_struct d[2]{};
         if (syscall(SYS_capget, &h, d) != 0) die("capget", errno);
@@ -272,7 +291,7 @@ struct LandlockAttr {
     if (setresuid(u, u, u) != 0) die("setresuid", errno);
     set_caps(ptrace ? 1ull << CAP_SYS_PTRACE : 0);
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0) die("no_new_privs", errno);
-    if (!main_kernel) {
+    if (!init || cfg.landlock) {
         LandlockAttr a{LANDLOCK_ACCESS_FS_MAKE_BLOCK, 0, 0};
         size_t sz = sizeof(uint64_t);
         if (W.landlock_abi >= 6) {
@@ -322,24 +341,28 @@ void reap(pid_t pid) {
     while (waitpid(pid, &st, 0) < 0 && errno == EINTR) {}
 }
 
-std::vector<std::string> locks_of(const ProcConfig& cfg, bool main_kernel) {
+std::vector<std::string> locks_of(const ProcConfig& cfg, bool init) {
     std::vector<std::string> l;
-    if (main_kernel && kernel_mounts(cfg)) {
-        l.push_back("landlock: none (main kernel)");
-        l.push_back("capabilities: none (bounding set empty)");
-        l.push_back(std::string("daemon directory: ") + KERNEL_AOS + " in its ns (daemon_access mount)" +
-                    (W.cgfd >= 0 ? std::string(", cgroup directory at ") + KERNEL_CGROUP : ""));
-    } else if (main_kernel) {
-        l.push_back("landlock: none (main kernel)");
-        l.push_back("capabilities: cap_sys_ptrace only (bounding set: cap_sys_ptrace)");
-        l.push_back("daemon directory: /proc/1/cwd (daemon_access ptrace)");
-    } else {
+    if (!init || cfg.landlock) {
         std::string s = "landlock: own domain (ABI " + std::to_string(W.landlock_abi) + "); fs: make_block handled, no other fs rule; ";
         s += W.landlock_abi >= 6 ? "scoped: signal, abstract unix socket"
                                  : "signal and abstract unix socket scoping not available (needs ABI 6)";
+        if (init) s += "; init asked for it (locks.landlock true)";
         l.push_back(s);
+    } else {
+        l.push_back("landlock: none (init)");
+    }
+    if (init && init_mounts(cfg)) {
+        l.push_back("capabilities: none (bounding set empty)");
+        l.push_back("daemon directory: " + init_daemon_path(cfg) + " in its ns (daemon_access mount)" +
+                    (W.cgfd >= 0 ? ", cgroup directory at " + init_cgroup_path(cfg) : std::string()));
+    } else if (init) {
+        l.push_back("capabilities: cap_sys_ptrace only (bounding set: cap_sys_ptrace)");
+        l.push_back("daemon directory: /proc/1/cwd (daemon_access ptrace)");
+    } else {
         l.push_back("capabilities: none (bounding set empty)");
     }
+    l.push_back(cfg.net == "none" ? "net: none (own netns, loopback only)" : "net: host (the daemon's network namespace)");
     l.push_back("securebits: noroot, no_setuid_fixup, keep_caps_locked, no_cap_ambient_raise (all locked)");
     l.push_back("no_new_privs");
     l.push_back(W.setgroups_ok ? "groups: cleared" : "groups: kept (setgroups is denied without newgidmap)");
@@ -388,21 +411,22 @@ void enter_ns(int rootfd, int nsfd) {
 
 }  // namespace
 
-std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& out) {
-    if (!main_kernel && W.landlock_abi < 1)
-        return "LandlockUnavailable this kernel has no Landlock; only the main kernel may run without it";
+std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
+    if ((!init || cfg.landlock) && W.landlock_abi < 1)
+        return std::string("LandlockUnavailable this kernel has no Landlock; ") +
+               (init ? "init asked for it (locks.landlock true)" : "only init may run without it");
     if (cfg.uid > 0 && cfg.uid > W.subuid_count)
         return "UidUnavailable uid " + std::to_string(cfg.uid) + " needs a subuid range of at least that size (have " +
                std::to_string(W.subuid_count) + ")";
     out = Spawned{};
     out.mounts = plan_mounts(cfg.ns);
-    if (main_kernel && kernel_mounts(cfg)) {
-        std::string bad = kernel_ns_conflict(cfg, W.cgfd >= 0);
+    if (init && init_mounts(cfg)) {
+        std::string bad = init_ns_conflict(cfg, W.cgfd >= 0);
         if (!bad.empty()) return bad;
-        out.mounts.push_back({"aos", "-", KERNEL_AOS, true});
-        if (W.cgfd >= 0) out.mounts.push_back({"cgroup", W.cg_host, KERNEL_CGROUP, true});
+        out.mounts.push_back({"aos", "-", init_daemon_path(cfg), true});
+        if (W.cgfd >= 0) out.mounts.push_back({"cgroup", W.cg_host, init_cgroup_path(cfg), true});
     }
-    out.locks = locks_of(cfg, main_kernel);
+    out.locks = locks_of(cfg, init);
 
     // cgroup：起動前開好、寫好上限
     if (W.cgfd >= 0) {
@@ -428,8 +452,8 @@ std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& ou
     std::vector<std::string> env = cfg.env;
     if (env.empty()) env = {"PATH=/usr/local/bin:/usr/bin:/bin", "HOME=/"};
     std::erase_if(env, [](const std::string& e) { return e.rfind("AOS_DAEMON=", 0) == 0 || e.rfind("AOS_NAME=", 0) == 0; });
-    // AOS_DAEMON 只給主 kernel：其他 proc 讀不到 daemon 的目錄，給了反而誤導【擬】
-    if (main_kernel) env.push_back(std::string("AOS_DAEMON=") + (kernel_mounts(cfg) ? KERNEL_AOS : "/proc/1/cwd"));
+    // AOS_DAEMON 只給 init：其他 proc 讀不到 daemon 的目錄，給了反而誤導【擬】
+    if (init) env.push_back("AOS_DAEMON=" + (init_mounts(cfg) ? init_daemon_path(cfg) : std::string("/proc/1/cwd")));
     env.push_back("AOS_NAME=" + cfg.name);
     std::vector<std::string> args = cfg.argv;
     std::vector<char*> argv, envp;
@@ -450,7 +474,7 @@ std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& ou
         close(st[0]);
         close(go[1]);
         report_fd = st[1];
-        child(cfg, main_kernel, out.mounts, out.cgroup, argv, envp, go[0]);
+        child(cfg, init, out.mounts, out.cgroup, argv, envp, go[0]);
     }
     close(st[1]);
     close(go[0]);

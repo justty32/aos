@@ -1,4 +1,4 @@
-// daemon.cpp：daemon 本體——PID namespace 的 1 號；擺出資訊與工具的目錄、住進只有它的小世界、起主 kernel、收屍、照工具檔的指令做事。
+// daemon.cpp：daemon 本體——PID namespace 的 1 號；擺出資訊與工具的目錄、住進只有它的小世界、起 init（有設定的話）、收屍、照工具檔的指令做事。
 #include "common.hpp"
 
 #include "aos/procfs.hpp"
@@ -34,7 +34,7 @@ namespace {
 
 struct Proc {
     ProcConfig cfg;
-    bool main_kernel = false;
+    bool init = false;
     Spawned sp;
     bool alive = true;
     int code = -1, sig = 0;
@@ -45,24 +45,26 @@ struct Proc {
 struct State {
     std::mutex mu;
     std::map<std::string, std::shared_ptr<Proc>> procs;
-    int kernel_restarts = 0;
-    std::deque<double> deaths;   // 主 kernel 死的時間（monotonic）
-    std::string kernel_last_exit = "-";
+    int init_restarts = 0;
+    std::deque<double> deaths;   // init 死的時間（monotonic）
+    std::string init_last_exit = "-";
+    std::string init_gone;       // 非空＝到了重起上限、on_restart_limit stay：init 不再起（原因）
 };
 
 State S;
 Options O;
-ProcConfig KCFG;
+ProcConfig ICFG;         // init 的設定；HAS_INIT false 時沒用
+bool HAS_INIT = false;
 pf::Fs* FS = nullptr;
 pf::Ctl* CTL = nullptr;
-// 放上表／拿掉時「表」與「目錄」一起改：主執行緒（start、主 kernel 重起）與做事的線（forget）不會交錯。
+// 放上表／拿掉時「表」與「目錄」一起改：主執行緒（start、init 重起）與做事的線（forget）不會交錯。
 // 回答的線（Producer）不拿它，所以拿著它跟核心講話（remove_tree 的通知）不會卡住回答的線。
 std::mutex DIR_MU;
 long seq = 0;            // cgroup 夾名的流水號，只在主執行緒動
 std::string started_at;
 int EFD = -1;
 bool gone = false;       // FUSE 連線斷了
-// 收到結束訊號後、等主 kernel 自己結束的那段（exit_grace）：只在主執行緒動
+// 收到結束訊號後、等 init 自己結束的那段（exit_grace）：只在主執行緒動
 bool stopping = false;
 double stop_deadline = 0;   // monotonic
 std::string stop_why;
@@ -136,7 +138,7 @@ void make_proc_nodes(const std::shared_ptr<Proc>& proc) {
     });
     add("locks", [](const Proc& p) { return join(p.sp.locks); });
     add("config", [](const Proc& p) { return p.cfg.path + "\n"; });
-    // 相對連結：小世界裡是 /aos/procs/<名>/ → /cgroup/…；主 kernel 的天空也把 cgroup 夾放在 /cgroup，所以兩邊都通
+    // 相對連結：小世界裡是 /aos/procs/<名>/ → /cgroup/…；init 的天空把 cgroup 夾放在 daemon_path 旁邊的 cgroup，所以兩邊都通
     if (!proc->sp.cgroup.empty()) FS->add_symlink(d + "/cgroup", "../../../cgroup/" + proc->sp.cgroup);
 }
 
@@ -176,17 +178,19 @@ std::shared_ptr<Proc> find(const std::string& name) {
 }
 
 // 主執行緒
-std::string start_proc(const ProcConfig& cfg, bool main_kernel) {
+std::string start_proc(const ProcConfig& cfg, bool init) {
     {
         std::lock_guard<std::mutex> g(S.mu);
         if (find(cfg.name)) return "ProcExists " + cfg.name + " (forget it first if it is dead)";
     }
-    if (!main_kernel && !cfg.daemon_access.empty())
-        return "ConfigBad daemon_access is only read from the main kernel's config (--kernel)";
+    if (!init && !cfg.daemon_access.empty())
+        return "ConfigBad daemon_access is only read from init's config (\"init\" in the daemon config, or --init)";
+    if (!init && !cfg.daemon_path.empty())
+        return "ConfigBad daemon_path is only read from init's config (\"init\" in the daemon config, or --init)";
     auto p = std::make_shared<Proc>();
     p->cfg = cfg;
-    p->main_kernel = main_kernel;
-    std::string err = spawn(cfg, main_kernel, ++seq, p->sp);
+    p->init = init;
+    std::string err = spawn(cfg, init, ++seq, p->sp);
     if (!err.empty()) {
         log("start " + cfg.name + " failed: " + err);
         return err;
@@ -194,7 +198,7 @@ std::string start_proc(const ProcConfig& cfg, bool main_kernel) {
     p->started_at = iso_now();
     put_proc(p);
     log("started " + cfg.name + " (pid " + std::to_string(p->sp.pid) + ", host pid " + std::to_string(p->sp.host_pid) +
-        (main_kernel ? ", main kernel" : "") + ")");
+        (init ? ", init" : "") + ")");
     if (p->sp.ns_check != "ok") log("ns of " + cfg.name + " does not match its config: " + p->sp.ns_check);
     return "";
 }
@@ -229,15 +233,17 @@ void rm_cgroup(const std::string& cg) {
     _exit(code);
 }
 
-// 主 kernel 死了（或起不來）：照起動參數做，判斷不在這裡以外
-void kernel_died(const std::string& how, int as_code) {
+// init 死了（或起不來）：照起動參數做，判斷不在這裡以外
+void init_died(const std::string& how, int as_code) {
     {
         std::lock_guard<std::mutex> g(S.mu);
-        S.kernel_last_exit = how;
+        S.init_last_exit = how;
     }
-    // 結束訊號後的寬限裡主 kernel 結束了：不重起，不再等，收掉其餘的
-    if (stopping) shutdown(0, stop_why + "; main kernel " + how + " within the exit grace");
-    if (!O.restart) shutdown(as_code, "main kernel " + how + ", --on-kernel-exit exit");
+    // 結束訊號後的寬限裡 init 結束了：不重起，不再等，收掉其餘的
+    if (stopping) shutdown(0, stop_why + "; init " + how + " within the exit grace");
+    if (!O.restart)
+        shutdown(O.exit_code_own ? EXIT_INIT_EXITED : as_code,
+                 "init " + how + ", on_init_exit exit" + (O.exit_code_own ? ", exit_code own" : ", exit_code init"));
     double now = mono_now();
     size_t n;
     {
@@ -246,17 +252,26 @@ void kernel_died(const std::string& how, int as_code) {
         while (!S.deaths.empty() && S.deaths.front() < now - O.restart_window) S.deaths.pop_front();
         n = S.deaths.size();
     }
-    if (static_cast<int>(n) > O.restart_limit)
-        shutdown(1, "main kernel died " + std::to_string(n) + " times within " + std::to_string(static_cast<int>(O.restart_window)) +
-                        " s, more than --restart-limit " + std::to_string(O.restart_limit));
-    rm_cgroup(drop_proc(KCFG.name));
+    if (static_cast<int>(n) > O.restart_limit) {
+        std::string why = "init died " + std::to_string(n) + " times within " + std::to_string(static_cast<int>(O.restart_window)) +
+                          " s, more than --restart-limit " + std::to_string(O.restart_limit);
+        if (!O.restart_limit_stay) shutdown(1, why);
+        // on_restart_limit stay：不再起 init，daemon 與其他 proc 照跑；死掉的 init 留在表上（看得到 exit，要拿掉就 forget）
+        {
+            std::lock_guard<std::mutex> g(S.mu);
+            S.init_gone = why;
+        }
+        log(why + "; on_restart_limit stay: not restarting it, the daemon keeps running without init");
+        return;
+    }
+    rm_cgroup(drop_proc(ICFG.name));
     {
         std::lock_guard<std::mutex> g(S.mu);
-        ++S.kernel_restarts;
+        ++S.init_restarts;
     }
-    log("restarting main kernel " + KCFG.name + " (" + how + ")");
-    std::string err = start_proc(KCFG, true);
-    if (!err.empty()) kernel_died("failed to start: " + err, 1);
+    log("restarting init " + ICFG.name + " (" + how + ")");
+    std::string err = start_proc(ICFG, true);
+    if (!err.empty()) init_died("failed to start: " + err, 1);
 }
 
 void reap_all() {
@@ -278,31 +293,32 @@ void reap_all() {
         if (!hit) continue;   // 被收養的孫子、幫手
         std::string how = exit_text(*hit);
         log("proc " + hit->cfg.name + " exited: " + how);
-        if (hit->main_kernel) kernel_died(how, hit->sig ? 128 + hit->sig : hit->code);
+        if (hit->init) init_died(how, hit->sig ? 128 + hit->sig : hit->code);
     }
 }
 
-// 主執行緒：收到 SIGTERM／SIGINT／SIGHUP。先只對主 kernel 送 SIGTERM，最多等 exit_grace 秒（主循環照跑，ctl 照用），
-// 主 kernel 先結束就不再等（kernel_died），時間到就 shutdown（全部 SIGKILL）。寬限裡再收到的結束訊號不管（照樣等到時間到）。
+// 主執行緒：收到 SIGTERM／SIGINT／SIGHUP。先只對 init 送 SIGTERM，最多等 exit_grace 秒（主循環照跑，ctl 照用），
+// init 先結束就不再等（init_died），時間到就 shutdown（全部 SIGKILL）。寬限裡再收到的結束訊號不管（照樣等到時間到）。
+// 沒有 init（設定沒給、或到了重起上限而 stay）：沒人可等，直接全部 SIGKILL。
 void begin_stop(int sig) {
     std::string why = std::string("got ") + signal_name(sig);
     if (stopping) {
-        log(why + " while waiting for the main kernel to exit; still waiting");
+        log(why + " while waiting for init to exit; still waiting");
         return;
     }
     pid_t kp = 0;
-    {
+    if (HAS_INIT) {
         std::lock_guard<std::mutex> g(S.mu);
-        auto p = find(KCFG.name);
-        if (p && p->main_kernel && p->alive) kp = p->sp.pid;
+        auto p = find(ICFG.name);
+        if (p && p->init && p->alive) kp = p->sp.pid;
     }
-    if (!kp) shutdown(0, why + ", no main kernel running");
+    if (!kp) shutdown(0, why + (HAS_INIT ? ", init is not running" : ", no init"));
     kill(kp, SIGTERM);
     if (!(O.exit_grace > 0)) shutdown(0, why);
     stopping = true;
     stop_why = why;
     stop_deadline = mono_now() + O.exit_grace;
-    log(why + ": sent SIGTERM to the main kernel " + KCFG.name + ", waiting up to " + seconds_text(O.exit_grace) +
+    log(why + ": sent SIGTERM to init " + ICFG.name + ", waiting up to " + seconds_text(O.exit_grace) +
         " s (exit_grace) before killing every proc");
 }
 
@@ -342,17 +358,16 @@ std::string check_name(const pf::Command& c, size_t argc, const char* usage, int
     return "";
 }
 
-// 主 kernel（mount 模式）天空裡的 /aos、/cgroup 是 daemon 放的，ctl 的 mount／umount 不准動（蓋住或卸掉就斷了）
+// init（mount 模式）天空裡的 daemon_path 與旁邊的 cgroup 是 daemon 放的，ctl 的 mount／umount 不准動（蓋住或卸掉就斷了）
 std::string reserved_dst(const std::string& name, const std::string& dst) {
     std::lock_guard<std::mutex> g(S.mu);
     auto p = find(name);
-    if (!p || !p->main_kernel || !kernel_mounts(p->cfg)) return "";
-    for (const char* top : {KERNEL_AOS, KERNEL_CGROUP}) {
-        std::string t = top;
-        if (t == KERNEL_CGROUP && W.cgfd < 0) continue;
+    if (!p || !p->init || !init_mounts(p->cfg)) return "";
+    std::string dp = init_daemon_path(p->cfg), cp = init_cgroup_path(p->cfg);
+    for (const std::string& t : {dp, cp}) {
+        if (t == cp && W.cgfd < 0) continue;
         if (dst == t || dst.rfind(t + "/", 0) == 0)
-            return "PathReserved " + t + " in the main kernel's ns is where the daemon put its " +
-                   (t == KERNEL_AOS ? "directory" : "cgroup directory");
+            return "PathReserved " + t + " in init's ns is where the daemon put its " + (t == dp ? "directory" : "cgroup directory");
     }
     return "";
 }
@@ -414,7 +429,7 @@ void setup_ctl(pf::Ctl& ctl) {
                 if (!e.empty()) return pf::Result::failed(e);
             }
             if (!cg.empty()) {
-                // 不帶 -k：cgroup 裡還有它留下的行程就不拿掉（要收由 kernel 寫 cgroup.kill，或用 forget -k）
+                // 不帶 -k：cgroup 裡還有它留下的行程就不拿掉（要收由 init 寫 cgroup.kill，或用 forget -k）
                 // 帶 -k：已經空了；剛被殺的還沒收屍時 rmdir 可能短暫 EBUSY，等一下
                 double end = mono_now() + (k ? FORGET_KILL_WAIT : 0);
                 for (;;) {
@@ -426,7 +441,7 @@ void setup_ctl(pf::Ctl& ctl) {
                     usleep(10000);
                 }
             }
-            drop_proc(name, p.get());   // 這段時間裡主 kernel 被重起成同名的新一隻，就不拿那隻
+            drop_proc(name, p.get());   // 這段時間裡 init 被重起成同名的新一隻，就不拿那隻
             log("forgot " + name + (k ? " (-k)" : ""));
             return pf::Result::done();
         },
@@ -512,19 +527,29 @@ std::string status_text() {
     s += pf::kv_line("pid_host", std::to_string(W.host_pid));
     s += pf::kv_line("started_at", started_at);
     s += pf::kv_line("config", O.config_path.empty() ? "-" : O.config_path);
-    s += pf::kv_line("main_kernel", KCFG.name);
-    s += pf::kv_line("on_kernel_exit", O.restart ? "restart" : "exit");
+    s += pf::kv_line("init", HAS_INIT ? ICFG.name : "-");
+    std::string state = "none (no init in the daemon config)";
+    if (HAS_INIT && !S.init_gone.empty()) {
+        state = "gone (restart limit reached: " + S.init_gone + "; on_restart_limit stay)";
+    } else if (HAS_INIT) {
+        auto p = find(ICFG.name);
+        state = p && p->init ? (p->alive ? "alive" : "dead") : "starting";
+    }
+    s += pf::kv_line("init_state", state);
+    s += pf::kv_line("on_init_exit", O.restart ? "restart" : "exit");
     s += pf::kv_line("restart_limit", std::to_string(O.restart_limit) + " deaths within " +
                                           std::to_string(static_cast<int>(O.restart_window)) + " s");
+    s += pf::kv_line("on_restart_limit", O.restart_limit_stay ? "stay" : "exit");
+    s += pf::kv_line("exit_code", O.exit_code_own ? "own" : "init");
     s += pf::kv_line("exit_grace", seconds_text(O.exit_grace) + " s");
     s += pf::kv_line("on_parent_death", O.parent_death_exit ? "exit" : "stay");
-    s += pf::kv_line("kernel_restarts", std::to_string(S.kernel_restarts));
-    s += pf::kv_line("kernel_deaths_in_window", std::to_string(S.deaths.size()));
-    s += pf::kv_line("kernel_last_exit", S.kernel_last_exit);
+    s += pf::kv_line("init_restarts", std::to_string(S.init_restarts));
+    s += pf::kv_line("init_deaths_in_window", std::to_string(S.deaths.size()));
+    s += pf::kv_line("init_last_exit", S.init_last_exit);
     s += pf::kv_line("landlock_abi", std::to_string(W.landlock_abi));
     s += pf::kv_line("cgroup", W.cgfd >= 0 ? W.cg_host : "off (" + W.cg_note + ")");
     s += pf::kv_line("subuid", W.subuid_count ? std::to_string(W.subuid_start) + " " + std::to_string(W.subuid_count) : "none");
-    s += pf::kv_line("main_kernel_access", kernel_mounts(KCFG) ? std::string("mount ") + KERNEL_AOS : "ptrace /proc/1/cwd");
+    s += pf::kv_line("init_access", !HAS_INIT ? "-" : init_mounts(ICFG) ? "mount " + init_daemon_path(ICFG) : "ptrace /proc/1/cwd");
     s += pf::kv_line("procs", std::to_string(S.procs.size()));
     s += CTL->feedback();
     return s;
@@ -574,21 +599,24 @@ void must(int r, const std::string& what) {
     unsetenv("AOS_DAEMON_IN_SCOPE");
     long abi = syscall(SYS_landlock_create_ruleset, nullptr, 0, LANDLOCK_CREATE_RULESET_VERSION);
     W.landlock_abi = abi > 0 ? static_cast<int>(abi) : 0;
-    {
-        std::string err, text = O.kernel_text;   // daemon 設定檔裡內嵌的就不用讀檔
-        if (text.empty()) text = read_host_file(O.kernel_path, err);
+    HAS_INIT = has_init(O);
+    if (HAS_INIT) {
+        std::string err, text = O.init_text;   // daemon 設定檔裡內嵌的就不用讀檔
+        if (text.empty()) text = read_host_file(O.init_path, err);
         if (!err.empty()) fatal(err);
         try {
-            KCFG = parse_config(text, O.kernel_path);
+            ICFG = parse_config(text, O.init_path);
         } catch (const std::exception& e) {
-            fatal(std::string(e.what()) + " in " + O.kernel_path);
+            fatal(std::string(e.what()) + " in " + O.init_path);
         }
-        if (KCFG.uid != 0)
-            fatal("ConfigBad the main kernel must run as uid 0 in its ns (its \"uid\" is " + std::to_string(KCFG.uid) +
-                  "): ctl is 0200 and only the daemon's uid may use the mounted directory, in " + O.kernel_path);
+        if (ICFG.uid != 0)
+            fatal("ConfigBad init must run as uid 0 in its ns (its \"uid\" is " + std::to_string(ICFG.uid) +
+                  "): ctl is 0200 and only the daemon's uid may use the mounted directory, in " + O.init_path);
+        if (ICFG.landlock && W.landlock_abi < 1)
+            fatal("ConfigBad init asks for Landlock (locks.landlock true) but this Linux has none, in " + O.init_path);
         // cgroup 夾這時已經握住了（有沒有 cgroup 定了）
-        std::string bad = kernel_ns_conflict(KCFG, W.cgfd >= 0);
-        if (!bad.empty()) fatal(bad + " in " + O.kernel_path);
+        std::string bad = init_ns_conflict(ICFG, W.cgfd >= 0);
+        if (!bad.empty()) fatal(bad + " in " + O.init_path);
     }
     must(mount("proc", "/proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, nullptr), "mount proc");
     W.procfd = open("/proc", O_PATH | O_DIRECTORY | O_CLOEXEC);
@@ -641,8 +669,13 @@ void must(int r, const std::string& what) {
     log("ready: pid " + std::to_string(W.host_pid) + ", landlock ABI " + std::to_string(W.landlock_abi) +
         ", cgroup " + (W.cgfd >= 0 ? W.cg_host : "off (" + W.cg_note + ")"));
 
-    std::string err = start_proc(KCFG, true);
-    if (!err.empty()) kernel_died("failed to start: " + err, 1);
+    if (HAS_INIT) {
+        std::string err = start_proc(ICFG, true);
+        if (!err.empty()) init_died("failed to start: " + err, 1);
+    } else {
+        log("no init (the daemon config has no \"init\"): only the outside reaches the directory, through /proc/" +
+            std::to_string(W.host_pid) + "/cwd");
+    }
 
     for (;;) {
         pollfd p[2] = {{sfd, POLLIN, 0}, {EFD, POLLIN, 0}};
@@ -677,7 +710,7 @@ void must(int r, const std::string& what) {
         }
         reap_all();
         if (stopping && mono_now() >= stop_deadline)
-            shutdown(0, stop_why + "; the main kernel was still running after exit_grace " + seconds_text(O.exit_grace) + " s");
+            shutdown(0, stop_why + "; init was still running after exit_grace " + seconds_text(O.exit_grace) + " s");
     }
 }
 

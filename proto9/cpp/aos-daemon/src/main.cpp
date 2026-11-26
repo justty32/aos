@@ -23,35 +23,44 @@ using namespace d2;
 
 namespace {
 
-const char* HELP = R"(aos-daemon - the daemon gives facts and tools; all judgement belongs to one main kernel.
+const char* HELP = R"(aos-daemon - the daemon gives facts and tools; all judgement belongs to init.
 
 usage: aos-daemon DAEMON_CONFIG [flags]
-       aos-daemon --kernel CONFIG [flags]
+       aos-daemon --init CONFIG [flags]
 
 Starts without root: a new user namespace (you are uid 0 inside, plus your subuid range),
 a new PID namespace (the daemon is PID 1 there) and a new mount namespace. The daemon serves
 one directory and stands in it; once ready it prints
     export AOS_DAEMON=/proc/<PID>/cwd
-on stdout. Only the main kernel gets AOS_DAEMON in its environment; other procs do not.
+on stdout. Only init gets AOS_DAEMON in its environment; other procs do not.
 The daemon itself then lives in a small world that holds only that directory (and the cgroup
 switches): /proc/<PID>/root shows nothing else.
 
-The main kernel (CONFIG, same JSON format as `start`) is started first. It is the only proc
-without a Landlock domain, and it must run as uid 0 in its ns (any other "uid" in its
-config: the daemon refuses to start, exit 2). By default ("daemon_access": "mount") the
-directory is mounted in its ns at /aos (cgroup directory at /cgroup, when there is one), AOS_DAEMON=/aos,
-and it has no capabilities; with "daemon_access": "ptrace" it keeps cap_sys_ptrace and
-reads /proc/1/cwd. In mount mode its own ns config may not use /aos or /cgroup (exit 2).
+init (CONFIG, same JSON format as `start`) is the first proc the daemon starts (like PID 1 on
+Linux). It runs without a Landlock domain unless its config says "locks": {"landlock": true},
+and it must run as uid 0 in its ns (any other "uid": the daemon refuses to start, exit 2).
+By default ("daemon_access": "mount") the directory is mounted in its ns at "daemon_path"
+(default /aos; the cgroup directory, when there is one, at dirname(daemon_path)/cgroup),
+AOS_DAEMON=daemon_path, and it has no capabilities; with "daemon_access": "ptrace" it keeps
+cap_sys_ptrace and reads /proc/1/cwd. In mount mode its own ns config may not use those two
+places (exit 2). A daemon config without "init" runs the daemon with no init: nobody gets
+AOS_DAEMON, and only the outside reaches the directory through /proc/<PID>/cwd.
 
-Daemon config (DAEMON_CONFIG, a JSON object; every key optional except kernel):
-  {"kernel": "kernel.json",          path (relative to the daemon config's folder) or an
-                                     inline object in the same format as a `start` config
-   "on_kernel_exit": "restart",      restart | exit
+Every proc's config may say "net": "none" (default: its own network namespace with only a
+loopback that is up) or "host" (the daemon's network namespace, i.e. the outside network).
+
+Daemon config (DAEMON_CONFIG, a JSON object; every key optional):
+  {"init": "init.json",              path (relative to the daemon config's folder) or an
+                                     inline object in the same format as a `start` config;
+                                     leave it out for a daemon with no init
+   "on_init_exit": "restart",        restart | exit
    "restart_limit": 5, "restart_window": 60,
+   "on_restart_limit": "exit",       exit | stay (keep running without init)
+   "exit_code": "init",              init | own (with on_init_exit exit: init's code, or 3)
    "exit_grace": 0,                  seconds
    "on_parent_death": "exit",        exit | stay
    "cgroup": "auto", "subuid": "auto"}
-Flags override the file (aos-daemon daemon.json --exit-grace 10); --kernel beats "kernel".
+Flags override the file (aos-daemon daemon.json --exit-grace 10); --init beats "init".
 Unknown keys, wrong types or bad values: refuse to start, exit 2.
 
 Directory:
@@ -70,13 +79,18 @@ Directory:
                    (cpu.max, memory.max, cgroup.freeze, ...)
 
 flags:
-  --kernel CONFIG          main kernel config (required, here or as "kernel" in DAEMON_CONFIG)
-  --on-kernel-exit MODE    restart (default) or exit
-  --restart-limit N        stop restarting (and exit) after more than N deaths ... (default 5)
+  --init CONFIG            init's config (here or as "init" in DAEMON_CONFIG; without a
+                           DAEMON_CONFIG it is required)
+  --on-init-exit MODE      restart (default) or exit
+  --restart-limit N        stop restarting init after more than N deaths ... (default 5)
   --restart-window S       ... within S seconds (default 60)
-  --exit-grace S           on SIGTERM/SIGINT/SIGHUP send SIGTERM to the main kernel only, wait up
-                           to S seconds for it to exit (not restarted meanwhile; ctl keeps working),
-                           then SIGKILL every proc (default 0: at once)
+  --on-restart-limit MODE  exit (default): the daemon exits 1 at the restart limit;
+                           stay: it keeps running without init (other procs and ctl go on)
+  --exit-code MODE         init (default): with on_init_exit exit the daemon exits with init's
+                           code; own: it exits 3
+  --exit-grace S           on SIGTERM/SIGINT/SIGHUP send SIGTERM to init only, wait up to S
+                           seconds for it to exit (not restarted meanwhile; ctl keeps working),
+                           then SIGKILL every proc (default 0: at once; no init: at once)
   --on-parent-death MODE   exit (default): the daemon dies when the launching process dies;
                            stay: it keeps running (stop it with SIGTERM to the daemon's PID)
   --cgroup auto|off        auto (default): use a delegated cgroup; re-run itself under
@@ -84,8 +98,9 @@ flags:
   --subuid auto|off        auto (default): map the /etc/subuid range with newuidmap/newgidmap
   -h, --help               show this help
 
-Exit code: 0 after SIGTERM/SIGINT/SIGHUP; the main kernel's code (128+signal) with
---on-kernel-exit exit; 1 when the restart limit is reached; 2 on startup errors.
+Exit code: 0 after SIGTERM/SIGINT/SIGHUP; with on_init_exit exit, init's code (128+signal)
+or 3 with --exit-code own; 1 when the restart limit is reached (on_restart_limit exit);
+2 on startup errors.
 )";
 
 int usage_error(const std::string& why) {
@@ -182,7 +197,7 @@ struct Cgroup {
 };
 
 // 在 scope 裡：自己搬進 scope/daemon（v2 規定開了 controller 的夾不能直接放行程），再把 controller 開給底下
-// reexec：重跑自己時的參數（daemon 設定檔與 --kernel 的路徑已換成絕對路徑，其他照原樣，蓋過設定檔的參數也一起帶過去）
+// reexec：重跑自己時的參數（daemon 設定檔與 --init 的路徑已換成絕對路徑，其他照原樣，蓋過設定檔的參數也一起帶過去）
 Cgroup prepare_cgroup(const Options& o, const std::vector<std::string>& reexec) {
     Cgroup c;
     if (!o.cgroup_auto) {
@@ -261,7 +276,8 @@ std::string cwd_dir() {
 
 std::string absolute(const std::string& p, const std::string& base) { return p.empty() || p[0] == '/' ? p : base + "/" + p; }
 
-const char* const DCONF_KEYS = "kernel, on_kernel_exit, restart_limit, restart_window, exit_grace, on_parent_death, cgroup, subuid";
+const char* const DCONF_KEYS =
+    "init, on_init_exit, restart_limit, restart_window, on_restart_limit, exit_code, exit_grace, on_parent_death, cgroup, subuid";
 
 // daemon 設定檔（json 物件）蓋到 o 上；回 "" 或錯誤（起不來，退出碼 2）。path 已是絕對路徑。
 std::string load_daemon_config(const std::string& path, Options& o) {
@@ -287,18 +303,27 @@ std::string load_daemon_config(const std::string& path, Options& o) {
     auto finite = [](double x) { return x == x && x < 1e300 && x > -1e300; };
     for (const auto& [k, v] : j.items()) {
         std::string e;
-        if (k == "kernel") {
+        if (k == "init") {
             if (v.is_string() && !v.get<std::string>().empty()) {
-                o.kernel_path = absolute(v.get<std::string>(), dir);
-                o.kernel_text.clear();
+                o.init_path = absolute(v.get<std::string>(), dir);
+                o.init_text.clear();
             } else if (v.is_object()) {
-                o.kernel_text = v.dump();
-                o.kernel_path = path + "#/kernel";
+                o.init_text = v.dump();
+                o.init_path = path + "#/init";
             } else {
-                e = where + "\"kernel\" must be a path (a non-empty string) or an inline kernel config (an object), not " + v.dump();
+                e = where + "\"init\" must be a path (a non-empty string) or an inline init config (an object), not " + v.dump() +
+                    " (leave the key out for a daemon with no init)";
             }
-        } else if (k == "on_kernel_exit") {
+        } else if (k == "on_init_exit") {
             e = choice(k, v, "restart", "exit", o.restart);
+        } else if (k == "on_restart_limit") {
+            bool exit_ = true;
+            e = choice(k, v, "exit", "stay", exit_);
+            o.restart_limit_stay = !exit_;
+        } else if (k == "exit_code") {
+            bool init_ = true;
+            e = choice(k, v, "init", "own", init_);
+            o.exit_code_own = !init_;
         } else if (k == "restart_limit") {
             if (!v.is_number_integer() || v.get<long long>() < 0 || v.get<long long>() > INT_MAX)
                 e = where + "\"restart_limit\" must be an integer >= 0, not " + v.dump();
@@ -330,10 +355,10 @@ int main(int argc, char** argv) {
     // 先分出位置參數（daemon 設定檔）與命令列參數；順序：預設值 ← 設定檔 ← 命令列參數
     Options o;
     int conf_at = 0;                       // argv 裡 daemon 設定檔的位置；0＝沒有
-    std::vector<int> kernel_at;            // argv 裡 --kernel 的值的位置（重跑自己時換成絕對路徑）
+    std::vector<int> init_at;              // argv 裡 --init 的值的位置（重跑自己時換成絕對路徑）
     std::vector<std::pair<std::string, std::string>> flags;
-    const char* WITH_VALUE[] = {"--kernel", "--on-kernel-exit", "--restart-limit", "--restart-window", "--exit-grace",
-                                "--on-parent-death", "--cgroup", "--subuid"};
+    const char* WITH_VALUE[] = {"--init", "--on-init-exit", "--restart-limit", "--restart-window", "--on-restart-limit",
+                                "--exit-code", "--exit-grace", "--on-parent-death", "--cgroup", "--subuid"};
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "-h" || a == "--help") {
@@ -349,7 +374,7 @@ int main(int argc, char** argv) {
         for (const char* w : WITH_VALUE) known = known || a == w;
         if (!known) return usage_error("unknown argument " + a);
         if (i + 1 >= argc) return usage_error("bad value: " + a + " needs a value");
-        if (a == "--kernel") kernel_at.push_back(i + 1);
+        if (a == "--init") init_at.push_back(i + 1);
         flags.emplace_back(a, argv[++i]);
     }
     std::string cwd = cwd_dir();
@@ -361,13 +386,19 @@ int main(int argc, char** argv) {
     }
     for (const auto& [a, v] : flags) {
         try {
-            if (a == "--kernel") {
-                if (v.empty()) return usage_error("--kernel needs a path");
-                o.kernel_path = absolute(v, cwd);
-                o.kernel_text.clear();
-            } else if (a == "--on-kernel-exit") {
-                if (v != "restart" && v != "exit") return usage_error("--on-kernel-exit is restart or exit");
+            if (a == "--init") {
+                if (v.empty()) return usage_error("--init needs a path");
+                o.init_path = absolute(v, cwd);
+                o.init_text.clear();
+            } else if (a == "--on-init-exit") {
+                if (v != "restart" && v != "exit") return usage_error("--on-init-exit is restart or exit");
                 o.restart = v == "restart";
+            } else if (a == "--on-restart-limit") {
+                if (v != "exit" && v != "stay") return usage_error("--on-restart-limit is exit or stay");
+                o.restart_limit_stay = v == "stay";
+            } else if (a == "--exit-code") {
+                if (v != "init" && v != "own") return usage_error("--exit-code is init or own");
+                o.exit_code_own = v == "own";
             } else if (a == "--restart-limit") {
                 o.restart_limit = std::stoi(v);
                 if (o.restart_limit < 0) return usage_error("--restart-limit must be >= 0");
@@ -389,12 +420,15 @@ int main(int argc, char** argv) {
             return usage_error("bad value for " + a + ": " + v);
         }
     }
-    if (o.kernel_path.empty()) return usage_error("the main kernel config is required: --kernel CONFIG, or \"kernel\" in a daemon config");
-    if (o.kernel_text.empty() && access(o.kernel_path.c_str(), R_OK) != 0)
-        return usage_error("cannot read " + o.kernel_path + ": " + errstr(errno));
+    // 只用參數起（沒有 daemon 設定檔）又沒給 --init：照舊拒【擬】；要沒有 init 的 daemon，寫一份沒有 "init" 的 daemon 設定檔
+    if (!conf_at && !has_init(o))
+        return usage_error("--init CONFIG is required when no daemon config is given "
+                           "(for a daemon with no init, give a daemon config without \"init\", e.g. one holding {})");
+    if (has_init(o) && o.init_text.empty() && access(o.init_path.c_str(), R_OK) != 0)
+        return usage_error("cannot read " + o.init_path + ": " + errstr(errno));
     std::vector<std::string> reexec;
     for (int i = 1; i < argc; ++i) {
-        bool kv = std::find(kernel_at.begin(), kernel_at.end(), i) != kernel_at.end();
+        bool kv = std::find(init_at.begin(), init_at.end(), i) != init_at.end();
         reexec.push_back(i == conf_at ? o.config_path : kv ? absolute(argv[i], cwd) : std::string(argv[i]));
     }
 

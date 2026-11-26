@@ -66,6 +66,9 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 24. **「主 kernel」正式叫 `init`**（第 103、104 段；先說 core，看到改名範圍後改 init）：角色像 Linux 的 1 號——daemon 起來第一個起它、其他 proc 都由它下 `start`。程式與文件凡是「主 kernel」都換：`daemon.json` 的 `init`、`--init`、`on_init_exit`、status 的 `init`／`init_access`／`init_restarts`／`init_last_exit`…、`exit_code` 的值 `init`。它在 `procs/` 底下的名字照它設定的 `name`。這份紀錄前面寫的「主 kernel」不改（當時的紀錄）。
 25. **舊的 proto9 aos-daemon 收掉，aos-daemon2 改名回 aos-daemon**（第 105、106 段）：舊夾刪掉，最後一版在 `068bfb2fb`；proto8 那支不動。
 26. **網路：設定檔加 `net`，預設 `none`**（第 107 段）：`none`＝自己一個空的 network namespace、只有 loopback，外面連不到；`host`＝共用外面的網路（要上網的寫這個）。init 也一樣照設定。能連外網但看不到本機服務的那種要 pasta 之類，以後再說。
+27. **seccomp：預設套 daemon 內建的常見危險清單**（第 108 段）：像 Docker 預設那種（擋掛載、核心模組、開 namespace、ptrace、改系統時間等）；`"seccomp": "off"` 不套；`"seccomp": "/路徑/清單.json"` 用自己寫的。內建清單要自己維護；需要被擋功能的程式（例如在裡面開瀏覽器沙盒）就寫 `off` 或給自己的清單。
+28. **daemon.json 那批子 agent 定的細節**（第 109～113 段，都照現在）：收尾時間中再收到 SIGTERM／SIGINT 不理（Ctrl-C 會收到兩份），要馬上收就 `kill -9` daemon；`on_parent_death: stay` 只擋起動那一層被 `kill -9`，關終端機的 SIGHUP 照常收尾（長期背景跑交給 systemd／nohup）；收尾時間中 `ctl` 照常（含 `start`）；`forget -k` 固定最多等 5 秒；init 設定寫在 daemon.json 裡時 `config` 寫 `路徑#/init`；status 多 `exit_grace`、`on_parent_death`。其餘屬程式內部，不問。
+29. **天空裡的 proc 預設准自己再開 user namespace**（第 114、115 段；先選甲不准，改口准：「我一開始就打算讓他可以層層疊疊嵌套」；sky-1125 發現 4、四題的第 2 題）：內建 seccomp 清單**不擋**開 namespace（user、mount、PID 等），其他危險的照擋；proc 裡可以再跑 daemon、疊新的天空。開了也只能把自己的世界縮小或蓋住，天空原本的掛載卸不掉、翻不開。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 

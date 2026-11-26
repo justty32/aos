@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# run.py：aos-daemon 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、主 kernel 重起規則、整片跟著 daemon 走、主 kernel 經 /aos（或 ptrace）碰目錄、procs/<名>/ 是真的夾、daemon 設定檔、結束寬限、起動那一層死了留下、forget -k、沒有殘留。
-# 用法：python3 tests/run.py [組名…]；組：basic procs nsconf ns landlock cgroup mount modes restart teardown access dirs stdio dconf grace pdeath forgetk（最後一定跑 leftovers）
+# run.py：aos-daemon 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、init 重起規則、整片跟著 daemon 走、init 經 /aos（或 ptrace）碰目錄、procs/<名>/ 是真的夾、daemon 設定檔、結束寬限、起動那一層死了留下、forget -k、改名 init、沒有 init、到重起上限留著、daemon_path、init 進 Landlock、exit_code、net none／host、沒有殘留。
+# 用法：python3 tests/run.py [組名…]；組：basic procs nsconf ns landlock cgroup mount modes restart teardown access dirs stdio dconf grace pdeath forgetk rename noinit rlstay dpath ilandlock exitcode net（最後一定跑 leftovers）
 import errno, json, os, re, select, shutil, signal, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -83,13 +83,13 @@ def write_json(p, obj):
 
 
 class Daemon:
-    def __init__(self, test, kernel_argv=None, *flags, kernel_extra=None, wait=10.0, args=None, cwd="/"):
-        """args：給了就用 [BIN, *args] 起（不帶 --kernel；主 kernel 設定照樣寫在 dir/main.json）。"""
+    def __init__(self, test, init_argv=None, *flags, init_extra=None, wait=10.0, args=None, cwd="/"):
+        """args：給了就用 [BIN, *args] 起（不帶 --init；init 設定照樣寫在 dir/main.json）。"""
         self.dir = os.path.join(TMP, test)
         os.makedirs(self.dir, exist_ok=True)
-        kcfg = config(self.dir, "main", kernel_argv or ["kernel", "/out"], **(kernel_extra or {}))
+        kcfg = config(self.dir, "main", init_argv or ["init", "/out"], **(init_extra or {}))
         self.err_path = os.path.join(self.dir, "daemon.err")
-        self.p = subprocess.Popen([BIN, *(args if args is not None else ["--kernel", kcfg, *flags])], stdout=subprocess.PIPE,
+        self.p = subprocess.Popen([BIN, *(args if args is not None else ["--init", kcfg, *flags])], stdout=subprocess.PIPE,
                                   stderr=open(self.err_path, "w"), cwd=cwd)
         self.line = self._line(wait)
         m = re.fullmatch(r"export AOS_DAEMON=/proc/(\d+)/cwd", self.line or "")
@@ -151,7 +151,7 @@ class Daemon:
         return int(re.search(r"host: (\d+)", self.fact(name, "pid")).group(1))
 
     def ask(self, q, timeout=5.0):
-        """叫主 kernel（toys.py kernel）做一件事：讀一個路徑或寫一行 ctl；回答案。"""
+        """叫 init（toys.py init）做一件事：讀一個路徑或寫一行 ctl；回答案。"""
         n = "%d-%d" % (os.getpid(), int(time.monotonic() * 1e6))
         with open(os.path.join(self.dir, ".q"), "w") as f:
             f.write(q)
@@ -171,9 +171,9 @@ class Daemon:
             return None
 
 
-def kernel_file(d, timeout=5.0):
-    """主 kernel 起來時寫的 kernel-<PID>.txt（第一行 $AOS_DAEMON/status、root …、proc1 …）。"""
-    kf = wait_for(lambda: [n for n in os.listdir(d.dir) if n.startswith("kernel-")], timeout)
+def init_file(d, timeout=5.0):
+    """init 起來時寫的 init-<PID>.txt（第一行 $AOS_DAEMON/status、root …、proc1 …）。"""
+    kf = wait_for(lambda: [n for n in os.listdir(d.dir) if n.startswith("init-")], timeout)
     return wait_for(lambda: read(os.path.join(d.dir, kf[0])), timeout) if kf else ""
 
 
@@ -203,7 +203,7 @@ def t_basic():
           um[:3] == ["0", str(os.getuid()), "1"] and (len(um) == 3 or um[3] == "1"), um)
     s = d.status()
     check("basic: status via /proc/<PID>/cwd", s.get("pid_ns") == "1" and s.get("pid_host") == str(d.pid), s)
-    check("basic: main kernel listed and alive", started(d, "main"))
+    check("basic: init listed and alive", started(d, "main"))
     root = sorted(os.listdir("/proc/%d/root" % d.pid))
     check("basic: /proc/<PID>/root shows only the small world", root in (["aos"], ["aos", "cgroup"]), root)
     check("basic: cwd is the aos dir inside the small world",
@@ -212,10 +212,10 @@ def t_basic():
           not os.path.exists("/proc/%d/root/etc" % d.pid) and not os.path.exists("/proc/%d/root/usr" % d.pid))
     check("basic: the directory holds ctl, procs/, status (no slots/)", sorted(os.listdir(d.root)) == ["ctl", "procs", "status"],
           sorted(os.listdir(d.root)))
-    kt = kernel_file(d)
-    check("basic: main kernel reads $AOS_DAEMON/status, AOS_DAEMON is /aos", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
+    kt = init_file(d)
+    check("basic: init reads $AOS_DAEMON/status, AOS_DAEMON is /aos", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
     caps = re.search(r"CapEff:\s+(\w+)", read("/proc/%d/status" % d.hostpid("main"))).group(1)
-    check("basic: main kernel has no capabilities", int(caps, 16) == 0, caps)
+    check("basic: init has no capabilities", int(caps, 16) == 0, caps)
     check("basic: SIGTERM -> daemon exits 0", d.stop() == 0)
     check("basic: daemon process gone", wait_for(lambda: gone(d.pid), 3))
 
@@ -285,13 +285,13 @@ def t_procs():
               d.fact("alice", "uid") == "ns: 1001\nhost: %d\n" % (sub0 + 1000), (hu, d.fact("alice", "uid")))
     else:
         check("procs: (skip) no subuid range", True)
-    # 主 kernel 自己寫 ctl 起一隻
-    ck = config(d.dir, "bykernel", ["sleep"])
+    # init 自己寫 ctl 起一隻
+    ck = config(d.dir, "byinit", ["sleep"])
     a = d.ask("ctl start " + ck)
-    check("procs: main kernel writes start into /aos/ctl (alive when the write returns)",
-          a == "ok" and os.path.exists(d.root + "/procs/bykernel") and d.fact("bykernel", "state") == "alive\n", a)
+    check("procs: init writes start into /aos/ctl (alive when the write returns)",
+          a == "ok" and os.path.exists(d.root + "/procs/byinit") and d.fact("byinit", "state") == "alive\n", a)
     a = d.ask("ctl start /nonexistent/x.json")
-    check("procs: main kernel's failing start is a write error EIO", a == "err EIO", a)
+    check("procs: init's failing start is a write error EIO", a == "err EIO", a)
     check("procs: SIGTERM -> exit 0", d.stop() == 0)
 
 
@@ -408,9 +408,9 @@ def t_nsconf():
     check("nsconf: rejected ones left nothing in procs/", sorted(os.listdir(d.root + "/procs")) == ["g", "main"],
           sorted(os.listdir(d.root + "/procs")))
     d.stop()
-    d = Daemon("nsconf-kernel", kernel_extra={"ns": base_ns(os.path.join(TMP, "nsconf-kernel")) + ["tmpfs /x"]})
+    d = Daemon("nsconf-init", init_extra={"ns": base_ns(os.path.join(TMP, "nsconf-init")) + ["tmpfs /x"]})
     rc = d.p.wait(10)
-    check("nsconf: string entry in the --kernel file -> exit 2 with a message", rc == 2 and "ConfigBad" in d.err(),
+    check("nsconf: string entry in the --init file -> exit 2 with a message", rc == 2 and "ConfigBad" in d.err(),
           (rc, d.err()[-300:]))
 
 
@@ -422,7 +422,7 @@ def t_landlock():
         return
     started(d, "main")
     if int(d.status().get("landlock_abi", "0")) < 1:
-        check("landlock: (skip) kernel has no Landlock", True)
+        check("landlock: (skip) this Linux has no Landlock", True)
         d.stop()
         return
     d.ctl("start " + config(d.dir, "a", ["sleep"]))
@@ -445,10 +445,10 @@ def t_landlock():
     check("landlock: signal to the daemon from a non-main proc: %s (ABI %d)" % (k, abi),
           k == ("err EPERM" if abi >= 6 else "ok"), got)
     ans = d.ask("/proc/%s/root" % a_ns)
-    check("landlock: main kernel can read a proc's /proc/<pid>/root", ans and ans.startswith("ok") and "toys" in ans, ans)
+    check("landlock: init can read a proc's /proc/<pid>/root", ans and ans.startswith("ok") and "toys" in ans, ans)
     locks = d.fact("b", "locks")
     check("landlock: locks fact names the Landlock domain", locks.startswith("landlock: own domain"), locks)
-    check("landlock: main kernel's locks say no Landlock", d.fact("main", "locks").startswith("landlock: none"))
+    check("landlock: init's locks say no Landlock", d.fact("main", "locks").startswith("landlock: none"))
     caps = re.search(r"CapEff:\s+(\w+)", read("/proc/%d/status" % d.hostpid("b"))).group(1)
     check("landlock: non-main proc has no capabilities", int(caps, 16) == 0, caps)
     nnp = re.search(r"NoNewPrivs:\s+(\d)", read("/proc/%d/status" % d.hostpid("b"))).group(1)
@@ -580,9 +580,9 @@ def t_restart():
     d = Daemon("restart1", ["flaky", "/out", "2"])
     if not check("restart: daemon up", d.pid, d.err()):
         return
-    ok = wait_for(lambda: d.status().get("kernel_restarts") == "2" and started(d, "main", 0.1), 10)
-    check("restart: kernel that died twice was restarted and runs", ok, d.status())
-    check("restart: kernel_last_exit is code 5", d.status().get("kernel_last_exit") == "code 5")
+    ok = wait_for(lambda: d.status().get("init_restarts") == "2" and started(d, "main", 0.1), 10)
+    check("restart: init that died twice was restarted and runs", ok, d.status())
+    check("restart: init_last_exit is code 5", d.status().get("init_last_exit") == "code 5")
     check("restart: daemon still up", d.p.poll() is None)
     d.stop()
 
@@ -595,9 +595,9 @@ def t_restart():
     check("restart: says why", "more than --restart-limit 3" in d.err())
     check("restart: took < 10 s", time.monotonic() - t0 < 10)
 
-    d = Daemon("restart3", ["exit", "4"], "--on-kernel-exit", "exit")
+    d = Daemon("restart3", ["exit", "4"], "--on-init-exit", "exit")
     rc = d.p.wait(10) if d.pid else None
-    check("restart: --on-kernel-exit exit -> daemon exits with the kernel's code 4", rc == 4, rc)
+    check("restart: --on-init-exit exit -> daemon exits with init's code 4", rc == 4, rc)
     check("restart: ... without restarting", d.err().count("started main") == 1)
 
     d = Daemon("restart4", ["exit", "0"], "--restart-limit", "0")
@@ -638,57 +638,57 @@ def t_teardown():
 # ---------------------------------------------------------------- access
 
 def t_access():
-    """主 kernel 怎麼碰 daemon 的目錄：預設 mount（天空裡的 /aos、零 caps），設定 daemon_access ptrace 走 /proc/1/cwd。"""
+    """init 怎麼碰 daemon 的目錄：預設 mount（天空裡的 /aos、零 caps），設定 daemon_access ptrace 走 /proc/1/cwd。"""
     d = Daemon("access")
     if not check("access: daemon up", d.pid, d.err()):
         return
     started(d, "main")
     s = d.status()
-    check("access: status says main_kernel_access: mount /aos", s.get("main_kernel_access") == "mount /aos", s)
+    check("access: status says init_access: mount /aos", s.get("init_access") == "mount /aos", s)
     hp = d.hostpid("main")
     c = caps_of(hp)
-    check("access: mount mode: main kernel has zero capabilities (inh, prm, eff, bnd, amb)", not any(c.values()), c)
-    kt = kernel_file(d)
+    check("access: mount mode: init has zero capabilities (inh, prm, eff, bnd, amb)", not any(c.values()), c)
+    kt = init_file(d)
     check("access: AOS_DAEMON=/aos, reads /aos/status", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
     check("access: ... and cannot read /proc/1/cwd (EACCES)", "\nproc1 err EACCES\n" in kt, kt)
     table = [l.split() for l in d.fact("main", "ns").splitlines()]
     cg_on = not s.get("cgroup", "off").startswith("off")
-    check("access: kernel's ns table has 'aos - /aos rw'%s" % (" and the cgroup line" if cg_on else ""),
+    check("access: init's ns table has 'aos - /aos rw'%s" % (" and the cgroup line" if cg_on else ""),
           ["aos", "-", "/aos", "rw"] in table and (not cg_on or ["cgroup", s["cgroup"], "/cgroup", "rw"] in table), table)
     check("access: ns_check ok", d.fact("main", "ns_check") == "ok\n", d.fact("main", "ns_check"))
     mi = [l.split() for l in read("/proc/%d/mountinfo" % hp).splitlines()]
     aos = [l for l in mi if l[4] == "/aos"]
-    check("access: /aos in the kernel's mountinfo is the daemon's FUSE mount",
+    check("access: /aos in init's mountinfo is the daemon's FUSE mount",
           aos and aos[0][aos[0].index("-") + 1] == "fuse.aosproc", aos)
-    check("access: kernel's locks say no capabilities, directory at /aos",
+    check("access: init's locks say no capabilities, directory at /aos",
           "capabilities: none" in d.fact("main", "locks") and "daemon directory: /aos" in d.fact("main", "locks"),
           d.fact("main", "locks"))
     a = d.ask("/aos")
-    check("access: kernel lists /aos", a == "ok ctl procs status", a)
+    check("access: init lists /aos", a == "ok ctl procs status", a)
     cw = config(d.dir, "w", ["sleep"], locks={"cgroup": {"pids.max": "20"}} if cg_on else {})
     a = d.ask("ctl start " + cw)
-    check("access: kernel writes 'start' into /aos/ctl; when the write returns the proc is alive",
+    check("access: init writes 'start' into /aos/ctl; when the write returns the proc is alive",
           a == "ok" and d.fact("w", "state") == "alive\n", a)
     a = d.ask("/aos/procs/w/state")
-    check("access: kernel reads /aos/procs/w/state", a == "ok alive|", a)
+    check("access: init reads /aos/procs/w/state", a == "ok alive|", a)
     a = d.ask("ctl start /nonexistent/x.json")
-    check("access: kernel's failing start is EIO", a == "err EIO", a)
+    check("access: init's failing start is EIO", a == "err EIO", a)
     a = d.ask("/aos/status")
     check("access: ... and the reason is in /aos/status", a and "aos_ctl_state: failed" in a.replace("|", "\n"), a)
     if cg_on:
         a = d.ask("/aos/procs/w/cgroup/pids.max")
-        check("access: kernel follows procs/w/cgroup (relative link to /cgroup) and reads pids.max", a == "ok 20|", a)
+        check("access: init follows procs/w/cgroup (relative link to /cgroup) and reads pids.max", a == "ok 20|", a)
     a = d.ask("ctl umount main /aos")
-    check("access: ctl umount of /aos in the kernel's ns is refused (EINVAL)", a == "err EINVAL", a)
+    check("access: ctl umount of /aos in init's ns is refused (EINVAL)", a == "err EINVAL", a)
     a = d.ask("ctl mount main /usr /aos")
     check("access: ctl mount over /aos is refused (EINVAL)", a == "err EINVAL" and
           d.status().get("aos_ctl_error", "").startswith("PathReserved"), (a, d.status().get("aos_ctl_error")))
     a = d.ask("ctl kill w KILL")
     wait_for(lambda: d.fact("w", "state") == "dead\n", 5)
     a2 = d.ask("ctl forget w")
-    check("access: kernel kills and forgets; /aos/procs/w is gone for it", a == "ok" and a2 == "ok" and
+    check("access: init kills and forgets; /aos/procs/w is gone for it", a == "ok" and a2 == "ok" and
           d.ask("/aos/procs/w") == "err ENOENT", (a, a2))
-    # 非主 kernel 的：沒有 /aos、讀不到 /proc/1/cwd、沒有 AOS_DAEMON
+    # 非 init 的：沒有 /aos、讀不到 /proc/1/cwd、沒有 AOS_DAEMON
     d.ctl("start " + config(d.dir, "np", ["probe", "/out", "np", "/aos", "/proc/1/cwd/status", "env:AOS_DAEMON",
                                            "env:AOS_NAME", "/cgroup"]))
     res = wait_for(lambda: os.path.exists(os.path.join(d.dir, "np.txt")) and read(os.path.join(d.dir, "np.txt")), 5) or ""
@@ -706,33 +706,33 @@ def t_access():
     d.stop()
 
     # ptrace 模式（舊的做法，設定裡選）
-    d = Daemon("access-ptrace", kernel_extra={"daemon_access": "ptrace"})
+    d = Daemon("access-ptrace", init_extra={"daemon_access": "ptrace"})
     if not check("access: ptrace mode: daemon up", d.pid, d.err()):
         return
     started(d, "main")
     check("access: ptrace mode: status says ptrace /proc/1/cwd",
-          d.status().get("main_kernel_access") == "ptrace /proc/1/cwd", d.status())
+          d.status().get("init_access") == "ptrace /proc/1/cwd", d.status())
     c = caps_of(d.hostpid("main"))
-    check("access: ptrace mode: kernel keeps only cap_sys_ptrace", c["CapEff"] == 1 << 19 and c["CapBnd"] == 1 << 19, c)
-    kt = kernel_file(d)
+    check("access: ptrace mode: init keeps only cap_sys_ptrace", c["CapEff"] == 1 << 19 and c["CapBnd"] == 1 << 19, c)
+    kt = init_file(d)
     check("access: ptrace mode: AOS_DAEMON=/proc/1/cwd and it reads it",
           kt.startswith("ok pid_ns: 1") and "\nroot /proc/1/cwd\n" in kt, kt)
     check("access: ptrace mode: no /aos in its ns", d.ask("/aos") == "err ENOENT")
     a = d.ask("ctl start " + config(d.dir, "pw", ["sleep"]))
-    check("access: ptrace mode: kernel's start through /proc/1/cwd/ctl works", a == "ok" and d.fact("pw", "state") == "alive\n", a)
+    check("access: ptrace mode: init's start through /proc/1/cwd/ctl works", a == "ok" and d.fact("pw", "state") == "alive\n", a)
     d.stop()
 
-    # 主 kernel 的天空自己用了 /aos：daemon 起不來，說明原因
-    d = Daemon("access-clash", kernel_extra={"ns": base_ns(os.path.join(TMP, "access-clash")) + [ent("tmpfs", "/aos")]})
+    # init 的天空自己用了 /aos：daemon 起不來，說明原因
+    d = Daemon("access-clash", init_extra={"ns": base_ns(os.path.join(TMP, "access-clash")) + [ent("tmpfs", "/aos")]})
     rc = d.p.wait(10)
-    check("access: kernel ns using /aos -> daemon exits 2 and says why", rc == 2 and "/aos" in d.err() and
+    check("access: init ns using /aos -> daemon exits 2 and says why", rc == 2 and "/aos" in d.err() and
           "daemon_access" in d.err(), (rc, d.err()[-300:]))
 
-    # 主 kernel 的 uid 不是 0：兩種模式都起不來
+    # init 的 uid 不是 0：兩種模式都起不來
     for mode in ("mount", "ptrace"):
-        d = Daemon("access-uid-" + mode, kernel_extra={"uid": 5, "daemon_access": mode})
+        d = Daemon("access-uid-" + mode, init_extra={"uid": 5, "daemon_access": mode})
         rc = d.p.wait(10)
-        check("access: %s mode: kernel uid 5 -> daemon exits 2 and mentions uid" % mode,
+        check("access: %s mode: init uid 5 -> daemon exits 2 and mentions uid" % mode,
               rc == 2 and "uid" in d.err() and "uid 0" in d.err(), (rc, d.err()[-300:]))
 
 
@@ -783,7 +783,7 @@ def t_dirs():
 
 def t_stdio():
     """proc 的 stdout／stderr 沒設就是 /dev/null（使用者 11-26 定）；設了的那條進檔，另一條仍無處去。"""
-    d = Daemon("stdio", ["kchatter", "/out"])
+    d = Daemon("stdio", ["ichatter", "/out"])
     if not check("stdio: daemon up", d.pid, d.err()):
         return
     started(d, "main")
@@ -794,12 +794,12 @@ def t_stdio():
     check("stdio: proc without stdout/stderr started and wrote", r == (0, "done", "-") and os.path.exists(done), r)
     time.sleep(0.2)
     check("stdio: its output is not in the daemon's stderr", "CHATTER" not in d.err(), d.err()[-300:])
-    check("stdio: main kernel without stdout/stderr is silent too", "CHATTER" not in errs and "CHATTER" not in d.err())
+    check("stdio: init without stdout/stderr is silent too", "CHATTER" not in errs and "CHATTER" not in d.err())
     hp = d.hostpid("plain")
     fds = [os.readlink("/proc/%d/fd/%d" % (hp, i)) for i in (0, 1, 2)]
     check("stdio: fds 0, 1, 2 are all /dev/null", fds == ["/dev/null"] * 3, fds)
     kfds = [os.readlink("/proc/%d/fd/%d" % (d.hostpid("main"), i)) for i in (0, 1, 2)]
-    check("stdio: main kernel fds 0, 1, 2 are all /dev/null", kfds == ["/dev/null"] * 3, kfds)
+    check("stdio: init fds 0, 1, 2 are all /dev/null", kfds == ["/dev/null"] * 3, kfds)
     os.unlink(done)
     fo = os.path.join(d.dir, "only-out.log")
     r = d.ctl("start " + config(d.dir, "oo", ["chatter", "/out"], stdout=fo))
@@ -834,35 +834,35 @@ def t_dconf():
     cg_on = not s.get("cgroup", "off").startswith("off")
     d.stop()
 
-    # kernel 給絕對路徑
+    # init 給絕對路徑
     dd = os.path.join(TMP, "dconf-abs")
-    dj = write_json(os.path.join(dd, "daemon.json"), {"kernel": os.path.join(dd, "main.json")})
+    dj = write_json(os.path.join(dd, "daemon.json"), {"init": os.path.join(dd, "main.json")})
     d = Daemon("dconf-abs", args=[dj])
-    if check("dconf: daemon.json with an absolute kernel path", d.pid and started(d, "main"), d.err()):
+    if check("dconf: daemon.json with an absolute init path", d.pid and started(d, "main"), d.err()):
         s = d.status()
         check("dconf: status config is the daemon config path", s.get("config") == dj, s.get("config"))
-        check("dconf: procs/main/config is the kernel path", d.fact("main", "config") == os.path.join(dd, "main.json") + "\n",
+        check("dconf: procs/main/config is init path", d.fact("main", "config") == os.path.join(dd, "main.json") + "\n",
               d.fact("main", "config"))
         check("dconf: cgroup auto still works with a daemon config (re-exec carried it)",
               s.get("cgroup", "off").startswith("off") != cg_on, s.get("cgroup"))
         check("dconf: SIGTERM -> exit 0", d.stop() == 0)
 
-    # kernel 給相對路徑：從 daemon 設定檔的夾算，不是從 cwd
+    # init 給相對路徑：從 daemon 設定檔的夾算，不是從 cwd
     dd = os.path.join(TMP, "dconf-rel")
     os.makedirs(os.path.join(dd, "k"), exist_ok=True)
-    config(os.path.join(dd, "k"), "main", ["kernel", "/out"])
-    dj = write_json(os.path.join(dd, "daemon.json"), {"kernel": "k/main.json"})
+    config(os.path.join(dd, "k"), "main", ["init", "/out"])
+    dj = write_json(os.path.join(dd, "daemon.json"), {"init": "k/main.json"})
     d = Daemon("dconf-rel", args=[dj], cwd="/")
-    if check("dconf: relative kernel path is relative to the daemon config's folder (cwd /)", d.pid and started(d, "main"), d.err()):
+    if check("dconf: relative init path is relative to the daemon config's folder (cwd /)", d.pid and started(d, "main"), d.err()):
         check("dconf: ... procs/main/config shows the resolved path",
               d.fact("main", "config") == os.path.join(dd, "k", "main.json") + "\n", d.fact("main", "config"))
-        check("dconf: ... that kernel is the one running", bool(wait_for(lambda: [n for n in os.listdir(os.path.join(dd, "k"))
-                                                                               if n.startswith("kernel-")], 5)))
+        check("dconf: ... that init is the one running", bool(wait_for(lambda: [n for n in os.listdir(os.path.join(dd, "k"))
+                                                                               if n.startswith("init-")], 5)))
         d.stop()
 
     # daemon 設定檔本身給相對路徑（從 cwd 算），status 寫絕對路徑；經 systemd-run 重跑時也帶得過去
     dd = os.path.join(TMP, "dconf-relconf")
-    write_json(os.path.join(dd, "daemon.json"), {"kernel": "main.json"})
+    write_json(os.path.join(dd, "daemon.json"), {"init": "main.json"})
     d = Daemon("dconf-relconf", args=["daemon.json"], cwd=dd)
     if check("dconf: daemon config given as a relative path", d.pid and started(d, "main"), d.err()):
         s = d.status()
@@ -870,73 +870,76 @@ def t_dconf():
         check("dconf: ... and cgroup is the same as with flags", s.get("cgroup", "off").startswith("off") != cg_on, s.get("cgroup"))
         d.stop()
 
-    # 內嵌的主 kernel 設定
+    # 內嵌的 init 設定
     dd = os.path.join(TMP, "dconf-inline")
     os.makedirs(dd, exist_ok=True)
-    kc = {"name": "inl", "argv": ["/usr/bin/python3", "/toys/toys.py", "kernel", "/out"], "ns": base_ns(dd)}
-    dj = write_json(os.path.join(dd, "daemon.json"), {"kernel": kc})
+    kc = {"name": "inl", "argv": ["/usr/bin/python3", "/toys/toys.py", "init", "/out"], "ns": base_ns(dd)}
+    dj = write_json(os.path.join(dd, "daemon.json"), {"init": kc})
     d = Daemon("dconf-inline", args=[dj])
-    if check("dconf: inline kernel object starts", d.pid and started(d, "inl"), d.err()):
-        check("dconf: ... status main_kernel is its name", d.status().get("main_kernel") == "inl", d.status())
-        check("dconf: ... procs/inl/config is '<daemon.json>#/kernel'", d.fact("inl", "config") == dj + "#/kernel\n",
+    if check("dconf: inline init object starts", d.pid and started(d, "inl"), d.err()):
+        check("dconf: ... status init is its name", d.status().get("init") == "inl", d.status())
+        check("dconf: ... procs/inl/config is '<daemon.json>#/init'", d.fact("inl", "config") == dj + "#/init\n",
               d.fact("inl", "config"))
-        kt = kernel_file(d)
+        kt = init_file(d)
         check("dconf: ... and it reads $AOS_DAEMON/status", kt.startswith("ok pid_ns: 1"), kt)
         d.stop()
 
     # 設定檔的值，與命令列蓋過它
     dd = os.path.join(TMP, "dconf-vals")
-    vals = {"kernel": "main.json", "on_kernel_exit": "exit", "restart_limit": 2, "restart_window": 30, "exit_grace": 1.5,
-            "on_parent_death": "stay", "cgroup": "off", "subuid": "off"}
+    vals = {"init": "main.json", "on_init_exit": "exit", "restart_limit": 2, "restart_window": 30, "exit_grace": 1.5,
+            "on_parent_death": "stay", "cgroup": "off", "subuid": "off", "on_restart_limit": "stay", "exit_code": "own"}
     dj = write_json(os.path.join(dd, "daemon.json"), vals)
     d = Daemon("dconf-vals", args=[dj])
     if check("dconf: every key read from the file", d.pid and started(d, "main"), d.err()):
         s = d.status()
-        check("dconf: status shows the file's values (on_kernel_exit, restart_limit, exit_grace, on_parent_death, cgroup, subuid)",
-              s.get("on_kernel_exit") == "exit" and s.get("restart_limit") == "2 deaths within 30 s" and
+        check("dconf: status shows the file's values (on_init_exit, restart_limit, on_restart_limit, exit_code, exit_grace, "
+              "on_parent_death, cgroup, subuid)",
+              s.get("on_init_exit") == "exit" and s.get("restart_limit") == "2 deaths within 30 s" and
+              s.get("on_restart_limit") == "stay" and s.get("exit_code") == "own" and
               s.get("exit_grace") == "1.5 s" and s.get("on_parent_death") == "stay" and
               s.get("cgroup") == 'off ("cgroup": "off" in the daemon config)' and s.get("subuid") == "none", s)
         check("dconf: ... SIGTERM -> exit 0", d.stop() == 0)
-    d = Daemon("dconf-vals", args=[dj, "--on-kernel-exit", "restart", "--restart-limit", "7", "--exit-grace", "0",
-                                   "--on-parent-death", "exit", "--cgroup", "auto"])
+    d = Daemon("dconf-vals", args=[dj, "--on-init-exit", "restart", "--restart-limit", "7", "--exit-grace", "0",
+                                   "--on-parent-death", "exit", "--cgroup", "auto", "--on-restart-limit", "exit",
+                                   "--exit-code", "init"])
     if check("dconf: flags override the file", d.pid and started(d, "main"), d.err()):
         s = d.status()
         check("dconf: ... status shows the flags' values and keeps the rest from the file",
-              s.get("on_kernel_exit") == "restart" and s.get("restart_limit") == "7 deaths within 30 s" and
+              s.get("on_init_exit") == "restart" and s.get("restart_limit") == "7 deaths within 30 s" and
+              s.get("on_restart_limit") == "exit" and s.get("exit_code") == "init" and
               s.get("exit_grace") == "0 s" and s.get("on_parent_death") == "exit" and s.get("subuid") == "none", s)
         check("dconf: ... --cgroup auto beats \"cgroup\": \"off\" (and the flags survive the re-exec)",
               s.get("cgroup", "off").startswith("off") != cg_on, s.get("cgroup"))
         d.stop()
 
-    # --kernel 蓋過 "kernel"
+    # --init 蓋過 "init"
     dd = os.path.join(TMP, "dconf-kflag")
     os.makedirs(dd, exist_ok=True)
-    kflag = config(dd, "kflag", ["kernel", "/out"])
-    dj = write_json(os.path.join(dd, "daemon.json"), {"kernel": "main.json"})
-    d = Daemon("dconf-kflag", args=[dj, "--kernel", kflag])
-    if check("dconf: --kernel beats \"kernel\" in the file", d.pid and started(d, "kflag") and
-             d.status().get("main_kernel") == "kflag" and not os.path.exists(d.root + "/procs/main"), d.err()):
+    kflag = config(dd, "kflag", ["init", "/out"])
+    dj = write_json(os.path.join(dd, "daemon.json"), {"init": "main.json"})
+    d = Daemon("dconf-kflag", args=[dj, "--init", kflag])
+    if check("dconf: --init beats \"init\" in the file", d.pid and started(d, "kflag") and
+             d.status().get("init") == "kflag" and not os.path.exists(d.root + "/procs/main"), d.err()):
         d.stop()
 
     # 起不來：退出碼 2，stderr 說明
     dd = os.path.join(TMP, "dconf-bad")
     os.makedirs(dd, exist_ok=True)
-    config(dd, "main", ["kernel", "/out"])
+    config(dd, "main", ["init", "/out"])
     cases = [
-        ("unknown key", {"kernel": "main.json", "colour": "red"}, 'unknown key "colour"'),
-        ("restart_limit as a string", {"kernel": "main.json", "restart_limit": "5"}, "restart_limit"),
-        ("restart_limit not an integer", {"kernel": "main.json", "restart_limit": 2.5}, "restart_limit"),
-        ("on_kernel_exit bad value", {"kernel": "main.json", "on_kernel_exit": "maybe"}, "on_kernel_exit"),
-        ("negative exit_grace", {"kernel": "main.json", "exit_grace": -1}, "exit_grace"),
-        ("exit_grace as a string", {"kernel": "main.json", "exit_grace": "2"}, "exit_grace"),
-        ("on_parent_death bad value", {"kernel": "main.json", "on_parent_death": "linger"}, "on_parent_death"),
-        ("cgroup bad value", {"kernel": "main.json", "cgroup": True}, "cgroup"),
-        ("kernel a number", {"kernel": 5}, '"kernel"'),
-        ("no kernel", {"exit_grace": 1}, "required"),
-        ("not JSON", "{", "not JSON"),
+        ("unknown key", {"init": "main.json", "colour": "red"}, 'unknown key "colour"'),
+        ("restart_limit as a string", {"init": "main.json", "restart_limit": "5"}, "restart_limit"),
+        ("restart_limit not an integer", {"init": "main.json", "restart_limit": 2.5}, "restart_limit"),
+        ("on_init_exit bad value", {"init": "main.json", "on_init_exit": "maybe"}, "on_init_exit"),
+        ("negative exit_grace", {"init": "main.json", "exit_grace": -1}, "exit_grace"),
+        ("exit_grace as a string", {"init": "main.json", "exit_grace": "2"}, "exit_grace"),
+        ("on_parent_death bad value", {"init": "main.json", "on_parent_death": "linger"}, "on_parent_death"),
+        ("cgroup bad value", {"init": "main.json", "cgroup": True}, "cgroup"),
+        ("init a number", {"init": 5}, '"init"'),
+                ("not JSON", "{", "not JSON"),
         ("top level not an object", [], "object"),
-        ("kernel file missing", {"kernel": "nope.json"}, "cannot read"),
-        ("inline kernel without argv", {"kernel": {"name": "x"}}, "ConfigBad"),
+        ("init file missing", {"init": "nope.json"}, "cannot read"),
+        ("inline init without argv", {"init": {"name": "x"}}, "ConfigBad"),
     ]
     for i, (what, obj, word) in enumerate(cases):
         p = write_json(os.path.join(dd, "bad%d.json" % i), obj)
@@ -946,9 +949,9 @@ def t_dconf():
     for what, argv, word in [
         ("unreadable daemon config", ["/nonexistent/daemon.json"], "cannot read"),
         ("two daemon configs", [good, good], "only one"),
-        ("--exit-grace not a number", ["--kernel", os.path.join(dd, "main.json"), "--exit-grace", "abc"], "--exit-grace"),
-        ("--exit-grace negative", ["--kernel", os.path.join(dd, "main.json"), "--exit-grace", "-1"], "--exit-grace"),
-        ("--on-parent-death bad value", ["--kernel", os.path.join(dd, "main.json"), "--on-parent-death", "maybe"], "--on-parent-death"),
+        ("--exit-grace not a number", ["--init", os.path.join(dd, "main.json"), "--exit-grace", "abc"], "--exit-grace"),
+        ("--exit-grace negative", ["--init", os.path.join(dd, "main.json"), "--exit-grace", "-1"], "--exit-grace"),
+        ("--on-parent-death bad value", ["--init", os.path.join(dd, "main.json"), "--on-parent-death", "maybe"], "--on-parent-death"),
     ]:
         r = subprocess.run([BIN, *argv], capture_output=True, text=True, timeout=20, cwd="/")
         check("dconf: %s -> exit 2 with a message" % what, r.returncode == 2 and word in r.stderr, (r.returncode, r.stderr[-300:]))
@@ -966,64 +969,64 @@ def stop_timed(d, sig=signal.SIGTERM, timeout=15):
     return rc, time.monotonic() - t0
 
 
-def kernel_up(d):
-    """主 kernel（toys.py kernel／kgrace）alive 而且寫了 kernel-<PID>.txt（訊號處理已經裝好）。"""
-    return started(d, "main") and kernel_file(d).startswith("ok")
+def init_up(d):
+    """init（toys.py init／igrace）alive 而且寫了 init-<PID>.txt（訊號處理已經裝好）。"""
+    return started(d, "main") and init_file(d).startswith("ok")
 
 
 def t_grace():
-    d = Daemon("grace-clean", ["kgrace", "/out", "clean"], "--exit-grace", "5")
-    if not check("grace: daemon up with --exit-grace 5", d.pid and kernel_up(d), d.err()):
+    d = Daemon("grace-clean", ["igrace", "/out", "clean"], "--exit-grace", "5")
+    if not check("grace: daemon up with --exit-grace 5", d.pid and init_up(d), d.err()):
         return
     check("grace: status exit_grace: 5 s", d.status().get("exit_grace") == "5 s", d.status())
     d.ctl("start " + config(d.dir, "s1", ["sleep"]))
     started(d, "s1")
     pids = [d.hostpid("main"), d.hostpid("s1")]
     rc, el = stop_timed(d)
-    check("grace: kernel that cleans up on SIGTERM: cleanup done, daemon exits 0",
+    check("grace: init that cleans up on SIGTERM: cleanup done, daemon exits 0",
           rc == 0 and os.path.exists(os.path.join(d.dir, "cleanup")), (rc, d.err()[-400:]))
-    check("grace: ... stopped waiting as soon as the kernel exited (%.1f s < 3 s of 5)" % el, el < 3, el)
+    check("grace: ... stopped waiting as soon as init exited (%.1f s < 3 s of 5)" % el, el < 3, el)
     check("grace: ... the other procs were killed too", wait_for(lambda: all(gone(p) for p in pids), 3), pids)
-    check("grace: ... the kernel was not restarted", d.err().count("started main") == 1, d.err()[-400:])
+    check("grace: ... init was not restarted", d.err().count("started main") == 1, d.err()[-400:])
 
-    d = Daemon("grace-ignore", ["kgrace", "/out", "ignore"], "--exit-grace", "2")
-    kernel_up(d)
+    d = Daemon("grace-ignore", ["igrace", "/out", "ignore"], "--exit-grace", "2")
+    init_up(d)
     d.ctl("start " + config(d.dir, "s1", ["sleep"]))
     started(d, "s1")
     pids = [d.hostpid("main"), d.hostpid("s1")]
     t0 = time.monotonic()
     d.p.send_signal(signal.SIGTERM)
     time.sleep(1.0)
-    check("grace: during the grace only the kernel got SIGTERM: kernel and other procs still alive, daemon still up",
+    check("grace: during the grace only init got SIGTERM: init and other procs still alive, daemon still up",
           d.p.poll() is None and not any(gone(p) for p in pids) and d.status().get("pid_ns") == "1")
     try:
         rc = d.p.wait(10)
     except subprocess.TimeoutExpired:
         rc = None
     el = time.monotonic() - t0
-    check("grace: kernel ignoring SIGTERM with --exit-grace 2: daemon exits 0 after about 2 s (%.2f s)" % el,
+    check("grace: init ignoring SIGTERM with --exit-grace 2: daemon exits 0 after about 2 s (%.2f s)" % el,
           rc == 0 and 1.8 <= el < 4, (rc, el))
     check("grace: ... then everything was killed", wait_for(lambda: all(gone(p) for p in pids), 3), pids)
     check("grace: ... and says why", "still running after exit_grace 2 s" in d.err(), d.err()[-300:])
 
-    d = Daemon("grace-die", ["kgrace", "/out", "die"], "--exit-grace", "5")
-    kernel_up(d)
+    d = Daemon("grace-die", ["igrace", "/out", "die"], "--exit-grace", "5")
+    init_up(d)
     rc, el = stop_timed(d)
-    check("grace: kernel exiting with 3 during the grace is not restarted (on_kernel_exit restart); daemon exits 0 at once",
+    check("grace: init exiting with 3 during the grace is not restarted (on_init_exit restart); daemon exits 0 at once",
           rc == 0 and el < 2.5 and d.err().count("started main") == 1 and os.path.exists(os.path.join(d.dir, "term")),
           (rc, el, d.err()[-300:]))
 
-    d = Daemon("grace-ctl", ["kgrace", "/out", "ctl"], "--exit-grace", "5")
-    kernel_up(d)
+    d = Daemon("grace-ctl", ["igrace", "/out", "ctl"], "--exit-grace", "5")
+    init_up(d)
     d.ctl("start " + config(d.dir, "w", ["sleep"]))
     started(d, "w")
     rc, el = stop_timed(d)
     res = read(os.path.join(d.dir, "cleanup")).strip() if os.path.exists(os.path.join(d.dir, "cleanup")) else None
-    check("grace: the kernel uses ctl (kill, forget) during the grace", res == "ok ok err ENOENT" and rc == 0 and el < 4,
+    check("grace: init uses ctl (kill, forget) during the grace", res == "ok ok err ENOENT" and rc == 0 and el < 4,
           (res, rc, el))
 
-    d = Daemon("grace-stay", ["kgrace", "/out", "stay"], "--exit-grace", "3")
-    kernel_up(d)
+    d = Daemon("grace-stay", ["igrace", "/out", "stay"], "--exit-grace", "3")
+    init_up(d)
     d.ctl("start " + config(d.dir, "s1", ["sleep"]))
     started(d, "s1")
     t0 = time.monotonic()
@@ -1032,7 +1035,7 @@ def t_grace():
     r = d.ctl("start " + config(d.dir, "s2", ["sleep"]))
     check("grace: ctl from outside works during the grace (start)", r == (0, "done", "-") and started(d, "s2"), r)
     a = d.ask("ctl kill s1 KILL")
-    check("grace: the kernel's ctl works during the grace (kill)", a == "ok" and wait_for(lambda: d.fact("s1", "state") == "dead\n", 3), a)
+    check("grace: init's ctl works during the grace (kill)", a == "ok" and wait_for(lambda: d.fact("s1", "state") == "dead\n", 3), a)
     d.p.send_signal(signal.SIGTERM)   # 寬限裡再來一次：不管，照樣等到時間到
     time.sleep(0.5)
     check("grace: a second SIGTERM during the grace does not cut it short", d.p.poll() is None and time.monotonic() - t0 < 2.8)
@@ -1045,23 +1048,23 @@ def t_grace():
     check("grace: ... daemon exits 0 after the 3 s (%.2f s), procs gone" % el, rc == 0 and 2.8 <= el < 5 and
           wait_for(lambda: gone(s2), 3), (rc, el))
 
-    d = Daemon("grace-zero", ["kgrace", "/out", "clean"])
-    kernel_up(d)
+    d = Daemon("grace-zero", ["igrace", "/out", "clean"])
+    init_up(d)
     kp = d.hostpid("main")
     rc, el = stop_timed(d)
-    check("grace: --exit-grace 0 (default): SIGTERM to the kernel then SIGKILL at once, no cleanup, exit 0",
+    check("grace: --exit-grace 0 (default): SIGTERM to init then SIGKILL at once, no cleanup, exit 0",
           rc == 0 and el < 1.5 and not os.path.exists(os.path.join(d.dir, "cleanup")) and wait_for(lambda: gone(kp), 3),
           (rc, el))
 
-    d = Daemon("grace-int", ["kgrace", "/out", "clean"], "--exit-grace", "5")
-    kernel_up(d)
+    d = Daemon("grace-int", ["igrace", "/out", "clean"], "--exit-grace", "5")
+    init_up(d)
     rc, el = stop_timed(d, signal.SIGINT)
     check("grace: SIGINT gets the same grace", rc == 0 and os.path.exists(os.path.join(d.dir, "cleanup")) and el < 3, (rc, el))
 
-    d = Daemon("grace-kexit", ["exit", "4"], "--on-kernel-exit", "exit", "--exit-grace", "5")
+    d = Daemon("grace-kexit", ["exit", "4"], "--on-init-exit", "exit", "--exit-grace", "5")
     t0 = time.monotonic()
     rc = d.p.wait(10) if d.pid else None
-    check("grace: kernel already dead (on_kernel_exit exit): no grace, exits with its code 4 at once",
+    check("grace: init already dead (on_init_exit exit): no grace, exits with its code 4 at once",
           rc == 4 and time.monotonic() - t0 < 3, rc)
     d = Daemon("grace-klimit", ["exit", "3"], "--restart-limit", "0", "--exit-grace", "5")
     t0 = time.monotonic()
@@ -1176,7 +1179,7 @@ def t_forgetk():
     wait_for(lambda: d.fact("orph2", "state") == "dead\n" and os.path.exists(os.path.join(d.dir, "orph2.orphan")), 5)
     left = [int(x) for x in read(d.root + "/procs/orph2/cgroup/cgroup.procs").split()]
     a = d.ask("ctl forget -k orph2")
-    check("forgetk: the main kernel's forget -k through /aos/ctl works", a == "ok" and left and
+    check("forgetk: init's forget -k through /aos/ctl works", a == "ok" and left and
           not os.path.lexists(d.root + "/procs/orph2") and wait_for(lambda: all(gone(p) for p in left), 3), (a, left))
     d.stop()
 
@@ -1193,6 +1196,290 @@ def t_forgetk():
           child is not None and not gone(child), child)
     d.stop()
     check("forgetk: --cgroup off: ... and goes with the daemon", child is not None and wait_for(lambda: gone(child), 3), child)
+
+
+# ---------------------------------------------------------------- rename（主 kernel 改名 init，使用者 11-26 定）
+
+def t_rename():
+    d = Daemon("rename")
+    if not check("rename: daemon up with --init", d.pid and started(d, "main"), d.err()):
+        return
+    s = d.status()
+    want = {"init": "main", "init_state": "alive", "on_init_exit": "restart", "on_restart_limit": "exit", "exit_code": "init",
+            "init_restarts": "0", "init_deaths_in_window": "0", "init_last_exit": "-", "init_access": "mount /aos"}
+    check("rename: status has the init lines with today's defaults", {k: s.get(k) for k in want} == want, s)
+    check("rename: no status line is named after the kernel any more", not any("kernel" in k for k in s), list(s))
+    check("rename: the daemon's log says init",
+          wait_for(lambda: re.search(r"started main \(pid \d+, host pid \d+, init\)", d.err()), 3), d.err()[-300:])
+    d.stop()
+    dd = os.path.join(TMP, "rename-bad")
+    os.makedirs(dd, exist_ok=True)
+    main = config(dd, "main", ["init", "/out"])
+    for i, (what, obj, word) in enumerate([
+        ('old key "kernel"', {"kernel": "main.json"}, 'unknown key "kernel"'),
+        ('old key "on_kernel_exit"', {"init": "main.json", "on_kernel_exit": "exit"}, 'unknown key "on_kernel_exit"'),
+        ("on_restart_limit bad value", {"init": "main.json", "on_restart_limit": "maybe"}, "on_restart_limit"),
+        ("exit_code bad value", {"init": "main.json", "exit_code": 3}, "exit_code"),
+    ]):
+        p = write_json(os.path.join(dd, "bad%d.json" % i), obj)
+        r = subprocess.run([BIN, p], capture_output=True, text=True, timeout=20, cwd="/")
+        check("rename: %s -> exit 2 with a message" % what, r.returncode == 2 and word in r.stderr, (r.returncode, r.stderr[-300:]))
+    for what, argv, word in [
+        ("old flag --kernel", ["--kernel", main], "unknown argument --kernel"),
+        ("old flag --on-kernel-exit", ["--init", main, "--on-kernel-exit", "exit"], "unknown argument --on-kernel-exit"),
+        ("--on-init-exit bad value", ["--init", main, "--on-init-exit", "maybe"], "--on-init-exit"),
+        ("--on-restart-limit bad value", ["--init", main, "--on-restart-limit", "maybe"], "--on-restart-limit"),
+        ("--exit-code bad value", ["--init", main, "--exit-code", "maybe"], "--exit-code"),
+        ("flags only without --init", ["--exit-grace", "1"], '--init CONFIG is required'),
+    ]:
+        r = subprocess.run([BIN, *argv], capture_output=True, text=True, timeout=20, cwd="/")
+        check("rename: %s -> exit 2 with a message" % what, r.returncode == 2 and word in r.stderr, (r.returncode, r.stderr[-300:]))
+    r = subprocess.run([BIN, "--exit-grace", "1"], capture_output=True, text=True, timeout=20, cwd="/")
+    check("rename: ... and that message points at a daemon config without \"init\"", 'without "init"' in r.stderr, r.stderr)
+    r = subprocess.run([BIN, "--help"], capture_output=True, text=True, timeout=20)
+    check("rename: --help speaks of init, not the main kernel", r.returncode == 0 and "--init CONFIG" in r.stdout and
+          "main kernel" not in r.stdout and "--kernel" not in r.stdout, r.stdout[:200])
+
+
+# ---------------------------------------------------------------- noinit（daemon 設定檔不寫 init，使用者 11-26 定）
+
+def t_noinit():
+    dd = os.path.join(TMP, "noinit")
+    dj = write_json(os.path.join(dd, "daemon.json"), {"exit_grace": 5})
+    d = Daemon("noinit", args=[dj])
+    if not check("noinit: daemon config without \"init\": daemon up", d.pid, d.err()):
+        return
+    s = d.status()
+    check("noinit: status init -, init_state none, init_access -", s.get("init") == "-" and
+          s.get("init_state", "").startswith("none") and s.get("init_access") == "-", s)
+    check("noinit: procs/ is empty", os.listdir(d.root + "/procs") == [] and s.get("procs") == "0", os.listdir(d.root + "/procs"))
+    check("noinit: the daemon logs that it has no init", "no init" in d.err(), d.err()[-300:])
+    r = d.ctl("start " + config(d.dir, "np", ["probe", "/out", "np", "env:AOS_DAEMON", "env:AOS_NAME", "/aos", "/proc/1/cwd/status"]))
+    check("noinit: start from outside (/proc/<PID>/cwd/ctl) works", r == (0, "done", "-") and started(d, "np"), r)
+    res = wait_for(lambda: os.path.exists(os.path.join(d.dir, "np.txt")) and read(os.path.join(d.dir, "np.txt")), 5) or ""
+    got = {l.split(" ")[0]: " ".join(l.split(" ")[1:]) for l in res.strip().splitlines()}
+    check("noinit: the proc gets no AOS_DAEMON (AOS_NAME yes), no /aos, no /proc/1/cwd",
+          got.get("env:AOS_DAEMON") == "err unset" and got.get("env:AOS_NAME") == "ok np" and got.get("/aos") == "err ENOENT" and
+          got.get("/proc/1/cwd/status") == "err EACCES", got)
+    r1 = d.ctl("kill np KILL")
+    wait_for(lambda: d.fact("np", "state") == "dead\n", 5)
+    r2 = d.ctl("forget np")
+    check("noinit: kill and forget from outside", r1 == (0, "done", "-") and r2 == (0, "done", "-") and
+          not os.path.lexists(d.root + "/procs/np"), (r1, r2))
+    d.ctl("start " + config(d.dir, "s1", ["sleep"]))
+    started(d, "s1")
+    hp = d.hostpid("s1")
+    rc, el = stop_timed(d)
+    check("noinit: SIGTERM with exit_grace 5: nobody to wait for, exits 0 at once (%.2f s)" % el, rc == 0 and el < 2, (rc, el))
+    check("noinit: ... the procs are gone", wait_for(lambda: gone(hp), 3))
+    check("noinit: ... and the log says why", "no init" in d.err().splitlines()[-1], d.err()[-200:])
+    d = Daemon("noinit-flag", args=[dj, "--init", os.path.join(TMP, "noinit-flag", "main.json")])
+    check("noinit: --init with that daemon config gives an init", d.pid and started(d, "main") and d.status().get("init") == "main",
+          d.err()[-300:])
+    d.stop()
+
+
+# ---------------------------------------------------------------- rlstay（on_restart_limit stay，使用者 11-26 定）
+
+def t_rlstay():
+    d = Daemon("rlstay", ["sleep"], "--restart-limit", "1", "--on-restart-limit", "stay")
+    if not check("rlstay: daemon up with --on-restart-limit stay", d.pid and started(d, "main"), d.err()):
+        return
+    check("rlstay: status on_restart_limit: stay", d.status().get("on_restart_limit") == "stay", d.status())
+    d.ctl("start " + config(d.dir, "w", ["sleep"]))
+    started(d, "w")
+    wp = d.hostpid("w")
+    d.ctl("kill main KILL")
+    check("rlstay: first death: init restarted", wait_for(lambda: d.status().get("init_restarts") == "1" and started(d, "main", 0.1), 5),
+          d.status())
+    d.ctl("kill main KILL")
+    st = wait_for(lambda: d.status().get("init_state", "").startswith("gone") and d.status(), 5) or d.status()
+    time.sleep(0.3)
+    check("rlstay: past the limit the daemon stays up", d.p.poll() is None and d.status().get("pid_ns") == "1")
+    check("rlstay: status says init is gone because the limit was hit", st.get("init") == "main" and
+          "restart limit reached" in st.get("init_state", "") and "stay" in st.get("init_state", "") and
+          st.get("init_restarts") == "1", st)
+    check("rlstay: the dead init stays listed (dead, signal 9)", d.fact("main", "state") == "dead\n" and
+          d.fact("main", "exit") == "signal 9 SIGKILL\n", d.fact("main", "exit"))
+    check("rlstay: it was not restarted again", d.err().count("started main") == 2 and "not restarting" in d.err(), d.err()[-300:])
+    check("rlstay: the other proc keeps running", not gone(wp) and d.fact("w", "state") == "alive\n")
+    r = d.ctl("start " + config(d.dir, "s2", ["sleep"]))
+    check("rlstay: outside ctl still works (start)", r == (0, "done", "-") and started(d, "s2"), r)
+    r = d.ctl("forget main")
+    check("rlstay: the dead init can be forgotten", r == (0, "done", "-") and not os.path.lexists(d.root + "/procs/main"), r)
+    rc, el = stop_timed(d)
+    check("rlstay: SIGTERM: exits 0 at once, procs gone", rc == 0 and el < 2 and wait_for(lambda: gone(wp), 3), (rc, el))
+
+
+# ---------------------------------------------------------------- dpath（init 的 daemon_path，使用者 11-26 定）
+
+def t_dpath():
+    dd = os.path.join(TMP, "dpath")
+    d = Daemon("dpath", None, init_extra={"daemon_path": "/run/aos", "ns": base_ns(dd) + [ent("tmpfs", "/aos")]})
+    if not check("dpath: daemon up with daemon_path /run/aos", d.pid and started(d, "main"), d.err()):
+        return
+    s = d.status()
+    cg_on = not s.get("cgroup", "off").startswith("off")
+    check("dpath: status init_access: mount /run/aos", s.get("init_access") == "mount /run/aos", s)
+    kt = init_file(d)
+    check("dpath: AOS_DAEMON=/run/aos and init reads $AOS_DAEMON/status", kt.startswith("ok pid_ns: 1") and "\nroot /run/aos\n" in kt, kt)
+    table = [l.split() for l in d.fact("main", "ns").splitlines()]
+    check("dpath: ns rows at the configured places ('aos - /run/aos rw'%s)" % (", cgroup at /run/cgroup" if cg_on else ""),
+          ["aos", "-", "/run/aos", "rw"] in table and (not cg_on or ["cgroup", s["cgroup"], "/run/cgroup", "rw"] in table) and
+          d.fact("main", "ns_check") == "ok\n", table)
+    nj = json.loads(d.fact("main", "ns.json"))
+    check("dpath: ns.json too", {"type": "aos", "dst": "/run/aos", "rw": True} in nj, nj)
+    locks = d.fact("main", "locks")
+    check("dpath: locks name the configured places", "daemon directory: /run/aos" in locks and
+          (not cg_on or "cgroup directory at /run/cgroup" in locks), locks)
+    check("dpath: /aos is now just its own tmpfs (empty)", d.ask("/aos") == "ok", d.ask("/aos"))
+    cw = config(d.dir, "w", ["sleep"], locks={"cgroup": {"pids.max": "20"}} if cg_on else {})
+    a = d.ask("ctl start " + cw)
+    check("dpath: init starts a proc through /run/aos/ctl", a == "ok" and d.fact("w", "state") == "alive\n", a)
+    if cg_on:
+        a = d.ask("/run/aos/procs/w/cgroup/pids.max")
+        check("dpath: procs/w/cgroup (../../../cgroup/…) resolves to /run/cgroup inside init", a == "ok 20|", a)
+        check("dpath: ... /run/cgroup holds the proc's cgroup dir",
+              (d.ask("/run/cgroup") or "").split()[1:].count(os.readlink(d.root + "/procs/w/cgroup").split("/")[-1]) == 1)
+    a = d.ask("ctl umount main /run/aos")
+    check("dpath: ctl umount of /run/aos is refused (EINVAL PathReserved)", a == "err EINVAL" and
+          d.status().get("aos_ctl_error", "").startswith("PathReserved /run/aos"), (a, d.status().get("aos_ctl_error")))
+    if cg_on:
+        a = d.ask("ctl mount main /usr /run/cgroup/x")
+        check("dpath: ctl mount under /run/cgroup is refused (EINVAL PathReserved)", a == "err EINVAL" and
+              d.status().get("aos_ctl_error", "").startswith("PathReserved /run/cgroup"), (a, d.status().get("aos_ctl_error")))
+    a = d.ask("ctl mount main /usr /aos")
+    check("dpath: /aos is not reserved any more: ctl mount over it works", a == "ok" and
+          ["bind", "/usr", "/aos", "ro"] in [l.split() for l in d.fact("main", "ns").splitlines()], a)
+    r = d.ctl("start " + config(d.dir, "dp", ["sleep"], daemon_path="/run/aos"))
+    check("dpath: daemon_path in a non-init config -> EIO, failed ConfigBad", r[0] == errno.EIO and r[1] == "failed" and
+          "daemon_path" in (r[2] or ""), r)
+    d.stop()
+    d = Daemon("dpath-clash", init_extra={"daemon_path": "/run/aos", "ns": base_ns(os.path.join(TMP, "dpath-clash")) +
+                                                                          [ent("tmpfs", "/run/aos")]})
+    rc = d.p.wait(10)
+    check("dpath: init ns using its daemon_path -> exit 2 and says why", rc == 2 and "/run/aos" in d.err() and
+          "daemon_path" in d.err(), (rc, d.err()[-300:]))
+    for i, (what, extra) in enumerate([("relative", {"daemon_path": "run/aos"}), ("/", {"daemon_path": "/"}),
+                                       ("trailing /", {"daemon_path": "/run/aos/"}), ("..", {"daemon_path": "/run/../aos"}),
+                                       ("/cgroup (where the cgroup dir goes)", {"daemon_path": "/cgroup"}),
+                                       ("/x/cgroup", {"daemon_path": "/x/cgroup"}), ("a number", {"daemon_path": 5}),
+                                       ("with ptrace", {"daemon_path": "/run/aos", "daemon_access": "ptrace"})]):
+        d = Daemon("dpath-bad%d" % i, init_extra=extra)
+        rc = d.p.wait(10)
+        check("dpath: daemon_path %s -> exit 2 with a message" % what, rc == 2 and "daemon_path" in d.err(), (rc, d.err()[-300:]))
+
+
+# ---------------------------------------------------------------- ilandlock（init 的 locks.landlock，使用者 11-26 定）
+
+def t_ilandlock():
+    d = Daemon("ilandlock", None, init_extra={"locks": {"landlock": True}})
+    if not check("ilandlock: daemon up with init locks.landlock true", d.pid and started(d, "main"), d.err()):
+        return
+    if int(d.status().get("landlock_abi", "0")) < 1:
+        check("ilandlock: (skip) this Linux has no Landlock", True)
+        d.stop()
+        return
+    s = d.status()
+    cg_on = not s.get("cgroup", "off").startswith("off")
+    locks = d.fact("main", "locks")
+    check("ilandlock: init's locks say it has its own Landlock domain", locks.startswith("landlock: own domain") and
+          "init asked for it" in locks, locks)
+    check("ilandlock: ... and still no capabilities", not any(caps_of(d.hostpid("main")).values()))
+    kt = init_file(d)
+    check("ilandlock: init reads $AOS_DAEMON/status", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
+    cw = config(d.dir, "w", ["sleep"], locks={"cgroup": {"pids.max": "20"}} if cg_on else {})
+    a = d.ask("ctl start " + cw)
+    check("ilandlock: init starts a proc through /aos/ctl", a == "ok" and d.fact("w", "state") == "alive\n", a)
+    check("ilandlock: init reads /aos/procs/w/state", d.ask("/aos/procs/w/state") == "ok alive|")
+    if cg_on:
+        check("ilandlock: init reads the proc's cgroup folder", d.ask("/aos/procs/w/cgroup/pids.max") == "ok 20|")
+        a = d.ask("put:/aos/procs/w/cgroup/cgroup.freeze=1")
+        check("ilandlock: init writes the proc's cgroup.freeze (frozen)", a == "ok" and
+              wait_for(lambda: "frozen 1" in read(d.root + "/procs/w/cgroup/cgroup.events"), 3), a)
+        d.ask("put:/aos/procs/w/cgroup/cgroup.freeze=0")
+    w_ns = re.search(r"ns: (\d+)", d.fact("w", "pid")).group(1)
+    a = d.ask("/proc/%s/root" % w_ns)
+    check("ilandlock: measured: in its own domain init cannot read a proc's /proc/<pid>/root (%s)" % a,
+          (a or "").startswith("err EACCES"), a)
+    a1 = d.ask("ctl kill w KILL")
+    wait_for(lambda: d.fact("w", "state") == "dead\n", 5)
+    a2 = d.ask("ctl forget w")
+    check("ilandlock: init kills and forgets", a1 == "ok" and a2 == "ok" and not os.path.lexists(d.root + "/procs/w"), (a1, a2))
+    d.stop()
+
+
+# ---------------------------------------------------------------- exitcode（exit_code init|own，使用者 11-26 定）
+
+def t_exitcode():
+    d = Daemon("exitcode", ["exit", "4"], "--on-init-exit", "exit", "--exit-code", "own")
+    rc = d.p.wait(10) if d.pid else None
+    check("exitcode: own: init exits 4 -> daemon exits 3", rc == 3, (rc, d.err()[-300:]))
+    check("exitcode: ... and says so", "exit_code own" in d.err(), d.err()[-300:])
+    d = Daemon("exitcode-sig", ["sleep"], "--on-init-exit", "exit", "--exit-code", "own")
+    started(d, "main")
+    os.kill(d.hostpid("main"), signal.SIGKILL)   # 不經 ctl：daemon 馬上結束，ctl 之後讀 status 會斷
+    rc = d.p.wait(10) if d.pid else None
+    check("exitcode: own: init killed by SIGKILL -> daemon exits 3 (not 137)", rc == 3, rc)
+    d = Daemon("exitcode-init", ["exit", "4"], "--on-init-exit", "exit", "--exit-code", "init")
+    rc = d.p.wait(10) if d.pid else None
+    check("exitcode: init (default): daemon exits with init's code 4", rc == 4, rc)
+    d = Daemon("exitcode-term", None, "--exit-code", "own")
+    started(d, "main")
+    check("exitcode: own: status exit_code own; SIGTERM still exits 0", d.status().get("exit_code") == "own" and d.stop() == 0)
+    d = Daemon("exitcode-limit", ["exit", "3"], "--restart-limit", "0", "--exit-code", "own")
+    rc = d.p.wait(10) if d.pid else None
+    check("exitcode: own: restart limit still exits 1", rc == 1, rc)
+
+
+# ---------------------------------------------------------------- net（net none|host，使用者 11-26 定）
+
+def t_net():
+    import socket
+    lis = socket.socket()
+    lis.bind(("127.0.0.1", 0))
+    lis.listen(16)
+    port = lis.getsockname()[1]
+    try:
+        d = Daemon("net")
+        if not check("net: daemon up", d.pid and started(d, "main"), d.err()):
+            return
+        mynet = os.readlink("/proc/self/ns/net")
+        check("net: init defaults to net none", "net: none (own netns, loopback only)" in d.fact("main", "locks") and
+              os.readlink("/proc/%d/ns/net" % d.hostpid("main")) != mynet, d.fact("main", "locks"))
+
+        def result(name):
+            return wait_for(lambda: os.path.exists(os.path.join(d.dir, name + ".txt")) and read(os.path.join(d.dir, name + ".txt")), 8) or ""
+
+        r = d.ctl("start " + config(d.dir, "nn", ["net", "/out", "nn", str(port)]))
+        got = dict(l.split(" ", 1) for l in result("nn").strip().splitlines())
+        check("net: default proc started", r == (0, "done", "-"), r)
+        check("net: none: cannot reach a port listening on the outside's 127.0.0.1 (%s)" % got.get("host"),
+              got.get("host", "").startswith("err"), got)
+        check("net: none: its own 127.0.0.1 works (bind, connect, send)", got.get("loop") == "ok", got)
+        check("net: none: /proc/net/dev lists only lo", got.get("ifaces") == "lo", got)
+        check("net: none: locks say so", "net: none (own netns, loopback only)" in d.fact("nn", "locks"), d.fact("nn", "locks"))
+        check("net: none: its own network namespace", os.readlink("/proc/%d/ns/net" % d.hostpid("nn")) != mynet)
+        r = d.ctl("start " + config(d.dir, "nh", ["net", "/out", "nh", str(port)], net="host"))
+        got = dict(l.split(" ", 1) for l in result("nh").strip().splitlines())
+        hostifs = ",".join(sorted(l.split(":")[0].strip() for l in read("/proc/net/dev").splitlines()[2:]))
+        check("net: host: started", r == (0, "done", "-"), r)
+        check("net: host: reaches the port on the outside's 127.0.0.1", got.get("host") == "ok", got)
+        check("net: host: its own 127.0.0.1 works too", got.get("loop") == "ok", got)
+        check("net: host: sees the outside's interfaces", got.get("ifaces") == hostifs, (got, hostifs))
+        check("net: host: locks say so", "net: host" in d.fact("nh", "locks"), d.fact("nh", "locks"))
+        check("net: host: same network namespace as the daemon", os.readlink("/proc/%d/ns/net" % d.hostpid("nh")) == mynet)
+        for i, v in enumerate(["maybe", 5]):
+            r = d.ctl("start " + config(d.dir, "nb%d" % i, ["sleep"], net=v))
+            check("net: net %r -> EIO, failed ConfigBad" % (v,), r[0] == errno.EIO and r[1] == "failed" and
+                  "ConfigBad" in (r[2] or "") and "net" in (r[2] or ""), r)
+        d.stop()
+        d = Daemon("net-init", None, init_extra={"net": "host"})
+        check("net: init with net host shares the daemon's network namespace", d.pid and started(d, "main") and
+              "net: host" in d.fact("main", "locks") and os.readlink("/proc/%d/ns/net" % d.hostpid("main")) == mynet, d.err()[-300:])
+        d.stop()
+    finally:
+        lis.close()
 
 
 # ---------------------------------------------------------------- leftovers
@@ -1233,7 +1520,9 @@ def t_leftovers():
 
 GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "nsconf": t_nsconf, "landlock": t_landlock, "cgroup": t_cgroup,
           "mount": t_mount, "modes": t_modes, "restart": t_restart, "teardown": t_teardown, "access": t_access,
-          "dirs": t_dirs, "stdio": t_stdio, "dconf": t_dconf, "grace": t_grace, "pdeath": t_pdeath, "forgetk": t_forgetk}
+          "dirs": t_dirs, "stdio": t_stdio, "dconf": t_dconf, "grace": t_grace, "pdeath": t_pdeath, "forgetk": t_forgetk,
+          "rename": t_rename, "noinit": t_noinit, "rlstay": t_rlstay, "dpath": t_dpath, "ilandlock": t_ilandlock,
+          "exitcode": t_exitcode, "net": t_net}
 
 
 def main():

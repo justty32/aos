@@ -35,21 +35,27 @@ struct ProcConfig {
     std::vector<std::pair<std::string, std::string>> cgroup;   // cgroup 檔名 → 值（起動前寫進那隻的 cgroup）
     std::string stdout_path, stderr_path;   // 外面的路徑；空＝/dev/null
     std::string path;                  // 從哪個檔讀來的
-    std::string daemon_access;         // 只有主 kernel 的設定收："mount"（不寫＝這個）或 "ptrace"；其他 proc 寫了就拒
+    bool landlock = false;             // 設定寫了 locks.landlock: true（其他 proc 不管寫不寫都進；init 寫了才進）
+    std::string net = "none";          // "none"（預設：自己一個 network namespace，只有 lo）或 "host"（跟 daemon 同一個）
+    // 下面兩個只有 init 的設定收；其他 proc 寫了就拒
+    std::string daemon_access;         // "mount"（不寫＝這個）或 "ptrace"
+    std::string daemon_path;           // mount 模式時 daemon 的目錄在 init 天空裡的位置；空＝/aos
 };
 
-// 主 kernel 怎麼碰 daemon 的目錄（設定檔的 daemon_access）：
-//   mount（預設）：daemon 的目錄掛在它天空裡的 /aos（有 cgroup 時 cgroup 夾在 /cgroup），一個 cap 都不給，AOS_DAEMON=/aos
+// init（daemon 起的第一隻）怎麼碰 daemon 的目錄（設定檔的 daemon_access）：
+//   mount（預設）：daemon 的目錄掛在它天空裡的 daemon_path（預設 /aos），有 cgroup 時 cgroup 夾在
+//                  dirname(daemon_path)/cgroup，一個 cap 都不給，AOS_DAEMON=daemon_path
 //   ptrace：留 CAP_SYS_PTRACE、走 /proc/1/cwd（舊的做法）
-extern const char* const KERNEL_AOS;      // "/aos"
-extern const char* const KERNEL_CGROUP;   // "/cgroup"
-inline bool kernel_mounts(const ProcConfig& c) { return c.daemon_access != "ptrace"; }
+extern const char* const DEFAULT_DAEMON_PATH;   // "/aos"
+inline bool init_mounts(const ProcConfig& c) { return c.daemon_access != "ptrace"; }
+std::string init_daemon_path(const ProcConfig& c);   // daemon_path 或 /aos
+std::string init_cgroup_path(const ProcConfig& c);   // dirname(daemon_path)/cgroup
 
 ProcConfig parse_config(const std::string& text, const std::string& path);   // 錯了丟 std::runtime_error("ConfigBad …")
 bool abs_path_ok(const std::string& p);   // 絕對、乾淨（沒有 . .. 空段、尾巴 /）的路徑
 std::vector<Mount> plan_mounts(const std::vector<NsEntry>& ns);
-// 主 kernel（mount 模式）的天空不能自己用 /aos、/cgroup：用了回 "ConfigBad …"，沒有回 ""
-std::string kernel_ns_conflict(const ProcConfig& c, bool cgroup_on);
+// init（mount 模式）的天空不能自己用 daemon_path 與 cgroup 夾的位置：用了回 "ConfigBad …"，沒有回 ""
+std::string init_ns_conflict(const ProcConfig& c, bool cgroup_on);
 extern const char* const DEV_NODES[5];
 
 // daemon 起動時握住的東西（之後換根進小世界，外面的檔案只能經這些 fd 碰）。
@@ -72,18 +78,22 @@ extern World W;
 // 起動參數（main.cpp 讀，起動那一層與 daemon 都用）：預設值 ← daemon 設定檔（有給的話）← 命令列參數（後蓋前）
 struct Options {
     std::string config_path;          // daemon 設定檔（外面的絕對路徑）；空＝只用命令列參數起
-    std::string kernel_path;          // 主 kernel 的設定檔（外面的路徑）；內嵌時是 "<config_path>#/kernel"
-    std::string kernel_text;          // daemon 設定檔裡內嵌的主 kernel 設定（json 文字）；空＝讀 kernel_path
-    bool restart = true;              // 主 kernel 死了：true＝restart、false＝exit
+    std::string init_path;            // init 的設定檔（外面的路徑）；內嵌時是 "<config_path>#/init"；init_path 與 init_text 都空＝沒有 init
+    std::string init_text;            // daemon 設定檔裡內嵌的 init 設定（json 文字）；空＝讀 init_path
+    bool restart = true;              // init 死了：true＝restart、false＝exit
     int restart_limit = 5;            // window 秒內死超過這麼多次就不再起
     double restart_window = 60;
-    double exit_grace = 0;            // 收到結束訊號：先只對主 kernel 送 SIGTERM，最多等這麼多秒，再全部 SIGKILL
+    bool restart_limit_stay = false;  // 到重起上限：false＝daemon 結束（exit，預設）、true＝留著、沒有 init（stay）
+    bool exit_code_own = false;       // on_init_exit exit 時 daemon 的退出碼：false＝init 的（預設）、true＝自己的 EXIT_INIT_EXITED
+    double exit_grace = 0;            // 收到結束訊號：先只對 init 送 SIGTERM，最多等這麼多秒，再全部 SIGKILL
     bool parent_death_exit = true;    // 起動那一層死了 daemon 跟著走（parent-death signal）；false＝stay
     bool cgroup_auto = true;
     std::string cgroup_off_note = "--cgroup off";   // cgroup 關掉時 status 寫的原因（命令列或設定檔）
     bool subuid_auto = true;
 };
 std::string seconds_text(double s);   // 2 → "2"、0.5 → "0.5"
+inline bool has_init(const Options& o) { return !o.init_path.empty() || !o.init_text.empty(); }
+const int EXIT_INIT_EXITED = 3;       // exit_code own：init 結束了、on_init_exit exit 時 daemon 的退出碼
 
 // daemon.cpp：PID namespace 的 1 號。sync_fd 等起動那一層寫好 uid/gid 對照表再讀到自己在外面的 PID。
 [[noreturn]] void daemon_main(const Options& o, int sync_fd);
@@ -99,7 +109,7 @@ struct Spawned {
     std::vector<std::string> locks;
     std::string cgroup;            // cgroup 夾名（在 W.cgfd 底下），空＝沒有
 };
-std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& out);   // ""＝成功，否則 "代號 原因"
+std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out);   // ""＝成功，否則 "代號 原因"
 std::string live_mount(pid_t pid, const std::string& src, const std::string& dst, bool rw);
 std::string live_umount(pid_t pid, const std::string& dst);
 

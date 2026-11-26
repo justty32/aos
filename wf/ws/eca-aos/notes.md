@@ -824,3 +824,15 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 106 段：收掉舊的。我刪了舊夾（最後一版 068bfb2fb，14 個檔，清單在 scratchpad/old-daemon-files.txt）、把 aos-daemon2 搬成 aos-daemon；派 sonnet 子 agent 改內部名字與引用。注意 proto8 的 aos-daemon 行程同名，leftover 檢查要改成看 exe 路徑。回來後：兩支重跑、交件（commit 用 --rm 列舊檔與 aos-daemon2 舊路徑）、再派 init 改名＋五個可選設定。
 - 第 107 段：net 預設 none（host 要寫）。跟 init 改名、五個可選設定一起派（等改名那隻回來）。下一題：seccomp。
 - 改名那隻回來：我兩支清 build 重跑（aos-daemon 280、aos-procfs 5+40+37+36+36）、無殘留（看 exe 路徑）。交件。
+- 1c3daddf7 交了收掉＋改名。派 opus 子 agent：init 改名＋五個可選設定＋net（預設 none）。seccomp 等使用者回答再派。
+- 第 108 段：seccomp 照擬的（預設內建清單、off、自己的清單）。等 init 那隻回來再派（同一夾）。
+- 第 109 段：寬限中第二次訊號不理，照現在。下一條：stay 時 SIGHUP 還是收掉 daemon。
+- 第 110 段：stay 與 SIGHUP 照現在。剩的子 agent【擬】：收尾時間中 ctl 照用（start 起的最後也被殺）、SIGTERM 時沒 init 就直接收、forget -k 最多等 5 秒、inline 設定的 config 顯示 path#/init、status 多 exit_grace／on_parent_death 兩行；其餘（--init 不寫鍵也行、cgroup off 訊息、re-exec 絕對路徑、pdeath 提早設）屬內部，不用問。
+- 第 111 段：收尾中 ctl 照常。下一條：forget -k 最多等 5 秒。
+- 第 112 段：forget -k 固定 5 秒。下一條：inline 設定的 config 顯示 path#/init＋status 多兩行。
+- 第 113 段：子 agent 的【擬】看完。剩 daemon 題目：aoslua 怎麼描、11-25 留下的幾題。init 那隻還在跑；回來後驗、交、派 seccomp、新【擬】給他看。
+- 第 114 段：天空裡預設不准開 user namespace（內建 seccomp 擋）。sky-1125 第 3 題（選用 kernel 要不要起的一方先有）屬 kernel 登記表、已歸 init，不在 daemon，可跟使用者說一聲收掉。
+- 第 115 段：改口預設准開 user namespace（要層層嵌套）；內建 seccomp 清單不擋開 namespace。派 seccomp 時照這個。
+- 第 116 段：seccomp 那批加「daemon 疊 daemon」測試（量實際限制：subuid、cgroup、net、Landlock 疊、seccomp 疊）。等 init 那隻回來再派。
+- 第 117 段：第八輪剩的只 7、8 在 daemon；先談 8（ns.json 每筆記誰要、何時）。
+- init 那隻回來：我清 build 重跑 373／373、無殘留。交件。接著派 seccomp＋疊 daemon。
