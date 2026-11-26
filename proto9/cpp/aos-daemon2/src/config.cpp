@@ -40,12 +40,12 @@ bool name_ok(const std::string& n) {
 
 }  // namespace
 
-SkyEntry parse_sky_line(const std::string& line) {
+NsEntry parse_ns_line(const std::string& line) {
     std::istringstream in(line);
     std::vector<std::string> w;
     for (std::string s; in >> s;) w.push_back(s);
-    if (w.empty()) bad("empty sky line");
-    SkyEntry e;
+    if (w.empty()) bad("empty ns line");
+    NsEntry e;
     e.kind = w[0];
     if (e.kind == "bind") {
         size_t i = 1;
@@ -64,15 +64,15 @@ SkyEntry parse_sky_line(const std::string& line) {
         e.src = w[1];
         e.dst = clean_path(w[2], "symlink path");
     } else {
-        bad("unknown sky word " + e.kind + " (bind, tmpfs, proc, dev, symlink)");
+        bad("unknown ns word " + e.kind + " (bind, tmpfs, proc, dev, symlink)");
     }
     if (e.dst == "/") bad("the root is always a fresh tmpfs; " + e.kind + " / is not allowed");
     return e;
 }
 
-std::vector<Mount> plan_mounts(const std::vector<SkyEntry>& sky) {
+std::vector<Mount> plan_mounts(const std::vector<NsEntry>& ns) {
     std::vector<Mount> out{{"tmpfs", "-", "/", false}};
-    for (const auto& e : sky) {
+    for (const auto& e : ns) {
         if (e.kind == "bind") out.push_back({"bind", e.src, e.dst, e.rw});
         else if (e.kind == "tmpfs" || e.kind == "proc") out.push_back({e.kind, "-", e.dst, true});
         else if (e.kind == "dev") {
@@ -83,13 +83,13 @@ std::vector<Mount> plan_mounts(const std::vector<SkyEntry>& sky) {
     return out;
 }
 
-std::string kernel_sky_conflict(const ProcConfig& c, bool cgroup_on) {
+std::string kernel_ns_conflict(const ProcConfig& c, bool cgroup_on) {
     if (!kernel_mounts(c)) return "";
     auto under = [](const std::string& p, const std::string& top) { return p == top || p.rfind(top + "/", 0) == 0; };
-    for (const auto& e : c.sky) {
+    for (const auto& e : c.ns) {
         if (under(e.dst, KERNEL_AOS) || (cgroup_on && under(e.dst, KERNEL_CGROUP)))
-            return "ConfigBad sky line for " + e.dst + ": " + KERNEL_AOS + (cgroup_on ? std::string(" and ") + KERNEL_CGROUP : "") +
-                   " are where the daemon puts its directory in the main kernel's sky (or set \"daemon_access\": \"ptrace\")";
+            return "ConfigBad ns line for " + e.dst + ": " + KERNEL_AOS + (cgroup_on ? std::string(" and ") + KERNEL_CGROUP : "") +
+                   " are where the daemon puts its directory in the main kernel's ns (or set \"daemon_access\": \"ptrace\")";
     }
     return "";
 }
@@ -115,7 +115,7 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
         } else if (k == "argv") {
             if (!v.is_array() || v.empty()) bad("argv must be a non-empty array of strings");
             for (const auto& a : v) c.argv.push_back(str(a, "argv item"));
-            if (c.argv[0].empty() || c.argv[0][0] != '/') bad("argv[0] must be an absolute path inside the sky");
+            if (c.argv[0].empty() || c.argv[0][0] != '/') bad("argv[0] must be an absolute path inside the ns");
         } else if (k == "env") {
             if (!v.is_object()) bad("env must be an object of strings");
             for (const auto& [ek, ev] : v.items()) {
@@ -124,9 +124,9 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
             }
         } else if (k == "cwd") {
             c.cwd = clean_path(str(v, "cwd"), "cwd");
-        } else if (k == "sky") {
-            if (!v.is_array()) bad("sky must be an array of lines");
-            for (const auto& l : v) c.sky.push_back(parse_sky_line(str(l, "sky line")));
+        } else if (k == "ns") {
+            if (!v.is_array()) bad("ns must be an array of lines");
+            for (const auto& l : v) c.ns.push_back(parse_ns_line(str(l, "ns line")));
         } else if (k == "uid") {
             if (!v.is_number_integer() || v.get<long long>() < 0 || v.get<long long>() > 65535)
                 bad("uid must be an integer 0..65535");
@@ -158,7 +158,7 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
         } else if (k == "stdout" || k == "stderr") {
             (k == "stdout" ? c.stdout_path : c.stderr_path) = clean_path(str(v, k), k);
         } else {
-            bad("unknown key " + k + " (name, argv, env, cwd, sky, uid, locks, stdout, stderr, daemon_access)");
+            bad("unknown key " + k + " (name, argv, env, cwd, ns, uid, locks, stdout, stderr, daemon_access)");
         }
     }
     if (c.name.empty()) bad("name is missing");

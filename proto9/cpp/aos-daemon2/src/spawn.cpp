@@ -186,7 +186,7 @@ struct LandlockAttr {
     int root = open(STAGE, O_PATH | O_DIRECTORY | O_CLOEXEC);
     if (root < 0) die("open root", errno);
     size_t mi = 1;
-    for (const auto& e : cfg.sky) {
+    for (const auto& e : cfg.ns) {
         if (e.kind == "bind") {
             attach(clones[mi], root, e.dst, e.rw, true, e.src);
             ++mi;
@@ -326,7 +326,7 @@ std::vector<std::string> locks_of(const ProcConfig& cfg, bool main_kernel) {
     if (main_kernel && kernel_mounts(cfg)) {
         l.push_back("landlock: none (main kernel)");
         l.push_back("capabilities: none (bounding set empty)");
-        l.push_back(std::string("daemon directory: ") + KERNEL_AOS + " in its sky (daemon_access mount)" +
+        l.push_back(std::string("daemon directory: ") + KERNEL_AOS + " in its ns (daemon_access mount)" +
                     (W.cgfd >= 0 ? std::string(", cgroup directory at ") + KERNEL_CGROUP : ""));
     } else if (main_kernel) {
         l.push_back("landlock: none (main kernel)");
@@ -342,14 +342,14 @@ std::vector<std::string> locks_of(const ProcConfig& cfg, bool main_kernel) {
     l.push_back("securebits: noroot, no_setuid_fixup, keep_caps_locked, no_cap_ambient_raise (all locked)");
     l.push_back("no_new_privs");
     l.push_back(W.setgroups_ok ? "groups: cleared" : "groups: kept (setgroups is denied without newgidmap)");
-    l.push_back("sky: root built from zero, read-only root, mount and umount need capabilities it does not have");
+    l.push_back("ns: root built from zero, read-only root, mount and umount need capabilities it does not have");
     for (const auto& [k, v] : cfg.cgroup) l.push_back("cgroup: " + k + "=" + v);
     return l;
 }
 
 // 全部預備好的子行程（跑的時候掛／卸）：進 pid 那隻的天空，fn 在裡面做事；回 "" 或錯誤
 template <class F>
-std::string in_sky_helper(pid_t pid, const std::string& what, F fn) {
+std::string in_ns_helper(pid_t pid, const std::string& what, F fn) {
     int st[2];
     if (pipe2(st, O_CLOEXEC) != 0) return "Internal pipe: " + errstr(errno);
     pid_t h = fork();
@@ -380,9 +380,9 @@ std::string in_sky_helper(pid_t pid, const std::string& what, F fn) {
     return msg.empty() ? "" : msg.substr(1);
 }
 
-void enter_sky(int rootfd, int nsfd) {
-    if (setns(nsfd, CLONE_NEWNS) != 0) die("setns into the sky", errno);
-    if (fchdir(rootfd) != 0 || chroot(".") != 0 || chdir("/") != 0) die("chroot into the sky", errno);
+void enter_ns(int rootfd, int nsfd) {
+    if (setns(nsfd, CLONE_NEWNS) != 0) die("setns into the ns", errno);
+    if (fchdir(rootfd) != 0 || chroot(".") != 0 || chdir("/") != 0) die("chroot into the ns", errno);
 }
 
 }  // namespace
@@ -394,9 +394,9 @@ std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& ou
         return "UidUnavailable uid " + std::to_string(cfg.uid) + " needs a subuid range of at least that size (have " +
                std::to_string(W.subuid_count) + ")";
     out = Spawned{};
-    out.mounts = plan_mounts(cfg.sky);
+    out.mounts = plan_mounts(cfg.ns);
     if (main_kernel && kernel_mounts(cfg)) {
-        std::string bad = kernel_sky_conflict(cfg, W.cgfd >= 0);
+        std::string bad = kernel_ns_conflict(cfg, W.cgfd >= 0);
         if (!bad.empty()) return bad;
         out.mounts.push_back({"aos", "-", KERNEL_AOS, true});
         if (W.cgfd >= 0) out.mounts.push_back({"cgroup", W.cg_host, KERNEL_CGROUP, true});
@@ -466,11 +466,11 @@ std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& ou
     if (pid < 0) return fail("Internal fork: " + errstr(errno));
     std::string msg;
     bool eof;
-    if (!read_msg(st[0], 10, msg, eof)) return fail("Timeout building the sky took more than 10 s");
+    if (!read_msg(st[0], 10, msg, eof)) return fail("Timeout building the ns took more than 10 s");
     if (msg.empty() || msg[0] != 'B') return fail("StartFailed " + (msg.empty() ? "child exited" : msg.substr(1)));
     out.pid = pid;
     out.host_pid = std::atol(msg.c_str() + 1);
-    out.sky = sky_table(pid, out.mounts, out.sky_check);
+    out.ns = ns_table(pid, out.mounts, out.ns_check);
     if (write(go[1], "G", 1) != 1) return fail("StartFailed child went away");
     close(go[1]);
     go[1] = -1;
@@ -481,10 +481,10 @@ std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& ou
 }
 
 std::string live_mount(pid_t pid, const std::string& src, const std::string& dst, bool rw) {
-    return in_sky_helper(pid, "mount", [&](int rootfd, int nsfd) {
+    return in_ns_helper(pid, "mount", [&](int rootfd, int nsfd) {
         int c = clone_src(src);
         if (c < 0) die("bind source " + src, errno);
-        enter_sky(rootfd, nsfd);
+        enter_ns(rootfd, nsfd);
         int root = open("/", O_PATH | O_DIRECTORY | O_CLOEXEC);
         // 掛載點不在而根是唯讀時：暫時把根改成可寫、建好再改回（sky-1125 的做法）
         int t = mkpoint(root, dst, is_dir_fd(c));
@@ -502,8 +502,8 @@ std::string live_mount(pid_t pid, const std::string& src, const std::string& dst
 }
 
 std::string live_umount(pid_t pid, const std::string& dst) {
-    return in_sky_helper(pid, "umount", [&](int rootfd, int nsfd) {
-        enter_sky(rootfd, nsfd);
+    return in_ns_helper(pid, "umount", [&](int rootfd, int nsfd) {
+        enter_ns(rootfd, nsfd);
         if (umount2(dst.c_str(), MNT_DETACH | UMOUNT_NOFOLLOW) != 0) die("umount " + dst, errno);
     });
 }

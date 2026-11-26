@@ -40,10 +40,10 @@ Directory:
   ctl              tools, one command per write:
                      start CONFIG_PATH            (a JSON file, path as seen where the daemon started)
                      kill NAME SIGNAL             (no graceful stop: send TERM, wait, send KILL yourself)
-                     mount NAME [-w] SRC DST      (bind SRC into a running proc's sky; read-only unless -w)
+                     mount NAME [-w] SRC DST      (bind SRC into a running proc's ns; read-only unless -w)
                      umount NAME DST
                      forget NAME                  (remove a dead proc from the table)
-  procs/NAME       -> slots/N: name pid state exit started_at ended_at sky sky_check uid locks config
+  procs/NAME       -> slots/N: name pid state exit started_at ended_at ns ns_check uid locks config
                       and cgroup -> its cgroup directory (cpu.max, memory.max, cgroup.freeze, ...)
 
 flags:

@@ -1,4 +1,4 @@
-// sky.cpp：天空表——讀一隻 proc 的 /proc/<PID>/mountinfo，一個掛載一行，對回預定的掛載表標上來源。
+// ns.cpp：天空表——讀一隻 proc 的 /proc/<PID>/mountinfo，一個掛載一行，對回預定的掛載表標上來源。
 #include "common.hpp"
 
 #include <sstream>
@@ -65,7 +65,7 @@ std::string esc(const std::string& s) {
 
 // 一行：種類 來源 天空裡的位置 ro|rw [locked]
 //   locked＝不是設定寫的，是 bind 來源底下外面那層掛的、被迫一起帶進來（卸不掉）的掛載
-std::string sky_table(pid_t pid, const std::vector<Mount>& planned, std::string& check) {
+std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& check) {
     auto mi = mountinfo(pid);
     std::vector<bool> used(planned.size(), false);
     std::string out, problems;

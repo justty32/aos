@@ -123,11 +123,11 @@ void make_proc_nodes(const std::shared_ptr<Proc>& proc) {
     add("exit", [](const Proc& p) { return exit_text(p) + "\n"; });
     add("started_at", [](const Proc& p) { return p.started_at + "\n"; });
     add("ended_at", [](const Proc& p) { return p.ended_at + "\n"; });
-    add("sky", [](const Proc& p) { return p.sp.sky; });
-    add("sky_check", [](const Proc& p) { return p.sp.sky_check + "\n"; });
+    add("ns", [](const Proc& p) { return p.sp.ns; });
+    add("ns_check", [](const Proc& p) { return p.sp.ns_check + "\n"; });
     add("uid", [](const Proc& p) {
         long host = p.cfg.uid == 0 ? W.host_uid : W.subuid_start + p.cfg.uid - 1;
-        return "sky: " + std::to_string(p.cfg.uid) + "\nhost: " + std::to_string(host) + "\n";
+        return "ns: " + std::to_string(p.cfg.uid) + "\nhost: " + std::to_string(host) + "\n";
     });
     add("locks", [](const Proc& p) { return join(p.sp.locks); });
     add("config", [](const Proc& p) { return p.cfg.path + "\n"; });
@@ -190,7 +190,7 @@ std::string start_proc(const ProcConfig& cfg, bool main_kernel) {
     put_proc(p);
     log("started " + cfg.name + " (pid " + std::to_string(p->sp.pid) + ", host pid " + std::to_string(p->sp.host_pid) +
         (main_kernel ? ", main kernel" : "") + ")");
-    if (p->sp.sky_check != "ok") log("sky of " + cfg.name + " does not match its config: " + p->sp.sky_check);
+    if (p->sp.ns_check != "ok") log("ns of " + cfg.name + " does not match its config: " + p->sp.ns_check);
     return "";
 }
 
@@ -296,7 +296,7 @@ std::string reserved_dst(const std::string& name, const std::string& dst) {
         std::string t = top;
         if (t == KERNEL_CGROUP && W.cgfd < 0) continue;
         if (dst == t || dst.rfind(t + "/", 0) == 0)
-            return "PathReserved " + t + " in the main kernel's sky is where the daemon put its " +
+            return "PathReserved " + t + " in the main kernel's ns is where the daemon put its " +
                    (t == KERNEL_AOS ? "directory" : "cgroup directory");
     }
     return "";
@@ -305,7 +305,7 @@ std::string reserved_dst(const std::string& name, const std::string& dst) {
 bool abs_clean(const std::string& p) {
     if (p.empty() || p[0] != '/') return false;
     try {
-        SkyEntry e = parse_sky_line("tmpfs " + p);
+        NsEntry e = parse_ns_line("tmpfs " + p);
         return e.dst == p;
     } catch (...) {
         return false;
@@ -383,11 +383,11 @@ void setup_ctl(pf::Ctl& ctl) {
                 if (!e.empty()) return "MountFailed " + e;
                 std::vector<Mount> m = p->sp.mounts;
                 m.push_back({"bind", src, dst, rw});
-                std::string check, sky = sky_table(p->sp.pid, m, check);
+                std::string check, ns = ns_table(p->sp.pid, m, check);
                 std::lock_guard<std::mutex> g(S.mu);
                 p->sp.mounts = m;
-                p->sp.sky = sky;
-                p->sp.sky_check = check;
+                p->sp.ns = ns;
+                p->sp.ns_check = check;
                 return std::string();
             });
             if (err.empty()) log("mounted " + src + " at " + dst + " in " + name);
@@ -418,11 +418,11 @@ void setup_ctl(pf::Ctl& ctl) {
                 std::vector<Mount> m;
                 for (const auto& x : p->sp.mounts)
                     if (!(x.dst == dst || x.dst.rfind(dst + "/", 0) == 0)) m.push_back(x);
-                std::string check, sky = sky_table(p->sp.pid, m, check);
+                std::string check, ns = ns_table(p->sp.pid, m, check);
                 std::lock_guard<std::mutex> g(S.mu);
                 p->sp.mounts = m;
-                p->sp.sky = sky;
-                p->sp.sky_check = check;
+                p->sp.ns = ns;
+                p->sp.ns_check = check;
                 return std::string();
             });
             if (err.empty()) log("unmounted " + dst + " in " + name);
@@ -509,7 +509,7 @@ void must(int r, const std::string& what) {
             fatal(std::string(e.what()) + " in " + O.kernel_path);
         }
         // cgroup 夾這時已經握住了（有沒有 cgroup 定了）
-        std::string bad = kernel_sky_conflict(KCFG, W.cgfd >= 0);
+        std::string bad = kernel_ns_conflict(KCFG, W.cgfd >= 0);
         if (!bad.empty()) fatal(bad + " in " + O.kernel_path);
     }
     must(mount("proc", "/proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, nullptr), "mount proc");

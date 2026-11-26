@@ -784,3 +784,11 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 狀態：本地比遠端多 20 個 commit，全沒推；背景有一隻子 agent 在做 `/aos`＋真的 `procs/<名字>/`（12:47 派）。
 - compact 後接：讀這節與 HANDOFF 公司段 → 等那隻的通知 → 三支重跑、查殘留、交件 → 新的【擬】一次一條給使用者。
 - 13:1x 12:47 那隻回來：`/aos`＋零權限（ptrace 選項保留）、`remove_tree`、真的 `procs/<名字>/`。我清 build 重跑：procfs 5+40+37+36+36、舊 daemon 73、daemon2 155，無警告、無殘留。交件，HANDOFF 跟上（多 21 個沒推、背景空）。新【擬】五條等給使用者看。
+
+## 2026-11-26 午後：午覺後 compact，新【擬】一條一條給
+
+- 第 77 段：第 1 條 `/aos`、`/cgroup` 保留「照現在這樣」；問 `/aos` 底下放什麼 → 答了。第 78 段：`config`、`sky_check` 留著；「那個sky...不如直接用ns？」第 79 段：「好，三個一起改」（`sky`→`ns`、`sky_check`→`ns_check`、設定鍵 `"sky"`→`"ns"`）。
+- 思考紀錄「實作時定的」加第 5、6 條；9p-proc-1125 加第 77～79 段。
+- 派一隻 sonnet 背景子 agent 在 aos-daemon2 改名（含 `src/sky.cpp`→`ns.cpp`、測試組名）。**回來後**：清 build 重跑、查殘留、交件（連同思考紀錄與逐字）。
+- 下一條【擬】：第 2 條設定鍵 `daemon_access`。剩 3～5：非主 kernel 不給 `AOS_ROOT`、`status` 的 `main_kernel_access`、`remove_tree` 不拿 ctl／信箱。
+- 改名那隻回來：我清 build 重跑 155／155、無警告、無殘留；剩下的 sky 只有指向 sky-1125 實驗的連結與註解。它多改一處：`uid` 檔第一行 `sky: N`→`ns: N`（跟 `pid` 檔一致）。交件。

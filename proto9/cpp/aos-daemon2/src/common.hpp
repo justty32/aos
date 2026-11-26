@@ -9,7 +9,7 @@
 namespace d2 {
 
 // 天空設定的一行（字串寫法見 README）：bind [-w] SRC DST、tmpfs DST、proc DST、dev DST、symlink TARGET DST。
-struct SkyEntry {
+struct NsEntry {
     std::string kind;   // bind tmpfs proc dev symlink
     std::string src;    // bind：外面（daemon 起動前那一層）的絕對路徑；symlink：連結的目標
     std::string dst;    // 天空裡的絕對路徑
@@ -30,7 +30,7 @@ struct ProcConfig {
     std::vector<std::string> argv;
     std::vector<std::string> env;      // "K=V"
     std::string cwd = "/";
-    std::vector<SkyEntry> sky;
+    std::vector<NsEntry> ns;
     int uid = 0;                       // 0＝天空裡的 0 號（外面的使用者本人）；N＞0＝subuid 範圍裡第 N 個
     std::vector<std::pair<std::string, std::string>> cgroup;   // cgroup 檔名 → 值（起動前寫進那隻的 cgroup）
     std::string stdout_path, stderr_path;   // 外面的路徑；空＝跟 daemon 的 stderr
@@ -46,10 +46,10 @@ extern const char* const KERNEL_CGROUP;   // "/cgroup"
 inline bool kernel_mounts(const ProcConfig& c) { return c.daemon_access != "ptrace"; }
 
 ProcConfig parse_config(const std::string& text, const std::string& path);   // 錯了丟 std::runtime_error("ConfigBad …")
-SkyEntry parse_sky_line(const std::string& line);
-std::vector<Mount> plan_mounts(const std::vector<SkyEntry>& sky);
+NsEntry parse_ns_line(const std::string& line);
+std::vector<Mount> plan_mounts(const std::vector<NsEntry>& ns);
 // 主 kernel（mount 模式）的天空不能自己用 /aos、/cgroup：用了回 "ConfigBad …"，沒有回 ""
-std::string kernel_sky_conflict(const ProcConfig& c, bool cgroup_on);
+std::string kernel_ns_conflict(const ProcConfig& c, bool cgroup_on);
 extern const char* const DEV_NODES[5];
 
 // daemon 起動時握住的東西（之後換根進小世界，外面的檔案只能經這些 fd 碰）。
@@ -87,8 +87,8 @@ struct Spawned {
     pid_t pid = 0;                 // daemon 那一層的 PID
     long host_pid = 0;             // 起動那一層的 PID
     std::vector<Mount> mounts;
-    std::string sky;               // 天空表（從 mountinfo 量的）
-    std::string sky_check;         // "ok" 或哪裡對不上
+    std::string ns;               // 天空表（從 mountinfo 量的）
+    std::string ns_check;         // "ok" 或哪裡對不上
     std::vector<std::string> locks;
     std::string cgroup;            // cgroup 夾名（在 W.cgfd 底下），空＝沒有
 };
@@ -96,8 +96,8 @@ std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& ou
 std::string live_mount(pid_t pid, const std::string& src, const std::string& dst, bool rw);
 std::string live_umount(pid_t pid, const std::string& dst);
 
-// sky.cpp
-std::string sky_table(pid_t pid, const std::vector<Mount>& planned, std::string& check);
+// ns.cpp
+std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& check);
 std::string esc(const std::string& s);
 
 // util.cpp

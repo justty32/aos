@@ -42,6 +42,9 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 3. **小世界裡留著 `cgroup/`。**（第 75 段）每隻 proc 資訊裡的 cgroup 連結指向它；`/proc/<PID>/root` 只有外面的使用者讀得到。
 4. **`procs/<名字>/` 是真的資料夾，`forget` 了就消失。**（第 76 段，選 B）aos-procfs 要能拿掉資料夾（連同底下的檔），不再用 `slots/<號碼>/` 加連結。合 aoslua：`procs/` 是一張 table，列出來的就是還在的名字。
 
+5. **主 kernel 天空裡 `/aos`、`/cgroup` 兩個名字保留。**（第 77 段，照現在）`/aos` 是 daemon 的目錄（底下 `status`、`ctl`、`procs/<名字>/`）；`/cgroup` 是 cgroup 夾，跟小世界擺法一樣，`procs/<名字>/cgroup` 的相對連結在兩邊都通。主 kernel 的天空設定不能用這兩個地方。`procs/<名字>/` 裡草稿外多的 `config`（設定檔路徑）、`ns_check`（實際掛載對不對得上天空表）留著（第 78 段「可以」）。
+6. **天空表叫 `ns`。**（第 78、79 段）資訊檔 `procs/<名字>/ns`、對照檔 `ns_check`、設定檔的鍵 `"ns"`，三個一起改（原本叫 `sky`）。是 Plan 9 的意思；跟 Linux 的 `/proc/<PID>/ns/`（namespace 連結的資料夾）同名不同東西，路徑不撞。中文照舊叫「天空」。
+
 ## 我的讀法（使用者沒反對，照這樣記）
 
 - 第四輪寫「把開關發給 kernel，發給哪個由 daemon 定」。照第 4 條改成：**daemon 只把開關交給那一個 kernel；要不要再分給排程、准不准等其他 kernel，由它決定。**

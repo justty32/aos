@@ -13,7 +13,7 @@ aos-daemon2：照「daemon 只提供資訊與工具、判斷全交給主 kernel�
 | `src/main.cpp` | 入口與「起動那一層」：讀參數、需要時經 `systemd-run --user --scope` 拿一個 cgroup、開 namespace、用 `newuidmap`／`newgidmap` 寫對照表、把訊號轉給 daemon、daemon 結束後清 cgroup |
 | `src/daemon.cpp` | daemon 本體（1 號）：握住要的 fd、擺目錄、換根進小世界、起主 kernel、收屍、主 kernel 死了照起動參數做、`procs/<名>/` 的建與拿、工具檔的五個指令 |
 | `src/spawn.cpp` | 起一隻 proc：子行程先在小世界拿 daemon 的目錄（主 kernel 才要）、進原本那一層拿來源、根從零組天空、換根、進 cgroup、上鎖、exec；跑的時候掛、卸 |
-| `src/sky.cpp` | 天空表：讀那隻的 `/proc/<PID>/mountinfo`，一個掛載一行，對回設定標上來源 |
+| `src/ns.cpp` | 天空表：讀那隻的 `/proc/<PID>/mountinfo`，一個掛載一行，對回設定標上來源 |
 | `src/config.cpp` | 讀設定檔（json）與天空的每一行 |
 | `src/util.cpp` | 小工具：經起動前握住的根讀外面的檔、時間、記錄、訊號名字 |
 | `src/common.hpp` | 共用的型別 |
@@ -37,7 +37,7 @@ $ build/bin/aos-daemon2 --kernel /path/to/k.json &
 export AOS_ROOT=/proc/12345/cwd          # 外面（使用者）用的；主 kernel 拿到的 AOS_ROOT 是 /aos
 $ cat /proc/12345/cwd/status
 $ echo "start /path/to/worker.json" > /proc/12345/cwd/ctl
-$ cat /proc/12345/cwd/procs/worker/sky
+$ cat /proc/12345/cwd/procs/worker/ns
 $ echo "kill worker TERM" > /proc/12345/cwd/ctl
 $ echo "forget worker" > /proc/12345/cwd/ctl
 $ kill %1        # daemon 結束，底下整片跟著走
@@ -63,7 +63,9 @@ $ kill %1        # daemon 結束，底下整片跟著走
 |---|---|
 | `status` | daemon 的資訊：`pid_ns`（1）、`pid_host`、`started_at`、`main_kernel`、`on_kernel_exit`、`restart_limit`、`kernel_restarts`、`kernel_deaths_in_window`、`kernel_last_exit`、`landlock_abi`、`cgroup`（外面的路徑或 `off (原因)`）、`subuid`、`main_kernel_access`（`mount /aos` 或 `ptrace /proc/1/cwd`）、`procs`，加上 ctl 回饋四行 `aos_ctl_cmd`／`state`／`error`／`count` |
 | `ctl` | 工具：一次寫一行，見下 |
-| `procs/<名>/` | 一隻 proc 的資訊（真的夾：`start` 成功時建，`forget`、主 kernel 重起時連同底下整個拿掉；`ls procs/` 列出來的就是表上還在的名字），每個一個檔：`name`、`pid`（`ns: N` 是 daemon 那一層、也就是天空裡 `/proc` 看到的；`host: N` 是起 aos-daemon2 的那一層）、`state`（`alive`／`dead`）、`exit`（`-`、`code N`、`signal N SIGNAME`）、`started_at`、`ended_at`（UTC）、`sky`（天空表）、`sky_check`（`ok` 或對不上的地方）、`uid`（`sky: N`、`host: N`）、`locks`（上了哪些鎖，一行一種）、`config`（設定檔路徑）；有 cgroup 時還有 `cgroup` → 那隻的 cgroup 夾（`cpu.max`、`memory.max`、`pids.max`、`cgroup.freeze`、`cgroup.kill` 直接寫就是開關；相對連結 `../../../cgroup/p-…`，外面、主 kernel 的 `/aos` 底下都通） |
+| `procs/<名>/` | 一隻 proc 的資訊（真的夾：`start` 成功時建，`forget`、主 kernel 重起時連同底下整個拿掉；`ls procs/` 列出來的就是表上還在的名字），每個一個檔：`name`、`pid`（`ns: N` 是 daemon 那一層、也就是天空裡 `/proc` 看到的；`host: N` 是起 aos-daemon2 的那一層）、`state`（`alive`／`dead`）、`exit`（`-`、`code N`、`signal N SIGNAME`）、`started_at`、`ended_at`（UTC）、`ns`（天空表）、`ns_check`（`ok` 或對不上的地方）、`uid`（`ns: N`、`host: N`）、`locks`（上了哪些鎖，一行一種）、`config`（設定檔路徑）；有 cgroup 時還有 `cgroup` → 那隻的 cgroup 夾（`cpu.max`、`memory.max`、`pids.max`、`cgroup.freeze`、`cgroup.kill` 直接寫就是開關；相對連結 `../../../cgroup/p-…`，外面、主 kernel 的 `/aos` 底下都通） |
+
+`ns` 是 Plan 9 的意思（這隻 proc 的天空表），跟 Linux 的 `/proc/<PID>/ns/`（namespace 連結的資料夾）不是同一個東西；使用者 11-26 定名。
 
 工具（`ctl`）：
 
@@ -95,7 +97,7 @@ daemon 不做的：自動重起（主 kernel 以外）、判卡住、准不准�
   "argv": ["/usr/bin/python3", "/toys/toys.py", "sleep"],
   "env": {"PATH": "/usr/bin:/bin"},
   "cwd": "/",
-  "sky": ["bind /usr /usr", "bind /etc /etc", "symlink usr/bin /bin", "symlink usr/lib /lib",
+  "ns": ["bind /usr /usr", "bind /etc /etc", "symlink usr/bin /bin", "symlink usr/lib /lib",
           "symlink usr/lib64 /lib64", "dev /dev", "proc /proc", "tmpfs /tmp",
           "bind /home/me/toys /toys", "bind -w /home/me/out /out"],
   "uid": 0,
@@ -109,7 +111,7 @@ daemon 不做的：自動重起（主 kernel 以外）、判卡住、准不准�
 - `name`：字母、數字、`_ - .`，1～64 字，不以 `.` 開頭。同名的還在表上（活的或死了沒 forget）就拒。
 - `argv[0]`：天空裡的絕對路徑。
 - `env`：不給就是 `PATH=/usr/local/bin:/usr/bin:/bin`、`HOME=/`。一律加上 `AOS_NAME=<名>`。`AOS_ROOT` 只給主 kernel（mount 模式 `/aos`、ptrace 模式 `/proc/1/cwd`）；其他 proc 讀不到 daemon 的目錄，所以不給，設定裡寫了也拿掉【擬】。
-- `sky`：根一定是一塊新的空 tmpfs（組好後改唯讀），一行一條，照順序做：`bind [-w] SRC DST`（預設唯讀；SRC 是外面的路徑）、`tmpfs DST`（mode 1777）、`proc DST`、`dev DST`（tmpfs 加 null、zero、full、random、urandom 與 fd、stdin、stdout、stderr 四個 symlink，組好後唯讀）、`symlink TARGET DST`。天空裡的 symlink 只在天空裡解（`openat2` 的 `RESOLVE_IN_ROOT`），寫成絕對路徑也不會碰到外面。
+- `ns`：根一定是一塊新的空 tmpfs（組好後改唯讀），一行一條，照順序做：`bind [-w] SRC DST`（預設唯讀；SRC 是外面的路徑）、`tmpfs DST`（mode 1777）、`proc DST`、`dev DST`（tmpfs 加 null、zero、full、random、urandom 與 fd、stdin、stdout、stderr 四個 symlink，組好後唯讀）、`symlink TARGET DST`。天空裡的 symlink 只在天空裡解（`openat2` 的 `RESOLVE_IN_ROOT`），寫成絕對路徑也不會碰到外面。
 - `uid`：0＝天空裡的 0 號（外面的使用者本人）；N＞0＝subuid 範圍的第 N 個（外面是 subuid 起點＋N−1），gid 同號。
 - `locks.cgroup`：起動前寫進那隻 cgroup 夾的檔與值（不收 `cgroup.*`）。沒有 cgroup 時給了就拒。`locks.landlock` 只能是 `true`（不能關）；`locks.seccomp` 這版不收。
 - `stdout`、`stderr`：外面的路徑（附加寫）；不給就跟 daemon 的 stderr。stdin 一律 `/dev/null`。
@@ -129,7 +131,7 @@ proc - /proc rw
 bind /home/me/out /out rw
 ```
 
-表是在 proc 組好天空、exec 之前從它的 `mountinfo` 量出來的（跑的時候掛、卸之後重量一次），每行對回設定標上來源，所以跟 mountinfo 一行對一行。`locked`＝設定沒寫、是 bind 來源底下外面那層掛的、被迫一起帶進來的（公司 WSL 的 `/usr` 底下有三個）。量的跟設定對不上（少了、多了、唯讀可寫不同）就寫在 `sky_check`。路徑裡的空白、tab、換行、反斜線照 mountinfo 寫成 `\040` 這種八進位。symlink 不是掛載，不在表上。
+表是在 proc 組好天空、exec 之前從它的 `mountinfo` 量出來的（跑的時候掛、卸之後重量一次），每行對回設定標上來源，所以跟 mountinfo 一行對一行。`locked`＝設定沒寫、是 bind 來源底下外面那層掛的、被迫一起帶進來的（公司 WSL 的 `/usr` 底下有三個）。量的跟設定對不上（少了、多了、唯讀可寫不同）就寫在 `ns_check`。路徑裡的空白、tab、換行、反斜線照 mountinfo 寫成 `\040` 這種八進位。symlink 不是掛載，不在表上。
 
 ## 做法
 
@@ -173,7 +175,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 
 - **mount 模式怎麼做**：daemon 的目錄是小世界裡的一個 FUSE 掛載，只在 daemon 的 mount namespace 裡。起主 kernel 的子行程 fork 出來時還在小世界，**先 `open_tree(OPEN_TREE_CLONE)` 把 `/aos`（與 `/cgroup`）複製成還沒掛上的掛載**，再進原本那一層拿天空的來源；組天空時（根改唯讀之前）用 `mount_setattr`（nosuid、nodev、可寫）＋`move_mount` 掛到天空的 `/aos`、`/cgroup`。還沒掛上的掛載可以掛進別的 mount namespace（天空的 bind 本來就這樣做），所以不用任何新權限。FUSE 只放跟 daemon 同 uid 的行程進來、`ctl` 是 0200，主 kernel 用天空裡的 0 號就讀寫得到，跟 caps 無關。實測（`access` 組）：caps 全 0、讀得到 `/aos/status`、寫 `/aos/ctl` 的 `start` 等到 `alive` 才回、失敗是 `EIO`、原因在 `/aos/status`、`kill`／`forget` 後 `/aos/procs/<名>` 走不到；讀 `/proc/1/cwd` 是 `EACCES`。
 - **為什麼也掛 `/cgroup`**：`procs/<名>/cgroup` 是相對連結 `../../../cgroup/p-…`。小世界裡 `/aos` 旁邊是 `/cgroup`，主 kernel 的天空擺成一樣，連結在兩邊都通（外面走 `/proc/<PID>/cwd` 時解在 daemon 的根裡，照舊通）。所以 mount 模式的主 kernel，天空設定不能自己用 `/aos`（有 cgroup 時還有 `/cgroup`）與底下：daemon 起不來（退出碼 2，說明原因）；`ctl` 的 `mount`／`umount` 也不准動這兩個地方。
-- **天空表**多兩行：`aos - /aos rw` 與 `cgroup <cgroup 夾外面的路徑> /cgroup rw`（`sky_check` 照樣對）；`locks` 檔寫 `capabilities: none (bounding set empty)` 與 `daemon directory: /aos in its sky …`。
+- **天空表**多兩行：`aos - /aos rw` 與 `cgroup <cgroup 夾外面的路徑> /cgroup rw`（`ns_check` 照樣對）；`locks` 檔寫 `capabilities: none (bounding set empty)` 與 `daemon directory: /aos in its ns …`。
 - **ptrace 模式**：Linux 讀別的行程的 `/proc/<PID>/cwd` 時，除了同 uid，還要「自己的 caps 包含對方的」；daemon 在 user namespace 裡有全部 caps，主 kernel 清成 0 就讀不到（實測：0 caps EACCES，只留 cap_sys_ptrace 就讀得到）。代價是能 ptrace 同一個 user namespace 裡的行程（含 daemon）。這個模式天空裡沒有 `/aos`。
 - 兩種模式主 kernel 都讀得到其他 proc 的 `/proc/<PID>/root`（mount 模式也行：對方 caps 是 0、同 uid；Landlock 只擋 domain 裡的往外，不擋外面的往裡）。
 - 主 kernel 要用天空裡的 0 號（uid 0）：`ctl` 是 0200、FUSE 也只放跟 daemon 同 uid 的行程進來。
@@ -202,14 +204,14 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 |---|---|
 | `basic` | 一般使用者起得來；export 那行；daemon 在自己的 PID namespace 是 1 號（NSpid）；uid 對照表；經 `/proc/<PID>/cwd` 讀 `status`；`/proc/<PID>/root` 只有小世界、看不到 `/etc`、`/usr`；目錄裡只有 `ctl`、`procs/`、`status`（沒有 `slots/`）；主 kernel 讀得到 `$AOS_ROOT/status`、`AOS_ROOT` 是 `/aos`、caps 是 0；SIGTERM 後退出碼 0 |
 | `procs` | start／kill／forget；`start` 的寫入回來時那隻已經在表上、`alive`；`pid` 兩層對得上 NSpid；forget 活的、kill 不在的、壞訊號、不認得的字、相對路徑都寫入失敗 `EINVAL`；同名、讀不到設定、關 Landlock、exec 失敗都是寫入失敗 `EIO`＋`failed`＋原因；退出碼 7、SIGTERM 記對；uid 1001 在外面是 subuid；主 kernel 自己寫 `/aos/ctl` 起一隻（寫入回來時已經 `alive`），起不來的它拿到 `EIO` |
-| `sky` | 天空表的行數、掛載點、唯讀可寫跟 mountinfo 一樣；每個 bind 的來源跟掛載點是同一個檔（dev＋inode）；WSL 的 `/usr` 子掛載記成 `locked`；唯讀的地方寫不進去、`-w` 的寫得進去而且落在外面的夾；根裡只有設定放的東西 |
+| `ns` | 天空表的行數、掛載點、唯讀可寫跟 mountinfo 一樣；每個 bind 的來源跟掛載點是同一個檔（dev＋inode）；WSL 的 `/usr` 子掛載記成 `locked`；唯讀的地方寫不進去、`-w` 的寫得進去而且落在外面的夾；根裡只有設定放的東西 |
 | `landlock` | 非主 kernel 的 proc 讀不到 `/proc/1/cwd`、`/proc/1/root`、旁邊 proc 的 `/proc/<PID>/root` 與 `environ`，自己的 `/proc/self/root` 可以；能不能對 daemon 送訊號照 ABI 記（ABI 3：能）；主 kernel 讀得到旁邊 proc 的 `/proc/<PID>/root`；`locks` 檔；caps 0、no_new_privs |
 | `cgroup` | `procs/<名>/cgroup` 可用、行程在裡面、`memory.max`／`pids.max` 照設定、`cgroup.freeze` 凍住再解凍、forget 刪掉夾、不認得的上限檔 `EIO`＋`failed`、daemon 結束後 scope 不見 |
 | `mount` | 跑的時候掛進去、看得到、表多一行且仍跟 mountinfo 一樣；`-w`；卸掉後不見、表也拿掉；來源不在、卸沒掛的地方都是 `EIO`＋`failed`；相對路徑寫入失敗 `EINVAL` |
 | `modes` | `--cgroup off --subuid off`：對照表只有一段、給 cgroup 上限或 uid 5 都 `EIO`＋`failed`、一般 proc 照起、`locks` 寫 groups kept |
 | `restart` | 前兩次起來就死的主 kernel 被重起兩次後活著；`--restart-limit 3` 起 4 次後 daemon 以 1 結束並說明原因；`--on-kernel-exit exit` 以主 kernel 的 4 結束、不重起；`--restart-limit 0` 第一次死就結束 |
 | `teardown` | `kill -9` daemon：底下 4 隻 1 秒內全不見、起動那一層以 137 結束；`kill -9` 起動那一層：daemon 與底下跟著走 |
-| `access` | mount 模式（預設）：`status` 寫 `main_kernel_access: mount /aos`；主 kernel 的 CapInh／Prm／Eff／Bnd／Amb 全 0；`AOS_ROOT=/aos`、讀得到 `/aos/status`、讀 `/proc/1/cwd` 是 `EACCES`；天空表有 `aos - /aos rw` 與 cgroup 那行、`sky_check` ok；mountinfo 裡 `/aos` 是 `fuse.aosproc`；`locks` 寫 caps none、目錄在 `/aos`；列 `/aos`；寫 `/aos/ctl` 的 `start` 回來時已經 `alive`、讀 `/aos/procs/w/state`；起不來的是 `EIO`、原因在 `/aos/status`；經 `/aos/procs/w/cgroup` 讀到 `pids.max`；`ctl` 卸 `/aos`、掛蓋 `/aos` 都 `EINVAL`（`PathReserved`）；`kill`、`forget` 後 `/aos/procs/w` 走不到。非主 kernel 的：沒有 `/aos`、`/cgroup`，讀不到 `/proc/1/cwd`，沒有 `AOS_ROOT`（有 `AOS_NAME`）；設定寫 `daemon_access` 是 `EIO`＋`ConfigBad`；外面的 `/proc/<PID>/cwd` 照通。ptrace 模式：`status` 寫 `ptrace /proc/1/cwd`、只留 cap_sys_ptrace、`AOS_ROOT=/proc/1/cwd` 讀得到、沒有 `/aos`、經它寫 `start` 可以。主 kernel 天空自己用 `/aos`：daemon 以 2 結束並說明 |
+| `access` | mount 模式（預設）：`status` 寫 `main_kernel_access: mount /aos`；主 kernel 的 CapInh／Prm／Eff／Bnd／Amb 全 0；`AOS_ROOT=/aos`、讀得到 `/aos/status`、讀 `/proc/1/cwd` 是 `EACCES`；天空表有 `aos - /aos rw` 與 cgroup 那行、`ns_check` ok；mountinfo 裡 `/aos` 是 `fuse.aosproc`；`locks` 寫 caps none、目錄在 `/aos`；列 `/aos`；寫 `/aos/ctl` 的 `start` 回來時已經 `alive`、讀 `/aos/procs/w/state`；起不來的是 `EIO`、原因在 `/aos/status`；經 `/aos/procs/w/cgroup` 讀到 `pids.max`；`ctl` 卸 `/aos`、掛蓋 `/aos` 都 `EINVAL`（`PathReserved`）；`kill`、`forget` 後 `/aos/procs/w` 走不到。非主 kernel 的：沒有 `/aos`、`/cgroup`，讀不到 `/proc/1/cwd`，沒有 `AOS_ROOT`（有 `AOS_NAME`）；設定寫 `daemon_access` 是 `EIO`＋`ConfigBad`；外面的 `/proc/<PID>/cwd` 照通。ptrace 模式：`status` 寫 `ptrace /proc/1/cwd`、只留 cap_sys_ptrace、`AOS_ROOT=/proc/1/cwd` 讀得到、沒有 `/aos`、經它寫 `start` 可以。主 kernel 天空自己用 `/aos`：daemon 以 2 結束並說明 |
 | `dirs` | `procs/x` 是夾不是 symlink、裡面是那幾個檔；`ls procs/`；先讓核心快取那條路、開著一個檔，`forget` 回來時 `procs/x` 與底下都走不到、`ls procs/` 只剩 main、開著的檔照讀；同名再起是新的那隻；10 次 start／forget 每次都建、拿；最後 `procs/` 與 `status` 的 `procs` 對 |
 | `leftovers`（最後一定跑） | 沒有留下行程（daemon、起動那一層、天空裡的 toys.py）、systemd unit、`aos-daemon2-*` cgroup、掛載 |
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # run.py：aos-daemon2 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、主 kernel 重起規則、整片跟著 daemon 走、主 kernel 經 /aos（或 ptrace）碰目錄、procs/<名>/ 是真的夾、沒有殘留。
-# 用法：python3 tests/run.py [組名…]；組：basic procs sky landlock cgroup mount modes restart teardown access dirs（最後一定跑 leftovers）
+# 用法：python3 tests/run.py [組名…]；組：basic procs ns landlock cgroup mount modes restart teardown access dirs（最後一定跑 leftovers）
 import errno, json, os, re, select, shutil, signal, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -44,15 +44,15 @@ def gone(pid):
     return st[st.rfind(")") + 2] == "Z"
 
 
-def base_sky(out):
+def base_ns(out):
     return ["bind /usr /usr", "bind /etc /etc", "symlink usr/bin /bin", "symlink usr/lib /lib",
             "symlink usr/lib64 /lib64", "dev /dev", "proc /proc", "tmpfs /tmp",
             "bind %s /toys" % TOYS, "bind -w %s /out" % out]
 
 
-def config(d, name, toy, sky=None, **extra):
+def config(d, name, toy, ns=None, **extra):
     """寫一份設定檔到 d/name.json，回路徑。toy 是 toys.py 的參數（天空裡的 /toys/toys.py）；extra 可蓋掉 argv 等。"""
-    c = {"name": name, "argv": ["/usr/bin/python3", "/toys/toys.py"] + toy, "sky": sky or base_sky(d)}
+    c = {"name": name, "argv": ["/usr/bin/python3", "/toys/toys.py"] + toy, "ns": ns or base_ns(d)}
     c.update(extra)
     p = os.path.join(d, name + ".json")
     with open(p, "w") as f:
@@ -259,7 +259,7 @@ def t_procs():
         hu = re.search(r"Uid:\s+(\d+)", read("/proc/%d/status" % d.hostpid("alice"))).group(1)
         sub0 = int(d.status()["subuid"].split()[0])
         check("procs: uid 1001 runs as subuid (host %d)" % (sub0 + 1000), hu == str(sub0 + 1000) and
-              d.fact("alice", "uid") == "sky: 1001\nhost: %d\n" % (sub0 + 1000), (hu, d.fact("alice", "uid")))
+              d.fact("alice", "uid") == "ns: 1001\nhost: %d\n" % (sub0 + 1000), (hu, d.fact("alice", "uid")))
     else:
         check("procs: (skip) no subuid range", True)
     # 主 kernel 自己寫 ctl 起一隻
@@ -272,7 +272,7 @@ def t_procs():
     check("procs: SIGTERM -> exit 0", d.stop() == 0)
 
 
-# ---------------------------------------------------------------- sky
+# ---------------------------------------------------------------- ns
 
 def parse_mountinfo(hp):
     out = []
@@ -282,27 +282,27 @@ def parse_mountinfo(hp):
     return out
 
 
-def t_sky():
-    d = Daemon("sky")
-    if not check("sky: daemon up", d.pid, d.err()):
+def t_ns():
+    d = Daemon("ns")
+    if not check("ns: daemon up", d.pid, d.err()):
         return
     started(d, "main")
     src = os.path.join(d.dir, "data")
     os.makedirs(src, exist_ok=True)
     with open(os.path.join(src, "f"), "w") as f:
         f.write("data")
-    sky = base_sky(d.dir) + ["bind %s /ro" % src, "bind -w %s /rw" % src, "symlink /ro/f /link", "tmpfs /scratch"]
-    c = config(d.dir, "sk", ["write", "/out", "sk", "/ro/x", "/rw/x", "/x", "/tmp/x", "/scratch/x", "/usr/x"], sky=sky)
+    ns = base_ns(d.dir) + ["bind %s /ro" % src, "bind -w %s /rw" % src, "symlink /ro/f /link", "tmpfs /scratch"]
+    c = config(d.dir, "sk", ["write", "/out", "sk", "/ro/x", "/rw/x", "/x", "/tmp/x", "/scratch/x", "/usr/x"], ns=ns)
     r = d.ctl("start " + c)
-    check("sky: start", r == (0, "done", "-"), r)
+    check("ns: start", r == (0, "done", "-"), r)
     started(d, "sk")
     hp = d.hostpid("sk")
-    table = [l.split() for l in d.fact("sk", "sky").splitlines()]
+    table = [l.split() for l in d.fact("sk", "ns").splitlines()]
     mi = parse_mountinfo(hp)
-    check("sky: one table line per mount (same count as mountinfo)", len(table) == len(mi), (len(table), len(mi)))
-    check("sky: mount points and ro/rw match mountinfo",
+    check("ns: one table line per mount (same count as mountinfo)", len(table) == len(mi), (len(table), len(mi)))
+    check("ns: mount points and ro/rw match mountinfo",
           sorted((t[2], t[3] == "ro") for t in table) == sorted(mi), (table, mi))
-    check("sky: sky_check ok", d.fact("sk", "sky_check") == "ok\n", d.fact("sk", "sky_check"))
+    check("ns: ns_check ok", d.fact("sk", "ns_check") == "ok\n", d.fact("sk", "ns_check"))
     same = True
     bad = []
     for t in table:
@@ -311,19 +311,19 @@ def t_sky():
             if (a.st_dev, a.st_ino) != (b.st_dev, b.st_ino):
                 same = False
                 bad.append(t)
-    check("sky: every bind line's source is the same file as its mount point", same, bad)
+    check("ns: every bind line's source is the same file as its mount point", same, bad)
     locked = [t for t in table if t[-1] == "locked"]
     wsl = os.path.exists("/usr/lib/wsl")
-    check("sky: locked submounts under /usr listed (%s)" % ("WSL" if wsl else "none expected"),
+    check("ns: locked submounts under /usr listed (%s)" % ("WSL" if wsl else "none expected"),
           (len(locked) > 0) == any(l.split()[4].startswith("/usr/") for l in read("/proc/self/mountinfo").splitlines()),
           locked)
     res = wait_for(lambda: os.path.exists(os.path.join(d.dir, "sk.txt")) and read(os.path.join(d.dir, "sk.txt")), 5) or ""
     want = {"/ro/x": "err EROFS", "/rw/x": "ok", "/x": "err EROFS", "/tmp/x": "ok", "/scratch/x": "ok", "/usr/x": "err EROFS"}
     got = dict(l.split(" ", 1) for l in res.strip().splitlines())
-    check("sky: read-only and writable places behave as the table says", got == want, got)
-    check("sky: the rw write landed in the host dir", os.path.exists(os.path.join(src, "x")))
+    check("ns: read-only and writable places behave as the table says", got == want, got)
+    check("ns: the rw write landed in the host dir", os.path.exists(os.path.join(src, "x")))
     root = os.listdir("/proc/%d/root" % hp)
-    check("sky: the proc's root holds only what the config put there",
+    check("ns: the proc's root holds only what the config put there",
           sorted(root) == sorted(["usr", "etc", "bin", "lib", "lib64", "dev", "proc", "tmp", "toys", "out", "ro", "rw",
                                   "link", "scratch"]), sorted(root))
     d.stop()
@@ -433,17 +433,17 @@ def t_mount():
     hp = d.hostpid("m")
     r = d.ctl("mount m %s /live" % src)
     check("mount: mount into a running proc -> done", r == (0, "done", "-"), r)
-    check("mount: visible in its sky", os.path.exists("/proc/%d/root/live/hello" % hp))
-    table = [l.split() for l in d.fact("m", "sky").splitlines()]
-    check("mount: sky table has the new line (ro)", ["bind", src, "/live", "ro"] in table, table)
+    check("mount: visible in its ns", os.path.exists("/proc/%d/root/live/hello" % hp))
+    table = [l.split() for l in d.fact("m", "ns").splitlines()]
+    check("mount: ns table has the new line (ro)", ["bind", src, "/live", "ro"] in table, table)
     check("mount: table still matches mountinfo",
           sorted((t[2], t[3] == "ro") for t in table) == sorted(parse_mountinfo(hp)))
     r = d.ctl("mount m -w %s /out/sub/live" % src)
     check("mount: -w into a writable place", r == (0, "done", "-") and ["bind", src, "/out/sub/live", "rw"] in
-          [l.split() for l in d.fact("m", "sky").splitlines()], r)
+          [l.split() for l in d.fact("m", "ns").splitlines()], r)
     r = d.ctl("umount m /live")
-    table = [l.split() for l in d.fact("m", "sky").splitlines()]
-    check("mount: umount -> gone from sky and table", r == (0, "done", "-") and
+    table = [l.split() for l in d.fact("m", "ns").splitlines()]
+    check("mount: umount -> gone from ns and table", r == (0, "done", "-") and
           not os.path.exists("/proc/%d/root/live/hello" % hp) and not any(t[2] == "/live" for t in table), r)
     check("mount: table matches mountinfo after umount",
           sorted((t[2], t[3] == "ro") for t in table) == sorted(parse_mountinfo(hp)))
@@ -560,11 +560,11 @@ def t_access():
     kt = kernel_file(d)
     check("access: AOS_ROOT=/aos, reads /aos/status", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
     check("access: ... and cannot read /proc/1/cwd (EACCES)", "\nproc1 err EACCES\n" in kt, kt)
-    table = [l.split() for l in d.fact("main", "sky").splitlines()]
+    table = [l.split() for l in d.fact("main", "ns").splitlines()]
     cg_on = not s.get("cgroup", "off").startswith("off")
-    check("access: kernel's sky table has 'aos - /aos rw'%s" % (" and the cgroup line" if cg_on else ""),
+    check("access: kernel's ns table has 'aos - /aos rw'%s" % (" and the cgroup line" if cg_on else ""),
           ["aos", "-", "/aos", "rw"] in table and (not cg_on or ["cgroup", s["cgroup"], "/cgroup", "rw"] in table), table)
-    check("access: sky_check ok", d.fact("main", "sky_check") == "ok\n", d.fact("main", "sky_check"))
+    check("access: ns_check ok", d.fact("main", "ns_check") == "ok\n", d.fact("main", "ns_check"))
     mi = [l.split() for l in read("/proc/%d/mountinfo" % hp).splitlines()]
     aos = [l for l in mi if l[4] == "/aos"]
     check("access: /aos in the kernel's mountinfo is the daemon's FUSE mount",
@@ -588,7 +588,7 @@ def t_access():
         a = d.ask("/aos/procs/w/cgroup/pids.max")
         check("access: kernel follows procs/w/cgroup (relative link to /cgroup) and reads pids.max", a == "ok 20|", a)
     a = d.ask("ctl umount main /aos")
-    check("access: ctl umount of /aos in the kernel's sky is refused (EINVAL)", a == "err EINVAL", a)
+    check("access: ctl umount of /aos in the kernel's ns is refused (EINVAL)", a == "err EINVAL", a)
     a = d.ask("ctl mount main /usr /aos")
     check("access: ctl mount over /aos is refused (EINVAL)", a == "err EINVAL" and
           d.status().get("aos_ctl_error", "").startswith("PathReserved"), (a, d.status().get("aos_ctl_error")))
@@ -626,15 +626,15 @@ def t_access():
     kt = kernel_file(d)
     check("access: ptrace mode: AOS_ROOT=/proc/1/cwd and it reads it",
           kt.startswith("ok pid_ns: 1") and "\nroot /proc/1/cwd\n" in kt, kt)
-    check("access: ptrace mode: no /aos in its sky", d.ask("/aos") == "err ENOENT")
+    check("access: ptrace mode: no /aos in its ns", d.ask("/aos") == "err ENOENT")
     a = d.ask("ctl start " + config(d.dir, "pw", ["sleep"]))
     check("access: ptrace mode: kernel's start through /proc/1/cwd/ctl works", a == "ok" and d.fact("pw", "state") == "alive\n", a)
     d.stop()
 
     # 主 kernel 的天空自己用了 /aos：daemon 起不來，說明原因
-    d = Daemon("access-clash", kernel_extra={"sky": base_sky(os.path.join(TMP, "access-clash")) + ["tmpfs /aos"]})
+    d = Daemon("access-clash", kernel_extra={"ns": base_ns(os.path.join(TMP, "access-clash")) + ["tmpfs /aos"]})
     rc = d.p.wait(10)
-    check("access: kernel sky using /aos -> daemon exits 2 and says why", rc == 2 and "/aos" in d.err() and
+    check("access: kernel ns using /aos -> daemon exits 2 and says why", rc == 2 and "/aos" in d.err() and
           "daemon_access" in d.err(), (rc, d.err()[-300:]))
 
 
@@ -650,7 +650,7 @@ def t_dirs():
     d.ctl("start " + c)
     p = d.root + "/procs/x"
     check("dirs: procs/x is a real directory, not a symlink", os.path.isdir(p) and not os.path.islink(p))
-    want = {"name", "pid", "state", "exit", "started_at", "ended_at", "sky", "sky_check", "uid", "locks", "config"}
+    want = {"name", "pid", "state", "exit", "started_at", "ended_at", "ns", "ns_check", "uid", "locks", "config"}
     if not d.status().get("cgroup", "off").startswith("off"):
         want.add("cgroup")
     check("dirs: it holds the facts", set(os.listdir(p)) == want, sorted(os.listdir(p)))
@@ -713,7 +713,7 @@ def t_leftovers():
     check("leftovers: no mounts", not mi, mi)
 
 
-GROUPS = {"basic": t_basic, "procs": t_procs, "sky": t_sky, "landlock": t_landlock, "cgroup": t_cgroup,
+GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "landlock": t_landlock, "cgroup": t_cgroup,
           "mount": t_mount, "modes": t_modes, "restart": t_restart, "teardown": t_teardown, "access": t_access,
           "dirs": t_dirs}
 
