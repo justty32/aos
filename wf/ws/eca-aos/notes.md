@@ -752,3 +752,4 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 使用者第 54 段回七條未決：不要 `__call.json`、`__metatable`／`__mode` 先不管、「各元素怎麼用」拿掉、`_index.json` 以後改、`#` 解析算介面（還沒想好）、名字用 aoslua、接著談介面宣告檔。
 - 第 55、56 段：介面宣告＝能存取到 `xxx/__meta/__interfaces/aos/name` 就有 `aos/name`，位置上放什麼由讀的人處理；哪層算介面各自認定、`__interfaces` 不限形狀、可用 `__index` 現算、不往下傳。思考紀錄定了到 30 條。
 - 下一步：問使用者要不要接著定 aos 第一版的共同介面（aos/name、aos/description、改名、路徑解析規則）。
+- 第 57、58 段：路徑解析規則是介面 `aos/utilpath`（能存取到就代表 `xxx/` 以下可用 `#`），管整棵子樹、以後可用 JSON 寫細節（去掉子項）；`#` 後面 JSON Pointer、第一版只管 `.json`、只保證讀；讀宣告能不能用 `#` 看讀的程式，aos 標準實作預設支援。定了到 35 條。
