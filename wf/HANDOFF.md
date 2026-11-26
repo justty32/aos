@@ -16,6 +16,8 @@
 
 **寫這條的是家機 repo-aos 樹的 `main`**（Claude Code，模型 Opus 5.5）。細節在 [`wf/ws/main/notes.md`](ws/main/notes.md)「2026-11-25 晚（家機）」那節。上一條是公司 `eca-aos` 的 11-25 17:0x（proto9 小庫、daemon、aos-exec 交件與下一批 1～6），全文在 git 歷史 `3cc5beb2e`；還有效的摘在下面「公司那條還有效的」。
 
+**11-26 08:2x 公司補**（`eca-aos`，模型 Opus 5.5）：公司這台 pull 了（快轉到 `916d2d6a7`，本地沒交的 core 改動與筆記都保留）。公司這邊沒有東西在跑、下一批沒派。今天要先跟使用者確認：昨天的下一批 1～6 在做減法之後還做哪些；要不要在公司 WSL 跑一次 sky-1125 小實驗。細節在 [`wf/ws/eca-aos/notes.md`](ws/eca-aos/notes.md) 最後一節。
+
 **接手先讀**：這條 → [daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md)（第一～九輪：每輪定了的、實測數據、提案）→ 原話在 [9p-proc-1125](../proto8/thinking/2026-11/25/9p-proc-1125.md) 第 30～39 段 → progress `proto9-sky-1125`。
 
 **授權（11-25 晚當場）**

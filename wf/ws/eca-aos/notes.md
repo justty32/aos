@@ -716,3 +716,12 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 16:55 鐘 push-1655 來了：已經推過，沒再推，回了一句。HANDOFF 換成 17:0x 這條。
 - 17:00 交件：`c40e198343`（小庫與 daemon 第二批＋草稿）、`3cc5beb2eb`（aos-exec、third_party、proto9/README、HANDOFF）。**都沒推**（本地比遠端多這幾個；要推等使用者說）。
 - 17:0x 使用者（逐字）：「好，我要下班了」。沒有東西在背景跑；下一批（HANDOFF「下一批」1～4）沒派，他沒說派。上網的幫手照他說的留著。明天接：先讀 HANDOFF；等他對 artifact、aos-exec 要砍什麼的話；他說派才派下一批。
+- 17:0x 使用者（逐字）：「都push」→ 推了 `243b6a9c5..dc322d687`（3 個 commit），本地與遠端一樣。這則筆記本身還沒交件、沒推。
+
+## 2026-11-26 08:2x：公司接手，pull，準備 compact
+
+- 這個畫面模型換成 Opus 5.5。使用者（逐字）：「先git pull」→ fetch 後落後 12 個（家機 main 昨晚的），`git pull --ff-only --autostash`，快轉到 `916d2d6a7`；本地沒交的（core 的 proto8 改動、core 筆記一行、我筆記一行）都保留，沒有衝突。
+- **家機昨晚改了方向**（HANDOFF 現在是家機 main 的 11-25 23:0x 那條，接手先讀它；細節 thinking `daemon當容器-1125`、9p-proc-1125 第 30～39 段）：做減法——`procs/<名>/` 底下不規定任何東西，ctl、status、mailbox、ctl 的鎖都歸之後的 agent 界面；aos-procfs 變成寫 agent、kernel 用的庫；daemon 只管碰 Linux 權力的五樣（起收行程當 PID namespace 的 1 號、每隻一個 mount namespace、uid、起動前上鎖、把開關發給 kernel），kernel 管所有決定；daemon 一死底下整片收掉。
+- **影響我昨天的下一批 1～6**：前提動了（ctl、status 不再是每隻必有），**派之前先跟使用者確認，別照舊單子做**。草稿 01 怎麼跟上也等他看過實驗再說，別先改。
+- 家機的小實驗 `proto9/experiments/sky-1125/` **公司 WSL 沒跑過**（Landlock 版本、subuid、systemd --user 沒查）——可以提議在這台跑一次（`cd proto9/experiments/sky-1125 && python3 run.py`），先問。
+- 使用者（逐字）：「新的一天，你整理一下，我compact」→ 寫了這節、HANDOFF 補一小段公司這邊的狀態，交件，不推（push 授權昨晚用掉了）。
