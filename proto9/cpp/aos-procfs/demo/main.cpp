@@ -1,6 +1,7 @@
 // main.cpp：aos-procfs-demo——一隻最小的 aos proc（status／ctl／settings／attrs／_metainfo.json／mailbox/），另有 --cleanup 收死掉的掛載。
 #include "aos/procfs.hpp"
 #include "mail.hpp"
+#include "trees.hpp"
 
 #include <cerrno>
 #include <chrono>
@@ -35,10 +36,12 @@ when $AOS_NAME_PID equals its own pid: a grandchild that inherited them ignores 
 wrapper script must exec this program.
 
 Mounts MOUNTPOINT, chdirs into it and prints "pid: N" and "AOS_ROOT=/proc/N/cwd".
-Files: status, ctl, settings, attrs, _metainfo.json, links/, mailbox/ (tmp/ new/ cur/).
+Files: status, ctl, settings, attrs, _metainfo.json, links/, trees/, mailbox/ (tmp/ new/ cur/).
 ctl words: stop, pause, resume; for tests: slow N (sleep N seconds), link NAME TARGET,
-unlink NAME (add or remove the symlink links/NAME), take (take the oldest letter from
-mailbox/new/), refuse on|off (refuse letters as they are moved into new/, with EPERM).
+unlink NAME (add or remove the symlink links/NAME), tree NAME (add trees/NAME/ with info,
+count, sub/deep and link), rmtree PATH (remove PATH and everything under it), take (take
+the oldest letter from mailbox/new/), refuse on|off (refuse letters as they are moved into
+new/, with EPERM).
 Deliver a letter: write it under mailbox/tmp/, then mv it into mailbox/new/.
 
 flags:
@@ -249,6 +252,8 @@ int main(int argc, char** argv) {
         }, [](const pf::Command& c) -> std::string {
             return c.words.size() == 2 ? "" : "ArgumentsBad unlink NAME";
         });
+
+        demo_trees_setup(fs, *ctl);   // 測試用：trees/ 底下隨時加、拿掉一整棵（tree、rmtree）
 
         if (ctl_wait) ctl->reply_when_done();
         fs.mount(mnt);

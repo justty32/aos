@@ -155,6 +155,7 @@ struct Fs::Impl {
     std::vector<std::unique_ptr<Mailbox>> mailboxes;
 
     int fd = -1;
+    std::mutex nmu;                       // 寫通知（notify_gone）與 unmount 關 fd 互斥：不往關掉、可能被別人拿去用的 fd 寫
     std::string mnt;
     bool created_dir = false;
     bool is_mounted = false;
@@ -171,9 +172,13 @@ struct Fs::Impl {
     void fill_attr(uint64_t nid, const Node& n, fuse_attr& a) const;
     fuse_entry_out entry_of(uint64_t nid, const Node& n) const;
     uint64_t kid(const Node& dir, const std::string& name) const;   // 沒有回 0
+    // 叫核心丟掉 parent 底下 name 的快取（FUSE_NOTIFY_INVAL_ENTRY）；不拿著 mu 叫，不在回答的線上叫
+    void notify_gone(uint64_t parent, const std::string& name);
 
     // 下面的 op_* 進來時拿著 mu、node 是 h.nodeid 那一個；回覆之前自己放開
     using Lock = std::unique_lock<std::mutex>;
+    // 節點已經被拿掉（remove_tree、信被拿走）時還會來的請求：開著的檔、夾照舊讀，關掉時放掉。處理了回 true
+    bool gone_op(const Req& r, Lock& lk);
     void op_mknod(const Req& r, Lock& lk, uint64_t nid, Node& node);
     void op_unlink(const Req& r, Lock& lk, Node& node);
     void op_open(const Req& r, Lock& lk, Node& node);

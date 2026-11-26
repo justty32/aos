@@ -152,6 +152,15 @@ struct LandlockAttr {
     for (int s = 1; s < 32; ++s)
         if (s != SIGKILL && s != SIGSTOP) signal(s, SIG_DFL);
     setsid();
+    // 主 kernel（mount 模式）：daemon 的目錄（與 cgroup 夾）只在 daemon 的小世界裡，趁還在這裡先複製成還沒掛上的掛載
+    bool give_aos = main_kernel && kernel_mounts(cfg);
+    int aos_clone = -1, cg_clone = -1;
+    if (give_aos) {
+        aos_clone = open_tree(AT_FDCWD, KERNEL_AOS, OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC);
+        if (aos_clone < 0) die("clone the daemon's directory", errno);
+        if (W.cgfd >= 0 && (cg_clone = open_tree(AT_FDCWD, KERNEL_CGROUP, OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC)) < 0)
+            die("clone the cgroup directory", errno);
+    }
 
     // 1. 進原本那一層（daemon 換根之前的世界）：設定裡的路徑都照那一層解
     if (setns(W.orignsfd, CLONE_NEWNS) != 0) die("setns", errno);
@@ -209,6 +218,11 @@ struct LandlockAttr {
             close(pfd);
         }
     }
+    if (give_aos) {
+        // 天空裡的固定位置：/aos＝daemon 的目錄（可寫：ctl 要寫），/cgroup＝cgroup 夾（procs/<名>/cgroup 的相對連結才通）
+        attach(aos_clone, root, KERNEL_AOS, true, true, "the daemon's directory");
+        if (cg_clone >= 0) attach(cg_clone, root, KERNEL_CGROUP, true, true, "the cgroup directory");
+    }
     if (set_attr(root, "", AT_EMPTY_PATH, MOUNT_ATTR_RDONLY) != 0) die("make root read-only", errno);
 
     // 4. 換根，舊的根整片卸掉
@@ -232,8 +246,9 @@ struct LandlockAttr {
 
     // 7. 上鎖
     if (W.setgroups_ok && setgroups(0, nullptr) != 0) die("setgroups", errno);
-    if (main_kernel) {
-        // 主 kernel 留 CAP_SYS_PTRACE 一個：daemon 的 caps 比它多，沒有這個就讀不到 /proc/1/cwd
+    bool ptrace = main_kernel && !give_aos;
+    if (ptrace) {
+        // ptrace 模式：主 kernel 留 CAP_SYS_PTRACE 一個——daemon 的 caps 比它多，沒有這個就讀不到 /proc/1/cwd
         __user_cap_header_struct h{_LINUX_CAPABILITY_VERSION_3, 0};
         __user_cap_data_struct d[2]{};
         if (syscall(SYS_capget, &h, d) != 0) die("capget", errno);
@@ -245,7 +260,7 @@ struct LandlockAttr {
     }
     if (prctl(PR_SET_SECUREBITS, SECBITS, 0, 0, 0) != 0) die("securebits", errno);
     for (int c = 0; c < 64; ++c) {
-        if (main_kernel && c == CAP_SYS_PTRACE) continue;
+        if (ptrace && c == CAP_SYS_PTRACE) continue;
         if (prctl(PR_CAPBSET_DROP, c, 0, 0, 0) != 0) {
             if (errno == EINVAL) break;
             die("drop bounding cap " + std::to_string(c), errno);
@@ -254,7 +269,7 @@ struct LandlockAttr {
     uid_t u = static_cast<uid_t>(cfg.uid);
     if (setresgid(u, u, u) != 0) die("setresgid", errno);
     if (setresuid(u, u, u) != 0) die("setresuid", errno);
-    set_caps(main_kernel ? 1ull << CAP_SYS_PTRACE : 0);
+    set_caps(ptrace ? 1ull << CAP_SYS_PTRACE : 0);
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0) die("no_new_privs", errno);
     if (!main_kernel) {
         LandlockAttr a{LANDLOCK_ACCESS_FS_MAKE_BLOCK, 0, 0};
@@ -308,9 +323,15 @@ void reap(pid_t pid) {
 
 std::vector<std::string> locks_of(const ProcConfig& cfg, bool main_kernel) {
     std::vector<std::string> l;
-    if (main_kernel) {
+    if (main_kernel && kernel_mounts(cfg)) {
+        l.push_back("landlock: none (main kernel)");
+        l.push_back("capabilities: none (bounding set empty)");
+        l.push_back(std::string("daemon directory: ") + KERNEL_AOS + " in its sky (daemon_access mount)" +
+                    (W.cgfd >= 0 ? std::string(", cgroup directory at ") + KERNEL_CGROUP : ""));
+    } else if (main_kernel) {
         l.push_back("landlock: none (main kernel)");
         l.push_back("capabilities: cap_sys_ptrace only (bounding set: cap_sys_ptrace)");
+        l.push_back("daemon directory: /proc/1/cwd (daemon_access ptrace)");
     } else {
         std::string s = "landlock: own domain (ABI " + std::to_string(W.landlock_abi) + "); fs: make_block handled, no other fs rule; ";
         s += W.landlock_abi >= 6 ? "scoped: signal, abstract unix socket"
@@ -374,6 +395,12 @@ std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& ou
                std::to_string(W.subuid_count) + ")";
     out = Spawned{};
     out.mounts = plan_mounts(cfg.sky);
+    if (main_kernel && kernel_mounts(cfg)) {
+        std::string bad = kernel_sky_conflict(cfg, W.cgfd >= 0);
+        if (!bad.empty()) return bad;
+        out.mounts.push_back({"aos", "-", KERNEL_AOS, true});
+        if (W.cgfd >= 0) out.mounts.push_back({"cgroup", W.cg_host, KERNEL_CGROUP, true});
+    }
     out.locks = locks_of(cfg, main_kernel);
 
     // cgroup：起動前開好、寫好上限
@@ -400,7 +427,8 @@ std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& ou
     std::vector<std::string> env = cfg.env;
     if (env.empty()) env = {"PATH=/usr/local/bin:/usr/bin:/bin", "HOME=/"};
     std::erase_if(env, [](const std::string& e) { return e.rfind("AOS_ROOT=", 0) == 0 || e.rfind("AOS_NAME=", 0) == 0; });
-    env.push_back("AOS_ROOT=/proc/1/cwd");
+    // AOS_ROOT 只給主 kernel：其他 proc 讀不到 daemon 的目錄，給了反而誤導【擬】
+    if (main_kernel) env.push_back(std::string("AOS_ROOT=") + (kernel_mounts(cfg) ? KERNEL_AOS : "/proc/1/cwd"));
     env.push_back("AOS_NAME=" + cfg.name);
     std::vector<std::string> args = cfg.argv;
     std::vector<char*> argv, envp;

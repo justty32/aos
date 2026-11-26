@@ -35,11 +35,21 @@ struct ProcConfig {
     std::vector<std::pair<std::string, std::string>> cgroup;   // cgroup 檔名 → 值（起動前寫進那隻的 cgroup）
     std::string stdout_path, stderr_path;   // 外面的路徑；空＝跟 daemon 的 stderr
     std::string path;                  // 從哪個檔讀來的
+    std::string daemon_access;         // 只有主 kernel 的設定收："mount"（不寫＝這個）或 "ptrace"；其他 proc 寫了就拒
 };
+
+// 主 kernel 怎麼碰 daemon 的目錄（設定檔的 daemon_access）：
+//   mount（預設）：daemon 的目錄掛在它天空裡的 /aos（有 cgroup 時 cgroup 夾在 /cgroup），一個 cap 都不給，AOS_ROOT=/aos
+//   ptrace：留 CAP_SYS_PTRACE、走 /proc/1/cwd（舊的做法）
+extern const char* const KERNEL_AOS;      // "/aos"
+extern const char* const KERNEL_CGROUP;   // "/cgroup"
+inline bool kernel_mounts(const ProcConfig& c) { return c.daemon_access != "ptrace"; }
 
 ProcConfig parse_config(const std::string& text, const std::string& path);   // 錯了丟 std::runtime_error("ConfigBad …")
 SkyEntry parse_sky_line(const std::string& line);
 std::vector<Mount> plan_mounts(const std::vector<SkyEntry>& sky);
+// 主 kernel（mount 模式）的天空不能自己用 /aos、/cgroup：用了回 "ConfigBad …"，沒有回 ""
+std::string kernel_sky_conflict(const ProcConfig& c, bool cgroup_on);
 extern const char* const DEV_NODES[5];
 
 // daemon 起動時握住的東西（之後換根進小世界，外面的檔案只能經這些 fd 碰）。

@@ -41,12 +41,10 @@ struct Proc {
     std::string started_at, ended_at = "-";
 };
 
-// 表：proc 放在編號的格子裡（資訊目錄的 slots/<i>/），procs/<名> 是指向格子的 symlink。
-// aos-procfs 只准拿掉 symlink，所以格子的夾一直留著、forget 後空著給下一隻用。
+// 表：名字 → 那隻。資訊目錄的 procs/<名>/ 是真的夾，放上表時建、從表上拿掉時連同底下整個拿掉（aos-procfs 的 remove_tree）。
 struct State {
     std::mutex mu;
-    std::vector<std::shared_ptr<Proc>> slots;
-    std::map<std::string, size_t> by_name;
+    std::map<std::string, std::shared_ptr<Proc>> procs;
     int kernel_restarts = 0;
     std::deque<double> deaths;   // 主 kernel 死的時間（monotonic）
     std::string kernel_last_exit = "-";
@@ -57,7 +55,9 @@ Options O;
 ProcConfig KCFG;
 pf::Fs* FS = nullptr;
 pf::Ctl* CTL = nullptr;
-size_t slots_made = 0;   // 只在主執行緒動
+// 放上表／拿掉時「表」與「目錄」一起改：主執行緒（start、主 kernel 重起）與做事的線（forget）不會交錯。
+// 回答的線（Producer）不拿它，所以拿著它跟核心講話（remove_tree 的通知）不會卡住回答的線。
+std::mutex DIR_MU;
 long seq = 0;            // cgroup 夾名的流水號，只在主執行緒動
 std::string started_at;
 int EFD = -1;
@@ -105,15 +105,14 @@ std::string join(const std::vector<std::string>& v) {
     return s;
 }
 
-// 格子 i 的資訊檔（回答的線上跑：只讀記憶體）
-void make_slot_nodes(size_t i) {
-    std::string d = "slots/" + std::to_string(i);
+// procs/<名>/ 的資訊檔（內容在回答的線上產生：只讀記憶體）。每個檔抓著那隻的 shared_ptr，夾拿掉時跟著放
+void make_proc_nodes(const std::shared_ptr<Proc>& proc) {
+    std::string d = "procs/" + proc->cfg.name;
     FS->add_dir(d);
     auto add = [&](const char* file, std::function<std::string(const Proc&)> f) {
-        FS->add_text(d + "/" + file, [i, f] {
+        FS->add_text(d + "/" + file, [proc, f] {
             std::lock_guard<std::mutex> g(S.mu);
-            if (i >= S.slots.size() || !S.slots[i]) return std::string();
-            return f(*S.slots[i]);
+            return f(*proc);
         });
     };
     add("name", [](const Proc& p) { return p.cfg.name + "\n"; });
@@ -132,45 +131,43 @@ void make_slot_nodes(size_t i) {
     });
     add("locks", [](const Proc& p) { return join(p.sp.locks); });
     add("config", [](const Proc& p) { return p.cfg.path + "\n"; });
+    // 相對連結：小世界裡是 /aos/procs/<名>/ → /cgroup/…；主 kernel 的天空也把 cgroup 夾放在 /cgroup，所以兩邊都通
+    if (!proc->sp.cgroup.empty()) FS->add_symlink(d + "/cgroup", "../../../cgroup/" + proc->sp.cgroup);
 }
 
-// 主執行緒：放進表、擺出 procs/<名> 與 cgroup 的 symlink
+// 主執行緒：放進表、擺出 procs/<名>/
 void put_proc(const std::shared_ptr<Proc>& p) {
-    size_t i;
+    std::lock_guard<std::mutex> dg(DIR_MU);
     {
         std::lock_guard<std::mutex> g(S.mu);
-        for (i = 0; i < S.slots.size() && S.slots[i]; ++i) {}
-        if (i == S.slots.size()) S.slots.push_back(nullptr);
-        S.slots[i] = p;
-        S.by_name[p->cfg.name] = i;
+        S.procs[p->cfg.name] = p;
     }
-    while (slots_made <= i) make_slot_nodes(slots_made++);
-    std::string d = "slots/" + std::to_string(i);
-    if (!p->sp.cgroup.empty()) FS->add_symlink(d + "/cgroup", "../../../cgroup/" + p->sp.cgroup);
-    FS->add_symlink("procs/" + p->cfg.name, "../" + d);
+    try {
+        make_proc_nodes(p);
+    } catch (const std::exception& e) {
+        // 表跟目錄一起改，照理不會撞名；真的撞了就記下來，表上照樣有它（kill、forget 照常）
+        log("procs/" + p->cfg.name + "/ not made: " + e.what());
+    }
 }
 
-// 從表上拿掉（任何執行緒）；回它的 cgroup 夾名
-std::string drop_proc(const std::string& name) {
-    size_t i;
+// 從表上拿掉（任何執行緒，回答的線除外），連同 procs/<名>/；only 非空時只在表上的還是它才拿。回它的 cgroup 夾名
+std::string drop_proc(const std::string& name, const Proc* only = nullptr) {
+    std::lock_guard<std::mutex> dg(DIR_MU);
     std::string cg;
     {
         std::lock_guard<std::mutex> g(S.mu);
-        auto it = S.by_name.find(name);
-        if (it == S.by_name.end()) return "";
-        i = it->second;
-        cg = S.slots[i]->sp.cgroup;
-        S.slots[i] = nullptr;
-        S.by_name.erase(it);
+        auto it = S.procs.find(name);
+        if (it == S.procs.end() || (only && it->second.get() != only)) return "";
+        cg = it->second->sp.cgroup;
+        S.procs.erase(it);
     }
-    FS->remove("procs/" + name);
-    FS->remove("slots/" + std::to_string(i) + "/cgroup");
+    if (!FS->remove_tree("procs/" + name)) log("procs/" + name + "/ was not there to remove");
     return cg;
 }
 
 std::shared_ptr<Proc> find(const std::string& name) {
-    auto it = S.by_name.find(name);
-    return it == S.by_name.end() ? nullptr : S.slots[it->second];
+    auto it = S.procs.find(name);
+    return it == S.procs.end() ? nullptr : it->second;
 }
 
 // 主執行緒
@@ -179,6 +176,8 @@ std::string start_proc(const ProcConfig& cfg, bool main_kernel) {
         std::lock_guard<std::mutex> g(S.mu);
         if (find(cfg.name)) return "ProcExists " + cfg.name + " (forget it first if it is dead)";
     }
+    if (!main_kernel && !cfg.daemon_access.empty())
+        return "ConfigBad daemon_access is only read from the main kernel's config (--kernel)";
     auto p = std::make_shared<Proc>();
     p->cfg = cfg;
     p->main_kernel = main_kernel;
@@ -218,8 +217,8 @@ void rm_cgroup(const std::string& cg) {
     std::vector<std::string> cgs;
     {
         std::lock_guard<std::mutex> g(S.mu);
-        for (const auto& p : S.slots)
-            if (p && !p->sp.cgroup.empty()) cgs.push_back(p->sp.cgroup);
+        for (const auto& [n, p] : S.procs)
+            if (!p->sp.cgroup.empty()) cgs.push_back(p->sp.cgroup);
     }
     for (const auto& c : cgs) rm_cgroup(c);
     _exit(code);
@@ -260,8 +259,8 @@ void reap_all() {
         std::shared_ptr<Proc> hit;
         {
             std::lock_guard<std::mutex> g(S.mu);
-            for (const auto& p : S.slots)
-                if (p && p->alive && p->sp.pid == pid) hit = p;
+            for (const auto& [n, p] : S.procs)
+                if (p->alive && p->sp.pid == pid) hit = p;
             if (hit) {
                 hit->alive = false;
                 hit->ended_at = iso_now();
@@ -285,6 +284,21 @@ std::string check_name(const pf::Command& c, size_t argc, const char* usage, int
     if (!p) return "ProcUnknown " + c.words[1];
     if (need_alive == 1 && !p->alive) return "ProcDead " + c.words[1] + " is not running";
     if (need_alive == 0 && p->alive) return "ProcAlive " + c.words[1] + " is still running (kill it first)";
+    return "";
+}
+
+// 主 kernel（mount 模式）天空裡的 /aos、/cgroup 是 daemon 放的，ctl 的 mount／umount 不准動（蓋住或卸掉就斷了）
+std::string reserved_dst(const std::string& name, const std::string& dst) {
+    std::lock_guard<std::mutex> g(S.mu);
+    auto p = find(name);
+    if (!p || !p->main_kernel || !kernel_mounts(p->cfg)) return "";
+    for (const char* top : {KERNEL_AOS, KERNEL_CGROUP}) {
+        std::string t = top;
+        if (t == KERNEL_CGROUP && W.cgfd < 0) continue;
+        if (dst == t || dst.rfind(t + "/", 0) == 0)
+            return "PathReserved " + t + " in the main kernel's sky is where the daemon put its " +
+                   (t == KERNEL_AOS ? "directory" : "cgroup directory");
+    }
     return "";
 }
 
@@ -337,9 +351,10 @@ void setup_ctl(pf::Ctl& ctl) {
     ctl.on("forget",
         [](const pf::Command& c) {
             std::string cg;
+            std::shared_ptr<Proc> p;
             {
                 std::lock_guard<std::mutex> g(S.mu);
-                auto p = find(c.words[1]);
+                p = find(c.words[1]);
                 if (!p) return pf::Result::failed("ProcUnknown " + c.words[1]);
                 if (p->alive) return pf::Result::failed("ProcAlive " + c.words[1]);
                 cg = p->sp.cgroup;
@@ -348,7 +363,7 @@ void setup_ctl(pf::Ctl& ctl) {
             if (!cg.empty() && unlinkat(W.cgfd, cg.c_str(), AT_REMOVEDIR) != 0 && errno != ENOENT)
                 return pf::Result::failed("CgroupNotEmpty " + c.words[1] + ": " + errstr(errno) +
                                           " (processes it left are still in its cgroup; write 1 to its cgroup/cgroup.kill)");
-            drop_proc(c.words[1]);
+            drop_proc(c.words[1], p.get());   // 這段時間裡主 kernel 被重起成同名的新一隻，就不拿那隻
             log("forgot " + c.words[1]);
             return pf::Result::done();
         },
@@ -385,7 +400,8 @@ void setup_ctl(pf::Ctl& ctl) {
             const std::string& dst = c.words[rw ? 4 : 3];
             if (!abs_clean(src) || !abs_clean(dst) || dst == "/")
                 return "PathBad SRC and DST must be clean absolute paths, DST not /";
-            return check_name(pf::Command{c.line, {c.words[0], c.words[1]}}, 2, "mount NAME [-w] SRC DST", 1);
+            std::string e = check_name(pf::Command{c.line, {c.words[0], c.words[1]}}, 2, "mount NAME [-w] SRC DST", 1);
+            return e.empty() ? reserved_dst(c.words[1], dst) : e;
         });
     ctl.on("umount",
         [](const pf::Command& c) {
@@ -415,7 +431,8 @@ void setup_ctl(pf::Ctl& ctl) {
         [](const pf::Command& c) -> std::string {
             if (c.words.size() == 3 && (!abs_clean(c.words[2]) || c.words[2] == "/"))
                 return "PathBad DST must be a clean absolute path, not /";
-            return check_name(c, 3, "umount NAME DST", 1);
+            std::string e = check_name(c, 3, "umount NAME DST", 1);
+            return e.empty() ? reserved_dst(c.words[1], c.words[2]) : e;
         });
 }
 
@@ -435,7 +452,8 @@ std::string status_text() {
     s += pf::kv_line("landlock_abi", std::to_string(W.landlock_abi));
     s += pf::kv_line("cgroup", W.cgfd >= 0 ? W.cg_host : "off (" + W.cg_note + ")");
     s += pf::kv_line("subuid", W.subuid_count ? std::to_string(W.subuid_start) + " " + std::to_string(W.subuid_count) : "none");
-    s += pf::kv_line("procs", std::to_string(S.by_name.size()));
+    s += pf::kv_line("main_kernel_access", kernel_mounts(KCFG) ? std::string("mount ") + KERNEL_AOS : "ptrace /proc/1/cwd");
+    s += pf::kv_line("procs", std::to_string(S.procs.size()));
     s += CTL->feedback();
     return s;
 }
@@ -490,6 +508,9 @@ void must(int r, const std::string& what) {
         } catch (const std::exception& e) {
             fatal(std::string(e.what()) + " in " + O.kernel_path);
         }
+        // cgroup 夾這時已經握住了（有沒有 cgroup 定了）
+        std::string bad = kernel_sky_conflict(KCFG, W.cgfd >= 0);
+        if (!bad.empty()) fatal(bad + " in " + O.kernel_path);
     }
     must(mount("proc", "/proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, nullptr), "mount proc");
     W.procfd = open("/proc", O_PATH | O_DIRECTORY | O_CLOEXEC);
@@ -526,7 +547,6 @@ void must(int r, const std::string& what) {
         setup_ctl(*CTL);
         fs.add_text("status", status_text);
         fs.add_dir("procs");
-        fs.add_dir("slots");
         fs.mount("/tmp/aos");
     } catch (const std::exception& e) {
         fatal(std::string("mount info directory: ") + e.what());

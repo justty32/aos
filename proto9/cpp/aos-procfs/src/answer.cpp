@@ -101,6 +101,38 @@ uint64_t Fs::Impl::kid(const Node& dir, const std::string& name) const {
     return 0;
 }
 
+bool Fs::Impl::gone_op(const Req& r, Lock& lk) {
+    switch (r.h.opcode) {
+    case FUSE_READ:
+    case FUSE_READDIR: {
+        // 開檔那刻拍的那份、開夾那刻拍的名單都還在：照舊讀完（信箱的檔不走 fh，找不到就照舊 ENOENT）
+        fuse_read_in ri;
+        r.in(ri);
+        bool have = r.h.opcode == FUSE_READ ? fhs.count(ri.fh) != 0 : dirs.count(ri.fh) != 0;
+        if (!have) return false;
+        if (r.h.opcode == FUSE_READ) op_read(r, lk);
+        else op_readdir(r, lk);
+        return true;
+    }
+    case FUSE_RELEASE:
+    case FUSE_RELEASEDIR: {
+        fuse_release_in ri;
+        r.in(ri);
+        if (r.h.opcode == FUSE_RELEASE) fhs.erase(ri.fh);
+        else dirs.erase(ri.fh);
+        lk.unlock();
+        reply(r.h.unique, 0);
+        return true;
+    }
+    case FUSE_FLUSH:
+        lk.unlock();
+        reply(r.h.unique, 0);   // close() 不因為節點已經拿掉而失敗
+        return true;
+    default:
+        return false;
+    }
+}
+
 void Fs::Impl::dispatch(const char* buf, size_t len) {
     Req r;
     std::memcpy(&r.h, buf, sizeof r.h);
@@ -154,6 +186,7 @@ void Fs::Impl::dispatch(const char* buf, size_t len) {
     Lock lk(mu);
     auto it = nodes.find(h.nodeid);
     if (it == nodes.end()) {
+        if (gone_op(r, lk)) return;
         lk.unlock();
         reply(h.unique, ENOENT);
         return;

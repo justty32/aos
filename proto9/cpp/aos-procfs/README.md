@@ -17,15 +17,16 @@ aos-procfs：讓一支行程用 FUSE（不靠 libfuse，自己照 `linux/fuse.h`
 | `src/mailbox.cpp` | 收信這一邊：`add_mailbox`、`take()`、`stats()`、丟掉過期的 `tmp/` |
 | `src/env.cpp` | `env_assignment()`：`AOS_NAME`、`AOS_MOUNT` 是不是給自己的 |
 | `src/ctl.cpp` | 指令檔：鎖、回饋四行、做事的線 |
-| `src/fs.cpp` | 節點表、掛上／卸下的流程 |
+| `src/fs.cpp` | 節點表（含拿掉整棵 `remove_tree`）、叫核心丟快取的通知、掛上／卸下的流程 |
 | `src/mount.cpp` | `fusermount3`＋socketpair、mountinfo、abort、清死掉的掛載 |
 | `src/kv.cpp` | 「名稱: 值」一行、json 字串跳脫 |
 | `src/internal.hpp` | 庫內部共用的型別 |
-| `demo/main.cpp`、`demo/mail.cpp`（＋`mail.hpp`）、`demo/files.hpp` | `aos-procfs-demo`；信箱那一部分在 `mail.cpp`；`status`、`settings`、`attrs` 的欄位表在 `files.hpp` |
+| `demo/main.cpp`、`demo/mail.cpp`（＋`mail.hpp`）、`demo/trees.cpp`（＋`trees.hpp`）、`demo/files.hpp` | `aos-procfs-demo`；信箱那一部分在 `mail.cpp`；測試用的 `trees/`（`tree`、`rmtree`）在 `trees.cpp`；`status`、`settings`、`attrs` 的欄位表在 `files.hpp` |
 | `tests/fields_test.cpp` | 欄位表的測試（C++，編成 `build/bin/fields-test`） |
 | `tests/run.py` | 測試：ctl、status、abort、socket、symlink、環境變數（`tests/common.py` 是共用小工具） |
 | `tests/ctl_wait.py` | 「做完才回」的 ctl 的測試（demo `--ctl-wait`） |
 | `tests/mail.py`、`tests/mail_more.py` | 信箱的測試 |
+| `tests/tree.py` | 拿掉整棵（`remove_tree`）的測試（demo 的 `tree`、`rmtree`） |
 | `tests/probe_abort.py` | 實測 abort 的細節（印觀察，不判對錯） |
 | `tests/bench.py` | 跟 Python 玩具比延遲與記憶體 |
 
@@ -34,7 +35,7 @@ aos-procfs：讓一支行程用 FUSE（不靠 libfuse，自己照 `linux/fuse.h`
 ```
 cd proto9/cpp/aos-procfs
 make                 # build/libaos-procfs.a、build/bin/aos-procfs-demo、build/bin/fields-test；-Wall -Wextra 沒有警告
-make test            # = build/bin/fields-test、tests/run.py、tests/ctl_wait.py 與 tests/mail.py；只跑某幾組：python3 tests/run.py basic kill、python3 tests/ctl_wait.py lock、python3 tests/mail.py clash big
+make test            # = build/bin/fields-test、tests/run.py、tests/ctl_wait.py、tests/mail.py 與 tests/tree.py；只跑某幾組：python3 tests/run.py basic kill、python3 tests/ctl_wait.py lock、python3 tests/mail.py clash big、python3 tests/tree.py basic
 python3 tests/bench.py 500
 python3 tests/probe_abort.py
 ```
@@ -65,7 +66,7 @@ $ echo stop > /proc/12345/cwd/ctl          # 行程退出、掛載與掛載點�
 $ build/bin/aos-procfs-demo --cleanup <掛載點>   # 收 kill -9 之後留下的死掛載
 ```
 
-demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--ctl-wait] [--persists PATH] [--obey WORDS] [--mail-max-bytes N] [--mail-max-letters N] [--mail-max-total N] [--mail-stale S]`，或 `--cleanup PATH [--force]`。不給 NAME、MOUNTPOINT 時用 `$AOS_NAME`、`$AOS_MOUNT`，但只在 `$AOS_NAME_PID` 等於自己的 PID 時（見下面「環境變數」）。ctl 收 `stop`、`pause`、`resume`，測試用另有 `slow N`（做 N 秒）、`link 名 目標`／`unlink 名`（在 `links/` 底下隨時加、拿掉 symlink，模擬 daemon 的 `procs/<名>`）、`take`（從 `mailbox/new/` 拿走最早的一封；沒有信＝`failed`＋`MailEmpty`）、`refuse on|off`（拒收開關：開著時搬進 `new/` 那一步失敗、`EPERM`）。`--socket` 讓根夾可以放 unix socket，並在裡面 bind 一個 echo socket `sock`。`--ctl-wait` 讓 ctl 變成「做完才回」（見下面那一節；不給＝原本的「寫回來＝收到」）。`--persists PATH` 是 `settings` 的 `aos_persists`（沒給寫 `-`）；`--obey WORDS` 讓 `settings` 多一行 `aos_obey: WORDS`（例 `--obey "stop kill"`：被 register 進 daemon 時准 daemon 下這幾個字，見 aos-daemon 的 README；沒給就沒有這行）。demo 一律擺 `mailbox/`，`attrs` 多一行 `aos_mailbox: yes`；`status` 多幾行不帶 `aos_` 的：`mail_waiting`（`new/` 幾封）、`mail_writing`（`tmp/` 幾項）、`mail_bytes`、`mail_delivered`、`mail_taken`、`mail_refused`、`mail_dropped_stale`、`mail_last_refusal`、`mail_refusing`、`mail_last_name`、`mail_last_bytes`（最後 `take` 的那封）。demo 不讀 eventfd，信等 ctl 的 `take` 才拿。
+demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--ctl-wait] [--persists PATH] [--obey WORDS] [--mail-max-bytes N] [--mail-max-letters N] [--mail-max-total N] [--mail-stale S]`，或 `--cleanup PATH [--force]`。不給 NAME、MOUNTPOINT 時用 `$AOS_NAME`、`$AOS_MOUNT`，但只在 `$AOS_NAME_PID` 等於自己的 PID 時（見下面「環境變數」）。ctl 收 `stop`、`pause`、`resume`，測試用另有 `slow N`（做 N 秒）、`link 名 目標`／`unlink 名`（在 `links/` 底下隨時加、拿掉 symlink）、`tree 名`（在 `trees/` 底下加一整棵 `trees/<名>/`：`info`、`count`〔每開一次加 1〕、`sub/deep`、`link` → `info`，模擬 daemon 的 `procs/<名>/`）、`rmtree 路徑`（拿掉任何路徑連同底下；不給拿＝`failed`＋`RemoveRefused`）、`take`（從 `mailbox/new/` 拿走最早的一封；沒有信＝`failed`＋`MailEmpty`）、`refuse on|off`（拒收開關：開著時搬進 `new/` 那一步失敗、`EPERM`）。`--socket` 讓根夾可以放 unix socket，並在裡面 bind 一個 echo socket `sock`。`--ctl-wait` 讓 ctl 變成「做完才回」（見下面那一節；不給＝原本的「寫回來＝收到」）。`--persists PATH` 是 `settings` 的 `aos_persists`（沒給寫 `-`）；`--obey WORDS` 讓 `settings` 多一行 `aos_obey: WORDS`（例 `--obey "stop kill"`：被 register 進 daemon 時准 daemon 下這幾個字，見 aos-daemon 的 README；沒給就沒有這行）。demo 一律擺 `mailbox/`，`attrs` 多一行 `aos_mailbox: yes`；`status` 多幾行不帶 `aos_` 的：`mail_waiting`（`new/` 幾封）、`mail_writing`（`tmp/` 幾項）、`mail_bytes`、`mail_delivered`、`mail_taken`、`mail_refused`、`mail_dropped_stale`、`mail_last_refusal`、`mail_refusing`、`mail_last_name`、`mail_last_bytes`（最後 `take` 的那封）。demo 不讀 eventfd，信等 ctl 的 `take` 才拿。
 
 ## 庫的介面一覽
 
@@ -78,7 +79,8 @@ demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--ctl-wait] [--persi
 | `add_text(path, Producer)` | 只讀純文字。開檔那刻叫 `Producer` 產生一份、整次讀都讀那份；size 報 0＋`direct_io`。內容用欄位表的 `to_text(…)` 產生（見下面「欄位表」） |
 | `add_json(path, 內容)` | 只讀、內容不變（`_metainfo.json`）；報真長度、可快取 |
 | `add_ctl(path, prefix)` → `Ctl&` | 只寫指令檔；`prefix` 例 `aos_ctl_`、`aos_procs_ctl_` |
-| `add_symlink(path, 目標)`／`remove(path)` | 隨時可加、拿掉；名字與屬性都不快取（entry_valid＝0） |
+| `add_symlink(path, 目標)`／`remove(path)` | 隨時可加、拿掉；名字與屬性都不快取（entry_valid＝0）。`remove` 只拿 symlink 與 socket（不變） |
+| `remove_tree(path)` | 拿掉一個節點連同底下的一切（夾、純文字、json、symlink、socket；也可以只拿一個檔），路徑馬上走不到；它或底下有 ctl、信箱就不給拿（回 false）。見下面「拿掉整棵」 |
 | `mount(掛載點)`／`unmount()` | 掛上（夾不在就建）、起回答的線與每個 ctl 的做事的線；卸下見下 |
 | `Ctl::on(字, Action, Check)` | 註冊一個字。`Check` 在回答的線上看參數（回 `"代號 原因"` 就拒）；`Action` 在做事的線上做，回 `Result::done()`（`aos_ctl_state: done`、error `-`）／`failed("代號 原因")`（`failed`＋原因）／`hold_until_exit()` |
 | `Ctl::reply_when_done()` | 這個 ctl 改成「做完才回」：寫入等 `Action` 跑完才回來，`done`＝寫入成功、`failed`＝寫入失敗 `EIO`（見下面「做完才回的 ctl」）。要在 `mount` 之前叫；不叫＝原本的「寫回來＝收到」 |
@@ -95,7 +97,7 @@ demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--ctl-wait] [--persi
 | `Mailbox::stats()` | 幾封在等、幾項在寫、合計 byte、寄到／拿走／拒收／過期丟掉的次數、最後一次拒收的原因；O(1)，可以在 `status` 的 Producer 裡叫 |
 | `env_assignment()` | `AOS_NAME`、`AOS_MOUNT`，只在 `AOS_NAME_PID` 等於 `getpid()` 時給，否則 `nullopt` |
 
-**「回答的線不碰檔案系統」怎麼讓人難違反**：檔的內容只能經 `Producer` 給（介面文件寫明不可阻塞、不可碰路徑，連 `localtime` 都別叫——demo 的 `aos_started_at` 是起來時先算好的）；ctl 的事一律交給做事的線，回答的線上只跑 `Check`（只看參數）與信箱的 `Accept`（只看那封信）；庫裡會碰檔案系統的函數（`mount`、`unmount`、`abort_connection`、`cleanup_dead_mount`）在回答的線上叫就丟 `std::logic_error`。叫 `Producer` 時不拿著節點表的鎖。庫擋不住的是使用者在 `Producer`／`Check` 裡硬去讀檔——這只能靠文件。
+**「回答的線不碰檔案系統」怎麼讓人難違反**：檔的內容只能經 `Producer` 給（介面文件寫明不可阻塞、不可碰路徑，連 `localtime` 都別叫——demo 的 `aos_started_at` 是起來時先算好的）；ctl 的事一律交給做事的線，回答的線上只跑 `Check`（只看參數）與信箱的 `Accept`（只看那封信）；庫裡會碰檔案系統或要跟核心講話的函數（`mount`、`unmount`、`abort_connection`、`cleanup_dead_mount`、`remove_tree`）在回答的線上叫就丟 `std::logic_error`。叫 `Producer` 時不拿著節點表的鎖。庫擋不住的是使用者在 `Producer`／`Check` 裡硬去讀檔——這只能靠文件。
 
 **掛載與卸載**：socketpair 一端給 `fusermount3`（環境 `_FUSE_COMMFD`，fork 之前就把 argv／envp 備好），另一端 `recvmsg(MSG_CMSG_CLOEXEC)` 收 `/dev/fuse` 的 fd，收到那刻就是 close-on-exec。選項 `fsname=<fsname>:<PID>,subtype=aosproc,default_permissions`（不用 `auto_unmount`，玩具實測這台不收）。`unmount()`：自己站在掛載點裡就先 `chdir("/")`，`fusermount3 -u`；失敗（別人站在裡面）才 `-u -z`，再 abort 那條連線讓回答的線醒來；等回答的線最多 2 秒；最後刪掉 mount 時建的夾。
 
@@ -132,6 +134,28 @@ demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--ctl-wait] [--persi
 **卸載**：`unmount()` 一開始先把還留著的寫入回 `ECONNABORTED`（不然那人拿著開著的檔，`fusermount3 -u` 會失敗、只能 lazy＋abort）；關 `/dev/fuse` 之前讓 ctl 不再回覆（之後才做完的指令，回覆不會寫進已經關掉、可能被別人拿去用的 fd）。
 
 測試（`tests/ctl_wait.py` 37 條全過）：預設的 ctl 照舊（大小 0、寫入當場回、做的時候失敗照樣寫入成功）；`pause` 寫入回來時 `status` 已經是 `done`、`paused`；`slow 1` 的寫入約 1 秒才回；做的時候失敗是 `EIO`＋`failed`＋原因；不認得的字照舊 `EINVAL`；空寫入；殼的 `echo` 也等；大小 1 GiB；`stop` 寫入成功、行程退 0；等著的時候讀 `status` 快、第二個人當場 `EBUSY`、回饋不動；兩人先開好檔再先後寫，第二個當場 `EBUSY`；SIGINT、SIGKILL 放開等的人、指令照做到 `done`（一條回答的線與 `--threads 4` 各一次）；等著的時候伺服器收到 SIGTERM，等的人拿到 `ECONNABORTED`、伺服器退 0、掛載沒了。
+
+## 拿掉整棵（`Fs::remove_tree`，11-26）
+
+使用者 11-26 定 daemon 的 `procs/<名字>/` 要是真的夾、`forget` 了就消失（[daemon職責-1126](../../../proto8/thinking/2026-11/26/daemon職責-1126.md)「實作時定的」第 4 條）。以前掛上之後夾、檔都能加（`add_dir`、`add_text` 一直可以），但只拿得掉 symlink 與 socket。現在多一個 `remove_tree(path)`，原本的 `remove` 一個字沒改。
+
+**做什麼**：拿著節點表的鎖，把那個節點跟底下全部從表上拿掉，再叫核心丟掉那個名字的快取，然後回 true。可以拿夾、純文字、json、symlink、socket，也可以只拿一個檔（`procs/x/state` 這種）。
+
+**不給拿（回 false，什麼都不動）**：路徑不在、根、它或底下有 ctl、信箱（夾或信）。ctl 有自己的做事的線、還可能有人在等「做完才回」；信箱有收信的那一邊在 `take()`。兩樣都跟著 `Fs` 活到底。根丟 `std::runtime_error`（`empty path`，跟 `remove` 一樣）。在回答的線上叫丟 `std::logic_error`。
+
+**為什麼安全**：
+
+| 會碰到的 | 怎麼處理 |
+|---|---|
+| 核心的名字快取（一般節點快取 1 秒） | 拿掉後寫一個 `FUSE_NOTIFY_INVAL_ENTRY`（伺服器主動通知，`unique` 0）給那個名字的上一層。核心丟掉那個名字（連同底下的快取），寫入回來時路徑就走不到了；之後同名再加，看到的是新的。核心本來就沒快取（沒人走過）時回 `ENOENT`，不管 |
+| 通知會不會卡住 | 核心收到通知時要拿上一層夾的鎖。那把鎖可能被正在查名字的人拿著、等回答的線回話，所以寫通知的線不能是回答的線（丟 `logic_error`），而且寫的時候不拿節點表的鎖（回答的線才答得了）。測試：200 次加拿，旁邊兩支殼一直讀，一條與四條回答的線都沒卡 |
+| 節點編號 | 不回收（本來就是）。核心手上的舊編號再來，表上找不到，回 `ENOENT`；不會認錯成後來加的節點。所以 FORGET 照舊不用記 |
+| 已經開著的檔 | 純文字檔開檔那刻就產生好一份、放在 fh 上；拿掉之後照舊讀得完，`close` 也成功。列到一半的夾（OPENDIR 拍的名單）照舊列得完。關掉時（RELEASE、RELEASEDIR）把那份放掉——以前節點不在時這兩個回 `ENOENT`、那份就漏了（信被拿走後還開著的信夾也會漏），順手修掉。`FLUSH` 對不在的節點改回成功（以前是 `ENOENT`，`close` 會報錯） |
+| 正在答的請求 | 回答的線拿著表鎖時才碰節點，要用的東西（`Producer`、內容）先抄出來再放鎖。拿掉也是拿著表鎖做，所以不會有人拿著已經不在的節點 |
+| `Producer` 抓著的東西 | 拿掉的節點先搬到鎖外面才解構（使用者的東西不在拿著表鎖時碰）。正在跑的那次 `Producer` 是抄出來的一份，跑完才放 |
+| 站在拿掉的夾裡（`cd` 進去）、拿著夾的 fd | 之後在裡面找名字都是 `ENOENT` |
+
+**demo 與測試**：demo 的 `tree 名`、`rmtree 路徑`（見上面 demo 的參數）。`tests/tree.py` 36 條全過（basic 25、busy 5、busy4 5，加「沒有殘留」）：加一整棵、讀得到；同名再加是 `failed`、第一棵不動；先讓核心快取那條路、開著一個檔與一個夾，再拿掉——寫入回來時路徑已經走不到（約 16 ms，比 1 秒的快取短很多）、`ls trees/` 沒有它、開著的檔讀到開檔那刻的那份、`close` 成功、從開著的夾找名字是 `ENOENT`；同名馬上再加，讀到新的；只拿一個檔、只拿一個 symlink；`ctl`、`mailbox`、`mailbox/new`、不在的、`/`、`.` 都不給拿；demo 掛上前加的普通夾 `trees` 也拿得掉、之後往裡面加是 `failed`；busy 見上。
 
 ## 欄位表：每個欄位只宣告一次，純文字與 json 都從它生（11-26）
 
@@ -319,6 +343,8 @@ C++ 讀 `status` 比玩具快 5～8 倍，寫 ctl 快約 50 倍（玩具每道�
 
 `tests/ctl_wait.py` 37 條全過（見「做完才回的 ctl」）。
 
+`tests/tree.py` 36 條全過（見「拿掉整棵」）。
+
 `tests/run.py` 40 條全過（basic 19、kill 5、abort 3、socket 4、links 5、env 3，加最後一條「沒有殘留的行程與掛載」）。驗的有：status 八行；`pause` 後 `aos_phase: paused`；`slow 3` 進行中別人寫 `pause` 當場 busy、回饋沒動、`status` 照樣讀得到（約 5～9 ms）；兩人先開檔再先後寫第二個 EBUSY；不認得的字寫入失敗且 `rejected`；一次寫兩行被拒；收下了、做的時候失敗（`unlink` 不存在的）是 `failed`＋原因；`done` 時 error 是 `-`；`stop` 後退出、掛載與夾都沒了；`kill -9` 後 `/proc/<PID>/cwd` 馬上不見、死掛載留著、`--cleanup` 活著時不動、死了收得掉；abort；socket；symlink 隨時加、拿掉（拿掉後馬上走不到）；`AOS_NAME_PID` 三種情形（見上面「環境變數」）。
 
 **寫進 ctl 回來只代表「收到」**（預設的 ctl；「做完才回」的見上面那一節）：收下的那一刻 `aos_ctl_state` 已經是 `doing`（回答的線上設的），做完才變 `done`／`failed`。測試凡是「寫 ctl、再看狀態」的，都要等那一道做完再看（11-26 查過兩支的全部測試）：`basic` 的 `pause` 原本看到 `aos_phase: paused` 就讀回饋（phase 是做到一半改的，`done` 還沒記）；`mail.py` 的 `take` 原本只等 `mail_taken` 加 1 就看 `mail_last_name`（計數在 `take()` 裡就加了，名字要做事的線做完才寫），`refuse on` 之後馬上寫下一道可能撞到還沒放的鎖——都改成寫完等 `aos_ctl_state` 不是 `doing`（`mail_more.py` 的 `ctl_done`）。
@@ -331,11 +357,12 @@ C++ 讀 `status` 比玩具快 5～8 倍，寫 ctl 快約 50 倍（玩具每道�
 
 ## 行數
 
-庫（`include/`＋`src/`）2155 行（欄位表 `fields.hpp` 155）；demo 431 行；測試與量測 1189 行（11-26 加了做完才回的 ctl 與 `tests/ctl_wait.py` 之後）。每個檔都在 300 行以內（最長 `demo/main.cpp` 290、`src/answer.cpp` 253）：原本 391 行的 `answer.cpp` 拆成 `answer.cpp`（分派、屬性）與 `ops.cpp`（一般節點的較長操作），信箱另三個檔。
+庫（`include/`＋`src/`）2251 行（欄位表 `fields.hpp` 155）；demo 487 行；測試與量測 1338 行（11-26 加了 `remove_tree` 與 `tests/tree.py` 之後；之前是 2155、431、1189）。每個檔都在 300 行以內（最長 `demo/main.cpp` 295、`src/answer.cpp` 286）：原本 391 行的 `answer.cpp` 拆成 `answer.cpp`（分派、屬性）與 `ops.cpp`（一般節點的較長操作），信箱另三個檔。
 
 ## 還沒做的
 
-- daemon 的部分（`procs/`、`procs_ctl`、`procs_status`、卡住的檢查）：庫備好了零件（symlink 隨時加拿、ctl 可設字首、`connection_id`／`abort_connection`／`cleanup_dead_mount`），還沒有 daemon 本身。
+- daemon 的部分（`procs/`、`procs_ctl`、`procs_status`、卡住的檢查）：庫備好了零件（symlink 隨時加拿、夾與檔隨時加、整棵拿掉、ctl 可設字首、`connection_id`／`abort_connection`／`cleanup_dead_mount`）；用上的 daemon 見 `../aos-daemon`（舊）與 `../aos-daemon2`。
+- `remove_tree`：拿不掉 ctl 與信箱（含底下有的）；拿掉後核心手上的舊節點直到 FORGET 才放，庫不記（編號不回收，所以不會錯）。通知只送那個名字的上一層一個，底下的名字靠核心自己跟著丟。
 - 各檔的 json 版（`status.json`…）：欄位表生得出來，檔還沒擺；`persists` 在目錄裡怎麼擺（草稿第 12 節第 4 條）。
 - 卸載時回答的線 2 秒內醒不來（abort 也失敗）就只 detach、不關 fd；這時 `Fs` 若被解構，線會碰到已經釋放的記憶體——現在只有行程馬上要結束的情形會走到，沒處理。
 - 回答的線只靠文件守規矩：`Producer` 裡硬去讀檔，庫攔不到。

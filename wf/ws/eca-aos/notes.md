@@ -783,3 +783,4 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - HANDOFF 公司段換新（daemon 職責定了的、daemon2 兩次交件、背景那隻回來要做的、還沒談的題目）。
 - 狀態：本地比遠端多 20 個 commit，全沒推；背景有一隻子 agent 在做 `/aos`＋真的 `procs/<名字>/`（12:47 派）。
 - compact 後接：讀這節與 HANDOFF 公司段 → 等那隻的通知 → 三支重跑、查殘留、交件 → 新的【擬】一次一條給使用者。
+- 13:1x 12:47 那隻回來：`/aos`＋零權限（ptrace 選項保留）、`remove_tree`、真的 `procs/<名字>/`。我清 build 重跑：procfs 5+40+37+36+36、舊 daemon 73、daemon2 155，無警告、無殘留。交件，HANDOFF 跟上（多 21 個沒推、背景空）。新【擬】五條等給使用者看。

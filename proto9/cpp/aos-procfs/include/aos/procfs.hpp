@@ -164,6 +164,11 @@ public:
     Ctl& add_ctl(const std::string& path, std::string prefix);    // 只寫指令檔；prefix 例 "aos_ctl_"、"aos_procs_ctl_"
     void add_symlink(const std::string& path, std::string target); // 隨時可加；名字不快取（entry_valid＝0）
     bool remove(const std::string& path);                         // 拿掉 symlink 或 socket 節點（其他種類不給拿）
+    // 拿掉一個節點連同底下的一切（夾、純文字、json、symlink、socket 都可以；也可以只拿一個檔）。掛著時會叫核心
+    // 丟掉那個名字的快取，回來後路徑馬上走不到；之後同名再加，看到的是新的。已經開著的檔照舊讀得到開檔那刻的那份、
+    // 列到一半的夾照舊列得完；對拿掉的節點的其他操作一律 ENOENT。
+    // 回 false、什麼都不動：不在、根、它或底下有 ctl 或信箱。在回答的線上叫丟 std::logic_error（要跟核心講話）。
+    bool remove_tree(const std::string& path);
     // 信箱資料夾：path/ 底下 tmp/（寄的人在這裡寫）、new/（搬進來＝寄到）、cur/（永遠是空的，只為了跟 Maildir 同形）。
     // 信存在記憶體裡；Mailbox 跟著 Fs 活。要在 mount 之前加。
     Mailbox& add_mailbox(const std::string& path, MailLimits limits = {}, Accept accept = {});

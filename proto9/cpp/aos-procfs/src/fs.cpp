@@ -1,4 +1,4 @@
-// fs.cpp：Fs 的節點表（加夾、加檔、加連結、拿掉）與掛上／卸下的流程。
+// fs.cpp：Fs 的節點表（加夾、加檔、加連結、拿掉單一節點或整棵）、叫核心丟快取的通知與掛上／卸下的流程。
 #include "internal.hpp"
 
 #include <cerrno>
@@ -7,6 +7,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <sys/stat.h>
+#include <sys/uio.h>
 #include <unistd.h>
 
 namespace aos::procfs {
@@ -130,6 +131,55 @@ bool Fs::remove(const std::string& path) {
     return true;
 }
 
+bool Fs::remove_tree(const std::string& path) {
+    forbid_on_answer_thread("Fs::remove_tree");
+    Impl& m = *impl_;
+    std::vector<Node> dead;   // 拿到鎖外面才解構：Producer 抓著的東西是使用者的，拿著 mu 時不碰
+    uint64_t parent;
+    std::string name;
+    {
+        std::lock_guard<std::mutex> g(m.mu);
+        uint64_t nid = m.lookup_path(path, nullptr, false);
+        if (!nid || nid == 1) return false;
+        std::vector<uint64_t> all{nid};
+        for (size_t i = 0; i < all.size(); ++i) {
+            const Node& n = m.nodes.at(all[i]);
+            // ctl 有自己的做事的線、信箱有收信的那一邊，跟著 Fs 活到底，不給拿
+            if (n.kind == Kind::Ctl || n.kind == Kind::MailDir || n.kind == Kind::MailFile || n.mb) return false;
+            for (uint64_t k : n.kids) all.push_back(k);
+        }
+        const Node& top = m.nodes.at(nid);
+        parent = top.parent;
+        name = top.name;
+        std::erase(m.nodes.at(parent).kids, nid);
+        dead.reserve(all.size());
+        for (uint64_t id : all) {
+            auto it = m.nodes.find(id);
+            dead.push_back(std::move(it->second));
+            m.nodes.erase(it);
+        }
+    }
+    // 節點編號不回收：核心手上舊的編號再來，只會拿到 ENOENT（開著的檔除外，見 gone_op），不會認錯人
+    m.notify_gone(parent, name);
+    return true;
+}
+
+void Fs::Impl::notify_gone(uint64_t parent_nid, const std::string& leaf) {
+    std::lock_guard<std::mutex> g(nmu);
+    if (fd < 0) return;   // 沒掛、或 unmount 已經關掉
+    fuse_notify_inval_entry_out o{};
+    o.parent = parent_nid;
+    o.namelen = static_cast<uint32_t>(leaf.size());
+    fuse_out_header h{};
+    h.len = static_cast<uint32_t>(sizeof h + sizeof o + leaf.size() + 1);
+    h.error = FUSE_NOTIFY_INVAL_ENTRY;   // unique 0＋error 放通知的種類＝伺服器主動通知
+    h.unique = 0;
+    char nul = 0;
+    iovec iov[4] = {{&h, sizeof h}, {&o, sizeof o}, {const_cast<char*>(leaf.data()), leaf.size()}, {&nul, 1}};
+    // 失敗不管：ENOENT＝核心本來就沒快取這個名字（沒人走過），其他錯也只是少丟一份最多 1 秒的快取
+    while (writev(fd, iov, 4) < 0 && errno == EINTR) {}
+}
+
 void Fs::mount(const std::string& mountpoint) {
     forbid_on_answer_thread("Fs::mount");
     Impl& m = *impl_;
@@ -204,8 +254,11 @@ void Fs::unmount() {
     }
     m.threads.clear();
     for (auto& c : m.ctls) c->impl()->detach();   // 之後做完的指令不再往這個 fd 回
-    if (all_gone) close(m.fd);
-    m.fd = -1;
+    {
+        std::lock_guard<std::mutex> g(m.nmu);
+        if (all_gone) close(m.fd);
+        m.fd = -1;
+    }
     for (auto& c : m.ctls) c->impl()->stop();
     if (m.created_dir) rmdir(m.mnt.c_str());
     m.created_dir = false;

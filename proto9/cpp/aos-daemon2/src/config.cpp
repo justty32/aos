@@ -9,6 +9,8 @@
 namespace d2 {
 
 const char* const DEV_NODES[5] = {"null", "zero", "full", "random", "urandom"};
+const char* const KERNEL_AOS = "/aos";
+const char* const KERNEL_CGROUP = "/cgroup";
 
 namespace {
 
@@ -81,6 +83,17 @@ std::vector<Mount> plan_mounts(const std::vector<SkyEntry>& sky) {
     return out;
 }
 
+std::string kernel_sky_conflict(const ProcConfig& c, bool cgroup_on) {
+    if (!kernel_mounts(c)) return "";
+    auto under = [](const std::string& p, const std::string& top) { return p == top || p.rfind(top + "/", 0) == 0; };
+    for (const auto& e : c.sky) {
+        if (under(e.dst, KERNEL_AOS) || (cgroup_on && under(e.dst, KERNEL_CGROUP)))
+            return "ConfigBad sky line for " + e.dst + ": " + KERNEL_AOS + (cgroup_on ? std::string(" and ") + KERNEL_CGROUP : "") +
+                   " are where the daemon puts its directory in the main kernel's sky (or set \"daemon_access\": \"ptrace\")";
+    }
+    return "";
+}
+
 ProcConfig parse_config(const std::string& text, const std::string& path) {
     nlohmann::json j;
     try {
@@ -139,10 +152,13 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
                     bad("unknown lock " + lk + " (landlock, cgroup)");
                 }
             }
+        } else if (k == "daemon_access") {
+            c.daemon_access = str(v, "daemon_access");
+            if (c.daemon_access != "mount" && c.daemon_access != "ptrace") bad("daemon_access must be \"mount\" or \"ptrace\"");
         } else if (k == "stdout" || k == "stderr") {
             (k == "stdout" ? c.stdout_path : c.stderr_path) = clean_path(str(v, k), k);
         } else {
-            bad("unknown key " + k + " (name, argv, env, cwd, sky, uid, locks, stdout, stderr)");
+            bad("unknown key " + k + " (name, argv, env, cwd, sky, uid, locks, stdout, stderr, daemon_access)");
         }
     }
     if (c.name.empty()) bad("name is missing");

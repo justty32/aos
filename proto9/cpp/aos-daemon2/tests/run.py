@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# run.py：aos-daemon2 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、主 kernel 重起規則、整片跟著 daemon 走、沒有殘留。
-# 用法：python3 tests/run.py [組名…]；組：basic procs sky landlock cgroup mount modes restart teardown（最後一定跑 leftovers）
+# run.py：aos-daemon2 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、主 kernel 重起規則、整片跟著 daemon 走、主 kernel 經 /aos（或 ptrace）碰目錄、procs/<名>/ 是真的夾、沒有殘留。
+# 用法：python3 tests/run.py [組名…]；組：basic procs sky landlock cgroup mount modes restart teardown access dirs（最後一定跑 leftovers）
 import errno, json, os, re, select, shutil, signal, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -148,6 +148,17 @@ class Daemon:
             return None
 
 
+def kernel_file(d, timeout=5.0):
+    """主 kernel 起來時寫的 kernel-<PID>.txt（第一行 $AOS_ROOT/status、root …、proc1 …）。"""
+    kf = wait_for(lambda: [n for n in os.listdir(d.dir) if n.startswith("kernel-")], timeout)
+    return wait_for(lambda: read(os.path.join(d.dir, kf[0])), timeout) if kf else ""
+
+
+def caps_of(hp):
+    st = read("/proc/%d/status" % hp)
+    return {k: int(re.search(k + r":\s+(\w+)", st).group(1), 16) for k in ("CapInh", "CapPrm", "CapEff", "CapBnd", "CapAmb")}
+
+
 def started(d, name, timeout=5.0):
     return wait_for(lambda: os.path.exists("%s/procs/%s" % (d.root, name)) and d.fact(name, "state") == "alive\n", timeout)
 
@@ -176,11 +187,12 @@ def t_basic():
           os.path.samefile("/proc/%d/cwd" % d.pid, "/proc/%d/root/aos" % d.pid))
     check("basic: no host files through /proc/<PID>/root",
           not os.path.exists("/proc/%d/root/etc" % d.pid) and not os.path.exists("/proc/%d/root/usr" % d.pid))
-    kf = wait_for(lambda: [n for n in os.listdir(d.dir) if n.startswith("kernel-")], 5)
-    kt = read(os.path.join(d.dir, kf[0])) if kf else ""
-    check("basic: main kernel reads /proc/1/cwd/status", kt.startswith("ok pid_ns: 1"), kt)
+    check("basic: the directory holds ctl, procs/, status (no slots/)", sorted(os.listdir(d.root)) == ["ctl", "procs", "status"],
+          sorted(os.listdir(d.root)))
+    kt = kernel_file(d)
+    check("basic: main kernel reads $AOS_ROOT/status, AOS_ROOT is /aos", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
     caps = re.search(r"CapEff:\s+(\w+)", read("/proc/%d/status" % d.hostpid("main"))).group(1)
-    check("basic: main kernel keeps only cap_sys_ptrace", int(caps, 16) == 1 << 19, caps)
+    check("basic: main kernel has no capabilities", int(caps, 16) == 0, caps)
     check("basic: SIGTERM -> daemon exits 0", d.stop() == 0)
     check("basic: daemon process gone", wait_for(lambda: gone(d.pid), 3))
 
@@ -253,7 +265,7 @@ def t_procs():
     # 主 kernel 自己寫 ctl 起一隻
     ck = config(d.dir, "bykernel", ["sleep"])
     a = d.ask("ctl start " + ck)
-    check("procs: main kernel writes start into /proc/1/cwd/ctl (alive when the write returns)",
+    check("procs: main kernel writes start into /aos/ctl (alive when the write returns)",
           a == "ok" and os.path.exists(d.root + "/procs/bykernel") and d.fact("bykernel", "state") == "alive\n", a)
     a = d.ask("ctl start /nonexistent/x.json")
     check("procs: main kernel's failing start is a write error EIO", a == "err EIO", a)
@@ -532,6 +544,145 @@ def t_teardown():
     d.p.wait(5)
 
 
+# ---------------------------------------------------------------- access
+
+def t_access():
+    """主 kernel 怎麼碰 daemon 的目錄：預設 mount（天空裡的 /aos、零 caps），設定 daemon_access ptrace 走 /proc/1/cwd。"""
+    d = Daemon("access")
+    if not check("access: daemon up", d.pid, d.err()):
+        return
+    started(d, "main")
+    s = d.status()
+    check("access: status says main_kernel_access: mount /aos", s.get("main_kernel_access") == "mount /aos", s)
+    hp = d.hostpid("main")
+    c = caps_of(hp)
+    check("access: mount mode: main kernel has zero capabilities (inh, prm, eff, bnd, amb)", not any(c.values()), c)
+    kt = kernel_file(d)
+    check("access: AOS_ROOT=/aos, reads /aos/status", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
+    check("access: ... and cannot read /proc/1/cwd (EACCES)", "\nproc1 err EACCES\n" in kt, kt)
+    table = [l.split() for l in d.fact("main", "sky").splitlines()]
+    cg_on = not s.get("cgroup", "off").startswith("off")
+    check("access: kernel's sky table has 'aos - /aos rw'%s" % (" and the cgroup line" if cg_on else ""),
+          ["aos", "-", "/aos", "rw"] in table and (not cg_on or ["cgroup", s["cgroup"], "/cgroup", "rw"] in table), table)
+    check("access: sky_check ok", d.fact("main", "sky_check") == "ok\n", d.fact("main", "sky_check"))
+    mi = [l.split() for l in read("/proc/%d/mountinfo" % hp).splitlines()]
+    aos = [l for l in mi if l[4] == "/aos"]
+    check("access: /aos in the kernel's mountinfo is the daemon's FUSE mount",
+          aos and aos[0][aos[0].index("-") + 1] == "fuse.aosproc", aos)
+    check("access: kernel's locks say no capabilities, directory at /aos",
+          "capabilities: none" in d.fact("main", "locks") and "daemon directory: /aos" in d.fact("main", "locks"),
+          d.fact("main", "locks"))
+    a = d.ask("/aos")
+    check("access: kernel lists /aos", a == "ok ctl procs status", a)
+    cw = config(d.dir, "w", ["sleep"], locks={"cgroup": {"pids.max": "20"}} if cg_on else {})
+    a = d.ask("ctl start " + cw)
+    check("access: kernel writes 'start' into /aos/ctl; when the write returns the proc is alive",
+          a == "ok" and d.fact("w", "state") == "alive\n", a)
+    a = d.ask("/aos/procs/w/state")
+    check("access: kernel reads /aos/procs/w/state", a == "ok alive|", a)
+    a = d.ask("ctl start /nonexistent/x.json")
+    check("access: kernel's failing start is EIO", a == "err EIO", a)
+    a = d.ask("/aos/status")
+    check("access: ... and the reason is in /aos/status", a and "aos_ctl_state: failed" in a.replace("|", "\n"), a)
+    if cg_on:
+        a = d.ask("/aos/procs/w/cgroup/pids.max")
+        check("access: kernel follows procs/w/cgroup (relative link to /cgroup) and reads pids.max", a == "ok 20|", a)
+    a = d.ask("ctl umount main /aos")
+    check("access: ctl umount of /aos in the kernel's sky is refused (EINVAL)", a == "err EINVAL", a)
+    a = d.ask("ctl mount main /usr /aos")
+    check("access: ctl mount over /aos is refused (EINVAL)", a == "err EINVAL" and
+          d.status().get("aos_ctl_error", "").startswith("PathReserved"), (a, d.status().get("aos_ctl_error")))
+    a = d.ask("ctl kill w KILL")
+    wait_for(lambda: d.fact("w", "state") == "dead\n", 5)
+    a2 = d.ask("ctl forget w")
+    check("access: kernel kills and forgets; /aos/procs/w is gone for it", a == "ok" and a2 == "ok" and
+          d.ask("/aos/procs/w") == "err ENOENT", (a, a2))
+    # 非主 kernel 的：沒有 /aos、讀不到 /proc/1/cwd、沒有 AOS_ROOT
+    d.ctl("start " + config(d.dir, "np", ["probe", "/out", "np", "/aos", "/proc/1/cwd/status", "env:AOS_ROOT",
+                                           "env:AOS_NAME", "/cgroup"]))
+    res = wait_for(lambda: os.path.exists(os.path.join(d.dir, "np.txt")) and read(os.path.join(d.dir, "np.txt")), 5) or ""
+    got = {l.split(" ")[0]: " ".join(l.split(" ")[1:]) for l in res.strip().splitlines()}
+    check("access: non-main proc has no /aos", got.get("/aos") == "err ENOENT", got)
+    check("access: non-main proc has no /cgroup", got.get("/cgroup") == "err ENOENT", got)
+    check("access: non-main proc cannot read /proc/1/cwd", got.get("/proc/1/cwd/status") == "err EACCES", got)
+    check("access: non-main proc gets no AOS_ROOT (but gets AOS_NAME)",
+          got.get("env:AOS_ROOT") == "err unset" and got.get("env:AOS_NAME") == "ok np", got)
+    bad = config(d.dir, "dacc", ["sleep"], daemon_access="ptrace")
+    r = d.ctl("start " + bad)
+    check("access: daemon_access in a non-main config -> EIO, failed ConfigBad",
+          r[0] == errno.EIO and r[1] == "failed" and "daemon_access" in (r[2] or ""), r)
+    check("access: /proc/<PID>/cwd from outside still works", d.status().get("pid_ns") == "1")
+    d.stop()
+
+    # ptrace 模式（舊的做法，設定裡選）
+    d = Daemon("access-ptrace", kernel_extra={"daemon_access": "ptrace"})
+    if not check("access: ptrace mode: daemon up", d.pid, d.err()):
+        return
+    started(d, "main")
+    check("access: ptrace mode: status says ptrace /proc/1/cwd",
+          d.status().get("main_kernel_access") == "ptrace /proc/1/cwd", d.status())
+    c = caps_of(d.hostpid("main"))
+    check("access: ptrace mode: kernel keeps only cap_sys_ptrace", c["CapEff"] == 1 << 19 and c["CapBnd"] == 1 << 19, c)
+    kt = kernel_file(d)
+    check("access: ptrace mode: AOS_ROOT=/proc/1/cwd and it reads it",
+          kt.startswith("ok pid_ns: 1") and "\nroot /proc/1/cwd\n" in kt, kt)
+    check("access: ptrace mode: no /aos in its sky", d.ask("/aos") == "err ENOENT")
+    a = d.ask("ctl start " + config(d.dir, "pw", ["sleep"]))
+    check("access: ptrace mode: kernel's start through /proc/1/cwd/ctl works", a == "ok" and d.fact("pw", "state") == "alive\n", a)
+    d.stop()
+
+    # 主 kernel 的天空自己用了 /aos：daemon 起不來，說明原因
+    d = Daemon("access-clash", kernel_extra={"sky": base_sky(os.path.join(TMP, "access-clash")) + ["tmpfs /aos"]})
+    rc = d.p.wait(10)
+    check("access: kernel sky using /aos -> daemon exits 2 and says why", rc == 2 and "/aos" in d.err() and
+          "daemon_access" in d.err(), (rc, d.err()[-300:]))
+
+
+# ---------------------------------------------------------------- dirs
+
+def t_dirs():
+    """procs/<名>/ 是真的夾：start 時建、forget 時連同底下整個拿掉；同名再起看到新的。"""
+    d = Daemon("dirs")
+    if not check("dirs: daemon up", d.pid, d.err()):
+        return
+    started(d, "main")
+    c = config(d.dir, "x", ["sleep"])
+    d.ctl("start " + c)
+    p = d.root + "/procs/x"
+    check("dirs: procs/x is a real directory, not a symlink", os.path.isdir(p) and not os.path.islink(p))
+    want = {"name", "pid", "state", "exit", "started_at", "ended_at", "sky", "sky_check", "uid", "locks", "config"}
+    if not d.status().get("cgroup", "off").startswith("off"):
+        want.add("cgroup")
+    check("dirs: it holds the facts", set(os.listdir(p)) == want, sorted(os.listdir(p)))
+    check("dirs: ls procs/ lists main and x", sorted(os.listdir(d.root + "/procs")) == ["main", "x"])
+    hp1 = d.hostpid("x")
+    os.stat(p + "/state")   # 讓核心快取這條路
+    f = open(p + "/name")
+    d.ctl("kill x KILL")
+    wait_for(lambda: d.fact("x", "state") == "dead\n", 5)
+    r = d.ctl("forget x")
+    check("dirs: forget -> done and procs/x is gone at once (with what was under it)",
+          r == (0, "done", "-") and not os.path.lexists(p) and not os.path.lexists(p + "/state"), r)
+    check("dirs: ls procs/ lists only main", os.listdir(d.root + "/procs") == ["main"])
+    check("dirs: a fact file opened before forget still reads", f.read() == "x\n")
+    f.close()
+    r = d.ctl("start " + c)
+    check("dirs: same name again: new directory with the new proc", r == (0, "done", "-") and d.hostpid("x") != hp1)
+    ok = True
+    for i in range(10):
+        n = "c%d" % i
+        if d.ctl("start " + config(d.dir, n, ["exit", "0"]))[1] != "done":
+            ok = False
+        wait_for(lambda: d.fact(n, "state") == "dead\n", 5)
+        if d.ctl("forget " + n)[1] != "done" or os.path.lexists(d.root + "/procs/" + n):
+            ok = False
+    check("dirs: 10 start/forget rounds, each directory made and removed", ok)
+    check("dirs: procs/ is back to main and x", sorted(os.listdir(d.root + "/procs")) == ["main", "x"],
+          os.listdir(d.root + "/procs"))
+    check("dirs: status counts 2 procs", d.status().get("procs") == "2")
+    d.stop()
+
+
 # ---------------------------------------------------------------- leftovers
 
 def t_leftovers():
@@ -563,7 +714,8 @@ def t_leftovers():
 
 
 GROUPS = {"basic": t_basic, "procs": t_procs, "sky": t_sky, "landlock": t_landlock, "cgroup": t_cgroup,
-          "mount": t_mount, "modes": t_modes, "restart": t_restart, "teardown": t_teardown}
+          "mount": t_mount, "modes": t_modes, "restart": t_restart, "teardown": t_teardown, "access": t_access,
+          "dirs": t_dirs}
 
 
 def main():
