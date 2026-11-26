@@ -857,3 +857,15 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 126 段：init 做最小的（甲）。新開 thinking 26/kernel-1126.md。
 - 第 127～129 段：跟 init 說話走 ctl 介面，`__meta/__interfaces/ctl/` 底下寫怎麼講。我擬 kind file|socket、path（以宣告所在目錄起算）、commands；介面宣告可以是夾、底下放參數（要補 aospl 紀錄）。等他答三小題。
 - seccomp 那隻回來：我清 build 重跑 444／444、無殘留，交件。它的【擬】與疊 daemon 第 6 條（a～d）待給他看。下一批五樣等 ctl 三小題定了再派。
+- 01f4a998a 交了 seccomp＋疊 daemon（444）＋kernel-1126。
+- fable 審查回來（子 agent 寫不了檔，我從輸出抽出存 ~/.aos/scratch/proto9-daemon-review-1126/report.md）。該先處理 6 條：①signalfd 不看寄件人（ssi_pid==0 且 SI_USER/SI_KERNEL 才收；殺 init 6 次那半要他挑）②擋 uid0 proc 寫 ctl 只靠 Landlock、職責第 2/12 條理由寫錯、缺測試 ③疊 daemon 跟 Landlock/init uid0 打架（＝seccomp 那隻第 6 條）④bwrap 定了沒照做、沒紀錄 ⑤只能往下傳自己有的沒人接（建議 bind 可選 RESOLVE_BENEATH、ns.json 加量到的真實來源）⑥bind 來源卡住主執行緒 waitpid 卡死。待給使用者看（一次三條），ctl 三小題還在等他。
+- 第 130 段：ctl 三小題照推薦（aos/ctl、kind/path/commands、aos/daemon 改 aos/ctl 夾）。aospl 第 46 條、kernel-1126 第 2 條補好。
+- 第 131 段：審查 1（訊號看寄件人、殺 init 那半先接受）、2（先試試看：加測試）、3（逾時不等）都照擬。daemon職責第 35～37 條。派 opus 背景一隻做這三條＋下一批五樣（by/at、overlay、B 測試、restart-init、介面宣告 aos/ctl 夾），暫存 ~/.aos/scratch/proto9-daemon-fix-1126/。回來：清 build 重跑、查殘留、交件。
+- 他問「哪個proc會是uid 0」：預設 uid 是 0，沒寫 uid 的都是 → 問他要不要改成預設 subuid、要寫使用者檔的才明寫 uid 0。
+- 審查剩：③疊 daemon（大題）、④bwrap 紀錄、⑤只能往下傳自己有的；值得想 11 條、小事 14 條。
+- 第 132～135 段：proc 預設自動配 subuid、除了 init 禁止寫 uid 0（daemon職責第 38 條）；改使用者檔先用外面 setfacl（乙「經 init」以後有人自製 init 可做，先不管）。**uid 這條還沒派**（fix 那隻在同一夾跑，回來後再派）。下一題：審查第 3 條疊 daemon。
+- 第 136、137 段：疊 daemon 等 6.12（第 39 條）；舊版照跑講明風險、status 警告（40）；不用 bwrap 補原因與待辦（41）；beneath＋real（42）。**待派（fix 那隻回來後，同一夾）**：38 uid 預設 subuid＋禁 0、40 警告＋README、41 README 待辦＋seccomp 註解、42 beneath／real。審查剩「值得想」11、「小事」14。
+- 第 138 段：43 重起前殺舊 init cgroup、44 slave、45 收掉 ptrace，都待派（同上那批）。值得想剩：2 每隻自己 PID ns、5 start 路徑照誰的天空解、6 events、7 FUSE kernel 沒路、8 天空不是牆 vs 預設已像牆。
+- 第 139 段：天空＝看得到什麼是路由、行程之間是牆（第 46 條；daemon當容器第九輪那句加了指向）。PID ns 先不做。值得想剩：5 start 路徑照誰的天空解、6 events、7 FUSE kernel。
+- 第 140 段：47 路徑照寫的人的天空解、48 events、49 FUSE kernel 待辦。值得想看完。剩「小事」14 條。待派清單：38、40～45、47、48（等 fix 那隻回來）。
+- 第 141 段：小事照擬（第 50 條）。審查全部看完。待派：38、40～45、47、48、50（背景 fix 那隻回來、驗、交之後）。kernel 下一題：登記表。

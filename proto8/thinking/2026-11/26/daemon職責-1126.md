@@ -75,6 +75,31 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 33. **ctl 加 `restart-init`**（第 122、123 段）：只在 init 不在時能用（死了、`gone`、還沒起過；活著就 `EINVAL`），照 daemon.json 的 init 設定起一隻真正的 init（有 `daemon_path` 掛的目錄與 `AOS_DAEMON`），表上舊的那筆先拿掉、重起次數歸零；設定裡沒有 init 就失敗。
 34. **daemon 的資訊與工具用 aoslua 描：先擺介面宣告**（第 124 段）：daemon 目錄擺 `__meta/__interfaces/aos/daemon`（有 `status`、`ctl`、`procs/`）、`__meta/__interfaces/aos/jsonpath`（底下可用 `#`，例 `procs/w/ns.json#/0/src`），每隻 `procs/<名字>/` 擺 `__meta/__interfaces/aos/proc`，都是靜態空檔。第二步以後再做：`procs/` 的 `__newindex`＝`start`、`__gc`＝`forget`，是可執行檔、背後寫 `ctl`，就是第 6 條的外層程式。
     - 同一段：**`aos/utilpath` 改名 `aos/jsonpath`**（「也就是可以用#去存取json的東西」），記在 [aospl循址與元介面-1126](aospl循址與元介面-1126.md) 第 45 條。
+    - 改（11-26 傍晚，[kernel-1126](kernel-1126.md) 第 2 條、第 130 段）：`aos/daemon` 不做，daemon 目錄改宣告共同介面 **`aos/ctl`**——`__meta/__interfaces/aos/ctl/` 夾底下 `kind`（`file`）、`path`（`ctl`）、`commands`。`aos/jsonpath`、`aos/proc` 照舊。
+35. **daemon 只收外面送來的停止訊號**（fable 審查第 1 條，第 131 段）：signalfd 讀到的寄件人 PID 是 0（daemon 的 PID namespace 外面送的）且 `ssi_code` 是 `SI_USER`／`SI_KERNEL`，或寄件人是 init，才收尾；天空裡其他 proc 送的不理。uid 0 的 proc 還是殺得掉 init（60 秒 6 次 daemon 照上限結束）與兄弟：**先接受**，寫進 README 與 `locks` 檔。使用者問「哪個proc會是uid 0？如果是init kernel有這個權限，那我覺得OK」——預設 uid 是 0，所以沒寫 `uid` 的 proc 都是；要不要改預設另題。
+36. **擋普通 proc 寫 init 的 ctl 其實只靠 Landlock**（fable 審查第 2 條，第 131 段「先試試看」）：init 也是 uid 0、caps 0，同 uid 的 proc 照帳號規則走得進 `/proc/<init>/root/aos/`，擋下的是它自己的 Landlock domain。加測試驗它讀 `status`、寫 `ctl` 都失敗；第 2、12、20 條的理由照這個讀（原文不改）。
+37. **bind 來源卡住時不再無限等**（fable 審查第 6 條，第 131 段）：組天空、跑的時候掛卸的幫手逾時送 SIGKILL 後直接回失敗，不用會一直等的 `waitpid`；那個 PID 留給主循環平常的收屍收。
+38. **proc 預設用 subuid，不是 uid 0**（第 132 段，選乙；使用者打「以」，照字音當成「乙」）：設定沒寫 `uid` 的 proc，daemon 自動配一個沒人用的 subuid，每隻不同；~~要改使用者檔案的才明寫 `"uid": 0`~~→ 使用者第 133、134 段改：**除了指定的 init，禁止明寫 0**（設定寫 `"uid": 0` 的 `start` 要拒）。init 照舊一定 uid 0。起因是使用者問「哪個proc會是uid 0？如果是init kernel有這個權限，那我覺得OK」。代價：除了 init，沒有 proc 能用使用者本人的帳號寫檔；要改使用者的 repo：**先用外面的 `setfacl` 給那隻的 subuid 寫的權限**，daemon 不用改（第 135 段，選甲）；經 init 開檔或交 fd 也是可以的路（「以後可能會有人想自製另一種init kernel」），先不管；subuid 的 proc 建的檔，外面看是大 uid。
+39. **疊 daemon 等新版 Linux**（fable 審查第 3 條，第 136 段，選乙：「等新版linux。反正就是強制大家升linux」）：不為了疊 daemon 放寬 Landlock。等 Linux 6.12 以上（Landlock ABI 6）改成只管訊號、abstract socket 範圍、不管檔案權限的 domain，大家照進 Landlock 也能 mount。公司這台 6.6 疊不了，照實記在 README 與測試（`nest` 組）。第 29 條「准開 user namespace」照舊。
+40. **舊版 Linux 照跑，風險講明**（第 137 段：「就跟大家說，你linux版本如果是舊的，那你就可能要承擔X風險」）：daemon 在 6.6（Landlock ABI 小於 6）上照樣能跑；README 寫明正式要求 6.12 以上，並列出舊版要承擔的風險（天空裡 uid 相同的能互送訊號、abstract socket 擋不住、不能疊 daemon）；舊版時 `status` 多一行英文警告。
+41. **不用 bwrap，起 proc 是自己寫的**（fable 審查第 4 條，第 137 段）：第六輪定的「直接用 bwrap」改掉，原因是這些 bwrap 做不到——同一個 user namespace 裡換成 subuid、進 Landlock、exec 前停下來量天空表、跑的時候掛進去、從 daemon 握著的那一層取來源。代價是 /dev、終端機、seccomp 清單自己維護：另列「bwrap／runc 有、我們還沒有」的待辦（`/dev/pts` 與終端機、tmpfs 大小上限…），seccomp 清單在註解記下對照的現成清單。
+42. **「只能往下傳自己有的」歸 init，daemon 給兩樣機制**（fable 審查第 5 條，第 137 段）：bind 加可選的 `beneath`（從那個夾往下開，`RESOLVE_BENEATH`，出界或跟 symlink 出去就失敗）；`ns.json` 每筆多 `real`（daemon 實際開到的真實位置）。
+43. **init 重起前先把舊 init 的 cgroup 殺乾淨**（fable 審查「值得想」第 3 條，第 138 段）：等於自動做一次 `forget -k`，舊 init 留下的孩子不再漏在表外；沒開 cgroup 時做不到，README 寫明。
+44. **daemon 握著的外面跟著外面的掛卸走**（「值得想」第 4 條，第 138 段）：原本那一層從 private 改成 slave（收外面的掛、卸，不往外傳），複製進天空的那份照舊 private、不在背後變；要實測，做不好就照現在、寫進已知限制。
+45. **`daemon_access: ptrace` 收掉**（「值得想」第 9 條，第 138 段）：只留 mount 做法（第 7 條改成只剩一種）。
+46. **天空：看得到什麼是路由，行程之間是牆**（fable 審查「值得想」第 8 條，第 139 段：「啊...沒想到會自然而然發展成這樣。好，那就改成這樣吧」）：取代 [daemon當容器-1125](../25/daemon當容器-1125.md) 第九輪的「天空是共用的路由、不是牆」。
+    - 看得到什麼：由起它的那一方決定，kernel 提供的名字大家共用——路由。
+    - 行程之間：預設互相碰不到（送訊號、看彼此的天空與環境變數），daemon 與 init 一定擋住——牆。
+    - 網路預設不給，讓流量只走指定的 kernel（例 llm proxy）。
+    - 每隻自己一個 PID namespace（「值得想」第 2 條）先不做：帳號各自不同後只多擋「看得到別人的命令列」；README 提醒祕密別放命令列參數。
+47. **`start`／`mount` 的路徑照寫的人的天空解**（fable 審查「值得想」第 5 條，第 140 段）：寫 `ctl` 的是外面的人（PID 0）照外面解；寫的是 init，照 init 自己的天空解（來源從它的 mount namespace 取）。「只能往下傳自己有的」對 init 自動成立；代價是 daemon.json 裡 init 的天空要列較多東西（例：使用者的 repo）。第 15 條「只收絕對路徑」照舊。要在 ctl 格式定死前做。
+48. **daemon 目錄加 `events`**（「值得想」第 6 條，第 140 段；daemon當容器第七輪已定要做「事件」）：讀的時候會等，有事才吐一行（時間、名字、欄、舊值 -> 新值），`cat events` 能一直看著。
+49. **FUSE kernel 的路先列待辦**（「值得想」第 7 條，第 140 段）：要由 daemon 開 FUSE 連線、把掛載點擺進指定的天空、把連線交給那隻 kernel；等第一隻要用 FUSE 的 kernel 出現再設計。
+50. **審查「小事」**（第 141 段）：
+    - `kill <名字>` 送給它整個 cgroup；沒開 cgroup 時送給它的行程組。
+    - `tmpfs` 條目與天空的根加可選 `size`，預設不限。
+    - daemon 在 `$XDG_RUNTIME_DIR/aos-daemon/<名字>` 放固定位置的連結、結束時拿掉；README 教人寫 `ctl` 前先對 `status` 的 PID。
+    - 其餘 11 條照 審查報告（`~/.aos/scratch/proto9-daemon-review-1126/report.md`）「小事」的建議直接修（kill 改 pidfd、`on_main` 逾時標取消、擋 `daemon_path` 上層的 umount／mount、`/tmp` 不在也能起、文件補正等）。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 

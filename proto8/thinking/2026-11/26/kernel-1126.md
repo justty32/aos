@@ -19,7 +19,14 @@ daemon 收窄之後談 kernel：init 做最小的（照設定起第一批、把�
 
 2. **別的 proc 跟 init 說話，走同一套介面，不另開一條路。**（第 127 段）init 那邊擺出一個目錄，有 `__meta/__interfaces/xxx` 宣告它符合哪個介面；背後用 socket、FUSE 還是一般檔案都行，只要符合介面（界面＝檔案布局＋格式＋存取得到，見 [aospl循址與元介面-1126](aospl循址與元介面-1126.md)）。
    - 補（第 128 段）：意思是 init 宣告相關的 **ctl 介面**，別的 proc 照那個介面寫 ctl。
-   - 待定：這個 ctl 介面跟 daemon 的是不是同一份、在別人天空裡擺哪裡。
+   - 宣告長這樣（第 129 段他提、第 130 段三小題照推薦）：介面名 **`aos/ctl`**；`__meta/__interfaces/aos/ctl/` 是一個夾，底下寫怎麼講：
+     - `kind`：`file`（寫一行進那個檔、做完才回、失敗在寫入那一下回錯誤）或 `socket`（連上、送一行、讀回一行）。背後是不是 FUSE 是提供者的事，寫入的一方只分這兩種。
+     - `path`：以宣告所在的目錄起算（`ctl` 就是 `/aos/ctl`），整個目錄掛到別處也照通。
+     - `commands`：有哪些指令，例 `start kill mount umount forget`。
+     - 同時給兩種講法就開兩個夾（`aos/ctl/file/`、`aos/ctl/socket/`）。
+   - 起點固定：每隻 proc 先到自己天空裡的 `/aos`，讀宣告才知道去哪寫。`/aos` 在天空裡唯讀，只有 ctl 本身能寫（誰能改宣告，誰就能把別人的指令導走）。
+   - daemon 也宣告 `aos/ctl`（下一批原本的空檔 `aos/daemon` 改成這個夾）。init 對別人擺出同一份介面，所以每隻 proc 在 `/aos` 看到的都是「管我的那一方」，程式不用知道背後是 daemon 還是 init，疊 daemon 也不用改。init 可以拒絕某些指令、只讓每隻看到它自己起的。
+   - 「登記 kernel」不放進這份 ctl，交給登記表那個 kernel 自己宣告的介面（第 3 題）。
 
 ## 還沒談的（照該先談的排）
 
