@@ -10,6 +10,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <sys/types.h>
 #include <vector>
@@ -32,13 +33,14 @@ struct Config {
 struct Proc {
     std::string name;                     // 表上的名字（一層，不含 /）
     unsigned long long id = 0;            // 同名拿掉再加回來時分得出是哪一隻
-    bool external = false;                // register 進來的：不送訊號、不卸掛載
+    bool external = false;                // register 進來的：只做它自己 settings 的 aos_obey 准的事
+    std::vector<std::string> obey;        // 外來的：aos_obey 准的字（只認 stop、kill），登記時從它自己的 settings 讀
     std::vector<std::string> argv, env;   // 怎麼起（env 是額外的 "K=V"）
     std::string phase = "stopped", want = "up";
     pid_t pid = -1;
     int pidfd = -1;                       // 外來的才有：不是自己的子行程，靠它知道死了沒
-    std::string code = "-", sig = "-", reason = "-", persist = "-", mailbox = "-", stuck = "no";
-    std::string mount;                    // 交給它的 AOS_MOUNT
+    std::string code = "-", sig = "-", reason = "-", persists = "-", mailbox = "-", stuck = "no";
+    std::string mount;                    // 交給它的 AOS_MOUNT（外來的：kill 時從 mountinfo 找到的，收屍時清）
     bool linked = false, removing = false;
     std::string killed;                   // 被 daemon 強制收時，結束後寫進 reason 的那句
     Clock::time_point deadline;           // starting：登記期限；rm 時：強制收的時間
@@ -46,7 +48,51 @@ struct Proc {
     int inflight = 0;                     // 為它開的、還沒收屍的小行程
     int hung = 0;                         // 其中到期被放棄的（可能殺不掉、卡在它的目錄裡）
     std::string last_error;               // 登記時最後一次試讀的錯
+
+    bool obeys(const std::string& w) const {
+        for (const auto& x : obey)
+            if (x == w) return true;
+        return false;
+    }
 };
+
+// ---------- 擺出來的有結構的檔：每個一張欄位表（aos/fields.hpp），純文字與 json 都從這裡生 ----------
+
+#define DAEMON_STATUS_FIELDS(F)                  \
+    F(std::string, aos_name, Always)             \
+    F(std::string, aos_phase, Always)            \
+    F(long long, aos_pid, Always)                \
+    F(std::string, aos_started_at, Always)       \
+    F(pf::Feedback, aos_ctl_, Embed)             \
+    F(long long, aos_procs, Always)              \
+    F(pf::Feedback, aos_procs_ctl_, Embed)
+AOS_RECORD(DaemonStatus, DAEMON_STATUS_FIELDS)
+
+#define DAEMON_SETTINGS_FIELDS(F)                \
+    F(std::string, aos_persists, Always)         \
+    F(std::string, aos_mailbox, Always)          \
+    F(std::string, mount_base, Always)
+AOS_RECORD(DaemonSettings, DAEMON_SETTINGS_FIELDS)
+
+#define DAEMON_ATTRS_FIELDS(F) F(std::string, aos_kind, Always) F(std::string, aos_live, Always)
+AOS_RECORD(DaemonAttrs, DAEMON_ATTRS_FIELDS)
+
+// procs_status 的一隻：純文字是 "<名>.<欄>"；external、obey 只有外來登記的才有
+#define PROC_ROW_FIELDS(F)                       \
+    F(std::string, phase, Always)                \
+    F(std::string, want, Always)                 \
+    F(std::optional<long long>, pid, Always)     \
+    F(std::optional<long long>, code, Always)    \
+    F(std::optional<long long>, signal, Always)  \
+    F(std::string, reason, Always)               \
+    F(std::string, persists, Always)             \
+    F(std::string, mailbox, Always)              \
+    F(std::string, stuck, Always)                \
+    F(std::string, external, OmitEmpty)          \
+    F(std::optional<std::string>, obey, OmitEmpty)
+AOS_RECORD(ProcRow, PROC_ROW_FIELDS)
+using ProcsStatus = std::map<std::string, ProcRow>;
+ProcRow row_of(const Proc& p);   // lifecycle.cpp；拿著 State::mu 叫
 
 // 做事的線（procs_ctl 的 Action）交給監工的一道指令；監工做完 daemon 這邊的動作就 finish。
 struct Request {
@@ -137,6 +183,7 @@ private:
     void force_kill(Proc& p, const std::string& why);
     void begin_shutdown();
     bool shutdown_tick();
+    static bool stops_with_me(const Proc& p);   // daemon 自己停時要收它：自己起的，或外來的而 aos_obey 有 stop
     std::string child_name(const std::string& name) const;
 
     const Config& cfg_;

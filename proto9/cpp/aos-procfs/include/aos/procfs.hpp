@@ -5,6 +5,8 @@
 // 所以：只讀檔的內容由「當場產生字串」的 Producer 給（在回答的線上跑）；ctl 的指令交給另一條做事的線跑。
 #pragma once
 
+#include "aos/fields.hpp"
+
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -18,23 +20,18 @@ namespace aos::procfs {
 // ---------- 「名稱: 值」文字 ----------
 
 // 一行 "name: value\n"；值裡的換行換成空白，空值寫 "-"（草稿第 5 節）。
+// 整個檔的內容請用欄位表（aos/fields.hpp 的 AOS_RECORD、to_text、to_json），每個欄位只宣告一次。
 std::string kv_line(std::string_view name, std::string_view value);
 
-// 一行一行疊起來的小工具：Kv().add("aos_pid", 123).add("aos_phase", "running").str()
-class Kv {
-public:
-    Kv& add(std::string_view name, std::string_view value);
-    Kv& add(std::string_view name, const char* value) { return add(name, std::string_view(value ? value : "")); }
-    Kv& add(std::string_view name, long long value);
-    Kv& add(std::string_view name, int value) { return add(name, static_cast<long long>(value)); }
-    Kv& raw(std::string_view lines);   // 已經是 "name: value\n" 的整段（例：Ctl::feedback()）
-    const std::string& str() const { return out_; }
-
-private:
-    std::string out_;
-};
-
 // ---------- 指令檔（ctl、procs_ctl） ----------
+
+// 回饋四行（草稿第 6 節）。放進 status 的欄位表時用 Embed、格名就是字首：F(aos::procfs::Feedback, aos_ctl_, Embed)
+#define AOS_FEEDBACK_FIELDS(F)       \
+    F(std::string, cmd, Always)      \
+    F(std::string, state, Always)    \
+    F(std::string, error, Always)    \
+    F(long long, count, Always)
+AOS_RECORD(Feedback, AOS_FEEDBACK_FIELDS)
 
 struct Command {
     std::string line;                  // 收下的那一道（去掉行尾換行）
@@ -60,7 +57,9 @@ class Ctl {
 public:
     // 註冊一個字。要在 Fs::mount 之前註冊完（之後不再改表，回答的線讀它不用鎖）。
     void on(std::string word, Action action, Check check = {});
-    // 回饋四行 <prefix>cmd／state／error／count；在 Producer 裡叫，只拿一下鎖、不阻塞。
+    // 回饋四行的值（還沒收過＝空字串，寫出來是 "-"）；在 Producer 裡叫，只拿一下鎖、不阻塞。
+    Feedback snapshot() const;
+    // 同上，寫成四行純文字 <prefix>cmd／state／error／count。
     std::string feedback() const;
     bool locked() const;
 

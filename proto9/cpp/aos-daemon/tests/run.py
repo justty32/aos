@@ -3,8 +3,10 @@
 """用法：python3 tests/run.py [測試名 ...]   （不給＝全部；名字見 TESTS）"""
 import json, os, signal, subprocess, sys, time
 from common import (DAEMON, DEMO, SCRATCH, FAST, start_daemon, start_demo, sh, read_kv, table, ctl, wait_until, alive,
-                    our_mounts, marked, cleanup, leftovers, env, results, check, spec, phase_is, pctl_done, stop_daemon)
+                    our_mounts, marked, cleanup, leftovers, env, results, check, spec, phase_is, pctl_done, pctl, own_ctl,
+                    stop_daemon)
 from stuck import t_stuck, t_lock, t_stopstuck
+from register import t_register, t_obey
 
 def t_self():
     p, pid, root, base = start_daemon("self")
@@ -14,13 +16,13 @@ def t_self():
     check("status has the 8 lines + aos_procs + 4 procs_ctl lines", all(k in st for k in want), st)
     check("root: aos_name is /, aos_pid is the daemon", st.get("aos_name") == "/" and st.get("aos_pid") == str(pid), st)
     rc, out, _ = sh("cat %s/attrs %s/settings %s/_metainfo.json; ls %s/procs %s/proc/" % ((root,) * 5))
-    check("attrs, settings, _metainfo.json, procs/ and proc/ readable", rc == 0 and "aos_live: yes" in out and "aos_persist" in out, out)
-    ctl(root + "/ctl", "pause")
-    st = wait_until(lambda: (read_kv(root + "/status") or {}).get("aos_phase") == "paused" and read_kv(root + "/status")) or {}
+    check("attrs, settings, _metainfo.json, procs/ and proc/ readable", rc == 0 and "aos_live: yes" in out and "aos_persists" in out, out)
+    own_ctl(root, "pause")
+    st = read_kv(root + "/status") or {}
     rc, _, err = ctl(root + "/procs_ctl", "add x %s" % DEMO)
     check("pause -> aos_phase paused; add is refused while paused", st.get("aos_phase") == "paused" and rc != 0
           and (read_kv(root + "/status") or {}).get("aos_procs_ctl_error", "").startswith("DaemonPaused"), (st, err))
-    ctl(root + "/ctl", "resume")
+    own_ctl(root, "resume")
     rc, _, err = ctl(root + "/procs_ctl", "frobnicate x")
     st = read_kv(root + "/status") or {}
     check("unknown procs_ctl word: write fails, rejected CommandUnknown", rc != 0 and st.get("aos_procs_ctl_state") == "rejected"
@@ -44,10 +46,10 @@ def t_add():
     check("proc/kid is the same place", (read_kv(root + "/proc/kid/status") or {}).get("aos_pid") == st.get("aos_pid"))
     kmnt = os.path.join(base, "kid")
     check("kid is mounted under --mount-base", kmnt in our_mounts(), our_mounts())
-    s = spec(os.path.join(SCRATCH, "persist.json"), [DEMO, "--persist", "/tmp/aos-test-persist"])
-    ctl(root + "/procs_ctl", "add pj %s" % s)
+    s = spec(os.path.join(SCRATCH, "persists.json"), [DEMO, "--persists", "/tmp/aos-test-persists"])
+    pctl(root, "add pj %s" % s)
     ok = phase_is(root, "pj", "running")
-    check("add via json spec; settings aos_persist recorded in the table", ok and table(root, "pj").get("persist") == "/tmp/aos-test-persist",
+    check("add via json spec; settings aos_persists recorded in the table", ok and table(root, "pj").get("persists") == "/tmp/aos-test-persists",
           table(root, "pj"))
 
     rc, _, err = ctl(root + "/procs_ctl", "stop kid")
@@ -56,7 +58,7 @@ def t_add():
     check("stop kid -> stopped, want down, code 0, reason stopped", rc == 0 and ok and t.get("want") == "down"
           and t.get("code") == "0" and t.get("reason") == "stopped", (err, t))
     check("after stop: link gone, mount gone, still on the table",
-          not os.path.lexists(root + "/procs/kid") and kmnt not in our_mounts() and "pid" in t)
+          wait_until(lambda: not os.path.lexists(root + "/procs/kid") and kmnt not in our_mounts(), 3) and "pid" in t)
     rc, _, err = ctl(root + "/procs_ctl", "start kid")
     ok = phase_is(root, "kid", "running")
     check("start kid -> running again, procs/kid readable", rc == 0 and ok and read_kv(root + "/procs/kid/status") is not None, err)
@@ -85,45 +87,22 @@ def t_crash():
 def t_regfail():
     p, pid, root, base = start_daemon("regfail")
     s = spec(os.path.join(SCRATCH, "sleep.json"), ["/bin/sleep", "60"])
-    t0 = time.time()
+    t0 = time.monotonic()
     rc, _, err = ctl(root + "/procs_ctl", "add sl %s" % s)
     spid = int(wait_until(lambda: table(root, "sl").get("pid", "-") != "-" and table(root, "sl")["pid"], 2) or 0)
     ok = phase_is(root, "sl", "failed", 6)
     t = table(root, "sl")
-    check("add sleep 60 (never registers) -> failed after the 3 s deadline (%.1f s), reason RegisterTimeout" % (time.time() - t0),
+    check("add sleep 60 (never registers) -> failed after the 3 s deadline (%.1f s), reason RegisterTimeout" % (time.monotonic() - t0),
           rc == 0 and ok and t.get("reason", "").startswith("RegisterTimeout"), (err, t))
     check("... and the process was killed", spid > 0 and wait_until(lambda: not alive(spid), 2), spid)
-    rc, _, _ = ctl(root + "/procs_ctl", "add fl /bin/false")
+    pctl(root, "add fl /bin/false")
     ok = phase_is(root, "fl", "failed", 3)
     check("add /bin/false -> failed, exited before registering", ok and "before registering" in table(root, "fl").get("reason", ""),
           table(root, "fl"))
-    pctl_done(root)
-    ctl(root + "/procs_ctl", "add nx /no/such/file")
-    st = pctl_done(root)
+    _, _, st = pctl(root, "add nx /no/such/file")
     check("add a missing path -> failed with PathBad, not on the table", st.get("aos_procs_ctl_state") == "failed"
           and st.get("aos_procs_ctl_error", "").startswith("PathBad") and table(root, "nx") == {}, st)
     stop_daemon(p, root, "regfail")
-
-
-def t_register():
-    p, pid, root, base = start_daemon("register")
-    q, qpid, qroot, qmnt = start_demo("ext")
-    rc, _, err = ctl(root + "/procs_ctl", "register ext %d" % qpid)
-    ok = phase_is(root, "ext", "running")
-    check("register ext PID -> procs/ext/status readable, marked external",
-          rc == 0 and ok and (read_kv(root + "/procs/ext/status") or {}).get("aos_name") == "ext"
-          and table(root, "ext").get("external") == "yes", (err, table(root, "ext")))
-    rc, _, _ = ctl(root + "/procs_ctl", "kill ext")
-    check("kill on a registered proc is refused", rc != 0 and alive(qpid))
-    rc, _, _ = ctl(root + "/procs_ctl", "rm ext")
-    check("rm ext -> off the table; the process and its mount are untouched",
-          rc == 0 and table(root, "ext") == {} and alive(qpid) and qmnt in our_mounts())
-    ctl(root + "/procs_ctl", "register ext %d" % qpid)
-    phase_is(root, "ext", "running")
-    stop_daemon(p, root, "register")
-    check("daemon stop leaves a registered proc alive with its mount", alive(qpid) and qmnt in our_mounts())
-    ctl(qroot + "/ctl", "stop")
-    q.wait(5)
 
 
 def t_nested():
@@ -228,7 +207,7 @@ def t_mailbox():
 
 
 TESTS = {"self": t_self, "add": t_add, "crash": t_crash, "stuck": t_stuck, "regfail": t_regfail,
-         "register": t_register, "lock": t_lock, "nested": t_nested, "startup": t_startup,
+         "register": t_register, "obey": t_obey, "lock": t_lock, "nested": t_nested, "startup": t_startup,
          "stopstuck": t_stopstuck, "sigterm": t_sigterm, "envpid": t_envpid, "mailbox": t_mailbox}
 
 

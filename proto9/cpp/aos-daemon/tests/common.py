@@ -25,10 +25,10 @@ def env():
 
 
 def _wait_line(p, prefix, wait):
-    deadline = time.time() + wait
+    deadline = time.monotonic() + wait
     buf = b""
     fd = p.stdout.fileno()
-    while time.time() < deadline:
+    while time.monotonic() < deadline:
         r, _, _ = select.select([fd], [], [], 0.1)
         if not r:
             continue
@@ -55,11 +55,11 @@ def start_daemon(test, *extra, wait=5.0):
     return p, int(root.split("/")[2]), root, base
 
 
-def start_demo(name, wait=5.0):
-    """外面起一隻 demo；回 (Popen, pid, root, mountpoint)。"""
+def start_demo(name, *extra, wait=5.0, tag=""):
+    """外面起一隻 demo（extra 是多給的旗標，tag 讓同名的第二隻用另一個掛載點）；回 (Popen, pid, root, mountpoint)。"""
     os.makedirs(MNT, exist_ok=True)
-    mnt = os.path.join(MNT, "%s-%s" % (name, RUN))
-    p = subprocess.Popen([DEMO, name, mnt], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd="/", env=env())
+    mnt = os.path.join(MNT, "%s%s-%s" % (name, tag, RUN))
+    p = subprocess.Popen([DEMO, name, mnt, *extra], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd="/", env=env())
     _procs.append(p)
     root = _wait_line(p, "AOS_ROOT=", wait).split("=", 1)[1]
     return p, int(root.split("/")[2]), root, mnt
@@ -84,9 +84,9 @@ def bg(cmd):
 
 
 def timed(cmd, timeout=5.0):
-    t = time.time()
+    t = time.monotonic()
     r = sh(cmd, timeout)
-    return r + (time.time() - t,)
+    return r + (time.monotonic() - t,)
 
 
 def parse_kv(text):
@@ -114,8 +114,8 @@ def ctl(path, line, timeout=5.0):
 
 
 def wait_until(fn, timeout=5.0, step=0.05):
-    deadline = time.time() + timeout
-    while time.time() < deadline:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
         v = fn()
         if v:
             return v
@@ -211,10 +211,25 @@ def phase_is(root, name, want, timeout=5.0):
     return wait_until(lambda: table(root, name).get("phase") == want, timeout)
 
 
-def pctl_done(root, timeout=5.0):
-    """等 procs_ctl 那道做完（daemon 這邊的動作），回 status。"""
-    st = wait_until(lambda: (read_kv(root + "/status") or {}).get("aos_procs_ctl_state") != "doing" and read_kv(root + "/status"), timeout)
+def pctl_done(root, timeout=5.0, prefix="aos_procs_ctl_"):
+    """等 procs_ctl（或 prefix 給的那個 ctl）的那道做完，回 status。
+    寫入回來只代表「收到」：收下的那一刻 state 已經是 doing（回答的線上設的），所以寫完再等「不是 doing」就是等那一道。"""
+    st = wait_until(lambda: (read_kv(root + "/status") or {}).get(prefix + "state") != "doing" and read_kv(root + "/status"), timeout)
     return st or {}
+
+
+def pctl(root, line, timeout=5.0):
+    """寫 procs_ctl 並等那道做完；回 (rc, stderr, status)。被拒的（rc 不是 0）不等。"""
+    rc, _, err = ctl(root + "/procs_ctl", line)
+    return rc, err, (pctl_done(root, timeout) if rc == 0 else read_kv(root + "/status") or {})
+
+
+def own_ctl(root, line, timeout=5.0):
+    """寫 daemon 自己的 ctl 並等那道做完（stop 除外：它鎖到結束）；回 (rc, stderr)。"""
+    rc, _, err = ctl(root + "/ctl", line)
+    if rc == 0:
+        pctl_done(root, timeout, "aos_ctl_")
+    return rc, err
 
 
 def stop_daemon(p, root, label):

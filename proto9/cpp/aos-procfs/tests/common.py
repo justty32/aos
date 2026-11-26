@@ -17,10 +17,10 @@ def start_demo(name, *extra, wait=5.0):
     mnt = os.path.join(MNT, "%s-%d" % (name, os.getpid()))
     p = subprocess.Popen([DEMO, name, mnt, *extra], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd="/")
     _procs.append(p)
-    deadline = time.time() + wait
+    deadline = time.monotonic() + wait
     buf = b""
     fd = p.stdout.fileno()
-    while time.time() < deadline:
+    while time.monotonic() < deadline:
         # 直接讀 fd：用帶緩衝的 readline 會把兩行一起吃進緩衝，select 就再也等不到
         r, _, _ = select.select([fd], [], [], 0.1)
         if not r:
@@ -71,8 +71,8 @@ def status(root, timeout=3.0):
 
 
 def wait_until(fn, timeout=5.0, step=0.02):
-    deadline = time.time() + timeout
-    while time.time() < deadline:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
         v = fn()
         if v:
             return v

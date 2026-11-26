@@ -26,11 +26,15 @@ void Ctl::on(std::string word, Action action, Check check) {
     impl_->table[std::move(word)] = Impl::Entry{std::move(action), std::move(check)};
 }
 
-std::string Ctl::feedback() const {
+Feedback Ctl::snapshot() const {
     std::lock_guard<std::mutex> g(impl_->mu);
-    const std::string& p = impl_->prefix;
-    return kv_line(p + "cmd", impl_->cmd) + kv_line(p + "state", impl_->state) +
-           kv_line(p + "error", impl_->error) + kv_line(p + "count", std::to_string(impl_->count));
+    return Feedback{impl_->cmd, impl_->state, impl_->error, impl_->count};
+}
+
+std::string Ctl::feedback() const {
+    std::string out;
+    fields_detail::text_fields(out, impl_->prefix, true, snapshot());
+    return out;
 }
 
 bool Ctl::locked() const {
@@ -73,7 +77,7 @@ int Ctl::Impl::write(std::string_view data) {
     ++count;
     cmd = line;
     state = "doing";
-    error = "-";
+    error.clear();
     busy = true;
     job = std::move(c);
     has_job = true;
@@ -119,7 +123,7 @@ void Ctl::Impl::run() {
         if (r.hold) continue;   // stop：鎖到行程結束，state 停在 doing
         // 收下了、做的時候失敗＝failed（使用者 11-25 定）；done 一定是做成了、error 是 -
         state = r.error.empty() ? "done" : "failed";
-        error = r.error.empty() ? "-" : r.error;
+        error = r.error;
         busy = false;
     }
 }

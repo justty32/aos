@@ -52,20 +52,20 @@ void demo_mail_setup(pf::Fs& fs, pf::Ctl& ctl, DemoMail& dm) {
     });
 }
 
-std::string demo_mail_status(DemoMail& dm) {
+DemoMailStatus demo_mail_status(DemoMail& dm) {
     pf::MailStats s = dm.box->stats();
-    pf::Kv kv;
-    kv.add("mail_waiting", static_cast<long long>(s.waiting))
-        .add("mail_writing", static_cast<long long>(s.writing))
-        .add("mail_bytes", static_cast<long long>(s.bytes))
-        .add("mail_delivered", static_cast<long long>(s.delivered))
-        .add("mail_taken", static_cast<long long>(s.taken))
-        .add("mail_refused", static_cast<long long>(s.refused))
-        .add("mail_dropped_stale", static_cast<long long>(s.dropped_stale))
-        .add("mail_last_refusal", s.last_refusal);
+    DemoMailStatus m;
+    m.waiting = static_cast<long long>(s.waiting);
+    m.writing = static_cast<long long>(s.writing);
+    m.bytes = static_cast<long long>(s.bytes);
+    m.delivered = static_cast<long long>(s.delivered);
+    m.taken = static_cast<long long>(s.taken);
+    m.refused = static_cast<long long>(s.refused);
+    m.dropped_stale = static_cast<long long>(s.dropped_stale);
+    m.last_refusal = s.last_refusal;
     std::lock_guard<std::mutex> g(dm.mu);
-    kv.add("mail_refusing", dm.refusing ? "on" : "off").add("mail_last_name", dm.last_name);
-    if (dm.last_bytes < 0) kv.add("mail_last_bytes", "");
-    else kv.add("mail_last_bytes", dm.last_bytes);
-    return kv.str();
+    m.refusing = dm.refusing ? "on" : "off";
+    m.last_name = dm.last_name;
+    m.last_bytes = dm.last_bytes;
+    return m;
 }

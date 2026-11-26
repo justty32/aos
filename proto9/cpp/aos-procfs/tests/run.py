@@ -34,7 +34,8 @@ def t_basic():
     rc, _, err = sh("echo pause > %s/ctl" % root)
     ok = rc == 0 and wait_until(lambda: (status(root) or {}).get("aos_phase") == "paused")
     check("echo pause > ctl -> aos_phase: paused", ok, err)
-    st = status(root) or {}
+    # phase 是做事的線在做的途中改的，done 在它做完之後才記：等 done，不是看到 paused 就讀
+    st = ctl_state(root, "done") and status(root) or {}
     check("feedback after pause: cmd pause, done, count 1",
           (st.get("aos_ctl_cmd"), st.get("aos_ctl_state"), st.get("aos_ctl_count")) == ("pause", "done", "1"), st)
     sh("echo resume > %s/ctl" % root)
@@ -64,9 +65,9 @@ def t_basic():
     rc, _, _ = sh("echo 'slow 3' > %s/ctl" % root)
     before = status(root) or {}
     rc2, _, err2 = sh("echo pause > %s/ctl" % root)
-    t = time.time()
+    t = time.monotonic()
     after = status(root, timeout=1.0)
-    dt = time.time() - t
+    dt = time.monotonic() - t
     check("slow 3 accepted and locked (doing)", rc == 0 and before.get("aos_ctl_state") == "doing", before)
     check("second writer during slow 3 fails with busy", rc2 != 0 and "busy" in err2, err2)
     keys = ("aos_ctl_cmd", "aos_ctl_state", "aos_ctl_count")

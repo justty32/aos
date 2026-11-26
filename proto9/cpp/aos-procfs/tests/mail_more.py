@@ -31,6 +31,13 @@ def mail(st, *keys):
     return tuple((st or {}).get("mail_" + k) for k in keys)
 
 
+def ctl_done(root, line):
+    """寫 ctl 並等那道做完；回 status。收下的那一刻 state 就是 doing（回答的線上設的），所以寫完等「不是 doing」就是等這一道。
+    take 的 mail_taken 在 take() 裡就加了、mail_last_name 要到做事的線做完才寫，只等計數會讀到一半。"""
+    sh("echo '%s' > %s/ctl" % (line, root))
+    return wait_until(lambda: (lambda s: s.get("aos_ctl_state") not in (None, "doing") and s)(status(root) or {})) or {}
+
+
 def stop(p, root):
     sh("echo stop > %s/ctl" % root)
     try:
@@ -83,8 +90,7 @@ def t_folder():
     e3 = err_of(os.rmdir, mb + "/tmp/M")
     check("inside a folder letter: no sub-folder (EPERM); rmdir non-empty ENOTEMPTY; empty rmdir ok",
           (e1, e2, e3) == ("EPERM", "ENOTEMPTY", 0), (e1, e2, e3))
-    sh("echo take > %s/ctl" % root)
-    st = wait_until(lambda: mail(status(root), "taken")[0] == "1" and status(root)) or {}
+    st = ctl_done(root, "take")
     check("take a folder letter: size = all its files (11 + 3)", mail(st, "last_name", "last_bytes") == ("L", "14"), st)
     stop(p, root)
 
@@ -114,8 +120,7 @@ def t_aospost():
     body = json.load(open(mb + "/new/named/letter.json")).get("body")
     check("aos-post with the same given name twice: second is LetterExists, first intact, tmp/ cleaned",
           rc1 == 0 and rc2 == 1 and "LetterExists" in err2 and body == "first" and os.listdir(mb + "/tmp") == [], (err2, body))
-    sh("echo 'refuse on' > %s/ctl" % root)
-    wait_until(lambda: mail(status(root), "refusing")[0] == "on")
+    ctl_done(root, "refuse on")
     rc, _, err = post(mb)
     check("refusing proc: aos-post fails (WriteFailed ... not permitted) and cleans its tmp/",
           rc == 1 and "WriteFailed" in err and "not permitted" in err and os.listdir(mb + "/tmp") == [], (rc, err))

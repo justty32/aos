@@ -1,5 +1,7 @@
-// kv.cpp：「名稱: 值」一行一個的純文字產生器（status、settings、attrs 共用）。
+// kv.cpp：「名稱: 值」一行的寫法與 json 字串的跳脫（欄位表 aos/fields.hpp 的兩種寫法都靠這兩個）。
 #include "aos/procfs.hpp"
+
+#include <cstdio>
 
 namespace aos::procfs {
 
@@ -18,19 +20,28 @@ std::string kv_line(std::string_view name, std::string_view value) {
     return out;
 }
 
-Kv& Kv::add(std::string_view name, std::string_view value) {
-    out_ += kv_line(name, value);
-    return *this;
-}
-
-Kv& Kv::add(std::string_view name, long long value) {
-    out_ += kv_line(name, std::to_string(value));
-    return *this;
-}
-
-Kv& Kv::raw(std::string_view lines) {
-    out_.append(lines);
-    return *this;
+std::string json_quote(std::string_view s) {
+    std::string out = "\"";
+    for (char c : s) {
+        unsigned char u = static_cast<unsigned char>(c);
+        if (c == '"' || c == '\\') {
+            out += '\\';
+            out += c;
+        } else if (c == '\n') {
+            out += "\\n";
+        } else if (c == '\t') {
+            out += "\\t";
+        } else if (c == '\r') {
+            out += "\\r";
+        } else if (u < 0x20) {
+            char buf[8];
+            std::snprintf(buf, sizeof buf, "\\u%04x", u);
+            out += buf;
+        } else {
+            out += c;   // UTF-8 原樣
+        }
+    }
+    return out + "\"";
 }
 
 }  // namespace aos::procfs

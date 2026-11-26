@@ -6,7 +6,7 @@ import common
 common.SCRATCH = os.path.expanduser("~/.aos/scratch/proto9-mailbox-1125")
 common.MNT = os.path.join(common.SCRATCH, "mnt")
 from common import DEMO, RESULTS as results, check, start_demo, sh, status, wait_until, cleanup, leftovers
-from mail_more import err_of, put, mail, stop, t_guards, t_folder, t_aospost, t_stopped, t_many
+from mail_more import err_of, put, mail, stop, ctl_done, t_guards, t_folder, t_aospost, t_stopped, t_many
 
 
 def t_shell():
@@ -79,8 +79,7 @@ def t_limits():
     check("over max letters (tmp/ + new/): creating a 4th entry fails with ENOSPC", e == "ENOSPC" and rc != 0
           and "space" in err, (e, err))
     os.rename(mb + "/tmp/a", mb + "/new/a")
-    sh("echo take > %s/ctl" % root)
-    wait_until(lambda: mail(status(root), "taken")[0] == "1")
+    ctl_done(root, "take")
     os.unlink(mb + "/tmp/c")
     e = err_of(put, mb + "/tmp/d", b"d" * 900)
     check("after take and rm, room again: a new letter fits", e == 0, e)
@@ -93,8 +92,7 @@ def t_limits():
 def t_refuse():
     p, pid, root, mnt = start_demo("mrefuse")
     mb = root + "/mailbox"
-    sh("echo 'refuse on' > %s/ctl" % root)
-    wait_until(lambda: mail(status(root), "refusing")[0] == "on")
+    ctl_done(root, "refuse on")
     rc, _, err = sh("printf 'no thanks' > %s/tmp/r && mv %s/tmp/r %s/new/r" % (mb, mb, mb))
     st = status(root)
     check("refuse on: the mv fails (EPERM) and nothing lands in new/", rc != 0 and "not permitted" in err
@@ -102,8 +100,7 @@ def t_refuse():
     check("... the letter is still in tmp/; mail_refused 1, mail_last_refusal MailRefused",
           os.path.exists(mb + "/tmp/r") and mail(st, "refused", "last_refusal")[0] == "1"
           and mail(st, "last_refusal")[0].startswith("MailRefused"), st)
-    sh("echo 'refuse off' > %s/ctl" % root)
-    wait_until(lambda: mail(status(root), "refusing")[0] == "off")
+    ctl_done(root, "refuse off")
     rc, _, err = sh("mv %s/tmp/r %s/new/r" % (mb, mb))
     check("refuse off: the same mv goes through", rc == 0 and os.listdir(mb + "/new") == ["r"], err)
     stop(p, root)
@@ -115,16 +112,13 @@ def t_take():
     for n, d in (("one", b"1"), ("two", b"22")):
         put(mb + "/tmp/" + n, d)
         os.rename(mb + "/tmp/" + n, mb + "/new/" + n)
-    rc, _, _ = sh("echo take > %s/ctl" % root)
-    st = wait_until(lambda: mail(status(root), "taken")[0] == "1" and status(root)) or {}
-    check("take: the oldest letter (one) is gone from new/; counts moved", rc == 0 and os.listdir(mb + "/new") == ["two"]
+    st = ctl_done(root, "take")
+    check("take: the oldest letter (one) is gone from new/; counts moved", st.get("aos_ctl_state") == "done" and os.listdir(mb + "/new") == ["two"]
           and mail(st, "waiting", "taken", "last_name", "last_bytes") == ("1", "1", "one", "1"), st)
-    sh("echo take > %s/ctl" % root)
-    st = wait_until(lambda: mail(status(root), "taken")[0] == "2" and status(root)) or {}
+    st = ctl_done(root, "take")
     check("take again: two (2 bytes); new/ empty", os.listdir(mb + "/new") == [] and mail(st, "last_name", "last_bytes") == ("two", "2"), st)
-    rc, _, _ = sh("echo take > %s/ctl" % root)
-    st = wait_until(lambda: (status(root) or {}).get("aos_ctl_state") == "failed" and status(root)) or {}
-    check("take with nothing waiting: accepted, then failed MailEmpty", rc == 0 and st.get("aos_ctl_error", "").startswith("MailEmpty"), st)
+    st = ctl_done(root, "take")
+    check("take with nothing waiting: accepted, then failed MailEmpty", st.get("aos_ctl_state") == "failed" and st.get("aos_ctl_error", "").startswith("MailEmpty"), st)
     stop(p, root)
 
 
@@ -146,16 +140,15 @@ def t_big():
     p, pid, root, mnt = start_demo("mbig")
     mb = root + "/mailbox"
     data = os.urandom(1 << 20)
-    t = time.time()
+    t = time.monotonic()
     put(mb + "/tmp/big", data, chunk=100000)
     os.rename(mb + "/tmp/big", mb + "/new/big")
-    dt = time.time() - t
+    dt = time.monotonic() - t
     with open(mb + "/new/big", "rb") as f:
         back = f.read()
     check("1 MB letter in 11 writes arrives byte-identical (%.1f ms to deliver)" % (dt * 1000),
           hashlib.sha256(back).digest() == hashlib.sha256(data).digest() and os.stat(mb + "/new/big").st_size == len(data))
-    sh("echo take > %s/ctl" % root)
-    st = wait_until(lambda: mail(status(root), "taken")[0] == "1" and status(root)) or {}
+    st = ctl_done(root, "take")
     check("take reports 1048576 bytes; mail_bytes back to 0", mail(st, "last_bytes", "bytes") == ("1048576", "0"), st)
     stop(p, root)
 

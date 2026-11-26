@@ -23,11 +23,11 @@ namespace {
 
 namespace pf = aos::procfs;
 
-const char* USAGE = "aos-procfs-demo [NAME MOUNTPOINT] [--threads N] [--socket] [--persist PATH] [--mail-* N] | --cleanup PATH [--force]";
+const char* USAGE = "aos-procfs-demo [NAME MOUNTPOINT] [--threads N] [--socket] [--persists PATH] [--obey WORDS] [--mail-* N] | --cleanup PATH [--force]";
 
 const char* HELP = R"(aos-procfs-demo - A minimal aos proc served over FUSE.
 
-usage: aos-procfs-demo NAME MOUNTPOINT [--threads N] [--socket] [--persist PATH] [--mail-* N]
+usage: aos-procfs-demo NAME MOUNTPOINT [--threads N] [--socket] [--persists PATH] [--obey WORDS] [--mail-* N]
        aos-procfs-demo --cleanup PATH [--force]
 
 Without NAME and MOUNTPOINT it uses $AOS_NAME and $AOS_MOUNT (set by aos-daemon), but only
@@ -44,7 +44,9 @@ Deliver a letter: write it under mailbox/tmp/, then mv it into mailbox/new/.
 flags:
   --threads N      answer threads (default 1)
   --socket         allow unix sockets in the root and serve an echo socket named "sock"
-  --persist PATH   value of aos_persist in settings (default -)
+  --persists PATH  value of aos_persists in settings (default -)
+  --obey WORDS     add "aos_obey: WORDS" to settings: the ctl words a daemon this proc is
+                   registered with may use on it, e.g. "stop kill" (default: no line, only rm)
   --mail-max-bytes N    max bytes in one letter (default 8388608; over it: EFBIG)
   --mail-max-letters N  max entries in tmp/ and new/ together (default 4096; ENOSPC)
   --mail-max-total N    max bytes in tmp/ and new/ together (default 67108864; ENOSPC)
@@ -116,7 +118,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> pos;
     int threads = 1;
     bool sock = false, force = false;
-    std::string persist, clean;
+    std::string persists, obey, clean;
     DemoMail dm;
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
@@ -132,8 +134,10 @@ int main(int argc, char** argv) {
                 threads = std::stoi(need("--threads"));
             } else if (a == "--socket") {
                 sock = true;
-            } else if (a == "--persist") {
-                persist = need("--persist");
+            } else if (a == "--persists") {
+                persists = need("--persists");
+            } else if (a == "--obey") {
+                obey = need("--obey");
             } else if (a == "--cleanup") {
                 clean = need("--cleanup");
             } else if (a == "--force") {
@@ -156,7 +160,7 @@ int main(int argc, char** argv) {
     if (pos.size() != 2)
         return fail("ArgumentsBad", "need NAME and MOUNTPOINT (or $AOS_NAME and $AOS_MOUNT with $AOS_NAME_PID = own pid)");
     const std::string name = pos[0], mnt = pos[1];
-    const long pid = static_cast<long>(getpid());
+    const long long pid = static_cast<long long>(getpid());
     const std::string started_at = now_iso();
 
     // 訊號在所有線起來之前擋下，只由主線的 signalfd 收
@@ -194,18 +198,11 @@ int main(int argc, char** argv) {
                 std::lock_guard<std::mutex> g(mu);
                 ph = phase;
             }
-            return pf::Kv()
-                .add("aos_name", name)
-                .add("aos_phase", ph)
-                .add("aos_pid", static_cast<long long>(pid))
-                .add("aos_started_at", started_at)
-                .raw(ctl->feedback())
-                .raw(demo_mail_status(dm))
-                .str();
+            return pf::to_text(DemoStatus{name, ph, pid, started_at, ctl->snapshot(), demo_mail_status(dm)});
         });
         // settings 的 aos_mailbox 是「掛了的時候信投到哪」（硬碟上的），跟活著時的 mailbox/ 不是同一個：demo 沒有，寫 -
-        fs.add_text("settings", [&] { return pf::Kv().add("aos_persist", persist).add("aos_mailbox", "").str(); });
-        fs.add_text("attrs", [] { return pf::Kv().add("aos_kind", "fuse").add("aos_live", "yes").add("aos_mailbox", "yes").str(); });
+        fs.add_text("settings", [&] { return pf::to_text(DemoSettings{persists, "", obey}); });
+        fs.add_text("attrs", [] { return pf::to_text(DemoAttrs{"fuse", "yes", "yes"}); });
         demo_mail_setup(fs, *ctl, dm);
         fs.add_json("_metainfo.json", "{\n  \"summary\": \"Minimal aos proc served over FUSE by aos-procfs-demo.\"\n}\n");
 

@@ -31,7 +31,7 @@ struct Ctl::Impl : std::enable_shared_from_this<Ctl::Impl> {
     bool has_job = false;
     bool quit = false;
     Command job;
-    std::string cmd = "-", state = "-", error = "-";
+    std::string cmd, state, error;        // 空＝還沒有（寫出來是 "-"）
     long long count = 0;
     std::thread worker;
 

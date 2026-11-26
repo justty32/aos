@@ -47,7 +47,9 @@ void Supervisor::handle(const std::shared_ptr<Request>& r) {
     if (it == st_.procs.end()) return r->finish("ProcUnknown " + w[1]);
     Proc& p = it->second;
     if (w[0] == "rm") return cmd_rm(r, p);
-    if (p.external) return r->finish("ProcExternal " + p.name + " was registered, not started here");
+    // 外來的：只做它自己 settings 的 aos_obey 准的字；start 一律不行（不知道怎麼起它）
+    if (p.external && (w[0] == "start" || !p.obeys(w[0])))
+        return r->finish("ProcExternal " + p.name + " was registered; its aos_obey does not allow " + w[0]);
     if (w[0] == "stop") return cmd_stop(r, p);
     if (w[0] == "kill") {
         p.want = "down";
@@ -116,9 +118,26 @@ void Supervisor::cmd_register(const std::shared_ptr<Request>& r) {
     p.pid = pid;
     p.pidfd = fd;
     p.phase = "starting";
+    p.reason = "checking its status";
     p.deadline = Clock::now() + secs(cfg_.register_timeout);
-    p.next_try = Clock::now();
-    r->finish("");
+    unsigned long long id = p.id;
+    // 驗身分：讀它自己的 status（交給小行程、帶期限），aos_name 要等於要登記的名字路；不信登記的人說的
+    helper(p, cwd_of(pid) + "/status", false, "", cfg_.ctl_timeout, [this, r, name, id, pid](bool ok, int err, const std::string& data) {
+        Proc* q = find(name, id);
+        if (!q) return r->finish("ProcGone " + name + " was removed while checking");
+        auto drop = [&](const std::string& why) {
+            if (q->pidfd >= 0) close(q->pidfd);
+            st_.procs.erase(name);
+            r->finish(why);
+        };
+        std::string ps = std::to_string(pid);
+        if (!ok) return drop("StatusUnreadable pid " + ps + ": " + (err == ETIMEDOUT ? "read timed out" : std::strerror(err)));
+        std::string said = kv_get(data, "aos_name"), want = child_name(name);
+        if (said != want) return drop("NameMismatch pid " + ps + " says aos_name " + said + ", not " + want);
+        q->reason = "-";
+        q->next_try = Clock::now();   // 接著照平常讀 settings 登記（tick）
+        r->finish("");
+    });
 }
 
 void Supervisor::cmd_stop(const std::shared_ptr<Request>& r, Proc& p) {
@@ -137,7 +156,7 @@ void Supervisor::cmd_stop(const std::shared_ptr<Request>& r, Proc& p) {
 
 void Supervisor::cmd_rm(const std::shared_ptr<Request>& r, Proc& p) {
     if (p.external || p.pid < 0) {
-        // 外來的只從表上拿掉：不送訊號、不碰它的掛載
+        // 外來的只從表上拿掉（不管 aos_obey 准了什麼）：不送訊號、不碰它的掛載
         unlink(p);
         if (p.pidfd >= 0) close(p.pidfd);
         st_.procs.erase(p.name);
@@ -169,7 +188,7 @@ std::string Supervisor::start_proc(Proc& p) {
     env.push_back("AOS_ROOT=" + cfg_.aos_root);
     std::string err;
     pid_t pid = spawn(p.argv, env, err);
-    p.code = p.sig = p.persist = p.mailbox = "-";
+    p.code = p.sig = p.persists = p.mailbox = "-";
     p.stuck = "no";
     p.killed.clear();
     p.last_error.clear();
@@ -187,14 +206,22 @@ std::string Supervisor::start_proc(Proc& p) {
     return "";
 }
 
-// 強制收：先斷開它的 FUSE 連線（放開被它拖住的人），再 SIGKILL；死掛載等收屍時清
+// 強制收：先斷開它的 FUSE 連線（放開被它拖住的人），再 SIGKILL；死掛載等收屍時清。
+// 外來的只在 aos_obey 有 kill 時收，訊號經 pidfd 送（PID 被別人拿走也不會打錯人）
 void Supervisor::force_kill(Proc& p, const std::string& why) {
-    if (p.pid < 0 || p.external) return;
+    if (p.pid < 0 || (p.external && !p.obeys("kill"))) return;
     std::string m = mount_of_pid(p.pid);
     if (!m.empty()) pf::abort_connection(m);
-    kill(p.pid, SIGKILL);
+    if (p.external) {
+        p.mount = m;
+        syscall(SYS_pidfd_send_signal, p.pidfd, SIGKILL, nullptr, 0);
+    } else {
+        kill(p.pid, SIGKILL);
+    }
     p.killed = why.empty() ? "killed by daemon" : why;
 }
+
+bool Supervisor::stops_with_me(const Proc& p) { return p.pid > 0 && (!p.external || p.obeys("stop")); }
 
 void Supervisor::begin_shutdown() {
     if (shutting_) return;
@@ -203,7 +230,7 @@ void Supervisor::begin_shutdown() {
     std::lock_guard<std::mutex> g(st_.mu);
     st_.phase = "stopping";
     for (auto& [name, p] : st_.procs) {
-        if (p.external || p.pid < 0) continue;
+        if (!stops_with_me(p)) continue;
         p.want = "down";
         if (p.phase != "running" || p.hung > 0) {
             force_kill(p, "killed by daemon stop");
@@ -222,13 +249,14 @@ bool Supervisor::shutdown_tick() {
     auto now = Clock::now();
     std::lock_guard<std::mutex> g(st_.mu);
     bool any = false;
-    for (auto& [name, p] : st_.procs) any = any || (!p.external && p.pid > 0);
+    for (auto& [name, p] : st_.procs) any = any || stops_with_me(p);
     if (!any) return true;
     if (forced_) return now >= shut_deadline_;
     if (now < shut_deadline_) return false;
     forced_ = true;
     shut_deadline_ = now + secs(3);
-    for (auto& [name, p] : st_.procs) force_kill(p, "killed by daemon stop (did not stop in time)");
+    for (auto& [name, p] : st_.procs)
+        if (stops_with_me(p)) force_kill(p, "killed by daemon stop (did not stop in time)");
     return false;
 }
 

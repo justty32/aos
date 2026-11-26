@@ -173,41 +173,26 @@ int main(int argc, char** argv) {
         pf::Ctl& pctl = fs.add_ctl("procs_ctl", "aos_procs_ctl_");
         // 回答的線上跑：只抄表、不碰任何路徑
         fs.add_text("status", [&] {
-            std::string ph;
-            size_t n;
+            DaemonStatus s{cfg.aos_name, "", pid, started_at, ctl.snapshot(), 0, pctl.snapshot()};
             {
                 std::lock_guard<std::mutex> g(st.mu);
-                ph = st.phase;
-                n = st.procs.size();
+                s.aos_phase = st.phase;
+                s.aos_procs = static_cast<long long>(st.procs.size());
             }
-            return pf::Kv()
-                .add("aos_name", cfg.aos_name)
-                .add("aos_phase", ph)
-                .add("aos_pid", static_cast<long long>(pid))
-                .add("aos_started_at", started_at)
-                .raw(ctl.feedback())
-                .add("aos_procs", static_cast<long long>(n))
-                .raw(pctl.feedback())
-                .str();
+            return pf::to_text(s);
         });
-        fs.add_text("settings", [&] {
-            return pf::Kv().add("aos_persist", "").add("aos_mailbox", "").add("mount_base", cfg.mount_base).str();
-        });
-        fs.add_text("attrs", [] { return pf::Kv().add("aos_kind", "fuse").add("aos_live", "yes").str(); });
+        fs.add_text("settings", [&] { return pf::to_text(DaemonSettings{"", "", cfg.mount_base}); });
+        fs.add_text("attrs", [] { return pf::to_text(DaemonAttrs{"fuse", "yes"}); });
         fs.add_json("_metainfo.json", "{\n  \"summary\": \"Minimal aos daemon (proto9 aos-daemon).\"\n}\n");
         fs.add_dir("procs");
         fs.add_symlink("proc", "procs");
         fs.add_text("procs_status", [&] {
-            pf::Kv kv;
-            std::lock_guard<std::mutex> g(st.mu);
-            for (const auto& [n, p] : st.procs) {
-                kv.add(n + ".phase", p.phase).add(n + ".want", p.want);
-                kv.add(n + ".pid", p.pid > 0 ? std::to_string(p.pid) : "-");
-                kv.add(n + ".code", p.code).add(n + ".signal", p.sig).add(n + ".reason", p.reason);
-                kv.add(n + ".persist", p.persist).add(n + ".mailbox", p.mailbox).add(n + ".stuck", p.stuck);
-                if (p.external) kv.add(n + ".external", "yes");
+            ProcsStatus rows;
+            {
+                std::lock_guard<std::mutex> g(st.mu);
+                for (const auto& [n, p] : st.procs) rows[n] = row_of(p);
             }
-            return kv.str();
+            return pf::to_text(rows);
         });
 
         auto no_args = [](const pf::Command& c) -> std::string {
@@ -246,7 +231,13 @@ int main(int argc, char** argv) {
             auto it = st.procs.find(n);
             if (creates) return it == st.procs.end() ? "" : "ProcExists " + n;
             if (it == st.procs.end()) return "ProcUnknown " + n;
-            if (it->second.external && w != "rm") return "ProcExternal " + n + " was registered; only rm is allowed";
+            // 外來的：rm，加上它自己 settings 的 aos_obey 准的字（登記時讀的）；start 一律不行
+            const Proc& q = it->second;
+            if (q.external && w != "rm" && (w == "start" || !q.obeys(w))) {
+                std::string ok = "rm";
+                for (const auto& x : q.obey) ok += " " + x;
+                return "ProcExternal " + n + " was registered; allowed: " + ok + " (its own settings aos_obey)";
+            }
             return "";
         };
         auto act = [&st, &cfg, wake](const pf::Command& c) {

@@ -30,7 +30,7 @@ def main():
     print("mountinfo dev %d:%d -> connection %d; exists in /sys/fs/fuse/connections: %s"
           % (maj, mi, cid, os.path.isdir("/sys/fs/fuse/connections/%d" % cid)))
     os.kill(pid, signal.SIGSTOP)
-    t0 = time.time()
+    t0 = time.monotonic()
     # 先只放一個讀的人，看它卡在哪、SIGKILL 殺不殺得掉
     victim = bg("cat %s/status" % root)
     time.sleep(1.0)
@@ -49,7 +49,7 @@ def main():
         f.write("1")
     try:
         out, err = reader.communicate(timeout=3)
-        print("after abort: reader rc=%s stderr=%r (stuck %.1fs total)" % (reader.returncode, err.strip(), time.time() - t0))
+        print("after abort: reader rc=%s stderr=%r (stuck %.1fs total)" % (reader.returncode, err.strip(), time.monotonic() - t0))
         out, err = reader2.communicate(timeout=3)
         print("after abort: reader2 rc=%s stderr=%r" % (reader2.returncode, err.strip()))
     except Exception as e:

@@ -49,20 +49,30 @@ def t_stuck():
 
 
 def t_lock():
-    p, pid, root, base = start_daemon("lock")
+    # ctl-timeout 3 秒（別組是 1 秒）：慢的那道鎖久一點，機器很忙、每看一次 status 要起一個殼時也看得到它在 doing
+    p, pid, root, base = start_daemon("lock", "--ctl-timeout", "3")
     ctl(root + "/procs_ctl", "add z %s" % DEMO)
     phase_is(root, "z", "running")
     zpid = int(table(root, "z")["pid"])
     os.kill(zpid, signal.SIGSTOP)
-    # add 的路徑指到卡住的 proc 裡：daemon 只在拋棄式小行程裡讀它，procs_ctl 鎖到 ctl-timeout（1 秒）就放棄
+    # add 的路徑指到卡住的 proc 裡：daemon 只在拋棄式小行程裡讀它，procs_ctl 鎖到 ctl-timeout 就放棄
     first = bg("echo 'add y /proc/%d/cwd/_metainfo.json' > %s/procs_ctl" % (zpid, root))
-    time.sleep(0.3)
+    # 等那道真的被收下（回饋是 add y、doing）才寫第二道；以前固定睡 0.3 秒，機器忙時 bash 還沒起來，第二道先到
+    t0, seen = time.monotonic(), []   # 等的時候看到的回饋（變了才記），沒過時印出來
+
+    def add_taken():
+        s = read_kv(root + "/status") or {}
+        v = (s.get("aos_procs_ctl_cmd", "")[:5], s.get("aos_procs_ctl_state"), s.get("aos_procs_ctl_error"))
+        if not seen or seen[-1][1:] != v:
+            seen.append((round(time.monotonic() - t0, 2),) + v)
+        return v[0] == "add y" and v[1] == "doing"
+    taken = wait_until(add_taken, 5)
     rc, _, err = ctl(root + "/procs_ctl", "stop z")
     st = read_kv(root + "/status") or {}
-    check("procs_ctl locked by a slow command: another writer gets busy", rc != 0 and "busy" in err
-          and st.get("aos_procs_ctl_cmd", "").startswith("add y"), (rc, err, st))
+    check("procs_ctl locked by a slow command: another writer gets busy", taken and rc != 0 and "busy" in err
+          and st.get("aos_procs_ctl_cmd", "").startswith("add y"), (seen, rc, err, st))
     out = first.communicate(timeout=5)
-    st = wait_until(lambda: (read_kv(root + "/status") or {}).get("aos_procs_ctl_state") == "failed" and read_kv(root + "/status"), 3) or {}
+    st = wait_until(lambda: (read_kv(root + "/status") or {}).get("aos_procs_ctl_state") == "failed" and read_kv(root + "/status"), 6) or {}
     check("the slow add gives up after the deadline (failed, PathBad ... timed out), daemon still answers",
           "timed out" in st.get("aos_procs_ctl_error", ""), (out, st))
     os.kill(zpid, signal.SIGCONT)
@@ -77,10 +87,10 @@ def t_stopstuck():
     apid, bpid = int(table(root, "a")["pid"]), int(table(root, "b")["pid"])
     os.kill(apid, signal.SIGSTOP)
     wait_until(lambda: table(root, "a").get("stuck", "no") != "no", 4)
-    t0 = time.time()
+    t0 = time.monotonic()
     ctl(root + "/procs_ctl", "stop a")
     st = pctl_done(root)
-    dt = time.time() - t0
+    dt = time.monotonic() - t0
     err = st.get("aos_procs_ctl_error", "")
     check("stop on a stuck proc gives up within ctl-timeout (%.2f s): %s" % (dt, err.split(" ")[0]),
           dt < 2 and st.get("aos_procs_ctl_state") == "failed" and (err.startswith("CtlTimeout") or err.startswith("ProcStuck")), st)
@@ -90,15 +100,18 @@ def t_stopstuck():
     phase_is(root, "a", "running")
     apid = int(table(root, "a")["pid"])
     os.kill(apid, signal.SIGSTOP)
-    t0 = time.time()
+    t0 = time.monotonic()
     rc, _, _ = ctl(root + "/ctl", "stop")
-    mid = read_kv(root + "/status", 1) or {}
+    # aos_phase: stopping 是監工收到之後才設的，寫回來時不一定已經是了
+    mid = wait_until(lambda: (lambda s: s.get("aos_phase") == "stopping" and s)(read_kv(root + "/status", 1) or {}), 2) or {}
+    rows = table(root, "a")
+    tmid = time.monotonic() - t0
     try:
         code = p.wait(10)
     except subprocess.TimeoutExpired:
         code = None
-    dt = time.time() - t0
+    dt = time.monotonic() - t0
     check("daemon stop with a stuck child: status still readable while stopping", mid.get("aos_phase") == "stopping", mid)
-    check("... forces it after stop-timeout and exits (%.1f s)" % dt, code == 0 and 2.5 < dt < 8, code)
+    check("... forces it after stop-timeout and exits (%.1f s)" % dt, code == 0 and 2.5 < dt < 8, (code, round(tmid, 2), rows))
     check("... both children gone, no mounts left", not alive(apid) and not alive(bpid)
           and wait_until(lambda: our_mounts() == [], 3), our_mounts())

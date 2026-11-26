@@ -67,7 +67,7 @@ daemon 另外多：
 
 以後才有的：
 
-- 【定】每個純文字檔另給一份 json：`settings.json`、`status.json`…（跟 `_metainfo.json` 同一種叫法）。之後再做。
+- 【定】每個純文字檔另給一份 json：`settings.json`、`status.json`…（跟 `_metainfo.json` 同一種叫法）。之後再做。（11-26：小庫已經能從同一張欄位表生出兩種寫法，純文字＝把 json 攤平、巢狀的名稱用 `.` 接；檔還沒擺出來。）
 - 【定】`status` 以外可以再多給別的檔，例：報 token 用量的檔。名字與內容【開】。
 - 收訊息的 `sock` 與 `msg`（第 9 節）。
 
@@ -136,6 +136,7 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 |---|---|
 | `aos_persists` | 它要留的東西在哪（硬碟上的真實位置） |
 | `aos_mailbox` | 它掛了的時候，信投到哪 |
+| `aos_obey` | 【擬】（11-26）它被 `register` 進某台 daemon 時，那台可以對它下哪幾個字，例 `stop kill`；沒這行＝只收 `rm`。只對外來登記的有意思（daemon 自己起的本來就歸它管） |
 
 【定】persists 在哪，以 proc 自己在 `settings` 說的為準；daemon 起它之後來讀。daemon 可以給預設位置，在 `/tmp` 開一塊。proc 沒說就死了，daemon 就不知道。
 
@@ -166,10 +167,14 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 
   proto8 的 `sleep`／`wake` 要不要留【開】。鎖與回饋的規則同第 6 節。
 
+  【擬】（11-26）`register` 的兩條：
+  - **驗身分**：daemon 登記前讀那支行程自己的 `status`（交給帶期限的小行程，不在回答的線上讀），`aos_name` 要等於要登記的名字路（根底下就是名字本身，`d1` 底下是 `d1/名字`）；對不上＝拒（`NameMismatch`），讀不到＝拒（`StatusUnreadable`），表上不留。表上已經有的名字，`register` 搶不走（`ProcExists`）。
+  - **daemon 對它有多少權力，由它自己說**：照它自己 `settings` 的 `aos_obey`（第 7 節），不照登記的人說的。准了 `stop`：daemon 可以寫 `stop` 進它的 `ctl`，daemon 自己停時也一起停它；准了 `kill`：daemon 可以斷開它的連線、收掉它（之後它的死掛載也清）。`rm` 一律收、只從表上拿掉；`start` 一律不行（daemon 不知道怎麼起它）。
+
   【定】`procs_ctl` 的「做完」＝daemon 這邊的動作做完（例：`stop arena` 是把字送給 arena 了），不等那隻 proc 真的結束；結果看 `procs_status`。這樣 `stop` 很久的時候，`kill` 才下得進去。
 
 - 【定】`procs_status`：底下每隻 proc 的狀態，純文字。proc 死了，它自己的 `status` 就沒了，這張表是唯一還答得出來的地方。
-- 【定】行名是 `名字.欄名`，欄有 `phase`、`want`、`pid`、`code`、`reason`、`persists`、`mailbox`：
+- 【定】行名是 `名字.欄名`，欄有 `phase`、`want`、`pid`、`code`、`reason`、`persists`、`mailbox`（外來登記的另有【擬】`external: yes` 與 `obey`：它的 `aos_obey` 准了哪幾個字，沒有寫 `-`）：
 
   ```
   arena.phase: stopped
@@ -264,7 +269,7 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 
 ## 10. 留下來的東西與搬家
 
-【定】名字是 `persists`（使用者 11-25：「persist我感覺應該改名為persists」；原本叫 `persist`）。【擬】`settings` 的那一行與 `procs_status` 的那一欄跟著改成 `aos_persists`、`名字.persists`。程式（小庫、daemon）下一批才跟上。
+【定】名字是 `persists`（使用者 11-25：「persist我感覺應該改名為persists」；原本叫 `persist`）。【擬】`settings` 的那一行與 `procs_status` 的那一欄跟著改成 `aos_persists`、`名字.persists`。程式（小庫、daemon）11-26 跟上了（demo 的旗標也改成 `--persists`）。
 
 - 【定】`.stack` 這個夾以後沒有；身體是活的，要留的各自處理，推薦放 `persists`。
 - 【定】可遷移性現在不動，設計時先考慮著。遠期目標：`cp AOS_ROOT` 就能把一切搬走。
@@ -328,7 +333,7 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 - 它碰到【開】的地方都挑了保守的（【擬】，等使用者看；整張表在它的 README）。最該先看的四條：
   1. `procs_status` 的 `phase` 用五個值：`starting`（起了、還沒登記）、`running`、`stopping`、`stopped`、`failed`（起動失敗）。**【定】**（使用者 11-25「1.可以。」）
   2. 掛載點放 `<mount-base>/<名字路把 / 換成 %>`，例 `d1%kid`。**【定】**（使用者 11-25「2.可以...不過%不會有問題吧。」——功能上沒問題；`%` 在 crontab、systemd 的 unit 檔、printf 的格式字串裡有特別意思，把這個路徑寫進那三種地方時要小心。平常走 `$AOS_ROOT/procs/…`，不會打到這個路徑。）
-  3. 外來登記（`register`）的只收 `rm`；`stop`、`start`、`kill` 都拒；誰都能登記任何 PID、不驗身分。
+  3. 外來登記（`register`）的只收 `rm`；`stop`、`start`、`kill` 都拒；誰都能登記任何 PID、不驗身分。（11-26 改了，見第 8 節 `register` 的兩條【擬】：驗 `status` 的 `aos_name`；它自己 `settings` 寫 `aos_obey` 才准 `stop`／`kill`。）
   4. `add` 只收絕對路徑；檔讀不到時那次寫入照樣成功、錯誤記在回饋裡（回答的線不去讀那個檔）。
 - 沒做：自動重起、`sleep`／`wake`、預設的 persists、底下的 stderr 收進 `reason`。`kill` 一台嵌套的 daemon，它底下的就沒人管（照「自行承擔風險」）。
 
@@ -354,6 +359,6 @@ proto8 的 `updated_at`、`responded_at`、`boot_id`、`started_at_ticks` 沒收
 3. `procs_ctl` 要不要留 proto8 的 `sleep`／`wake`。
 4. `persists` 在目錄裡怎麼擺（真的夾、連結、還是 proc 當場回答）；proc 死了以後別人怎麼走到它的 persists（現在只有 `procs_status` 那一行路徑）。
 6. 報 token 用量的檔。
-7. 只登記、不起的入口（`register`）：誰可以登記誰、登記後 daemon 對它有多少權力。
+7. 只登記、不起的入口（`register`）：誰可以登記誰、登記後 daemon 對它有多少權力。（11-26 先做了【擬】：驗 `aos_name`、權力照它自己的 `aos_obey`，見第 8 節；寫得進 `procs_ctl` 的誰都能下 `register`，這點沒變。）
 8. agent 的身體：【定】不搬 proto8 的 aos-loop、aos-fsm 那一整套；agent 就是一支簡單的程式，擺出這份介面（使用者 11-25：「我們就會變成一個簡單的程式，但是暴露相關介面」）。agent 專用的檔案布局與格式是另一份介面，使用者之後規劃。還沒定：那份介面的內容、用什麼語言寫、Claude Code 這種畫面型的怎麼包。
 9. 換 Linux 帳號的 proc 怎麼進樹。
