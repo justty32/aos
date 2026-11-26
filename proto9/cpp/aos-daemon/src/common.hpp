@@ -9,20 +9,27 @@
 
 namespace d2 {
 
-// 天空設定的一條（json 物件寫法見 README）：bind（src、dst、rw）、tmpfs／proc／dev（dst）、symlink（target、dst）。
+// 天空設定的一條（json 物件寫法見 README）：bind（src、dst、rw）、tmpfs／proc／dev（dst）、symlink（target、dst）、
+// overlay（lower、dst；唯讀）。
 struct NsEntry {
-    std::string kind;   // bind tmpfs proc dev symlink
+    std::string kind;   // bind tmpfs proc dev symlink overlay
     std::string src;    // bind：外面（daemon 起動前那一層）的絕對路徑；symlink：連結的目標
     std::string dst;    // 天空裡的絕對路徑
     bool rw = false;    // 只有 bind 用
+    std::vector<std::string> lower;   // overlay：外面的夾，第一個在最上面（跟 overlayfs 的 lowerdir 同序），至少兩個
 };
 
 // 一個預定的掛載（設定展開後的樣子；symlink 不是掛載，不在這裡）。根 tmpfs 是第一個。
 struct Mount {
-    std::string kind;   // tmpfs bind proc dev（dev＝/dev 那塊 tmpfs；裡面的裝置檔是 bind）
-    std::string src;    // bind 的來源（外面的路徑），其他寫 "-"
+    Mount() = default;
+    Mount(std::string k, std::string s, std::string d, bool w) : kind(std::move(k)), src(std::move(s)), dst(std::move(d)), rw(w) {}
+    std::string kind;   // tmpfs bind proc dev overlay aos cgroup（dev＝/dev 那塊 tmpfs；裡面的裝置檔是 bind）
+    std::string src;    // bind 的來源（外面的路徑）；overlay 是 lower 用 : 接起來（只給文字的天空表看）；其他寫 "-"
     std::string dst;
     bool rw = false;
+    std::vector<std::string> lower;   // overlay 的 lower（ns.json 照陣列寫）
+    std::string by = "start";         // ns.json 的 by：start（起動時照設定）、mount（跑的時候 ctl 掛的）、daemon（daemon 自己加的）
+    std::string at;                   // ns.json 的 at：放上天空的時間（UTC）
 };
 
 // start 收的設定檔（json）讀出來的樣子。
@@ -117,6 +124,8 @@ struct Spawned {
 std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out);   // ""＝成功，否則 "代號 原因"
 std::string live_mount(pid_t pid, const std::string& src, const std::string& dst, bool rw);
 std::string live_umount(pid_t pid, const std::string& dst);
+// 起不來的那隻（或卡住被 SIGKILL 的幫手）沒走掉時，它的 cgroup 夾刪不掉：記下來，主循環之後再刪（daemon.cpp；只在主執行緒叫）
+void cgroup_remove_later(const std::string& cg);
 
 // seccomp.cpp：x86_64 的手寫 BPF；擋的回 EPERM，別的架構與 x32 的呼叫殺掉整個行程
 std::string load_seccomp_list(ProcConfig& c);              // locks.seccomp 是路徑時讀名單檔、名字換號碼；回 "" 或 "ConfigBad …"

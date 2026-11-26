@@ -112,6 +112,33 @@ int clone_src(const std::string& src) {
     return fd;
 }
 
+// overlay（唯讀，沒有 upper）：用 fsopen／fsconfig／fsmount 疊成一個還沒掛上的掛載（跟 bind 的 clone 一樣之後再 attach）。
+// 在原本那一層叫：lower 照外面的路徑解；路徑裡的 \ 與 : 照 overlayfs 的寫法加 \。失敗回 -1、errno 是那一步的，step 說是哪一步
+int overlay_mount(const std::vector<std::string>& lower, std::string& step) {
+    std::string spec;
+    for (const auto& l : lower) {
+        if (!spec.empty()) spec += ':';
+        for (char c : l) {
+            if (c == '\\' || c == ':') spec += '\\';
+            spec += c;
+        }
+    }
+    int fs = fsopen("overlay", FSOPEN_CLOEXEC);
+    if (fs < 0) {
+        step = "fsopen overlay";
+        return -1;
+    }
+    int m = -1;
+    if (fsconfig(fs, FSCONFIG_SET_STRING, "lowerdir", spec.c_str(), 0) != 0) step = "overlay lowerdir";
+    else if (fsconfig(fs, FSCONFIG_SET_FLAG, "ro", nullptr, 0) != 0) step = "overlay ro";
+    else if (fsconfig(fs, FSCONFIG_CMD_CREATE, nullptr, nullptr, 0) != 0) step = "create overlay";
+    else if ((m = fsmount(fs, FSMOUNT_CLOEXEC, MOUNT_ATTR_RDONLY | MOUNT_ATTR_NOSUID | MOUNT_ATTR_NODEV)) < 0) step = "fsmount overlay";
+    int e = errno;
+    close(fs);
+    errno = e;
+    return m;
+}
+
 bool is_dir_fd(int fd) {
     struct stat st;
     return fstat(fd, &st) == 0 && S_ISDIR(st.st_mode);
@@ -193,10 +220,15 @@ void loopback_up() {
     int fout = out_fd(cfg.stdout_path), ferr = out_fd(cfg.stderr_path);
     if (fin < 0) die("open /dev/null", errno);
 
-    // 2. 來源先全部拿好（複製成還沒掛上的掛載）
+    // 2. 來源先全部拿好（bind 複製成還沒掛上的掛載；overlay 照外面的路徑疊好、也是還沒掛上的掛載）
     std::vector<int> clones(mounts.size(), -1);
-    for (size_t i = 0; i < mounts.size(); ++i)
+    for (size_t i = 0; i < mounts.size(); ++i) {
         if (mounts[i].kind == "bind" && (clones[i] = clone_src(mounts[i].src)) < 0) die("bind source " + mounts[i].src, errno);
+        if (mounts[i].kind == "overlay") {
+            std::string step;
+            if ((clones[i] = overlay_mount(mounts[i].lower, step)) < 0) die(step + " (" + mounts[i].src + ")", errno);
+        }
+    }
 
     // 3. 自己一份 mount namespace，根從一塊新的 tmpfs 組起；net none 時順便開自己的 network namespace、打開 lo
     if (unshare(CLONE_NEWNS) != 0) die("unshare mount namespace", errno);
@@ -217,6 +249,9 @@ void loopback_up() {
             ++mi;
         } else if (e.kind == "proc") {
             mount_fs(root, e.dst, "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, nullptr);
+            ++mi;
+        } else if (e.kind == "overlay") {
+            attach(clones[mi], root, e.dst, false, true, "overlay at " + e.dst);
             ++mi;
         } else if (e.kind == "dev") {
             mount_fs(root, e.dst, "tmpfs", MS_NOSUID | MS_NOEXEC, "mode=0755");
@@ -343,9 +378,27 @@ bool read_msg(int fd, double timeout, std::string& out, bool& eof) {
     }
 }
 
-void reap(pid_t pid) {
-    int st;
-    while (waitpid(pid, &st, 0) < 0 && errno == EINTR) {}
+// 等 pid 結束最多 secs 秒（WNOHANG 輪詢，monotonic）；收到了回 true。沒收到（例如卡在不回應的檔案系統上，SIGKILL 也要等那個
+// 請求回來）就回 false、不再等：那個 PID 留給主循環平常的 reap_all 收（它略過不認得的 PID）
+bool reap_within(pid_t pid, double secs) {
+    double end = mono_now() + secs;
+    for (;;) {
+        int st;
+        pid_t r = waitpid(pid, &st, WNOHANG);
+        if (r == pid || (r < 0 && errno != EINTR)) return true;
+        if (mono_now() >= end) return false;
+        usleep(2000);
+    }
+}
+
+// 子行程（起 proc 的、跑的時候掛卸的幫手）失敗或逾時：SIGKILL，最多等 KILL_WAIT 秒，沒走就留給主循環收
+const double KILL_WAIT = 0.5;
+bool kill_and_leave(pid_t pid, const std::string& what) {
+    kill(pid, SIGKILL);
+    if (reap_within(pid, KILL_WAIT)) return true;
+    log(what + ": pid " + std::to_string(pid) + " did not exit " + seconds_text(KILL_WAIT) +
+        " s after SIGKILL (stuck in the kernel?); not waiting for it, the main loop reaps it when it goes");
+    return false;
 }
 
 std::vector<std::string> locks_of(const ProcConfig& cfg, bool init) {
@@ -369,6 +422,10 @@ std::vector<std::string> locks_of(const ProcConfig& cfg, bool init) {
     } else {
         l.push_back("capabilities: none (bounding set empty)");
     }
+    // Landlock ABI 6 以前擋不住訊號：uid 0 的 proc（外面的使用者本人）送得到 init 與其他 uid 0 的 proc（daemon 自己不理它送的停止訊號）
+    if (!init && cfg.uid == 0 && W.landlock_abi < 6)
+        l.push_back("signals: can signal init and other uid-0 procs (Landlock ABI " + std::to_string(W.landlock_abi) +
+                    " has no signal scoping; the daemon ignores stop signals from it)");
     l.push_back(cfg.net == "none" ? "net: none (own netns, loopback only)" : "net: host (the daemon's network namespace)");
     l.push_back("securebits: noroot, no_setuid_fixup, keep_caps_locked, no_cap_ambient_raise (all locked)");
     l.push_back("no_new_privs");
@@ -406,9 +463,13 @@ std::string in_ns_helper(pid_t pid, const std::string& what, F fn) {
     bool eof;
     bool ok = read_msg(st[0], 10, msg, eof);
     close(st[0]);
-    if (!ok) kill(h, SIGKILL);
-    reap(h);
-    if (!ok) return "Timeout " + what + " took more than 10 s";
+    if (!ok) {
+        // 卡住了（例如來源在不回應的 FUSE 上）：不等它，主循環之後收
+        kill_and_leave(h, what + " helper");
+        return "Timeout " + what + " took more than 10 s";
+    }
+    // 幫手寫完（或沒寫）就 _exit 了；照理馬上收得到，收不到也不等
+    if (!reap_within(h, 1)) log(what + " helper: pid " + std::to_string(h) + " has not exited yet; the main loop reaps it");
     return msg.empty() ? "" : msg.substr(1);
 }
 
@@ -431,8 +492,14 @@ std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
     if (init && init_mounts(cfg)) {
         std::string bad = init_ns_conflict(cfg, W.cgfd >= 0);
         if (!bad.empty()) return bad;
-        out.mounts.push_back({"aos", "-", init_daemon_path(cfg), true});
-        if (W.cgfd >= 0) out.mounts.push_back({"cgroup", W.cg_host, init_cgroup_path(cfg), true});
+        Mount a{"aos", "-", init_daemon_path(cfg), true};
+        a.by = "daemon";   // daemon 自己加的（設定裡沒有）
+        out.mounts.push_back(a);
+        if (W.cgfd >= 0) {
+            Mount c{"cgroup", W.cg_host, init_cgroup_path(cfg), true};
+            c.by = "daemon";
+            out.mounts.push_back(c);
+        }
     }
     out.locks = locks_of(cfg, init);
 
@@ -489,12 +556,12 @@ std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
     close(go[0]);
     auto fail = [&](const std::string& why) {
         close(st[0]);
-        close(go[1]);
-        if (pid > 0) {
-            kill(pid, SIGKILL);
-            reap(pid);
-        }
-        if (!out.cgroup.empty()) unlinkat(W.cgfd, out.cgroup.c_str(), AT_REMOVEDIR);
+        if (go[1] >= 0) close(go[1]);
+        // 不用會一直等的 waitpid：卡在核心裡的子行程（bind 來源在不回應的檔案系統上）SIGKILL 也要等那個請求回來
+        if (pid > 0) kill_and_leave(pid, "start " + cfg.name);
+        // 卡在進 cgroup 之前的（例如拿 bind 來源時）夾是空的，照樣刪得掉；子行程還在夾裡（EBUSY）就記下來，主循環之後再刪
+        if (!out.cgroup.empty() && unlinkat(W.cgfd, out.cgroup.c_str(), AT_REMOVEDIR) != 0 && errno != ENOENT)
+            cgroup_remove_later(out.cgroup);
         return why;
     };
     if (pid < 0) return fail("Internal fork: " + errstr(errno));
@@ -504,6 +571,8 @@ std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
     if (msg.empty() || msg[0] != 'B') return fail("StartFailed " + (msg.empty() ? "child exited" : msg.substr(1)));
     out.pid = pid;
     out.host_pid = std::atol(msg.c_str() + 1);
+    std::string now = iso_now();   // ns.json 的 at：天空組好的時間
+    for (auto& m : out.mounts) m.at = now;
     out.ns = ns_table(pid, out.mounts, out.ns_check, out.ns_json);
     if (write(go[1], "G", 1) != 1) return fail("StartFailed child went away");
     close(go[1]);

@@ -876,3 +876,12 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - **compact 後接**：等它通知 → 清 build、跑三次、查殘留（exe 路徑／dev+inode）→ 改 proto9/README 條數 → 交件 → 它的【擬】一次三條給使用者 → 派下一批：daemon職責第 38、40～45、47、48、50 條（同一夾，一隻 opus）。
 - kernel 下一題：登記表（kernel-1126 第 3 題）。
 - 本地比遠端多 33 個 commit，沒推。
+
+## 2026-11-26 晚：使用者「派個fable去審一下我們先前做的這些決策吧。審過的...看你要不要再審一次」
+
+- 派了一隻 fable（背景、只讀、報告當最後回覆交回，我再存到 ~/.aos/scratch/proto9-decisions-review-1126/report.md）。
+- 範圍我定的：aospl 1～46、kernel 1～2、daemon職責 35～50 是重點（都沒審過）；daemon職責 1～34、daemon當容器上次審過，不逐條重審，只看跟新決定有沒有打架（特別是第 46 條推翻第九輪那句）；以 9p-proc-1125 原話為準查條目有沒有寫歪。
+- 回來後：存報告 → 跟使用者一條一條討論（大題一次一題）。
+- fable 決策審查回來，報告存 ~/.aos/scratch/proto9-decisions-review-1126/report.md。該先處理 6 條（最小 init×全員 subuid、往下傳沒人守／預設全准、aos/ctl 宣告形狀、init 重起後 /aos 斷、aoslua 跑別人的 __meta 可執行檔、aoslua 四處兩讀）、值得想 8、小事 10、對不上原話 4、要問 10 題。
+- 我的判斷：下一批裡 38（subuid 怎麼配）、47（路徑怎麼解）、48（events）、介面宣告形狀都被題目碰到，先不派；40～45、50（XDG 連結那小項除外）不受影響可先派。
+- fix 那隻回來：559 條；違規用過一次 pkill（條件帶它的暫存路徑）。我在跑三次清 build 驗證。

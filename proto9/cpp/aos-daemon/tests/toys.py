@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# toys.py：測試時在天空裡跑的小程式（init、探路的 proc、照退出碼結束的、睡著的、時好時壞的 init、收到 SIGTERM 才收尾的 init、留下孩子的 proc、試網路的 proc、試系統呼叫（seccomp）與開 namespace、mount 的 proc）。
+# toys.py：測試時在天空裡跑的小程式（init、探路的 proc、照退出碼結束的、睡著的、時好時壞的 init、收到 SIGTERM 才收尾的 init、留下孩子的 proc、試網路的 proc、試系統呼叫（seccomp）與開 namespace、mount 的 proc、送訊號與冒名送訊號的 proc），外加一支在外面跑的：故意不回答的 FUSE（stuckfuse）。
 import errno, os, signal, socket, sys, time
 
 # init 拿到的 AOS_DAEMON（mount 模式 /aos、ptrace 模式 /proc/1/cwd）；其他 proc 沒有
@@ -7,9 +7,17 @@ ROOT = os.environ.get("AOS_DAEMON", "/proc/1/cwd")
 
 
 def try_path(p):
-    """讀一個路徑：夾就列、檔就讀；'kill:PID' 是試送訊號 0；'env:NAME' 是那個環境變數；'put:PATH=VALUE' 是把 VALUE 寫進 PATH。
+    """讀一個路徑：夾就列、檔就讀；'kill:PID' 是試送訊號 0；'sig:PID:SIG' 是真的送訊號 SIG；'forge:PID:SIG:FAKEPID' 是用
+    rt_sigqueueinfo 送、寄件人 PID 填 FAKEPID（si_code SI_QUEUE）；'env:NAME' 是那個環境變數；'put:PATH=VALUE' 是把 VALUE 寫進 PATH。
     回 'ok …' 或 'err ENAME'。"""
     try:
+        if p.startswith("sig:"):
+            pid, sig = p[4:].split(":")
+            os.kill(int(pid), int(sig))
+            return "ok"
+        if p.startswith("forge:"):
+            pid, sig, fake = (int(x) for x in p[6:].split(":"))
+            return forge(pid, sig, fake)
         if p.startswith("put:"):
             path, _, value = p[4:].partition("=")
             with open(path, "w") as f:
@@ -27,6 +35,63 @@ def try_path(p):
             return "ok " + f.read(4000).replace("\n", "|")
     except OSError as e:
         return "err " + errno.errorcode.get(e.errno, str(e.errno))
+
+
+def forge(pid, sig, fake):
+    """rt_sigqueueinfo(pid, sig, info)：info 的 si_code 是 SI_QUEUE（-1）、si_pid 是 fake（核心不改，除非寄件人在祖先的 PID namespace）。"""
+    import ctypes, struct
+    c = ctypes.CDLL(None, use_errno=True)
+    c.syscall.restype = ctypes.c_long
+    buf = ctypes.create_string_buffer(struct.pack("<iiiiiI", sig, 0, -1, 0, fake, 0) + b"\0" * 104, 128)
+    ctypes.set_errno(0)
+    if c.syscall(ctypes.c_long(129), ctypes.c_long(pid), ctypes.c_long(sig), buf) == -1:
+        e = ctypes.get_errno()
+        return "err " + errno.errorcode.get(e, str(e))
+    return "ok"
+
+
+def stuckfuse(mnt, out):
+    """在外面跑：用 fusermount3 掛一個 FUSE 在 mnt，回答 INIT 與根的 GETATTR／STATFS，其他 LOOKUP 回 ENOENT，
+    但 LOOKUP 名字以 "stuck" 開頭的讀了就不回答：碰 mnt/stuck… 的行程會卡在核心裡（SIGKILL 也要等這個請求回來）。
+    掛好寫 out/ready；收到那種 LOOKUP 時寫 out/stuck-<那個請求的 pid>（同一個名字第二個人會在核心裡等第一個，不會再來一次）。被殺掉（fd 關了）時核心中止連線，卡住的人放開。"""
+    import socket as sk, struct, subprocess
+    a, b = sk.socketpair(sk.AF_UNIX, sk.SOCK_STREAM)
+    env = dict(os.environ, _FUSE_COMMFD=str(b.fileno()))
+    r = subprocess.run(["fusermount3", "-o", "fsname=aosdtest-stuck,subtype=stuck", "--", mnt], env=env, pass_fds=[b.fileno()])
+    if r.returncode != 0:
+        put(out, "failed", "fusermount3 exited %d\n" % r.returncode)
+        return
+    _, fds, _, _ = sk.recv_fds(a, 1, 1)
+    fd = fds[0]
+    uid, gid = os.getuid(), os.getgid()
+    attr = struct.pack("<QQQQQQIIIIIIIIII", 1, 0, 0, 0, 0, 0, 0, 0, 0, 0o40755, 2, uid, gid, 0, 4096, 0)
+
+    def reply(unique, err=0, body=b""):
+        os.write(fd, struct.pack("<IiQ", 16 + len(body), -err, unique) + body)
+
+    while True:
+        req = os.read(fd, 1 << 20)
+        ln, op, unique, node = struct.unpack("<IIQQ", req[:24])
+        rpid = struct.unpack("<I", req[32:36])[0]
+        body = req[40:ln]
+        if op == 26:     # INIT
+            major, minor, ra, flags = struct.unpack("<IIII", body[:16])
+            par = flags & (1 << 18)   # FUSE_PARALLEL_DIROPS：不然同一個夾裡的 lookup 一個一個來，第二個人卡在核心裡等第一個、到不了這裡
+            reply(unique, 0, struct.pack("<IIIIHHIIHHI", 7, 31, ra, par, 0, 0, 4096, 1, 0, 0, 0) + b"\0" * 28)
+            put(out, "ready", "x")
+        elif op == 1:    # LOOKUP
+            if body.split(b"\0")[0].startswith(b"stuck"):
+                put(out, "stuck-%d" % rpid, "x")   # 讀了、不回答
+            else:
+                reply(unique, errno.ENOENT)
+        elif op == 3:    # GETATTR
+            reply(unique, 0, struct.pack("<QII", 1, 0, 0) + attr)
+        elif op == 17:   # STATFS
+            reply(unique, 0, b"\0" * 80)
+        elif op in (2, 36, 38, 42):   # FORGET、INTERRUPT、DESTROY、BATCH_FORGET：不回
+            pass
+        else:
+            reply(unique, errno.ENOSYS)
 
 
 def write_ctl(line):
@@ -280,6 +345,8 @@ def main():
         while not os.path.exists(os.path.join(sys.argv[2], sys.argv[3] + ".orphan")) and time.monotonic() < end:
             time.sleep(0.01)
         os._exit(0)
+    elif mode == "stuckfuse":   # stuckfuse MNT OUT：在外面跑，見 stuckfuse()
+        stuckfuse(sys.argv[2], sys.argv[3])
     elif mode == "flaky":   # flaky OUT N：前 N 次起來就以 5 結束，之後當 init
         out, n = sys.argv[2], int(sys.argv[3])
         cnt = os.path.join(out, "flaky-count")

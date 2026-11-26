@@ -48,11 +48,11 @@ bool abs_path_ok(const std::string& p) {
 }
 
 // 設定的 ns 每條是一個 json 物件：{"type": "bind", "src", "dst", "rw"?}、{"type": "tmpfs"|"proc"|"dev", "dst"}、
-// {"type": "symlink", "target", "dst"}。不認得的鍵、缺的鍵、型別不對、不認得的 type 都拒。
+// {"type": "symlink", "target", "dst"}、{"type": "overlay", "lower": [...], "dst"}。不認得的鍵、缺的鍵、型別不對、不認得的 type 都拒。
 NsEntry parse_ns_entry(const nlohmann::json& j) {
     if (!j.is_object()) bad("ns entry must be an object like {\"type\": \"bind\", \"src\": \"/usr\", \"dst\": \"/usr\"}, not " + j.dump());
     auto it = j.find("type");
-    if (it == j.end()) bad("ns entry has no \"type\" (bind, tmpfs, proc, dev, symlink): " + j.dump());
+    if (it == j.end()) bad("ns entry has no \"type\" (bind, tmpfs, proc, dev, symlink, overlay): " + j.dump());
     if (!it->is_string()) bad("ns entry \"type\" must be a string: " + j.dump());
     NsEntry e;
     e.kind = it->get<std::string>();
@@ -62,8 +62,10 @@ NsEntry parse_ns_entry(const nlohmann::json& j) {
         allowed.push_back("rw");
     } else if (e.kind == "symlink") {
         allowed.push_back("target");
+    } else if (e.kind == "overlay") {
+        allowed.push_back("lower");
     } else if (e.kind != "tmpfs" && e.kind != "proc" && e.kind != "dev") {
-        bad("unknown ns entry type " + e.kind + " (bind, tmpfs, proc, dev, symlink)");
+        bad("unknown ns entry type " + e.kind + " (bind, tmpfs, proc, dev, symlink, overlay)");
     }
     for (const auto& [k, v] : j.items()) {
         (void)v;
@@ -92,6 +94,16 @@ NsEntry parse_ns_entry(const nlohmann::json& j) {
     } else if (e.kind == "symlink") {
         e.src = need("target");
         if (e.src.empty()) bad("symlink \"target\" must not be empty");
+    } else if (e.kind == "overlay") {
+        // 唯讀的 overlay（沒有 upper）：Linux 要至少兩層 lower；起動時疊好，之後不能加層
+        auto f = j.find("lower");
+        if (f == j.end()) bad("ns entry of type overlay needs \"lower\" (an array of at least 2 absolute paths, top first): " + j.dump());
+        if (!f->is_array() || f->size() < 2)
+            bad("overlay \"lower\" must be an array of at least 2 absolute paths (a read-only overlay needs 2 layers), top first: " + j.dump());
+        for (const auto& l : *f) {
+            if (!l.is_string()) bad("overlay \"lower\" items must be strings: " + j.dump());
+            e.lower.push_back(clean_path(l.get<std::string>(), "overlay lower"));
+        }
     }
     if (e.dst == "/") bad("the root is always a fresh tmpfs; an entry with dst / is not allowed");
     return e;
@@ -102,6 +114,13 @@ std::vector<Mount> plan_mounts(const std::vector<NsEntry>& ns) {
     for (const auto& e : ns) {
         if (e.kind == "bind") out.push_back({"bind", e.src, e.dst, e.rw});
         else if (e.kind == "tmpfs" || e.kind == "proc") out.push_back({e.kind, "-", e.dst, true});
+        else if (e.kind == "overlay") {
+            std::string joined;
+            for (const auto& l : e.lower) joined += (joined.empty() ? "" : ":") + l;
+            Mount m{"overlay", joined, e.dst, false};
+            m.lower = e.lower;
+            out.push_back(m);
+        }
         else if (e.kind == "dev") {
             out.push_back({"dev", "-", e.dst, false});
             for (const char* n : DEV_NODES) out.push_back({"bind", std::string("/dev/") + n, e.dst + "/" + n, true});

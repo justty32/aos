@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# run.py：aos-daemon 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、init 重起規則、整片跟著 daemon 走、init 經 /aos（或 ptrace）碰目錄、procs/<名>/ 是真的夾、daemon 設定檔、結束寬限、起動那一層死了留下、forget -k、改名 init、沒有 init、到重起上限留著、daemon_path、init 進 Landlock、exit_code、net none／host、seccomp（內建的擋單、off、自己的名單）、疊 daemon 量到的界線、--cgroup PATH、沒有殘留。
-# 用法：python3 tests/run.py [組名…]；組：basic procs nsconf ns landlock cgroup mount modes restart teardown access dirs stdio dconf grace pdeath forgetk rename noinit rlstay dpath ilandlock exitcode net seccomp nest cgpath（最後一定跑 leftovers）
+# run.py：aos-daemon 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、init 重起規則、整片跟著 daemon 走、init 經 /aos（或 ptrace）碰目錄、procs/<名>/ 是真的夾、daemon 設定檔、結束寬限、起動那一層死了留下、forget -k、改名 init、沒有 init、到重起上限留著、daemon_path、init 進 Landlock、exit_code、net none／host、seccomp（內建的擋單、off、自己的名單）、疊 daemon 量到的界線、--cgroup PATH、停止訊號只收外面與 init 送的、普通 proc 經 init 的 /proc/<PID>/root 進不去、bind 來源卡住時不跟著卡、ns.json 的 by／at、overlay、合併目錄 B、restart-init、介面宣告、沒有殘留。
+# 用法：python3 tests/run.py [組名…]；組：basic procs nsconf ns landlock cgroup mount modes restart teardown access dirs stdio dconf grace pdeath forgetk rename noinit rlstay dpath ilandlock exitcode net seccomp nest cgpath sigsrc ipath stuck nsby overlay merge rinit iface（最後一定跑 leftovers）
 import errno, json, os, re, select, shutil, signal, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -212,7 +212,7 @@ def t_basic():
           os.path.samefile("/proc/%d/cwd" % d.pid, "/proc/%d/root/aos" % d.pid))
     check("basic: no host files through /proc/<PID>/root",
           not os.path.exists("/proc/%d/root/etc" % d.pid) and not os.path.exists("/proc/%d/root/usr" % d.pid))
-    check("basic: the directory holds ctl, procs/, status (no slots/)", sorted(os.listdir(d.root)) == ["ctl", "procs", "status"],
+    check("basic: the directory holds __meta/, ctl, procs/, status (no slots/)", sorted(os.listdir(d.root)) == ["__meta", "ctl", "procs", "status"],
           sorted(os.listdir(d.root)))
     kt = init_file(d)
     check("basic: init reads $AOS_DAEMON/status, AOS_DAEMON is /aos", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
@@ -298,6 +298,11 @@ def t_procs():
 
 
 # ---------------------------------------------------------------- ns
+
+def nsrow(j):
+    """ns.json 的一筆拿掉 by、at（比的時候只看 type、src、lower、dst、rw、locked）。"""
+    return {k: v for k, v in j.items() if k not in ("by", "at")}
+
 
 def parse_mountinfo(hp):
     out = []
@@ -524,7 +529,7 @@ def t_mount():
     table = [l.split() for l in d.fact("m", "ns").splitlines()]
     check("mount: ns table has the new line (ro)", ["bind", src, "/live", "ro"] in table, table)
     nj = json.loads(d.fact("m", "ns.json"))
-    check("mount: ns.json has the new mount too", {"type": "bind", "src": src, "dst": "/live", "rw": False} in nj and
+    check("mount: ns.json has the new mount too", {"type": "bind", "src": src, "dst": "/live", "rw": False} in map(nsrow, nj) and
           len(nj) == len(d.fact("m", "ns").splitlines()), nj)
     check("mount: table still matches mountinfo",
           sorted((t[2], t[3] == "ro") for t in table) == sorted(parse_mountinfo(hp)))
@@ -666,7 +671,7 @@ def t_access():
           "capabilities: none" in d.fact("main", "locks") and "daemon directory: /aos" in d.fact("main", "locks"),
           d.fact("main", "locks"))
     a = d.ask("/aos")
-    check("access: init lists /aos", a == "ok ctl procs status", a)
+    check("access: init lists /aos", a == "ok __meta ctl procs status", a)
     cw = config(d.dir, "w", ["sleep"], locks={"cgroup": {"pids.max": "20"}} if cg_on else {})
     a = d.ask("ctl start " + cw)
     check("access: init writes 'start' into /aos/ctl; when the write returns the proc is alive",
@@ -750,7 +755,7 @@ def t_dirs():
     d.ctl("start " + c)
     p = d.root + "/procs/x"
     check("dirs: procs/x is a real directory, not a symlink", os.path.isdir(p) and not os.path.islink(p))
-    want = {"name", "pid", "state", "exit", "started_at", "ended_at", "ns", "ns.json", "ns_check", "uid", "locks", "config"}
+    want = {"name", "pid", "state", "exit", "started_at", "ended_at", "ns", "ns.json", "ns_check", "uid", "locks", "config", "__meta"}
     if not d.status().get("cgroup", "off").startswith("off"):
         want.add("cgroup")
     check("dirs: it holds the facts", set(os.listdir(p)) == want, sorted(os.listdir(p)))
@@ -1330,7 +1335,7 @@ def t_dpath():
           ["aos", "-", "/run/aos", "rw"] in table and (not cg_on or ["cgroup", s["cgroup"], "/run/cgroup", "rw"] in table) and
           d.fact("main", "ns_check") == "ok\n", table)
     nj = json.loads(d.fact("main", "ns.json"))
-    check("dpath: ns.json too", {"type": "aos", "dst": "/run/aos", "rw": True} in nj, nj)
+    check("dpath: ns.json too", {"type": "aos", "dst": "/run/aos", "rw": True} in map(nsrow, nj), nj)
     locks = d.fact("main", "locks")
     check("dpath: locks name the configured places", "daemon directory: /run/aos" in locks and
           (not cg_on or "cgroup directory at /run/cgroup" in locks), locks)
@@ -1760,6 +1765,452 @@ def t_cgpath():
           (p.returncode, p.stderr))
 
 
+# ---------------------------------------------------------------- sigsrc（停止訊號只收外面與 init 送的，使用者 11-26 定）
+
+ISO = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$")
+
+
+def ns_pid(d, name):
+    return int(re.search(r"ns: (\d+)", d.fact(name, "pid")).group(1))
+
+
+def t_sigsrc():
+    d = Daemon("sigsrc")
+    if not check("sigsrc: daemon up", d.pid and init_up(d), d.err()):
+        return
+    abi = int(d.status().get("landlock_abi", "0"))
+    ip = ns_pid(d, "main")
+    sigs = ["sig:1:15", "sig:1:1", "sig:1:2"]
+    d.ctl("start " + config(d.dir, "s", ["probe", "/out", "s"] + sigs))
+    got = results(d, "s")
+    sp = ns_pid(d, "s")
+    want = "ok" if abi < 6 else "err EPERM"
+    check("sigsrc: a sky proc sends SIGTERM, SIGHUP, SIGINT to the daemon (PID 1): %s (Landlock ABI %d)" % (got.get(sigs[0]), abi),
+          all(got.get(k) == want for k in sigs), got)
+    lines = ["ignored %s from pid %d (s) in the daemon's PID namespace" % (n, sp) for n in ("SIGTERM", "SIGHUP", "SIGINT")]
+    if abi < 6:
+        wait_for(lambda: all(l in d.err() for l in lines), 3)
+    else:
+        time.sleep(0.5)
+    check("sigsrc: ... the daemon does not stop: still up, status reads", d.p.poll() is None and d.status().get("pid_ns") == "1")
+    if abi < 6:
+        check("sigsrc: ... and logs one line each (ignored SIGTERM/SIGHUP/SIGINT from pid N (s) …)", all(l in d.err() for l in lines),
+              d.err()[-800:])
+        # 一般訊號同號的還沒讀走時第二個會被併掉：一隻一個、等到記下來再送下一個
+        for name, fake, want_line in (("f0", 0, "ignored SIGTERM from outside the daemon's PID namespace with si_code -1"),
+                                      ("fi", ip, "ignored SIGTERM from pid %d (main) in the daemon's PID namespace with si_code -1" % ip)):
+            d.ctl("start " + config(d.dir, name, ["probe", "/out", name, "forge:1:15:%d" % fake]))
+            g = results(d, name)
+            seen = wait_for(lambda: want_line in d.err(), 3)
+            check("sigsrc: a forged sender (rt_sigqueueinfo, si_code SI_QUEUE, si_pid %s) is ignored" % ("0" if not fake else "= init's"),
+                  g.get("forge:1:15:%d" % fake) == "ok" and seen and d.p.poll() is None, (g, d.err()[-600:]))
+    r = d.ctl("start " + config(d.dir, "s2", ["sleep"]))
+    check("sigsrc: ctl still works afterwards", r == (0, "done", "-") and started(d, "s2"), r)
+    check("sigsrc: locks of a uid-0 proc %s 'signals: can signal init and other uid-0 procs' (ABI %d)" % ("have" if abi < 6 else "lack", abi),
+          ("signals: can signal init and other uid-0 procs" in d.fact("s", "locks")) == (abi < 6), d.fact("s", "locks"))
+    check("sigsrc: init's locks have no signals line", "signals:" not in d.fact("main", "locks"), d.fact("main", "locks"))
+    if d.status().get("subuid", "none") != "none":
+        d.ctl("start " + config(d.dir, "u1", ["sleep"], uid=1))
+        check("sigsrc: a subuid proc's locks have no signals line", started(d, "u1") and "signals:" not in d.fact("u1", "locks"),
+              d.fact("u1", "locks"))
+    d.ask("sig:1:15")   # init 送；daemon 收尾時 init 可能來不及寫答案，不看答案
+    try:
+        rc = d.p.wait(10)
+    except subprocess.TimeoutExpired:
+        rc = None
+    check("sigsrc: init sends SIGTERM to the daemon -> it stops, exit 0", rc == 0 and "exiting (got SIGTERM" in d.err(), (rc, d.err()[-400:]))
+    check("sigsrc: ... that one was not ignored (only the three from s are)", d.err().count("ignored SIGTERM") == (3 if abi < 6 else 0),
+          d.err()[-600:])
+
+    d = Daemon("sigsrc-out")
+    init_up(d)
+    check("sigsrc: SIGTERM from outside (through the launcher) -> exit 0, nothing ignored", d.stop() == 0 and "ignored" not in d.err(),
+          d.err()[-300:])
+    d = Daemon("sigsrc-out2")
+    init_up(d)
+    os.kill(d.pid, signal.SIGHUP)
+    try:
+        rc = d.p.wait(10)
+    except subprocess.TimeoutExpired:
+        rc = None
+    check("sigsrc: SIGHUP sent from outside straight to the daemon's PID -> exit 0", rc == 0 and "exiting (got SIGHUP" in d.err(),
+          (rc, d.err()[-300:]))
+
+
+# ---------------------------------------------------------------- ipath（普通 proc 經 init 的 /proc/<PID>/root 進不去 daemon 的目錄）
+
+def t_ipath():
+    for variant, extra, label in (("", None, "init without Landlock"),
+                                  ("-landlock", {"locks": {"landlock": True}}, "init with locks.landlock true")):
+        d = Daemon("ipath" + variant, None, init_extra=extra)
+        if not check("ipath: (%s) daemon up" % label, d.pid and started(d, "main"), d.err()):
+            continue
+        if int(d.status().get("landlock_abi", "0")) < 1:
+            check("ipath: (skip) this Linux has no Landlock", True)
+            d.stop()
+            continue
+        i = ns_pid(d, "main")
+        victim = config(d.dir, "victim", ["sleep"])
+        reads = ["/proc/%d/root/aos/status" % i, "/proc/%d/cwd/aos/status" % i, "/proc/%d/root/aos/procs" % i,
+                 "/proc/%d/root" % i, "/proc/%d/cwd" % i]
+        writes = ["put:/proc/%d/root/aos/ctl=start %s" % (i, victim), "put:/proc/%d/cwd/aos/ctl=start %s" % (i, victim)]
+        d.ctl("start " + config(d.dir, "q", ["probe", "/out", "q"] + reads + writes))
+        results(d, "q")
+        got = {}   # 寫的那幾個的路徑裡有空白，照整個前綴找
+        for line in read(os.path.join(d.dir, "q.txt")).splitlines():
+            for p in reads + writes:
+                if line.startswith(p + " "):
+                    got[p] = line[len(p) + 1:]
+        check("ipath: (%s) the probe is uid 0 like init" % label, d.fact("q", "uid").startswith("ns: 0\n"), d.fact("q", "uid"))
+        names = ["root/aos/status", "cwd/aos/status", "root/aos/procs", "root", "cwd"]
+        for p, n in zip(reads, names):
+            check("ipath: (%s) uid-0 proc reading /proc/<init>/%s: %s" % (label, n, got.get(p)), got.get(p, "").startswith("err"), got)
+        for p, n in zip(writes, ["root/aos/ctl", "cwd/aos/ctl"]):
+            check("ipath: (%s) uid-0 proc writing /proc/<init>/%s: %s" % (label, n, got.get(p)), got.get(p, "").startswith("err"), got)
+        check("ipath: (%s) ... nothing was started through it" % label, not os.path.lexists(d.root + "/procs/victim") and
+              "victim" not in d.status().get("aos_ctl_cmd", ""), d.status().get("aos_ctl_cmd"))
+        d.stop()
+
+
+# ---------------------------------------------------------------- stuck（bind 來源卡住時 daemon 不跟著卡）
+
+def stuck_fuse(dd):
+    """起 toys.py stuckfuse（在外面跑的故意不回答的 FUSE）；回 (Popen, 掛載點, 狀態夾, 說明)。Popen 是 None 就是起不來。"""
+    mnt, st = os.path.join(dd, "mnt"), os.path.join(dd, "st")
+    os.makedirs(mnt, exist_ok=True)
+    os.makedirs(st, exist_ok=True)
+    if not shutil.which("fusermount3") or not os.path.exists("/dev/fuse"):
+        return None, mnt, st, "no fusermount3 or /dev/fuse"
+    p = subprocess.Popen([sys.executable, os.path.join(TOYS, "toys.py"), "stuckfuse", mnt, st], stdout=subprocess.DEVNULL,
+                         stderr=open(os.path.join(dd, "fuse.err"), "w"))
+    wait_for(lambda: os.path.exists(st + "/ready") or os.path.exists(st + "/failed") or p.poll() is not None, 5)
+    if not os.path.exists(st + "/ready"):
+        p.kill()
+        p.wait(5)
+        return None, mnt, st, read(os.path.join(dd, "fuse.err"))[-300:]
+    return p, mnt, st, ""
+
+
+def stuck_pids(st):
+    return sorted(int(n[6:]) for n in os.listdir(st) if n.startswith("stuck-"))
+
+
+def proc_state(pid):
+    try:
+        return re.search(r"State:\s+(\S)", read("/proc/%d/status" % pid)).group(1)
+    except OSError:
+        return None
+
+
+def t_stuck():
+    dd = os.path.join(TMP, "stuck-fuse")
+    fp, mnt, st, why = stuck_fuse(dd)
+    if not fp:
+        check("stuck: (skip) could not make a FUSE that hangs: %s" % why, True)
+        return
+    try:
+        d = Daemon("stuck")   # FUSE 先掛好再起 daemon：daemon 握的「原本那一層」是起動那一刻的
+        if not check("stuck: daemon up", d.pid and started(d, "main"), d.err()):
+            return
+        cg = d.status().get("cgroup", "off")
+        cg_on = not cg.startswith("off")
+        t0 = time.monotonic()
+        r = d.ctl("start " + config(d.dir, "sb", ["sleep"], ns=base_ns(d.dir) + [bind(mnt + "/stuck", "/x")]), wait=30)
+        el = time.monotonic() - t0
+        check("stuck: start whose bind source hangs: write error EIO after the 10 s timeout (%.1f s), Timeout building the ns" % el,
+              r[0] == errno.EIO and r[1] == "failed" and (r[2] or "").startswith("Timeout building the ns") and 9.5 <= el < 13, (r, el))
+        sp = stuck_pids(st)
+        check("stuck: ... the FUSE got the lookup and does not answer it", len(sp) == 1, sp)
+        check("stuck: ... the child is still stuck in the kernel after SIGKILL (state D), not reaped",
+              sp and proc_state(sp[0]) == "D", sp and proc_state(sp[0]))
+        t0 = time.monotonic()
+        s = d.status()
+        r = d.ctl("start " + config(d.dir, "ok1", ["sleep"]))
+        check("stuck: the daemon is not stuck: status reads, another start is done at once (%.2f s)" % (time.monotonic() - t0),
+              s.get("pid_ns") == "1" and r == (0, "done", "-") and started(d, "ok1") and time.monotonic() - t0 < 3, r)
+        check("stuck: the failed one is not on the table", not os.path.lexists(d.root + "/procs/sb"))
+        check("stuck: the daemon says it did not wait for it", "did not exit 0.5 s after SIGKILL" in d.err(), d.err()[-500:])
+        if cg_on:
+            check("stuck: ... it was stuck before joining its cgroup, so the cgroup folder is removed at once",
+                  not [n for n in os.listdir(cg) if n.startswith("p-sb-")] and "cgroup p-sb-" not in d.err(), d.err()[-400:])
+        # 卡在 exec（程式在不回答的 FUSE 上）：已經進了自己的 cgroup，夾刪不掉，記下來之後再刪
+        t0 = time.monotonic()
+        r = d.ctl("start " + config(d.dir, "sx", [], ns=base_ns(d.dir) + [bind(mnt, "/fz")], argv=["/fz/stuck-exec"]), wait=30)
+        el = time.monotonic() - t0
+        check("stuck: start whose program is on the hanging FUSE: EIO after the 10 s exec timeout (%.1f s), Timeout exec" % el,
+              r[0] == errno.EIO and r[1] == "failed" and (r[2] or "").startswith("Timeout exec") and 9.5 <= el < 13, (r, el))
+        sp = stuck_pids(st)
+        check("stuck: ... that child is stuck in the kernel too (state D)", len(sp) == 2 and all(proc_state(p) == "D" for p in sp),
+              [(p, proc_state(p)) for p in sp])
+        left = []
+        if cg_on:
+            left = [n for n in os.listdir(cg) if n.startswith("p-sx-")]
+            check("stuck: ... its cgroup folder could not be removed yet and is kept for later", len(left) == 1 and
+                  "cgroup %s not removed yet" % (left or ["?"])[0] in d.err(), (left, d.err()[-400:]))
+        t0 = time.monotonic()
+        r = d.ctl("mount ok1 %s/stuck-mount /y" % mnt, wait=30)
+        el = time.monotonic() - t0
+        check("stuck: ctl mount from the hanging FUSE: write error EIO after 10 s (%.1f s), MountFailed Timeout" % el,
+              r[0] == errno.EIO and r[1] == "failed" and (r[2] or "").startswith("MountFailed Timeout mount took more than 10 s") and
+              9.5 <= el < 13, (r, el))
+        sp = stuck_pids(st)
+        check("stuck: ... its helper is stuck too (state D)", len(sp) == 3 and all(proc_state(p) == "D" for p in sp),
+              [(p, proc_state(p)) for p in sp])
+        r = d.ctl("kill ok1 TERM")
+        check("stuck: ... and ctl still works", r == (0, "done", "-"), r)
+        fp.kill()   # FUSE 的 fd 關了：核心中止連線，卡住的請求回錯，兩隻帶著 SIGKILL 走掉
+        fp.wait(5)
+        check("stuck: once the FUSE goes away the stuck ones exit and the main loop reaps them (no zombies)",
+              wait_for(lambda: all(not os.path.exists("/proc/%d" % p) for p in sp), 5), [(p, proc_state(p)) for p in sp])
+        if cg_on:
+            check("stuck: ... and the kept cgroup folder is removed then",
+                  wait_for(lambda: not any(os.path.exists(os.path.join(cg, n)) for n in left), 5) and "removed cgroup p-sx-" in d.err(),
+                  d.err()[-400:])
+        check("stuck: the daemon still stops with SIGTERM (exit 0)", d.stop() == 0)
+    finally:
+        if fp.poll() is None:
+            fp.kill()
+            fp.wait(5)
+        subprocess.run(["fusermount3", "-u", "-z", mnt], stderr=subprocess.DEVNULL)
+
+
+# ---------------------------------------------------------------- nsby（ns.json 每筆的 by、at）
+
+def t_nsby():
+    d = Daemon("nsby")
+    if not check("nsby: daemon up", d.pid and started(d, "main"), d.err()):
+        return
+    d.ctl("start " + config(d.dir, "w", ["sleep"]))
+    started(d, "w")
+    js = json.loads(d.fact("w", "ns.json"))
+    check("nsby: every entry has by and at", all("by" in j and "at" in j for j in js), js)
+    check("nsby: at is a UTC time (YYYY-MM-DDTHH:MM:SS.mmmZ)", all(ISO.match(j.get("at", "")) for j in js), [j.get("at") for j in js])
+    check("nsby: rows from the config are by start, forced-in submounts by locked",
+          all(j.get("by") == ("locked" if j.get("locked") else "start") for j in js), js)
+    if any(j.get("locked") for j in js):
+        check("nsby: (WSL) the locked rows under /usr are by locked", all(j["by"] == "locked" for j in js if j.get("locked")))
+    cg_on = not d.status().get("cgroup", "off").startswith("off")
+    nj = json.loads(d.fact("main", "ns.json"))
+    want = {"/aos": "daemon", "/cgroup": "daemon"} if cg_on else {"/aos": "daemon"}
+    check("nsby: init's /aos%s rows are by daemon" % (" and /cgroup" if cg_on else ""),
+          {j["dst"]: j["by"] for j in nj if j["type"] in ("aos", "cgroup")} == want, nj)
+    check("nsby: init's other rows are by start or locked", all(j["by"] in ("start", "locked") for j in nj if j["type"] not in ("aos", "cgroup")))
+    time.sleep(0.05)
+    src = os.path.join(d.dir, "live")
+    os.makedirs(src, exist_ok=True)
+    r = d.ctl("mount w %s /live" % src)
+    js2 = json.loads(d.fact("w", "ns.json"))
+    live = [j for j in js2 if j["dst"] == "/live"]
+    check("nsby: a ctl mount is by mount with its own at", r == (0, "done", "-") and len(live) == 1 and live[0]["by"] == "mount" and
+          ISO.match(live[0]["at"]) and live[0]["at"] != js[0]["at"], (r, live, js[0]))
+    check("nsby: the start rows keep their by and at after the remeasure", [j for j in js2 if j["dst"] != "/live"] == js)
+    check("nsby: the text ns has no by/at", all(len(l.split()) in (4, 5) for l in d.fact("w", "ns").splitlines()) and
+          " start" not in d.fact("w", "ns") and " mount" not in d.fact("w", "ns"), d.fact("w", "ns"))
+    d.stop()
+
+
+# ---------------------------------------------------------------- overlay（ns 的 overlay，唯讀）
+
+def t_overlay():
+    d = Daemon("overlay")
+    if not check("overlay: daemon up", d.pid and started(d, "main"), d.err()):
+        return
+    top, bot = os.path.join(d.dir, "top"), os.path.join(d.dir, "bot")
+    for p, files in ((top, {"common": "TOP", "t": "t"}), (bot, {"common": "BOT", "b": "b"})):
+        os.makedirs(p, exist_ok=True)
+        for n, v in files.items():
+            with open(os.path.join(p, n), "w") as f:
+                f.write(v)
+    ov = {"type": "overlay", "lower": [top, bot], "dst": "/ov"}
+    r = d.ctl("start " + config(d.dir, "ov", ["probe", "/out", "ov", "/ov", "/ov/common", "/ov/t", "/ov/b"], ns=base_ns(d.dir) + [ov]))
+    check("overlay: start with an overlay entry -> done", r == (0, "done", "-"), r)
+    got = results(d, "ov")
+    check("overlay: both layers show in one folder, the first lower on top",
+          got == {"/ov": "ok b common t", "/ov/common": "ok TOP", "/ov/t": "ok t", "/ov/b": "ok b"}, got)
+    d.ctl("start " + config(d.dir, "ovw", ["write", "/out", "ovw", "/ov/x", "/ov/common"], ns=base_ns(d.dir) + [ov]))
+    got = results(d, "ovw")
+    check("overlay: it is read-only (new file and existing file: EROFS)", got == {"/ov/x": "err EROFS", "/ov/common": "err EROFS"}, got)
+    table = [l.split() for l in d.fact("ov", "ns").splitlines()]
+    check("overlay: ns line 'overlay <top>:<bot> /ov ro'", ["overlay", top + ":" + bot, "/ov", "ro"] in table, table)
+    row = [j for j in json.loads(d.fact("ov", "ns.json")) if j["dst"] == "/ov"]
+    check("overlay: ns.json row has type overlay, lower as an array, rw false, by start",
+          len(row) == 1 and row[0]["type"] == "overlay" and row[0]["lower"] == [top, bot] and row[0]["rw"] is False and
+          row[0]["by"] == "start" and "src" not in row[0], row)
+    check("overlay: ns_check ok", d.fact("ov", "ns_check") == "ok\n", d.fact("ov", "ns_check"))
+    mi = [l.split() for l in read("/proc/%d/mountinfo" % d.hostpid("ov")).splitlines()]
+    m = [l for l in mi if l[4] == "/ov"]
+    check("overlay: mountinfo: /ov is an overlay, ro", m and m[0][m[0].index("-") + 1] == "overlay" and m[0][5].startswith("ro"), m)
+    cases = [("one lower", {"type": "overlay", "lower": [top], "dst": "/z"}, "at least 2"),
+             ("lower not an array", {"type": "overlay", "lower": top, "dst": "/z"}, "at least 2"),
+             ("relative lower", {"type": "overlay", "lower": [top, "rel/x"], "dst": "/z"}, "absolute"),
+             ("missing lower", {"type": "overlay", "dst": "/z"}, "lower"),
+             ("rw on overlay", {"type": "overlay", "lower": [top, bot], "dst": "/z", "rw": True}, "unknown key"),
+             ("src on overlay", {"type": "overlay", "lower": [top, bot], "dst": "/z", "src": top}, "unknown key")]
+    for k, (what, e, word) in enumerate(cases):
+        r = d.ctl("start " + config(d.dir, "ob%d" % k, ["sleep"], ns=base_ns(d.dir) + [e]))
+        check("overlay: %s -> EIO, ConfigBad" % what, r[0] == errno.EIO and "ConfigBad" in (r[2] or "") and word in (r[2] or ""), r)
+    r = d.ctl("start " + config(d.dir, "onx", ["sleep"], ns=base_ns(d.dir) + [{"type": "overlay", "lower": [top, "/nonexistent/x"], "dst": "/z"}]))
+    check("overlay: a lower that does not exist -> EIO, StartFailed (overlay)", r[0] == errno.EIO and
+          (r[2] or "").startswith("StartFailed") and "overlay" in (r[2] or ""), r)
+    d.stop()
+
+
+# ---------------------------------------------------------------- merge（合併目錄 B：留空 tmpfs，跑的時候一個一個檔掛進去）
+
+def t_merge():
+    dd = os.path.join(TMP, "merge")
+    d = Daemon("merge", None, init_extra={"ns": base_ns(dd) + [ent("tmpfs", "/merged")]})
+    if not check("merge: daemon up (init has an empty tmpfs at /merged)", d.pid and started(d, "main"), d.err()):
+        return
+    check("merge: /merged starts empty", d.ask("/merged") == "ok", d.ask("/merged"))
+    files = {}
+    for sub, name, val in (("one", "tool-a", "A"), ("two", "tool-b", "B")):
+        os.makedirs(os.path.join(dd, sub), exist_ok=True)
+        files[name] = os.path.join(dd, sub, name)
+        with open(files[name], "w") as f:
+            f.write(val)
+    rs = [d.ctl("mount main %s /merged/%s" % (files[n], n)) for n in ("tool-a", "tool-b")]
+    check("merge: ctl mount of two single files from two host folders -> done", rs == [(0, "done", "-")] * 2, rs)
+    check("merge: init sees both in one folder", d.ask("/merged") == "ok tool-a tool-b", d.ask("/merged"))
+    check("merge: ... with their contents", d.ask("/merged/tool-a") == "ok A" and d.ask("/merged/tool-b") == "ok B")
+    table = [l.split() for l in d.fact("main", "ns").splitlines()]
+    check("merge: ns has one bind line per file", all(["bind", files[n], "/merged/" + n, "ro"] in table for n in files), table)
+    nj = [j for j in json.loads(d.fact("main", "ns.json")) if j["dst"].startswith("/merged/")]
+    check("merge: ns.json rows are by mount", len(nj) == 2 and all(j["by"] == "mount" for j in nj), nj)
+    check("merge: ns_check ok", d.fact("main", "ns_check") == "ok\n", d.fact("main", "ns_check"))
+    r = d.ctl("umount main /merged/tool-a")
+    check("merge: umount one -> done; measured: an empty mount-point file stays (%s)" % d.ask("/merged/tool-a"),
+          r == (0, "done", "-") and d.ask("/merged/tool-a") == "ok" and d.ask("/merged/tool-b") == "ok B", r)
+    d.stop()
+
+
+# ---------------------------------------------------------------- rinit（ctl 的 restart-init，使用者 11-26 定）
+
+def t_rinit():
+    dd = os.path.join(TMP, "rinit")
+    xdir = os.path.join(dd, "x")
+    os.makedirs(xdir, exist_ok=True)
+    d = Daemon("rinit", None, "--restart-limit", "1", "--on-restart-limit", "stay", init_extra={"ns": base_ns(dd) + [bind(xdir, "/x")]})
+    if not check("rinit: daemon up (--restart-limit 1 --on-restart-limit stay)", d.pid and init_up(d), d.err()):
+        return
+
+    r = d.ctl("restart-init")
+    check("rinit: init alive -> write error EINVAL, rejected InitAlive", r[0] == errno.EINVAL and r[1] == "rejected" and
+          (r[2] or "").startswith("InitAlive"), r)
+    r = d.ctl("restart-init now")
+    check("rinit: an argument -> EINVAL ArgumentsBad", r[0] == errno.EINVAL and (r[2] or "").startswith("ArgumentsBad"), r)
+    hp = d.hostpid("main")
+    d.ctl("kill main KILL")
+    wait_for(lambda: d.status().get("init_restarts") == "1" and started(d, "main", 0.05) and d.hostpid("main") != hp, 5)
+    hp = d.hostpid("main")
+    d.ctl("kill main KILL")
+    gone_ = wait_for(lambda: d.status().get("init_state", "").startswith("gone"), 5)
+    check("rinit: two deaths -> init gone (restart limit, stay)", gone_ and d.status().get("init_restarts") == "1", d.status())
+    r = d.ctl("restart-init")
+    s = d.status()
+    check("rinit: restart-init while init is gone -> done; init alive again, restart counts back to 0",
+          r == (0, "done", "-") and s.get("init_state") == "alive" and s.get("init_restarts") == "0" and
+          s.get("init_deaths_in_window") == "0" and d.fact("main", "state") == "alive\n" and d.hostpid("main") != hp, (r, s))
+    kt = wait_for(lambda: read(os.path.join(d.dir, "init-%d.txt" % ns_pid(d, "main"))), 5) or ""   # init 記的是它自己看到的 PID
+    check("rinit: it is a real init: AOS_DAEMON=/aos, reads /aos/status; /aos in its ns", kt.startswith("ok pid_ns: 1") and
+          "\nroot /aos\n" in kt and ["aos", "-", "/aos", "rw"] in [l.split() for l in d.fact("main", "ns").splitlines()], kt)
+    check("rinit: stderr says restart-init", "restart-init: starting init main" in d.err(), d.err()[-300:])
+    hp = d.hostpid("main")
+    d.ctl("kill main KILL")
+    check("rinit: the restart window was reset: the next death is restarted again (init_restarts 1)",
+          wait_for(lambda: d.status().get("init_restarts") == "1" and started(d, "main", 0.05) and d.hostpid("main") != hp, 5), d.status())
+    hp = d.hostpid("main")
+    d.ctl("kill main KILL")
+    wait_for(lambda: d.status().get("init_state", "").startswith("gone"), 5)
+    r1 = d.ctl("forget main")
+    r2 = d.ctl("restart-init")
+    check("rinit: after forget of the gone init, restart-init starts it", r1 == (0, "done", "-") and r2 == (0, "done", "-") and
+          started(d, "main") and d.status().get("init_state") == "alive", (r1, r2))
+    # 起不來：init 天空的 bind 來源不見了
+    for _ in range(2):
+        hp = d.hostpid("main")
+        d.ctl("kill main KILL")
+        wait_for(lambda: d.status().get("init_state", "").startswith("gone") or
+                 (started(d, "main", 0.05) and d.hostpid("main") != hp), 5)
+    os.rmdir(xdir)
+    r = d.ctl("restart-init")
+    s = d.status()
+    check("rinit: init that cannot start -> write error EIO, failed; init_state gone (restart-init failed …); daemon stays",
+          r[0] == errno.EIO and r[1] == "failed" and "bind source" in (r[2] or "") and
+          s.get("init_state", "").startswith("gone (restart-init failed") and d.p.poll() is None, (r, s.get("init_state")))
+    os.makedirs(xdir)
+    r = d.ctl("restart-init")
+    check("rinit: fixed, restart-init again -> done", r == (0, "done", "-") and started(d, "main"), r)
+    # 表上同名的是一般 proc
+    for _ in range(2):
+        hp = d.hostpid("main")
+        d.ctl("kill main KILL")
+        wait_for(lambda: d.status().get("init_state", "").startswith("gone") or
+                 (started(d, "main", 0.05) and d.hostpid("main") != hp), 5)
+    d.ctl("forget main")
+    other = os.path.join(d.dir, "other")
+    os.makedirs(other, exist_ok=True)
+    d.ctl("start " + config(other, "main", ["sleep"], ns=base_ns(d.dir)))
+    r = d.ctl("restart-init")
+    check("rinit: a proc named main that is not init is on the table -> EINVAL ProcExists",
+          r[0] == errno.EINVAL and (r[2] or "").startswith("ProcExists"), r)
+    d.stop()
+    dj = write_json(os.path.join(TMP, "rinit-noinit", "daemon.json"), {})
+    d = Daemon("rinit-noinit", args=[dj])
+    r = d.ctl("restart-init")
+    check("rinit: no init in the daemon config -> EINVAL NoInit", r[0] == errno.EINVAL and (r[2] or "").startswith("NoInit"), r)
+    d.stop()
+
+
+# ---------------------------------------------------------------- iface（介面宣告 __meta/__interfaces，使用者 11-26 定）
+
+def t_iface():
+    d = Daemon("iface")
+    if not check("iface: daemon up", d.pid and init_up(d), d.err()):
+        return
+    base = d.root + "/__meta/__interfaces/aos"
+    check("iface: __meta/__interfaces/aos holds ctl/ and jsonpath", sorted(os.listdir(base)) == ["ctl", "jsonpath"], os.listdir(base))
+    check("iface: aos/ctl is a folder with kind, path, commands", os.path.isdir(base + "/ctl") and
+          sorted(os.listdir(base + "/ctl")) == ["commands", "kind", "path"])
+    check("iface: aos/ctl/kind is file", read(base + "/ctl/kind") == "file\n", read(base + "/ctl/kind"))
+    check("iface: aos/ctl/path is ctl, and that is the ctl next to __meta", read(base + "/ctl/path") == "ctl\n" and
+          os.path.exists(os.path.join(d.root, read(base + "/ctl/path").strip())))
+    cmds = read(base + "/ctl/commands").split()
+    check("iface: aos/ctl/commands lists the commands, restart-init included",
+          cmds == ["start", "kill", "mount", "umount", "forget", "restart-init"], cmds)
+    res = [d.ctl(c) for c in cmds]
+    check("iface: ... and ctl knows every one of them (no CommandUnknown)",
+          all(r[0] == errno.EINVAL and not (r[2] or "").startswith("CommandUnknown") for r in res), res)
+    r = d.ctl("frobnicate")
+    check("iface: ... while a word not listed is CommandUnknown", (r[2] or "").startswith("CommandUnknown"), r)
+    check("iface: aos/jsonpath is an empty file", os.path.isfile(base + "/jsonpath") and read(base + "/jsonpath") == "")
+    modes = {p: os.stat(p).st_mode & 0o777 for p in (d.root + "/__meta", base, base + "/ctl", base + "/ctl/kind", base + "/jsonpath")}
+    check("iface: read-only (folders 0555, files 0444)", list(modes.values()) == [0o555, 0o555, 0o555, 0o444, 0o444], modes)
+    errs = []
+    for f in (lambda: os.close(os.open(base + "/ctl/kind", os.O_WRONLY)), lambda: os.mkdir(base + "/x"),
+              lambda: os.close(os.open(base + "/new", os.O_WRONLY | os.O_CREAT)), lambda: os.unlink(base + "/jsonpath")):
+        try:
+            f()
+            errs.append("ok")
+        except OSError as e:
+            errs.append(errno.errorcode.get(e.errno, str(e.errno)))
+    check("iface: writing, making, removing under __meta all fail (%s)" % " ".join(errs), "ok" not in errs, errs)
+    d.ctl("start " + config(d.dir, "w", ["sleep"]))
+    started(d, "w")
+    for n in ("main", "w"):
+        p = "%s/procs/%s/__meta/__interfaces/aos" % (d.root, n)
+        check("iface: procs/%s/ declares aos/proc (an empty file)" % n, os.listdir(p) == ["proc"] and read(p + "/proc") == "",
+              os.listdir(p))
+    check("iface: init reads /aos/__meta/__interfaces/aos/ctl/kind", d.ask("/aos/__meta/__interfaces/aos/ctl/kind") == "ok file|")
+    check("iface: init reads .../ctl/path and .../ctl/commands", d.ask("/aos/__meta/__interfaces/aos/ctl/path") == "ok ctl|" and
+          d.ask("/aos/__meta/__interfaces/aos/ctl/commands") == "ok start kill mount umount forget restart-init|")
+    check("iface: init reads .../aos/jsonpath and procs/w/__meta/__interfaces/aos/proc",
+          d.ask("/aos/__meta/__interfaces/aos/jsonpath") == "ok" and d.ask("/aos/procs/w/__meta/__interfaces/aos/proc") == "ok")
+    a = d.ask("put:/aos/__meta/__interfaces/aos/ctl/kind=socket")
+    check("iface: init cannot change the declaration (%s)" % a, (a or "").startswith("err") and read(base + "/ctl/kind") == "file\n", a)
+    d.stop()
+
+
 # ---------------------------------------------------------------- leftovers
 
 def t_leftovers():
@@ -1801,7 +2252,9 @@ GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "nsconf": t_nsconf, "l
           "mount": t_mount, "modes": t_modes, "restart": t_restart, "teardown": t_teardown, "access": t_access,
           "dirs": t_dirs, "stdio": t_stdio, "dconf": t_dconf, "grace": t_grace, "pdeath": t_pdeath, "forgetk": t_forgetk,
           "rename": t_rename, "noinit": t_noinit, "rlstay": t_rlstay, "dpath": t_dpath, "ilandlock": t_ilandlock,
-          "exitcode": t_exitcode, "net": t_net, "seccomp": t_seccomp, "nest": t_nest, "cgpath": t_cgpath}
+          "exitcode": t_exitcode, "net": t_net, "seccomp": t_seccomp, "nest": t_nest, "cgpath": t_cgpath,
+          "sigsrc": t_sigsrc, "ipath": t_ipath, "stuck": t_stuck, "nsby": t_nsby, "overlay": t_overlay, "merge": t_merge,
+          "rinit": t_rinit, "iface": t_iface}
 
 
 def main():

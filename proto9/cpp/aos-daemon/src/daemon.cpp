@@ -4,6 +4,7 @@
 #include "aos/procfs.hpp"
 
 #include <cerrno>
+#include <algorithm>
 #include <condition_variable>
 #include <csignal>
 #include <cstring>
@@ -68,6 +69,11 @@ bool gone = false;       // FUSE 連線斷了
 bool stopping = false;
 double stop_deadline = 0;   // monotonic
 std::string stop_why;
+pid_t last_init_pid = 0;    // 最近一次死掉的 init 在這一層的 PID（它死前送的停止訊號可能在收屍之後才讀到）；只在主執行緒動
+std::vector<std::string> cg_later;   // 刪不掉、之後再刪的 cgroup 夾（起不來的那隻卡著沒走）；只在主執行緒動
+
+// ctl 的指令（aos/ctl 宣告的 commands 照這張寫）
+const char* const COMMANDS = "start kill mount umount forget restart-init";
 
 // 做事的線把要 fork／收屍的事交給主執行緒（只有主執行緒 fork 與 waitpid）
 struct Request {
@@ -140,6 +146,11 @@ void make_proc_nodes(const std::shared_ptr<Proc>& proc) {
     add("config", [](const Proc& p) { return p.cfg.path + "\n"; });
     // 相對連結：小世界裡是 /aos/procs/<名>/ → /cgroup/…；init 的天空把 cgroup 夾放在 daemon_path 旁邊的 cgroup，所以兩邊都通
     if (!proc->sp.cgroup.empty()) FS->add_symlink(d + "/cgroup", "../../../cgroup/" + proc->sp.cgroup);
+    // 介面宣告（aoslua）：這個夾符合 aos/proc；靜態空檔
+    FS->add_dir(d + "/__meta");
+    FS->add_dir(d + "/__meta/__interfaces");
+    FS->add_dir(d + "/__meta/__interfaces/aos");
+    FS->add_text(d + "/__meta/__interfaces/aos/proc", [] { return std::string(); });
 }
 
 // 主執行緒：放進表、擺出 procs/<名>/
@@ -213,6 +224,17 @@ void rm_cgroup(const std::string& cg) {
     log("cgroup " + cg + " not removed: " + errstr(errno));
 }
 
+// 主執行緒：記下來的 cgroup 夾再刪一次（每圈主循環；刪得掉或已經不在就拿掉）
+void retry_cgroups() {
+    std::erase_if(cg_later, [](const std::string& cg) {
+        if (unlinkat(W.cgfd, cg.c_str(), AT_REMOVEDIR) == 0 || errno == ENOENT) {
+            log("removed cgroup " + cg + " (left over from a failed start)");
+            return true;
+        }
+        return false;
+    });
+}
+
 [[noreturn]] void shutdown(int code, const std::string& why) {
     log("exiting (" + why + "), code " + std::to_string(code));
     // 1 號一走，Linux 也會收掉整片；這裡先收、等完，好把 cgroup 夾清掉
@@ -229,6 +251,7 @@ void rm_cgroup(const std::string& cg) {
         for (const auto& [n, p] : S.procs)
             if (!p->sp.cgroup.empty()) cgs.push_back(p->sp.cgroup);
     }
+    cgs.insert(cgs.end(), cg_later.begin(), cg_later.end());
     for (const auto& c : cgs) rm_cgroup(c);
     _exit(code);
 }
@@ -259,7 +282,7 @@ void init_died(const std::string& how, int as_code) {
         // on_restart_limit stay：不再起 init，daemon 與其他 proc 照跑；死掉的 init 留在表上（看得到 exit，要拿掉就 forget）
         {
             std::lock_guard<std::mutex> g(S.mu);
-            S.init_gone = why;
+            S.init_gone = "restart limit reached: " + why + "; on_restart_limit stay";
         }
         log(why + "; on_restart_limit stay: not restarting it, the daemon keeps running without init");
         return;
@@ -290,10 +313,13 @@ void reap_all() {
                 else hit->code = WEXITSTATUS(st);
             }
         }
-        if (!hit) continue;   // 被收養的孫子、幫手
+        if (!hit) continue;   // 被收養的孫子、幫手（含逾時時沒等它走的那種）
         std::string how = exit_text(*hit);
         log("proc " + hit->cfg.name + " exited: " + how);
-        if (hit->init) init_died(how, hit->sig ? 128 + hit->sig : hit->code);
+        if (hit->init) {
+            last_init_pid = pid;
+            init_died(how, hit->sig ? 128 + hit->sig : hit->code);
+        }
     }
 }
 
@@ -320,6 +346,63 @@ void begin_stop(int sig) {
     stop_deadline = mono_now() + O.exit_grace;
     log(why + ": sent SIGTERM to init " + ICFG.name + ", waiting up to " + seconds_text(O.exit_grace) +
         " s (exit_grace) before killing every proc");
+}
+
+// 主執行緒：停止訊號（SIGTERM／SIGINT／SIGHUP）的寄件人收不收。只收兩種（使用者 11-26 定，daemon職責「實作時定的」第 35 條）：
+//   - daemon 的 PID namespace 外面送的：ssi_pid 是 0，而且 ssi_code 是 SI_USER（kill()）或 SI_KERNEL（例：終端機的 Ctrl-C）。
+//     天空裡的 proc 用 rt_sigqueueinfo 能自己填 si_pid 0，但那種的 si_code 一定是負的，所以不收。
+//   - init 送的：ssi_pid 是 init 在這一層的 PID（或剛死掉的那隻 init 的），而且 ssi_code 是 SI_USER 或 SI_TKILL——這兩種的寄件人
+//     PID 由核心填，別的 proc 造不了（用 rt_sigqueueinfo 填 init 的 PID，code 一定是負的）【擬】。
+// 收就回 true；不收回 false，why 寫原因（記一行 log）。
+bool stop_sender_ok(const signalfd_siginfo& si, std::string& why) {
+    int code = si.ssi_code;
+    pid_t from = static_cast<pid_t>(si.ssi_pid);
+    if (from == 0) {
+        if (code == SI_USER || code == SI_KERNEL) return true;
+        why = "from outside the daemon's PID namespace with si_code " + std::to_string(code) +
+              " (only kill() or the kernel may stop the daemon)";
+        return false;
+    }
+    std::string name;
+    pid_t ip = 0;
+    {
+        std::lock_guard<std::mutex> g(S.mu);
+        for (const auto& [n, p] : S.procs) {
+            if (p->sp.pid == from) name = n;
+            if (p->init && p->alive) ip = p->sp.pid;
+        }
+    }
+    bool from_init = HAS_INIT && (from == ip || from == last_init_pid) && from != 0;
+    if (from_init && (code == SI_USER || code == SI_TKILL)) return true;
+    why = "from pid " + std::to_string(from) + (name.empty() ? "" : " (" + name + ")") + " in the daemon's PID namespace" +
+          (from_init ? " with si_code " + std::to_string(code) + " (init's stop signal must come from kill() or tgkill())"
+                     : ": stop signals are taken only from outside the namespace or from init");
+    return false;
+}
+
+// 主執行緒：restart-init（使用者 11-26 定，第 33 條）。init 不在（死了、gone、表上沒有）時照 daemon 設定的 init 起一隻真正的 init：
+// 表上舊的那筆先拿掉、重起次數歸零（init_restarts、init_deaths_in_window），起不來就 EIO、照舊沒有 init（不自動再試）【擬】
+std::string restart_init() {
+    {
+        std::lock_guard<std::mutex> g(S.mu);
+        auto p = find(ICFG.name);
+        if (p && p->init && p->alive) return "InitAlive init " + ICFG.name + " is running";
+        if (p && !p->init) return "ProcExists " + ICFG.name + " is a proc that is not init (forget it first)";
+    }
+    rm_cgroup(drop_proc(ICFG.name));
+    {
+        std::lock_guard<std::mutex> g(S.mu);
+        S.deaths.clear();
+        S.init_restarts = 0;
+        S.init_gone.clear();
+    }
+    log("restart-init: starting init " + ICFG.name + " (restart count reset)");
+    std::string err = start_proc(ICFG, true);
+    if (!err.empty()) {
+        std::lock_guard<std::mutex> g(S.mu);
+        S.init_gone = "restart-init failed: " + err;
+    }
+    return err;
 }
 
 // 做事的線：forget -k。那隻的 cgroup 夾裡還有行程就寫 cgroup.kill，等到空（最多 FORGET_KILL_WAIT 秒，monotonic）
@@ -452,6 +535,21 @@ void setup_ctl(pf::Ctl& ctl) {
             if (c.words.size() != (k ? 3u : 2u)) return "ArgumentsBad usage: forget [-k] NAME";
             return check_name(pf::Command{c.line, {c.words[0], c.words.back()}}, 2, "forget [-k] NAME", 0);
         });
+    // restart-init：init 不在時照 daemon 設定的 init 起一隻（活著 EINVAL、設定沒有 init EINVAL）
+    ctl.on("restart-init",
+        [](const pf::Command&) {
+            std::string err = on_main(restart_init);
+            return err.empty() ? pf::Result::done() : pf::Result::failed(err);
+        },
+        [](const pf::Command& c) -> std::string {
+            if (c.words.size() != 1) return "ArgumentsBad usage: restart-init";
+            if (!HAS_INIT) return "NoInit the daemon config has no init";
+            std::lock_guard<std::mutex> g(S.mu);
+            auto p = find(ICFG.name);
+            if (p && p->init && p->alive) return "InitAlive init " + ICFG.name + " is running (kill it first, or let the restart rule handle it)";
+            if (p && !p->init) return "ProcExists " + ICFG.name + " is a proc that is not init (forget it first)";
+            return "";
+        });
     ctl.on("mount",
         [](const pf::Command& c) {
             bool rw = c.words[2] == "-w";
@@ -466,7 +564,10 @@ void setup_ctl(pf::Ctl& ctl) {
                 std::string e = live_mount(p->sp.pid, src, dst, rw);
                 if (!e.empty()) return "MountFailed " + e;
                 std::vector<Mount> m = p->sp.mounts;
-                m.push_back({"bind", src, dst, rw});
+                Mount nm{"bind", src, dst, rw};
+                nm.by = "mount";   // 跑的時候 ctl 掛的
+                nm.at = iso_now();
+                m.push_back(nm);
                 std::string check, nsj, ns = ns_table(p->sp.pid, m, check, nsj);
                 std::lock_guard<std::mutex> g(S.mu);
                 p->sp.mounts = m;
@@ -532,7 +633,7 @@ std::string status_text() {
     s += pf::kv_line("init", HAS_INIT ? ICFG.name : "-");
     std::string state = "none (no init in the daemon config)";
     if (HAS_INIT && !S.init_gone.empty()) {
-        state = "gone (restart limit reached: " + S.init_gone + "; on_restart_limit stay)";
+        state = "gone (" + S.init_gone + ")";
     } else if (HAS_INIT) {
         auto p = find(ICFG.name);
         state = p && p->init ? (p->alive ? "alive" : "dead") : "starting";
@@ -567,6 +668,12 @@ void must(int r, const std::string& what) {
 }
 
 }  // namespace
+
+void cgroup_remove_later(const std::string& cg) {
+    if (cg.empty() || W.cgfd < 0) return;
+    log("cgroup " + cg + " not removed yet (its process has not gone); will retry");
+    cg_later.push_back(cg);
+}
 
 [[noreturn]] void daemon_main(const Options& o, int sync_fd) {
     O = o;
@@ -657,6 +764,15 @@ void must(int r, const std::string& what) {
         setup_ctl(*CTL);
         fs.add_text("status", status_text);
         fs.add_dir("procs");
+        // 介面宣告（aoslua，使用者 11-26 定）：靜態、唯讀。aos/ctl 是夾（kind、path、commands），aos/jsonpath 是空檔
+        fs.add_dir("__meta");
+        fs.add_dir("__meta/__interfaces");
+        fs.add_dir("__meta/__interfaces/aos");
+        fs.add_dir("__meta/__interfaces/aos/ctl");
+        fs.add_text("__meta/__interfaces/aos/ctl/kind", [] { return std::string("file\n"); });
+        fs.add_text("__meta/__interfaces/aos/ctl/path", [] { return std::string("ctl\n"); });
+        fs.add_text("__meta/__interfaces/aos/ctl/commands", [] { return std::string(COMMANDS) + "\n"; });
+        fs.add_text("__meta/__interfaces/aos/jsonpath", [] { return std::string(); });
         fs.mount("/tmp/aos");
     } catch (const std::exception& e) {
         fatal(std::string("mount info directory: ") + e.what());
@@ -683,15 +799,21 @@ void must(int r, const std::string& what) {
 
     for (;;) {
         pollfd p[2] = {{sfd, POLLIN, 0}, {EFD, POLLIN, 0}};
-        int timeout = -1;
+        int timeout = cg_later.empty() ? -1 : 1000;   // 有等著再刪的 cgroup 夾：每秒再試一次
         if (stopping) {
             double left = stop_deadline - mono_now();
-            timeout = left <= 0 ? 0 : left > 3600 ? 3600000 : static_cast<int>(left * 1000) + 1;
+            int t = left <= 0 ? 0 : left > 3600 ? 3600000 : static_cast<int>(left * 1000) + 1;
+            timeout = timeout < 0 ? t : std::min(timeout, t);
         }
         if (poll(p, 2, timeout) < 0 && errno != EINTR) fatal("poll: " + errstr(errno));
         signalfd_siginfo si;
         while (read(sfd, &si, sizeof si) == static_cast<ssize_t>(sizeof si)) {
             if (si.ssi_signo == SIGCHLD) continue;
+            std::string why;
+            if (!stop_sender_ok(si, why)) {
+                log("ignored " + signal_name(static_cast<int>(si.ssi_signo)) + " " + why);
+                continue;
+            }
             begin_stop(static_cast<int>(si.ssi_signo));
         }
         reap_all();
@@ -713,6 +835,7 @@ void must(int r, const std::string& what) {
             r->cv.notify_all();
         }
         reap_all();
+        if (!cg_later.empty()) retry_cgroups();
         if (stopping && mono_now() >= stop_deadline)
             shutdown(0, stop_why + "; init was still running after exit_grace " + seconds_text(O.exit_grace) + " s");
     }

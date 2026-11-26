@@ -67,15 +67,25 @@ std::string esc(const std::string& s) {
 
 // 一行：種類 來源 天空裡的位置 ro|rw [locked]
 //   locked＝不是設定寫的，是 bind 來源底下外面那層掛的、被迫一起帶進來（卸不掉）的掛載
-//   json＝同一張表的 JSON 陣列：一行一個物件，鍵 type、src（文字行是 - 就不寫）、dst、rw（一定有）、locked（只有 locked 的才有）
+//   json＝同一張表的 JSON 陣列：一行一個物件，鍵 type、src（文字行是 - 就不寫；overlay 寫 lower 陣列）、dst、rw（一定有）、
+//         locked（只有 locked 的才有）、by（start／mount／daemon／locked）、at（放上天空的時間，UTC）；
+//         對不上設定的（unknown，ns_check 會寫 unexpected）沒有 by、at
 std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& check, std::string& json) {
     std::string jrows;
     auto jstr = [](const std::string& v) {
         return nlohmann::json(v).dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
     };
-    auto jrow = [&](const std::string& kind, const std::string& src, const std::string& dst, bool rw, bool locked) {
-        jrows += std::string(jrows.empty() ? "" : ",\n") + "{\"type\": " + jstr(kind) + (src == "-" ? "" : ", \"src\": " + jstr(src)) +
-                 ", \"dst\": " + jstr(dst) + ", \"rw\": " + (rw ? "true" : "false") + (locked ? ", \"locked\": true" : "") + "}";
+    auto jrow = [&](const Mount& p, const std::string& dst, bool rw, bool locked, bool known) {
+        std::string src;
+        if (p.kind == "overlay") {
+            for (const auto& l : p.lower) src += (src.empty() ? "" : ", ") + jstr(l);
+            src = ", \"lower\": [" + src + "]";
+        } else if (p.src != "-") {
+            src = ", \"src\": " + jstr(p.src);
+        }
+        jrows += std::string(jrows.empty() ? "" : ",\n") + "{\"type\": " + jstr(p.kind) + src + ", \"dst\": " + jstr(dst) +
+                 ", \"rw\": " + (rw ? "true" : "false") + (locked ? ", \"locked\": true" : "") +
+                 (known ? ", \"by\": " + jstr(locked ? "locked" : p.by) + ", \"at\": " + jstr(p.at) : "") + "}";
     };
     auto mi = mountinfo(pid);
     std::vector<bool> used(planned.size(), false);
@@ -93,7 +103,7 @@ std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& 
             used[hit] = true;
             const Mount& p = planned[hit];
             out += p.kind + " " + esc(p.src) + " " + esc(m.point) + " " + rw + "\n";
-            jrow(p.kind, p.src, m.point, !m.ro, false);
+            jrow(p, m.point, !m.ro, false, true);
             if (p.rw == m.ro) problems += m.point + " is " + rw + " but the config says " + (p.rw ? "rw" : "ro") + "; ";
             continue;
         }
@@ -106,10 +116,14 @@ std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& 
         if (anc >= 0) {
             const Mount& p = planned[anc];
             out += "bind " + esc(p.src + m.point.substr(p.dst.size())) + " " + esc(m.point) + " " + rw + " locked\n";
-            jrow("bind", p.src + m.point.substr(p.dst.size()), m.point, !m.ro, true);
+            Mount sub = p;   // 被迫帶進來的：來源接在祖先 bind 的來源後面，時間跟祖先一樣
+            sub.kind = "bind";
+            sub.src = p.src + m.point.substr(p.dst.size());
+            jrow(sub, m.point, !m.ro, true, true);
         } else {
             out += "unknown " + esc(m.fstype) + " " + esc(m.point) + " " + rw + "\n";
-            jrow("unknown", m.fstype, m.point, !m.ro, false);
+            Mount u{"unknown", m.fstype, m.point, !m.ro};
+            jrow(u, m.point, !m.ro, false, false);
             problems += "unexpected mount at " + m.point + "; ";
         }
     }
