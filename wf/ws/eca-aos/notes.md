@@ -770,3 +770,4 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 下一題（還沒問）：工具長什麼樣（可寫檔 vs 可執行檔）。
 - 第 68～71 段：工具先做可寫檔（A）；資訊與工具清單照草稿；主 kernel 由 daemon 起動參數指定、唯一不進 Landlock；死了照起動參數 `restart`（60 秒內死超過 5 次就停、daemon 結束）或 `exit`。
 - 11:5x 使用者：「我十二點要去吃飯，你能先開始實作嗎？應該十二點十五分回來。」→ 派一隻 opus 背景子 agent 做 `proto9/cpp/aos-daemon2/`（新夾，舊 aos-daemon 不動；暫存 `~/.aos/scratch/proto9-daemon2-1126/`；不 commit）。**回來後**：清 build 重編重跑、查殘留（行程、掛載、cgroup、unit）、交件、把【擬】給使用者看。夾名 aos-daemon2 是我挑的，可改。
+- 12:2x aos-daemon2 那隻回來（約 2550 行）。我清 build 重編無警告、`make test` 110／110、查殘留（行程、unit、cgroup、掛載、/tmp）全空。交件（proto9/README 加一列）。等使用者的五點：執行期錯誤不是寫入錯誤（procfs 收到就回）、主 kernel 要 CAP_SYS_PTRACE 才讀得到 /proc/1/cwd、ABI 3 擋不住訊號、小世界裡多一個 cgroup/、procfs 拿不掉資料夾所以用 slots/。
