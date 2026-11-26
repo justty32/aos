@@ -725,3 +725,10 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - **影響我昨天的下一批 1～6**：前提動了（ctl、status 不再是每隻必有），**派之前先跟使用者確認，別照舊單子做**。草稿 01 怎麼跟上也等他看過實驗再說，別先改。
 - 家機的小實驗 `proto9/experiments/sky-1125/` **公司 WSL 沒跑過**（Landlock 版本、subuid、systemd --user 沒查）——可以提議在這台跑一次（`cd proto9/experiments/sky-1125 && python3 run.py`），先問。
 - 使用者（逐字）：「新的一天，你整理一下，我compact」→ 寫了這節、HANDOFF 補一小段公司這邊的狀態，交件，不推（push 授權昨晚用掉了）。
+
+## 2026-11-26 09:xx：都做、sky-1125 在公司跑通、聊 aos-exec 定位
+
+- 使用者（逐字）：「都做。然後我想來聊聊關於aos-exec在這個新體系的定位」→ 我的讀法：下一批 2～5 派一隻（opus 背景，只碰 proto9/cpp/aos-procfs、aos-daemon，暫存 `~/.aos/scratch/proto9-batch-1126/`）；1 等 aos-exec 定位聊完；6 本來就是「之後」。
+- sky-1125 公司第一次跑 0 PASS（daemon 沒起來）。派一隻修（只改 experiments/sky-1125）：三個原因——util-linux 2.39 兩次 `--map-users` 只留最後一個；WSL 在 `/usr` 底下有三個鎖住的子掛載，要連子掛載一起 bind；`base.sky` 的 `/lib64 -> usr/lib` 是 Arch 排法，Ubuntu 要 `usr/lib64`。**我重跑 10 PASS、沒留東西**。改到兩台共用的只有 `/lib64` 那行，家機 pull 後要跑一次確認。
+- 對設計的意思：資料夾不一定能單獨交給天空（底下被鎖住的掛載要一起帶）；正式版自己叫 newuidmap 別靠 unshare 參數；天空裡別寫死發行版路徑；Landlock 在 6.6（ABI 3）擋得住讀別人 /proc，擋不住訊號與 abstract socket（要 6.12+）。
+- aos-exec 定位：我擺了 A 普通工具（推薦）／B daemon 自己認資料夾／C 當一種 kernel，問他 A/B/C 與「除了工具還有什麼要用資料夾當程式」。等他回。

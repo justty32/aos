@@ -40,6 +40,15 @@ def subids(path):
     return None
 
 
+def util_linux():
+    """Version of the unshare we run, e.g. (2, 39); (0,) if it cannot be read."""
+    try:
+        out = subprocess.run(["unshare", "--version"], capture_output=True, text=True).stdout
+        return tuple(int(x) for x in re.search(r"(\d+)\.(\d+)", out).groups())
+    except (OSError, AttributeError):
+        return (0,)
+
+
 def nspid(pid):
     try:
         with open(f"/proc/{pid}/status") as f:
@@ -190,8 +199,12 @@ class Run:
         cmd = ["unshare", "--user"]
         if su and sg and shutil.which("newuidmap") and shutil.which("newgidmap") and not self.no_subuid:
             self.subuid = su
-            cmd += [f"--map-users=0:{uid}:1", f"--map-users=1:{su[0]}:{su[1]}",
-                    f"--map-groups=0:{gid}:1", f"--map-groups=1:{sg[0]}:{sg[1]}", "--setgroups=allow"]
+            if util_linux() >= (2, 40):
+                cmd += [f"--map-users=0:{uid}:1", f"--map-users=1:{su[0]}:{su[1]}",
+                        f"--map-groups=0:{gid}:1", f"--map-groups=1:{sg[0]}:{sg[1]}", "--setgroups=allow"]
+            else:  # before 2.40 only the last --map-users counts; --map-user=0 plus one range gives the same two lines
+                cmd += ["--map-user=0", f"--map-users=1:{su[0]}:{su[1]}",
+                        "--map-group=0", f"--map-groups=1:{sg[0]}:{sg[1]}", "--setgroups=allow"]
         else:
             cmd += ["--map-root-user"]
         cmd += ["--mount", "--pid", "--fork", "--kill-child", "--mount-proc", "--propagation=private", "--",
@@ -309,7 +322,9 @@ class Run:
         if not missing or not wrong:
             raise Fail(f"the comparison did not notice a wrong table: {missing} {wrong}")
         mounts = sum(1 for r in ns["rows"] if r["kind"] != "symlink")
-        return (f"leader.sky (via base.sky) became a {len(ns['rows'])}-row table in the daemon ({mounts} mounts + symlinks); "
+        subs = sum(len(r.get("subs", [])) for r in ns["rows"])
+        return (f"leader.sky (via base.sky) became a {len(ns['rows'])}-row table in the daemon ({mounts} mounts + symlinks"
+                + (f"; binds brought {subs} locked submounts along" if subs else "") + "); "
                 f"leader's /proc/PID/mountinfo has exactly those {n} mounts, same sources (dev+inode) and ro/rw; "
                 f"4 kernel skies match too; a wrong table is caught", self.table(ns).splitlines()
                 + [f"negative control: {missing[0]} / {wrong[0]}"])

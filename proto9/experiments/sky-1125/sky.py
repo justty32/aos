@@ -107,6 +107,29 @@ def remount(path, ro, extra=0):
     mount(None, path, None, MS_REMOUNT | MS_BIND | keep | extra | (MS_RDONLY if ro else 0))
 
 
+def locked_subs(src):
+    """Mount points below src that a bind of src has to take along, as paths relative to src (usually none).
+    A bind without its submounts is refused (EINVAL) when a submount below is locked, i.e. was made by a more
+    privileged namespace (WSL mounts /usr/lib/wsl/* under /usr). Then only a recursive bind works, and it brings
+    every submount below src. Probed with open_tree: the same kernel check, nothing gets mounted."""
+    try:
+        fd = os.open(src, os.O_PATH | os.O_CLOEXEC)
+    except OSError:
+        return []
+    try:
+        os.close(open_tree(fd, OPEN_TREE_CLONE))
+        return []
+    except OSError as e:
+        if e.errno != errno.EINVAL:
+            return []
+    finally:
+        os.close(fd)
+    top = os.path.realpath(src)
+    with open("/proc/self/mountinfo") as f:
+        points = [m["mnt"] for m in parse_mountinfo(f.read())]
+    return sorted({p[len(top):].lstrip("/") for p in points if p != top and under(p, top)})
+
+
 def open_beneath(base, rel):
     """O_PATH fd for base/rel where rel may not leave base: no absolute or escaping symlinks, no /proc magic links."""
     fd = os.open(base, os.O_PATH | os.O_CLOEXEC)
@@ -295,11 +318,19 @@ def compose(lines, starter, ctx):
             raise Refused(f"{origin}: {e}") from None
     if not any(r["path"] == "/" for r in rows):
         raise Refused("the sky has no root (it needs a `tmpfs /` line)")
+    for r in rows:  # a bind whose source has locked submounts brings them along; the table says so
+        r.pop("subs", None)
+        if r["kind"] in ("bind", "devnode"):
+            subs = locked_subs(src_of(r))
+            if subs:
+                r["subs"] = subs
     return rows, cfg
 
 
 def describe(row):
     k = row["kind"]
+    if row.get("subs"):
+        return describe({**row, "subs": None}) + f" +{len(row['subs'])} locked submounts"
     return {"root": "tmpfs", "tmpfs": "tmpfs", "devfs": "tmpfs (dev)", "proc": "proc",
             "symlink": f"-> {row.get('target')}", "bind": f"bind {src_of(row) if 'base' in row else ''}",
             "devnode": f"bind {src_of(row) if 'base' in row else ''}",
@@ -386,10 +417,11 @@ def build(rows, root, net, join_net=None):
             fd = open_beneath(r["base"], r["rel"])  # opened again here, so a symlink swapped in since is caught
             try:
                 mkpoint(root, p, stat.S_ISDIR(os.fstat(fd).st_mode), own)
-                mount(f"/proc/self/fd/{fd}", t, None, MS_BIND)
+                mount(f"/proc/self/fd/{fd}", t, None, MS_BIND | (MS_REC if r.get("subs") else 0))
             finally:
                 os.close(fd)
-            remount(t, r["mode"] == "ro", MS_NOSUID | (0 if k == "devnode" else MS_NODEV))
+            for at in [t] + [f"{t}/{s}" for s in r.get("subs", [])]:
+                remount(at, r["mode"] == "ro", MS_NOSUID | (0 if k == "devnode" else MS_NODEV))
         elif k == "kexec":
             at = posixpath.dirname(p)
             if at not in overlays:
@@ -489,6 +521,17 @@ def compare(rows, mountinfo, sky_root, real_root):
             a, b = os.stat(sky_root + at), os.stat(real_root + src_of(r))
             if (a.st_dev, a.st_ino) != (b.st_dev, b.st_ino):
                 problems.append(f"{at}: want {src_of(r)}, but it is a different file")
+        for s in r.get("subs", []):  # locked submounts the bind had to bring along
+            sub = posixpath.join(at, s)
+            expected.add(sub)
+            if sub not in mounts:
+                problems.append(f"{sub}: a locked submount of {src_of(r)}, but nothing is mounted there")
+                continue
+            if r["mode"] and mounts[sub]["opts"].split(",")[0] != r["mode"]:
+                problems.append(f"{sub}: want {r['mode']}, mounted {mounts[sub]['opts'].split(',')[0]}")
+            a, b = os.stat(sky_root + sub), os.stat(real_root + posixpath.join(src_of(r), s))
+            if (a.st_dev, a.st_ino) != (b.st_dev, b.st_ino):
+                problems.append(f"{sub}: want {posixpath.join(src_of(r), s)}, but it is a different file")
         if k == "kexec":
             if r["layer"] not in m["super"]:
                 problems.append(f"{at}: overlay does not have the layer {r['layer']}")

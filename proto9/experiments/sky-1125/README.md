@@ -17,7 +17,7 @@ python3 run.py --no-systemd --no-subuid  # 假裝沒有 systemd --user、沒有 
 ```
 
 - 用 `run.py` 不用 `run.sh`：使用者 10-15 定過「少用 sh」。
-- 要有：user namespace（一般使用者能開）、util-linux 2.38 以上的 `unshare`（要 `--map-users`）與 `setpriv`、Python 3.12 以上。第 9 項要 `/etc/subuid` 有自己的範圍和 `newuidmap`；第 10 項要 `systemd --user`。syscall 號碼寫死 x86_64。
+- 要有：user namespace（一般使用者能開）、util-linux 2.39 以上的 `unshare`（要 `--map-users`；2.39 只認最後一個 `--map-users`，`run.py` 看版本改用 `--map-user=0` 加一段）與 `setpriv`、Python 3.12 以上。第 9 項要 `/etc/subuid` 有自己的範圍和 `newuidmap`；第 10 項要 `systemd --user`。syscall 號碼寫死 x86_64。
 - 每次開一個新的 `/tmp/sky-1125-XXXXXXXX`，結束時刪掉。daemon 做的東西全放在它自己 mount namespace 裡的一塊 tmpfs（像一塊只有它看得到的白板），daemon 一死就跟著消失。`run.py` 最後印一行 cleanup，查過沒有留下行程、掛載、cgroup、systemd unit。
 - `run.py` 自己被 `kill -9` 也不留行程（子行程設了 parent-death signal，實測過）；留下的暫存夾下一次跑會先清掉。
 
@@ -89,6 +89,37 @@ python3 run.py --no-systemd --no-subuid  # 假裝沒有 systemd --user、沒有 
 | （對照）自己有的 | `bind /toys /opt/toys2` | 成功，孩子列得出 /opt/toys2 裡的檔 |
 
 </details>
+
+### 公司 WSL（11-26）
+
+機器：WSL2 上的 Ubuntu，Linux 6.6.114.1-microsoft-standard-WSL2，Python 3.12.3，util-linux 2.39.3，Landlock ABI 3，cgroup v2，有 systemd --user，`/etc/subuid` 有 guanyu:100000:65536。`/usr` 不是自己一個掛載（跟 `/` 同一顆 ext4），但 WSL 在它底下掛了三個：`/usr/lib/wsl/drivers`、`/usr/lib/wsl/lib`、`/usr/lib/modules/6.6.114.1-microsoft-standard-WSL2`。
+
+一開始沒過，三個原因，一個接一個冒出來：
+
+1. **daemon 第一次掛 tmpfs 就 EPERM。** util-linux 2.39 給兩次 `--map-users` 只留最後一次（man 寫明「last occurrence takes precedence」，2.40 起才能給多段），0:1000:1 那段沒了，daemon 在裡面是 nobody、沒有 caps。改法：`run.py` 讀 `unshare --version`，2.40 以上照舊；比較舊的改給 `--map-user=0 --map-users=1:100000:65536`（gid 同樣），寫出來的對照表一樣是兩行（實測過）。
+2. **組 draw-kernel 的天空時 mount `/usr` 得到 EINVAL。** 就是上面坑 5：不帶子掛載的 bind，來源底下有「鎖住的」子掛載就被拒。家機的 `/usr` 底下沒有掛載，所以沒碰到；這台有 WSL 那三個，它們是外面（比較有權的那層）掛的，進了 user namespace 就鎖住，卸不掉也不能丟下。改法：daemon 算表時，對每個 bind 先用 `open_tree` 不帶子掛載試一次（跟 mount 是同一道檢查，什麼都不會掛上）；被拒才改成連子掛載一起 bind，並把那幾個子掛載記在那一列（`ns` 印成 `bind /usr +3 locked submounts`）。組天空時那幾個也一起改成唯讀；表跟 mountinfo 對照時也把它們算進去，一樣比來源、比唯讀。家機試的那一次會成功，什麼都不變。
+3. **exec `setpriv` 得到 ENOENT。** `base.sky` 寫 `/lib64 -> usr/lib`，那是 Arch 的排法；Ubuntu 的 ELF loader 在 `/usr/lib64/ld-linux-x86-64.so.2`，`/usr/lib` 底下沒有，找不到 loader 時 execve 回的就是 ENOENT。改成 `/lib64 -> usr/lib64`：Arch 的 `/usr/lib64` 本來就是指向 `lib` 的 symlink，兩台走到的是同一個檔。
+
+Python 3.12 沒有語法問題。Landlock ABI 3 的影響照原本寫好的退法：每隻 proc 還是進自己的 Landlock domain，擋得住讀旁邊 proc 的 `/proc/<PID>/root`、`environ`；擋訊號和 abstract socket 要 ABI 6，這台沒有，第 7 項的訊息會寫出來「not scoped」，這兩條不算進 PASS 的條件（其餘的鎖都量到了）。
+
+改了的檔：`run.py`（看 util-linux 版本選對照表的給法；第 1 項訊息多寫帶進來幾個子掛載）、`sky.py`（`locked_subs`，以及 compose、build、compare、describe 認得這種列）、`base.sky`（`/lib64` 那行）。
+
+最後結果（各跑多次，每次收尾都是 nothing left，另外查過 `pgrep`、`/proc/mounts`、`systemctl --user` 都沒留下）：
+
+| 跑法 | 結果 |
+|---|---|
+| `python3 run.py` | 10 PASS |
+| `python3 run.py --no-subuid` | 9 PASS、1 SKIP（第 9 項） |
+| `python3 run.py --no-subuid --no-systemd` | 8 PASS、2 SKIP（第 9、10 項） |
+
+各項跟家機的差別：第 1 項 leader 的表一樣 22 列，mountinfo 是 17 個掛載（14 個加 `/usr` 帶進來的 3 個）；第 7 項訊號和 abstract socket 沒擋（ABI 3）；第 9 項 alice 外面是 101000、bob 是 101001，跟家機一樣；第 8 項 17 支行程 0.05 秒內全部不見；第 10 項凍住 0 個 tick、解凍 0.6 秒 12～13 個。其餘一樣。
+
+這對設計的意思：
+
+- **天空不一定能「只拿一個資料夾、不拿它底下的」。** 外面那層在某個資料夾底下掛了東西，交給天空時就得連那些一起交，而且是鎖住的。「根從零組、表跟 mountinfo 一對一」還成立，但表得老實記下這些被迫帶進來的掛載；哪些會被迫帶，要在那台機器上試了才知道（WSL 的 `/usr`、某些發行版的 `/home` 底下有 autofs、snap 之類都可能）。
+- **util-linux 版本會影響 daemon 怎麼起**：一個身分加一段 subuid 這種排法，2.39 要換寫法，更舊（2.38）的 `--map-users` 參數順序還不一樣，沒試。正式做時自己呼叫 `newuidmap`／`newgidmap` 比靠 `unshare` 的參數穩。
+- **天空裡的檔案路徑不能照某一個發行版寫死**（`/lib64` 這種），最好照 daemon 那層實際的樣子抄。
+- **Landlock 那道便宜的牆在 6.6 只有一半**：讀別人的 /proc 擋得住，訊號和 abstract socket 要 6.12 以上。
 
 ## 檔案
 
@@ -195,8 +226,8 @@ kernel 是一隻普通的 proc，跟 daemon 登記「我提供 `/usr/bin/draw`�
 - **kernel 死了以後**：它會從公告欄消失（有寫）；已經選用它的天空裡名字還在，連上去應該是 ECONNREFUSED。沒測。
 - **由 proc 下「跑的時候改」**：規則寫了（只有使用者或那隻 proc 的起的一方），沒測。
 - **加入起的一方的網路**：起的一方是 `net none` 時，孩子預設加入它那個 network namespace。寫了，沒測。
-- **Landlock ABI 小於 6 的核心**（公司 WSL 的 6.6）：會退成只擋讀別人的 /proc，不擋訊號和 abstract socket，第 7 項照實寫出來（不會假裝過）。完全沒有 Landlock 的核心會略過那一步，旁邊的 proc 看得到彼此的天空，第 7 項會 FAIL。都沒在那種核心上跑過。
-- **公司 WSL 有沒有 subuid、newuidmap、systemd --user**：沒查；`--no-systemd --no-subuid` 模擬過沒有的情況。
+- **Landlock ABI 小於 6 的核心**（公司 WSL 的 6.6）：會退成只擋讀別人的 /proc，不擋訊號和 abstract socket，第 7 項照實寫出來（不會假裝過）。完全沒有 Landlock 的核心會略過那一步，旁邊的 proc 看得到彼此的天空，第 7 項會 FAIL。ABI 3 在公司 WSL 跑過了（見上面「公司 WSL」）；完全沒有 Landlock 的核心沒跑過。
+- **公司 WSL 有沒有 subuid、newuidmap、systemd --user**：都有，11-26 跑過，見上面「公司 WSL」。
 - **Claude Code 住進天空**：它認的是 `ANTHROPIC_BASE_URL`（http 網址），不認 unix socket。天空裡只有 lo，要多一支小轉接：在天空自己的 lo 上聽一個埠，轉到 `/srv/llm`。沒做。
 - **不同身分的 proc 用 kernel**：kernel 以 uid 0 建的 socket 是 0755，照 Linux 規則別的 uid 連不上（connect 要寫入權）。照規則推，沒實測。
 - **量與規模**：daemon 是單執行緒，一個不送字的連線（5 秒逾時）或一個組很慢的天空會卡住它；很多隻 proc、很多請求都沒試。
