@@ -99,6 +99,20 @@ const Sys SYSCALLS[] = {
 
 // 內建的擋單（使用者 11-26 定：預設就上、跟 Docker 預設的精神相近，但建 namespace、mount 那一族都不擋，好讓 proc 裡再起 daemon）。
 // 一個一個為什麼見 README「seccomp」。號碼是 x86_64 的。
+//
+// 對照的現成清單（daemon職責第 41 條：清單自己維護，記下對照的是哪一份）：
+//   1. systemd 255（255.4-1ubuntu8.19）`systemd-analyze syscall-filter` 印出來的群組，11-26 在公司 WSL 上逐個比過：
+//      @module、@reboot、@swap、@clock、@raw-io、@keyring 在 x86_64 有的全擋；
+//      @debug 擋 ptrace、perf_event_open、pidfd_getfd、lookup_dcookie（rtas、s390_* 不是 x86_64 的）；
+//      @obsolete 只擋 create_module、get_kernel_syms、query_module、uselib、_sysctl（afs_syscall、getpmsg、putpmsg、security、
+//        tuxcall、vserver 核心沒實作，sysfs、ustat 只讀、無害，沒擋）；
+//      @privileged 只擋 acct、bpf、quotactl、quotactl_fd、open_by_handle_at、vhangup、nfsservctl、_sysctl（chown、setuid 這類、
+//        capset、chroot、pivot_root、sethostname、setdomainname、fanotify_* 沒擋：天空裡的程式要用，在 user namespace 裡也動不到外面）；
+//      @resources 只擋 move_pages、migrate_pages（mbind、set_mempolicy、setpriority 等只動自己，放）；
+//      @aio 只擋 io_uring_*；@mount 整組不擋（為了疊 daemon）；@cpu-emulation 的 modify_ldt 沒擋。
+//   2. Docker（moby）預設 seccomp 設定檔 profiles/seccomp/default.json 的精神：syslog、userfaultfd、kcmp、name_to_handle_at、
+//      process_vm_readv／writev 這幾個在 systemd 的群組裡不算危險（@system-service、@ipc），照 Docker「要 CAP_SYS_PTRACE／CAP_SYSLOG
+//      等才放」擋；personality 只放的五個值照它。本機沒有 docker，沒有逐行比對某一版的 default.json。
 const int BUILTIN_DENY[] = {
     175, 313, 176, 174, 177, 178,   // init_module finit_module delete_module create_module get_kernel_syms query_module
     246, 320, 169,                  // kexec_load kexec_file_load reboot
@@ -155,6 +169,7 @@ std::string load_seccomp_list(ProcConfig& c) {
     std::string err, text = read_host_file(c.seccomp, err);
     if (!err.empty()) return "ConfigBad locks.seccomp list: " + err;
     std::string where = "ConfigBad locks.seccomp list " + c.seccomp + ": ";
+    if (!json_depth_ok(text)) return where + "nested deeper than " + std::to_string(JSON_MAX_DEPTH) + " levels of [ ] or { }";
     nlohmann::json j;
     try {
         j = nlohmann::json::parse(text);

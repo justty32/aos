@@ -30,6 +30,21 @@ std::string clean_path(const std::string& p, const std::string& what) {
     return out.empty() ? "/" : out;
 }
 
+// tmpfs 的大小：字串「數字＋可選的 k／m／g」（大小寫都行），或正整數（位元組）；0 拒（tmpfs 的 size=0 是不限，跟「不寫」意思不同，免得看錯）
+std::string size_value(const nlohmann::json& v, const std::string& what) {
+    std::string s;
+    if (v.is_number_unsigned() || (v.is_number_integer() && v.get<long long>() > 0)) s = std::to_string(v.get<unsigned long long>());
+    else if (v.is_string()) s = v.get<std::string>();
+    else bad(what + " must be a size like \"64m\" (digits with an optional k, m or g) or a number of bytes, not " + v.dump());
+    size_t n = 0;
+    while (n < s.size() && isdigit(static_cast<unsigned char>(s[n]))) ++n;
+    bool ok = n > 0 && n <= 18 && (n == s.size() || (n + 1 == s.size() && std::string("kmgKMG").find(s[n]) != std::string::npos));
+    if (!ok) bad(what + " must be a size like \"64m\" (digits with an optional k, m or g) or a number of bytes, not " + v.dump());
+    if (s.find_first_not_of("0kmgKMG") == std::string::npos)
+        bad(what + " must not be 0 (leave it out for no size option)");
+    return s;
+}
+
 bool name_ok(const std::string& n) {
     if (n.empty() || n.size() > 64 || n[0] == '.') return false;
     for (char c : n)
@@ -39,6 +54,26 @@ bool name_ok(const std::string& n) {
 
 }  // namespace
 
+bool json_depth_ok(const std::string& text) {
+    int depth = 0;
+    bool in_str = false, esc = false;
+    for (char c : text) {
+        if (in_str) {
+            if (esc) esc = false;
+            else if (c == '\\') esc = true;
+            else if (c == '"') in_str = false;
+            continue;
+        }
+        if (c == '"') in_str = true;
+        else if (c == '[' || c == '{') {
+            if (++depth > JSON_MAX_DEPTH) return false;
+        } else if (c == ']' || c == '}') {
+            --depth;
+        }
+    }
+    return true;
+}
+
 bool abs_path_ok(const std::string& p) {
     try {
         return clean_path(p, "path") == p;
@@ -47,7 +82,8 @@ bool abs_path_ok(const std::string& p) {
     }
 }
 
-// 設定的 ns 每條是一個 json 物件：{"type": "bind", "src", "dst", "rw"?}、{"type": "tmpfs"|"proc"|"dev", "dst"}、
+// 設定的 ns 每條是一個 json 物件：{"type": "bind", "src", "dst", "rw"?, "beneath"?}、{"type": "tmpfs", "dst", "size"?}、
+// {"type": "proc"|"dev", "dst"}、
 // {"type": "symlink", "target", "dst"}、{"type": "overlay", "lower": [...], "dst"}。不認得的鍵、缺的鍵、型別不對、不認得的 type 都拒。
 NsEntry parse_ns_entry(const nlohmann::json& j) {
     if (!j.is_object()) bad("ns entry must be an object like {\"type\": \"bind\", \"src\": \"/usr\", \"dst\": \"/usr\"}, not " + j.dump());
@@ -60,11 +96,14 @@ NsEntry parse_ns_entry(const nlohmann::json& j) {
     if (e.kind == "bind") {
         allowed.push_back("src");
         allowed.push_back("rw");
+        allowed.push_back("beneath");
+    } else if (e.kind == "tmpfs") {
+        allowed.push_back("size");
     } else if (e.kind == "symlink") {
         allowed.push_back("target");
     } else if (e.kind == "overlay") {
         allowed.push_back("lower");
-    } else if (e.kind != "tmpfs" && e.kind != "proc" && e.kind != "dev") {
+    } else if (e.kind != "proc" && e.kind != "dev") {
         bad("unknown ns entry type " + e.kind + " (bind, tmpfs, proc, dev, symlink, overlay)");
     }
     for (const auto& [k, v] : j.items()) {
@@ -91,6 +130,15 @@ NsEntry parse_ns_entry(const nlohmann::json& j) {
             if (!f->is_boolean()) bad("ns entry \"rw\" must be true or false: " + j.dump());
             e.rw = f->get<bool>();
         }
+        // beneath：src 從這個夾往下開（RESOLVE_BENEATH）；src 要是它本身或它底下（照字串比，兩個都是乾淨的絕對路徑）
+        if (j.find("beneath") != j.end()) {
+            e.beneath = clean_path(need("beneath"), "bind beneath");
+            bool inside = e.beneath == "/" || e.src == e.beneath || e.src.rfind(e.beneath + "/", 0) == 0;
+            if (!inside) bad("bind src " + e.src + " is not under its \"beneath\" " + e.beneath);
+        }
+    } else if (e.kind == "tmpfs") {
+        auto f = j.find("size");
+        if (f != j.end()) e.size = size_value(*f, "tmpfs \"size\"");
     } else if (e.kind == "symlink") {
         e.src = need("target");
         if (e.src.empty()) bad("symlink \"target\" must not be empty");
@@ -109,11 +157,20 @@ NsEntry parse_ns_entry(const nlohmann::json& j) {
     return e;
 }
 
-std::vector<Mount> plan_mounts(const std::vector<NsEntry>& ns) {
+std::vector<Mount> plan_mounts(const ProcConfig& c) {
+    const std::vector<NsEntry>& ns = c.ns;
     std::vector<Mount> out{{"tmpfs", "-", "/", false}};
+    out[0].size = c.root_size;
     for (const auto& e : ns) {
-        if (e.kind == "bind") out.push_back({"bind", e.src, e.dst, e.rw});
-        else if (e.kind == "tmpfs" || e.kind == "proc") out.push_back({e.kind, "-", e.dst, true});
+        if (e.kind == "bind") {
+            Mount m{"bind", e.src, e.dst, e.rw};
+            m.beneath = e.beneath;
+            out.push_back(m);
+        } else if (e.kind == "tmpfs") {
+            Mount m{"tmpfs", "-", e.dst, true};
+            m.size = e.size;
+            out.push_back(m);
+        } else if (e.kind == "proc") out.push_back({e.kind, "-", e.dst, true});
         else if (e.kind == "overlay") {
             std::string joined;
             for (const auto& l : e.lower) joined += (joined.empty() ? "" : ":") + l;
@@ -138,18 +195,18 @@ std::string init_cgroup_path(const ProcConfig& c) {
 }
 
 std::string init_ns_conflict(const ProcConfig& c, bool cgroup_on) {
-    if (!init_mounts(c)) return "";
     std::string dp = init_daemon_path(c), cp = init_cgroup_path(c);
     auto under = [](const std::string& p, const std::string& top) { return p == top || p.rfind(top + "/", 0) == 0; };
     for (const auto& e : c.ns) {
         if (under(e.dst, dp) || (cgroup_on && under(e.dst, cp)))
             return "ConfigBad ns entry for " + e.dst + ": " + dp + (cgroup_on ? " and " + cp : std::string()) +
-                   " are where the daemon puts its directory in init's ns (choose another \"daemon_path\", or set \"daemon_access\": \"ptrace\")";
+                   " are where the daemon puts its directory in init's ns (choose another \"daemon_path\")";
     }
     return "";
 }
 
 ProcConfig parse_config(const std::string& text, const std::string& path) {
+    if (!json_depth_ok(text)) bad("nested deeper than " + std::to_string(JSON_MAX_DEPTH) + " levels of [ ] or { }");
     nlohmann::json j;
     try {
         j = nlohmann::json::parse(text);
@@ -182,6 +239,8 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
         } else if (k == "ns") {
             if (!v.is_array()) bad("ns must be an array of objects");
             for (const auto& l : v) c.ns.push_back(parse_ns_entry(l));
+        } else if (k == "root_size") {
+            c.root_size = size_value(v, "root_size");
         } else if (k == "uid") {
             if (!v.is_number_integer() || v.get<long long>() < 0 || v.get<long long>() > 65535)
                 bad("uid must be an integer 0..65535");
@@ -214,7 +273,10 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
             }
         } else if (k == "daemon_access") {
             c.daemon_access = str(v, "daemon_access");
-            if (c.daemon_access != "mount" && c.daemon_access != "ptrace") bad("daemon_access must be \"mount\" or \"ptrace\"");
+            if (c.daemon_access == "ptrace")
+                bad("daemon_access \"ptrace\" was removed (11-26): init reaches the daemon's directory only where it is mounted in its ns "
+                    "(\"daemon_path\", default /aos); leave \"daemon_access\" out");
+            if (c.daemon_access != "mount") bad("daemon_access must be \"mount\" (the only way left; or leave it out)");
         } else if (k == "daemon_path") {
             c.daemon_path = str(v, "daemon_path");
             if (!abs_path_ok(c.daemon_path) || c.daemon_path == "/")
@@ -227,11 +289,9 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
         } else if (k == "stdout" || k == "stderr") {
             (k == "stdout" ? c.stdout_path : c.stderr_path) = clean_path(str(v, k), k);
         } else {
-            bad("unknown key " + k + " (name, argv, env, cwd, ns, uid, locks, net, stdout, stderr, daemon_access, daemon_path)");
+            bad("unknown key " + k + " (name, argv, env, cwd, ns, root_size, uid, locks, net, stdout, stderr, daemon_access, daemon_path)");
         }
     }
-    if (!c.daemon_path.empty() && c.daemon_access == "ptrace")
-        bad("daemon_path is only for \"daemon_access\": \"mount\" (with ptrace the directory is /proc/1/cwd)");
     if (c.name.empty()) bad("name is missing");
     if (c.argv.empty()) bad("argv is missing");
     return c;

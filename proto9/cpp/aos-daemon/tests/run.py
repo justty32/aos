@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# run.py：aos-daemon 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、init 重起規則、整片跟著 daemon 走、init 經 /aos（或 ptrace）碰目錄、procs/<名>/ 是真的夾、daemon 設定檔、結束寬限、起動那一層死了留下、forget -k、改名 init、沒有 init、到重起上限留著、daemon_path、init 進 Landlock、exit_code、net none／host、seccomp（內建的擋單、off、自己的名單）、疊 daemon 量到的界線、--cgroup PATH、停止訊號只收外面與 init 送的、普通 proc 經 init 的 /proc/<PID>/root 進不去、bind 來源卡住時不跟著卡、ns.json 的 by／at、overlay、合併目錄 B、restart-init、介面宣告、沒有殘留。
-# 用法：python3 tests/run.py [組名…]；組：basic procs nsconf ns landlock cgroup mount modes restart teardown access dirs stdio dconf grace pdeath forgetk rename noinit rlstay dpath ilandlock exitcode net seccomp nest cgpath sigsrc ipath stuck nsby overlay merge rinit iface（最後一定跑 leftovers）
+# run.py：aos-daemon 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、init 重起規則、整片跟著 daemon 走、init 經 /aos 碰目錄（ptrace 收掉）、procs/<名>/ 是真的夾、daemon 設定檔、結束寬限、起動那一層死了留下、forget -k、改名 init、沒有 init、到重起上限留著、daemon_path、init 進 Landlock、exit_code、net none／host、seccomp（內建的擋單、off、自己的名單）、疊 daemon 量到的界線、--cgroup PATH、停止訊號只收外面與 init 送的、普通 proc 經 init 的 /proc/<PID>/root 進不去、bind 來源卡住時不跟著卡、ns.json 的 by／at、overlay、合併目錄 B、restart-init、介面宣告、舊版 Linux 的警告、bind 的 beneath、ns.json 的 real、init 重起前清舊 cgroup、daemon 握著的那一層跟著外面掛卸（slave）、外面沒有 /tmp、kill 送給整個 cgroup／行程組、tmpfs 與根的 size、太深的 json、沒有殘留。
+# 用法：python3 tests/run.py [組名…]；組：basic procs nsconf ns landlock cgroup mount modes restart teardown access dirs stdio dconf grace pdeath forgetk rename noinit rlstay dpath ilandlock exitcode net seccomp nest cgpath sigsrc ipath stuck nsby overlay merge rinit iface oldlinux beneath real irestart slave notmp killgrp tsize jdepth（最後一定跑 leftovers）
 import errno, json, os, re, select, shutil, signal, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -83,15 +83,15 @@ def write_json(p, obj):
 
 
 class Daemon:
-    def __init__(self, test, init_argv=None, *flags, init_extra=None, wait=10.0, args=None, cwd="/", cmd=None):
+    def __init__(self, test, init_argv=None, *flags, init_extra=None, wait=10.0, args=None, cwd="/", cmd=None, stdin=None):
         """args：給了就用 [BIN, *args] 起（不帶 --init；init 設定照樣寫在 dir/main.json）。cmd：給了就整個照它起（cmd 可以是
-        函式，拿 init 設定檔的路徑回命令列）。"""
+        函式，拿 init 設定檔的路徑回命令列）。stdin：給 Popen 的 stdin（outer 那種要寫指令進去）。"""
         self.dir = os.path.join(TMP, test)
         os.makedirs(self.dir, exist_ok=True)
         kcfg = config(self.dir, "main", init_argv or ["init", "/out"], **(init_extra or {}))
         self.err_path = os.path.join(self.dir, "daemon.err")
         argv = cmd(kcfg) if cmd else [BIN, *(args if args is not None else ["--init", kcfg, *flags])]
-        self.p = subprocess.Popen(argv, stdout=subprocess.PIPE,
+        self.p = subprocess.Popen(argv, stdout=subprocess.PIPE, stdin=stdin,
                                   stderr=open(self.err_path, "w"), cwd=cwd)
         self.line = self._line(wait)
         m = re.fullmatch(r"export AOS_DAEMON=/proc/(\d+)/cwd", self.line or "")
@@ -300,8 +300,8 @@ def t_procs():
 # ---------------------------------------------------------------- ns
 
 def nsrow(j):
-    """ns.json 的一筆拿掉 by、at（比的時候只看 type、src、lower、dst、rw、locked）。"""
-    return {k: v for k, v in j.items() if k not in ("by", "at")}
+    """ns.json 的一筆拿掉 by、at、real（比的時候只看 type、src、lower、beneath、dst、rw、size、locked）。"""
+    return {k: v for k, v in j.items() if k not in ("by", "at", "real")}
 
 
 def parse_mountinfo(hp):
@@ -645,7 +645,7 @@ def t_teardown():
 # ---------------------------------------------------------------- access
 
 def t_access():
-    """init 怎麼碰 daemon 的目錄：預設 mount（天空裡的 /aos、零 caps），設定 daemon_access ptrace 走 /proc/1/cwd。"""
+    """init 怎麼碰 daemon 的目錄：天空裡的 /aos、零 caps（daemon_access ptrace 11-26 收掉，寫了起不來）。"""
     d = Daemon("access")
     if not check("access: daemon up", d.pid, d.err()):
         return
@@ -705,42 +705,33 @@ def t_access():
     check("access: non-main proc cannot read /proc/1/cwd", got.get("/proc/1/cwd/status") == "err EACCES", got)
     check("access: non-main proc gets no AOS_DAEMON (but gets AOS_NAME)",
           got.get("env:AOS_DAEMON") == "err unset" and got.get("env:AOS_NAME") == "ok np", got)
-    bad = config(d.dir, "dacc", ["sleep"], daemon_access="ptrace")
+    bad = config(d.dir, "dacc", ["sleep"], daemon_access="mount")
     r = d.ctl("start " + bad)
     check("access: daemon_access in a non-main config -> EIO, failed ConfigBad",
           r[0] == errno.EIO and r[1] == "failed" and "daemon_access" in (r[2] or ""), r)
     check("access: /proc/<PID>/cwd from outside still works", d.status().get("pid_ns") == "1")
     d.stop()
 
-    # ptrace 模式（舊的做法，設定裡選）
+    # daemon_access ptrace 收掉了（使用者 11-26 定）：寫了就起不來；寫 mount 照收
     d = Daemon("access-ptrace", init_extra={"daemon_access": "ptrace"})
-    if not check("access: ptrace mode: daemon up", d.pid, d.err()):
-        return
-    started(d, "main")
-    check("access: ptrace mode: status says ptrace /proc/1/cwd",
-          d.status().get("init_access") == "ptrace /proc/1/cwd", d.status())
-    c = caps_of(d.hostpid("main"))
-    check("access: ptrace mode: init keeps only cap_sys_ptrace", c["CapEff"] == 1 << 19 and c["CapBnd"] == 1 << 19, c)
-    kt = init_file(d)
-    check("access: ptrace mode: AOS_DAEMON=/proc/1/cwd and it reads it",
-          kt.startswith("ok pid_ns: 1") and "\nroot /proc/1/cwd\n" in kt, kt)
-    check("access: ptrace mode: no /aos in its ns", d.ask("/aos") == "err ENOENT")
-    a = d.ask("ctl start " + config(d.dir, "pw", ["sleep"]))
-    check("access: ptrace mode: init's start through /proc/1/cwd/ctl works", a == "ok" and d.fact("pw", "state") == "alive\n", a)
+    rc = d.p.wait(10)
+    check("access: init with daemon_access ptrace (removed) -> exit 2 and says it was removed",
+          rc == 2 and "ptrace" in d.err() and "removed" in d.err(), (rc, d.err()[-300:]))
+    d = Daemon("access-mountkey", init_extra={"daemon_access": "mount"})
+    check("access: daemon_access mount is still taken (the only way)", d.pid and started(d, "main") and
+          d.status().get("init_access") == "mount /aos", d.err())
     d.stop()
 
     # init 的天空自己用了 /aos：daemon 起不來，說明原因
     d = Daemon("access-clash", init_extra={"ns": base_ns(os.path.join(TMP, "access-clash")) + [ent("tmpfs", "/aos")]})
     rc = d.p.wait(10)
     check("access: init ns using /aos -> daemon exits 2 and says why", rc == 2 and "/aos" in d.err() and
-          "daemon_access" in d.err(), (rc, d.err()[-300:]))
+          "daemon_path" in d.err(), (rc, d.err()[-300:]))
 
-    # init 的 uid 不是 0：兩種模式都起不來
-    for mode in ("mount", "ptrace"):
-        d = Daemon("access-uid-" + mode, init_extra={"uid": 5, "daemon_access": mode})
-        rc = d.p.wait(10)
-        check("access: %s mode: init uid 5 -> daemon exits 2 and mentions uid" % mode,
-              rc == 2 and "uid" in d.err() and "uid 0" in d.err(), (rc, d.err()[-300:]))
+    # init 的 uid 不是 0：起不來
+    d = Daemon("access-uid", init_extra={"uid": 5})
+    rc = d.p.wait(10)
+    check("access: init uid 5 -> daemon exits 2 and mentions uid 0", rc == 2 and "uid 0" in d.err(), (rc, d.err()[-300:]))
 
 
 # ---------------------------------------------------------------- dirs
@@ -1355,6 +1346,11 @@ def t_dpath():
         a = d.ask("ctl mount main /usr /run/cgroup/x")
         check("dpath: ctl mount under /run/cgroup is refused (EINVAL PathReserved)", a == "err EINVAL" and
               d.status().get("aos_ctl_error", "").startswith("PathReserved /run/cgroup"), (a, d.status().get("aos_ctl_error")))
+    for cmd in ("umount main /run", "mount main /usr /run"):
+        a = d.ask("ctl " + cmd)
+        check("dpath: ctl %s (above /run/aos) is refused (EINVAL PathReserved /run … above)" % cmd.split()[0], a == "err EINVAL" and
+              d.status().get("aos_ctl_error", "").startswith("PathReserved /run in init's ns is above /run/aos"),
+              (a, d.status().get("aos_ctl_error")))
     a = d.ask("ctl mount main /usr /aos")
     check("dpath: /aos is not reserved any more: ctl mount over it works", a == "ok" and
           ["bind", "/usr", "/aos", "ro"] in [l.split() for l in d.fact("main", "ns").splitlines()], a)
@@ -1371,7 +1367,7 @@ def t_dpath():
                                        ("trailing /", {"daemon_path": "/run/aos/"}), ("..", {"daemon_path": "/run/../aos"}),
                                        ("/cgroup (where the cgroup dir goes)", {"daemon_path": "/cgroup"}),
                                        ("/x/cgroup", {"daemon_path": "/x/cgroup"}), ("a number", {"daemon_path": 5}),
-                                       ("with ptrace", {"daemon_path": "/run/aos", "daemon_access": "ptrace"})]):
+                                       ("with daemon_access ptrace (removed)", {"daemon_path": "/run/aos", "daemon_access": "ptrace"})]):
         d = Daemon("dpath-bad%d" % i, init_extra=extra)
         rc = d.p.wait(10)
         check("dpath: daemon_path %s -> exit 2 with a message" % what, rc == 2 and "daemon_path" in d.err(), (rc, d.err()[-300:]))
@@ -1688,11 +1684,11 @@ def t_nest():
     check("nest: proc with default locks (uid 0) runs the inner aos-daemon: it exits 2, could not write the uid/gid maps",
           r == (0, "done", "-") and ex == "code 2\n" and "could not write the uid/gid maps" in err, (r, ex, err))
     r, ex, err = inner("n1", uid=1)
-    check("nest: same as uid 1 (subuid): maps are fine, then Landlock refuses mounts: make mounts private: Operation not permitted",
-          r == (0, "done", "-") and ex == "code 2\n" and "make mounts private: Operation not permitted" in err, (r, ex, err))
+    check("nest: same as uid 1 (subuid): maps are fine, then Landlock refuses mounts: make mounts slave: Operation not permitted",
+          r == (0, "done", "-") and ex == "code 2\n" and "make mounts slave: Operation not permitted" in err, (r, ex, err))
     r, ex, err = inner("n2", uid=1, locks={"seccomp": "off"})
     check("nest: ... seccomp off changes nothing (it is Landlock, not seccomp)",
-          ex == "code 2\n" and "make mounts private: Operation not permitted" in err, (r, ex, err))
+          ex == "code 2\n" and "make mounts slave: Operation not permitted" in err, (r, ex, err))
     # 拆開量：開 namespace 都行；uid 0 對照不了自己；Landlock 擋 mount
     os.chmod(d.dir, 0o777)   # uid 1 的 proc（外面是 subuid）要能在 /out 寫結果
     for name, uid, line, sc in (("m0", 0, "0 0 1", None), ("m1", 1, "0 1 1", None), ("m1off", 1, "0 1 1", "off")):
@@ -2211,6 +2207,361 @@ def t_iface():
     d.stop()
 
 
+
+# ---------------------------------------------------------------- oldlinux（舊版 Linux 照跑、status 講明風險，使用者 11-26 定）
+
+def t_oldlinux():
+    d = Daemon("oldlinux")
+    if not check("oldlinux: daemon up", d.pid and started(d, "main"), d.err()):
+        return
+    s = d.status()
+    abi = int(s.get("landlock_abi", "0"))
+    keys = list(s)
+    if abi < 6:
+        w = s.get("landlock_warning", "")
+        check("oldlinux: ABI %d < 6: status has landlock_warning right after landlock_abi" % abi,
+              "landlock_warning" in keys and keys.index("landlock_warning") == keys.index("landlock_abi") + 1, keys)
+        check("oldlinux: ... it names Linux 6.12 and the three risks (signals, abstract unix sockets, no daemon inside a proc)",
+              "6.12" in w and "signal each other" in w and "abstract unix sockets" in w and "daemon cannot run inside a proc" in w, w)
+        check("oldlinux: ... and the daemon logged the same warning when it started", "warning: Landlock ABI %d" % abi in d.err())
+    else:
+        check("oldlinux: ABI %d >= 6: no landlock_warning" % abi, "landlock_warning" not in keys, keys)
+    d.stop()
+
+
+# ---------------------------------------------------------------- beneath（bind 的 beneath：從那個夾往下開，使用者 11-26 定）
+
+def t_beneath():
+    d = Daemon("beneath")
+    if not check("beneath: daemon up", d.pid and started(d, "main"), d.err()):
+        return
+    top = os.path.join(d.dir, "top")
+    os.makedirs(os.path.join(top, "in", "deep"))
+    os.makedirs(os.path.join(d.dir, "outside"))
+    write_json(os.path.join(top, "in", "file.txt"), "inside")
+    write_json(os.path.join(d.dir, "outside", "secret"), "secret")
+    os.symlink("in", os.path.join(top, "link-in"))
+    os.symlink("/etc", os.path.join(top, "link-out"))
+    os.symlink("../outside", os.path.join(top, "link-up"))
+    os.symlink("in/../../outside", os.path.join(top, "in-dotdot"))
+
+    def run(name, entry, probe=("/b",)):
+        r = d.ctl("start " + config(d.dir, name, ["probe", "/out", name] + list(probe), ns=base_ns(d.dir) + [entry]))
+        return r
+
+    def row(name, dst="/b"):
+        return [j for j in json.loads(d.fact(name, "ns.json")) if j["dst"] == dst]
+
+    e = dict(bind(os.path.join(top, "in"), "/b"), beneath=top)
+    r = run("ok1", e, ["/b/file.txt"])
+    got = results(d, "ok1")
+    rw = row("ok1")
+    check("beneath: src under beneath -> done, the proc reads the file", r == (0, "done", "-") and got.get("/b/file.txt") == "ok inside",
+          (r, got))
+    check("beneath: ns.json row keeps beneath and has real (the opened place)", rw and rw[0].get("beneath") == top and
+          rw[0].get("real") == os.path.join(top, "in"), rw)
+    check("beneath: the text ns has no beneath (same 4 or 5 words a row)",
+          ["bind", os.path.join(top, "in"), "/b", "ro"] in [l.split() for l in d.fact("ok1", "ns").splitlines()])
+    r = run("ok2", dict(bind(os.path.join(top, "link-in"), "/b"), beneath=top), ["/b/file.txt"])
+    check("beneath: a symlink that stays inside is fine; real is where it led", r == (0, "done", "-") and
+          results(d, "ok2").get("/b/file.txt") == "ok inside" and row("ok2")[0].get("real") == os.path.join(top, "in"), r)
+    r = run("ok3", dict(bind(top, "/b"), beneath=top), ["/b/in/file.txt"])
+    check("beneath: src equal to beneath works", r == (0, "done", "-") and results(d, "ok3").get("/b/in/file.txt") == "ok inside", r)
+    r = run("ok4", dict(bind("/usr", "/b"), beneath="/"), ["/b/bin"])
+    check("beneath: beneath / works", r == (0, "done", "-"), r)
+    for name, src, why in (("out1", "link-out", "an absolute symlink to /etc"), ("out2", "link-up", "a symlink to ../outside"),
+                           ("out3", "in-dotdot", "a symlink through in/../../outside")):
+        r = run(name, dict(bind(os.path.join(top, src), "/b"), beneath=top))
+        check("beneath: %s -> EIO StartFailed, says it leads out of beneath" % why, r[0] == errno.EIO and r[1] == "failed" and
+              (r[2] or "").startswith("StartFailed") and "leads out of " + top in (r[2] or "") and
+              not os.path.exists(d.root + "/procs/" + name), r)
+    r = run("nolink", dict(bind(os.path.join(top, "link-out"), "/b")), ["/b/hostname"])
+    check("beneath: without beneath the same symlink is followed (real /etc, src as written)", r == (0, "done", "-") and
+          row("nolink")[0].get("real") == "/etc" and row("nolink")[0].get("src") == os.path.join(top, "link-out"), r)
+    r = run("magic", dict(bind("/proc/self/root", "/b"), beneath="/proc"))
+    check("beneath: a /proc magic link (/proc/self/root beneath /proc) -> EIO", r[0] == errno.EIO and "magic link" in (r[2] or ""), r)
+    r = run("gone", dict(bind(os.path.join(d.dir, "nope", "x"), "/b"), beneath=os.path.join(d.dir, "nope")))
+    check("beneath: beneath that does not exist -> EIO StartFailed bind beneath", r[0] == errno.EIO and
+          "bind beneath" in (r[2] or ""), r)
+    bad = [("src not under beneath", dict(bind(os.path.join(d.dir, "outside"), "/b"), beneath=top), "not under"),
+           ("beneath relative", dict(bind(os.path.join(top, "in"), "/b"), beneath="top"), "absolute"),
+           ("beneath not a string", dict(bind(os.path.join(top, "in"), "/b"), beneath=5), "string"),
+           ("beneath with ..", dict(bind(os.path.join(top, "in"), "/b"), beneath=top + "/../top"), ".."),
+           ("beneath on a tmpfs entry", dict(ent("tmpfs", "/b"), beneath=top), "unknown key")]
+    for i, (what, entry, word) in enumerate(bad):
+        r = run("bad%d" % i, entry)
+        check("beneath: %s -> EIO ConfigBad" % what, r[0] == errno.EIO and (r[2] or "").startswith("ConfigBad") and word in r[2], r)
+    d.stop()
+
+
+# ---------------------------------------------------------------- real（ns.json 的 real，使用者 11-26 定）
+
+def t_real():
+    d = Daemon("real")
+    if not check("real: daemon up", d.pid and init_up(d), d.err()):
+        return
+    s = d.status()
+    cg_on = not s.get("cgroup", "off").startswith("off")
+    nj = json.loads(d.fact("main", "ns.json"))
+    by = {j["dst"]: j for j in nj}
+    check("real: every bind row of init has real (here the same as src: no symlinks)",
+          all(j.get("real") == j["src"] for j in nj if j["type"] == "bind"), [j for j in nj if j["type"] == "bind"])
+    check("real: locked rows carry the real of the bind that brought them",
+          all(j.get("real") == j["src"] for j in nj if j.get("locked")), [j for j in nj if j.get("locked")])
+    check("real: tmpfs, proc, dev and the aos row have no real",
+          all("real" not in j for j in nj if j["type"] in ("tmpfs", "proc", "dev", "aos")), nj)
+    if cg_on:
+        check("real: init's cgroup row has real (the cgroup folder the daemon opened)", by["/cgroup"].get("real") == s["cgroup"], by["/cgroup"])
+    a = os.path.join(d.dir, "a")
+    b = os.path.join(d.dir, "b")
+    for x in (a, b):
+        os.makedirs(x)
+        write_json(os.path.join(x, "f"), x)
+    os.symlink("a", os.path.join(d.dir, "la"))
+    os.symlink(b, os.path.join(d.dir, "lb"))
+    ov = {"type": "overlay", "lower": [os.path.join(d.dir, "la"), os.path.join(d.dir, "lb")], "dst": "/ov"}
+    r = d.ctl("start " + config(d.dir, "w", ["sleep"], ns=base_ns(d.dir) + [bind(os.path.join(d.dir, "la"), "/la"), ov]))
+    check("real: a proc with a symlinked bind src and a symlinked overlay starts", r == (0, "done", "-"), r)
+    rows = {j["dst"]: j for j in json.loads(d.fact("w", "ns.json"))}
+    check("real: bind via a symlink: src as written, real is the target", rows["/la"]["src"] == os.path.join(d.dir, "la") and
+          rows["/la"].get("real") == a, rows["/la"])
+    check("real: overlay: real is an array beside lower, each layer resolved", rows["/ov"].get("real") == [a, b] and
+          rows["/ov"]["lower"] == ov["lower"], rows["/ov"])
+    r = d.ctl("mount w %s /late" % os.path.join(d.dir, "lb"))
+    rows = {j["dst"]: j for j in json.loads(d.fact("w", "ns.json"))}
+    check("real: ctl mount via a symlink: the new row has real", r == (0, "done", "-") and rows.get("/late", {}).get("real") == b and
+          rows["/late"]["by"] == "mount", (r, rows.get("/late")))
+    check("real: rows that were there keep their real after the table is measured again", rows["/la"].get("real") == a)
+    d.stop()
+
+
+# ---------------------------------------------------------------- irestart（init 重起前殺掉舊 init 的 cgroup，使用者 11-26 定）
+
+def t_irestart():
+    d = Daemon("irestart", ["iorphan", "/out"])
+    if not check("irestart: daemon up", d.pid, d.err()):
+        return
+    cg = d.status().get("cgroup", "off")
+    if cg.startswith("off"):
+        check("irestart: (skip) %s" % cg, True)
+        d.stop()
+        return
+    ok = wait_for(lambda: d.status().get("init_restarts") == "1" and started(d, "main", 0.1) and init_file(d, 0.1), 10)
+    check("irestart: the first init left a child and exited; init was restarted once", ok, d.status())
+    child = int(read(os.path.join(d.dir, "iorphan.child")))
+    new_ns = int(re.search(r"ns: (\d+)", d.fact("main", "pid")).group(1))
+    check("irestart: ... the child the old init left is gone (killed with the old cgroup)",
+          new_ns != child and wait_for(lambda: ns_to_host(child, "iorphan") is None, 3), (child, new_ns))
+    check("irestart: ... the daemon logged cgroup.kill of the old init's cgroup", "wrote cgroup.kill of the old init's cgroup p-main-1" in d.err(),
+          d.err()[-500:])
+    check("irestart: ... the old cgroup folder is removed, the new init has its own",
+          wait_for(lambda: not os.path.exists(os.path.join(cg, "p-main-1")), 3) and os.readlink(d.root + "/procs/main/cgroup").endswith("p-main-2"))
+    d.stop()
+
+    # restart-init 也一樣（到上限 stay 時死掉的 init 留在表上，它的孩子還在；restart-init 先清掉）
+    d = Daemon("irestart-rinit", ["iorphan", "/out"], "--restart-limit", "0", "--on-restart-limit", "stay")
+    gone_ = wait_for(lambda: d.pid and d.status().get("init_state", "").startswith("gone"), 10)
+    child = int(read(os.path.join(d.dir, "iorphan.child"))) if gone_ else 0
+    hchild = ns_to_host(child, "iorphan") if child else None
+    check("irestart: restart limit 0 + stay: init gone, its child still running", gone_ and hchild and not gone(hchild), (d.status() if d.pid else d.err()))
+    r = d.ctl("restart-init")
+    check("irestart: restart-init -> done, the old init's child is killed first", r == (0, "done", "-") and hchild and
+          wait_for(lambda: gone(hchild), 3), r)
+    d.stop()
+
+    d = Daemon("irestart-off", ["iorphan", "/out"], "--cgroup", "off")
+    ok = wait_for(lambda: d.pid and d.status().get("init_restarts") == "1" and started(d, "main", 0.1), 10)
+    child = int(read(os.path.join(d.dir, "iorphan.child"))) if ok else 0
+    hchild = ns_to_host(child, "iorphan") if child else None
+    check("irestart: --cgroup off: init restarted, but the child the old init left keeps running (nothing to kill it by)",
+          ok and hchild and not gone(hchild), hchild)
+    d.stop()
+    check("irestart: --cgroup off: ... it goes with the daemon", hchild and wait_for(lambda: gone(hchild), 3))
+
+
+# ---------------------------------------------------------------- slave（daemon 握著的那一層跟著外面的掛卸走，天空不跟，使用者 11-26 定）
+
+def t_slave():
+    if not shutil.which("unshare"):
+        check("slave: (skip) no unshare", True)
+        return
+    dd = os.path.join(TMP, "slave")
+    os.makedirs(os.path.join(dd, "sl", "m"))
+    ns = base_ns(dd) + [bind(os.path.join(dd, "sl"), "/sl")]
+    # 外面＝unshare -Urm --propagation shared 出來的那一層（一般使用者在真的外面掛不了 tmpfs）
+    d = Daemon("slave", init_extra={"ns": ns}, stdin=subprocess.PIPE,
+               cmd=lambda k: ["unshare", "-Urm", "--propagation", "shared", sys.executable, os.path.join(TOYS, "toys.py"), "outer",
+                              BIN, "--cgroup", "off", "--subuid", "off", "--init", k])
+    if not check("slave: daemon up inside unshare -Urm --propagation shared", d.pid and init_up(d), d.err()):
+        return
+
+    def outer(cmd):
+        d.p.stdin.write((cmd + "\n").encode())
+        d.p.stdin.flush()
+        return d._line(10)
+    m = os.path.join(dd, "sl", "m")
+    check("slave: before: init's /sl/m is empty", d.ask("/sl/m") == "ok", d.ask("/sl/m"))
+    a = outer("mount " + m)
+    check("slave: the outside mounts a new tmpfs at sl/m (with a file hello)", a == "ok", a)
+    r = d.ctl("start " + config(dd, "after", ["probe", "/out", "after", "/m", "/m/hello"], ns=base_ns(dd) + [bind(m, "/m")]))
+    got = results(d, "after")
+    check("slave: a proc started afterwards with bind sl/m sees the new tmpfs (the daemon's layer got the mount)",
+          r == (0, "done", "-") and got.get("/m") == "ok hello" and got.get("/m/hello") == "ok hi|", (r, got))
+    check("slave: init's ns did not change behind its back (/sl/m still empty)", d.ask("/sl/m") == "ok", d.ask("/sl/m"))
+    r = d.ctl("mount main %s /late" % m)
+    check("slave: ctl mount of sl/m into init takes the new tmpfs", r == (0, "done", "-") and d.ask("/late") == "ok hello", r)
+    a = outer("umount " + m)
+    check("slave: the outside unmounts it", a == "ok", a)
+    r = d.ctl("start " + config(dd, "after2", ["probe", "/out", "after2", "/m"], ns=base_ns(dd) + [bind(m, "/m")]))
+    got = results(d, "after2")
+    check("slave: a proc started after the unmount sees the empty folder (the daemon's layer followed the unmount)",
+          r == (0, "done", "-") and got.get("/m") == "ok", (r, got))
+    check("slave: what is already in a ns stays (init's /late still has hello)", d.ask("/late") == "ok hello", d.ask("/late"))
+    mi = read("/proc/%d/mountinfo" % d.hostpid("main"))
+    check("slave: mounts in init's ns are private (no shared:/master: tags in its mountinfo)",
+          "shared:" not in mi and "master:" not in mi, [l for l in mi.splitlines() if "shared:" in l or "master:" in l][:3])
+    d.p.stdin.close()
+    try:
+        rc = d.p.wait(10)
+    except subprocess.TimeoutExpired:
+        rc = None
+    check("slave: closing stdin stops the daemon (exit 0)", rc == 0, rc)
+
+
+# ---------------------------------------------------------------- notmp（外面沒有 /tmp 也起得來，審查小事 7）
+
+def t_notmp():
+    if not shutil.which("unshare"):
+        check("notmp: (skip) no unshare", True)
+        return
+    dd = os.path.join(TMP, "notmp")
+    root = os.path.join(TMP, "notmp-root")
+    os.makedirs(dd)
+    os.makedirs(root)
+    inner = [bind("/usr", "/usr"), bind("/etc", "/etc"), symlink("usr/bin", "/bin"), symlink("usr/lib", "/lib"),
+             symlink("usr/lib64", "/lib64"), ent("dev", "/dev"), ent("proc", "/proc"), ent("tmpfs", "/tmp"),
+             bind("/toys", "/toys"), bind("/w", "/out", True)]
+    binds = ",".join(["/usr=/usr", "/etc=/etc", "/dev=/dev", "/proc=/proc", TOYS + "=/toys", dd + "=/w",
+                      os.path.dirname(BIN) + "=/aosd"])
+    d = Daemon("notmp", init_extra={"ns": inner},
+               cmd=lambda k: ["unshare", "-Urm", sys.executable, os.path.join(TOYS, "toys.py"), "notmp", root, binds,
+                              "/aosd/aos-daemon", "--cgroup", "off", "--subuid", "off", "--init", "/w/main.json"])
+    if not check("notmp: daemon up in a root with no /tmp", d.pid and init_up(d), d.err()):
+        return
+    check("notmp: ... the launcher's root really has no /tmp", not os.path.lexists("/proc/%d/root/tmp" % d.p.pid) and
+          os.path.exists("/proc/%d/root/usr" % d.p.pid))
+    check("notmp: ... the daemon's small world is as usual", sorted(os.listdir("/proc/%d/root" % d.pid)) == ["aos"],
+          os.listdir("/proc/%d/root" % d.pid))
+    c = config(dd, "w", ["sleep"], ns=inner)
+    r = d.ctl("start /w/w.json")
+    check("notmp: start a proc", r == (0, "done", "-") and d.fact("w", "ns_check") == "ok\n", (r, c))
+    check("notmp: SIGTERM -> exit 0", d.stop() == 0)
+
+
+# ---------------------------------------------------------------- killgrp（kill 送給整個 cgroup／行程組，使用者 11-26 定）
+
+def t_killgrp():
+    d = Daemon("killgrp")
+    if not check("killgrp: daemon up", d.pid and started(d, "main"), d.err()):
+        return
+    cg_on = not d.status().get("cgroup", "off").startswith("off")
+
+    def fam(name, how):
+        d.ctl("start " + config(d.dir, name, ["family", "/out", name, how]))
+        f = os.path.join(d.dir, name + ".child")
+        wait_for(lambda: os.path.exists(f) and read(f), 5)
+        return d.hostpid(name), ns_to_host(int(read(f)), "family")
+
+    if cg_on:
+        for name, how, sig in (("same", "same", "TERM"), ("ss", "setsid", "TERM"), ("sk", "setsid", "KILL")):
+            par, ch = fam(name, how)
+            r = d.ctl("kill %s %s" % (name, sig))
+            check("killgrp: cgroup: kill %s %s (child %s) -> done, the proc and its child both go" % (name, sig, how),
+                  r == (0, "done", "-") and ch and wait_for(lambda: gone(par) and gone(ch), 3), (r, par, ch))
+            want = "signal 9 SIGKILL\n" if sig == "KILL" else "signal 15 SIGTERM\n"
+            check("killgrp: ... exit records %s" % want.strip(), wait_for(lambda: d.fact(name, "exit") == want, 3), d.fact(name, "exit"))
+        check("killgrp: KILL went through cgroup.kill (no fallback logged)", "sending SIGKILL one by one" not in d.err())
+    else:
+        check("killgrp: (skip cgroup part) cgroup off", True)
+    d.stop()
+
+    d = Daemon("killgrp-off", None, "--cgroup", "off")
+    if not check("killgrp: --cgroup off: daemon up", d.pid and started(d, "main"), d.err()):
+        return
+    par, ch = fam("same", "same")
+    r = d.ctl("kill same TERM")
+    check("killgrp: --cgroup off: kill goes to the process group: the child in it goes too",
+          r == (0, "done", "-") and ch and wait_for(lambda: gone(par) and gone(ch), 3), (r, par, ch))
+    par, ch = fam("ss", "setsid")
+    r = d.ctl("kill ss TERM")
+    check("killgrp: --cgroup off: a child that left with setsid is not reached (only the proc goes)",
+          r == (0, "done", "-") and ch and wait_for(lambda: gone(par), 3) and not gone(ch), (r, par, ch))
+    d.stop()
+    check("killgrp: --cgroup off: ... it goes with the daemon", ch and wait_for(lambda: gone(ch), 3))
+
+
+# ---------------------------------------------------------------- tsize（tmpfs 與根的 size，使用者 11-26 定）
+
+def t_tsize():
+    d = Daemon("tsize")
+    if not check("tsize: daemon up", d.pid and started(d, "main"), d.err()):
+        return
+    small = dict(ent("tmpfs", "/small"), size="1m")
+    r = d.ctl("start " + config(d.dir, "ts", ["probe", "/out", "ts", "statvfs:/small", "fill:/small/ok:100000", "fill:/small/big:2000000",
+                                              "statvfs:/", "statvfs:/tmp"], ns=base_ns(d.dir) + [small], root_size="2m"))
+    got = results(d, "ts")
+    check("tsize: start with a 1m tmpfs and root_size 2m -> done", r == (0, "done", "-"), r)
+    check("tsize: the 1m tmpfs is 1 MiB", got.get("statvfs:/small") == "ok %d" % (1 << 20), got)
+    check("tsize: writing 2 MB into it fails ENOSPC, 100 kB fits", got.get("fill:/small/big:2000000") == "err ENOSPC" and
+          got.get("fill:/small/ok:100000") == "ok", got)
+    check("tsize: the root is 2 MiB", got.get("statvfs:/") == "ok %d" % (2 << 20), got)
+    check("tsize: a tmpfs without size is not limited by us (bigger than 2 MiB)",
+          int((got.get("statvfs:/tmp") or "ok 0").split()[1]) > (2 << 20), got)
+    rows = {j["dst"]: j for j in json.loads(d.fact("ts", "ns.json"))}
+    check("tsize: ns.json has size on the root and on /small, none on /tmp", rows["/"].get("size") == "2m" and
+          rows["/small"].get("size") == "1m" and "size" not in rows["/tmp"], (rows["/"], rows["/small"], rows["/tmp"]))
+    r = d.ctl("start " + config(d.dir, "tb", ["probe", "/out", "tb", "statvfs:/small"], ns=base_ns(d.dir) + [dict(ent("tmpfs", "/small"), size=1 << 20)]))
+    check("tsize: size as a number of bytes works", r == (0, "done", "-") and results(d, "tb").get("statvfs:/small") == "ok %d" % (1 << 20) and
+          {j["dst"]: j for j in json.loads(d.fact("tb", "ns.json"))}["/small"].get("size") == str(1 << 20), r)
+    bad = [("size 0", {"size": 0}), ("size \"0k\"", {"size": "0k"}), ("size \"1x\"", {"size": "1x"}), ("size \"1.5m\"", {"size": "1.5m"}),
+           ("size -5", {"size": -5}), ("size true", {"size": True}), ("size \"\"", {"size": ""})]
+    for i, (what, extra) in enumerate(bad):
+        r = d.ctl("start " + config(d.dir, "tbad%d" % i, ["sleep"], ns=base_ns(d.dir) + [dict(ent("tmpfs", "/small"), **extra)]))
+        check("tsize: tmpfs %s -> EIO ConfigBad" % what, r[0] == errno.EIO and (r[2] or "").startswith("ConfigBad") and "size" in r[2], r)
+    r = d.ctl("start " + config(d.dir, "tbind", ["sleep"], ns=base_ns(d.dir) + [dict(bind("/usr", "/u"), size="1m")]))
+    check("tsize: size on a bind entry -> EIO ConfigBad unknown key", r[0] == errno.EIO and "unknown key \"size\"" in (r[2] or ""), r)
+    r = d.ctl("start " + config(d.dir, "troot", ["sleep"], root_size="lots"))
+    check("tsize: root_size \"lots\" -> EIO ConfigBad", r[0] == errno.EIO and "root_size" in (r[2] or ""), r)
+    d.stop()
+
+
+# ---------------------------------------------------------------- jdepth（1 號不解太深的 json，審查小事 14）
+
+def t_jdepth():
+    d = Daemon("jdepth")
+    if not check("jdepth: daemon up", d.pid and started(d, "main"), d.err()):
+        return
+    deep = os.path.join(d.dir, "deep.json")
+    write_json(deep, '{"name": "deep", "argv": ["/bin/true"], "ns": ' + "[" * 200000 + "]" * 200000 + "}")
+    r = d.ctl("start " + deep)
+    check("jdepth: a config nested 200000 deep -> EIO ConfigBad nested deeper than 64", r[0] == errno.EIO and
+          (r[2] or "").startswith("ConfigBad nested deeper than 64"), r)
+    check("jdepth: ... and the daemon is still there", d.status().get("pid_ns") == "1" and d.p.poll() is None)
+    ok = os.path.join(d.dir, "ok.json")
+    write_json(ok, {"name": "okdeep", "argv": ["/usr/bin/python3", "/toys/toys.py", "sleep"], "ns": base_ns(d.dir),
+                    "env": {"X": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["}})
+    r = d.ctl("start " + ok)
+    check("jdepth: brackets inside strings do not count", r == (0, "done", "-"), r)
+    lst = write_json(os.path.join(d.dir, "deep-list.json"), '{"default": "allow", "deny": ' + "[" * 100 + "]" * 100 + "}")
+    r = d.ctl("start " + config(d.dir, "sdeep", ["sleep"], locks={"seccomp": lst}))
+    check("jdepth: a seccomp list nested 100 deep -> EIO ConfigBad", r[0] == errno.EIO and "nested deeper" in (r[2] or ""), r)
+    d.stop()
+    d = Daemon("jdepth-init", cmd=lambda k: [BIN, "--init", write_json(os.path.join(TMP, "jdepth-init", "deep-init.json"),
+                                                                      '{"name": "main", "argv": ["/x"], "ns": ' + "[" * 100 + "]" * 100 + "}")])
+    rc = d.p.wait(10)
+    check("jdepth: init config nested 100 deep -> exit 2 and says why", rc == 2 and "nested deeper" in d.err(), (rc, d.err()[-300:]))
+
+
 # ---------------------------------------------------------------- leftovers
 
 def t_leftovers():
@@ -2254,7 +2605,8 @@ GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "nsconf": t_nsconf, "l
           "rename": t_rename, "noinit": t_noinit, "rlstay": t_rlstay, "dpath": t_dpath, "ilandlock": t_ilandlock,
           "exitcode": t_exitcode, "net": t_net, "seccomp": t_seccomp, "nest": t_nest, "cgpath": t_cgpath,
           "sigsrc": t_sigsrc, "ipath": t_ipath, "stuck": t_stuck, "nsby": t_nsby, "overlay": t_overlay, "merge": t_merge,
-          "rinit": t_rinit, "iface": t_iface}
+          "rinit": t_rinit, "iface": t_iface, "oldlinux": t_oldlinux, "beneath": t_beneath, "real": t_real,
+          "irestart": t_irestart, "slave": t_slave, "notmp": t_notmp, "killgrp": t_killgrp, "tsize": t_tsize, "jdepth": t_jdepth}
 
 
 def main():

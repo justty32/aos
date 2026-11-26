@@ -14,8 +14,10 @@ struct MiLine {
     bool ro = false;
 };
 
+}  // namespace
+
 // mountinfo 把空白、tab、換行、反斜線寫成 \040 這種八進位
-std::string unescape(const std::string& s) {
+std::string unesc(const std::string& s) {
     std::string out;
     for (size_t i = 0; i < s.size(); ++i) {
         if (s[i] == '\\' && i + 3 < s.size() &&s[i + 1] >= '0' && s[i + 1] <= '7') {
@@ -28,6 +30,8 @@ std::string unescape(const std::string& s) {
     return out;
 }
 
+namespace {
+
 std::vector<MiLine> mountinfo(pid_t pid) {
     std::vector<MiLine> out;
     std::istringstream in(read_fd_at(W.procfd, std::to_string(pid) + "/mountinfo"));
@@ -38,7 +42,7 @@ std::vector<MiLine> mountinfo(pid_t pid) {
         while (ls >> f && f != "-") {}
         MiLine m;
         ls >> m.fstype;
-        m.point = unescape(point);
+        m.point = unesc(point);
         m.ro = opts.rfind("ro", 0) == 0 && (opts.size() == 2 || opts[2] == ',');
         out.push_back(std::move(m));
     }
@@ -67,8 +71,9 @@ std::string esc(const std::string& s) {
 
 // 一行：種類 來源 天空裡的位置 ro|rw [locked]
 //   locked＝不是設定寫的，是 bind 來源底下外面那層掛的、被迫一起帶進來（卸不掉）的掛載
-//   json＝同一張表的 JSON 陣列：一行一個物件，鍵 type、src（文字行是 - 就不寫；overlay 寫 lower 陣列）、dst、rw（一定有）、
-//         locked（只有 locked 的才有）、by（start／mount／daemon／locked）、at（放上天空的時間，UTC）；
+//   json＝同一張表的 JSON 陣列：一行一個物件，鍵 type、src（文字行是 - 就不寫；overlay 寫 lower 陣列）、beneath（設定有寫才有）、
+//         dst、rw（一定有）、size（tmpfs 設定有寫才有）、locked（只有 locked 的才有）、real（daemon 實際開到的位置，daemon 握著的
+//         那一層看到的路徑；bind、cgroup 是字串，overlay 是陣列；其他沒有）、by（start／mount／daemon／locked）、at（放上天空的時間，UTC）；
 //         對不上設定的（unknown，ns_check 會寫 unexpected）沒有 by、at
 std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& check, std::string& json) {
     std::string jrows;
@@ -76,15 +81,20 @@ std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& 
         return nlohmann::json(v).dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
     };
     auto jrow = [&](const Mount& p, const std::string& dst, bool rw, bool locked, bool known) {
-        std::string src;
+        std::string src, real;
         if (p.kind == "overlay") {
             for (const auto& l : p.lower) src += (src.empty() ? "" : ", ") + jstr(l);
             src = ", \"lower\": [" + src + "]";
-        } else if (p.src != "-") {
-            src = ", \"src\": " + jstr(p.src);
+            for (const auto& l : p.real_lower) real += (real.empty() ? "" : ", ") + jstr(l);
+            if (!real.empty()) real = ", \"real\": [" + real + "]";
+        } else {
+            if (p.src != "-") src = ", \"src\": " + jstr(p.src);
+            if (!p.real.empty()) real = ", \"real\": " + jstr(p.real);
         }
+        if (!p.beneath.empty()) src += ", \"beneath\": " + jstr(p.beneath);
         jrows += std::string(jrows.empty() ? "" : ",\n") + "{\"type\": " + jstr(p.kind) + src + ", \"dst\": " + jstr(dst) +
-                 ", \"rw\": " + (rw ? "true" : "false") + (locked ? ", \"locked\": true" : "") +
+                 ", \"rw\": " + (rw ? "true" : "false") + (p.size.empty() ? "" : ", \"size\": " + jstr(p.size)) +
+                 (locked ? ", \"locked\": true" : "") + (known ? real : "") +
                  (known ? ", \"by\": " + jstr(locked ? "locked" : p.by) + ", \"at\": " + jstr(p.at) : "") + "}";
     };
     auto mi = mountinfo(pid);
@@ -116,9 +126,12 @@ std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& 
         if (anc >= 0) {
             const Mount& p = planned[anc];
             out += "bind " + esc(p.src + m.point.substr(p.dst.size())) + " " + esc(m.point) + " " + rw + " locked\n";
-            Mount sub = p;   // 被迫帶進來的：來源接在祖先 bind 的來源後面，時間跟祖先一樣
+            Mount sub = p;   // 被迫帶進來的：來源（與真實位置）接在祖先 bind 的後面，時間跟祖先一樣
             sub.kind = "bind";
             sub.src = p.src + m.point.substr(p.dst.size());
+            sub.real = p.real.empty() ? "" : (p.real == "/" ? "" : p.real) + m.point.substr(p.dst.size());
+            sub.beneath.clear();
+            sub.size.clear();
             jrow(sub, m.point, !m.ro, true, true);
         } else {
             out += "unknown " + esc(m.fstype) + " " + esc(m.point) + " " + rw + "\n";

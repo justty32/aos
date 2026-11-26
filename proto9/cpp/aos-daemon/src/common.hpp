@@ -9,13 +9,15 @@
 
 namespace d2 {
 
-// 天空設定的一條（json 物件寫法見 README）：bind（src、dst、rw）、tmpfs／proc／dev（dst）、symlink（target、dst）、
-// overlay（lower、dst；唯讀）。
+// 天空設定的一條（json 物件寫法見 README）：bind（src、dst、rw、beneath）、tmpfs（dst、size）、proc／dev（dst）、
+// symlink（target、dst）、overlay（lower、dst；唯讀）。
 struct NsEntry {
     std::string kind;   // bind tmpfs proc dev symlink overlay
     std::string src;    // bind：外面（daemon 起動前那一層）的絕對路徑；symlink：連結的目標
     std::string dst;    // 天空裡的絕對路徑
     bool rw = false;    // 只有 bind 用
+    std::string beneath;   // bind：非空＝從這個外面的夾往下開 src（openat2 RESOLVE_BENEATH；出界或 symlink 帶出去就失敗）
+    std::string size;      // tmpfs：非空＝大小上限（tmpfs 的 size=，例 64m）；空＝不給（Linux 的預設）
     std::vector<std::string> lower;   // overlay：外面的夾，第一個在最上面（跟 overlayfs 的 lowerdir 同序），至少兩個
 };
 
@@ -28,6 +30,10 @@ struct Mount {
     std::string dst;
     bool rw = false;
     std::vector<std::string> lower;   // overlay 的 lower（ns.json 照陣列寫）
+    std::string beneath;              // bind 的 beneath（設定有寫才有）
+    std::string size;                 // tmpfs 的 size（設定有寫才有）
+    std::string real;                 // ns.json 的 real：daemon 實際開到的位置（daemon 握著的那一層看到的路徑）；空＝不寫
+    std::vector<std::string> real_lower;   // overlay 每一層的 real
     std::string by = "start";         // ns.json 的 by：start（起動時照設定）、mount（跑的時候 ctl 掛的）、daemon（daemon 自己加的）
     std::string at;                   // ns.json 的 at：放上天空的時間（UTC）
 };
@@ -39,6 +45,7 @@ struct ProcConfig {
     std::vector<std::string> env;      // "K=V"
     std::string cwd = "/";
     std::vector<NsEntry> ns;
+    std::string root_size;             // 天空的根那塊 tmpfs 的大小上限；空＝不給
     int uid = 0;                       // 0＝天空裡的 0 號（外面的使用者本人）；N＞0＝subuid 範圍裡第 N 個
     std::vector<std::pair<std::string, std::string>> cgroup;   // cgroup 檔名 → 值（起動前寫進那隻的 cgroup）
     std::string stdout_path, stderr_path;   // 外面的路徑；空＝/dev/null
@@ -49,23 +56,23 @@ struct ProcConfig {
     std::vector<int> sc_list;          // 名單檔解出來的號碼（load_seccomp_list 填）
     std::string net = "none";          // "none"（預設：自己一個 network namespace，只有 lo）或 "host"（跟 daemon 同一個）
     // 下面兩個只有 init 的設定收；其他 proc 寫了就拒
-    std::string daemon_access;         // "mount"（不寫＝這個）或 "ptrace"
-    std::string daemon_path;           // mount 模式時 daemon 的目錄在 init 天空裡的位置；空＝/aos
+    std::string daemon_access;         // 只收 "mount"（不寫也一樣）；"ptrace" 11-26 收掉了，寫了就拒
+    std::string daemon_path;           // daemon 的目錄在 init 天空裡的位置；空＝/aos
 };
 
-// init（daemon 起的第一隻）怎麼碰 daemon 的目錄（設定檔的 daemon_access）：
-//   mount（預設）：daemon 的目錄掛在它天空裡的 daemon_path（預設 /aos），有 cgroup 時 cgroup 夾在
-//                  dirname(daemon_path)/cgroup，一個 cap 都不給，AOS_DAEMON=daemon_path
-//   ptrace：留 CAP_SYS_PTRACE、走 /proc/1/cwd（舊的做法）
+// init（daemon 起的第一隻）碰 daemon 的目錄只有一種做法：目錄掛在它天空裡的 daemon_path（預設 /aos），有 cgroup 時
+// cgroup 夾在 dirname(daemon_path)/cgroup，一個 cap 都不給，AOS_DAEMON=daemon_path（ptrace 做法 11-26 收掉）
 extern const char* const DEFAULT_DAEMON_PATH;   // "/aos"
-inline bool init_mounts(const ProcConfig& c) { return c.daemon_access != "ptrace"; }
 std::string init_daemon_path(const ProcConfig& c);   // daemon_path 或 /aos
 std::string init_cgroup_path(const ProcConfig& c);   // dirname(daemon_path)/cgroup
 
 ProcConfig parse_config(const std::string& text, const std::string& path);   // 錯了丟 std::runtime_error("ConfigBad …")
+// json 文字的括號最多疊幾層（字串裡的不算）；daemon（1 號）解外面給的 json 前先看，太深的不解（nlohmann 的 dump 是遞迴的）
+const int JSON_MAX_DEPTH = 64;
+bool json_depth_ok(const std::string& text);
 bool abs_path_ok(const std::string& p);   // 絕對、乾淨（沒有 . .. 空段、尾巴 /）的路徑
-std::vector<Mount> plan_mounts(const std::vector<NsEntry>& ns);
-// init（mount 模式）的天空不能自己用 daemon_path 與 cgroup 夾的位置：用了回 "ConfigBad …"，沒有回 ""
+std::vector<Mount> plan_mounts(const ProcConfig& c);
+// init 的天空不能自己用 daemon_path 與 cgroup 夾的位置：用了回 "ConfigBad …"，沒有回 ""
 std::string init_ns_conflict(const ProcConfig& c, bool cgroup_on);
 extern const char* const DEV_NODES[5];
 
@@ -122,7 +129,7 @@ struct Spawned {
     std::string cgroup;            // cgroup 夾名（在 W.cgfd 底下），空＝沒有
 };
 std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out);   // ""＝成功，否則 "代號 原因"
-std::string live_mount(pid_t pid, const std::string& src, const std::string& dst, bool rw);
+std::string live_mount(pid_t pid, const std::string& src, const std::string& dst, bool rw, std::string& real);   // real：開到的真實位置
 std::string live_umount(pid_t pid, const std::string& dst);
 // 起不來的那隻（或卡住被 SIGKILL 的幫手）沒走掉時，它的 cgroup 夾刪不掉：記下來，主循環之後再刪（daemon.cpp；只在主執行緒叫）
 void cgroup_remove_later(const std::string& cg);
@@ -136,7 +143,8 @@ int syscall_number(const std::string& name);               // 不認得回 -1
 
 // ns.cpp
 std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& check, std::string& json);
-std::string esc(const std::string& s);
+std::string esc(const std::string& s);     // 空白、tab、換行、反斜線寫成 \040 這種八進位（跟 mountinfo 一樣）
+std::string unesc(const std::string& s);   // 反過來
 
 // util.cpp
 std::string read_host_file(const std::string& path, std::string& err);   // 經 W.rootfd；err 空＝成功

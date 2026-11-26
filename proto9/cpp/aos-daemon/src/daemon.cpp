@@ -72,6 +72,11 @@ std::string stop_why;
 pid_t last_init_pid = 0;    // 最近一次死掉的 init 在這一層的 PID（它死前送的停止訊號可能在收屍之後才讀到）；只在主執行緒動
 std::vector<std::string> cg_later;   // 刪不掉、之後再刪的 cgroup 夾（起不來的那隻卡著沒走）；只在主執行緒動
 
+// 小世界墊在哪組（換根前）
+const char* const SMALL = "/proc";
+const char* const SMALL_AOS = "/proc/aos";
+const char* const SMALL_CG = "/proc/cgroup";
+
 // ctl 的指令（aos/ctl 宣告的 commands 照這張寫）
 const char* const COMMANDS = "start kill mount umount forget restart-init";
 
@@ -80,6 +85,8 @@ struct Request {
     std::function<std::string()> fn;
     std::mutex m;
     std::condition_variable cv;
+    bool started = false;     // 主執行緒拿去做了
+    bool cancelled = false;   // 等太久、寫的人已經拿到失敗：主執行緒之後輪到它也不做
     bool done = false;
     std::string result;
 };
@@ -99,9 +106,14 @@ std::string on_main(std::function<std::string()> fn) {
         RQ.push_back(r);
     }
     wake();
+    // 60 秒內主執行緒還沒拿去做（前面排著別的事）：標成取消、回失敗，之後輪到它也不做（不會「回報失敗、proc 卻起來了」）。
+    // 已經拿去做了就等它做完（做的事自己都有逾時：起一隻最多約 20 秒、掛卸約 11 秒）
     std::unique_lock<std::mutex> lk(r->m);
-    if (!r->cv.wait_for(lk, std::chrono::seconds(60), [&] { return r->done; }))
-        return "Internal the main thread did not answer in 60 s";
+    if (!r->cv.wait_for(lk, std::chrono::seconds(60), [&] { return r->done || r->started; })) {
+        r->cancelled = true;
+        return "Timeout the main thread did not take the command within 60 s (cancelled, not done)";
+    }
+    r->cv.wait(lk, [&] { return r->done; });
     return r->result;
 }
 
@@ -214,6 +226,31 @@ std::string start_proc(const ProcConfig& cfg, bool init) {
     return "";
 }
 
+// 主執行緒：init 重起（自動重起與 restart-init）前，舊 init 的 cgroup 夾裡還有東西（它留下的孩子）就寫 cgroup.kill，
+// 等到空（最多 INIT_KILL_WAIT 秒，monotonic），再刪夾（等於自動做一次 forget -k）。等不到空（卡在核心裡的）：記下來、之後再刪，
+// 照樣重起。沒有 cgroup 時做不到（留下的孩子照跑，daemon 結束時一起收）
+const double INIT_KILL_WAIT = 2;
+void kill_old_init_cgroup(const std::string& cg) {
+    if (cg.empty() || W.cgfd < 0) return;
+    std::string ev = read_fd_at(W.cgfd, cg + "/cgroup.events");
+    if (!ev.empty() && ev.find("populated 0") == std::string::npos) {
+        int fd = openat(W.cgfd, (cg + "/cgroup.kill").c_str(), O_WRONLY | O_CLOEXEC);
+        bool ok = fd >= 0 && write(fd, "1", 1) == 1;
+        int e = errno;
+        if (fd >= 0) close(fd);
+        if (!ok) log("init restart: writing " + cg + "/cgroup.kill failed: " + errstr(e));
+        else log("init restart: wrote cgroup.kill of the old init's cgroup " + cg + " (what it left behind)");
+        double end = mono_now() + INIT_KILL_WAIT;
+        for (;;) {
+            ev = read_fd_at(W.cgfd, cg + "/cgroup.events");
+            if (ev.empty() || ev.find("populated 0") != std::string::npos || mono_now() > end) break;
+            usleep(10000);
+        }
+    }
+    if (unlinkat(W.cgfd, cg.c_str(), AT_REMOVEDIR) == 0 || errno == ENOENT) return;
+    cgroup_remove_later(cg);
+}
+
 void rm_cgroup(const std::string& cg) {
     if (cg.empty() || W.cgfd < 0) return;
     for (int k = 0; k < 100; ++k) {
@@ -287,7 +324,7 @@ void init_died(const std::string& how, int as_code) {
         log(why + "; on_restart_limit stay: not restarting it, the daemon keeps running without init");
         return;
     }
-    rm_cgroup(drop_proc(ICFG.name));
+    kill_old_init_cgroup(drop_proc(ICFG.name));
     {
         std::lock_guard<std::mutex> g(S.mu);
         ++S.init_restarts;
@@ -297,22 +334,29 @@ void init_died(const std::string& how, int as_code) {
     if (!err.empty()) init_died("failed to start: " + err, 1);
 }
 
+// 收屍：先用 waitid(WNOWAIT) 看是誰、拿表的鎖、才真的收（waitpid）並標成死的。kill 也拿同一把鎖送訊號，所以送的時候
+// 表上 alive 的那隻一定還沒被收掉，PID 不會已經被放掉、讓給別人（小事 1）
 void reap_all() {
-    int st;
-    pid_t pid;
-    while ((pid = waitpid(-1, &st, WNOHANG)) > 0) {
+    for (;;) {
+        siginfo_t si{};
+        if (waitid(P_ALL, 0, &si, WEXITED | WNOHANG | WNOWAIT) != 0 || si.si_pid == 0) break;
+        pid_t pid = si.si_pid;
+        int st = 0;
         std::shared_ptr<Proc> hit;
+        bool reaped;
         {
             std::lock_guard<std::mutex> g(S.mu);
+            reaped = waitpid(pid, &st, WNOHANG) == pid;   // 照理一定收得到（剛看到它是殭屍）；收不到就先不轉圈，下次再來
             for (const auto& [n, p] : S.procs)
                 if (p->alive && p->sp.pid == pid) hit = p;
-            if (hit) {
+            if (reaped && hit) {
                 hit->alive = false;
                 hit->ended_at = iso_now();
                 if (WIFSIGNALED(st)) hit->sig = WTERMSIG(st);
                 else hit->code = WEXITSTATUS(st);
             }
         }
+        if (!reaped) break;
         if (!hit) continue;   // 被收養的孫子、幫手（含逾時時沒等它走的那種）
         std::string how = exit_text(*hit);
         log("proc " + hit->cfg.name + " exited: " + how);
@@ -389,7 +433,7 @@ std::string restart_init() {
         if (p && p->init && p->alive) return "InitAlive init " + ICFG.name + " is running";
         if (p && !p->init) return "ProcExists " + ICFG.name + " is a proc that is not init (forget it first)";
     }
-    rm_cgroup(drop_proc(ICFG.name));
+    kill_old_init_cgroup(drop_proc(ICFG.name));
     {
         std::lock_guard<std::mutex> g(S.mu);
         S.deaths.clear();
@@ -431,6 +475,38 @@ std::string clear_cgroup(const std::string& name, const std::string& cg) {
 
 // ---------- 工具檔 ctl ----------
 
+// kill 的做法（呼叫的人拿著 S.mu、p 是 alive）：有 cgroup 送給整個 cgroup，沒有送給行程組。回 "" 或 "KillFailed …"
+std::string signal_proc(const Proc& p, int sig) {
+    if (!p.sp.cgroup.empty() && W.cgfd >= 0) {
+        if (sig == SIGKILL) {
+            int fd = openat(W.cgfd, (p.sp.cgroup + "/cgroup.kill").c_str(), O_WRONLY | O_CLOEXEC);
+            bool ok = fd >= 0 && write(fd, "1", 1) == 1;
+            int e = errno;
+            if (fd >= 0) close(fd);
+            if (ok) return "";
+            log("kill " + p.cfg.name + ": cgroup.kill: " + errstr(e) + "; sending SIGKILL one by one");
+        }
+        // cgroup.procs 列的 PID 是 daemon 這一層的（daemon 自己的 PID namespace）
+        std::string procs = read_fd_at(W.cgfd, p.sp.cgroup + "/cgroup.procs");
+        bool main_hit = false;
+        for (size_t at = 0; at < procs.size();) {
+            size_t nl = procs.find('\n', at);
+            pid_t pid = static_cast<pid_t>(std::atol(procs.c_str() + at));
+            if (pid > 0) {
+                main_hit = main_hit || pid == p.sp.pid;
+                kill(pid, sig);   // 剛好走掉的不管
+            }
+            at = nl == std::string::npos ? procs.size() : nl + 1;
+        }
+        if (main_hit) return "";
+        // 夾裡沒看到它（照理不會）：至少送給它本身
+    } else if (kill(-p.sp.pid, sig) == 0) {
+        return "";
+    }
+    if (kill(p.sp.pid, sig) != 0) return "KillFailed " + errstr(errno);
+    return "";
+}
+
 std::string check_name(const pf::Command& c, size_t argc, const char* usage, int need_alive) {
     if (c.words.size() != argc) return std::string("ArgumentsBad usage: ") + usage;
     std::lock_guard<std::mutex> g(S.mu);
@@ -441,16 +517,20 @@ std::string check_name(const pf::Command& c, size_t argc, const char* usage, int
     return "";
 }
 
-// init（mount 模式）天空裡的 daemon_path 與旁邊的 cgroup 是 daemon 放的，ctl 的 mount／umount 不准動（蓋住或卸掉就斷了）
+// init 天空裡的 daemon_path 與旁邊的 cgroup 是 daemon 放的，ctl 的 mount／umount 不准動它們、底下與上層（蓋住或卸掉就斷了；
+// 例 daemon_path /run/aos 時 umount /run 或掛東西到 /run 上，/run/aos 也就不見了）
 std::string reserved_dst(const std::string& name, const std::string& dst) {
     std::lock_guard<std::mutex> g(S.mu);
     auto p = find(name);
-    if (!p || !p->init || !init_mounts(p->cfg)) return "";
+    if (!p || !p->init) return "";
     std::string dp = init_daemon_path(p->cfg), cp = init_cgroup_path(p->cfg);
     for (const std::string& t : {dp, cp}) {
         if (t == cp && W.cgfd < 0) continue;
+        std::string what = t == dp ? "directory" : "cgroup directory";
         if (dst == t || dst.rfind(t + "/", 0) == 0)
-            return "PathReserved " + t + " in init's ns is where the daemon put its " + (t == dp ? "directory" : "cgroup directory");
+            return "PathReserved " + t + " in init's ns is where the daemon put its " + what;
+        if (t.rfind(dst + "/", 0) == 0)
+            return "PathReserved " + dst + " in init's ns is above " + t + ", where the daemon put its " + what;
     }
     return "";
 }
@@ -481,14 +561,17 @@ void setup_ctl(pf::Ctl& ctl) {
             if (c.words[1][0] != '/') return "PathNotAbsolute " + c.words[1] + " (a path as seen where the daemon was started)";
             return "";
         });
+    // kill NAME SIGNAL：送給它整個 cgroup（SIGKILL 寫 cgroup.kill，其他訊號照 cgroup.procs 逐一送）；沒有 cgroup 時送給它的
+    // 行程組（每隻 setsid 過，行程組號＝它的 PID；自己 setsid 出去的孩子收不到）
     ctl.on("kill",
         [](const pf::Command& c) {
             int sig = signal_number(c.words[2]);
             std::lock_guard<std::mutex> g(S.mu);
             auto p = find(c.words[1]);
             if (!p || !p->alive) return pf::Result::failed("ProcDead " + c.words[1] + " is not running");
-            // 還沒收屍前 PID 不會被別人拿走（收屍跟這裡拿同一把鎖）
-            if (kill(p->sp.pid, sig) != 0) return pf::Result::failed("KillFailed " + errstr(errno));
+            // 拿著表的鎖：收屍也要這把鎖，所以 alive 的那隻還沒被收掉，PID（也是行程組號）不會已經讓給別人
+            std::string err = signal_proc(*p, sig);
+            if (!err.empty()) return pf::Result::failed(err);
             return pf::Result::done();
         },
         [](const pf::Command& c) -> std::string {
@@ -561,12 +644,14 @@ void setup_ctl(pf::Ctl& ctl) {
                     p = find(name);
                     if (!p || !p->alive) return "ProcDead " + name;
                 }
-                std::string e = live_mount(p->sp.pid, src, dst, rw);
+                std::string real;
+                std::string e = live_mount(p->sp.pid, src, dst, rw, real);
                 if (!e.empty()) return "MountFailed " + e;
                 std::vector<Mount> m = p->sp.mounts;
                 Mount nm{"bind", src, dst, rw};
                 nm.by = "mount";   // 跑的時候 ctl 掛的
                 nm.at = iso_now();
+                nm.real = real;
                 m.push_back(nm);
                 std::string check, nsj, ns = ns_table(p->sp.pid, m, check, nsj);
                 std::lock_guard<std::mutex> g(S.mu);
@@ -623,6 +708,14 @@ void setup_ctl(pf::Ctl& ctl) {
         });
 }
 
+// Landlock ABI 小於 6（Linux 6.12 以前）時 status 多的那一行（使用者 11-26 定：舊版照跑、風險講明）
+std::string old_linux_warning() {
+    return "Landlock ABI " + std::to_string(W.landlock_abi) +
+           " is older than 6 (Linux 6.12), which aos-daemon requires; it runs anyway, at these risks: procs with the same uid "
+           "in the sky can signal each other (uid-0 procs can kill init), abstract unix sockets are not blocked (for procs with "
+           "\"net\": \"host\"), and a daemon cannot run inside a proc";
+}
+
 std::string status_text() {
     std::string s;
     std::lock_guard<std::mutex> g(S.mu);
@@ -650,9 +743,10 @@ std::string status_text() {
     s += pf::kv_line("init_deaths_in_window", std::to_string(S.deaths.size()));
     s += pf::kv_line("init_last_exit", S.init_last_exit);
     s += pf::kv_line("landlock_abi", std::to_string(W.landlock_abi));
+    if (W.landlock_abi < 6) s += pf::kv_line("landlock_warning", old_linux_warning());
     s += pf::kv_line("cgroup", W.cgfd >= 0 ? W.cg_host : "off (" + W.cg_note + ")");
     s += pf::kv_line("subuid", W.subuid_count ? std::to_string(W.subuid_start) + " " + std::to_string(W.subuid_count) : "none");
-    s += pf::kv_line("init_access", !HAS_INIT ? "-" : init_mounts(ICFG) ? "mount " + init_daemon_path(ICFG) : "ptrace /proc/1/cwd");
+    s += pf::kv_line("init_access", !HAS_INIT ? "-" : "mount " + init_daemon_path(ICFG));
     s += pf::kv_line("procs", std::to_string(S.procs.size()));
     s += CTL->feedback();
     return s;
@@ -692,8 +786,9 @@ void cgroup_remove_later(const std::string& cg) {
     if (W.setgroups_ok) must(setgroups(0, nullptr), "setgroups");
     started_at = iso_now();
 
-    // 原本那一層（自己的 mount namespace 裡那份）：握住要的 fd
-    must(mount(nullptr, "/", nullptr, MS_REC | MS_PRIVATE, nullptr), "make mounts private");
+    // 原本那一層（自己的 mount namespace 裡那份）：握住要的 fd。傳播設成 slave：收外面（起 daemon 那一層）之後的掛、卸，
+    // 自己這邊的不往外傳（使用者 11-26 定，原本是 private＝起動那一刻的快照）。複製進天空的那份另外設成 private（spawn.cpp）
+    must(mount(nullptr, "/", nullptr, MS_REC | MS_SLAVE, nullptr), "make mounts slave");
     W.hostprocfd = open("/proc", O_PATH | O_DIRECTORY | O_CLOEXEC);
     W.rootfd = open("/", O_PATH | O_DIRECTORY | O_CLOEXEC);
     const char* cg = getenv("AOS_DAEMON_CGROUP");
@@ -734,13 +829,15 @@ void cgroup_remove_later(const std::string& cg) {
     W.orignsfd = open("/proc/self/ns/mnt", O_RDONLY | O_CLOEXEC);
     if (W.hostprocfd < 0 || W.rootfd < 0 || W.procfd < 0 || W.orignsfd < 0) fatal("open the fds kept for later");
 
-    // 小世界：另一個 mount namespace，根是一塊小 tmpfs，裡面只有 aos/（資訊與工具）與 cgroup/（開關）
+    // 小世界：另一個 mount namespace，根是一塊小 tmpfs，裡面只有 aos/（資訊與工具）與 cgroup/（開關）。
+    // 墊在 /proc 上組（daemon 本來就要 /proc 在；以前墊在 /tmp，天空裡沒有 /tmp 就起不來）：這份 mount namespace 裡蓋住
+    // /proc 不影響別人，要的 procfs 上面已經握住了
     must(unshare(CLONE_NEWNS), "unshare mount namespace");
-    must(mount("tmpfs", "/tmp", "tmpfs", MS_NOSUID | MS_NODEV | MS_NOEXEC, "mode=0755,size=64k"), "mount small world");
-    must(mkdir("/tmp/aos", 0755), "mkdir aos");
+    must(mount("tmpfs", SMALL, "tmpfs", MS_NOSUID | MS_NODEV | MS_NOEXEC, "mode=0755,size=64k"), "mount small world");
+    must(mkdir(SMALL_AOS, 0755), "mkdir aos");
     if (W.cgfd >= 0) {
-        must(mkdir("/tmp/cgroup", 0755), "mkdir cgroup");
-        must(mount(W.cg_host.c_str(), "/tmp/cgroup", nullptr, MS_BIND, nullptr), "bind cgroup");
+        must(mkdir(SMALL_CG, 0755), "mkdir cgroup");
+        must(mount(W.cg_host.c_str(), SMALL_CG, nullptr, MS_BIND, nullptr), "bind cgroup");
     }
 
     sigset_t sigs;
@@ -773,13 +870,13 @@ void cgroup_remove_later(const std::string& cg) {
         fs.add_text("__meta/__interfaces/aos/ctl/path", [] { return std::string("ctl\n"); });
         fs.add_text("__meta/__interfaces/aos/ctl/commands", [] { return std::string(COMMANDS) + "\n"; });
         fs.add_text("__meta/__interfaces/aos/jsonpath", [] { return std::string(); });
-        fs.mount("/tmp/aos");
+        fs.mount(SMALL_AOS);
     } catch (const std::exception& e) {
         fatal(std::string("mount info directory: ") + e.what());
     }
-    must(mount(nullptr, "/tmp", nullptr, MS_REMOUNT | MS_BIND | MS_RDONLY | MS_NOSUID | MS_NODEV | MS_NOEXEC, nullptr),
+    must(mount(nullptr, SMALL, nullptr, MS_REMOUNT | MS_BIND | MS_RDONLY | MS_NOSUID | MS_NODEV | MS_NOEXEC, nullptr),
          "make small world read-only");
-    must(chdir("/tmp"), "chdir small world");
+    must(chdir(SMALL), "chdir small world");
     must(static_cast<int>(syscall(SYS_pivot_root, ".", ".")), "pivot_root");
     must(umount2(".", MNT_DETACH), "detach old root");
     must(chdir("/aos"), "chdir aos");
@@ -788,6 +885,7 @@ void cgroup_remove_later(const std::string& cg) {
     if (write(1, line.data(), line.size()) < 0) {}
     log("ready: pid " + std::to_string(W.host_pid) + ", landlock ABI " + std::to_string(W.landlock_abi) +
         ", cgroup " + (W.cgfd >= 0 ? W.cg_host : "off (" + W.cg_note + ")"));
+    if (W.landlock_abi < 6) log("warning: " + old_linux_warning());
 
     if (HAS_INIT) {
         std::string err = start_proc(ICFG, true);
@@ -827,6 +925,12 @@ void cgroup_remove_later(const std::string& cg) {
                 if (RQ.empty()) break;
                 r = RQ.front();
                 RQ.pop_front();
+            }
+            {
+                std::lock_guard<std::mutex> g(r->m);
+                if (r->cancelled) continue;   // 寫的人已經拿到逾時的失敗，不做
+                r->started = true;
+                r->cv.notify_all();
             }
             std::string res = r->fn();
             std::lock_guard<std::mutex> g(r->m);

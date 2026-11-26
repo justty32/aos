@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
-# toys.py：測試時在天空裡跑的小程式（init、探路的 proc、照退出碼結束的、睡著的、時好時壞的 init、收到 SIGTERM 才收尾的 init、留下孩子的 proc、試網路的 proc、試系統呼叫（seccomp）與開 namespace、mount 的 proc、送訊號與冒名送訊號的 proc），外加一支在外面跑的：故意不回答的 FUSE（stuckfuse）。
+# toys.py：測試時在天空裡跑的小程式（init、探路的 proc、照退出碼結束的、睡著的、時好時壞的 init、收到 SIGTERM 才收尾的 init、留下孩子的 proc 與 init、帶著孩子的 proc、試網路的 proc、試系統呼叫（seccomp）與開 namespace、mount 的 proc、送訊號與冒名送訊號的 proc），外加在外面跑的：故意不回答的 FUSE（stuckfuse）、在 unshare 出來的那一層起 daemon 並在那一層掛卸 tmpfs（outer）、在沒有 /tmp 的根裡起 daemon（notmp）。
 import errno, os, signal, socket, sys, time
 
-# init 拿到的 AOS_DAEMON（mount 模式 /aos、ptrace 模式 /proc/1/cwd）；其他 proc 沒有
+# init 拿到的 AOS_DAEMON（它的 daemon_path，預設 /aos）；其他 proc 沒有（沒有時當 /proc/1/cwd，讀了會被擋）
 ROOT = os.environ.get("AOS_DAEMON", "/proc/1/cwd")
 
 
 def try_path(p):
     """讀一個路徑：夾就列、檔就讀；'kill:PID' 是試送訊號 0；'sig:PID:SIG' 是真的送訊號 SIG；'forge:PID:SIG:FAKEPID' 是用
-    rt_sigqueueinfo 送、寄件人 PID 填 FAKEPID（si_code SI_QUEUE）；'env:NAME' 是那個環境變數；'put:PATH=VALUE' 是把 VALUE 寫進 PATH。
-    回 'ok …' 或 'err ENAME'。"""
+    rt_sigqueueinfo 送、寄件人 PID 填 FAKEPID（si_code SI_QUEUE）；'env:NAME' 是那個環境變數；'put:PATH=VALUE' 是把 VALUE 寫進 PATH；
+    'statvfs:PATH' 是那個檔案系統的總大小（位元組）；'fill:PATH:N' 是寫一個 N 位元組的檔。回 'ok …' 或 'err ENAME'。"""
     try:
+        if p.startswith("statvfs:"):
+            v = os.statvfs(p[8:])
+            return "ok %d" % (v.f_blocks * v.f_frsize)
+        if p.startswith("fill:"):
+            path, n = p[5:].rsplit(":", 1)
+            with open(path, "wb") as f:
+                f.write(b"x" * int(n))
+            return "ok"
         if p.startswith("sig:"):
             pid, sig = p[4:].split(":")
             os.kill(int(pid), int(sig))
@@ -92,6 +100,60 @@ def stuckfuse(mnt, out):
             pass
         else:
             reply(unique, errno.ENOSYS)
+
+
+def pdeath_kill():
+    """Popen 的 preexec_fn：我（叫它的那支）死了，它也收到 SIGKILL。"""
+    import ctypes
+    ctypes.CDLL(None).prctl(1, 9, 0, 0, 0)   # PR_SET_PDEATHSIG, SIGKILL
+
+
+def outer(argv):
+    """在 unshare -Urm --propagation shared 裡跑（測試起它；這一層就是 daemon 的「外面」）：起 daemon（argv），把它 stdout 的第一行
+    （export）轉出來；之後一行一道從 stdin 讀：'mount DIR'＝在這一層把一塊新 tmpfs 掛到 DIR 並寫 DIR/hello；'umount DIR'＝卸掉；
+    每道回一行 ok／err。stdin 關了就對 daemon 送 SIGTERM、等它結束，以它的退出碼結束。"""
+    import subprocess
+    p = subprocess.Popen(argv, stdout=subprocess.PIPE, preexec_fn=pdeath_kill)
+    sys.stdout.write(p.stdout.readline().decode())
+    sys.stdout.flush()
+    while True:
+        cmd = sys.stdin.readline()
+        if not cmd:
+            break
+        what, _, d = cmd.strip().partition(" ")
+        if what == "mount":
+            r = subprocess.run(["mount", "-t", "tmpfs", "-o", "size=1m", "aosdtest-outer", d])
+            if r.returncode == 0:
+                put(d, "hello", "hi\n")
+        else:
+            r = subprocess.run(["umount", d])
+        print("ok" if r.returncode == 0 else "err %d" % r.returncode, flush=True)
+    p.send_signal(signal.SIGTERM)
+    sys.exit(p.wait())
+
+
+def notmp(root, binds, argv):
+    """在 unshare -Urm 裡跑：root（空夾）掛一塊 tmpfs、照 binds（"外面=裡面"，用 , 分開）rbind 進去、加 bin／lib／lib64 連結，
+    pivot_root 進去（新的根裡沒有 /tmp），再 exec argv。"""
+    ctypes, c = libc()
+    MS_BIND, MS_REC = 4096, 16384
+
+    def ok(r, what):
+        if r != 0:
+            sys.exit("notmp: %s: %s" % (what, os.strerror(ctypes.get_errno())))
+    ok(c.mount(b"aosdtest-notmp", root.encode(), b"tmpfs", 0, b"mode=0755"), "mount root")
+    for spec in binds.split(","):
+        src, dst = spec.split("=")
+        os.makedirs(root + dst, exist_ok=True)
+        ok(c.mount(src.encode(), (root + dst).encode(), None, MS_BIND | MS_REC, None), "bind " + src)
+    for name, target in (("bin", "usr/bin"), ("lib", "usr/lib"), ("lib64", "usr/lib64")):
+        os.symlink(target, os.path.join(root, name))
+    os.chdir(root)
+    c.syscall.restype = ctypes.c_long
+    ok(c.syscall(ctypes.c_long(155), b".", b"."), "pivot_root")
+    ok(c.umount2(b".", 2), "detach old root")
+    os.chdir("/")
+    os.execv(argv[0], argv)
 
 
 def write_ctl(line):
@@ -345,6 +407,36 @@ def main():
         while not os.path.exists(os.path.join(sys.argv[2], sys.argv[3] + ".orphan")) and time.monotonic() < end:
             time.sleep(0.01)
         os._exit(0)
+    elif mode == "family":   # family OUT NAME same|setsid：生一個睡著的孩子（setsid＝它自己開新的 session、離開行程組），寫 OUT/NAME.child 後睡
+        out, name = sys.argv[2], sys.argv[3]
+        if os.fork() == 0:
+            if sys.argv[4] == "setsid":
+                os.setsid()
+            put(out, name + ".child", str(os.getpid()))
+            time.sleep(1000)
+            os._exit(0)
+        time.sleep(1000)
+    elif mode == "iorphan":   # iorphan OUT：第一次起來生一個 setsid 的孩子（留在同一個 cgroup，寫 OUT/iorphan.child）後以 5 結束；之後當 init
+        out = sys.argv[2]
+        cnt = os.path.join(out, "iorphan-count")
+        k = int(open(cnt).read()) if os.path.exists(cnt) else 0
+        with open(cnt, "w") as f:
+            f.write(str(k + 1))
+        if k == 0:
+            if os.fork() == 0:
+                os.setsid()
+                put(out, "iorphan.child", str(os.getpid()))
+                time.sleep(1000)
+                os._exit(0)
+            end = time.monotonic() + 5
+            while not os.path.exists(os.path.join(out, "iorphan.child")) and time.monotonic() < end:
+                time.sleep(0.01)
+            sys.exit(5)
+        init_loop(out)
+    elif mode == "outer":   # outer DAEMON_ARGV...：在 unshare 出來的那一層跑，見 outer()
+        outer(sys.argv[2:])
+    elif mode == "notmp":   # notmp ROOT BINDS DAEMON_ARGV...：見 notmp()
+        notmp(sys.argv[2], sys.argv[3], sys.argv[4:])
     elif mode == "stuckfuse":   # stuckfuse MNT OUT：在外面跑，見 stuckfuse()
         stuckfuse(sys.argv[2], sys.argv[3])
     elif mode == "flaky":   # flaky OUT N：前 N 次起來就以 5 結束，之後當 init

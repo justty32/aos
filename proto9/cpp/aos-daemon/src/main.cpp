@@ -39,12 +39,15 @@ switches): /proc/<PID>/root shows nothing else.
 init (CONFIG, same JSON format as `start`) is the first proc the daemon starts (like PID 1 on
 Linux). It runs without a Landlock domain unless its config says "locks": {"landlock": true},
 and it must run as uid 0 in its ns (any other "uid": the daemon refuses to start, exit 2).
-By default ("daemon_access": "mount") the directory is mounted in its ns at "daemon_path"
-(default /aos; the cgroup directory, when there is one, at dirname(daemon_path)/cgroup),
-AOS_DAEMON=daemon_path, and it has no capabilities; with "daemon_access": "ptrace" it keeps
-cap_sys_ptrace and reads /proc/1/cwd. In mount mode its own ns config may not use those two
-places (exit 2). A daemon config without "init" runs the daemon with no init: nobody gets
-AOS_DAEMON, and only the outside reaches the directory through /proc/<PID>/cwd.
+The directory is mounted in its ns at "daemon_path" (default /aos; the cgroup directory, when
+there is one, at dirname(daemon_path)/cgroup), AOS_DAEMON=daemon_path, and it has no
+capabilities ("daemon_access": "ptrace" was removed: exit 2). Its own ns config may not use
+those two places (exit 2). A daemon config without "init" runs the daemon with no init: nobody
+gets AOS_DAEMON, and only the outside reaches the directory through /proc/<PID>/cwd.
+
+aos-daemon is meant for Linux 6.12 or newer (Landlock ABI 6). On older Linux it runs, and
+`status` says the risks in a landlock_warning line: procs with the same uid can signal each
+other, abstract unix sockets are not blocked, and a daemon cannot run inside a proc.
 
 Every proc's config may say "net": "none" (default: its own network namespace with only a
 loopback that is up) or "host" (the daemon's network namespace, i.e. the outside network).
@@ -73,12 +76,14 @@ Directory:
   status           daemon facts and the feedback of the last ctl command
   ctl              tools, one command per write:
                      start CONFIG_PATH            (a JSON file, path as seen where the daemon started)
-                     kill NAME SIGNAL             (no graceful stop: send TERM, wait, send KILL yourself)
+                     kill NAME SIGNAL             (to its whole cgroup, or its process group without one;
+                                                   no graceful stop: send TERM, wait, send KILL yourself)
                      mount NAME [-w] SRC DST      (bind SRC into a running proc's ns; read-only unless -w)
                      umount NAME DST
                      forget NAME                  (remove a dead proc from the table)
                      forget -k NAME               (same, but first clear what it left in its cgroup:
                                                    write cgroup.kill, wait until empty, up to 5 s)
+                     restart-init                 (start init again when it is not running)
   procs/NAME/      a real folder per proc, with the files
                      name pid state exit started_at ended_at ns ns.json ns_check uid locks config
                    and, when there is a cgroup, cgroup -> its cgroup directory

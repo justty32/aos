@@ -30,7 +30,7 @@
 - **11-26 收工（下次開大約 12-01 週二）**：
   - 決策審查答了兩題（逐字第 143、144 段）：第 1 題甲，init 多做第四件「收窄檢查」，准不准的 kernel 死或卡算不准（kernel-1126 第 1 條「改」）；第 2 題乙，資訊與開關由 init 指定、daemon 分出去（daemon職責第 51 條）。**停在第 3 題**（`aos/ctl` 宣告形狀四小項：一律子夾、`ok`／`err` 回話、init 第一版用 socket、指令集另取名），第 4～10 題還沒問。
   - **通勤用 artifact 五份**（總覽、aoslua、daemon、kernel、決策審查）：網址在 `~/.aos/scratch/commute-1126/urls.txt`，HTML 源檔在同夾 `html/`；是 tmux 開的 alt claude（`CLAUDE_CONFIG_DIR=~/.claude-alt`）發佈的，我叫不到 CrossSessionMessage，用 tmux send-keys 傳話。
-  - **背景 opus 做 daemon職責第 40～45、50 條，收工時還沒做完**：改動留在 `proto9/cpp/aos-daemon/` 工作樹（沒交）。下次開先看它有沒有寫完：清 build 跑三次、查殘留，沒寫完就照它的進度補完或重派。暫存 `~/.aos/scratch/proto9-daemon-batch3-1126/`。
+  - 背景 opus 做完 daemon職責第 40～45、50 條（XDG 連結沒做），收工前 eca-aos 清 build 只跑完一次 648／648（第二次跑到一半使用者要下班、中斷，沒有殘留行程與掛載，剩 /tmp 一個測試暫存夾、關機會清掉；子 agent 自己跑過三次全過），交件並推了；下次開再跑三次確認；它的【擬】10 條在 aos-daemon README，還沒給使用者看。
   - **中文版知識庫落後**：收工查法印出 36 頁 stale、1 頁 missing（`aos/orgs.md`），還沒派線補；下次開派一條 opus 照 knowledge-zh-md README「怎麼跟上一頁」一次補齊。
   - eca_main 來信：早上 WSL 重開清掉 /tmp/aos（mod_tome4 證據不見）；使用者說範本不用改。
   - 還欠使用者看：上一批子 agent 的【擬】8 條（也在總覽 artifact 裡）。

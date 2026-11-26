@@ -26,8 +26,6 @@ namespace d2 {
 
 namespace {
 
-// 子行程自己那份 mount namespace 裡，新的根先掛在這裡。來源在掛之前都拿好了，蓋住外面的 /tmp 也沒關係。
-const char* STAGE = "/tmp";
 // securebits：noroot、no_setuid_fixup、keep_caps_locked、no_cap_ambient_raise，全部鎖住
 const unsigned long SECBITS = 0x01 | 0x02 | 0x04 | 0x08 | 0x20 | 0x40 | 0x80;
 
@@ -98,18 +96,80 @@ int mkpoint(int root, const std::string& path, bool dir) {
     return openat2_in(root, rel_of(path), O_PATH | (dir ? O_DIRECTORY : 0));
 }
 
-int set_attr(int dfd, const char* path, unsigned flags, uint64_t set, uint64_t clr = 0) {
+int set_attr(int dfd, const char* path, unsigned flags, uint64_t set, uint64_t clr = 0, uint64_t propagation = 0) {
     mount_attr a{};
     a.attr_set = set;
     a.attr_clr = clr;
+    a.propagation = propagation;
     return mount_setattr(dfd, path, flags, &a, sizeof a);
 }
 
-// 外面的一個路徑複製成一個還沒掛上的掛載；底下有鎖住的子掛載時只能連它們一起帶（sky-1125 坑 5）
-int clone_src(const std::string& src) {
-    int fd = open_tree(AT_FDCWD, src.c_str(), OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC);
-    if (fd < 0 && errno == EINVAL) fd = open_tree(AT_FDCWD, src.c_str(), OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC | AT_RECURSIVE);
-    return fd;
+// fd 指到的真實位置（照這個行程的根看：子行程進了 daemon 握著的那一層之後，就是那一層看到的路徑）；讀不到回空
+std::string fd_path(int fd) {
+    char buf[4096];
+    ssize_t n = readlinkat(W.procfd, ("self/fd/" + std::to_string(fd)).c_str(), buf, sizeof buf - 1);
+    return n > 0 ? std::string(buf, static_cast<size_t>(n)) : std::string();
+}
+
+// 外面的一個路徑先 O_PATH 開（beneath 非空：從那個夾往下開，openat2 的 RESOLVE_BENEATH＋RESOLVE_NO_MAGICLINKS，.. 或 symlink
+// 帶出那個夾就失敗），讀出真實位置（real），再從這個 fd 複製成一個還沒掛上的掛載；底下有鎖住的子掛載時只能連它們一起帶
+// （sky-1125 坑 5）。失敗回 -1、errno 是那一步的，step 說是哪一步
+int clone_src(const std::string& src, const std::string& beneath, std::string& real, std::string& step) {
+    int fd;
+    if (beneath.empty()) {
+        fd = open(src.c_str(), O_PATH | O_CLOEXEC);
+        if (fd < 0) step = "bind source " + src;
+    } else {
+        int b = open(beneath.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+        if (b < 0) {
+            step = "bind beneath " + beneath;
+            return -1;
+        }
+        std::string rel = src == beneath ? "." : src.substr(beneath == "/" ? 1 : beneath.size() + 1);
+        open_how how{};
+        how.flags = O_PATH | O_CLOEXEC;
+        how.resolve = RESOLVE_BENEATH | RESOLVE_NO_MAGICLINKS;
+        fd = static_cast<int>(syscall(SYS_openat2, b, rel.c_str(), &how, sizeof how));
+        int e = errno;
+        close(b);
+        errno = e;
+        if (fd < 0)
+            step = "bind source " + src + " beneath " + beneath +
+                   (e == EXDEV ? " (a .. or a symlink leads out of " + beneath + ")"
+                               : e == ELOOP ? " (a /proc magic link or too many symlinks)" : "");
+    }
+    if (fd < 0) return -1;
+    real = fd_path(fd);
+    int c = open_tree(fd, "", OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC | AT_EMPTY_PATH);
+    if (c < 0 && errno == EINVAL) c = open_tree(fd, "", OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC | AT_EMPTY_PATH | AT_RECURSIVE);
+    int e = errno;
+    close(fd);
+    errno = e;
+    if (c < 0) step = "bind source " + src;
+    return c;
+}
+
+// 新開一塊檔案系統（tmpfs、proc）成還沒掛上的掛載：fsopen／fsconfig／fsmount（不經路徑）。失敗回 -1，step 說是哪一步
+int new_fs(const char* type, uint64_t attrs, const std::vector<std::pair<std::string, std::string>>& opts, std::string& step) {
+    int fs = fsopen(type, FSOPEN_CLOEXEC);
+    if (fs < 0) {
+        step = std::string("fsopen ") + type;
+        return -1;
+    }
+    int m = -1;
+    for (const auto& [k, v] : opts)
+        if (fsconfig(fs, FSCONFIG_SET_STRING, k.c_str(), v.c_str(), 0) != 0) {
+            step = std::string(type) + " option " + k + "=" + v;
+            break;
+        }
+    if (step.empty()) {
+        if (fsconfig(fs, FSCONFIG_CMD_CREATE, nullptr, nullptr, 0) != 0) step = std::string("create ") + type;
+        else if ((m = fsmount(fs, FSMOUNT_CLOEXEC, attrs)) < 0) step = std::string("fsmount ") + type;
+    }
+    int e = errno;
+    close(fs);
+    errno = e;
+    return m;
 }
 
 // overlay（唯讀，沒有 upper）：用 fsopen／fsconfig／fsmount 疊成一個還沒掛上的掛載（跟 bind 的 clone 一樣之後再 attach）。
@@ -144,22 +204,36 @@ bool is_dir_fd(int fd) {
     return fstat(fd, &st) == 0 && S_ISDIR(st.st_mode);
 }
 
+// 複製來的掛載掛進天空：nosuid、（nodev）、唯讀與否；傳播設成 private（daemon 握著的那一層是 slave、會收外面的掛卸，
+// 複製出來的那份要是不改，天空會在背後跟著外面變）
 void attach(int clone, int root, const std::string& dst, bool rw, bool nodev, const std::string& what) {
     int t = mkpoint(root, dst, is_dir_fd(clone));
     if (t < 0) die("mount point " + dst, errno);
     uint64_t set = MOUNT_ATTR_NOSUID | (nodev ? MOUNT_ATTR_NODEV : 0) | (rw ? 0 : MOUNT_ATTR_RDONLY);
-    if (set_attr(clone, "", AT_EMPTY_PATH | AT_RECURSIVE, set) != 0) die("set flags on " + what, errno);
+    if (set_attr(clone, "", AT_EMPTY_PATH | AT_RECURSIVE, set, 0, MS_PRIVATE) != 0) die("set flags on " + what, errno);
     if (move_mount(clone, "", t, "", MOVE_MOUNT_F_EMPTY_PATH | MOVE_MOUNT_T_EMPTY_PATH) != 0) die("attach " + what, errno);
     close(t);
     close(clone);
 }
 
-void mount_fs(int root, const std::string& dst, const char* type, unsigned long flags, const char* data) {
+// 新開一塊檔案系統掛到天空的 dst（掛載點用 fd，不經 /proc/self/fd 的路徑）
+void mount_fs(int root, const std::string& dst, const char* type, uint64_t attrs,
+              const std::vector<std::pair<std::string, std::string>>& opts) {
     int t = mkpoint(root, dst, true);
     if (t < 0) die("mount point " + dst, errno);
-    std::string at = "/proc/self/fd/" + std::to_string(t);
-    if (mount(type, at.c_str(), type, flags, data) != 0) die(std::string("mount ") + type + " at " + dst, errno);
+    std::string step;
+    int m = new_fs(type, attrs, opts, step);
+    if (m < 0) die(step + " at " + dst, errno);
+    if (move_mount(m, "", t, "", MOVE_MOUNT_F_EMPTY_PATH | MOVE_MOUNT_T_EMPTY_PATH) != 0)
+        die(std::string("mount ") + type + " at " + dst, errno);
+    close(m);
     close(t);
+}
+
+std::vector<std::pair<std::string, std::string>> tmpfs_opts(const char* mode, const std::string& size) {
+    std::vector<std::pair<std::string, std::string>> o{{"mode", mode}};
+    if (!size.empty()) o.emplace_back("size", size);
+    return o;
 }
 
 void set_caps(uint64_t caps) {
@@ -196,17 +270,16 @@ void loopback_up() {
     for (int s = 1; s < 32; ++s)
         if (s != SIGKILL && s != SIGSTOP) signal(s, SIG_DFL);
     setsid();
-    // init（mount 模式）：daemon 的目錄（與 cgroup 夾）只在 daemon 的小世界裡（/aos、/cgroup），趁還在這裡先複製成還沒掛上的掛載
-    bool give_aos = init && init_mounts(cfg);
+    // init：daemon 的目錄（與 cgroup 夾）只在 daemon 的小世界裡（/aos、/cgroup），趁還在這裡先複製成還沒掛上的掛載
     int aos_clone = -1, cg_clone = -1;
-    if (give_aos) {
+    if (init) {
         aos_clone = open_tree(AT_FDCWD, "/aos", OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC);
         if (aos_clone < 0) die("clone the daemon's directory", errno);
         if (W.cgfd >= 0 && (cg_clone = open_tree(AT_FDCWD, "/cgroup", OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC)) < 0)
             die("clone the cgroup directory", errno);
     }
 
-    // 1. 進原本那一層（daemon 換根之前的世界）：設定裡的路徑都照那一層解
+    // 1. 進原本那一層（daemon 換根之前的世界、daemon 握著的那一層）：設定裡的路徑都照那一層解
     if (setns(W.orignsfd, CLONE_NEWNS) != 0) die("setns", errno);
     char hp[32] = {0};
     if (readlinkat(W.hostprocfd, "self", hp, sizeof hp - 1) < 0) die("read host pid", errno);
@@ -220,41 +293,58 @@ void loopback_up() {
     int fout = out_fd(cfg.stdout_path), ferr = out_fd(cfg.stderr_path);
     if (fin < 0) die("open /dev/null", errno);
 
-    // 2. 來源先全部拿好（bind 複製成還沒掛上的掛載；overlay 照外面的路徑疊好、也是還沒掛上的掛載）
+    // 2. 來源先全部拿好（bind 複製成還沒掛上的掛載；overlay 照外面的路徑疊好、也是還沒掛上的掛載），順便量出真實位置
+    //    （ns.json 的 real），一條一行 "R<第幾個>\t<路徑>…" 先告訴 daemon（路徑照天空表的寫法跳脫，不會有 tab、換行）
     std::vector<int> clones(mounts.size(), -1);
     for (size_t i = 0; i < mounts.size(); ++i) {
-        if (mounts[i].kind == "bind" && (clones[i] = clone_src(mounts[i].src)) < 0) die("bind source " + mounts[i].src, errno);
-        if (mounts[i].kind == "overlay") {
-            std::string step;
-            if ((clones[i] = overlay_mount(mounts[i].lower, step)) < 0) die(step + " (" + mounts[i].src + ")", errno);
+        std::string step;
+        std::vector<std::string> reals;
+        if (mounts[i].kind == "bind") {
+            std::string real;
+            if ((clones[i] = clone_src(mounts[i].src, mounts[i].beneath, real, step)) < 0) die(step, errno);
+            reals.push_back(real);
+        } else if (mounts[i].kind == "overlay") {
+            for (const auto& l : mounts[i].lower) {
+                int fd = open(l.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+                if (fd < 0) die("overlay lower " + l, errno);
+                reals.push_back(fd_path(fd));
+                close(fd);
+            }
+            if ((clones[i] = overlay_mount(reals, step)) < 0) die(step + " (" + mounts[i].src + ")", errno);
         }
+        if (reals.empty()) continue;
+        std::string line = "R" + std::to_string(i);
+        for (const auto& r : reals) line += "\t" + esc(r);
+        say(report_fd, line + "\n");
     }
 
-    // 3. 自己一份 mount namespace，根從一塊新的 tmpfs 組起；net none 時順便開自己的 network namespace、打開 lo
+    // 3. 自己一份 mount namespace，根從一塊新的 tmpfs 組起；net none 時順便開自己的 network namespace、打開 lo。
+    //    根那塊 tmpfs 掛在這份的 "/" 上面（不靠外面要有哪個夾當墊腳；以前墊在 /tmp），之後 pivot_root 換過去
     if (unshare(CLONE_NEWNS) != 0) die("unshare mount namespace", errno);
     if (cfg.net == "none") {
         if (unshare(CLONE_NEWNET) != 0) die("unshare network namespace", errno);
         loopback_up();
     }
-    if (mount("tmpfs", STAGE, "tmpfs", MS_NOSUID | MS_NODEV, "mode=0755") != 0) die("mount root tmpfs", errno);
-    int root = open(STAGE, O_PATH | O_DIRECTORY | O_CLOEXEC);
-    if (root < 0) die("open root", errno);
+    std::string step;
+    int root = new_fs("tmpfs", MOUNT_ATTR_NOSUID | MOUNT_ATTR_NODEV, tmpfs_opts("0755", cfg.root_size), step);
+    if (root < 0) die(step + " (the root)", errno);
+    if (move_mount(root, "", AT_FDCWD, "/", MOVE_MOUNT_F_EMPTY_PATH) != 0) die("attach the root tmpfs", errno);
     size_t mi = 1;
     for (const auto& e : cfg.ns) {
         if (e.kind == "bind") {
             attach(clones[mi], root, e.dst, e.rw, true, e.src);
             ++mi;
         } else if (e.kind == "tmpfs") {
-            mount_fs(root, e.dst, "tmpfs", MS_NOSUID | MS_NODEV, "mode=1777");
+            mount_fs(root, e.dst, "tmpfs", MOUNT_ATTR_NOSUID | MOUNT_ATTR_NODEV, tmpfs_opts("1777", e.size));
             ++mi;
         } else if (e.kind == "proc") {
-            mount_fs(root, e.dst, "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, nullptr);
+            mount_fs(root, e.dst, "proc", MOUNT_ATTR_NOSUID | MOUNT_ATTR_NODEV | MOUNT_ATTR_NOEXEC, {});
             ++mi;
         } else if (e.kind == "overlay") {
             attach(clones[mi], root, e.dst, false, true, "overlay at " + e.dst);
             ++mi;
         } else if (e.kind == "dev") {
-            mount_fs(root, e.dst, "tmpfs", MS_NOSUID | MS_NOEXEC, "mode=0755");
+            mount_fs(root, e.dst, "tmpfs", MOUNT_ATTR_NOSUID | MOUNT_ATTR_NOEXEC, tmpfs_opts("0755", ""));
             ++mi;
             for (const char* n : DEV_NODES) {
                 attach(clones[mi], root, e.dst + "/" + n, true, false, std::string("/dev/") + n);
@@ -275,7 +365,7 @@ void loopback_up() {
             close(pfd);
         }
     }
-    if (give_aos) {
+    if (init) {
         // 天空裡的位置：daemon_path（預設 /aos）＝daemon 的目錄（可寫：ctl 要寫），旁邊的 cgroup＝cgroup 夾（procs/<名>/cgroup 的相對連結才通）
         attach(aos_clone, root, init_daemon_path(cfg), true, true, "the daemon's directory");
         if (cg_clone >= 0) attach(cg_clone, root, init_cgroup_path(cfg), true, true, "the cgroup directory");
@@ -303,21 +393,9 @@ void loopback_up() {
 
     // 7. 上鎖
     if (W.setgroups_ok && setgroups(0, nullptr) != 0) die("setgroups", errno);
-    bool ptrace = init && !give_aos;
-    if (ptrace) {
-        // ptrace 模式：init 留 CAP_SYS_PTRACE 一個——daemon 的 caps 比它多，沒有這個就讀不到 /proc/1/cwd
-        __user_cap_header_struct h{_LINUX_CAPABILITY_VERSION_3, 0};
-        __user_cap_data_struct d[2]{};
-        if (syscall(SYS_capget, &h, d) != 0) die("capget", errno);
-        d[0].inheritable |= 1u << CAP_SYS_PTRACE;
-        if (syscall(SYS_capset, &h, d) != 0) die("capset inheritable", errno);
-        if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_RAISE, CAP_SYS_PTRACE, 0, 0) != 0) die("ambient cap_sys_ptrace", errno);
-    } else if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_CLEAR_ALL, 0, 0, 0) != 0) {
-        die("clear ambient caps", errno);
-    }
+    if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_CLEAR_ALL, 0, 0, 0) != 0) die("clear ambient caps", errno);
     if (prctl(PR_SET_SECUREBITS, SECBITS, 0, 0, 0) != 0) die("securebits", errno);
     for (int c = 0; c < 64; ++c) {
-        if (ptrace && c == CAP_SYS_PTRACE) continue;
         if (prctl(PR_CAPBSET_DROP, c, 0, 0, 0) != 0) {
             if (errno == EINVAL) break;
             die("drop bounding cap " + std::to_string(c), errno);
@@ -326,7 +404,7 @@ void loopback_up() {
     uid_t u = static_cast<uid_t>(cfg.uid);
     if (setresgid(u, u, u) != 0) die("setresgid", errno);
     if (setresuid(u, u, u) != 0) die("setresuid", errno);
-    set_caps(ptrace ? 1ull << CAP_SYS_PTRACE : 0);
+    set_caps(0);
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0) die("no_new_privs", errno);
     if (!init || cfg.landlock) {
         LandlockAttr a{LANDLOCK_ACCESS_FS_MAKE_BLOCK, 0, 0};
@@ -412,16 +490,10 @@ std::vector<std::string> locks_of(const ProcConfig& cfg, bool init) {
     } else {
         l.push_back("landlock: none (init)");
     }
-    if (init && init_mounts(cfg)) {
-        l.push_back("capabilities: none (bounding set empty)");
-        l.push_back("daemon directory: " + init_daemon_path(cfg) + " in its ns (daemon_access mount)" +
+    l.push_back("capabilities: none (bounding set empty)");
+    if (init)
+        l.push_back("daemon directory: " + init_daemon_path(cfg) + " in its ns" +
                     (W.cgfd >= 0 ? ", cgroup directory at " + init_cgroup_path(cfg) : std::string()));
-    } else if (init) {
-        l.push_back("capabilities: cap_sys_ptrace only (bounding set: cap_sys_ptrace)");
-        l.push_back("daemon directory: /proc/1/cwd (daemon_access ptrace)");
-    } else {
-        l.push_back("capabilities: none (bounding set empty)");
-    }
     // Landlock ABI 6 以前擋不住訊號：uid 0 的 proc（外面的使用者本人）送得到 init 與其他 uid 0 的 proc（daemon 自己不理它送的停止訊號）
     if (!init && cfg.uid == 0 && W.landlock_abi < 6)
         l.push_back("signals: can signal init and other uid-0 procs (Landlock ABI " + std::to_string(W.landlock_abi) +
@@ -436,9 +508,10 @@ std::vector<std::string> locks_of(const ProcConfig& cfg, bool init) {
     return l;
 }
 
-// 全部預備好的子行程（跑的時候掛／卸）：進 pid 那隻的天空，fn 在裡面做事；回 "" 或錯誤
+// 全部預備好的子行程（跑的時候掛／卸）：進 pid 那隻的天空，fn 在裡面做事；回 "" 或錯誤。
+// 幫手成功時可以寫一行 "R<路徑>"（跳脫過的）回來，放進 real
 template <class F>
-std::string in_ns_helper(pid_t pid, const std::string& what, F fn) {
+std::string in_ns_helper(pid_t pid, const std::string& what, F fn, std::string* real = nullptr) {
     int st[2];
     if (pipe2(st, O_CLOEXEC) != 0) return "Internal pipe: " + errstr(errno);
     pid_t h = fork();
@@ -470,6 +543,10 @@ std::string in_ns_helper(pid_t pid, const std::string& what, F fn) {
     }
     // 幫手寫完（或沒寫）就 _exit 了；照理馬上收得到，收不到也不等
     if (!reap_within(h, 1)) log(what + " helper: pid " + std::to_string(h) + " has not exited yet; the main loop reaps it");
+    if (!msg.empty() && msg[0] == 'R') {
+        if (real) *real = unesc(msg.substr(1));
+        return "";
+    }
     return msg.empty() ? "" : msg.substr(1);
 }
 
@@ -488,8 +565,8 @@ std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
         return "UidUnavailable uid " + std::to_string(cfg.uid) + " needs a subuid range of at least that size (have " +
                std::to_string(W.subuid_count) + ")";
     out = Spawned{};
-    out.mounts = plan_mounts(cfg.ns);
-    if (init && init_mounts(cfg)) {
+    out.mounts = plan_mounts(cfg);
+    if (init) {
         std::string bad = init_ns_conflict(cfg, W.cgfd >= 0);
         if (!bad.empty()) return bad;
         Mount a{"aos", "-", init_daemon_path(cfg), true};
@@ -498,6 +575,7 @@ std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
         if (W.cgfd >= 0) {
             Mount c{"cgroup", W.cg_host, init_cgroup_path(cfg), true};
             c.by = "daemon";
+            c.real = W.cg_host;   // daemon 起動時開的 cgroup 夾（小世界裡的 cgroup/ 就是它）
             out.mounts.push_back(c);
         }
     }
@@ -528,7 +606,7 @@ std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
     if (env.empty()) env = {"PATH=/usr/local/bin:/usr/bin:/bin", "HOME=/"};
     std::erase_if(env, [](const std::string& e) { return e.rfind("AOS_DAEMON=", 0) == 0 || e.rfind("AOS_NAME=", 0) == 0; });
     // AOS_DAEMON 只給 init：其他 proc 讀不到 daemon 的目錄，給了反而誤導【擬】
-    if (init) env.push_back("AOS_DAEMON=" + (init_mounts(cfg) ? init_daemon_path(cfg) : std::string("/proc/1/cwd")));
+    if (init) env.push_back("AOS_DAEMON=" + init_daemon_path(cfg));
     env.push_back("AOS_NAME=" + cfg.name);
     std::vector<std::string> args = cfg.argv;
     std::vector<char*> argv, envp;
@@ -567,7 +645,23 @@ std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
     if (pid < 0) return fail("Internal fork: " + errstr(errno));
     std::string msg;
     bool eof;
-    if (!read_msg(st[0], 10, msg, eof)) return fail("Timeout building the ns took more than 10 s");
+    // 先是每個來源的真實位置（R 行），再是「組好了」（B 行）；全部一起算 10 秒
+    double build_end = mono_now() + 10;
+    for (;;) {
+        if (!read_msg(st[0], build_end - mono_now(), msg, eof)) return fail("Timeout building the ns took more than 10 s");
+        if (msg.empty() || msg[0] != 'R') break;
+        size_t tab = msg.find('\t');
+        size_t i = static_cast<size_t>(std::atol(msg.c_str() + 1));
+        if (tab == std::string::npos || i >= out.mounts.size()) continue;
+        std::vector<std::string> reals;
+        for (size_t at = tab; at != std::string::npos;) {
+            size_t next = msg.find('\t', at + 1);
+            reals.push_back(unesc(msg.substr(at + 1, next == std::string::npos ? std::string::npos : next - at - 1)));
+            at = next;
+        }
+        if (out.mounts[i].kind == "overlay") out.mounts[i].real_lower = reals;
+        else out.mounts[i].real = reals[0];
+    }
     if (msg.empty() || msg[0] != 'B') return fail("StartFailed " + (msg.empty() ? "child exited" : msg.substr(1)));
     out.pid = pid;
     out.host_pid = std::atol(msg.c_str() + 1);
@@ -583,10 +677,11 @@ std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
     return "";
 }
 
-std::string live_mount(pid_t pid, const std::string& src, const std::string& dst, bool rw) {
+std::string live_mount(pid_t pid, const std::string& src, const std::string& dst, bool rw, std::string& real) {
     return in_ns_helper(pid, "mount", [&](int rootfd, int nsfd) {
-        int c = clone_src(src);
-        if (c < 0) die("bind source " + src, errno);
+        std::string r, step;
+        int c = clone_src(src, "", r, step);
+        if (c < 0) die(step, errno);
         enter_ns(rootfd, nsfd);
         int root = open("/", O_PATH | O_DIRECTORY | O_CLOEXEC);
         // 掛載點不在而根是唯讀時：暫時把根改成可寫、建好再改回（sky-1125 的做法）
@@ -601,7 +696,8 @@ std::string live_mount(pid_t pid, const std::string& src, const std::string& dst
         if (t < 0) die("mount point " + dst, errno);
         close(t);
         attach(c, root, dst, rw, true, src);
-    });
+        say(report_fd, "R" + esc(r) + "\n");
+    }, &real);
 }
 
 std::string live_umount(pid_t pid, const std::string& dst) {
