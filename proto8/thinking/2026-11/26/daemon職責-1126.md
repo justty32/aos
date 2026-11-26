@@ -44,6 +44,10 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 
 5. **主 kernel 天空裡 `/aos`、`/cgroup` 兩個名字保留。**（第 77 段，照現在）`/aos` 是 daemon 的目錄（底下 `status`、`ctl`、`procs/<名字>/`）；`/cgroup` 是 cgroup 夾，跟小世界擺法一樣，`procs/<名字>/cgroup` 的相對連結在兩邊都通。主 kernel 的天空設定不能用這兩個地方。`procs/<名字>/` 裡草稿外多的 `config`（設定檔路徑）、`ns_check`（實際掛載對不對得上天空表）留著（第 78 段「可以」）。
 6. **天空表叫 `ns`。**（第 78、79 段）資訊檔 `procs/<名字>/ns`、對照檔 `ns_check`、設定檔的鍵 `"ns"`，三個一起改（原本叫 `sky`）。是 Plan 9 的意思；跟 Linux 的 `/proc/<PID>/ns/`（namespace 連結的資料夾）同名不同東西，路徑不撞。中文照舊叫「天空」。
+7. **主 kernel 選怎麼讀寫 daemon 的目錄，用設定鍵 `daemon_access`**（第 80 段，照現在）：`mount`（預設，天空裡的 `/aos`、零權限）或 `ptrace`（留 CAP_SYS_PTRACE、走 `/proc/1/cwd`）。使用者說這塊不太懂，先這樣，用起來有問題再說。
+8. **只有主 kernel 拿得到 daemon 目錄的環境變數，名字叫 `AOS_DAEMON`。**（第 81、82 段）其他 proc 不給，設定寫了也拿掉；每隻都給 `AOS_NAME`。原本叫 `AOS_ROOT`，改名跟 proto8 的 `AOS_DAEMON`（daemon 的資料夾）同一個意思，也免得看成天空的根。只動 aos-daemon2，舊 aos-daemon、aos-procfs、aos-exec 照舊。
+9. **`status` 多一行 `main_kernel_access`**（第 83 段）：`mount /aos` 或 `ptrace /proc/1/cwd`，只是資訊、給除錯看。
+10. **aos-procfs 的 `remove_tree` 不拿 ctl 與信箱**（第 84 段，照現在）：本身或底下有就整個不動、回失敗。現在 `procs/<名字>/` 沒有這兩種；以後 proc 的夾要放自己的 ctl 時，再做「先收好（停做事的線、等著的人回錯）再拿掉」。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 

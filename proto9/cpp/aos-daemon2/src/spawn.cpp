@@ -426,9 +426,9 @@ std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& ou
     // exec 要的東西 fork 之前備好
     std::vector<std::string> env = cfg.env;
     if (env.empty()) env = {"PATH=/usr/local/bin:/usr/bin:/bin", "HOME=/"};
-    std::erase_if(env, [](const std::string& e) { return e.rfind("AOS_ROOT=", 0) == 0 || e.rfind("AOS_NAME=", 0) == 0; });
-    // AOS_ROOT 只給主 kernel：其他 proc 讀不到 daemon 的目錄，給了反而誤導【擬】
-    if (main_kernel) env.push_back(std::string("AOS_ROOT=") + (kernel_mounts(cfg) ? KERNEL_AOS : "/proc/1/cwd"));
+    std::erase_if(env, [](const std::string& e) { return e.rfind("AOS_DAEMON=", 0) == 0 || e.rfind("AOS_NAME=", 0) == 0; });
+    // AOS_DAEMON 只給主 kernel：其他 proc 讀不到 daemon 的目錄，給了反而誤導【擬】
+    if (main_kernel) env.push_back(std::string("AOS_DAEMON=") + (kernel_mounts(cfg) ? KERNEL_AOS : "/proc/1/cwd"));
     env.push_back("AOS_NAME=" + cfg.name);
     std::vector<std::string> args = cfg.argv;
     std::vector<char*> argv, envp;

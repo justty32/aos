@@ -69,7 +69,7 @@ class Daemon:
         self.p = subprocess.Popen([BIN, "--kernel", kcfg, *flags], stdout=subprocess.PIPE,
                                   stderr=open(self.err_path, "w"), cwd="/")
         self.line = self._line(wait)
-        m = re.fullmatch(r"export AOS_ROOT=/proc/(\d+)/cwd", self.line or "")
+        m = re.fullmatch(r"export AOS_DAEMON=/proc/(\d+)/cwd", self.line or "")
         self.pid = int(m.group(1)) if m else None
         self.root = "/proc/%d/cwd" % self.pid if self.pid else None
         STARTED.append((self.p, self.pid))
@@ -149,7 +149,7 @@ class Daemon:
 
 
 def kernel_file(d, timeout=5.0):
-    """主 kernel 起來時寫的 kernel-<PID>.txt（第一行 $AOS_ROOT/status、root …、proc1 …）。"""
+    """主 kernel 起來時寫的 kernel-<PID>.txt（第一行 $AOS_DAEMON/status、root …、proc1 …）。"""
     kf = wait_for(lambda: [n for n in os.listdir(d.dir) if n.startswith("kernel-")], timeout)
     return wait_for(lambda: read(os.path.join(d.dir, kf[0])), timeout) if kf else ""
 
@@ -190,7 +190,7 @@ def t_basic():
     check("basic: the directory holds ctl, procs/, status (no slots/)", sorted(os.listdir(d.root)) == ["ctl", "procs", "status"],
           sorted(os.listdir(d.root)))
     kt = kernel_file(d)
-    check("basic: main kernel reads $AOS_ROOT/status, AOS_ROOT is /aos", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
+    check("basic: main kernel reads $AOS_DAEMON/status, AOS_DAEMON is /aos", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
     caps = re.search(r"CapEff:\s+(\w+)", read("/proc/%d/status" % d.hostpid("main"))).group(1)
     check("basic: main kernel has no capabilities", int(caps, 16) == 0, caps)
     check("basic: SIGTERM -> daemon exits 0", d.stop() == 0)
@@ -558,7 +558,7 @@ def t_access():
     c = caps_of(hp)
     check("access: mount mode: main kernel has zero capabilities (inh, prm, eff, bnd, amb)", not any(c.values()), c)
     kt = kernel_file(d)
-    check("access: AOS_ROOT=/aos, reads /aos/status", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
+    check("access: AOS_DAEMON=/aos, reads /aos/status", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
     check("access: ... and cannot read /proc/1/cwd (EACCES)", "\nproc1 err EACCES\n" in kt, kt)
     table = [l.split() for l in d.fact("main", "ns").splitlines()]
     cg_on = not s.get("cgroup", "off").startswith("off")
@@ -597,16 +597,16 @@ def t_access():
     a2 = d.ask("ctl forget w")
     check("access: kernel kills and forgets; /aos/procs/w is gone for it", a == "ok" and a2 == "ok" and
           d.ask("/aos/procs/w") == "err ENOENT", (a, a2))
-    # 非主 kernel 的：沒有 /aos、讀不到 /proc/1/cwd、沒有 AOS_ROOT
-    d.ctl("start " + config(d.dir, "np", ["probe", "/out", "np", "/aos", "/proc/1/cwd/status", "env:AOS_ROOT",
+    # 非主 kernel 的：沒有 /aos、讀不到 /proc/1/cwd、沒有 AOS_DAEMON
+    d.ctl("start " + config(d.dir, "np", ["probe", "/out", "np", "/aos", "/proc/1/cwd/status", "env:AOS_DAEMON",
                                            "env:AOS_NAME", "/cgroup"]))
     res = wait_for(lambda: os.path.exists(os.path.join(d.dir, "np.txt")) and read(os.path.join(d.dir, "np.txt")), 5) or ""
     got = {l.split(" ")[0]: " ".join(l.split(" ")[1:]) for l in res.strip().splitlines()}
     check("access: non-main proc has no /aos", got.get("/aos") == "err ENOENT", got)
     check("access: non-main proc has no /cgroup", got.get("/cgroup") == "err ENOENT", got)
     check("access: non-main proc cannot read /proc/1/cwd", got.get("/proc/1/cwd/status") == "err EACCES", got)
-    check("access: non-main proc gets no AOS_ROOT (but gets AOS_NAME)",
-          got.get("env:AOS_ROOT") == "err unset" and got.get("env:AOS_NAME") == "ok np", got)
+    check("access: non-main proc gets no AOS_DAEMON (but gets AOS_NAME)",
+          got.get("env:AOS_DAEMON") == "err unset" and got.get("env:AOS_NAME") == "ok np", got)
     bad = config(d.dir, "dacc", ["sleep"], daemon_access="ptrace")
     r = d.ctl("start " + bad)
     check("access: daemon_access in a non-main config -> EIO, failed ConfigBad",
@@ -624,7 +624,7 @@ def t_access():
     c = caps_of(d.hostpid("main"))
     check("access: ptrace mode: kernel keeps only cap_sys_ptrace", c["CapEff"] == 1 << 19 and c["CapBnd"] == 1 << 19, c)
     kt = kernel_file(d)
-    check("access: ptrace mode: AOS_ROOT=/proc/1/cwd and it reads it",
+    check("access: ptrace mode: AOS_DAEMON=/proc/1/cwd and it reads it",
           kt.startswith("ok pid_ns: 1") and "\nroot /proc/1/cwd\n" in kt, kt)
     check("access: ptrace mode: no /aos in its ns", d.ask("/aos") == "err ENOENT")
     a = d.ask("ctl start " + config(d.dir, "pw", ["sleep"]))

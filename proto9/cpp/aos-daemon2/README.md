@@ -34,7 +34,7 @@ make test       # tests/run.py：約 4～7 秒；只跑某幾組：python3 tests
 
 ```
 $ build/bin/aos-daemon2 --kernel /path/to/k.json &
-export AOS_ROOT=/proc/12345/cwd          # 外面（使用者）用的；主 kernel 拿到的 AOS_ROOT 是 /aos
+export AOS_DAEMON=/proc/12345/cwd          # 外面（使用者）用的；主 kernel 拿到的 AOS_DAEMON 是 /aos
 $ cat /proc/12345/cwd/status
 $ echo "start /path/to/worker.json" > /proc/12345/cwd/ctl
 $ cat /proc/12345/cwd/procs/worker/ns
@@ -110,7 +110,7 @@ daemon 不做的：自動重起（主 kernel 以外）、判卡住、准不准�
 
 - `name`：字母、數字、`_ - .`，1～64 字，不以 `.` 開頭。同名的還在表上（活的或死了沒 forget）就拒。
 - `argv[0]`：天空裡的絕對路徑。
-- `env`：不給就是 `PATH=/usr/local/bin:/usr/bin:/bin`、`HOME=/`。一律加上 `AOS_NAME=<名>`。`AOS_ROOT` 只給主 kernel（mount 模式 `/aos`、ptrace 模式 `/proc/1/cwd`）；其他 proc 讀不到 daemon 的目錄，所以不給，設定裡寫了也拿掉【擬】。
+- `env`：不給就是 `PATH=/usr/local/bin:/usr/bin:/bin`、`HOME=/`。一律加上 `AOS_NAME=<名>`。`AOS_DAEMON` 只給主 kernel（mount 模式 `/aos`、ptrace 模式 `/proc/1/cwd`）；其他 proc 讀不到 daemon 的目錄，所以不給，設定裡寫了也拿掉【擬】。
 - `ns`：根一定是一塊新的空 tmpfs（組好後改唯讀），一行一條，照順序做：`bind [-w] SRC DST`（預設唯讀；SRC 是外面的路徑）、`tmpfs DST`（mode 1777）、`proc DST`、`dev DST`（tmpfs 加 null、zero、full、random、urandom 與 fd、stdin、stdout、stderr 四個 symlink，組好後唯讀）、`symlink TARGET DST`。天空裡的 symlink 只在天空裡解（`openat2` 的 `RESOLVE_IN_ROOT`），寫成絕對路徑也不會碰到外面。
 - `uid`：0＝天空裡的 0 號（外面的使用者本人）；N＞0＝subuid 範圍的第 N 個（外面是 subuid 起點＋N−1），gid 同號。
 - `locks.cgroup`：起動前寫進那隻 cgroup 夾的檔與值（不收 `cgroup.*`）。沒有 cgroup 時給了就拒。`locks.landlock` 只能是 `true`（不能關）；`locks.seccomp` 這版不收。
@@ -168,7 +168,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 - daemon 掛好目錄、印出 export 那行後第一件事起它。它是唯一不進 Landlock 的 proc。
 - **怎麼碰 daemon 的目錄**（使用者 11-26 定，[daemon職責-1126](../../../proto8/thinking/2026-11/26/daemon職責-1126.md)「實作時定的」第 2 條；設定檔的 `daemon_access`）：
 
-| `daemon_access` | 目錄在哪 | 權限 | `AOS_ROOT` |
+| `daemon_access` | 目錄在哪 | 權限 | `AOS_DAEMON` |
 |---|---|---|---|
 | `mount`（預設） | 自己天空裡的 **`/aos`【擬】**；有 cgroup 時 cgroup 夾在 **`/cgroup`【擬】** | **一個 cap 都沒有**（bounding set 也清空），跟其他 proc 一樣 | `/aos` |
 | `ptrace`（舊的做法，「保留 A」） | `/proc/1/cwd` | 留 CAP_SYS_PTRACE 一個 | `/proc/1/cwd` |
@@ -202,7 +202,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 
 | 組 | 驗什麼 |
 |---|---|
-| `basic` | 一般使用者起得來；export 那行；daemon 在自己的 PID namespace 是 1 號（NSpid）；uid 對照表；經 `/proc/<PID>/cwd` 讀 `status`；`/proc/<PID>/root` 只有小世界、看不到 `/etc`、`/usr`；目錄裡只有 `ctl`、`procs/`、`status`（沒有 `slots/`）；主 kernel 讀得到 `$AOS_ROOT/status`、`AOS_ROOT` 是 `/aos`、caps 是 0；SIGTERM 後退出碼 0 |
+| `basic` | 一般使用者起得來；export 那行；daemon 在自己的 PID namespace 是 1 號（NSpid）；uid 對照表；經 `/proc/<PID>/cwd` 讀 `status`；`/proc/<PID>/root` 只有小世界、看不到 `/etc`、`/usr`；目錄裡只有 `ctl`、`procs/`、`status`（沒有 `slots/`）；主 kernel 讀得到 `$AOS_DAEMON/status`、`AOS_DAEMON` 是 `/aos`、caps 是 0；SIGTERM 後退出碼 0 |
 | `procs` | start／kill／forget；`start` 的寫入回來時那隻已經在表上、`alive`；`pid` 兩層對得上 NSpid；forget 活的、kill 不在的、壞訊號、不認得的字、相對路徑都寫入失敗 `EINVAL`；同名、讀不到設定、關 Landlock、exec 失敗都是寫入失敗 `EIO`＋`failed`＋原因；退出碼 7、SIGTERM 記對；uid 1001 在外面是 subuid；主 kernel 自己寫 `/aos/ctl` 起一隻（寫入回來時已經 `alive`），起不來的它拿到 `EIO` |
 | `ns` | 天空表的行數、掛載點、唯讀可寫跟 mountinfo 一樣；每個 bind 的來源跟掛載點是同一個檔（dev＋inode）；WSL 的 `/usr` 子掛載記成 `locked`；唯讀的地方寫不進去、`-w` 的寫得進去而且落在外面的夾；根裡只有設定放的東西 |
 | `landlock` | 非主 kernel 的 proc 讀不到 `/proc/1/cwd`、`/proc/1/root`、旁邊 proc 的 `/proc/<PID>/root` 與 `environ`，自己的 `/proc/self/root` 可以；能不能對 daemon 送訊號照 ABI 記（ABI 3：能）；主 kernel 讀得到旁邊 proc 的 `/proc/<PID>/root`；`locks` 檔；caps 0、no_new_privs |
@@ -211,7 +211,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 | `modes` | `--cgroup off --subuid off`：對照表只有一段、給 cgroup 上限或 uid 5 都 `EIO`＋`failed`、一般 proc 照起、`locks` 寫 groups kept |
 | `restart` | 前兩次起來就死的主 kernel 被重起兩次後活著；`--restart-limit 3` 起 4 次後 daemon 以 1 結束並說明原因；`--on-kernel-exit exit` 以主 kernel 的 4 結束、不重起；`--restart-limit 0` 第一次死就結束 |
 | `teardown` | `kill -9` daemon：底下 4 隻 1 秒內全不見、起動那一層以 137 結束；`kill -9` 起動那一層：daemon 與底下跟著走 |
-| `access` | mount 模式（預設）：`status` 寫 `main_kernel_access: mount /aos`；主 kernel 的 CapInh／Prm／Eff／Bnd／Amb 全 0；`AOS_ROOT=/aos`、讀得到 `/aos/status`、讀 `/proc/1/cwd` 是 `EACCES`；天空表有 `aos - /aos rw` 與 cgroup 那行、`ns_check` ok；mountinfo 裡 `/aos` 是 `fuse.aosproc`；`locks` 寫 caps none、目錄在 `/aos`；列 `/aos`；寫 `/aos/ctl` 的 `start` 回來時已經 `alive`、讀 `/aos/procs/w/state`；起不來的是 `EIO`、原因在 `/aos/status`；經 `/aos/procs/w/cgroup` 讀到 `pids.max`；`ctl` 卸 `/aos`、掛蓋 `/aos` 都 `EINVAL`（`PathReserved`）；`kill`、`forget` 後 `/aos/procs/w` 走不到。非主 kernel 的：沒有 `/aos`、`/cgroup`，讀不到 `/proc/1/cwd`，沒有 `AOS_ROOT`（有 `AOS_NAME`）；設定寫 `daemon_access` 是 `EIO`＋`ConfigBad`；外面的 `/proc/<PID>/cwd` 照通。ptrace 模式：`status` 寫 `ptrace /proc/1/cwd`、只留 cap_sys_ptrace、`AOS_ROOT=/proc/1/cwd` 讀得到、沒有 `/aos`、經它寫 `start` 可以。主 kernel 天空自己用 `/aos`：daemon 以 2 結束並說明 |
+| `access` | mount 模式（預設）：`status` 寫 `main_kernel_access: mount /aos`；主 kernel 的 CapInh／Prm／Eff／Bnd／Amb 全 0；`AOS_DAEMON=/aos`、讀得到 `/aos/status`、讀 `/proc/1/cwd` 是 `EACCES`；天空表有 `aos - /aos rw` 與 cgroup 那行、`ns_check` ok；mountinfo 裡 `/aos` 是 `fuse.aosproc`；`locks` 寫 caps none、目錄在 `/aos`；列 `/aos`；寫 `/aos/ctl` 的 `start` 回來時已經 `alive`、讀 `/aos/procs/w/state`；起不來的是 `EIO`、原因在 `/aos/status`；經 `/aos/procs/w/cgroup` 讀到 `pids.max`；`ctl` 卸 `/aos`、掛蓋 `/aos` 都 `EINVAL`（`PathReserved`）；`kill`、`forget` 後 `/aos/procs/w` 走不到。非主 kernel 的：沒有 `/aos`、`/cgroup`，讀不到 `/proc/1/cwd`，沒有 `AOS_DAEMON`（有 `AOS_NAME`）；設定寫 `daemon_access` 是 `EIO`＋`ConfigBad`；外面的 `/proc/<PID>/cwd` 照通。ptrace 模式：`status` 寫 `ptrace /proc/1/cwd`、只留 cap_sys_ptrace、`AOS_DAEMON=/proc/1/cwd` 讀得到、沒有 `/aos`、經它寫 `start` 可以。主 kernel 天空自己用 `/aos`：daemon 以 2 結束並說明 |
 | `dirs` | `procs/x` 是夾不是 symlink、裡面是那幾個檔；`ls procs/`；先讓核心快取那條路、開著一個檔，`forget` 回來時 `procs/x` 與底下都走不到、`ls procs/` 只剩 main、開著的檔照讀；同名再起是新的那隻；10 次 start／forget 每次都建、拿；最後 `procs/` 與 `status` 的 `procs` 對 |
 | `leftovers`（最後一定跑） | 沒有留下行程（daemon、起動那一層、天空裡的 toys.py）、systemd unit、`aos-daemon2-*` cgroup、掛載 |
 
@@ -220,9 +220,9 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 - 設定檔的格式（json 鍵、天空一行一條的字串寫法、`uid` 的意思、`locks` 的樣子）。
 - `start` 的路徑是起 daemon 那一層看到的絕對路徑（主 kernel 住在自己的天空裡，未必知道那些路徑）。
 - 天空表一行的寫法（`種類 來源 位置 ro|rw [locked]`），從 mountinfo 量、對回設定。
-- 主 kernel 天空裡放 daemon 目錄的固定位置叫 `/aos`；有 cgroup 時 cgroup 夾放 `/cgroup`（跟小世界一樣的擺法，`procs/<名>/cgroup` 的相對連結才通）。這兩個地方主 kernel 的天空設定不能用（用了 daemon 起不來），`ctl` 的 `mount`／`umount` 也不准動。
-- 選舊做法的設定鍵叫 `daemon_access`（`mount`／`ptrace`，預設 `mount`），放在主 kernel 的設定檔裡；其他 proc 的設定寫了就拒。
-- `status` 多一行 `main_kernel_access`；天空表的兩行寫成 `aos - /aos rw`、`cgroup <外面的路徑> /cgroup rw`。
+- 主 kernel 天空裡放 daemon 目錄的固定位置叫 `/aos`；有 cgroup 時 cgroup 夾放 `/cgroup`（跟小世界一樣的擺法，`procs/<名>/cgroup` 的相對連結才通）。這兩個地方主 kernel 的天空設定不能用（用了 daemon 起不來），`ctl` 的 `mount`／`umount` 也不准動。**（使用者 11-26 定：照這樣）**
+- 選舊做法的設定鍵叫 `daemon_access`（`mount`／`ptrace`，預設 `mount`），放在主 kernel 的設定檔裡；其他 proc 的設定寫了就拒。**（使用者 11-26 定：照這樣）**
+- `status` 多一行 `main_kernel_access`**（使用者 11-26 定：留著）**；天空表的兩行寫成 `aos - /aos rw`、`cgroup <外面的路徑> /cgroup rw`。
 - 小世界裡除了 `aos/` 還有 `cgroup/`（cgroup 夾的 bind）；`procs/<名>/cgroup` 是相對 symlink `../../../cgroup/p-…`，外面走 `/proc/<PID>/cwd/…`、主 kernel 走 `/aos/…` 都通。
 - 工具檔叫 `ctl`，回饋在 `status` 的 `aos_ctl_*` 四行。
 - 做的時候失敗的寫入回 `EIO`（原因只在 `aos_ctl_error`）；`kill` 的「做完」是訊號送出、不等它死；`start` 的「做完」是 exec 成功。
@@ -231,7 +231,8 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 - daemon 結束時不另給寬限，直接 `kill(-1, SIGKILL)`（要好好收是主 kernel 的事）。
 - 起動那一層被殺時 daemon 跟著走（parent-death signal）。
 - proc 的 stdout／stderr 預設跟 daemon 的 stderr（daemon 的 stdout 只印 export 那行）；stdin 是 `/dev/null`；每隻 `setsid`。
-- `AOS_ROOT` 只給主 kernel（`/aos` 或 `/proc/1/cwd`）；其他 proc 不給（讀不到 daemon 的目錄），設定裡寫了也拿掉。`AOS_NAME` 每隻都給。
+- `AOS_DAEMON` 只給主 kernel（`/aos` 或 `/proc/1/cwd`）；其他 proc 不給（讀不到 daemon 的目錄），設定裡寫了也拿掉。`AOS_NAME` 每隻都給。**（使用者 11-26 定：照這樣）**
+- 名字跟 proto8 的 `AOS_DAEMON`（daemon 的資料夾）同一個意思；使用者 11-26 定（原本叫 `AOS_ROOT`）。舊名 `AOS_ROOT` 現在沒有特殊意思：設定的 `env` 寫了就當一般環境變數照傳。
 - `forget` 時那隻的 cgroup 夾裡還有它留下的行程就拒。
 - Landlock 的規則只管「建 block 裝置」一種，用意只在進一個自己的 domain；沒有 Landlock 的核心上非主 kernel 的 proc 一律起不來。
 - subuid 最多用 65535 個（uid 0～65535）。
@@ -250,7 +251,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 ## 要使用者定的
 
 1. ~~ctl 的錯誤要不要等做完才回~~：使用者 11-26 定「要」。aos-procfs 加了「做完才回」的 ctl，這裡用上了（見上面「寫入等做完才回」）；還要看的只剩 errno 挑 `EIO` 可不可以。
-2. ~~主 kernel 留 CAP_SYS_PTRACE 可以嗎~~：使用者 11-26 選「掛進主 kernel 的天空、不給權限」，並保留舊做法。做好了（見上面「主 kernel」）；還要看的：固定位置叫 `/aos` 可不可以、cgroup 夾跟著放 `/cgroup` 可不可以、設定鍵叫 `daemon_access` 可不可以、非主 kernel 不給 `AOS_ROOT` 可不可以。
+2. ~~主 kernel 留 CAP_SYS_PTRACE 可以嗎~~：使用者 11-26 選「掛進主 kernel 的天空、不給權限」，並保留舊做法。做好了（見上面「主 kernel」）；`/aos`、`/cgroup`、`daemon_access`、非主 kernel 不給 `AOS_DAEMON`（改名自 `AOS_ROOT`）、`main_kernel_access`，使用者 11-26 都說照這樣。
 3. **ABI 3 擋不住訊號**：非主 kernel 的 proc 能對 daemon 送 SIGTERM（daemon 一收就整片收掉）。daemon 職責第 5 條已記「之後要求較新的 Linux」；這版照實記在測試與 `locks` 檔。
-4. **小世界裡放 `cgroup/`**：開關照第 7 條「直接擺進資訊」，這版是把 cgroup 夾 bind 進小世界、用相對 symlink 指過去；所以 `/proc/<PID>/root` 會看到 `aos`、`cgroup` 兩個夾。
+4. ~~小世界裡放 `cgroup/`~~：使用者 11-26 定「照現在這樣」。開關照第 7 條「直接擺進資訊」，這版是把 cgroup 夾 bind 進小世界、用相對 symlink 指過去；所以 `/proc/<PID>/root` 會看到 `aos`、`cgroup` 兩個夾。
 5. ~~資訊夾用 `slots/<i>/` 加 symlink~~：使用者 11-26 定 `procs/<名>/` 是真的夾、`forget` 就消失。aos-procfs 加了 `remove_tree`，這裡用上了（見上面「`procs/<名>/`：真的夾」）。

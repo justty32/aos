@@ -558,7 +558,7 @@ void must(int r, const std::string& what) {
     must(umount2(".", MNT_DETACH), "detach old root");
     must(chdir("/aos"), "chdir aos");
 
-    std::string line = "export AOS_ROOT=/proc/" + std::to_string(W.host_pid) + "/cwd\n";
+    std::string line = "export AOS_DAEMON=/proc/" + std::to_string(W.host_pid) + "/cwd\n";
     if (write(1, line.data(), line.size()) < 0) {}
     log("ready: pid " + std::to_string(W.host_pid) + ", landlock ABI " + std::to_string(W.landlock_abi) +
         ", cgroup " + (W.cgfd >= 0 ? W.cg_host : "off (" + W.cg_note + ")"));

@@ -792,3 +792,8 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 派一隻 sonnet 背景子 agent 在 aos-daemon2 改名（含 `src/sky.cpp`→`ns.cpp`、測試組名）。**回來後**：清 build 重跑、查殘留、交件（連同思考紀錄與逐字）。
 - 下一條【擬】：第 2 條設定鍵 `daemon_access`。剩 3～5：非主 kernel 不給 `AOS_ROOT`、`status` 的 `main_kernel_access`、`remove_tree` 不拿 ctl／信箱。
 - 改名那隻回來：我清 build 重跑 155／155、無警告、無殘留；剩下的 sky 只有指向 sky-1125 實驗的連結與註解。它多改一處：`uid` 檔第一行 `sky: N`→`ns: N`（跟 `pid` 檔一致）。交件。
+- 第 80 段：第 2 條 `daemon_access` 照現在（他說這塊不太懂，先這樣、用起來有問題再說）。下一條：第 3 條非主 kernel 不給 `AOS_ROOT`。
+- 第 81、82 段：第 3 條照現在，但 `AOS_ROOT` 改名 `AOS_DAEMON`、只動 daemon2。派 sonnet 子 agent 改。回來後驗、交件（連同逐字與思考紀錄）。下一條：第 4 條 `status` 的 `main_kernel_access`。
+- 第 83 段：第 4 條 `main_kernel_access` 留著。下一條：第 5 條 `remove_tree` 不拿 ctl／信箱。
+- 第 84 段：第 5 條 `remove_tree` 照現在。新【擬】五條看完。剩：EIO 當錯誤碼、主 kernel 要是天空裡 uid 0、daemon2 README 舊【擬】清單；之後 daemon 題目（aoslua 怎麼描、主 kernel 正式名字、網路隔離與 seccomp、sky-1125 其餘、daemon當容器第 8 輪 7～11 與第 9 輪、舊 aos-daemon 退不退）。
+- AOS_DAEMON 那隻回來：清 build 重跑 155／155、無殘留。daemon2 README 把定了的【擬】標上；HANDOFF 跟上（多 23 個沒推、背景空）。交件。

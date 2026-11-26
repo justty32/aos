@@ -39,7 +39,7 @@ struct ProcConfig {
 };
 
 // 主 kernel 怎麼碰 daemon 的目錄（設定檔的 daemon_access）：
-//   mount（預設）：daemon 的目錄掛在它天空裡的 /aos（有 cgroup 時 cgroup 夾在 /cgroup），一個 cap 都不給，AOS_ROOT=/aos
+//   mount（預設）：daemon 的目錄掛在它天空裡的 /aos（有 cgroup 時 cgroup 夾在 /cgroup），一個 cap 都不給，AOS_DAEMON=/aos
 //   ptrace：留 CAP_SYS_PTRACE、走 /proc/1/cwd（舊的做法）
 extern const char* const KERNEL_AOS;      // "/aos"
 extern const char* const KERNEL_CGROUP;   // "/cgroup"

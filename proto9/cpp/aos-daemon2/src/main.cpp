@@ -27,7 +27,7 @@ usage: aos-daemon2 --kernel CONFIG [flags]
 Starts without root: a new user namespace (you are uid 0 inside, plus your subuid range),
 a new PID namespace (the daemon is PID 1 there) and a new mount namespace. The daemon serves
 one directory and stands in it; once ready it prints
-    export AOS_ROOT=/proc/<PID>/cwd
+    export AOS_DAEMON=/proc/<PID>/cwd
 on stdout. Inside the procs it starts, the same directory is /proc/1/cwd.
 The daemon itself then lives in a small world that holds only that directory (and the cgroup
 switches): /proc/<PID>/root shows nothing else.

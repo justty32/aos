@@ -2,8 +2,8 @@
 # toys.py：測試時在天空裡跑的小程式（主 kernel、探路的 proc、照退出碼結束的、睡著的、時好時壞的 kernel）。
 import errno, os, sys, time
 
-# 主 kernel 拿到的 AOS_ROOT（mount 模式 /aos、ptrace 模式 /proc/1/cwd）；其他 proc 沒有
-ROOT = os.environ.get("AOS_ROOT", "/proc/1/cwd")
+# 主 kernel 拿到的 AOS_DAEMON（mount 模式 /aos、ptrace 模式 /proc/1/cwd）；其他 proc 沒有
+ROOT = os.environ.get("AOS_DAEMON", "/proc/1/cwd")
 
 
 def try_path(p):
@@ -43,10 +43,10 @@ def put(out, name, text):
 
 
 def kernel(out):
-    """主 kernel：記下自己讀不讀得到 $AOS_ROOT/status（第一行）、AOS_ROOT 是什麼、讀不讀得到 /proc/1/cwd；
+    """主 kernel：記下自己讀不讀得到 $AOS_DAEMON/status（第一行）、AOS_DAEMON 是什麼、讀不讀得到 /proc/1/cwd；
     之後照 out/ask-* 做（讀路徑或寫 ctl），答案寫 out/ans-*。"""
     put(out, "kernel-%d.txt" % os.getpid(), "%s\nroot %s\nproc1 %s\n" % (
-        try_path(ROOT + "/status"), os.environ.get("AOS_ROOT", "-"), try_path("/proc/1/cwd/status")))
+        try_path(ROOT + "/status"), os.environ.get("AOS_DAEMON", "-"), try_path("/proc/1/cwd/status")))
     while True:
         for n in sorted(os.listdir(out)):
             if not n.startswith("ask-"):
