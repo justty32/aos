@@ -801,3 +801,8 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 發現：daemon2 `src/main.cpp:46` 的 usage 還寫 `procs/NAME -> slots/N`（真的夾之前的舊說法），下次改 daemon2 時順手修。主 kernel 設定寫 uid≠0 時程式沒擋（起得來但碰不到 /aos），正在問使用者。
 - 第 86 段：主 kernel uid≠0 起動就拒（退出碼 2）。派 sonnet 子 agent 改＋修 usage 舊說法。回來後驗、交件。下一條【擬】：設定檔格式或天空表一行的寫法。
 - uid 那隻回來：起動時主 kernel uid≠0 就 fatal（退出碼 2，mount／ptrace 都一樣；重起不重讀設定所以不用再查）、usage 舊說法修好。我清 build 重跑 157／157、無殘留。交件（proto9/README、HANDOFF 跟上，多 24 個沒推）。正在問：設定檔格式（ns 一條一字串 vs JSON 物件）。
+- 第 87 段：設定檔格式照現在。下一條：天空表（ns 資訊檔）一行的寫法。
+- 第 88 段：改口——設定檔的 `ns` 每條改成 JSON 物件；資訊檔 `ns` 也想用 JSON。正在擬兩邊的樣子給他看（還沒派）。
+- 第 89 段：資訊 `ns`（文字一行一行）與 `ns.json`（同一張表的 JSON 陣列）共存；設定檔 `ns` 每條 JSON 物件（照第 88 段，字串不收）。派 sonnet 子 agent 改。回來後驗、交件。
+- 第 90 段：start 路徑照現在（外面的絕對路徑）；他問能不能相對路徑 → 現在是 EINVAL，正在答。
+- 第 92 段：相對路徑交給以後的外層程式。ns.json 那隻回來：我清 build 重跑 179／179、無殘留。交件（proto9/README、HANDOFF 跟上，多 25 個沒推）。下一條【擬】：proc 的 stdout／stderr 預設、daemon 結束直接 SIGKILL 等（README【擬】清單）。

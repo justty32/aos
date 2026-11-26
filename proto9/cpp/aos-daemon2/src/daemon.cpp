@@ -124,6 +124,7 @@ void make_proc_nodes(const std::shared_ptr<Proc>& proc) {
     add("started_at", [](const Proc& p) { return p.started_at + "\n"; });
     add("ended_at", [](const Proc& p) { return p.ended_at + "\n"; });
     add("ns", [](const Proc& p) { return p.sp.ns; });
+    add("ns.json", [](const Proc& p) { return p.sp.ns_json; });
     add("ns_check", [](const Proc& p) { return p.sp.ns_check + "\n"; });
     add("uid", [](const Proc& p) {
         long host = p.cfg.uid == 0 ? W.host_uid : W.subuid_start + p.cfg.uid - 1;
@@ -302,15 +303,7 @@ std::string reserved_dst(const std::string& name, const std::string& dst) {
     return "";
 }
 
-bool abs_clean(const std::string& p) {
-    if (p.empty() || p[0] != '/') return false;
-    try {
-        NsEntry e = parse_ns_line("tmpfs " + p);
-        return e.dst == p;
-    } catch (...) {
-        return false;
-    }
-}
+bool abs_clean(const std::string& p) { return abs_path_ok(p); }
 
 void setup_ctl(pf::Ctl& ctl) {
     // 做完才回：start 等 exec 成功（或失敗）、mount／umount 等做完、kill 等送出、forget 等拿掉；做的時候失敗＝寫入失敗 EIO
@@ -383,10 +376,11 @@ void setup_ctl(pf::Ctl& ctl) {
                 if (!e.empty()) return "MountFailed " + e;
                 std::vector<Mount> m = p->sp.mounts;
                 m.push_back({"bind", src, dst, rw});
-                std::string check, ns = ns_table(p->sp.pid, m, check);
+                std::string check, nsj, ns = ns_table(p->sp.pid, m, check, nsj);
                 std::lock_guard<std::mutex> g(S.mu);
                 p->sp.mounts = m;
                 p->sp.ns = ns;
+                p->sp.ns_json = nsj;
                 p->sp.ns_check = check;
                 return std::string();
             });
@@ -418,10 +412,11 @@ void setup_ctl(pf::Ctl& ctl) {
                 std::vector<Mount> m;
                 for (const auto& x : p->sp.mounts)
                     if (!(x.dst == dst || x.dst.rfind(dst + "/", 0) == 0)) m.push_back(x);
-                std::string check, ns = ns_table(p->sp.pid, m, check);
+                std::string check, nsj, ns = ns_table(p->sp.pid, m, check, nsj);
                 std::lock_guard<std::mutex> g(S.mu);
                 p->sp.mounts = m;
                 p->sp.ns = ns;
+                p->sp.ns_json = nsj;
                 p->sp.ns_check = check;
                 return std::string();
             });

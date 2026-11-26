@@ -44,10 +44,25 @@ def gone(pid):
     return st[st.rfind(")") + 2] == "Z"
 
 
+def bind(src, dst, rw=None):
+    e = {"type": "bind", "src": src, "dst": dst}
+    if rw is not None:
+        e["rw"] = rw
+    return e
+
+
+def ent(type_, dst):
+    return {"type": type_, "dst": dst}
+
+
+def symlink(target, dst):
+    return {"type": "symlink", "target": target, "dst": dst}
+
+
 def base_ns(out):
-    return ["bind /usr /usr", "bind /etc /etc", "symlink usr/bin /bin", "symlink usr/lib /lib",
-            "symlink usr/lib64 /lib64", "dev /dev", "proc /proc", "tmpfs /tmp",
-            "bind %s /toys" % TOYS, "bind -w %s /out" % out]
+    return [bind("/usr", "/usr"), bind("/etc", "/etc"), symlink("usr/bin", "/bin"), symlink("usr/lib", "/lib"),
+            symlink("usr/lib64", "/lib64"), ent("dev", "/dev"), ent("proc", "/proc"), ent("tmpfs", "/tmp"),
+            bind(TOYS, "/toys"), bind(out, "/out", True)]
 
 
 def config(d, name, toy, ns=None, **extra):
@@ -291,13 +306,16 @@ def t_ns():
     os.makedirs(src, exist_ok=True)
     with open(os.path.join(src, "f"), "w") as f:
         f.write("data")
-    ns = base_ns(d.dir) + ["bind %s /ro" % src, "bind -w %s /rw" % src, "symlink /ro/f /link", "tmpfs /scratch"]
+    spsrc = os.path.join(d.dir, "dir with space")
+    os.makedirs(spsrc, exist_ok=True)
+    ns = base_ns(d.dir) + [bind(src, "/ro"), bind(src, "/rw", True), symlink("/ro/f", "/link"), ent("tmpfs", "/scratch"),
+                           bind(spsrc, "/with space")]
     c = config(d.dir, "sk", ["write", "/out", "sk", "/ro/x", "/rw/x", "/x", "/tmp/x", "/scratch/x", "/usr/x"], ns=ns)
     r = d.ctl("start " + c)
     check("ns: start", r == (0, "done", "-"), r)
     started(d, "sk")
     hp = d.hostpid("sk")
-    table = [l.split() for l in d.fact("sk", "ns").splitlines()]
+    table = [[w.replace("\\040", " ") for w in l.split()] for l in d.fact("sk", "ns").splitlines()]
     mi = parse_mountinfo(hp)
     check("ns: one table line per mount (same count as mountinfo)", len(table) == len(mi), (len(table), len(mi)))
     check("ns: mount points and ro/rw match mountinfo",
@@ -325,8 +343,67 @@ def t_ns():
     root = os.listdir("/proc/%d/root" % hp)
     check("ns: the proc's root holds only what the config put there",
           sorted(root) == sorted(["usr", "etc", "bin", "lib", "lib64", "dev", "proc", "tmp", "toys", "out", "ro", "rw",
-                                  "link", "scratch"]), sorted(root))
+                                  "link", "scratch", "with space"]), sorted(root))
+    # ns.json：同一張表的 JSON
+    raw = d.fact("sk", "ns.json")
+    lines = raw.splitlines()
+    check("nsjson: layout is [ / one object per line with commas / ]",
+          lines[0] == "[" and lines[-1] == "]" and raw.endswith("]\n") and
+          all(l.endswith("},") for l in lines[1:-2]) and lines[-2].endswith("}"), raw[:200])
+    try:
+        js = json.loads(raw)
+    except ValueError as e:
+        js = None
+        check("nsjson: parses as JSON", False, e)
+    if js is not None:
+        check("nsjson: parses as JSON", isinstance(js, list))
+        check("nsjson: same number of entries as ns lines", len(js) == len(table), (len(js), len(table)))
+        check("nsjson: entries match ns lines (type, dst, rw, locked)",
+              [(j["type"], j["dst"], j["rw"], bool(j.get("locked"))) for j in js] ==
+              [(t[0], t[2], t[3] == "rw", t[-1] == "locked") for t in table], js)
+        check("nsjson: rw always present, locked only when true, src omitted only where text has -",
+              all(isinstance(j["rw"], bool) and j.get("locked", True) is True and ("src" not in j) == (t[1] == "-")
+                  for j, t in zip(js, table)), js)
+        sp = [j for j in js if j["dst"] == "/with space"]
+        check("nsjson: a path with a space is a plain string", len(sp) == 1 and sp[0]["src"] == spsrc and
+              "\\040" not in raw and '"dst": "/with space"' in raw, sp)
+        check("nsjson: ns text keeps the \\040 form", "/with\\040space" in d.fact("sk", "ns"), d.fact("sk", "ns"))
+        check("nsjson: ro/rw of the object-form binds (default ro, rw true writable)",
+              {j["dst"]: j["rw"] for j in js if j["dst"] in ("/ro", "/rw", "/out")} == {"/ro": False, "/rw": True, "/out": True}, js)
     d.stop()
+
+
+# ---------------------------------------------------------------- nsconf（設定的 ns 每條一個物件）
+
+def t_nsconf():
+    d = Daemon("nsconf")
+    if not check("nsconf: daemon up", d.pid, d.err()):
+        return
+    started(d, "main")
+    good = config(d.dir, "g", ["sleep"], ns=base_ns(d.dir) + [bind("/usr/bin", "/ub", False), ent("tmpfs", "/t2")])
+    r = d.ctl("start " + good)
+    check("nsconf: object entries start (rw optional)", r == (0, "done", "-") and started(d, "g"), r)
+    cases = [
+        ("string entry", base_ns(d.dir) + ["bind /usr /u2"], "object"),
+        ("unknown entry key", base_ns(d.dir) + [{"type": "tmpfs", "dst": "/z", "mode": "1777"}], "unknown key"),
+        ("missing dst", base_ns(d.dir) + [{"type": "tmpfs"}], "dst"),
+        ("missing src", base_ns(d.dir) + [{"type": "bind", "dst": "/z"}], "src"),
+        ("rw on a non-bind", base_ns(d.dir) + [{"type": "tmpfs", "dst": "/z", "rw": True}], "unknown key"),
+        ("rw not boolean", base_ns(d.dir) + [bind("/usr", "/z", "yes")], "rw"),
+        ("unknown type", base_ns(d.dir) + [{"type": "fuse", "dst": "/z"}], "unknown ns entry type"),
+        ("dst not a string", base_ns(d.dir) + [{"type": "tmpfs", "dst": 5}], "dst"),
+    ]
+    for i, (what, ns, word) in enumerate(cases):
+        r = d.ctl("start " + config(d.dir, "b%d" % i, ["sleep"], ns=ns))
+        check("nsconf: %s rejected (EIO, failed, ConfigBad, clear message)" % what,
+              r[0] == errno.EIO and r[1] == "failed" and "ConfigBad" in (r[2] or "") and word in (r[2] or ""), r)
+    check("nsconf: rejected ones left nothing in procs/", sorted(os.listdir(d.root + "/procs")) == ["g", "main"],
+          sorted(os.listdir(d.root + "/procs")))
+    d.stop()
+    d = Daemon("nsconf-kernel", kernel_extra={"ns": base_ns(os.path.join(TMP, "nsconf-kernel")) + ["tmpfs /x"]})
+    rc = d.p.wait(10)
+    check("nsconf: string entry in the --kernel file -> exit 2 with a message", rc == 2 and "ConfigBad" in d.err(),
+          (rc, d.err()[-300:]))
 
 
 # ---------------------------------------------------------------- landlock
@@ -436,6 +513,9 @@ def t_mount():
     check("mount: visible in its ns", os.path.exists("/proc/%d/root/live/hello" % hp))
     table = [l.split() for l in d.fact("m", "ns").splitlines()]
     check("mount: ns table has the new line (ro)", ["bind", src, "/live", "ro"] in table, table)
+    nj = json.loads(d.fact("m", "ns.json"))
+    check("mount: ns.json has the new mount too", {"type": "bind", "src": src, "dst": "/live", "rw": False} in nj and
+          len(nj) == len(d.fact("m", "ns").splitlines()), nj)
     check("mount: table still matches mountinfo",
           sorted((t[2], t[3] == "ro") for t in table) == sorted(parse_mountinfo(hp)))
     r = d.ctl("mount m -w %s /out/sub/live" % src)
@@ -445,6 +525,9 @@ def t_mount():
     table = [l.split() for l in d.fact("m", "ns").splitlines()]
     check("mount: umount -> gone from ns and table", r == (0, "done", "-") and
           not os.path.exists("/proc/%d/root/live/hello" % hp) and not any(t[2] == "/live" for t in table), r)
+    nj = json.loads(d.fact("m", "ns.json"))
+    check("mount: ns.json drops it after umount", not any(j["dst"] == "/live" for j in nj) and
+          len(nj) == len(d.fact("m", "ns").splitlines()), nj)
     check("mount: table matches mountinfo after umount",
           sorted((t[2], t[3] == "ro") for t in table) == sorted(parse_mountinfo(hp)))
     r = d.ctl("mount m /nonexistent /x")
@@ -632,7 +715,7 @@ def t_access():
     d.stop()
 
     # 主 kernel 的天空自己用了 /aos：daemon 起不來，說明原因
-    d = Daemon("access-clash", kernel_extra={"ns": base_ns(os.path.join(TMP, "access-clash")) + ["tmpfs /aos"]})
+    d = Daemon("access-clash", kernel_extra={"ns": base_ns(os.path.join(TMP, "access-clash")) + [ent("tmpfs", "/aos")]})
     rc = d.p.wait(10)
     check("access: kernel ns using /aos -> daemon exits 2 and says why", rc == 2 and "/aos" in d.err() and
           "daemon_access" in d.err(), (rc, d.err()[-300:]))
@@ -657,7 +740,7 @@ def t_dirs():
     d.ctl("start " + c)
     p = d.root + "/procs/x"
     check("dirs: procs/x is a real directory, not a symlink", os.path.isdir(p) and not os.path.islink(p))
-    want = {"name", "pid", "state", "exit", "started_at", "ended_at", "ns", "ns_check", "uid", "locks", "config"}
+    want = {"name", "pid", "state", "exit", "started_at", "ended_at", "ns", "ns.json", "ns_check", "uid", "locks", "config"}
     if not d.status().get("cgroup", "off").startswith("off"):
         want.add("cgroup")
     check("dirs: it holds the facts", set(os.listdir(p)) == want, sorted(os.listdir(p)))
@@ -720,7 +803,7 @@ def t_leftovers():
     check("leftovers: no mounts", not mi, mi)
 
 
-GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "landlock": t_landlock, "cgroup": t_cgroup,
+GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "nsconf": t_nsconf, "landlock": t_landlock, "cgroup": t_cgroup,
           "mount": t_mount, "modes": t_modes, "restart": t_restart, "teardown": t_teardown, "access": t_access,
           "dirs": t_dirs}
 

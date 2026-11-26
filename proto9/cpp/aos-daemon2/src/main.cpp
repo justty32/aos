@@ -48,7 +48,7 @@ Directory:
                      umount NAME DST
                      forget NAME                  (remove a dead proc from the table)
   procs/NAME/      a real folder per proc, with the files
-                     name pid state exit started_at ended_at ns ns_check uid locks config
+                     name pid state exit started_at ended_at ns ns.json ns_check uid locks config
                    and, when there is a cgroup, cgroup -> its cgroup directory
                    (cpu.max, memory.max, cgroup.freeze, ...)
 

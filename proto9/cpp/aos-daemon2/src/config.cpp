@@ -40,33 +40,61 @@ bool name_ok(const std::string& n) {
 
 }  // namespace
 
-NsEntry parse_ns_line(const std::string& line) {
-    std::istringstream in(line);
-    std::vector<std::string> w;
-    for (std::string s; in >> s;) w.push_back(s);
-    if (w.empty()) bad("empty ns line");
-    NsEntry e;
-    e.kind = w[0];
-    if (e.kind == "bind") {
-        size_t i = 1;
-        if (i < w.size() && w[i] == "-w") {
-            e.rw = true;
-            ++i;
-        }
-        if (w.size() != i + 2) bad("usage: bind [-w] SRC DST: " + line);
-        e.src = clean_path(w[i], "bind source");
-        e.dst = clean_path(w[i + 1], "bind target");
-    } else if (e.kind == "tmpfs" || e.kind == "proc" || e.kind == "dev") {
-        if (w.size() != 2) bad("usage: " + e.kind + " DST: " + line);
-        e.dst = clean_path(w[1], e.kind + " target");
-    } else if (e.kind == "symlink") {
-        if (w.size() != 3) bad("usage: symlink TARGET DST: " + line);
-        e.src = w[1];
-        e.dst = clean_path(w[2], "symlink path");
-    } else {
-        bad("unknown ns word " + e.kind + " (bind, tmpfs, proc, dev, symlink)");
+bool abs_path_ok(const std::string& p) {
+    try {
+        return clean_path(p, "path") == p;
+    } catch (...) {
+        return false;
     }
-    if (e.dst == "/") bad("the root is always a fresh tmpfs; " + e.kind + " / is not allowed");
+}
+
+// 設定的 ns 每條是一個 json 物件：{"type": "bind", "src", "dst", "rw"?}、{"type": "tmpfs"|"proc"|"dev", "dst"}、
+// {"type": "symlink", "target", "dst"}。不認得的鍵、缺的鍵、型別不對、不認得的 type 都拒。
+NsEntry parse_ns_entry(const nlohmann::json& j) {
+    if (!j.is_object()) bad("ns entry must be an object like {\"type\": \"bind\", \"src\": \"/usr\", \"dst\": \"/usr\"}, not " + j.dump());
+    auto it = j.find("type");
+    if (it == j.end()) bad("ns entry has no \"type\" (bind, tmpfs, proc, dev, symlink): " + j.dump());
+    if (!it->is_string()) bad("ns entry \"type\" must be a string: " + j.dump());
+    NsEntry e;
+    e.kind = it->get<std::string>();
+    std::vector<std::string> allowed{"type", "dst"};
+    if (e.kind == "bind") {
+        allowed.push_back("src");
+        allowed.push_back("rw");
+    } else if (e.kind == "symlink") {
+        allowed.push_back("target");
+    } else if (e.kind != "tmpfs" && e.kind != "proc" && e.kind != "dev") {
+        bad("unknown ns entry type " + e.kind + " (bind, tmpfs, proc, dev, symlink)");
+    }
+    for (const auto& [k, v] : j.items()) {
+        (void)v;
+        bool ok = false;
+        for (const auto& a : allowed) ok = ok || a == k;
+        if (!ok) bad("unknown key \"" + k + "\" in ns entry of type " + e.kind + " (allowed: " + [&] {
+            std::string l;
+            for (const auto& a : allowed) l += (l.empty() ? "" : ", ") + a;
+            return l;
+        }() + ")");
+    }
+    auto need = [&](const char* key) {
+        auto f = j.find(key);
+        if (f == j.end()) bad(std::string("ns entry of type ") + e.kind + " needs \"" + key + "\": " + j.dump());
+        if (!f->is_string()) bad(std::string("ns entry \"") + key + "\" must be a string: " + j.dump());
+        return f->get<std::string>();
+    };
+    e.dst = clean_path(need("dst"), e.kind + " dst");
+    if (e.kind == "bind") {
+        e.src = clean_path(need("src"), "bind src");
+        auto f = j.find("rw");
+        if (f != j.end()) {
+            if (!f->is_boolean()) bad("ns entry \"rw\" must be true or false: " + j.dump());
+            e.rw = f->get<bool>();
+        }
+    } else if (e.kind == "symlink") {
+        e.src = need("target");
+        if (e.src.empty()) bad("symlink \"target\" must not be empty");
+    }
+    if (e.dst == "/") bad("the root is always a fresh tmpfs; an entry with dst / is not allowed");
     return e;
 }
 
@@ -88,7 +116,7 @@ std::string kernel_ns_conflict(const ProcConfig& c, bool cgroup_on) {
     auto under = [](const std::string& p, const std::string& top) { return p == top || p.rfind(top + "/", 0) == 0; };
     for (const auto& e : c.ns) {
         if (under(e.dst, KERNEL_AOS) || (cgroup_on && under(e.dst, KERNEL_CGROUP)))
-            return "ConfigBad ns line for " + e.dst + ": " + KERNEL_AOS + (cgroup_on ? std::string(" and ") + KERNEL_CGROUP : "") +
+            return "ConfigBad ns entry for " + e.dst + ": " + KERNEL_AOS + (cgroup_on ? std::string(" and ") + KERNEL_CGROUP : "") +
                    " are where the daemon puts its directory in the main kernel's ns (or set \"daemon_access\": \"ptrace\")";
     }
     return "";
@@ -125,8 +153,8 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
         } else if (k == "cwd") {
             c.cwd = clean_path(str(v, "cwd"), "cwd");
         } else if (k == "ns") {
-            if (!v.is_array()) bad("ns must be an array of lines");
-            for (const auto& l : v) c.ns.push_back(parse_ns_line(str(l, "ns line")));
+            if (!v.is_array()) bad("ns must be an array of objects");
+            for (const auto& l : v) c.ns.push_back(parse_ns_entry(l));
         } else if (k == "uid") {
             if (!v.is_number_integer() || v.get<long long>() < 0 || v.get<long long>() > 65535)
                 bad("uid must be an integer 0..65535");

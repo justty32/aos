@@ -63,7 +63,7 @@ $ kill %1        # daemon 結束，底下整片跟著走
 |---|---|
 | `status` | daemon 的資訊：`pid_ns`（1）、`pid_host`、`started_at`、`main_kernel`、`on_kernel_exit`、`restart_limit`、`kernel_restarts`、`kernel_deaths_in_window`、`kernel_last_exit`、`landlock_abi`、`cgroup`（外面的路徑或 `off (原因)`）、`subuid`、`main_kernel_access`（`mount /aos` 或 `ptrace /proc/1/cwd`）、`procs`，加上 ctl 回饋四行 `aos_ctl_cmd`／`state`／`error`／`count` |
 | `ctl` | 工具：一次寫一行，見下 |
-| `procs/<名>/` | 一隻 proc 的資訊（真的夾：`start` 成功時建，`forget`、主 kernel 重起時連同底下整個拿掉；`ls procs/` 列出來的就是表上還在的名字），每個一個檔：`name`、`pid`（`ns: N` 是 daemon 那一層、也就是天空裡 `/proc` 看到的；`host: N` 是起 aos-daemon2 的那一層）、`state`（`alive`／`dead`）、`exit`（`-`、`code N`、`signal N SIGNAME`）、`started_at`、`ended_at`（UTC）、`ns`（天空表）、`ns_check`（`ok` 或對不上的地方）、`uid`（`ns: N`、`host: N`）、`locks`（上了哪些鎖，一行一種）、`config`（設定檔路徑）；有 cgroup 時還有 `cgroup` → 那隻的 cgroup 夾（`cpu.max`、`memory.max`、`pids.max`、`cgroup.freeze`、`cgroup.kill` 直接寫就是開關；相對連結 `../../../cgroup/p-…`，外面、主 kernel 的 `/aos` 底下都通） |
+| `procs/<名>/` | 一隻 proc 的資訊（真的夾：`start` 成功時建，`forget`、主 kernel 重起時連同底下整個拿掉；`ls procs/` 列出來的就是表上還在的名字），每個一個檔：`name`、`pid`（`ns: N` 是 daemon 那一層、也就是天空裡 `/proc` 看到的；`host: N` 是起 aos-daemon2 的那一層）、`state`（`alive`／`dead`）、`exit`（`-`、`code N`、`signal N SIGNAME`）、`started_at`、`ended_at`（UTC）、`ns`（天空表，一行一個掛載的文字）、`ns.json`（同一張表的 JSON，見下）、`ns_check`（`ok` 或對不上的地方）、`uid`（`ns: N`、`host: N`）、`locks`（上了哪些鎖，一行一種）、`config`（設定檔路徑）；有 cgroup 時還有 `cgroup` → 那隻的 cgroup 夾（`cpu.max`、`memory.max`、`pids.max`、`cgroup.freeze`、`cgroup.kill` 直接寫就是開關；相對連結 `../../../cgroup/p-…`，外面、主 kernel 的 `/aos` 底下都通） |
 
 `ns` 是 Plan 9 的意思（這隻 proc 的天空表），跟 Linux 的 `/proc/<PID>/ns/`（namespace 連結的資料夾）不是同一個東西；使用者 11-26 定名。
 
@@ -97,9 +97,18 @@ daemon 不做的：自動重起（主 kernel 以外）、判卡住、准不准�
   "argv": ["/usr/bin/python3", "/toys/toys.py", "sleep"],
   "env": {"PATH": "/usr/bin:/bin"},
   "cwd": "/",
-  "ns": ["bind /usr /usr", "bind /etc /etc", "symlink usr/bin /bin", "symlink usr/lib /lib",
-          "symlink usr/lib64 /lib64", "dev /dev", "proc /proc", "tmpfs /tmp",
-          "bind /home/me/toys /toys", "bind -w /home/me/out /out"],
+  "ns": [
+    {"type": "bind", "src": "/usr", "dst": "/usr"},
+    {"type": "bind", "src": "/etc", "dst": "/etc"},
+    {"type": "symlink", "target": "usr/bin", "dst": "/bin"},
+    {"type": "symlink", "target": "usr/lib", "dst": "/lib"},
+    {"type": "symlink", "target": "usr/lib64", "dst": "/lib64"},
+    {"type": "dev", "dst": "/dev"},
+    {"type": "proc", "dst": "/proc"},
+    {"type": "tmpfs", "dst": "/tmp"},
+    {"type": "bind", "src": "/home/me/toys", "dst": "/toys"},
+    {"type": "bind", "src": "/home/me/out", "dst": "/out", "rw": true}
+  ],
   "uid": 0,
   "locks": {"cgroup": {"memory.max": "64M", "pids.max": "50"}},
   "stdout": "/home/me/out/worker.log"
@@ -111,7 +120,7 @@ daemon 不做的：自動重起（主 kernel 以外）、判卡住、准不准�
 - `name`：字母、數字、`_ - .`，1～64 字，不以 `.` 開頭。同名的還在表上（活的或死了沒 forget）就拒。
 - `argv[0]`：天空裡的絕對路徑。
 - `env`：不給就是 `PATH=/usr/local/bin:/usr/bin:/bin`、`HOME=/`。一律加上 `AOS_NAME=<名>`。`AOS_DAEMON` 只給主 kernel（mount 模式 `/aos`、ptrace 模式 `/proc/1/cwd`）；其他 proc 讀不到 daemon 的目錄，所以不給，設定裡寫了也拿掉【擬】。
-- `ns`：根一定是一塊新的空 tmpfs（組好後改唯讀），一行一條，照順序做：`bind [-w] SRC DST`（預設唯讀；SRC 是外面的路徑）、`tmpfs DST`（mode 1777）、`proc DST`、`dev DST`（tmpfs 加 null、zero、full、random、urandom 與 fd、stdin、stdout、stderr 四個 symlink，組好後唯讀）、`symlink TARGET DST`。天空裡的 symlink 只在天空裡解（`openat2` 的 `RESOLVE_IN_ROOT`），寫成絕對路徑也不會碰到外面。
+- `ns`：根一定是一塊新的空 tmpfs（組好後改唯讀），每條一個 JSON 物件（**使用者 11-26 定**；不再收字串，字串當設定錯拒），照順序做：`{"type": "bind", "src": SRC, "dst": DST}`（預設唯讀，加 `"rw": true` 才可寫；`rw` 可不寫、只有 bind 收、要是布林；SRC 是外面的路徑）、`{"type": "tmpfs", "dst": DST}`（mode 1777）、`{"type": "proc", "dst": DST}`、`{"type": "dev", "dst": DST}`（tmpfs 加 null、zero、full、random、urandom 與 fd、stdin、stdout、stderr 四個 symlink，組好後唯讀）、`{"type": "symlink", "target": TARGET, "dst": DST}`。不認得的鍵、缺的鍵、型別不對、不認得的 `type` 都拒（`ConfigBad`，說明哪一條哪裡錯；`start` 是 `EIO`、`--kernel` 的檔是退出碼 2）。天空裡的 symlink 只在天空裡解（`openat2` 的 `RESOLVE_IN_ROOT`），寫成絕對路徑也不會碰到外面。
 - `uid`：0＝天空裡的 0 號（外面的使用者本人）；N＞0＝subuid 範圍的第 N 個（外面是 subuid 起點＋N−1），gid 同號。
 - `locks.cgroup`：起動前寫進那隻 cgroup 夾的檔與值（不收 `cgroup.*`）。沒有 cgroup 時給了就拒。`locks.landlock` 只能是 `true`（不能關）；`locks.seccomp` 這版不收。
 - `stdout`、`stderr`：外面的路徑（附加寫）；不給就跟 daemon 的 stderr。stdin 一律 `/dev/null`。
@@ -132,6 +141,19 @@ bind /home/me/out /out rw
 ```
 
 表是在 proc 組好天空、exec 之前從它的 `mountinfo` 量出來的（跑的時候掛、卸之後重量一次），每行對回設定標上來源，所以跟 mountinfo 一行對一行。`locked`＝設定沒寫、是 bind 來源底下外面那層掛的、被迫一起帶進來的（公司 WSL 的 `/usr` 底下有三個）。量的跟設定對不上（少了、多了、唯讀可寫不同）就寫在 `ns_check`。路徑裡的空白、tab、換行、反斜線照 mountinfo 寫成 `\040` 這種八進位。symlink 不是掛載，不在表上。
+
+同一張表另有 JSON 版 `procs/<名>/ns.json`（使用者 11-26 定：設定檔的 `ns` 每條一個 JSON 物件；資訊有 `ns`（一行一行的文字）與 `ns.json`（同一張表的 JSON）共存）。兩個檔是同一次量的、掛／卸之後一起換，永遠是同一張表；`ns_check` 還是文字。格式：`[` 單獨一行、每個物件一行（除了最後一個，行尾有逗號）、`]` 單獨一行、結尾有換行；鍵跟設定的一條一樣（`type`、`src`、`dst`、`rw`），`rw` 一定有，`locked: true` 只有 locked 的才有，文字行上是 `-` 的 `src` 不寫；路徑是一般 JSON 字串（不寫 `\040`，mountinfo 的八進位跳脫會解開）。例：
+
+```
+[
+{"type": "tmpfs", "dst": "/", "rw": false},
+{"type": "bind", "src": "/usr", "dst": "/usr", "rw": false},
+{"type": "bind", "src": "/usr/lib/wsl/lib", "dst": "/usr/lib/wsl/lib", "rw": false, "locked": true},
+{"type": "proc", "dst": "/proc", "rw": true}
+]
+```
+
+主 kernel 的 `/aos`、`/cgroup` 兩條在 `ns.json` 也一樣有（`{"type": "aos", "dst": "/aos", "rw": true}`、`{"type": "cgroup", "src": "…", "dst": "/cgroup", "rw": true}`）。
 
 ## 做法
 
@@ -198,13 +220,14 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 
 ## 測試
 
-`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**157 PASS、0 FAIL**（11-26 主 kernel 改走 `/aos`、`procs/<名>/` 改成真的夾後 155；再加主 kernel uid 不是 0 要拒的 2 條），約 6～10 秒，清 build 跑一次加連跑 3 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
+`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**179 PASS、0 FAIL**（11-26 設定檔 `ns` 改物件、加 `ns.json` 與 `nsconf` 組共＋22 條；在那之前 157：主 kernel 改走 `/aos`、`procs/<名>/` 改成真的夾後 155；再加主 kernel uid 不是 0 要拒的 2 條），約 6～10 秒，清 build 跑一次加連跑 3 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
 
 | 組 | 驗什麼 |
 |---|---|
 | `basic` | 一般使用者起得來；export 那行；daemon 在自己的 PID namespace 是 1 號（NSpid）；uid 對照表；經 `/proc/<PID>/cwd` 讀 `status`；`/proc/<PID>/root` 只有小世界、看不到 `/etc`、`/usr`；目錄裡只有 `ctl`、`procs/`、`status`（沒有 `slots/`）；主 kernel 讀得到 `$AOS_DAEMON/status`、`AOS_DAEMON` 是 `/aos`、caps 是 0；SIGTERM 後退出碼 0 |
 | `procs` | start／kill／forget；`start` 的寫入回來時那隻已經在表上、`alive`；`pid` 兩層對得上 NSpid；forget 活的、kill 不在的、壞訊號、不認得的字、相對路徑都寫入失敗 `EINVAL`；同名、讀不到設定、關 Landlock、exec 失敗都是寫入失敗 `EIO`＋`failed`＋原因；退出碼 7、SIGTERM 記對；uid 1001 在外面是 subuid；主 kernel 自己寫 `/aos/ctl` 起一隻（寫入回來時已經 `alive`），起不來的它拿到 `EIO` |
-| `ns` | 天空表的行數、掛載點、唯讀可寫跟 mountinfo 一樣；每個 bind 的來源跟掛載點是同一個檔（dev＋inode）；WSL 的 `/usr` 子掛載記成 `locked`；唯讀的地方寫不進去、`-w` 的寫得進去而且落在外面的夾；根裡只有設定放的東西 |
+| `nsconf` | 設定的 `ns` 物件寫法能起（`rw` 可不寫）；字串條目、不認得的鍵、缺 `dst`／`src`、`rw` 不是布林或用在非 bind、不認得的 `type`、`dst` 不是字串都是 `EIO`＋`ConfigBad` 且不留 `procs/` 的夾；`--kernel` 的檔寫字串條目退出碼 2 |
+| `ns` | `ns.json` 是 JSON、版面（`[`、一行一物件、`]`）、條數與 `ns` 行數一樣、type／dst／rw／locked 對得上、`rw` 一定有、含空白的路徑是一般字串（文字檔仍是 `\040`）、掛／卸之後 `ns.json` 跟著換；天空表的行數、掛載點、唯讀可寫跟 mountinfo 一樣；每個 bind 的來源跟掛載點是同一個檔（dev＋inode）；WSL 的 `/usr` 子掛載記成 `locked`；唯讀的地方寫不進去、`-w` 的寫得進去而且落在外面的夾；根裡只有設定放的東西 |
 | `landlock` | 非主 kernel 的 proc 讀不到 `/proc/1/cwd`、`/proc/1/root`、旁邊 proc 的 `/proc/<PID>/root` 與 `environ`，自己的 `/proc/self/root` 可以；能不能對 daemon 送訊號照 ABI 記（ABI 3：能）；主 kernel 讀得到旁邊 proc 的 `/proc/<PID>/root`；`locks` 檔；caps 0、no_new_privs |
 | `cgroup` | `procs/<名>/cgroup` 可用、行程在裡面、`memory.max`／`pids.max` 照設定、`cgroup.freeze` 凍住再解凍、forget 刪掉夾、不認得的上限檔 `EIO`＋`failed`、daemon 結束後 scope 不見 |
 | `mount` | 跑的時候掛進去、看得到、表多一行且仍跟 mountinfo 一樣；`-w`；卸掉後不見、表也拿掉；來源不在、卸沒掛的地方都是 `EIO`＋`failed`；相對路徑寫入失敗 `EINVAL` |
@@ -217,7 +240,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 
 ## 【擬】（不清楚時選保守的，之後可改）
 
-- 設定檔的格式（json 鍵、天空一行一條的字串寫法、`uid` 的意思、`locks` 的樣子）。
+- 設定檔的格式（json 鍵、天空每條一個 JSON 物件的寫法、`uid` 的意思、`locks` 的樣子）。
 - `start` 的路徑是起 daemon 那一層看到的絕對路徑（主 kernel 住在自己的天空裡，未必知道那些路徑）。
 - 天空表一行的寫法（`種類 來源 位置 ro|rw [locked]`），從 mountinfo 量、對回設定。
 - 主 kernel 天空裡放 daemon 目錄的固定位置叫 `/aos`；有 cgroup 時 cgroup 夾放 `/cgroup`（跟小世界一樣的擺法，`procs/<名>/cgroup` 的相對連結才通）。這兩個地方主 kernel 的天空設定不能用（用了 daemon 起不來），`ctl` 的 `mount`／`umount` 也不准動。**（使用者 11-26 定：照這樣）**

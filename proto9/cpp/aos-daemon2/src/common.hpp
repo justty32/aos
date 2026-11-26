@@ -8,7 +8,7 @@
 
 namespace d2 {
 
-// 天空設定的一行（字串寫法見 README）：bind [-w] SRC DST、tmpfs DST、proc DST、dev DST、symlink TARGET DST。
+// 天空設定的一條（json 物件寫法見 README）：bind（src、dst、rw）、tmpfs／proc／dev（dst）、symlink（target、dst）。
 struct NsEntry {
     std::string kind;   // bind tmpfs proc dev symlink
     std::string src;    // bind：外面（daemon 起動前那一層）的絕對路徑；symlink：連結的目標
@@ -46,7 +46,7 @@ extern const char* const KERNEL_CGROUP;   // "/cgroup"
 inline bool kernel_mounts(const ProcConfig& c) { return c.daemon_access != "ptrace"; }
 
 ProcConfig parse_config(const std::string& text, const std::string& path);   // 錯了丟 std::runtime_error("ConfigBad …")
-NsEntry parse_ns_line(const std::string& line);
+bool abs_path_ok(const std::string& p);   // 絕對、乾淨（沒有 . .. 空段、尾巴 /）的路徑
 std::vector<Mount> plan_mounts(const std::vector<NsEntry>& ns);
 // 主 kernel（mount 模式）的天空不能自己用 /aos、/cgroup：用了回 "ConfigBad …"，沒有回 ""
 std::string kernel_ns_conflict(const ProcConfig& c, bool cgroup_on);
@@ -87,7 +87,8 @@ struct Spawned {
     pid_t pid = 0;                 // daemon 那一層的 PID
     long host_pid = 0;             // 起動那一層的 PID
     std::vector<Mount> mounts;
-    std::string ns;               // 天空表（從 mountinfo 量的）
+    std::string ns;               // 天空表（從 mountinfo 量的），一行一個掛載的文字
+    std::string ns_json;          // 同一張表的 JSON 陣列（一行一個物件），跟 ns 一起量、一起換
     std::string ns_check;         // "ok" 或哪裡對不上
     std::vector<std::string> locks;
     std::string cgroup;            // cgroup 夾名（在 W.cgfd 底下），空＝沒有
@@ -97,7 +98,7 @@ std::string live_mount(pid_t pid, const std::string& src, const std::string& dst
 std::string live_umount(pid_t pid, const std::string& dst);
 
 // ns.cpp
-std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& check);
+std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& check, std::string& json);
 std::string esc(const std::string& s);
 
 // util.cpp

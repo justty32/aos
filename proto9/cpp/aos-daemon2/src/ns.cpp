@@ -1,6 +1,8 @@
 // ns.cpp：天空表——讀一隻 proc 的 /proc/<PID>/mountinfo，一個掛載一行，對回預定的掛載表標上來源。
 #include "common.hpp"
 
+#include "nlohmann/json.hpp"
+
 #include <sstream>
 
 namespace d2 {
@@ -65,7 +67,16 @@ std::string esc(const std::string& s) {
 
 // 一行：種類 來源 天空裡的位置 ro|rw [locked]
 //   locked＝不是設定寫的，是 bind 來源底下外面那層掛的、被迫一起帶進來（卸不掉）的掛載
-std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& check) {
+//   json＝同一張表的 JSON 陣列：一行一個物件，鍵 type、src（文字行是 - 就不寫）、dst、rw（一定有）、locked（只有 locked 的才有）
+std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& check, std::string& json) {
+    std::string jrows;
+    auto jstr = [](const std::string& v) {
+        return nlohmann::json(v).dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
+    };
+    auto jrow = [&](const std::string& kind, const std::string& src, const std::string& dst, bool rw, bool locked) {
+        jrows += std::string(jrows.empty() ? "" : ",\n") + "{\"type\": " + jstr(kind) + (src == "-" ? "" : ", \"src\": " + jstr(src)) +
+                 ", \"dst\": " + jstr(dst) + ", \"rw\": " + (rw ? "true" : "false") + (locked ? ", \"locked\": true" : "") + "}";
+    };
     auto mi = mountinfo(pid);
     std::vector<bool> used(planned.size(), false);
     std::string out, problems;
@@ -82,6 +93,7 @@ std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& 
             used[hit] = true;
             const Mount& p = planned[hit];
             out += p.kind + " " + esc(p.src) + " " + esc(m.point) + " " + rw + "\n";
+            jrow(p.kind, p.src, m.point, !m.ro, false);
             if (p.rw == m.ro) problems += m.point + " is " + rw + " but the config says " + (p.rw ? "rw" : "ro") + "; ";
             continue;
         }
@@ -94,8 +106,10 @@ std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& 
         if (anc >= 0) {
             const Mount& p = planned[anc];
             out += "bind " + esc(p.src + m.point.substr(p.dst.size())) + " " + esc(m.point) + " " + rw + " locked\n";
+            jrow("bind", p.src + m.point.substr(p.dst.size()), m.point, !m.ro, true);
         } else {
             out += "unknown " + esc(m.fstype) + " " + esc(m.point) + " " + rw + "\n";
+            jrow("unknown", m.fstype, m.point, !m.ro, false);
             problems += "unexpected mount at " + m.point + "; ";
         }
     }
@@ -103,6 +117,7 @@ std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& 
         if (!used[i]) problems += "missing " + planned[i].kind + " at " + planned[i].dst + "; ";
     if (!problems.empty() && problems.size() >= 2) problems.resize(problems.size() - 2);
     check = problems.empty() ? "ok" : problems;
+    json = "[\n" + jrows + (jrows.empty() ? "" : "\n") + "]\n";
     return out;
 }
 

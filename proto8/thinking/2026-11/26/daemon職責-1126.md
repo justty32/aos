@@ -50,6 +50,9 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 10. **aos-procfs 的 `remove_tree` 不拿 ctl 與信箱**（第 84 段，照現在）：本身或底下有就整個不動、回失敗。現在 `procs/<名字>/` 沒有這兩種；以後 proc 的夾要放自己的 ctl 時，再做「先收好（停做事的線、等著的人回錯）再拿掉」。
 11. **`ctl` 做下去才失敗一律回 `EIO`**（第 85 段）：原因在 `status` 的 `aos_ctl_error`；寫錯的照舊 `EINVAL`。不依原因挑不同號碼。
 12. **主 kernel 在天空裡一定要是 uid 0，設定寫了別的 daemon 起動就拒**（第 86 段）：退出碼 2，跟 `/aos` 撞名一樣。uid 0＝外面的使用者本人、跟 daemon 同帳號；`ctl` 只有擁有者能寫、daemon 的目錄只放同帳號進來，其他 proc 用 subuid 的帳號，光這條就進不去。
+13. **`start` 吃的設定檔照 aos-daemon2 現在的寫法，但 `ns` 每條改成一個 JSON 物件**（第 87、88 段）：一隻 proc 一個 JSON（`name`、`argv`、`env`、`cwd`、`ns`、`uid`、`locks`、`stdout`／`stderr`，不認得的鍵拒）；`ns` 照順序做，每條像 `{"type": "bind", "src": "/usr", "dst": "/usr"}`、`"rw": true` 才可寫，另有 `tmpfs`、`proc`、`dev`、`symlink`（`target`）。第 87 段先說字串照現在，第 88 段改口物件。
+14. **天空表的資訊 `ns` 與 `ns.json` 共存**（第 88、89 段）：`ns` 照舊一個掛載一行文字（`種類 來源 位置 ro|rw [locked]`）；`ns.json` 是同一張表的 JSON 陣列、一個掛載一行，鍵跟設定檔一樣（`rw` 一定寫、被迫帶進來的多 `"locked": true`）。兩個檔一起量、一起更新；`ns_check` 照舊文字。
+15. **`start` 的路徑只收外面（起 daemon 那一層）看到的絕對路徑**（第 90～92 段）：主 kernel 自己 bind 一個外面的夾、換成外面的路徑。相對路徑寫入當場 `EINVAL`：daemon 不知道「相對於哪裡」——外面寫的人的 PID 它看到 0、小世界裡也沒有 `/proc`。相對路徑交給**以後的外層程式**（第 6 條說的可執行檔）用呼叫者的身分與 CWD 換成絕對路徑再寫 `ctl`；手動就寫 `$PWD/…`。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 

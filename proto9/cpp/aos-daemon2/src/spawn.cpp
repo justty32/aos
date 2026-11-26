@@ -470,7 +470,7 @@ std::string spawn(const ProcConfig& cfg, bool main_kernel, long seq, Spawned& ou
     if (msg.empty() || msg[0] != 'B') return fail("StartFailed " + (msg.empty() ? "child exited" : msg.substr(1)));
     out.pid = pid;
     out.host_pid = std::atol(msg.c_str() + 1);
-    out.ns = ns_table(pid, out.mounts, out.ns_check);
+    out.ns = ns_table(pid, out.mounts, out.ns_check, out.ns_json);
     if (write(go[1], "G", 1) != 1) return fail("StartFailed child went away");
     close(go[1]);
     go[1] = -1;
