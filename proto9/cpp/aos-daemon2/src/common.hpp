@@ -33,7 +33,7 @@ struct ProcConfig {
     std::vector<NsEntry> ns;
     int uid = 0;                       // 0＝天空裡的 0 號（外面的使用者本人）；N＞0＝subuid 範圍裡第 N 個
     std::vector<std::pair<std::string, std::string>> cgroup;   // cgroup 檔名 → 值（起動前寫進那隻的 cgroup）
-    std::string stdout_path, stderr_path;   // 外面的路徑；空＝跟 daemon 的 stderr
+    std::string stdout_path, stderr_path;   // 外面的路徑；空＝/dev/null
     std::string path;                  // 從哪個檔讀來的
     std::string daemon_access;         // 只有主 kernel 的設定收："mount"（不寫＝這個）或 "ptrace"；其他 proc 寫了就拒
 };

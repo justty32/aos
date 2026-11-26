@@ -168,8 +168,9 @@ struct LandlockAttr {
     if (readlinkat(W.hostprocfd, "self", hp, sizeof hp - 1) < 0) die("read host pid", errno);
     int fin = open("/dev/null", O_RDONLY | O_CLOEXEC);
     auto out_fd = [](const std::string& p) {
-        int fd = p.empty() ? fcntl(2, F_DUPFD_CLOEXEC, 3) : open(p.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
-        if (fd < 0) die("open " + (p.empty() ? std::string("stderr") : p), errno);
+        // 沒設＝/dev/null（使用者 11-26 定；不再跟 daemon 的 stderr）
+        int fd = p.empty() ? open("/dev/null", O_WRONLY | O_CLOEXEC) : open(p.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
+        if (fd < 0) die("open " + (p.empty() ? std::string("/dev/null") : p), errno);
         return fd;
     };
     int fout = out_fd(cfg.stdout_path), ferr = out_fd(cfg.stderr_path);

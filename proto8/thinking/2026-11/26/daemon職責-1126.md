@@ -53,6 +53,10 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 13. **`start` 吃的設定檔照 aos-daemon2 現在的寫法，但 `ns` 每條改成一個 JSON 物件**（第 87、88 段）：一隻 proc 一個 JSON（`name`、`argv`、`env`、`cwd`、`ns`、`uid`、`locks`、`stdout`／`stderr`，不認得的鍵拒）；`ns` 照順序做，每條像 `{"type": "bind", "src": "/usr", "dst": "/usr"}`、`"rw": true` 才可寫，另有 `tmpfs`、`proc`、`dev`、`symlink`（`target`）。第 87 段先說字串照現在，第 88 段改口物件。
 14. **天空表的資訊 `ns` 與 `ns.json` 共存**（第 88、89 段）：`ns` 照舊一個掛載一行文字（`種類 來源 位置 ro|rw [locked]`）；`ns.json` 是同一張表的 JSON 陣列、一個掛載一行，鍵跟設定檔一樣（`rw` 一定寫、被迫帶進來的多 `"locked": true`）。兩個檔一起量、一起更新；`ns_check` 照舊文字。
 15. **`start` 的路徑只收外面（起 daemon 那一層）看到的絕對路徑**（第 90～92 段）：主 kernel 自己 bind 一個外面的夾、換成外面的路徑。相對路徑寫入當場 `EINVAL`：daemon 不知道「相對於哪裡」——外面寫的人的 PID 它看到 0、小世界裡也沒有 `/proc`。相對路徑交給**以後的外層程式**（第 6 條說的可執行檔）用呼叫者的身分與 CWD 換成絕對路徑再寫 `ctl`；手動就寫 `$PWD/…`。
+16. **設定檔沒寫 `stdout`／`stderr` 就去 `/dev/null`**（第 93 段）：不再跟 daemon 的 stderr；主 kernel 也一樣。要留輸出就在設定檔寫路徑（daemon 不收 log）。stdin 照舊 `/dev/null`、每隻 `setsid`。
+17. **daemon 結束怎麼收、起動那一層死了 daemon 走不走，都做成起動參數**（第 94 段）：預設照現在（結束時直接 SIGKILL、不給寬限；起動那一層死了 daemon 跟著走）；參數可以改成先 SIGTERM、等 N 秒再 SIGKILL，或起動那一層死了 daemon 留著。參數名字是 eca-aos 擬的。
+    - 收尾的做法（第 95 段）：daemon 收到 SIGTERM，**先只對主 kernel 送 SIGTERM**，等設定的秒數（主 kernel 先結束就不等了；這段時間它死了不重起），再對所有 proc 送 SIGKILL。其他 proc 要不要好好收，由主 kernel 在這段時間自己處理。預設秒數 0，跟現在一樣。
+18. **`forget` 時 cgroup 裡還有行程照舊拒，但可以選先清再刪**（第 95 段）：預設要先寫 `cgroup.kill`；`forget -k <名字>` 就是 daemon 先寫 `cgroup.kill` 再拿掉。做成指令上的選項，每次由主 kernel 決定。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 

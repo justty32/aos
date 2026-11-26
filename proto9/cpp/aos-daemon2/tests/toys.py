@@ -84,6 +84,15 @@ def main():
         time.sleep(1000)
     elif mode == "exit":
         sys.exit(int(sys.argv[2]))
+    elif mode == "chatter":   # chatter OUT：stdout 與 stderr 各寫一行，記下 OUT/chatter.done，然後睡
+        print("CHATTER-OUT", flush=True)
+        print("CHATTER-ERR", file=sys.stderr, flush=True)
+        put(sys.argv[2], "chatter.done", "x")
+        time.sleep(1000)
+    elif mode == "kchatter":   # 當主 kernel，同上
+        print("CHATTER-OUT", flush=True)
+        print("CHATTER-ERR", file=sys.stderr, flush=True)
+        kernel(sys.argv[2])
     elif mode == "sleep":
         time.sleep(1000)
     elif mode == "flaky":   # flaky OUT N：前 N 次起來就以 5 結束，之後當主 kernel

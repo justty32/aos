@@ -123,7 +123,7 @@ daemon 不做的：自動重起（主 kernel 以外）、判卡住、准不准�
 - `ns`：根一定是一塊新的空 tmpfs（組好後改唯讀），每條一個 JSON 物件（**使用者 11-26 定**；不再收字串，字串當設定錯拒），照順序做：`{"type": "bind", "src": SRC, "dst": DST}`（預設唯讀，加 `"rw": true` 才可寫；`rw` 可不寫、只有 bind 收、要是布林；SRC 是外面的路徑）、`{"type": "tmpfs", "dst": DST}`（mode 1777）、`{"type": "proc", "dst": DST}`、`{"type": "dev", "dst": DST}`（tmpfs 加 null、zero、full、random、urandom 與 fd、stdin、stdout、stderr 四個 symlink，組好後唯讀）、`{"type": "symlink", "target": TARGET, "dst": DST}`。不認得的鍵、缺的鍵、型別不對、不認得的 `type` 都拒（`ConfigBad`，說明哪一條哪裡錯；`start` 是 `EIO`、`--kernel` 的檔是退出碼 2）。天空裡的 symlink 只在天空裡解（`openat2` 的 `RESOLVE_IN_ROOT`），寫成絕對路徑也不會碰到外面。
 - `uid`：0＝天空裡的 0 號（外面的使用者本人）；N＞0＝subuid 範圍的第 N 個（外面是 subuid 起點＋N−1），gid 同號。
 - `locks.cgroup`：起動前寫進那隻 cgroup 夾的檔與值（不收 `cgroup.*`）。沒有 cgroup 時給了就拒。`locks.landlock` 只能是 `true`（不能關）；`locks.seccomp` 這版不收。
-- `stdout`、`stderr`：外面的路徑（附加寫）；不給就跟 daemon 的 stderr。stdin 一律 `/dev/null`。
+- `stdout`、`stderr`：外面的路徑（附加寫）；不給就是 `/dev/null`（**使用者 11-26 定**；不再跟 daemon 的 stderr，主 kernel 也一樣；只給一條，另一條也是 `/dev/null`）。stdin 一律 `/dev/null`。
 - 不認得的鍵一律拒。
 
 ## 天空表的寫法【擬】
@@ -220,7 +220,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 
 ## 測試
 
-`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**179 PASS、0 FAIL**（11-26 設定檔 `ns` 改物件、加 `ns.json` 與 `nsconf` 組共＋22 條；在那之前 157：主 kernel 改走 `/aos`、`procs/<名>/` 改成真的夾後 155；再加主 kernel uid 不是 0 要拒的 2 條），約 6～10 秒，清 build 跑一次加連跑 3 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
+`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**189 PASS、0 FAIL**（11-26 proc 的 stdout／stderr 沒設改 `/dev/null`、加 `stdio` 組＋10 條，在那之前 179；11-26 設定檔 `ns` 改物件、加 `ns.json` 與 `nsconf` 組共＋22 條；在那之前 157：主 kernel 改走 `/aos`、`procs/<名>/` 改成真的夾後 155；再加主 kernel uid 不是 0 要拒的 2 條），約 6～10 秒，清 build 跑一次加連跑 3 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
 
 | 組 | 驗什麼 |
 |---|---|
@@ -253,7 +253,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 - 主 kernel 起不來也算死一次，照重起規則走。
 - daemon 結束時不另給寬限，直接 `kill(-1, SIGKILL)`（要好好收是主 kernel 的事）。
 - 起動那一層被殺時 daemon 跟著走（parent-death signal）。
-- proc 的 stdout／stderr 預設跟 daemon 的 stderr（daemon 的 stdout 只印 export 那行）；stdin 是 `/dev/null`；每隻 `setsid`。
+- proc 的 stdout／stderr 沒設就是 `/dev/null`（**使用者 11-26 定**；含主 kernel；daemon 自己的 stdout 只印 export 那行、stderr 只有 daemon 自己的訊息）；stdin 是 `/dev/null`；每隻 `setsid`。
 - `AOS_DAEMON` 只給主 kernel（`/aos` 或 `/proc/1/cwd`）；其他 proc 不給（讀不到 daemon 的目錄），設定裡寫了也拿掉。`AOS_NAME` 每隻都給。**（使用者 11-26 定：照這樣）**
 - 名字跟 proto8 的 `AOS_DAEMON`（daemon 的資料夾）同一個意思；使用者 11-26 定（原本叫 `AOS_ROOT`）。舊名 `AOS_ROOT` 現在沒有特殊意思：設定的 `env` 寫了就當一般環境變數照傳。
 - `forget` 時那隻的 cgroup 夾裡還有它留下的行程就拒。

@@ -806,3 +806,8 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 89 段：資訊 `ns`（文字一行一行）與 `ns.json`（同一張表的 JSON 陣列）共存；設定檔 `ns` 每條 JSON 物件（照第 88 段，字串不收）。派 sonnet 子 agent 改。回來後驗、交件。
 - 第 90 段：start 路徑照現在（外面的絕對路徑）；他問能不能相對路徑 → 現在是 EINVAL，正在答。
 - 第 92 段：相對路徑交給以後的外層程式。ns.json 那隻回來：我清 build 重跑 179／179、無殘留。交件（proto9/README、HANDOFF 跟上，多 25 個沒推）。下一條【擬】：proc 的 stdout／stderr 預設、daemon 結束直接 SIGKILL 等（README【擬】清單）。
+- 第 93 段：沒寫 stdout／stderr 就 /dev/null（主 kernel 也一樣）。派 sonnet 子 agent 改。回來後驗、交件。
+- 第 94 段：結束寬限、parent-death 都做成起動參數，預設照現在。**等 stdout 那隻回來再派**（同一夾）。我擬：`--exit-grace SECONDS`（預設 0＝直接 SIGKILL；>0＝先對全部 SIGTERM、等到全死或逾時再 SIGKILL）、`--on-parent-death exit|stay`（預設 exit）。
+- 第 95 段：daemon 收 SIGTERM → 先只對主 kernel SIGTERM、等 `--exit-grace` 秒（主 kernel 先死就不等、不重起）→ 全部 SIGKILL，預設 0；`forget -k`。連同 `--on-parent-death`，**等 stdout 那隻回來再一起派**。
+- 第 96 段：他提 daemon 起動參數多了、要不要吃設定檔 → 擬樣子問他（還沒派；stdout 那隻還在跑）。
+- stdout 那隻回來：我清 build 重跑 189／189、無殘留。交件（proto9/README、HANDOFF，多 26 個沒推）。

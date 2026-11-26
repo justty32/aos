@@ -773,6 +773,45 @@ def t_dirs():
     d.stop()
 
 
+def t_stdio():
+    """proc 的 stdout／stderr 沒設就是 /dev/null（使用者 11-26 定）；設了的那條進檔，另一條仍無處去。"""
+    d = Daemon("stdio", ["kchatter", "/out"])
+    if not check("stdio: daemon up", d.pid, d.err()):
+        return
+    started(d, "main")
+    errs = d.err()
+    r = d.ctl("start " + config(d.dir, "plain", ["chatter", "/out"]))
+    done = os.path.join(d.dir, "chatter.done")
+    wait_for(lambda: os.path.exists(done), 5)
+    check("stdio: proc without stdout/stderr started and wrote", r == (0, "done", "-") and os.path.exists(done), r)
+    time.sleep(0.2)
+    check("stdio: its output is not in the daemon's stderr", "CHATTER" not in d.err(), d.err()[-300:])
+    check("stdio: main kernel without stdout/stderr is silent too", "CHATTER" not in errs and "CHATTER" not in d.err())
+    hp = d.hostpid("plain")
+    fds = [os.readlink("/proc/%d/fd/%d" % (hp, i)) for i in (0, 1, 2)]
+    check("stdio: fds 0, 1, 2 are all /dev/null", fds == ["/dev/null"] * 3, fds)
+    kfds = [os.readlink("/proc/%d/fd/%d" % (d.hostpid("main"), i)) for i in (0, 1, 2)]
+    check("stdio: main kernel fds 0, 1, 2 are all /dev/null", kfds == ["/dev/null"] * 3, kfds)
+    os.unlink(done)
+    fo = os.path.join(d.dir, "only-out.log")
+    r = d.ctl("start " + config(d.dir, "oo", ["chatter", "/out"], stdout=fo))
+    wait_for(lambda: os.path.exists(done), 5)
+    time.sleep(0.2)
+    check("stdio: with stdout set the output lands in the file, stderr goes nowhere",
+          r == (0, "done", "-") and read(fo) == "CHATTER-OUT\n" and "CHATTER" not in d.err(), (r, read(fo) if os.path.exists(fo) else None))
+    fe = [os.readlink("/proc/%d/fd/%d" % (d.hostpid("oo"), i)) for i in (1, 2)]
+    check("stdio: ... fd 2 is /dev/null", fe[1] == "/dev/null" and fe[0] == fo, fe)
+    os.unlink(done)
+    fe2 = os.path.join(d.dir, "only-err.log")
+    r = d.ctl("start " + config(d.dir, "oe", ["chatter", "/out"], stderr=fe2))
+    wait_for(lambda: os.path.exists(done), 5)
+    time.sleep(0.2)
+    check("stdio: with only stderr set it lands in the file, stdout goes nowhere",
+          r == (0, "done", "-") and read(fe2) == "CHATTER-ERR\n" and "CHATTER" not in d.err(), r)
+    check("stdio: the daemon's stdout stays at the export line only", d.line.startswith("export AOS_DAEMON="))
+    d.stop()
+
+
 # ---------------------------------------------------------------- leftovers
 
 def t_leftovers():
@@ -805,7 +844,7 @@ def t_leftovers():
 
 GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "nsconf": t_nsconf, "landlock": t_landlock, "cgroup": t_cgroup,
           "mount": t_mount, "modes": t_modes, "restart": t_restart, "teardown": t_teardown, "access": t_access,
-          "dirs": t_dirs}
+          "dirs": t_dirs, "stdio": t_stdio}
 
 
 def main():
