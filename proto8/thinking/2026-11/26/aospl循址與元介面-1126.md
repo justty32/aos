@@ -38,8 +38,8 @@
 9. **「單元」改叫元素（element）。**（第 48 段）
 10. **`__meta` 先留這九個（參考 Lua 5.4 的 metatable）：** `__index`（找不到時去哪找或叫誰算）、`__newindex`（新建時怎麼辦）、`__call`（怎麼執行，取代 `_entry`）、`__pairs`（列出時看到什麼）、`__name`（是哪一種東西）、`__description`（Lua 的 `__tostring` 改名；一句給人看的說明）、`__metatable`（保護元表）、`__gc`（被刪時的收尾）、`__mode`（裡面的東西隨時可以清掉）。不收：`__len`、`__close`、比較與算術、位元、`__concat`。`__interfaces` 之後再說，會是 aoslua 標準的一部份。（第 47、48 段）
 
-11. **aoslua 的基本操作九個**（參考 Plan 9 的 9P 請求）：走（walk）、列（list）、讀（read）、寫（write）、建（create）、刪（remove）、看屬性（stat）、執行（exec）、改名（rename）。九個 `__meta` 大致對上：走到不存在的名字→`__index`、建→`__newindex`、列→`__pairs`、執行→`__call`、刪→`__gc`、看屬性→`__name`／`__description`（之後可以加 `__stat`）、改 `__meta`→`__metatable`；讀寫已經存在的元素跟 Lua 一樣不經 `__meta`。（第 49 段）
-12. **Linux 比 9P 多的操作（symlink、監看、鎖……）不算基本操作**：碰到 `.json` 這類檔就不好用；要的可以自己提供實作，並在介面裡宣告。（第 49 段）
+11. **aoslua 的基本操作八個**（參考 Plan 9 的 9P 請求）：走（walk）、列（list）、讀（read）、寫（write）、建（create）、刪（remove）、看屬性（stat）、執行（exec）。改名第 49 段先說算進去，第 50 段改成「用介面宣告」，不算基本操作。九個 `__meta` 大致對上：走到不存在的名字→`__index`、建→`__newindex`、列→`__pairs`、執行→`__call`、刪→`__gc`、看屬性→`__name`／`__description`（之後可以加 `__stat`）、改 `__meta`→`__metatable`；讀寫已經存在的元素跟 Lua 一樣不經 `__meta`。（第 49、50 段）
+12. **改名、Linux 比 9P 多的操作（symlink、監看、鎖……）不算基本操作**：碰到 `.json` 這類檔就不好用；要的可以自己提供實作，並在介面裡宣告。（第 49 段）
 
 ## 未決
 

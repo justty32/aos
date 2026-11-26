@@ -738,3 +738,4 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 使用者第 46 段：保留 __ 開頭、讀 __meta 不經轉手是規範、__call 取代 _entry（__meta 多半參考用）、概念用 table 介紹；他把整串重整成四步（Unix 路徑＝通用循址格式 → 任何東西弄成存取得到 → aoslua 的 table 與 __meta 元表 → 別的手段可忽視 __meta）。思考紀錄跟上。
 - 使用者第 47 段：interfaces 是 aoslua 標準的一部份；先看 Lua metatable 有什麼、參考著設計 __meta，再加 aoslua 獨有的。我列 Lua 5.4 全部元方法與建議（抄／改／先不抄）給他挑。
 - 使用者第 48、49 段：__meta 留九個（__tostring 改名 __description）、單元改叫元素、基本操作九個（加改名）、之後可加 __stat、Linux 多的操作不算基本、要的自己實作並在介面宣告。思考紀錄跟上。
+- 使用者第 50 段：改名改回用介面宣告，基本操作八個。
