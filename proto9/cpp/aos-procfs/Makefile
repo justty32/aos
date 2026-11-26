@@ -2,7 +2,7 @@
 #
 # Usage:
 #   make            build/libaos-procfs.a, build/bin/aos-procfs-demo and build/bin/fields-test
-#   make test       build, then run build/bin/fields-test, tests/run.py and tests/mail.py
+#   make test       build, then run build/bin/fields-test, tests/run.py, tests/ctl_wait.py and tests/mail.py
 #   make clean      remove build/
 
 BUILD    := build
@@ -39,6 +39,7 @@ $(FT): $(FT_OBJ) $(LIB)
 test: all
 	$(FT)
 	python3 tests/run.py
+	python3 tests/ctl_wait.py
 	python3 tests/mail.py
 
 clean:

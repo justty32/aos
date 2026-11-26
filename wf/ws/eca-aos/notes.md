@@ -775,3 +775,4 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 73、74 段選 B 但保留 A（預設：主 kernel 天空裡掛 daemon 的目錄、不給權限；設定可選給 CAP_SYS_PTRACE 走 /proc/1/cwd）→ **等上一隻回來再派**（同一夾，不能兩隻一起改）。固定位置的名字還沒定，我會擬 `/aos`（AOS_ROOT 指過去）。
 - 第 75 段：`cgroup/` 照現在留著。第 76 段選 B：aos-procfs 能拿掉資料夾、`procs/<名字>/` 真的夾 → 跟第 73、74 段那件一起，**等做完才回那隻回來再派**。
 - 12:3x 使用者（逐字）：「我剛吃完飯，想睡午覺休息一下，你弄一弄，大約13:00整理收尾，我13:10休息好，幫你compact」→ 掛 12:57 的計時；等做完才回那隻、驗、交、派下一隻（第 73～76 段那件）；13:00 整理 HANDOFF 收尾。
+- 12:4x 做完才回那隻回來：`Ctl::reply_when_done()`、失敗回 EIO、等的時候 Ctrl-C／kill 放得掉（EINTR）、卸載回 ECONNABORTED、這種 ctl stat 報 1 GiB（避開 kernel 鎖）。我清 build 重跑：procfs 5+40+37+36、舊 daemon 73、daemon2 112，無警告、無殘留。交件。

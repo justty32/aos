@@ -34,9 +34,19 @@ struct Ctl::Impl : std::enable_shared_from_this<Ctl::Impl> {
     std::string cmd, state, error;        // 空＝還沒有（寫出來是 "-"）
     long long count = 0;
     std::thread worker;
+    // 「做完才回」（reply_when_done）：收下的那次 WRITE 先不回，記在 pending，做事的線做完再回
+    std::atomic<bool> wait_done{false}; // mount 之前定；回答的線不拿鎖就讀
+    uint64_t pending = 0;                 // 留著沒回的 WRITE 的 unique；0＝沒有
+    uint32_t pending_size = 0;            // 成功時回的寫入長度
+    // mount 時由 Fs 給：回一次 WRITE（err 0＝成功、寫了 size byte）。拿著 mu 叫，所以 detach 之後不會再有回覆寫出去
+    std::function<void(uint64_t unique, int err, uint32_t size)> answer;
 
-    // 回答的線上叫：0＝收下（或空寫入），否則 errno（EBUSY／EINVAL）。
-    int write(std::string_view data);
+    static constexpr int HELD = -1;       // write 的回傳：收下了、回覆留著（做完才回）
+    // 回答的線上叫：0＝收下（或空寫入），HELD＝收下、回覆留著，否則 errno（EBUSY／EINVAL）。
+    int write(std::string_view data, uint64_t unique = 0, uint32_t size = 0);
+    bool interrupt(uint64_t unique);      // 那次 WRITE 還留著就回 EINTR、回 true
+    void cancel_pending(int err);         // 留著的那次（有的話）回 err
+    void detach();                        // 之後不再回覆（Fs 要關 /dev/fuse 之前）
     bool open_ok() const;
     void start();
     void stop();   // 不等正在跑的那道指令
@@ -140,7 +150,8 @@ struct Fs::Impl {
     std::unordered_map<uint64_t, std::shared_ptr<const std::string>> fhs;
     std::unordered_map<uint64_t, std::shared_ptr<std::vector<DirEnt>>> dirs;
     uint64_t next_fh = 1;
-    std::vector<std::unique_ptr<Ctl>> ctls;
+    std::vector<std::unique_ptr<Ctl>> ctls;   // mount 之後不再改，回答的線讀它不用鎖
+    bool any_wait = false;                // 有「做完才回」的 ctl（mount 時定）：要理 INTERRUPT
     std::vector<std::unique_ptr<Mailbox>> mailboxes;
 
     int fd = -1;

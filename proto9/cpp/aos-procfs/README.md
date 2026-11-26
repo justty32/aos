@@ -24,6 +24,7 @@ aos-procfs：讓一支行程用 FUSE（不靠 libfuse，自己照 `linux/fuse.h`
 | `demo/main.cpp`、`demo/mail.cpp`（＋`mail.hpp`）、`demo/files.hpp` | `aos-procfs-demo`；信箱那一部分在 `mail.cpp`；`status`、`settings`、`attrs` 的欄位表在 `files.hpp` |
 | `tests/fields_test.cpp` | 欄位表的測試（C++，編成 `build/bin/fields-test`） |
 | `tests/run.py` | 測試：ctl、status、abort、socket、symlink、環境變數（`tests/common.py` 是共用小工具） |
+| `tests/ctl_wait.py` | 「做完才回」的 ctl 的測試（demo `--ctl-wait`） |
 | `tests/mail.py`、`tests/mail_more.py` | 信箱的測試 |
 | `tests/probe_abort.py` | 實測 abort 的細節（印觀察，不判對錯） |
 | `tests/bench.py` | 跟 Python 玩具比延遲與記憶體 |
@@ -33,7 +34,7 @@ aos-procfs：讓一支行程用 FUSE（不靠 libfuse，自己照 `linux/fuse.h`
 ```
 cd proto9/cpp/aos-procfs
 make                 # build/libaos-procfs.a、build/bin/aos-procfs-demo、build/bin/fields-test；-Wall -Wextra 沒有警告
-make test            # = build/bin/fields-test、tests/run.py 與 tests/mail.py；只跑某幾組：python3 tests/run.py basic kill、python3 tests/mail.py clash big
+make test            # = build/bin/fields-test、tests/run.py、tests/ctl_wait.py 與 tests/mail.py；只跑某幾組：python3 tests/run.py basic kill、python3 tests/ctl_wait.py lock、python3 tests/mail.py clash big
 python3 tests/bench.py 500
 python3 tests/probe_abort.py
 ```
@@ -64,7 +65,7 @@ $ echo stop > /proc/12345/cwd/ctl          # 行程退出、掛載與掛載點�
 $ build/bin/aos-procfs-demo --cleanup <掛載點>   # 收 kill -9 之後留下的死掛載
 ```
 
-demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--persists PATH] [--obey WORDS] [--mail-max-bytes N] [--mail-max-letters N] [--mail-max-total N] [--mail-stale S]`，或 `--cleanup PATH [--force]`。不給 NAME、MOUNTPOINT 時用 `$AOS_NAME`、`$AOS_MOUNT`，但只在 `$AOS_NAME_PID` 等於自己的 PID 時（見下面「環境變數」）。ctl 收 `stop`、`pause`、`resume`，測試用另有 `slow N`（做 N 秒）、`link 名 目標`／`unlink 名`（在 `links/` 底下隨時加、拿掉 symlink，模擬 daemon 的 `procs/<名>`）、`take`（從 `mailbox/new/` 拿走最早的一封；沒有信＝`failed`＋`MailEmpty`）、`refuse on|off`（拒收開關：開著時搬進 `new/` 那一步失敗、`EPERM`）。`--socket` 讓根夾可以放 unix socket，並在裡面 bind 一個 echo socket `sock`。`--persists PATH` 是 `settings` 的 `aos_persists`（沒給寫 `-`）；`--obey WORDS` 讓 `settings` 多一行 `aos_obey: WORDS`（例 `--obey "stop kill"`：被 register 進 daemon 時准 daemon 下這幾個字，見 aos-daemon 的 README；沒給就沒有這行）。demo 一律擺 `mailbox/`，`attrs` 多一行 `aos_mailbox: yes`；`status` 多幾行不帶 `aos_` 的：`mail_waiting`（`new/` 幾封）、`mail_writing`（`tmp/` 幾項）、`mail_bytes`、`mail_delivered`、`mail_taken`、`mail_refused`、`mail_dropped_stale`、`mail_last_refusal`、`mail_refusing`、`mail_last_name`、`mail_last_bytes`（最後 `take` 的那封）。demo 不讀 eventfd，信等 ctl 的 `take` 才拿。
+demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--ctl-wait] [--persists PATH] [--obey WORDS] [--mail-max-bytes N] [--mail-max-letters N] [--mail-max-total N] [--mail-stale S]`，或 `--cleanup PATH [--force]`。不給 NAME、MOUNTPOINT 時用 `$AOS_NAME`、`$AOS_MOUNT`，但只在 `$AOS_NAME_PID` 等於自己的 PID 時（見下面「環境變數」）。ctl 收 `stop`、`pause`、`resume`，測試用另有 `slow N`（做 N 秒）、`link 名 目標`／`unlink 名`（在 `links/` 底下隨時加、拿掉 symlink，模擬 daemon 的 `procs/<名>`）、`take`（從 `mailbox/new/` 拿走最早的一封；沒有信＝`failed`＋`MailEmpty`）、`refuse on|off`（拒收開關：開著時搬進 `new/` 那一步失敗、`EPERM`）。`--socket` 讓根夾可以放 unix socket，並在裡面 bind 一個 echo socket `sock`。`--ctl-wait` 讓 ctl 變成「做完才回」（見下面那一節；不給＝原本的「寫回來＝收到」）。`--persists PATH` 是 `settings` 的 `aos_persists`（沒給寫 `-`）；`--obey WORDS` 讓 `settings` 多一行 `aos_obey: WORDS`（例 `--obey "stop kill"`：被 register 進 daemon 時准 daemon 下這幾個字，見 aos-daemon 的 README；沒給就沒有這行）。demo 一律擺 `mailbox/`，`attrs` 多一行 `aos_mailbox: yes`；`status` 多幾行不帶 `aos_` 的：`mail_waiting`（`new/` 幾封）、`mail_writing`（`tmp/` 幾項）、`mail_bytes`、`mail_delivered`、`mail_taken`、`mail_refused`、`mail_dropped_stale`、`mail_last_refusal`、`mail_refusing`、`mail_last_name`、`mail_last_bytes`（最後 `take` 的那封）。demo 不讀 eventfd，信等 ctl 的 `take` 才拿。
 
 ## 庫的介面一覽
 
@@ -80,6 +81,7 @@ demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--persists PATH] [--
 | `add_symlink(path, 目標)`／`remove(path)` | 隨時可加、拿掉；名字與屬性都不快取（entry_valid＝0） |
 | `mount(掛載點)`／`unmount()` | 掛上（夾不在就建）、起回答的線與每個 ctl 的做事的線；卸下見下 |
 | `Ctl::on(字, Action, Check)` | 註冊一個字。`Check` 在回答的線上看參數（回 `"代號 原因"` 就拒）；`Action` 在做事的線上做，回 `Result::done()`（`aos_ctl_state: done`、error `-`）／`failed("代號 原因")`（`failed`＋原因）／`hold_until_exit()` |
+| `Ctl::reply_when_done()` | 這個 ctl 改成「做完才回」：寫入等 `Action` 跑完才回來，`done`＝寫入成功、`failed`＝寫入失敗 `EIO`（見下面「做完才回的 ctl」）。要在 `mount` 之前叫；不叫＝原本的「寫回來＝收到」 |
 | `Ctl::snapshot()` | 回饋四行的值（`Feedback` 這個欄位表），放進 status 的欄位表裡：`F(aos::procfs::Feedback, aos_ctl_, Embed)`；`Ctl::feedback()` 是同一份寫成純文字 |
 | `AOS_RECORD`、`to_text`、`to_json` | 欄位表（`aos/fields.hpp`），見下面 |
 | `kv_line` | 「名稱: 值」一行：值裡的換行換成空白、空值寫 `-`（以前的 `Kv` 拿掉了，改用欄位表） |
@@ -97,7 +99,39 @@ demo 的參數：`NAME MOUNTPOINT [--threads N] [--socket] [--persists PATH] [--
 
 **掛載與卸載**：socketpair 一端給 `fusermount3`（環境 `_FUSE_COMMFD`，fork 之前就把 argv／envp 備好），另一端 `recvmsg(MSG_CMSG_CLOEXEC)` 收 `/dev/fuse` 的 fd，收到那刻就是 close-on-exec。選項 `fsname=<fsname>:<PID>,subtype=aosproc,default_permissions`（不用 `auto_unmount`，玩具實測這台不收）。`unmount()`：自己站在掛載點裡就先 `chdir("/")`，`fusermount3 -u`；失敗（別人站在裡面）才 `-u -z`，再 abort 那條連線讓回答的線醒來；等回答的線最多 2 秒；最後刪掉 mount 時建的夾。
 
-**避開的玩具十三坑**：`default_permissions` 有加（1）；ctl 的 SETATTR size=0 回成功、什麼都不動（2）；FORGET／BATCH_FORGET／INTERRUPT 不回（3）；demo 掛好、回答的線起來之後才 chdir（4）；卸之前先離開自己的掛載點、失敗才 lazy（5）；回答的線不碰路徑（6）；fd close-on-exec（7）；`fusermount3` 子行程 cwd 是 `/`（8）；不靠 `auto_unmount`，給 `cleanup_dead_mount`（9）；symlink 與 socket 的 entry／attr 都不快取，其餘固定節點快取 1 秒（10）；C++ 一個來回快很多（11，見延遲）；bwrap（12）庫管不到，照舊；不認得的字讓寫入失敗、多行就拒（13，照草稿【定】）。另外：OPENDIR 那刻拍一份名單，`procs/` 分段讀時名單變了也不漏不重。
+**避開的玩具十三坑**：`default_permissions` 有加（1）；ctl 的 SETATTR size=0 回成功、什麼都不動（2）；FORGET／BATCH_FORGET／INTERRUPT 不回（3；INTERRUPT 只有在有「做完才回」的 ctl 時才理，見下）；demo 掛好、回答的線起來之後才 chdir（4）；卸之前先離開自己的掛載點、失敗才 lazy（5）；回答的線不碰路徑（6）；fd close-on-exec（7）；`fusermount3` 子行程 cwd 是 `/`（8）；不靠 `auto_unmount`，給 `cleanup_dead_mount`（9）；symlink 與 socket 的 entry／attr 都不快取，其餘固定節點快取 1 秒（10）；C++ 一個來回快很多（11，見延遲）；bwrap（12）庫管不到，照舊；不認得的字讓寫入失敗、多行就拒（13，照草稿【定】）。另外：OPENDIR 那刻拍一份名單，`procs/` 分段讀時名單變了也不漏不重。
+
+## 做完才回的 ctl（`Ctl::reply_when_done()`，11-26）
+
+使用者 11-26 定：寫 ctl 要等那件事做完才回來，做的時候失敗，那次寫入就要失敗。原本的 ctl 是「寫回來＝收到」（`Check` 過了就回），做完沒做成只看得到 `aos_ctl_state`。改成一個可選的模式，一個 ctl 一個開關（比每個字各一個簡單：同一個檔的寫入照同一套規矩）；不開的 ctl 一切照舊，舊的測試一條沒改。
+
+**行為**：
+
+| 情形 | 寫入 | 回饋 |
+|---|---|---|
+| `Check` 過了、`Action` 回 `done()` | 等 `Action` 跑完才回，成功 | 寫入回來時已經是 `done`、error `-` |
+| `Action` 回 `failed("代號 原因")` | 等跑完，**失敗 `EIO`**【擬】（殼裡是 `write error: Input/output error`） | `failed`＋原因（寫入帶不了字，原因照舊只在 `*_error`） |
+| `Action` 回 `hold_until_exit()`（`stop`） | `Action` 回來那刻就回成功【擬】 | 照舊停在 `doing`、鎖到行程結束 |
+| 不認得的字、`Check` 拒、多行 | 當場 `EINVAL`（不變） | `rejected`（不變） |
+| 鎖著 | 開檔或寫入當場 `EBUSY`（不變） | 不動（不變） |
+| 空寫入 | 當場成功（不變） | 不動 |
+| 等的人收到訊號（Ctrl-C、`kill`、`kill -9`） | 當場放開：`EINTR`（或照訊號死掉） | 指令照做，做完記 `done`／`failed`；鎖照舊到做完才放 |
+| 等的時候行程 `unmount()`（例 SIGTERM） | `ECONNABORTED`【擬】 | — |
+| 等的時候連線被 abort、伺服器死掉 | 核心給的錯（`ECONNABORTED`；死掉是 `ENOTCONN` 之類） | — |
+
+**怎麼做到「回答的線不等」**：回答的線收下那次 WRITE（`Check` 過了、上鎖、交給做事的線）之後**不回**，只把它的 unique 記在 ctl 上，接著去答別的請求（讀 `status`、寫別的檔都照常，測試量到等著的時候讀 `status` 約 10 ms 內）。做事的線跑完 `Action`、先寫好回饋，再拿著 ctl 的鎖把那次 WRITE 的回覆寫進 `/dev/fuse`。所以寫入一回來，`status` 已經是 `done`／`failed`。
+
+**訊號（FUSE 的 INTERRUPT）**：核心把請求交給伺服器之後，等的人連 `kill -9` 都殺不掉，要等伺服器回（上面「實測一」那種 D 狀態）；核心改送一個 INTERRUPT。所以有「做完才回」的 ctl 時，回答的線會理 INTERRUPT：那次寫入還留著，就當場回 `EINTR`，等的人馬上放開（測試量到約 10 ms；`kill -9` 也是）。指令不取消（`Action` 已經在做事的線上跑了、沒有辦法叫停），結果照舊記在回饋裡。找不到那次寫入時回 `EAGAIN`（協議的做法）：多條回答的線時，那次 WRITE 可能還在別條線上沒登記，核心會再送一次；已經回了的，核心收到 `EAGAIN` 就丟掉。沒有這種 ctl 時 INTERRUPT 照舊不理（其他請求都當場回完，用不著）。
+
+要知道：Python 的 `os.write` 碰到 `EINTR` 會自己重寫一次（PEP 475，除非訊號處理丟例外），重寫多半撞到還沒放的鎖、拿到 `EBUSY`。
+
+**先開好檔的第二個人**：核心在做 FUSE 的 direct_io 寫入時拿著那個檔的鎖，寫過檔尾時是獨佔的。ctl 報的大小是 0，每次寫都過檔尾，於是先開好 ctl 的第二個人寫的時候會排在第一個人的鎖後面（排的時候殺不掉），等第一道做完、鎖放了，他的指令再被收下——不是當場 `EBUSY`（實測過：不報大的大小時，測試的「兩人先開好檔」那條沒過，第二個人等了 2 秒後寫入成功）。所以「做完才回」的 ctl：開檔時多給核心 `FOPEN_PARALLEL_DIRECT_WRITES`（准同一個檔並行寫），大小報成 1 GiB【擬】（寫入不過檔尾，核心才真的並行），第二個人的寫入進得來、當場 `EBUSY`。後果：`stat`、`ls -l` 看到這種 ctl 的大小是 1073741824；預設的 ctl 照舊是 0。`echo x > ctl` 這種每次開檔的不受影響（開檔那步就 `EBUSY`）。還剩一個很窄的縫：第二個人開檔剛好在第一個人上鎖之前、`O_TRUNC` 的截短排在第一個人的寫入後面，那時他會等到第一道做完。
+
+**`Action` 一直不回**：寫的人一直等（可以 Ctrl-C、`kill` 放開，見上），ctl 一直鎖著。沒做逾時【擬】：該等多久只有 `Action` 自己知道（例 aos-daemon2 叫主執行緒做事有自己的 60 秒），庫不替它猜。
+
+**卸載**：`unmount()` 一開始先把還留著的寫入回 `ECONNABORTED`（不然那人拿著開著的檔，`fusermount3 -u` 會失敗、只能 lazy＋abort）；關 `/dev/fuse` 之前讓 ctl 不再回覆（之後才做完的指令，回覆不會寫進已經關掉、可能被別人拿去用的 fd）。
+
+測試（`tests/ctl_wait.py` 37 條全過）：預設的 ctl 照舊（大小 0、寫入當場回、做的時候失敗照樣寫入成功）；`pause` 寫入回來時 `status` 已經是 `done`、`paused`；`slow 1` 的寫入約 1 秒才回；做的時候失敗是 `EIO`＋`failed`＋原因；不認得的字照舊 `EINVAL`；空寫入；殼的 `echo` 也等；大小 1 GiB；`stop` 寫入成功、行程退 0；等著的時候讀 `status` 快、第二個人當場 `EBUSY`、回饋不動；兩人先開好檔再先後寫，第二個當場 `EBUSY`；SIGINT、SIGKILL 放開等的人、指令照做到 `done`（一條回答的線與 `--threads 4` 各一次）；等著的時候伺服器收到 SIGTERM，等的人拿到 `ECONNABORTED`、伺服器退 0、掛載沒了。
 
 ## 欄位表：每個欄位只宣告一次，純文字與 json 都從它生（11-26）
 
@@ -186,6 +220,7 @@ daemon 起一支底下的 proc 時給 `AOS_NAME`、`AOS_MOUNT`、`AOS_ROOT`。�
 - 第 5 節：名稱小寫加底線、冒號後一個空白、沒有值寫 `-`；行的先後沒意思。
 - 第 6 節：基礎三字 `stop`、`pause`、`resume`。
 - 第 6 節【定】（使用者 11-25）：收下了、做的時候失敗＝`aos_ctl_state: failed`、原因在 `aos_ctl_error`；`done` 一定是做成了、`aos_ctl_error: -`。`rejected` 照舊（門口就不收、寫入失敗）。
+- 使用者 11-26 定：寫 ctl 要等做完才回、做的時候失敗寫入就失敗——做成可選的 `reply_when_done()`（見「做完才回的 ctl」），預設的 ctl 不變；那一節裡的【擬】：失敗回 `EIO`、`hold_until_exit` 在 `Action` 回來時就回成功、卸載時回 `ECONNABORTED`、報 1 GiB 大小、不做逾時。
 - 第 6 節鎖的細節：寫不進去＝那次開檔或寫入當場 EBUSY、不動 `aos_ctl_*`；`pause` 停住就算做完（放鎖）；`stop` 的做完是行程結束（`hold_until_exit`，鎖到退出，`aos_ctl_state` 停在 `doing`）。
 - 第 7 節 `settings` 兩行 `aos_persists`、`aos_mailbox`（demo 沒有就寫 `-`；11-26 照草稿從 `aos_persist` 改名）；第 7 節【擬】（11-26）`aos_obey`：demo 給了 `--obey` 才寫。
 - 第 4 節保留名：demo 自己多擺的夾叫 `links/`，沒佔 `procs/`。
@@ -282,9 +317,11 @@ C++ 讀 `status` 比玩具快 5～8 倍，寫 ctl 快約 50 倍（玩具每道�
 
 `build/bin/fields-test` 5 條全過：同一個 struct 的純文字與 json 逐 byte 對照（攤平、`Embed` 不加 `.`、map 的鍵、空值 `-`／`null`、`OmitEmpty`、json 跳脫）。
 
+`tests/ctl_wait.py` 37 條全過（見「做完才回的 ctl」）。
+
 `tests/run.py` 40 條全過（basic 19、kill 5、abort 3、socket 4、links 5、env 3，加最後一條「沒有殘留的行程與掛載」）。驗的有：status 八行；`pause` 後 `aos_phase: paused`；`slow 3` 進行中別人寫 `pause` 當場 busy、回饋沒動、`status` 照樣讀得到（約 5～9 ms）；兩人先開檔再先後寫第二個 EBUSY；不認得的字寫入失敗且 `rejected`；一次寫兩行被拒；收下了、做的時候失敗（`unlink` 不存在的）是 `failed`＋原因；`done` 時 error 是 `-`；`stop` 後退出、掛載與夾都沒了；`kill -9` 後 `/proc/<PID>/cwd` 馬上不見、死掛載留著、`--cleanup` 活著時不動、死了收得掉；abort；socket；symlink 隨時加、拿掉（拿掉後馬上走不到）；`AOS_NAME_PID` 三種情形（見上面「環境變數」）。
 
-**寫進 ctl 回來只代表「收到」**：收下的那一刻 `aos_ctl_state` 已經是 `doing`（回答的線上設的），做完才變 `done`／`failed`。測試凡是「寫 ctl、再看狀態」的，都要等那一道做完再看（11-26 查過兩支的全部測試）：`basic` 的 `pause` 原本看到 `aos_phase: paused` 就讀回饋（phase 是做到一半改的，`done` 還沒記）；`mail.py` 的 `take` 原本只等 `mail_taken` 加 1 就看 `mail_last_name`（計數在 `take()` 裡就加了，名字要做事的線做完才寫），`refuse on` 之後馬上寫下一道可能撞到還沒放的鎖——都改成寫完等 `aos_ctl_state` 不是 `doing`（`mail_more.py` 的 `ctl_done`）。
+**寫進 ctl 回來只代表「收到」**（預設的 ctl；「做完才回」的見上面那一節）：收下的那一刻 `aos_ctl_state` 已經是 `doing`（回答的線上設的），做完才變 `done`／`failed`。測試凡是「寫 ctl、再看狀態」的，都要等那一道做完再看（11-26 查過兩支的全部測試）：`basic` 的 `pause` 原本看到 `aos_phase: paused` 就讀回饋（phase 是做到一半改的，`done` 還沒記）；`mail.py` 的 `take` 原本只等 `mail_taken` 加 1 就看 `mail_last_name`（計數在 `take()` 裡就加了，名字要做事的線做完才寫），`refuse on` 之後馬上寫下一道可能撞到還沒放的鎖——都改成寫完等 `aos_ctl_state` 不是 `doing`（`mail_more.py` 的 `ctl_done`）。
 
 `tests/mail.py`（後半在 `tests/mail_more.py`）36 條全過（shell 3、half 3、clash 2、limits 5、refuse 3、take 3、stale 1、big 2、guards 2、folder 3、aospost 3、stopped 2、many 3，加「沒有殘留」）。掛載與暫存放 `~/.aos/scratch/proto9-mailbox-1125/`。驗的有：`attrs` 有 `aos_mailbox: yes`、`settings` 的照舊是 `-`；殼裡 `printf > tmp/a && mv tmp/a new/a` 寄到、`status` 的 `mail_*` 跟著動；寫一半的只在 `tmp/`、`new/` 看不到；搬進 `new/` 後還開著的 fd 再寫＝`EPERM`；撞名＝`EEXIST`（`rename` 與 `mv` 都是）、第一封原樣；`.` 開頭搬不進 `new/`；三種上限各自 `EFBIG`／`ENOSPC`、拿走與刪掉後又有空間；拒收時 `mv` 失敗、`new/` 沒東西、信還在 `tmp/`，關掉拒收同一個 `mv` 就過；`take` 拿最早的、計數跟著動、沒信時 `failed MailEmpty`；過期的檔與信夾被丟、新的留著；1 MB 的信逐 byte 一樣；不該做的九樣都擋下；信夾的形狀（aos-post 那幾步用殼做一次）；proto8 `aos-post` 實寄三種情形；被 SIGSTOP 時寄信卡住、SIGCONT 後寄到；1000 封等著時讀 `status` 一樣快。整支要放在 `timeout` 底下跑（`make test` 沒包；直接下系統呼叫的那幾步，伺服器真壞掉時會卡住）。
 
@@ -294,7 +331,7 @@ C++ 讀 `status` 比玩具快 5～8 倍，寫 ctl 快約 50 倍（玩具每道�
 
 ## 行數
 
-庫（`include/`＋`src/`）2072 行（欄位表 `fields.hpp` 155）；demo 425 行；測試與量測 971 行。每個檔都在 300 行以內（最長 `demo/main.cpp` 284、`src/answer.cpp` 240）：原本 391 行的 `answer.cpp` 拆成 `answer.cpp`（分派、屬性）與 `ops.cpp`（一般節點的較長操作），信箱另三個檔。
+庫（`include/`＋`src/`）2155 行（欄位表 `fields.hpp` 155）；demo 431 行；測試與量測 1189 行（11-26 加了做完才回的 ctl 與 `tests/ctl_wait.py` 之後）。每個檔都在 300 行以內（最長 `demo/main.cpp` 290、`src/answer.cpp` 253）：原本 391 行的 `answer.cpp` 拆成 `answer.cpp`（分派、屬性）與 `ops.cpp`（一般節點的較長操作），信箱另三個檔。
 
 ## 還沒做的
 
@@ -302,6 +339,7 @@ C++ 讀 `status` 比玩具快 5～8 倍，寫 ctl 快約 50 倍（玩具每道�
 - 各檔的 json 版（`status.json`…）：欄位表生得出來，檔還沒擺；`persists` 在目錄裡怎麼擺（草稿第 12 節第 4 條）。
 - 卸載時回答的線 2 秒內醒不來（abort 也失敗）就只 detach、不關 fd；這時 `Fs` 若被解構，線會碰到已經釋放的記憶體——現在只有行程馬上要結束的情形會走到，沒處理。
 - 回答的線只靠文件守規矩：`Producer` 裡硬去讀檔，庫攔不到。
+- 做完才回的 ctl：沒有逾時；訊號只放開等的人、不取消指令（`Action` 沒有叫停的辦法）；一個 ctl 一個開關，同一個檔不能有的字做完才回、有的不用。
 - 收到的請求長度、名稱都有防越界，但沒做模糊測試；INIT 只對過這台的 7.39。
 - 別的 Linux 帳號、bwrap 沙箱裡用 socket：沒測。
 - 信箱：plumber 那種「一個只寫的檔 `msg`」、socket 上的一行一則、各檔的 json 版都沒做。`aos-post send --ordered` 寄不進來（要在信箱根開 `order.lock/`）。`link()` 式的投遞（老的 qmail 那樣 `link tmp/x new/x` 再 `unlink`）不收。信只在記憶體裡：proc 一死，還沒 `take()` 的信就沒了（草稿「收到後還沒處理就死：介面不保證」）。`new/` 裡找名字、拿最早的一封都是線性掃，幾千封還好，再多要換資料結構。

@@ -57,6 +57,11 @@ class Ctl {
 public:
     // 註冊一個字。要在 Fs::mount 之前註冊完（之後不再改表，回答的線讀它不用鎖）。
     void on(std::string word, Action action, Check check = {});
+    // 「做完才回」：寫入要等 Action 跑完才回來——done＝寫入成功，failed＝寫入失敗 EIO（原因照舊在 *_error）；
+    // hold_until_exit 在 Action 回來那刻就回成功。回答的線不等：那次 WRITE 的回覆留著，由做事的線做完時回。
+    // 等的人收到訊號（Ctrl-C、kill）會當場拿到 EINTR 放開，指令照做、結果只在回饋裡；卸載時還沒回的拿到 ECONNABORTED。
+    // 不叫＝原本的「寫回來＝收到」。要在 Fs::mount 之前叫。
+    void reply_when_done(bool on = true);
     // 回饋四行的值（還沒收過＝空字串，寫出來是 "-"）；在 Producer 裡叫，只拿一下鎖、不阻塞。
     Feedback snapshot() const;
     // 同上，寫成四行純文字 <prefix>cmd／state／error／count。

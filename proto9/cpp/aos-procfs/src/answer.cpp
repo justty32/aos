@@ -14,6 +14,8 @@ namespace {
 constexpr uint32_t MAX_WRITE = 128 * 1024;
 // 核心要求讀的緩衝至少放得下 header＋write_in＋max_write
 constexpr size_t BUF_SIZE = MAX_WRITE + 64 * 1024;
+// 做完才回的 ctl 報的大小：寫入不過檔尾，核心才讓先開好檔的人並行寫進來（拿到 EBUSY），不排在前一個人的鎖後面
+constexpr uint64_t WAIT_CTL_SIZE = 1ull << 30;
 
 uint32_t type_bits(Kind k) {
     switch (k) {
@@ -77,6 +79,7 @@ void Fs::Impl::fill_attr(uint64_t nid, const Node& n, fuse_attr& a) const {
     // 純文字檔報 0、靠 direct_io 讀；報真長度就得每次 stat 都產生一次，而且 stat 與讀之間會對不上
     if (n.kind == Kind::Json || n.kind == Kind::Link) a.size = n.data->size();
     if (n.kind == Kind::MailFile) a.size = n.body->size();
+    if (n.kind == Kind::Ctl && n.ctl->impl()->wait_done) a.size = WAIT_CTL_SIZE;
     a.blocks = (a.size + 511) / 512;
 }
 
@@ -129,8 +132,18 @@ void Fs::Impl::dispatch(const char* buf, size_t len) {
     }
     case FUSE_FORGET:
     case FUSE_BATCH_FORGET:
-    case FUSE_INTERRUPT:
-        return;   // 協議規定這三種不回；nodeid 不回收，所以不必記 lookup 次數
+        return;   // 協議規定這兩種不回；nodeid 不回收，所以不必記 lookup 次數
+    case FUSE_INTERRUPT: {
+        // 沒有「做完才回」的 ctl：照舊不理（其他請求都當場回完）
+        if (!any_wait) return;
+        fuse_interrupt_in ii;
+        r.in(ii);
+        for (auto& c : ctls)
+            if (c->impl()->interrupt(ii.unique)) return;   // 還留著的那次寫入：回了 EINTR
+        // 找不到：已經回了（核心會回 ENOENT、不再送），或那次 WRITE 還在別條回答的線上沒登記（核心會再送一次）
+        reply(h.unique, EAGAIN);
+        return;
+    }
     case FUSE_DESTROY:
         reply(h.unique, 0);
         return;

@@ -152,7 +152,16 @@ void Fs::mount(const std::string& mountpoint) {
         throw;
     }
     m.is_mounted = true;
-    for (auto& c : m.ctls) c->impl()->start();
+    for (auto& c : m.ctls) {
+        // 做完才回的回覆由做事的線寫進 /dev/fuse；拿著 ctl 的鎖寫，unmount 先 detach 再關 fd
+        c->impl()->answer = [&m](uint64_t unique, int err, uint32_t size) {
+            fuse_write_out o{};
+            o.size = size;
+            m.reply(unique, err, &o, sizeof o);
+        };
+        if (c->impl()->wait_done) m.any_wait = true;
+        c->impl()->start();
+    }
     m.live_threads = m.opt.threads;
     for (int i = 0; i < m.opt.threads; ++i) m.threads.emplace_back([&m] { m.loop(); });
 }
@@ -162,6 +171,8 @@ void Fs::unmount() {
     Impl& m = *impl_;
     if (!m.is_mounted) return;
     m.is_mounted = false;
+    // 還在等「做完才回」的人：先放開（不然他拿著開著的檔，fusermount3 -u 會失敗）
+    for (auto& c : m.ctls) c->impl()->cancel_pending(ECONNABORTED);
     // 自己站在掛載點裡 umount 會 EBUSY，先離開
     char cwd[PATH_MAX];
     if (getcwd(cwd, sizeof cwd)) {
@@ -192,6 +203,7 @@ void Fs::unmount() {
         else t.detach();   // 醒不來就不等，行程結束時一起收；fd 也不關，免得它讀到別人的 fd
     }
     m.threads.clear();
+    for (auto& c : m.ctls) c->impl()->detach();   // 之後做完的指令不再往這個 fd 回
     if (all_gone) close(m.fd);
     m.fd = -1;
     for (auto& c : m.ctls) c->impl()->stop();

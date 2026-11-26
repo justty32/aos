@@ -23,11 +23,11 @@ namespace {
 
 namespace pf = aos::procfs;
 
-const char* USAGE = "aos-procfs-demo [NAME MOUNTPOINT] [--threads N] [--socket] [--persists PATH] [--obey WORDS] [--mail-* N] | --cleanup PATH [--force]";
+const char* USAGE = "aos-procfs-demo [NAME MOUNTPOINT] [--threads N] [--socket] [--ctl-wait] [--persists PATH] [--obey WORDS] [--mail-* N] | --cleanup PATH [--force]";
 
 const char* HELP = R"(aos-procfs-demo - A minimal aos proc served over FUSE.
 
-usage: aos-procfs-demo NAME MOUNTPOINT [--threads N] [--socket] [--persists PATH] [--obey WORDS] [--mail-* N]
+usage: aos-procfs-demo NAME MOUNTPOINT [--threads N] [--socket] [--ctl-wait] [--persists PATH] [--obey WORDS] [--mail-* N]
        aos-procfs-demo --cleanup PATH [--force]
 
 Without NAME and MOUNTPOINT it uses $AOS_NAME and $AOS_MOUNT (set by aos-daemon), but only
@@ -44,6 +44,9 @@ Deliver a letter: write it under mailbox/tmp/, then mv it into mailbox/new/.
 flags:
   --threads N      answer threads (default 1)
   --socket         allow unix sockets in the root and serve an echo socket named "sock"
+  --ctl-wait       a write to ctl returns only when the command is done: done = the write
+                   succeeds, failed = the write fails with EIO (the reason is in status);
+                   without it a write returns as soon as the command is accepted
   --persists PATH  value of aos_persists in settings (default -)
   --obey WORDS     add "aos_obey: WORDS" to settings: the ctl words a daemon this proc is
                    registered with may use on it, e.g. "stop kill" (default: no line, only rm)
@@ -117,7 +120,7 @@ void echo_server(int lfd) {
 int main(int argc, char** argv) {
     std::vector<std::string> pos;
     int threads = 1;
-    bool sock = false, force = false;
+    bool sock = false, force = false, ctl_wait = false;
     std::string persists, obey, clean;
     DemoMail dm;
     for (int i = 1; i < argc; ++i) {
@@ -134,6 +137,8 @@ int main(int argc, char** argv) {
                 threads = std::stoi(need("--threads"));
             } else if (a == "--socket") {
                 sock = true;
+            } else if (a == "--ctl-wait") {
+                ctl_wait = true;
             } else if (a == "--persists") {
                 persists = need("--persists");
             } else if (a == "--obey") {
@@ -245,6 +250,7 @@ int main(int argc, char** argv) {
             return c.words.size() == 2 ? "" : "ArgumentsBad unlink NAME";
         });
 
+        if (ctl_wait) ctl->reply_when_done();
         fs.mount(mnt);
     } catch (const std::exception& e) {
         return fail("MountFailed", e.what());

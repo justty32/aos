@@ -1,4 +1,4 @@
-// ctl.cpp：指令檔（ctl、procs_ctl）——一次寫入一道、從收下到做完都鎖住、回饋四行、指令交給做事的線。
+// ctl.cpp：指令檔（ctl、procs_ctl）——一次寫入一道、從收下到做完都鎖住、回饋四行、指令交給做事的線；可選「做完才回」寫入。
 #include "internal.hpp"
 
 #include <algorithm>
@@ -26,6 +26,8 @@ void Ctl::on(std::string word, Action action, Check check) {
     impl_->table[std::move(word)] = Impl::Entry{std::move(action), std::move(check)};
 }
 
+void Ctl::reply_when_done(bool on) { impl_->wait_done = on; }
+
 Feedback Ctl::snapshot() const {
     std::lock_guard<std::mutex> g(impl_->mu);
     return Feedback{impl_->cmd, impl_->state, impl_->error, impl_->count};
@@ -47,7 +49,7 @@ bool Ctl::Impl::open_ok() const {
     return !busy;
 }
 
-int Ctl::Impl::write(std::string_view data) {
+int Ctl::Impl::write(std::string_view data, uint64_t unique, uint32_t size) {
     std::string line = trim(data);
     std::lock_guard<std::mutex> g(mu);
     // 鎖著時一律先擋、不動回饋：先搶到的人的回饋才不會被蓋掉（草稿第 6 節）
@@ -81,8 +83,36 @@ int Ctl::Impl::write(std::string_view data) {
     busy = true;
     job = std::move(c);
     has_job = true;
+    if (wait_done && unique) {
+        // 做完才回：回覆留給做事的線（登記在 notify 之前，做事的線再快也看得到）
+        pending = unique;
+        pending_size = size;
+        cv.notify_one();
+        return HELD;
+    }
     cv.notify_one();
     return 0;   // 寫回來＝收到，不等做完
+}
+
+bool Ctl::Impl::interrupt(uint64_t unique) {
+    std::lock_guard<std::mutex> g(mu);
+    if (!pending || pending != unique) return false;
+    // 等的人收到訊號：當場放開（不然連 SIGKILL 都要等到做完）；指令照做，結果只在回饋裡
+    if (answer) answer(pending, EINTR, 0);
+    pending = 0;
+    return true;
+}
+
+void Ctl::Impl::cancel_pending(int err) {
+    std::lock_guard<std::mutex> g(mu);
+    if (pending && answer) answer(pending, err, 0);
+    pending = 0;
+}
+
+void Ctl::Impl::detach() {
+    std::lock_guard<std::mutex> g(mu);
+    answer = nullptr;
+    pending = 0;
 }
 
 void Ctl::Impl::start() {
@@ -120,11 +150,19 @@ void Ctl::Impl::run() {
             r = Result::failed(std::string("Internal ") + e.what());
         }
         std::lock_guard<std::mutex> g(mu);
-        if (r.hold) continue;   // stop：鎖到行程結束，state 停在 doing
+        uint64_t u = pending;   // 做完才回的那次 WRITE（被中斷過、或不是這種 ctl＝0）
+        pending = 0;
+        if (r.hold) {
+            // stop：鎖到行程結束，state 停在 doing；做完才回的寫入在這時回成功（等行程結束的話，卸載會讓它變失敗）
+            if (u && answer) answer(u, 0, pending_size);
+            continue;
+        }
         // 收下了、做的時候失敗＝failed（使用者 11-25 定）；done 一定是做成了、error 是 -
         state = r.error.empty() ? "done" : "failed";
         error = r.error;
         busy = false;
+        // 回饋先寫好再回：寫入一回來，status 就已經是 done／failed
+        if (u && answer) answer(u, r.error.empty() ? 0 : EIO, pending_size);
     }
 }
 

@@ -97,8 +97,14 @@ class Daemon:
             out[k] = v
         return out
 
-    def ctl(self, line, wait=10.0):
-        """寫一道指令；回 (寫入的 errno 或 0, 做完的 state, error)。"""
+    def ctl(self, line, wait=20.0):
+        """寫一道指令；回 (寫入的 errno 或 0, state, error)。ctl 是「做完才回」：寫入一回來就讀 status，不再等。
+        wait 秒還沒回就用 SIGALRM 打斷（daemon 會回 EINTR），回 (EINTR, …)。"""
+        def alarm(*_):
+            raise TimeoutError("ctl write did not return in %s s" % wait)
+        old = signal.signal(signal.SIGALRM, alarm)
+        signal.setitimer(signal.ITIMER_REAL, wait)
+        err = 0
         try:
             fd = os.open(self.root + "/ctl", os.O_WRONLY)
             try:
@@ -106,10 +112,14 @@ class Daemon:
             finally:
                 os.close(fd)
         except OSError as e:
-            s = self.status()
-            return e.errno, s.get("aos_ctl_state"), s.get("aos_ctl_error")
-        s = wait_for(lambda: (lambda x: x if x.get("aos_ctl_state") != "doing" else None)(self.status()), wait)
-        return 0, s and s.get("aos_ctl_state"), s and s.get("aos_ctl_error")
+            err = e.errno
+        except TimeoutError:
+            err = errno.EINTR
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, old)
+        s = self.status()
+        return err, s.get("aos_ctl_state"), s.get("aos_ctl_error")
 
     def fact(self, name, f):
         return read("%s/procs/%s/%s" % (self.root, name, f))
@@ -184,15 +194,17 @@ def t_procs():
     started(d, "main")
     c = config(d.dir, "sleeper", ["sleep"])
     r = d.ctl("start " + c)
-    check("procs: start -> done", r == (0, "done", "-"), r)
-    check("procs: started proc is alive", started(d, "sleeper"))
+    check("procs: start -> write ok, done", r == (0, "done", "-"), r)
+    check("procs: when the write returns the proc is already listed and alive",
+          os.path.exists(d.root + "/procs/sleeper") and d.fact("sleeper", "state") == "alive\n")
     hp = d.hostpid("sleeper")
     ns = int(re.search(r"ns: (\d+)", d.fact("sleeper", "pid")).group(1))
     nspid = re.search(r"NSpid:\s+(.*)", read("/proc/%d/status" % hp)).group(1).split()
     check("procs: pid file gives both levels (matches NSpid)", nspid == [str(hp), str(ns)], (nspid, ns))
     check("procs: started_at is a UTC time", re.fullmatch(r"\d{4}-\d\d-\d\dT[\d:.]+Z\n", d.fact("sleeper", "started_at")))
     r = d.ctl("start " + c)
-    check("procs: same name again -> failed ProcExists", r[0] == 0 and r[1] == "failed" and r[2].startswith("ProcExists"), r)
+    check("procs: same name again -> write error EIO, failed ProcExists",
+          r[0] == errno.EIO and r[1] == "failed" and r[2].startswith("ProcExists"), r)
     r = d.ctl("forget sleeper")
     check("procs: forget alive -> write error EINVAL", r[0] == errno.EINVAL and r[2].startswith("ProcAlive"), r)
     r = d.ctl("kill nobody TERM")
@@ -204,12 +216,13 @@ def t_procs():
     r = d.ctl("start relative.json")
     check("procs: start relative path -> write error", r[0] == errno.EINVAL, r)
     r = d.ctl("start /nonexistent/x.json")
-    check("procs: start unreadable config -> failed", r[1] == "failed" and r[2].startswith("ConfigUnreadable"), r)
+    check("procs: start unreadable config -> write error EIO, failed",
+          r[0] == errno.EIO and r[1] == "failed" and r[2].startswith("ConfigUnreadable"), r)
     bad = os.path.join(d.dir, "bad.json")
     with open(bad, "w") as f:
         f.write('{"name": "x", "argv": ["/bin/true"], "locks": {"landlock": false}}')
     r = d.ctl("start " + bad)
-    check("procs: landlock off is refused", r[1] == "failed" and "landlock" in (r[2] or ""), r)
+    check("procs: landlock off is refused (EIO)", r[0] == errno.EIO and r[1] == "failed" and "landlock" in (r[2] or ""), r)
     r = d.ctl("kill sleeper TERM")
     check("procs: kill -> done", r == (0, "done", "-"), r)
     check("procs: dead after SIGTERM", wait_for(lambda: d.fact("sleeper", "state") == "dead\n", 5))
@@ -224,7 +237,8 @@ def t_procs():
     check("procs: exit code 7 recorded", wait_for(lambda: d.fact("seven", "exit") == "code 7\n", 5))
     cb = config(d.dir, "noexec", ["x"], argv=["/nonexistent"])
     r = d.ctl("start " + cb)
-    check("procs: exec failure -> failed with reason", r[1] == "failed" and "exec /nonexistent" in (r[2] or ""), r)
+    check("procs: exec failure -> write error EIO, failed with reason",
+          r[0] == errno.EIO and r[1] == "failed" and "exec /nonexistent" in (r[2] or ""), r)
     check("procs: failed start leaves no entry", not os.path.exists(d.root + "/procs/noexec"))
     if d.status().get("subuid") != "none":
         cu = config(d.dir, "alice", ["sleep"], uid=1001)
@@ -239,7 +253,10 @@ def t_procs():
     # 主 kernel 自己寫 ctl 起一隻
     ck = config(d.dir, "bykernel", ["sleep"])
     a = d.ask("ctl start " + ck)
-    check("procs: main kernel writes start into /proc/1/cwd/ctl", a == "ok" and started(d, "bykernel"), a)
+    check("procs: main kernel writes start into /proc/1/cwd/ctl (alive when the write returns)",
+          a == "ok" and os.path.exists(d.root + "/procs/bykernel") and d.fact("bykernel", "state") == "alive\n", a)
+    a = d.ask("ctl start /nonexistent/x.json")
+    check("procs: main kernel's failing start is a write error EIO", a == "err EIO", a)
     check("procs: SIGTERM -> exit 0", d.stop() == 0)
 
 
@@ -382,7 +399,8 @@ def t_cgroup():
     check("cgroup: forget removes the cgroup dir", r[1] == "done" and not os.path.exists(os.path.join(cg, name)), r)
     if "memory" in ctrls:
         r = d.ctl("start " + config(d.dir, "u", ["sleep"], locks={"cgroup": {"nosuch.max": "1"}}))
-        check("cgroup: unknown limit file -> failed CgroupLimitFailed", r[1] == "failed" and "CgroupLimitFailed" in r[2], r)
+        check("cgroup: unknown limit file -> EIO, failed CgroupLimitFailed",
+              r[0] == errno.EIO and r[1] == "failed" and "CgroupLimitFailed" in r[2], r)
     d.stop()
     check("cgroup: scope removed after the daemon exits", wait_for(lambda: not os.path.exists(cg), 5), cg)
 
@@ -418,7 +436,11 @@ def t_mount():
     check("mount: table matches mountinfo after umount",
           sorted((t[2], t[3] == "ro") for t in table) == sorted(parse_mountinfo(hp)))
     r = d.ctl("mount m /nonexistent /x")
-    check("mount: bad source -> failed MountFailed", r[1] == "failed" and r[2].startswith("MountFailed"), r)
+    check("mount: bad source -> write error EIO, failed MountFailed",
+          r[0] == errno.EIO and r[1] == "failed" and r[2].startswith("MountFailed"), r)
+    r = d.ctl("umount m /nothere")
+    check("mount: umount of a place not mounted -> write error EIO, failed UmountFailed",
+          r[0] == errno.EIO and r[1] == "failed" and r[2].startswith("UmountFailed"), r)
     r = d.ctl("mount m relative /x")
     check("mount: relative path -> write error", r[0] == errno.EINVAL, r)
     d.stop()
@@ -437,10 +459,11 @@ def t_modes():
     um = read("/proc/%d/uid_map" % d.pid).split()
     check("modes: only the caller is mapped", um == ["0", str(os.getuid()), "1"], um)
     r = d.ctl("start " + config(d.dir, "c", ["sleep"], locks={"cgroup": {"pids.max": "10"}}))
-    check("modes: cgroup limit without cgroup -> failed CgroupUnavailable", r[1] == "failed" and
+    check("modes: cgroup limit without cgroup -> EIO, failed CgroupUnavailable", r[0] == errno.EIO and r[1] == "failed" and
           r[2].startswith("CgroupUnavailable"), r)
     r = d.ctl("start " + config(d.dir, "u", ["sleep"], uid=5))
-    check("modes: uid 5 without subuid -> failed UidUnavailable", r[1] == "failed" and r[2].startswith("UidUnavailable"), r)
+    check("modes: uid 5 without subuid -> EIO, failed UidUnavailable", r[0] == errno.EIO and r[1] == "failed" and
+          r[2].startswith("UidUnavailable"), r)
     r = d.ctl("start " + config(d.dir, "p", ["sleep"]))
     check("modes: a plain proc still starts", r[1] == "done" and started(d, "p"))
     check("modes: its locks say groups are kept", "groups: kept" in d.fact("p", "locks"))

@@ -27,7 +27,7 @@ aos-procfs 的原始碼在 `make` 時編進 `build/obj/procfs/`，不動 `../aos
 ```
 cd proto9/cpp/aos-daemon2
 make            # build/bin/aos-daemon2；-Wall -Wextra 沒有警告
-make test       # tests/run.py：約 7 秒；只跑某幾組：python3 tests/run.py basic restart
+make test       # tests/run.py：約 4～7 秒；只跑某幾組：python3 tests/run.py basic restart
 ```
 
 手動玩（`k.json` 的寫法見下面「設定檔」）：
@@ -76,7 +76,15 @@ $ kill %1        # daemon 結束，底下整片跟著走
 | `umount NAME DST` | 從它的天空卸掉 DST |
 | `forget NAME` | 把死掉的從表上拿掉（還活著就拒）；它的 cgroup 夾裡還有它留下的行程時也拒（先寫 `cgroup.kill`） |
 
-寫錯的（不認得的字、參數不對、名字不在、`kill` 死掉的、`forget` 活著的、路徑不是絕對路徑）寫入當場失敗（EINVAL），原因在 `status` 的 `aos_ctl_error`。收下之後做的時候才失敗的（設定檔讀不到、json 不對、exec 失敗、掛不上）寫入是成功的，`aos_ctl_state` 變 `failed`、原因在 `aos_ctl_error`，daemon 也寫到 stderr——這是 aos-procfs 的規矩（寫回來＝收到，不等做完），見最後「要使用者定的」第 1 題。
+**寫入等做完才回**（使用者 11-26 定；用 aos-procfs 的「做完才回」ctl，`Ctl::reply_when_done()`）：`start` 等那隻 exec 成功才回（寫入回來時 `procs/<名>` 已經在、`state` 是 `alive`），`mount`／`umount` 等掛好、卸好，`kill` 等訊號送出（不等它死），`forget` 等從表上拿掉。
+
+- 寫錯的（不認得的字、參數不對、名字不在、`kill` 死掉的、`forget` 活著的、路徑不是絕對路徑）：寫入當場失敗 `EINVAL`，`aos_ctl_state: rejected`（不變）。
+- 收下之後做的時候才失敗的（設定檔讀不到、json 不對、同名的已經在、exec 失敗、組天空失敗、cgroup 上限寫不進去、掛不上、卸不掉）：寫入失敗 **`EIO`【擬】**（殼裡是 `write error: Input/output error`）。寫入帶不了字，原因照舊在 `status` 的 `aos_ctl_error`（`aos_ctl_state: failed`），daemon 也寫到 stderr。
+- 寫入一回來，`status` 的 `aos_ctl_*` 已經是這一道的結果，不用再等。
+- 等的時候按 Ctrl-C（或 `kill` 寫的那支）：寫的人當場拿到 `EINTR` 放開，指令照做，結果只在 `aos_ctl_*`。daemon 等的時候結束了：寫的人拿到連線斷掉的錯（`ECONNABORTED`／`ENOTCONN` 之類，沒進測試）。
+- 一道還在做時（例 `start` 在組天空），別人寫 `ctl` 照舊當場 `EBUSY`；讀 `status` 不受影響。
+- 最久等多久：`start` 的組天空、exec 各有 10 秒逾時，叫主執行緒做事有 60 秒逾時（逾時＝`EIO`＋`Timeout …`／`Internal …`）；之外沒有別的逾時。
+- `stat` 看到 `ctl` 的大小是 1073741824：aos-procfs「做完才回」的 ctl 都這樣報（讓先開好檔的第二個人當場拿到 `EBUSY`，見 aos-procfs 的 README）。
 
 daemon 不做的：自動重起（主 kernel 以外）、判卡住、准不准、kernel 登記表。
 
@@ -167,17 +175,17 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 
 ## 測試
 
-`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**110 PASS、0 FAIL**，約 7 秒，連跑 7 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
+`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**112 PASS、0 FAIL**（11-26 改成寫入等做完才回之後；之前是 110），約 4～7 秒，清 build 跑一次加連跑 3 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
 
 | 組 | 驗什麼 |
 |---|---|
 | `basic` | 一般使用者起得來；export 那行；daemon 在自己的 PID namespace 是 1 號（NSpid）；uid 對照表；經 `/proc/<PID>/cwd` 讀 `status`；`/proc/<PID>/root` 只有小世界、看不到 `/etc`、`/usr`；主 kernel 讀得到 `/proc/1/cwd/status`、caps 只剩 cap_sys_ptrace；SIGTERM 後退出碼 0 |
-| `procs` | start／kill／forget；`pid` 兩層對得上 NSpid；同名、forget 活的、kill 不在的、壞訊號、不認得的字、相對路徑都寫入失敗；讀不到設定、關 Landlock、exec 失敗都是 `failed`；退出碼 7、SIGTERM 記對；uid 1001 在外面是 subuid；主 kernel 自己寫 `/proc/1/cwd/ctl` 起一隻 |
+| `procs` | start／kill／forget；`start` 的寫入回來時那隻已經在表上、`alive`；`pid` 兩層對得上 NSpid；forget 活的、kill 不在的、壞訊號、不認得的字、相對路徑都寫入失敗 `EINVAL`；同名、讀不到設定、關 Landlock、exec 失敗都是寫入失敗 `EIO`＋`failed`＋原因；退出碼 7、SIGTERM 記對；uid 1001 在外面是 subuid；主 kernel 自己寫 `/proc/1/cwd/ctl` 起一隻（寫入回來時已經 `alive`），起不來的它拿到 `EIO` |
 | `sky` | 天空表的行數、掛載點、唯讀可寫跟 mountinfo 一樣；每個 bind 的來源跟掛載點是同一個檔（dev＋inode）；WSL 的 `/usr` 子掛載記成 `locked`；唯讀的地方寫不進去、`-w` 的寫得進去而且落在外面的夾；根裡只有設定放的東西 |
 | `landlock` | 非主 kernel 的 proc 讀不到 `/proc/1/cwd`、`/proc/1/root`、旁邊 proc 的 `/proc/<PID>/root` 與 `environ`，自己的 `/proc/self/root` 可以；能不能對 daemon 送訊號照 ABI 記（ABI 3：能）；主 kernel 讀得到旁邊 proc 的 `/proc/<PID>/root`；`locks` 檔；caps 0、no_new_privs |
-| `cgroup` | `procs/<名>/cgroup` 可用、行程在裡面、`memory.max`／`pids.max` 照設定、`cgroup.freeze` 凍住再解凍、forget 刪掉夾、不認得的上限檔 `failed`、daemon 結束後 scope 不見 |
-| `mount` | 跑的時候掛進去、看得到、表多一行且仍跟 mountinfo 一樣；`-w`；卸掉後不見、表也拿掉；來源不在 `failed`；相對路徑寫入失敗 |
-| `modes` | `--cgroup off --subuid off`：對照表只有一段、給 cgroup 上限或 uid 5 都 `failed`、一般 proc 照起、`locks` 寫 groups kept |
+| `cgroup` | `procs/<名>/cgroup` 可用、行程在裡面、`memory.max`／`pids.max` 照設定、`cgroup.freeze` 凍住再解凍、forget 刪掉夾、不認得的上限檔 `EIO`＋`failed`、daemon 結束後 scope 不見 |
+| `mount` | 跑的時候掛進去、看得到、表多一行且仍跟 mountinfo 一樣；`-w`；卸掉後不見、表也拿掉；來源不在、卸沒掛的地方都是 `EIO`＋`failed`；相對路徑寫入失敗 `EINVAL` |
+| `modes` | `--cgroup off --subuid off`：對照表只有一段、給 cgroup 上限或 uid 5 都 `EIO`＋`failed`、一般 proc 照起、`locks` 寫 groups kept |
 | `restart` | 前兩次起來就死的主 kernel 被重起兩次後活著；`--restart-limit 3` 起 4 次後 daemon 以 1 結束並說明原因；`--on-kernel-exit exit` 以主 kernel 的 4 結束、不重起；`--restart-limit 0` 第一次死就結束 |
 | `teardown` | `kill -9` daemon：底下 4 隻 1 秒內全不見、起動那一層以 137 結束；`kill -9` 起動那一層：daemon 與底下跟著走 |
 | `leftovers`（最後一定跑） | 沒有留下行程（daemon、起動那一層、天空裡的 toys.py）、systemd unit、`aos-daemon2-*` cgroup、掛載 |
@@ -191,6 +199,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 - 小世界裡除了 `aos/` 還有 `cgroup/`（cgroup 夾的 bind）；`procs/<名>/cgroup` 是相對 symlink `../../../cgroup/p-…`，外面與天空裡走 `/proc/<PID>/cwd/…` 都通。
 - 每隻 proc 的資訊放在編號的 `slots/<i>/`，`procs/<名>` 是 symlink：aos-procfs 只准拿掉 symlink，夾拿不掉，forget 後格子空著給下一隻用（空格子的檔讀出來是空的）。
 - 工具檔叫 `ctl`，回饋在 `status` 的 `aos_ctl_*` 四行。
+- 做的時候失敗的寫入回 `EIO`（原因只在 `aos_ctl_error`）；`kill` 的「做完」是訊號送出、不等它死；`start` 的「做完」是 exec 成功。
 - 主 kernel 重起時舊的那筆直接拿掉、同名起新的；它死的情形記在 `status`。
 - 主 kernel 起不來也算死一次，照重起規則走。
 - daemon 結束時不另給寬限，直接 `kill(-1, SIGKILL)`（要好好收是主 kernel 的事）。
@@ -208,14 +217,13 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 - 網路（`net none` 之類）：天空都跟 daemon 同一個 network namespace，也就是外面的網路。
 - 擋訊號、abstract socket：要 Landlock ABI 6（Linux 6.12 以上）；這台 6.6 擋不住，程式在 ABI 6 以上會自動加。
 - `start` 的路徑用天空裡的路徑（照主 kernel 自己的天空換算）：這版只收外面的路徑。
-- ctl 做的時候才失敗的錯誤還不是寫入錯誤（見下第 1 題）。
 - 天空表只在起動與跑的時候掛／卸之後量；proc 自己改不了天空（沒有 caps），所以這兩個時候以外不會變。
 - 一個很慢的天空（例如 bind 的來源卡在別的 FUSE 上）會讓主執行緒等到 10 秒逾時，這段時間其他 `start` 也排著。
 - 沒試過：沒有 Landlock 的核心、沒有 systemd --user 而 `--cgroup auto`（照程式會寫 `off (no systemd --user …)`）、cgroup v1、家機。
 
 ## 要使用者定的
 
-1. **ctl 的錯誤要不要等做完才回**：使用者要的是「錯誤回成寫入錯誤」，但 aos-procfs 的 ctl 是「寫回來＝收到，不等做完」（11-25 定的），所以只有門口就擋得下的（不認得的字、參數、名字、活死）是寫入錯誤；設定檔讀不到、exec 失敗、掛不上只會在 `aos_ctl_state: failed`。要全部變成寫入錯誤，aos-procfs 得加一種「做完才回」的 ctl（回答的線把那次 WRITE 的回覆留著，做事的線做完再回，失敗回 errno）。這裡沒改 aos-procfs。
+1. ~~ctl 的錯誤要不要等做完才回~~：使用者 11-26 定「要」。aos-procfs 加了「做完才回」的 ctl，這裡用上了（見上面「寫入等做完才回」）；還要看的只剩 errno 挑 `EIO` 可不可以。
 2. **主 kernel 留 CAP_SYS_PTRACE 可以嗎**：這是讓它讀得到 `/proc/1/cwd` 最小的一步，但有了它，主 kernel 也能 ptrace 同一個 user namespace 裡的行程（含 daemon，等於能拿到 daemon 的權力）。另一條路是讓 daemon 自己的 caps 變少（例如把要 caps 的事交給另一支幫手行程），比較繞。
 3. **ABI 3 擋不住訊號**：非主 kernel 的 proc 能對 daemon 送 SIGTERM（daemon 一收就整片收掉）。daemon 職責第 5 條已記「之後要求較新的 Linux」；這版照實記在測試與 `locks` 檔。
 4. **小世界裡放 `cgroup/`**：開關照第 7 條「直接擺進資訊」，這版是把 cgroup 夾 bind 進小世界、用相對 symlink 指過去；所以 `/proc/<PID>/root` 會看到 `aos`、`cgroup` 兩個夾。

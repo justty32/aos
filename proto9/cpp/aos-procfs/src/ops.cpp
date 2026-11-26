@@ -90,6 +90,9 @@ void Fs::Impl::op_open(const Req& r, Lock& lk, Node& node) {
             return;
         }
         o.open_flags = FOPEN_DIRECT_IO;
+        // 做完才回的寫入會在核心裡拿著這個檔的鎖等；先開好檔的第二個人要能當場拿到 EBUSY，不是排在鎖後面
+        //（核心只在「不寫過檔尾」時給並行寫，所以這種 ctl 的大小報得很大，見 fill_attr）
+        if (c->impl()->wait_done) o.open_flags |= FOPEN_PARALLEL_DIRECT_WRITES;
         reply(r.h.unique, 0, &o, sizeof o);
         return;
     }
@@ -124,7 +127,8 @@ void Fs::Impl::op_write(const Req& r, Lock& lk, Node& node) {
     lk.unlock();
     size_t off = sizeof wi;
     size_t n = off < r.blen ? std::min<size_t>(wi.size, r.blen - off) : 0;
-    int err = c->impl()->write(std::string_view(r.body + off, n));
+    int err = c->impl()->write(std::string_view(r.body + off, n), r.h.unique, wi.size);
+    if (err == Ctl::Impl::HELD) return;   // 做完才回：做事的線做完時回
     if (err) {
         reply(r.h.unique, err);
         return;

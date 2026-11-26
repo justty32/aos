@@ -299,6 +299,8 @@ bool abs_clean(const std::string& p) {
 }
 
 void setup_ctl(pf::Ctl& ctl) {
+    // 做完才回：start 等 exec 成功（或失敗）、mount／umount 等做完、kill 等送出、forget 等拿掉；做的時候失敗＝寫入失敗 EIO
+    ctl.reply_when_done();
     ctl.on("start",
         [](const pf::Command& c) {
             std::string err;
