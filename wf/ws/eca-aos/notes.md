@@ -746,3 +746,9 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 使用者（逐字）：「先到這邊，整理一下，我compact」→ HANDOFF 的公司段換成今天這版（sky 跑通、2～5 交件、aospl 那串、還開著的、沒推）。
 - 狀態：本地比遠端多 8 個 commit，全沒推；背景沒東西在跑；上網幫手 `tmux -L webref` 照舊留著；根目錄 `ls` 檔還在（要刪等他說）。
 - compact 後接：讀這節與 HANDOFF 公司段 → 思考紀錄 aospl循址與元介面-1126 的「未決」。等使用者：interfaces 第一版規範、__call.json、__metatable／__mode、daemon 9 條【開】、aos-exec 瘦身、artifact、push。
+
+## 2026-11-26 午：compact 後接著談介面宣告
+
+- 使用者第 54 段回七條未決：不要 `__call.json`、`__metatable`／`__mode` 先不管、「各元素怎麼用」拿掉、`_index.json` 以後改、`#` 解析算介面（還沒想好）、名字用 aoslua、接著談介面宣告檔。
+- 第 55、56 段：介面宣告＝能存取到 `xxx/__meta/__interfaces/aos/name` 就有 `aos/name`，位置上放什麼由讀的人處理；哪層算介面各自認定、`__interfaces` 不限形狀、可用 `__index` 現算、不往下傳。思考紀錄定了到 30 條。
+- 下一步：問使用者要不要接著定 aos 第一版的共同介面（aos/name、aos/description、改名、路徑解析規則）。
