@@ -761,3 +761,10 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 使用者（逐字）：「aos-exec先不管。介面這塊差不多了，你整理收尾一下，我要compact，然後回頭來聊daemon。」→ 抄第 63 段；HANDOFF 公司段換新（介面那串到 44 條、compact 後接 daemon、可拿出來的 daemon 題目清單）。
 - 狀態：本地比遠端多 14 個 commit，全沒推；背景沒東西；`tmux -L webref` 照舊；根目錄 `ls` 還在。
 - compact 後接：讀這節與 HANDOFF 公司段 → 等使用者開 daemon 的題目（不要自己先挑著做）。
+
+## 2026-11-26 午後：compact 後談 daemon 的職責
+
+- 使用者第 64 段嫌我一次列太多：「我們一個一個來。先從daemon做完減法後的職責開始」。**之後一次只拿一題。**
+- 第 65～67 段定了：daemon 只提供資訊與工具、判斷與使用交給 kernel；用 `/proc/<daemon PID>/xxx` 存取（實際走 `cwd`）；daemon 自己住進只有資訊＋工具的小世界（A）；只開給一個地位像 Linux kernel 的 kernel；其他 proc 用 Landlock 擋（甲），訊號擋不住的之後要求較新的 Linux。
+- 新思考紀錄 `proto8/thinking/2026-11/26/daemon職責-1126.md`。我的讀法「開關只交給那一個 kernel、再分給誰由它定」他沒反對，照記。
+- 下一題（還沒問）：工具長什麼樣（可寫檔 vs 可執行檔）。
