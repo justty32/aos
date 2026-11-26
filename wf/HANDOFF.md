@@ -27,6 +27,13 @@
 - **compact 後（11-26 傍晚）**：seccomp＋疊 daemon 那隻回來，eca-aos 清 build 重跑 444／444、無殘留，交件（預設內建 seccomp 擋 44 個、`off`、自己的清單；`--cgroup PATH`；疊 daemon 在預設鎖下起不來：uid 0 對照不了自己、Landlock 擋 mount、天空沒 `/dev/fuse`——放寬哪道等使用者，README「要使用者定的」第 6 條；它的【擬】還沒給使用者看）。**派了一隻 fable 背景審 daemon 規劃**（只讀，報告寫 `~/.aos/scratch/proto9-daemon-review-1126/report.md`）。**開始談 kernel**（[kernel-1126](../proto8/thinking/2026-11/26/kernel-1126.md)，逐字第 125～129 段）：init 做最小的；別的 proc 跟 init 說話走 ctl 介面——`__meta/__interfaces/ctl/` 底下寫怎麼講（擬 `kind` file|socket、`path`、`commands`），在等使用者答三小題（叫 `ctl` 還是 `aos/ctl`、三欄位、下一批空檔 `aos/daemon` 改成 `aos/ctl` 夾）。下一批五樣先別派，等這三題定了（第五樣會變）。
 - **fable 審查看完、kernel 談了兩條**（逐字第 130～141 段）：ctl 宣告定為 `aos/ctl`（aospl 第 46 條）；daemon職責新增第 35～50 條——訊號看寄件人、ctl 只靠 Landlock 要補測試、bind 卡住不等（35～37，**背景 opus 在做**，連同下一批五樣，介面宣告改 `aos/ctl` 夾）；proc 預設自動配 subuid、除 init 禁 0（38）；疊 daemon 等 6.12（39）；舊版照跑講明風險（40）；不用 bwrap 補原因（41）；`beneath`／`real`（42）；重起前殺舊 init cgroup、slave、收掉 ptrace（43～45）；**天空＝看得到什麼是路由、行程之間是牆**（46，取代第九輪）；路徑照寫的人的天空解、`events`、FUSE kernel 待辦（47～49）；小事（50）。**待派（背景那隻回來、驗、交之後，同一夾）**：38、40～45、47、48、50。kernel 下一題：登記表（kernel-1126 第 3 題）。
 - **晚上（compact 後）**：背景那隻回來（35～37＋五樣，daemon 559 條；它違規用過一次 pkill，條件帶它自己的暫存路徑），eca-aos 清 build 跑三次 559／559、無殘留，交件；它的【擬】8 條在 aos-daemon README，還沒給使用者看。使用者「派個fable去審一下我們先前做的這些決策吧」→ 報告 `~/.aos/scratch/proto9-decisions-review-1126/report.md`（要問 10 題，正在一題一題問，第 1 題「往下傳自己有的誰守」）。下一批改成：40～45、50 先派；38、47、48 與 `aos/ctl` 宣告形狀等這輪題目談完。
+- **11-26 收工（下次開大約 12-01 週二）**：
+  - 決策審查答了兩題（逐字第 143、144 段）：第 1 題甲，init 多做第四件「收窄檢查」，准不准的 kernel 死或卡算不准（kernel-1126 第 1 條「改」）；第 2 題乙，資訊與開關由 init 指定、daemon 分出去（daemon職責第 51 條）。**停在第 3 題**（`aos/ctl` 宣告形狀四小項：一律子夾、`ok`／`err` 回話、init 第一版用 socket、指令集另取名），第 4～10 題還沒問。
+  - **通勤用 artifact 五份**（總覽、aoslua、daemon、kernel、決策審查）：網址在 `~/.aos/scratch/commute-1126/urls.txt`，HTML 源檔在同夾 `html/`；是 tmux 開的 alt claude（`CLAUDE_CONFIG_DIR=~/.claude-alt`）發佈的，我叫不到 CrossSessionMessage，用 tmux send-keys 傳話。
+  - **背景 opus 做 daemon職責第 40～45、50 條，收工時還沒做完**：改動留在 `proto9/cpp/aos-daemon/` 工作樹（沒交）。下次開先看它有沒有寫完：清 build 跑三次、查殘留，沒寫完就照它的進度補完或重派。暫存 `~/.aos/scratch/proto9-daemon-batch3-1126/`。
+  - **中文版知識庫落後**：收工查法印出 36 頁 stale、1 頁 missing（`aos/orgs.md`），還沒派線補；下次開派一條 opus 照 knowledge-zh-md README「怎麼跟上一頁」一次補齊。
+  - eca_main 來信：早上 WSL 重開清掉 /tmp/aos（mod_tome4 證據不見）；使用者說範本不用改。
+  - 還欠使用者看：上一批子 agent 的【擬】8 條（也在總覽 artifact 裡）。
 - **daemon 還沒談的**（11-26 午後大多談完；舊清單留著對照）：daemon2 剩下的【擬】（設定檔格式、天空表一行的寫法、EIO 當錯誤碼、主 kernel 要是天空裡 uid 0…，見其 README）；資訊與工具用 aoslua 怎麼描；主 kernel 正式名字；網路隔離、seccomp；sky-1125 四題剩「天空裡開 user namespace」「選用 kernel 要不要先有」「uid」；daemon當容器第八輪 7～11、第九輪兩點；舊 aos-daemon 要不要收掉。
 - **還開著（不催）**：`__metatable`、`__mode`；`__index` 整條路；`aos/utilpath` 細節；exec／before／after 兩個邊角；aos-exec 瘦身；草稿 01 還沒跟上這些概念。
 

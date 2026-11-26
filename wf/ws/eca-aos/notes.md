@@ -889,3 +889,13 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 使用者「先停在這邊吧…弄成artifact，讓我在通勤路上看…tmux開一個不在aos體系下的claude，並且使用~/.claude-alt，然後用claude message (a2a)的方式傳訊給他」＋「可以多做幾份」「圖多、只講結論、細節摺疊」「你不先做好網頁，再跟他講html檔案地址嗎」。
   - 素材 ~/.aos/scratch/commute-1126/0N-*.md、規格 html-spec.md；5 隻 opus 各做一份 HTML 到 html/。
   - tmux session `alt-commute`（env -i、CLAUDE_CONFIG_DIR=~/.claude-alt）已開。我叫不到 CrossSessionMessage（延遲工具、沒 ToolSearch），改用 tmux send-keys 傳路徑給它發佈。
+- 通勤 artifact 五份發佈好（alt claude 在 tmux alt-commute 發的）：網址在 ~/.aos/scratch/commute-1126/urls.txt。HTML 源檔在 html/。之後要改就改 html 再請 alt claude 重發同一網址。
+- 停在：決策審查第 3 題（aos/ctl 形狀四小項）等使用者；背景 opus 做 40～45、50。
+- 收到 eca_main 通知（不用回）：早上 WSL 重開，/tmp/aos 清空，mod_tome4 的複查證據不見。查了：我們的 org 範本 proto8/templates/orgs/ 沒寫 /tmp 慣例（那條在 mod_tome4 自家 places.md，源頭是 arena_cheater 樣本）。可做：範本 places 說明加一句「給別人複查的證據放 repo 或持久位置，或至少把重產方式放 repo」——開新工作，問使用者。我自己的暫存在 ~/.aos/scratch（不受影響）。
+
+## 2026-11-26 收工：使用者「不用，收拾整理一下，差不多該準備push了」「push後我要compact，然後我要關掉session。下次開應該是下禮拜二了」
+
+- 「不用」＝org 範本不加 /tmp 證據那句。
+- push 授權：使用者這句就是要 push。
+- 下次開（約 12-01 週二）照 HANDOFF 最後一條接：先看背景 daemon 40～45、50 那隻的半成品（工作樹）、中文版知識庫 36 stale＋1 missing 派線、決策審查第 3 題。
+- alt-commute tmux 收掉（artifact 留著）。
