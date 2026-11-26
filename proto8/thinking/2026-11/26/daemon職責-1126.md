@@ -26,6 +26,14 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 5. **擋其他 proc 用 Landlock。**（第 67 段，選甲）除了那個 kernel，其他 proc 起動前各進一個自己的 Landlock domain。
    - Linux 6.6（公司 WSL，ABI 3）只擋得住讀 `/proc/1/...`，擋不住送訊號；同帳號的 proc 還能對 daemon 送 SIGTERM（daemon 一收，底下整片收掉）。
    - 使用者：之後就要求較新的 Linux 版本（訊號、abstract socket 的擋法要 6.12 以上）。
+6. **工具先做可寫的檔。**（第 68 段，選 A）daemon 擺一個檔，寫一行進去 daemon 就照做（像現在的 `procs_ctl`）。照 exec／before／after 那套的可執行檔以後當外層包上去，內部就是去寫這個檔（可執行檔用呼叫者的身分跑，本身沒有 daemon 的權力）。
+7. **資訊與工具的清單照草稿。**（第 69 段）
+   - 資訊（每隻 proc 一份）：名字、PID（講明哪一層）、活著或死了、結束碼或訊號、起動時間、天空表（像 Plan 9 的 `ns`）、uid、上了哪些鎖。
+   - 工具（同一個可寫檔，一行一個指令）：`start <設定檔路徑>`（名字、程式與參數、天空、uid、鎖都寫在設定檔）；`kill <名字> <訊號>`（沒有「好好停」，要好好收由 kernel 先 SIGTERM、等一陣子再 SIGKILL，等多久它定）；`mount`／`umount <名字> …`（跑的時候改天空）；`forget <名字>`（把死掉的從表上拿掉）。
+   - 開關：每隻 proc 的 cgroup 資料夾（`cpu.max`、`memory.max`、`cgroup.freeze`）直接擺進資訊，不另做工具。
+   - 不在 daemon：自動重起、判卡住、准不准；kernel 登記表（哪些 kernel 提供哪些名字）改歸那一個 kernel，daemon 只照 `start` 給的天空掛。
+8. **主 kernel 怎麼來**（第 70 段；名字先叫「主 kernel」）：daemon 起動參數指定是哪支程式，daemon 起來第一件事就起它；它是唯一不進 Landlock 的 proc，其他 proc 都由它對 daemon 下 `start` 起出來。使用者在外面跟 daemon 同帳號，也讀寫得到 `/proc/<daemon PID>/cwd`，留著方便除錯。
+   - 它死了怎麼辦（第 71 段）：daemon 照起動參數預先寫好的規則做，判斷還是在起 daemon 的那一層（像 systemd 的 `Restart=`）。預設 `restart`：重起，但有上限（60 秒內死超過 5 次就不再起，daemon 結束、底下整片收掉）；另一個選項 `exit`：不重起，daemon 直接結束。主 kernel 重起後讀 daemon 的資訊接回去；它自己記憶體裡的東西（kernel 登記表、做到一半的判斷）要留就自己寫 persists。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 
@@ -33,7 +41,5 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 
 ## 還沒定的
 
-- 工具長什麼樣：daemon 提供的可寫檔（寫進去 daemon 就做），還是照 exec／before／after 那套的可執行檔（可執行檔用呼叫者的身分跑，碰 daemon 的權力得再傳給 daemon）。
 - 資訊與工具用 aoslua 的講法怎麼描（table、`__meta`、介面宣告）。
-- 那個 kernel 怎麼產生：daemon 起來時第一個起的、設定裡指定的，還是別的。
-- 那個 kernel 的名字（先叫它什麼）。
+- 主 kernel 的正式名字。

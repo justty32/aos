@@ -768,3 +768,5 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 65～67 段定了：daemon 只提供資訊與工具、判斷與使用交給 kernel；用 `/proc/<daemon PID>/xxx` 存取（實際走 `cwd`）；daemon 自己住進只有資訊＋工具的小世界（A）；只開給一個地位像 Linux kernel 的 kernel；其他 proc 用 Landlock 擋（甲），訊號擋不住的之後要求較新的 Linux。
 - 新思考紀錄 `proto8/thinking/2026-11/26/daemon職責-1126.md`。我的讀法「開關只交給那一個 kernel、再分給誰由它定」他沒反對，照記。
 - 下一題（還沒問）：工具長什麼樣（可寫檔 vs 可執行檔）。
+- 第 68～71 段：工具先做可寫檔（A）；資訊與工具清單照草稿；主 kernel 由 daemon 起動參數指定、唯一不進 Landlock；死了照起動參數 `restart`（60 秒內死超過 5 次就停、daemon 結束）或 `exit`。
+- 11:5x 使用者：「我十二點要去吃飯，你能先開始實作嗎？應該十二點十五分回來。」→ 派一隻 opus 背景子 agent 做 `proto9/cpp/aos-daemon2/`（新夾，舊 aos-daemon 不動；暫存 `~/.aos/scratch/proto9-daemon2-1126/`；不 commit）。**回來後**：清 build 重編重跑、查殘留（行程、掛載、cgroup、unit）、交件、把【擬】給使用者看。夾名 aos-daemon2 是我挑的，可改。
