@@ -885,3 +885,7 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - fable 決策審查回來，報告存 ~/.aos/scratch/proto9-decisions-review-1126/report.md。該先處理 6 條（最小 init×全員 subuid、往下傳沒人守／預設全准、aos/ctl 宣告形狀、init 重起後 /aos 斷、aoslua 跑別人的 __meta 可執行檔、aoslua 四處兩讀）、值得想 8、小事 10、對不上原話 4、要問 10 題。
 - 我的判斷：下一批裡 38（subuid 怎麼配）、47（路徑怎麼解）、48（events）、介面宣告形狀都被題目碰到，先不派；40～45、50（XDG 連結那小項除外）不受影響可先派。
 - fix 那隻回來：559 條；違規用過一次 pkill（條件帶它的暫存路徑）。我在跑三次清 build 驗證。
+- 決策審查第 1 題選甲（第 143 段，記在 kernel-1126 第 1 條「改」）；第 2 題選乙（第 144 段，daemon職責第 51 條）。正在問第 3 題（aos/ctl 宣告形狀＋init 第一版用什麼）。這些還沒交件。
+- 使用者「先停在這邊吧…弄成artifact，讓我在通勤路上看…tmux開一個不在aos體系下的claude，並且使用~/.claude-alt，然後用claude message (a2a)的方式傳訊給他」＋「可以多做幾份」「圖多、只講結論、細節摺疊」「你不先做好網頁，再跟他講html檔案地址嗎」。
+  - 素材 ~/.aos/scratch/commute-1126/0N-*.md、規格 html-spec.md；5 隻 opus 各做一份 HTML 到 html/。
+  - tmux session `alt-commute`（env -i、CLAUDE_CONFIG_DIR=~/.claude-alt）已開。我叫不到 CrossSessionMessage（延遲工具、沒 ToolSearch），改用 tmux send-keys 傳路徑給它發佈。

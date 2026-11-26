@@ -99,7 +99,12 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
     - `kill <名字>` 送給它整個 cgroup；沒開 cgroup 時送給它的行程組。
     - `tmpfs` 條目與天空的根加可選 `size`，預設不限。
     - daemon 在 `$XDG_RUNTIME_DIR/aos-daemon/<名字>` 放固定位置的連結、結束時拿掉；README 教人寫 `ctl` 前先對 `status` 的 PID。
-    - 其餘 11 條照 審查報告（`~/.aos/scratch/proto9-daemon-review-1126/report.md`）「小事」的建議直接修（kill 改 pidfd、`on_main` 逾時標取消、擋 `daemon_path` 上層的 umount／mount、`/tmp` 不在也能起、文件補正等）。
+    - 其餘 11 條照審查報告（`~/.aos/scratch/proto9-daemon-review-1126/report.md`）「小事」的建議直接修（kill 改 pidfd、`on_main` 逾時標取消、擋 `daemon_path` 上層的 umount／mount、`/tmp` 不在也能起、文件補正等）。
+51. **資訊與開關可由 init 指定分出去**（決策審查第 2 題，第 144 段，選乙；報告 `~/.aos/scratch/proto9-decisions-review-1126/report.md`）：可選的 kernel（重起、排程、登記表）都是 subuid，原本讀不到 daemon 目錄（FUSE 只准掛載者的帳號）、寫不了 cgroup 檔（主人是使用者本人）。daemon 多給兩樣機制，**給誰由 init 用 ctl 指定**，daemon 只照做：
+    - 把某隻 proc 的 cgroup 夾交給指定的那隻 kernel（讓它能寫 `cpu.max`、`cgroup.freeze` 等）；
+    - 讓指定的 proc 唯讀地看 `procs/`（之後的 `events` 同）。
+    - 第 4 條「只開給一個 kernel」改讀成：**ctl 只開給 init；資訊與開關可由 init 指定分出去。**下面「我的讀法」那條有了機制。
+    - 不選甲（init 全部轉手）：init 會多出資訊轉送、事件分發、開關轉送三套介面，外加一張「誰能碰誰」的表，等於把准不准的 kernel 搬回 init；而且 init 卡住時排程 kernel 連凍結都做不了。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 
