@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# run.py：aos-daemon 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、init 重起規則、整片跟著 daemon 走、init 經 /aos（或 ptrace）碰目錄、procs/<名>/ 是真的夾、daemon 設定檔、結束寬限、起動那一層死了留下、forget -k、改名 init、沒有 init、到重起上限留著、daemon_path、init 進 Landlock、exit_code、net none／host、沒有殘留。
-# 用法：python3 tests/run.py [組名…]；組：basic procs nsconf ns landlock cgroup mount modes restart teardown access dirs stdio dconf grace pdeath forgetk rename noinit rlstay dpath ilandlock exitcode net（最後一定跑 leftovers）
+# run.py：aos-daemon 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、init 重起規則、整片跟著 daemon 走、init 經 /aos（或 ptrace）碰目錄、procs/<名>/ 是真的夾、daemon 設定檔、結束寬限、起動那一層死了留下、forget -k、改名 init、沒有 init、到重起上限留著、daemon_path、init 進 Landlock、exit_code、net none／host、seccomp（內建的擋單、off、自己的名單）、疊 daemon 量到的界線、--cgroup PATH、沒有殘留。
+# 用法：python3 tests/run.py [組名…]；組：basic procs nsconf ns landlock cgroup mount modes restart teardown access dirs stdio dconf grace pdeath forgetk rename noinit rlstay dpath ilandlock exitcode net seccomp nest cgpath（最後一定跑 leftovers）
 import errno, json, os, re, select, shutil, signal, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -83,13 +83,15 @@ def write_json(p, obj):
 
 
 class Daemon:
-    def __init__(self, test, init_argv=None, *flags, init_extra=None, wait=10.0, args=None, cwd="/"):
-        """args：給了就用 [BIN, *args] 起（不帶 --init；init 設定照樣寫在 dir/main.json）。"""
+    def __init__(self, test, init_argv=None, *flags, init_extra=None, wait=10.0, args=None, cwd="/", cmd=None):
+        """args：給了就用 [BIN, *args] 起（不帶 --init；init 設定照樣寫在 dir/main.json）。cmd：給了就整個照它起（cmd 可以是
+        函式，拿 init 設定檔的路徑回命令列）。"""
         self.dir = os.path.join(TMP, test)
         os.makedirs(self.dir, exist_ok=True)
         kcfg = config(self.dir, "main", init_argv or ["init", "/out"], **(init_extra or {}))
         self.err_path = os.path.join(self.dir, "daemon.err")
-        self.p = subprocess.Popen([BIN, *(args if args is not None else ["--init", kcfg, *flags])], stdout=subprocess.PIPE,
+        argv = cmd(kcfg) if cmd else [BIN, *(args if args is not None else ["--init", kcfg, *flags])]
+        self.p = subprocess.Popen(argv, stdout=subprocess.PIPE,
                                   stderr=open(self.err_path, "w"), cwd=cwd)
         self.line = self._line(wait)
         m = re.fullmatch(r"export AOS_DAEMON=/proc/(\d+)/cwd", self.line or "")
@@ -1482,6 +1484,282 @@ def t_net():
         lis.close()
 
 
+# ---------------------------------------------------------------- seccomp
+
+SC_DENIED = ["ptrace", "bpf", "init_module", "finit_module", "kcmp", "personality_aslr", "keyctl", "userfaultfd",
+             "io_uring_setup", "name_to_handle_at", "syslog", "process_vm_readv", "reboot", "swapon", "acct", "clock_settime"]
+SC_OFF_OK = ["kcmp", "personality_aslr", "process_vm_readv"]   # 核心本來就放（不用權限），只有內建的擋單擋
+SC_ALLOWED = ["getpid", "getppid", "personality_query"]
+
+
+def seccomp_filters(pid="self"):
+    st = read("/proc/%s/status" % pid)
+    return re.search(r"Seccomp:\s+(\d+)", st).group(1), int(re.search(r"Seccomp_filters:\s+(\d+)", st).group(1))
+
+
+def results(d, name, timeout=8):
+    p = os.path.join(d.dir, name + ".txt")
+    t = wait_for(lambda: os.path.exists(p) and read(p), timeout) or ""
+    return dict(l.split(" ", 1) for l in t.strip().splitlines() if " " in l)
+
+
+def x86_64_names():
+    """系統呼叫名字（從 asm/unistd_64.h 讀；編 daemon 本來就要 linux 的標頭）。"""
+    for h in ("/usr/include/x86_64-linux-gnu/asm/unistd_64.h", "/usr/include/asm/unistd_64.h"):
+        if os.path.exists(h):
+            return re.findall(r"#define __NR_(\w+) \d+", read(h))
+    return []
+
+
+def t_seccomp():
+    mine = seccomp_filters()[1]   # 起測試的這一層本身可能已經有過濾器（例：沙盒），daemon 與底下都會繼承
+    d = Daemon("seccomp", ["isys", "/out"] + SC_DENIED + SC_ALLOWED)
+    if not check("seccomp: daemon up (init runs with the built-in list)", d.pid and started(d, "main"), d.err()):
+        return
+    got = results(d, "isys")
+    check("seccomp: init: the built-in list denies %s with EPERM" % ", ".join(SC_DENIED),
+          all(got.get(c) == "err EPERM" for c in SC_DENIED), got)
+    check("seccomp: init: getpid, getppid, personality(0xffffffff) still work", all(got.get(c) == "ok" for c in SC_ALLOWED), got)
+    lk = d.fact("main", "locks")
+    check("seccomp: init: locks say seccomp: builtin (44 syscalls denied ...)",
+          "\nseccomp: builtin (44 syscalls denied with EPERM, personality limited to safe values; other arch and x32 calls kill the process)\n" in lk, lk)
+    hp = d.hostpid("main")
+    check("seccomp: init: /proc status shows mode 2 and one more filter than the outside", seccomp_filters(hp) == ("2", mine + 1),
+          (seccomp_filters(hp), mine))
+    check("seccomp: init still does its job with the built-in list (reads $AOS_DAEMON/status)", init_file(d).startswith("ok pid_ns: 1"))
+    r = d.ask("ctl start " + config(d.dir, "via", ["sleep"]))
+    check("seccomp: ... and starts a proc through its ctl", r == "ok" and started(d, "via"), r)
+    check("seccomp: the daemon itself has no filter of its own (only what it inherited)", seccomp_filters(d.pid)[1] == mine,
+          seccomp_filters(d.pid))
+
+    # 一般 proc：預設（不寫）
+    r = d.ctl("start " + config(d.dir, "sb", ["sys", "/out", "sb"] + SC_DENIED + SC_ALLOWED))
+    got = results(d, "sb")
+    check("seccomp: default proc started", r == (0, "done", "-"), r)
+    check("seccomp: default proc: the built-in list denies them all with EPERM", all(got.get(c) == "err EPERM" for c in SC_DENIED), got)
+    check("seccomp: default proc: getpid, getppid, personality query work", all(got.get(c) == "ok" for c in SC_ALLOWED), got)
+    check("seccomp: default proc: locks line", "\nseccomp: builtin (44 syscalls denied" in d.fact("sb", "locks"), d.fact("sb", "locks"))
+    check("seccomp: default proc: one filter more than the outside", seccomp_filters(d.hostpid("sb")) == ("2", mine + 1))
+    r = d.ctl("start " + config(d.dir, "sbx", ["sys", "/out", "sbx", "kcmp"], locks={"seccomp": "builtin"}))
+    check("seccomp: \"seccomp\": \"builtin\" is the same as not writing it", r == (0, "done", "-") and
+          results(d, "sbx").get("kcmp") == "err EPERM" and "\nseccomp: builtin (44" in d.fact("sbx", "locks"), r)
+
+    # off
+    r = d.ctl("start " + config(d.dir, "so", ["sys", "/out", "so"] + SC_OFF_OK + SC_ALLOWED, locks={"seccomp": "off"}))
+    got = results(d, "so")
+    check("seccomp: off: started", r == (0, "done", "-"), r)
+    check("seccomp: off: kcmp, personality(ADDR_NO_RANDOMIZE), process_vm_readv on itself work (the kernel allows them)",
+          all(got.get(c) == "ok" for c in SC_OFF_OK + SC_ALLOWED), got)
+    check("seccomp: off: locks say seccomp: off", "\nseccomp: off\n" in d.fact("so", "locks"), d.fact("so", "locks"))
+    check("seccomp: off: no filter added", seccomp_filters(d.hostpid("so"))[1] == mine, seccomp_filters(d.hostpid("so")))
+
+    # 別的架構與 x32：整個行程被 SIGSYS 殺掉
+    for kind in ("x32", "i386"):
+        n = "a" + kind
+        r = d.ctl("start " + config(d.dir, n, ["arch", "/out", n, kind]))
+        dead = wait_for(lambda: d.fact(n, "state") == "dead\n", 5)
+        check("seccomp: a %s syscall kills the process with SIGSYS" % kind, r == (0, "done", "-") and dead and
+              d.fact(n, "exit") == "signal 31 SIGSYS\n" and os.path.exists(os.path.join(d.dir, n + ".before")) and
+              not os.path.exists(os.path.join(d.dir, n + ".txt")), (r, d.fact(n, "exit")))
+        n = "o" + kind
+        r = d.ctl("start " + config(d.dir, n, ["arch", "/out", n, kind], locks={"seccomp": "off"}))
+        got = wait_for(lambda: os.path.exists(os.path.join(d.dir, n + ".txt")) and read(os.path.join(d.dir, n + ".txt")), 5)
+        check("seccomp: off: the same %s syscall goes through (this kernel has it)" % kind, (got or "").startswith("survived"),
+              (got, d.fact(n, "exit")))
+
+    # 使用者的名單：default allow＋deny
+    lst = write_json(os.path.join(d.dir, "deny.json"), {"default": "allow", "deny": ["getppid", "kcmp", "getppid"]})
+    r = d.ctl("start " + config(d.dir, "ua", ["sys", "/out", "ua", "getppid", "kcmp", "getpid", "personality_aslr"], locks={"seccomp": lst}))
+    got = results(d, "ua")
+    check("seccomp: own list (default allow): started", r == (0, "done", "-"), r)
+    check("seccomp: own list (default allow): getppid and kcmp EPERM, getpid and personality(ADDR_NO_RANDOMIZE) ok (no built-in list)",
+          got.get("getppid") == "err EPERM" and got.get("kcmp") == "err EPERM" and got.get("getpid") == "ok" and
+          got.get("personality_aslr") == "ok", got)
+    check("seccomp: own list (default allow): locks line (duplicates counted once)",
+          "\nseccomp: %s (default allow, 2 denied with EPERM; other arch and x32 calls kill the process)\n" % lst in d.fact("ua", "locks"),
+          d.fact("ua", "locks"))
+    # default deny＋allow：全部名字減掉 getppid
+    names = [n for n in x86_64_names() if n != "getppid"]
+    lst = write_json(os.path.join(d.dir, "allow.json"), {"default": "deny", "allow": names})
+    r = d.ctl("start " + config(d.dir, "ud", ["sys", "/out", "ud", "getppid", "getpid", "kcmp"], locks={"seccomp": lst}))
+    got = results(d, "ud")
+    check("seccomp: own list (default deny, every name but getppid): started", len(names) > 300 and r == (0, "done", "-"), (len(names), r))
+    check("seccomp: own list (default deny): getppid EPERM, getpid and kcmp ok", got.get("getppid") == "err EPERM" and
+          got.get("getpid") == "ok" and got.get("kcmp") == "ok", got)
+    check("seccomp: own list (default deny): locks line", "\nseccomp: %s (default deny, %d allowed, the rest EPERM;" % (lst, len(names))
+          in d.fact("ud", "locks"), d.fact("ud", "locks"))
+    lst = write_json(os.path.join(d.dir, "tiny.json"), {"default": "deny", "allow": ["read", "write"]})
+    r = d.ctl("start " + config(d.dir, "ut", ["sleep"], locks={"seccomp": lst}))
+    check("seccomp: own list (default deny) without execve: start fails EIO, exec: Operation not permitted",
+          r[0] == errno.EIO and r[1] == "failed" and "exec" in (r[2] or "") and "Operation not permitted" in (r[2] or "") and
+          not os.path.exists(d.root + "/procs/ut"), r)
+
+    # 寫錯的
+    bad = [("unknown syscall name", {"default": "allow", "deny": ["ptrace", "nosuchcall"]}, "unknown syscall name \"nosuchcall\""),
+           ("list key does not match default", {"default": "allow", "allow": ["ptrace"]}, "unknown key \"allow\""),
+           ("no default", {"deny": ["ptrace"]}, "\"default\""),
+           ("default not allow/deny", {"default": "kill", "deny": []}, "\"default\""),
+           ("item not a string", {"default": "allow", "deny": [101]}, "names"),
+           ("top level not an object", ["ptrace"], "object"),
+           ("not json", "{nope", "not json")]
+    for i, (what, body, want) in enumerate(bad):
+        lst = write_json(os.path.join(d.dir, "bad%d.json" % i), body if isinstance(body, str) else json.dumps(body))
+        r = d.ctl("start " + config(d.dir, "ub%d" % i, ["sleep"], locks={"seccomp": lst}))
+        check("seccomp: own list %s -> EIO, failed ConfigBad, no procs/ folder" % what, r[0] == errno.EIO and r[1] == "failed" and
+              (r[2] or "").startswith("ConfigBad locks.seccomp list") and want in (r[2] or "") and
+              not os.path.exists(d.root + "/procs/ub%d" % i), r)
+    for i, v in enumerate([5, "relative.json", "/nonexistent/list.json", "/a/../b.json", True]):
+        r = d.ctl("start " + config(d.dir, "uv%d" % i, ["sleep"], locks={"seccomp": v}))
+        check("seccomp: \"seccomp\": %r -> EIO, failed ConfigBad" % (v,), r[0] == errno.EIO and r[1] == "failed" and
+              (r[2] or "").startswith("ConfigBad") and "seccomp" in (r[2] or ""), r)
+    d.stop()
+
+    # init：寫錯的名單起不來（退出碼 2）；init 也能 off、也能用自己的名單
+    lst = write_json(os.path.join(TMP, "seccomp-i", "bad.json"), {"default": "allow", "deny": ["nosuchcall"]})
+    d = Daemon("seccomp-i", init_extra={"locks": {"seccomp": lst}})
+    rc = d.stop() if d.pid else d.p.wait(10)
+    check("seccomp: init with an unknown syscall name in its list -> daemon exits 2 and says why",
+          d.pid is None and rc == 2 and "unknown syscall name \"nosuchcall\"" in d.err(), (rc, d.err()[-300:]))
+    d = Daemon("seccomp-ioff", init_extra={"locks": {"seccomp": "off"}})
+    check("seccomp: init with \"seccomp\": \"off\" runs with no filter", d.pid and started(d, "main") and
+          "\nseccomp: off\n" in d.fact("main", "locks") and seccomp_filters(d.hostpid("main"))[1] == mine, d.err()[-300:])
+    d.stop()
+    lst = write_json(os.path.join(TMP, "seccomp-ilist", "deny.json"), {"default": "allow", "deny": ["kcmp"]})
+    d = Daemon("seccomp-ilist", ["isys", "/out", "kcmp", "personality_aslr"], init_extra={"locks": {"seccomp": lst}})
+    got = results(d, "isys") if d.pid else {}
+    check("seccomp: init with its own list: kcmp EPERM, personality(ADDR_NO_RANDOMIZE) ok, still reads $AOS_DAEMON",
+          got.get("kcmp") == "err EPERM" and got.get("personality_aslr") == "ok" and init_file(d).startswith("ok pid_ns: 1"), got)
+    d.stop()
+
+    # 建 namespace、mount 不擋（使用者 11-26 定，為了在 proc 裡再起 daemon）：在 init（沒有 Landlock）裡試
+    d = Daemon("seccomp-ns", ["insmount", "/out", "0 0 1"])
+    got = results(d, "insmount") if d.pid else {}
+    check("seccomp: built-in list allows unshare of user, mount, pid, net, uts, ipc, cgroup namespaces (init)",
+          got.get("unshare") == "ok", got)
+    check("seccomp: ... and mount, umount2, setns inside its own user namespace", got.get("mount") == "ok" and
+          got.get("umount") == "ok" and got.get("setns") == "ok", got)
+    check("seccomp: ... (kernel, not seccomp: uid 0 cannot map itself into a new userns without CAP_SETFCAP -> uid_map EPERM)",
+          got.get("uid_map") == "err EPERM", got)
+    d.stop()
+
+
+# ---------------------------------------------------------------- nest
+
+def our_bin_pids():
+    """exe 是我們這份 build/bin/aos-daemon 的行程（比 dev＋inode：天空裡的行程 readlink 看到的是天空裡的路徑，例 /inner/aos-daemon）。"""
+    st = os.stat(BIN)
+    out = []
+    for p in os.listdir("/proc"):
+        if p.isdigit():
+            try:
+                e = os.stat("/proc/%s/exe" % p)
+            except OSError:
+                continue
+            if (e.st_dev, e.st_ino) == (st.st_dev, st.st_ino):
+                out.append(int(p))
+    return out
+
+
+def t_nest():
+    """疊 daemon：proc 裡再跑一份 build/bin/aos-daemon。照預設的鎖起不來，這裡驗量到的界線（README「疊 daemon」）。"""
+    sky = [bind("/usr", "/usr"), bind("/etc", "/etc"), symlink("usr/bin", "/bin"), symlink("usr/lib", "/lib"),
+           symlink("usr/lib64", "/lib64"), ent("dev", "/dev"), ent("proc", "/proc"), ent("tmpfs", "/tmp"),
+           bind("/toys", "/toys"), bind("/out", "/out", True)]
+    d = Daemon("nest")
+    if not check("nest: outer daemon up", d.pid and started(d, "main"), d.err()):
+        return
+    # 裡面那份 daemon 的設定（路徑是 proc 天空裡看到的）
+    write_json(os.path.join(d.dir, "inner.json"), {"init": {"name": "iinit", "argv": ["/usr/bin/python3", "/toys/toys.py", "init", "/out"],
+                                                            "ns": sky}, "cgroup": "off", "subuid": "off"})
+    inner_ns = base_ns(d.dir) + [bind(os.path.dirname(BIN), "/inner")]
+
+    def inner(name, **extra):
+        r = d.ctl("start " + config(d.dir, name, [], ns=inner_ns, argv=["/inner/aos-daemon", "/out/inner.json"],
+                                    stderr=os.path.join(d.dir, name + ".err"), **extra))
+        dead = wait_for(lambda: d.fact(name, "state") == "dead\n", 8)
+        return r, dead and d.fact(name, "exit"), read(os.path.join(d.dir, name + ".err"))
+
+    r, ex, err = inner("n0")
+    check("nest: proc with default locks (uid 0) runs the inner aos-daemon: it exits 2, could not write the uid/gid maps",
+          r == (0, "done", "-") and ex == "code 2\n" and "could not write the uid/gid maps" in err, (r, ex, err))
+    r, ex, err = inner("n1", uid=1)
+    check("nest: same as uid 1 (subuid): maps are fine, then Landlock refuses mounts: make mounts private: Operation not permitted",
+          r == (0, "done", "-") and ex == "code 2\n" and "make mounts private: Operation not permitted" in err, (r, ex, err))
+    r, ex, err = inner("n2", uid=1, locks={"seccomp": "off"})
+    check("nest: ... seccomp off changes nothing (it is Landlock, not seccomp)",
+          ex == "code 2\n" and "make mounts private: Operation not permitted" in err, (r, ex, err))
+    # 拆開量：開 namespace 都行；uid 0 對照不了自己；Landlock 擋 mount
+    os.chmod(d.dir, 0o777)   # uid 1 的 proc（外面是 subuid）要能在 /out 寫結果
+    for name, uid, line, sc in (("m0", 0, "0 0 1", None), ("m1", 1, "0 1 1", None), ("m1off", 1, "0 1 1", "off")):
+        extra = {"uid": uid}
+        if sc:
+            extra["locks"] = {"seccomp": sc}
+        d.ctl("start " + config(d.dir, name, ["nsmount", "/out", name, line], **extra))
+        got = results(d, name)
+        want_map = "err EPERM" if uid == 0 else "ok"
+        check("nest: proc uid %d%s: unshare ok, uid_map %r %s, mount EPERM (Landlock)" % (uid, " seccomp off" if sc else "", line, want_map),
+              got.get("unshare") == "ok" and got.get("uid_map") == want_map and got.get("mount") == "err EPERM", got)
+    hp = [d.hostpid(n) for n in ("main", "m0", "m1")]
+    check("nest: SIGTERM -> outer exits 0", d.stop() == 0)
+    check("nest: ... nothing of it is left (by exe dev+inode, nested ones too)",
+          wait_for(lambda: all(gone(p) for p in hp) and not our_bin_pids(), 3), our_bin_pids())
+
+    # init（沒有 Landlock）跑裡面那份：uid 0 一樣對照不了自己
+    d = Daemon("nest-init", None, "--on-init-exit", "exit", init_extra={
+        "argv": ["/inner/aos-daemon", "/out/inner.json"], "ns": base_ns(os.path.join(TMP, "nest-init")) + [bind(os.path.dirname(BIN), "/inner")],
+        "stderr": os.path.join(TMP, "nest-init", "init.err")})
+    write_json(os.path.join(d.dir, "inner.json"), {"init": {"name": "iinit", "argv": ["/usr/bin/true"], "ns": sky}, "cgroup": "off", "subuid": "off"})
+    try:
+        rc = d.p.wait(10)
+    except subprocess.TimeoutExpired:
+        rc = d.stop()
+    ierr = read(os.path.join(d.dir, "init.err")) if os.path.exists(os.path.join(d.dir, "init.err")) else ""
+    check("nest: as init (no Landlock, must be uid 0): the inner daemon exits 2 (could not write the uid/gid maps), outer exits 2",
+          rc == 2 and "could not write the uid/gid maps" in ierr, (rc, ierr, d.err()[-300:]))
+
+
+# ---------------------------------------------------------------- cgpath
+
+def t_cgpath():
+    """--cgroup PATH：用一個已經交給自己的 cgroup 夾（這裡用 systemd-run 開一個 Delegate=yes 的 scope，把 scope 的夾給它）。"""
+    dd = os.path.join(TMP, "cgpath")
+    os.makedirs(dd, exist_ok=True)
+    sh = os.path.join(dd, "run.sh")
+    with open(sh, "w") as f:
+        f.write('exec "$1" --cgroup "/sys/fs/cgroup$(sed -n "s/^0:://p" /proc/self/cgroup)" --init "$2"\n')
+    if not check("cgpath: systemd-run is there", shutil.which("systemd-run")):
+        return
+    d = Daemon("cgpath", cmd=lambda k: ["sh", "-c", 'exec systemd-run --user --scope --quiet --collect -p Delegate=yes '
+                                         '--unit=aos-daemon-$$ -- /bin/sh "$0" "$1" "$2"', sh, BIN, k])
+    if not check("cgpath: daemon up with --cgroup <a delegated scope folder>", d.pid and started(d, "main"), d.err()):
+        return
+    scope = "aos-daemon-%d.scope" % d.p.pid
+    cg = d.status().get("cgroup", "")
+    check("cgpath: status cgroup is that folder", cg.startswith("/sys/fs/cgroup/") and cg.endswith("/" + scope), cg)
+    check("cgpath: the daemon sits in <folder>/daemon", read("/proc/%d/cgroup" % d.pid).strip().endswith("/" + scope + "/daemon"),
+          read("/proc/%d/cgroup" % d.pid))
+    r = d.ctl("start " + config(d.dir, "w", ["sleep"], locks={"cgroup": {"pids.max": "33"}}))
+    check("cgpath: a proc with a cgroup limit starts", r == (0, "done", "-"), r)
+    check("cgpath: ... its limit is in its folder under the given one", d.fact("w", "cgroup/pids.max") == "33\n" and
+          ("/%s/p-w-" % scope) in read("/proc/%d/cgroup" % d.hostpid("w")), read("/proc/%d/cgroup" % d.hostpid("w")))
+    check("cgpath: SIGTERM -> exit 0", d.stop() == 0)
+    check("cgpath: ... the scope folder is gone afterwards", wait_for(lambda: not os.path.exists(cg), 5), cg)
+    for what, args, want in (("--cgroup /nonexistent/x", ["--cgroup", "/nonexistent/x"], "--cgroup /nonexistent/x"),
+                             ("--cgroup on a folder that is not a cgroup", ["--cgroup", dd], "not a cgroup v2 folder"),
+                             ("--cgroup relative/x", ["--cgroup", "relative/x"], "--cgroup is auto, off or an absolute path")):
+        p = subprocess.run([BIN, "--init", os.path.join(dd, "main.json"), *args], capture_output=True, text=True, timeout=20)
+        check("cgpath: %s -> exit 2 and says why" % what, p.returncode == 2 and want in p.stderr, (p.returncode, p.stderr))
+    for v in ("relative/x", 5):
+        dj = write_json(os.path.join(dd, "dc.json"), {"init": "main.json", "cgroup": v})
+        p = subprocess.run([BIN, dj], capture_output=True, text=True, timeout=20)
+        check("cgpath: daemon.json \"cgroup\": %r -> exit 2" % (v,), p.returncode == 2 and "absolute path to a delegated cgroup folder" in p.stderr,
+              (p.returncode, p.stderr))
+    dj = write_json(os.path.join(dd, "dc.json"), {"init": "main.json", "cgroup": "/nonexistent/y"})
+    p = subprocess.run([BIN, dj], capture_output=True, text=True, timeout=20)
+    check("cgpath: daemon.json \"cgroup\": \"/nonexistent/y\" -> exit 2", p.returncode == 2 and "/nonexistent/y" in p.stderr,
+          (p.returncode, p.stderr))
+
+
 # ---------------------------------------------------------------- leftovers
 
 def t_leftovers():
@@ -1492,6 +1770,7 @@ def t_leftovers():
     time.sleep(0.2)
     left = []
     binreal = os.path.realpath(BIN)
+    mine = set(our_bin_pids())   # 天空裡跑的那份（疊 daemon）exe 是天空裡的路徑，比 dev＋inode
     for d in os.listdir("/proc"):
         if d.isdigit():
             try:
@@ -1504,7 +1783,7 @@ def t_leftovers():
                 exe = ""
             # proto8 的 daemon 也叫 aos-daemon：只比 /proc/<pid>/exe 是不是我們這份 build/bin/aos-daemon（或 cmdline 的 argv[0]），不比名字
             # 起動那一層（argv[0]）、天空裡的 toys.py（argv[1]）
-            if exe == binreal or args[0] == BIN or args[1:2] == ["/toys/toys.py"]:
+            if exe == binreal or args[0] == BIN or args[1:2] == ["/toys/toys.py"] or int(d) in mine:
                 left.append((d, " ".join(args)))
     check("leftovers: no processes", not left, left)
     units = units_left()
@@ -1522,7 +1801,7 @@ GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "nsconf": t_nsconf, "l
           "mount": t_mount, "modes": t_modes, "restart": t_restart, "teardown": t_teardown, "access": t_access,
           "dirs": t_dirs, "stdio": t_stdio, "dconf": t_dconf, "grace": t_grace, "pdeath": t_pdeath, "forgetk": t_forgetk,
           "rename": t_rename, "noinit": t_noinit, "rlstay": t_rlstay, "dpath": t_dpath, "ilandlock": t_ilandlock,
-          "exitcode": t_exitcode, "net": t_net}
+          "exitcode": t_exitcode, "net": t_net, "seccomp": t_seccomp, "nest": t_nest, "cgpath": t_cgpath}
 
 
 def main():

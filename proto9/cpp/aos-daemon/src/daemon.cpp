@@ -388,6 +388,8 @@ void setup_ctl(pf::Ctl& ctl) {
             } catch (const std::exception& e) {
                 return pf::Result::failed(e.what());
             }
+            err = load_seccomp_list(cfg);   // locks.seccomp 是名單檔時：讀檔、名字換號碼（錯了 EIO＋ConfigBad）
+            if (!err.empty()) return pf::Result::failed(err);
             err = on_main([cfg] { return start_proc(cfg, false); });
             return err.empty() ? pf::Result::done() : pf::Result::failed(err);
         },
@@ -609,6 +611,8 @@ void must(int r, const std::string& what) {
         } catch (const std::exception& e) {
             fatal(std::string(e.what()) + " in " + O.init_path);
         }
+        // init 的 locks.seccomp 名單檔只在起動時讀一次（重起時用同一份）
+        if (std::string se = load_seccomp_list(ICFG); !se.empty()) fatal(se + " in " + O.init_path);
         if (ICFG.uid != 0)
             fatal("ConfigBad init must run as uid 0 in its ns (its \"uid\" is " + std::to_string(ICFG.uid) +
                   "): ctl is 0200 and only the daemon's uid may use the mounted directory, in " + O.init_path);

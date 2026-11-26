@@ -1,4 +1,4 @@
-aos-daemon：照「daemon 只提供資訊與工具、判斷全交給 init」重做的第一版 daemon（C++20，不用 root）：自己開 user／PID／mount namespace 當 1 號，擺出一個資訊與工具的目錄（外面走 `/proc/<PID>/cwd`、init 在自己天空裡的 `daemon_path`（預設 `/aos`）讀寫，不給它任何權限），自己住進只有這個目錄的小世界，先起 init（有設定的話），其他 proc 由 `start` 起、各進一個 Landlock domain、預設各有自己的 network namespace（只有 lo）；每隻 proc 的資訊是一個真的夾 `procs/<名>/`，`forget` 就消失。
+aos-daemon：照「daemon 只提供資訊與工具、判斷全交給 init」重做的第一版 daemon（C++20，不用 root）：自己開 user／PID／mount namespace 當 1 號，擺出一個資訊與工具的目錄（外面走 `/proc/<PID>/cwd`、init 在自己天空裡的 `daemon_path`（預設 `/aos`）讀寫，不給它任何權限），自己住進只有這個目錄的小世界，先起 init（有設定的話），其他 proc 由 `start` 起、各進一個 Landlock domain、預設各有自己的 network namespace（只有 lo）、每隻（含 init）exec 前都上一層 seccomp（預設內建的擋單）；每隻 proc 的資訊是一個真的夾 `procs/<名>/`，`forget` 就消失。
 
 # aos-daemon（proto9，11-26）
 
@@ -17,6 +17,7 @@ aos-daemon：照「daemon 只提供資訊與工具、判斷全交給 init」重�
 | `src/spawn.cpp` | 起一隻 proc：子行程先在小世界拿 daemon 的目錄（init 才要）、進原本那一層拿來源、根從零組天空（`net none` 時也開自己的 network namespace、打開 lo）、換根、進 cgroup、上鎖、exec；跑的時候掛、卸 |
 | `src/ns.cpp` | 天空表：讀那隻的 `/proc/<PID>/mountinfo`，一個掛載一行，對回設定標上來源 |
 | `src/config.cpp` | 讀設定檔（json）與天空的每一行；init 的 `daemon_path` 與 cgroup 夾的位置 |
+| `src/seccomp.cpp` | seccomp 過濾器（手寫 BPF）：內建的擋單、使用者名單檔、x86_64 系統呼叫名字表、`locks` 檔的那一行 |
 | `src/util.cpp` | 小工具：經起動前握住的根讀外面的檔、時間、記錄、訊號名字 |
 | `src/common.hpp` | 共用的型別 |
 | `tests/run.py` | 測試（`make test`） |
@@ -55,7 +56,7 @@ $ kill %1        # daemon 結束，底下整片跟著走
 | `--restart-limit N`、`--restart-window S` | `S` 秒內死超過 `N` 次就不再起（預設 5、60）；之後怎樣看 `--on-restart-limit` |
 | `--on-restart-limit exit\|stay` | 到重起上限：`exit`（預設）daemon 以 1 結束；`stay` daemon 留著、沒有 init，見下面「到重起上限」 |
 | `--exit-code init\|own` | `on_init_exit exit` 時 daemon 的退出碼：`init`（預設）用 init 的；`own` 用自己的 **3**，見下面「退出碼」 |
-| `--cgroup auto\|off` | `auto`（預設）：不在交給自己的 cgroup 裡，就用 `systemd-run --user --scope -p Delegate=yes` 重跑自己；沒有 systemd --user 就當 `off` |
+| `--cgroup auto\|off\|PATH` | `auto`（預設）：不在交給自己的 cgroup 裡，就用 `systemd-run --user --scope -p Delegate=yes` 重跑自己；沒有 systemd --user 就當 `off`。`PATH`（絕對路徑）：用這個已經交給自己的 cgroup v2 夾，見下面「cgroup」 |
 | `--subuid auto\|off` | `auto`（預設）：`/etc/subuid`、`/etc/subgid` 有範圍又有 `newuidmap`／`newgidmap` 就接在 1 號後面 |
 | `--exit-grace S` | 收到 SIGTERM／SIGINT／SIGHUP 時先只對 init 送 SIGTERM、最多等 `S` 秒再全部 SIGKILL（預設 0＝馬上），見下面「結束」 |
 | `--on-parent-death exit\|stay` | 起動那一層死了：`exit`（預設）daemon 跟著走；`stay` 留著，見下面「起動那一層死了」 |
@@ -89,7 +90,8 @@ $ kill %1        # daemon 結束，底下整片跟著走
 | `exit_code` | `"init"`／`"own"` | `--exit-code` |
 | `exit_grace` | 數字 ≥ 0（秒，可以有小數） | `--exit-grace` |
 | `on_parent_death` | `"exit"`／`"stay"` | `--on-parent-death` |
-| `cgroup`、`subuid` | `"auto"`／`"off"` | `--cgroup`、`--subuid` |
+| `cgroup` | `"auto"`／`"off"`／絕對路徑（已經交給自己的 cgroup 夾，起動那一層看到的路徑；相對路徑拒） | `--cgroup` |
+| `subuid` | `"auto"`／`"off"` | `--subuid` |
 
 - **參數蓋過檔**：`aos-daemon daemon.json --exit-grace 10` 用檔裡的其他值、`exit_grace` 用 10。檔裡有 `init` 又給了 `--init`：用 `--init`（檔裡沒有 `init` 而給了 `--init` 也一樣有 init）。只給參數不給檔（`aos-daemon --init init.json …`）照舊能用，`status` 的 `config` 寫 `-`。
 - 不認得的鍵（含舊名 `kernel`、`on_kernel_exit`）、型別不對、值不對、檔讀不到、不是 JSON、最上層不是物件、給了兩個位置參數、只用參數又沒有 `--init`：起不來，退出碼 2，stderr 一行英文說明（跟其他起動錯誤一樣）。init 設定本身寫錯（路徑那份或內嵌那份）照舊由 daemon 讀時拒、退出碼 2。
@@ -171,7 +173,7 @@ daemon 設定檔不寫 `init`（也沒給 `--init`）：daemon 照樣起來、�
 **寫入等做完才回**（使用者 11-26 定；用 aos-procfs 的「做完才回」ctl，`Ctl::reply_when_done()`）：`start` 等那隻 exec 成功才回（寫入回來時 `procs/<名>/` 已經在、`state` 是 `alive`），`mount`／`umount` 等掛好、卸好，`kill` 等訊號送出（不等它死），`forget` 等從表上拿掉（寫入回來時 `procs/<名>` 已經走不到；`-k` 也等清完）。
 
 - 寫錯的（不認得的字、參數不對、名字不在、`kill` 死掉的、`forget` 活著的、路徑不是絕對路徑）：寫入當場失敗 `EINVAL`，`aos_ctl_state: rejected`（不變）。
-- 收下之後做的時候才失敗的（設定檔讀不到、json 不對、init 以外的設定寫了 `daemon_access` 或 `daemon_path`、`net` 不對、同名的已經在、exec 失敗、組天空失敗、cgroup 上限寫不進去、掛不上、卸不掉）：寫入失敗 **`EIO`【擬】**（殼裡是 `write error: Input/output error`）。寫入帶不了字，原因照舊在 `status` 的 `aos_ctl_error`（`aos_ctl_state: failed`），daemon 也寫到 stderr。
+- 收下之後做的時候才失敗的（設定檔讀不到、json 不對、`locks.seccomp` 的名單檔讀不到或寫錯、init 以外的設定寫了 `daemon_access` 或 `daemon_path`、`net` 不對、同名的已經在、exec 失敗、組天空失敗、cgroup 上限寫不進去、掛不上、卸不掉）：寫入失敗 **`EIO`【擬】**（殼裡是 `write error: Input/output error`）。寫入帶不了字，原因照舊在 `status` 的 `aos_ctl_error`（`aos_ctl_state: failed`），daemon 也寫到 stderr。
 - 寫入一回來，`status` 的 `aos_ctl_*` 已經是這一道的結果，不用再等。
 - 等的時候按 Ctrl-C（或 `kill` 寫的那支）：寫的人當場拿到 `EINTR` 放開，指令照做，結果只在 `aos_ctl_*`。daemon 等的時候結束了：寫的人拿到連線斷掉的錯（`ECONNABORTED`／`ENOTCONN` 之類，沒進測試）。
 - 一道還在做時（例 `start` 在組天空），別人寫 `ctl` 照舊當場 `EBUSY`；讀 `status` 不受影響。
@@ -217,7 +219,7 @@ init 的設定（`init`／`--init`）多收兩個鍵，見下面「init」；其
 - `env`：不給就是 `PATH=/usr/local/bin:/usr/bin:/bin`、`HOME=/`。一律加上 `AOS_NAME=<名>`。`AOS_DAEMON` 只給 init（mount 模式是它的 `daemon_path`、預設 `/aos`，ptrace 模式 `/proc/1/cwd`）；沒有 init 時誰都沒有；其他 proc 讀不到 daemon 的目錄，所以不給，設定裡寫了也拿掉【擬】。
 - `ns`：根一定是一塊新的空 tmpfs（組好後改唯讀），每條一個 JSON 物件（**使用者 11-26 定**；不再收字串，字串當設定錯拒），照順序做：`{"type": "bind", "src": SRC, "dst": DST}`（預設唯讀，加 `"rw": true` 才可寫；`rw` 可不寫、只有 bind 收、要是布林；SRC 是外面的路徑）、`{"type": "tmpfs", "dst": DST}`（mode 1777）、`{"type": "proc", "dst": DST}`、`{"type": "dev", "dst": DST}`（tmpfs 加 null、zero、full、random、urandom 與 fd、stdin、stdout、stderr 四個 symlink，組好後唯讀）、`{"type": "symlink", "target": TARGET, "dst": DST}`。不認得的鍵、缺的鍵、型別不對、不認得的 `type` 都拒（`ConfigBad`，說明哪一條哪裡錯；`start` 是 `EIO`、`--init` 的檔是退出碼 2）。天空裡的 symlink 只在天空裡解（`openat2` 的 `RESOLVE_IN_ROOT`），寫成絕對路徑也不會碰到外面。
 - `uid`：0＝天空裡的 0 號（外面的使用者本人）；N＞0＝subuid 範圍的第 N 個（外面是 subuid 起點＋N−1），gid 同號。
-- `locks.cgroup`：起動前寫進那隻 cgroup 夾的檔與值（不收 `cgroup.*`）。沒有 cgroup 時給了就拒。`locks.landlock` 只能是 `true`（不能關）：init 以外的 proc 寫不寫都進自己的 Landlock domain；**init 寫了 `true` 才進**（不寫＝不進，照以前；使用者 11-26 定，見下面「init」）；`locks.seccomp` 這版不收。
+- `locks.cgroup`：起動前寫進那隻 cgroup 夾的檔與值（不收 `cgroup.*`）。沒有 cgroup 時給了就拒。`locks.landlock` 只能是 `true`（不能關）：init 以外的 proc 寫不寫都進自己的 Landlock domain；**init 寫了 `true` 才進**（不寫＝不進，照以前；使用者 11-26 定，見下面「init」）。`locks.seccomp`（使用者 11-26 定）：不寫＝內建的擋單、`"off"`＝不上、絕對路徑＝自己的名單檔，見下面「seccomp」。
 - `net`（使用者 11-26 定）：`"none"`（**預設**）＝自己一個新的 network namespace，裡面只有 lo、而且已經打開（`127.0.0.1`、`::1` 能用，連不到外面，也連不到外面那層的 `127.0.0.1`）；`"host"`＝跟 daemon 同一個 network namespace，也就是外面的網路（以前的做法）。init 也一樣（預設 `none`）。別的值、不是字串都拒（`ConfigBad`）。**預設改了**：要網路的 proc 現在要寫 `"net": "host"`。見下面「網路」。
 - `stdout`、`stderr`：外面的路徑（附加寫）；不給就是 `/dev/null`（**使用者 11-26 定**；不再跟 daemon 的 stderr，init 也一樣；只給一條，另一條也是 `/dev/null`）。stdin 一律 `/dev/null`。
 - 不認得的鍵一律拒。
@@ -277,7 +279,7 @@ init 的 daemon 目錄與 cgroup 夾兩條在 `ns.json` 也一樣有，位置照
 3. `unshare(CLONE_NEWNS)`；`net none` 時再 `unshare(CLONE_NEWNET)`、用 `ioctl(SIOCSIFFLAGS)` 打開 lo（見下面「網路」）。在自己這份的 `/tmp` 掛一塊新 tmpfs 當根（來源都拿好了，蓋住外面的 `/tmp` 不影響），照設定一條一條做；bind 用 `mount_setattr` 設 nosuid、nodev、唯讀再 `move_mount`；init 再把第 0 步拿的兩個掛到 `daemon_path` 與 `dirname(daemon_path)/cgroup`（可寫，中間缺的夾在根的 tmpfs 裡建）。根改唯讀，`pivot_root` 進去、舊的根卸掉。
 4. 進自己的 cgroup（`p-<名>-<流水號>`，上限 daemon 先寫好了）。
 5. 告訴 daemon「組好了」，daemon 趁它停著讀 mountinfo 做天空表，再叫它走。
-6. 上鎖：清附加群組；securebits（noroot、no_setuid_fixup、keep_caps_locked、no_cap_ambient_raise，全部鎖住）；清空 bounding set；設 uid/gid；caps 清成 0（ptrace 模式的 init 留 cap_sys_ptrace）；no_new_privs；進一個自己的 Landlock domain（init 只有設定寫了 `locks.landlock: true` 才進）。exec。哪一步失敗，原因經 pipe 回 daemon，`start` 記 `failed`、不留在表上。
+6. 上鎖：清附加群組；securebits（noroot、no_setuid_fixup、keep_caps_locked、no_cap_ambient_raise，全部鎖住）；清空 bounding set；設 uid/gid；caps 清成 0（ptrace 模式的 init 留 cap_sys_ptrace）；no_new_privs；進一個自己的 Landlock domain（init 只有設定寫了 `locks.landlock: true` 才進）；chdir、接好 0／1／2；**最後上 seccomp**（`locks.seccomp` 不是 `off` 的話；過濾器 fork 之前就組好）。exec。哪一步失敗，原因經 pipe 回 daemon，`start` 記 `failed`、不留在表上。
 
 Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本來就做不到），沒有別的規則：要的是「自己一個 domain」帶來的隔開——不能讀 daemon 與旁邊 proc 的 `/proc/<PID>/root`、`cwd`、`environ`。ABI 6 以上再加擋訊號與 abstract unix socket；公司 WSL（6.6，ABI 3）擋不住訊號，測試照實記下（同帳號的 proc 能對 daemon 送訊號）。
 
@@ -300,6 +302,73 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 - init 要用天空裡的 0 號（uid 0）：`ctl` 是 0200、FUSE 也只放跟 daemon 同 uid 的行程進來。init 設定的 uid 不是 0，daemon 起不來（退出碼 2，說明原因；兩種 `daemon_access` 都一樣；重起 init 時不再讀設定檔，所以只在起動時檢查）——使用者 11-26 定。
 - 它死了：`restart`（預設）就重起；`--restart-window` 秒內死超過 `--restart-limit` 次（預設 60 秒內超過 5 次，即第 6 次）就不再起，照 `on_restart_limit`：`exit`（預設）daemon 以 1 結束、整片收掉；`stay` daemon 留著（見上面「到重起上限」）。起不來（exec 失敗之類）也算死一次。重起時舊的那筆從表上拿掉（`procs/<名>/` 整個拿掉）、用同一個名字起新的（新的 `procs/<名>/`）；`status` 的 `init_restarts`、`init_last_exit` 記著。`exit`：daemon 直接結束，退出碼照 `exit_code`（見上面「退出碼」）。
 
+### seccomp（`locks.seccomp`，使用者 11-26 定）
+
+每隻 proc（**init 也一樣**）在 exec 前最後一步上一層 seccomp 過濾器：在 no_new_privs、Landlock 之後，所以 daemon 自己的預備（組天空、`unshare`、`mount`、`pivot_root`、Landlock）不受影響；daemon 本身與起動那一層不上。過濾器是手寫的 classic BPF（`linux/filter.h`、`linux/seccomp.h`、`linux/audit.h`，沒有用 libseccomp，這台也沒裝）。
+
+| `locks.seccomp` | 意思 | `locks` 檔那一行 |
+|---|---|---|
+| 不寫（**預設**）或 `"builtin"`【擬】 | 內建的擋單（下表），擋的回 `EPERM` | `seccomp: builtin (44 syscalls denied with EPERM, personality limited to safe values; other arch and x32 calls kill the process)` |
+| `"off"` | 不上 | `seccomp: off` |
+| `"/abs/list.json"` | 自己的名單檔（路徑照起 daemon 那一層看，跟 `start` 的路徑一樣經握住的根讀） | `seccomp: /abs/list.json (default allow, N denied with EPERM; …)` 或 `(default deny, N allowed, the rest EPERM; …)` |
+
+**不擋建 namespace 與 mount 那一族**（使用者 11-26 定：要能在 proc 裡再起 daemon，一層疊一層）：`unshare`、`clone`、`clone3`（含 `CLONE_NEW*` 的 user、mount、pid、net、uts、ipc、cgroup）、`setns`、`mount`、`umount2`、`pivot_root`、`open_tree`、`move_mount`、`mount_setattr`、`fsopen`、`fsconfig`、`fsmount`、`fspick` 都放；外面那層的掛載本來就鎖住，user namespace 裡的 mount 只動得到自己那份。也不擋 `seccomp`（疊上去的 daemon 要再上一層）、`landlock_*`、`prctl`、`capset`。
+
+內建的擋單（x86_64 號碼；44 個一律 `EPERM`，`personality` 看參數）：
+
+| 系統呼叫 | 為什麼擋 |
+|---|---|
+| `init_module`、`finit_module`、`delete_module`、`create_module`、`get_kernel_syms`、`query_module` | 載入／卸下核心模組（後三個是早就拿掉的舊呼叫，順手擋） |
+| `kexec_load`、`kexec_file_load` | 換核心 |
+| `reboot` | 重開機、關機 |
+| `swapon`、`swapoff` | 動整台的 swap |
+| `settimeofday`、`clock_settime`、`clock_adjtime`、`adjtimex` | 改整台的時鐘（時間不分 namespace；x86_64 沒有 `stime`） |
+| `acct` | 整台的行程記帳 |
+| `quotactl`、`quotactl_fd` | 檔案系統配額 |
+| `bpf` | 載 eBPF 程式（核心攻擊面大） |
+| `perf_event_open` | 效能計數器，可看到別的行程與核心的資訊 |
+| `userfaultfd` | 常被拿來把核心的競爭條件拉長（攻擊手法） |
+| `keyctl`、`add_key`、`request_key` | 核心的 keyring 不分 namespace |
+| `ptrace` | 追蹤、改別的行程 |
+| `process_vm_readv`、`process_vm_writev` | 直接讀寫別的行程的記憶體 |
+| `kcmp` | 比對兩個行程的核心物件（跟 ptrace 同一類的窺看）【擬：擋】 |
+| `pidfd_getfd` | 從別的行程拿 fd（要 ptrace 權限的那種）【擬：一起擋】 |
+| `open_by_handle_at`、`name_to_handle_at` | 用 file handle 開檔，可繞過路徑（Docker 早年逃出容器的手法） |
+| `lookup_dcookie` | 舊的 profiling 介面，洩漏路徑 |
+| `iopl`、`ioperm` | 直接碰 I/O port |
+| `syslog` | 讀核心的訊息緩衝（dmesg） |
+| `uselib`、`vhangup`、`nfsservctl`、`_sysctl` | 舊的或用不到的（`uselib` 是 a.out 時代的、`vhangup` 掛斷終端機、後兩個核心早拿掉了） |
+| `move_pages`、`migrate_pages` | 搬別的行程的記憶體頁（NUMA）【擬：擋；只動自己的 `mbind`、`set_mempolicy`、`get_mempolicy` 放】 |
+| `io_uring_setup`、`io_uring_enter`、`io_uring_register` | io_uring：核心漏洞多，Docker 現在預設也擋【擬：擋】 |
+| `personality` | 只放 `0`、`0x8`（PER_LINUX32）、`0x20000`（UNAME26）、`0x20008`、`0xffffffff`（只查不改），跟 Docker 一樣；別的值（例 `ADDR_NO_RANDOMIZE`）`EPERM` |
+
+- **架構檢查**：`seccomp_data.arch` 不是 `AUDIT_ARCH_X86_64`（例 `int 0x80` 進來的 i386 呼叫），或號碼帶 x32 的位元（`0x40000000`）：**整個行程殺掉**（`SECCOMP_RET_KILL_PROCESS`，那隻記 `signal 31 SIGSYS`）**【擬】**——不然 i386／x32 的入口能繞過整張表；32 位元或 x32 的程式在 proc 裡本來就不支援，殺掉比「每個呼叫都 EPERM、半死不活」清楚。名單檔也一樣有這段。
+- **擋的回 `EPERM`**（使用者 11-26 定），不殺。
+- **名單檔**（格式【擬】）：`{"default": "allow", "deny": ["ptrace", "bpf"]}`（列的回 `EPERM`、其餘放）或 `{"default": "deny", "allow": [...]}`（列的放、其餘 `EPERM`；兩種都做了）。名字是 x86_64 的系統呼叫名（`src/seccomp.cpp` 裡的表，照 `asm/unistd_64.h` 抄的 373 個）；重複的算一個。不認得的名字、`default` 不是 `allow`／`deny`、清單的鍵跟 `default` 對不上（`allow` 配 `allow`）、多的鍵、項目不是字串、不是 JSON、讀不到：`start` 寫入失敗 `EIO`、`ConfigBad locks.seccomp list …`、不留 `procs/` 的夾；init 的就 daemon 起不來（退出碼 2）。名單檔**不疊在內建的擋單上**【擬】：寫了名單就只照名單（要內建的那些就自己列進去）。`default deny` 的名單要放 `execve` 等 exec 要的呼叫，不然 `start` 是 `EIO`、`StartFailed exec …: Operation not permitted`。
+- `locks.seccomp` 不是字串、不是 `"off"`／`"builtin"`／乾淨的絕對路徑：`ConfigBad`。
+- init 的名單檔只在 daemon 起動時讀一次，重起 init 用同一份（跟 init 設定一樣）。
+- init 照內建的擋單跑得好好的（整套測試的 init 都上了；它要的都沒擋）。
+- 實測（`seccomp` 組）：init 與一般 proc 試 `ptrace`、`bpf`、`init_module`、`finit_module`、`kcmp`、`personality(ADDR_NO_RANDOMIZE)`、`keyctl`、`userfaultfd`、`io_uring_setup`、`name_to_handle_at`、`syslog`、`process_vm_readv`、`reboot`、`swapon`、`acct`、`clock_settime` 都是 `EPERM`；`off` 時 `kcmp`、`personality(ADDR_NO_RANDOMIZE)`、對自己的 `process_vm_readv` 照通（核心本來就放）；x32、i386 的 `getpid` 被殺（`SIGSYS`），`off` 時照通；`/proc/<PID>/status` 的 `Seccomp_filters` 比外面多 1（`off` 不多）；init（沒有 Landlock）裡 `unshare` 七種 namespace、`mount`、`umount2`、`setns` 都行。
+- 只有 x86_64：別的架構編不過（`#error`）**【擬】**。
+
+### 疊 daemon（proc 裡再起 daemon；11-26 量的）
+
+使用者 11-26 要的：照預設的鎖（`net none`、內建 seccomp、Landlock、uid 0、沒有 caps、no_new_privs）起一隻 proc，裡面跑 `build/bin/aos-daemon`（binary 綁進天空），帶自己的 daemon.json 與 init。**量的結果：照預設的鎖起不來，有兩道是根本的，這版沒有放寬任何預設**（`nest` 組把這些界線寫成測試）：
+
+1. **uid 0 對照不了自己**：裡面那份要開新的 user namespace，對照表得把外面那層的 uid 0（proc 自己）放進去。Linux 5.12 起（`verify_root_map`），對照表裡有「上一層的 0 號」時，寫的人要在上一層有 **CAP_SETFCAP**（或建 namespace 的人當時有）；proc 的 caps 全清了，所以 `uid_map` 寫入 `EPERM`。實測：uid 0 的 proc 跑裡面那份，它以 2 結束、`could not write the uid/gid maps of the daemon`；`unshare -U` 本身行（seccomp 不擋），只是寫 `0 0 1` 被拒。用 subuid 的 uid（例 `"uid": 1`）就過得了這關（對照 `0 1 1` 不含上一層的 0 號，實測 OK）。`newuidmap` 也幫不上：no_new_privs 讓它的 setuid 不作用。
+2. **Landlock 不准動掛載**：只要 domain 管了任何一種檔案系統的權限（這裡管「建 block 裝置」），Linux 就不准 `mount`、`umount`、`pivot_root`、`move_mount`（Landlock 文件的已知限制）；init 以外的 proc 一定進 Landlock。實測：`"uid": 1` 的 proc 跑裡面那份，對照表寫得進去，下一步 `make mounts private: Operation not permitted`、以 2 結束；`seccomp` 關掉也一樣（是 Landlock 不是 seccomp）；拆開試：uid 1 的 proc `unshare` 後 `uid_map` OK、`mount` 一塊 tmpfs `EPERM`。這台 6.6（ABI 3）沒辦法做「不管檔案系統的 Landlock domain」（建 ruleset 至少要一種權限，ABI 6 以上才有只管 signal／abstract socket 的 scoped；新核心那樣的 domain 擋不擋 mount 沒實測）。
+3. **init 那條路也不通**：init 預設不進 Landlock，但它一定要 uid 0（使用者 11-26 定），撞上第 1 道。實測：init 跑裡面那份，以 2 結束（`could not write the uid/gid maps`），`--on-init-exit exit` 時外面那份也以 2 結束。
+4. 另外一道小的：天空的 `dev` 只有 null、zero、full、random、urandom，**沒有 `/dev/fuse`**；`bind` 一律 `nodev`，自己綁 `/dev/fuse` 也開不了。裡面那份的資訊目錄是 FUSE，要 `/dev/fuse`。
+
+**拿掉這幾道之後量的**（在 scratch 用改過的一份 build 量，沒進程式）：proc 不進 Landlock、`"uid": 1`、天空的 `/dev` 多 `fuse` 時，裡面那份 **起得來**：印 export 那行、init 讀得到自己的 `$AOS_DAEMON/status`、經 `/aos/ctl` `start` 一隻 proc（`done`；那隻的 `locks` 照樣有 Landlock、內建 seccomp，`Seccomp_filters` 疊成兩層，Landlock、seccomp 疊上去都沒擋到裡面那份）、外面那份收 SIGTERM 時整片走光（用 exe 的 dev＋inode 找，沒有留下）。要的參數：`--subuid off`（no_new_privs 下 `newuidmap` 沒用；uid 1 在 `/etc/passwd` 對到別的名字，`auto` 本來也找不到範圍）、`--cgroup off`，或用下面的 `--cgroup PATH`。
+
+**cgroup**：裡面那份可以用外面給那隻 proc 的 cgroup 夾，量過能用，但要三件事：
+- 裡面那份要能「用這個已經交給我的夾」：**做了**（`--cgroup PATH`／daemon.json `"cgroup": "/path"`，見下面「cgroup」；`cgpath` 組在最外層用 systemd-run 給的 scope 測）。
+- 外面那份把 `p-<名>-<流水號>` 夾**交給那隻的 uid**（chown 夾與 `cgroup.procs`、`cgroup.subtree_control`、`cgroup.threads`；因為第 1 道，它是 uid 1，不是夾的主人 0 號），並把夾綁進它的天空（可寫）。實測這樣裡面那份的 `status` 寫 `cgroup: /cg`、開得了 cpu／memory／pids、建 `p-iinit-1`、`p-w-2`。**沒做**：疊 daemon 本身照預設起不來，先不加。
+- 外面那份收尾時要**由深到淺刪**它那隻夾底下裡面那份建的夾（那些夾的主人是 subuid，起動那一層沒有權限刪，要 daemon 自己刪）；不然 systemd 收掉 unit 後 cgroup 夾留著（實測留下過，已清掉）。**沒做**，理由同上。
+
+要放寬哪一道是使用者的事，見下面「要使用者定的」第 6 條。
+
 ### 網路（`net`，使用者 11-26 定）
 
 - 每隻 proc（含 init）的設定 `net`：`"none"`（預設）或 `"host"`。`locks` 檔多一行：`net: none (own netns, loopback only)` 或 `net: host (the daemon's network namespace)`。
@@ -321,10 +390,11 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 - 在 scope 裡：起動那一層把自己搬進 `scope/daemon/`（cgroup v2 規定開了 controller 的夾不能直接放行程），再把 `cgroup.controllers` 列的都寫進 `cgroup.subtree_control`（這台有 cpu、memory、pids 等）。每隻 proc 一個 `scope/p-<名>-<流水號>/`。
 - 收尾：daemon 結束前刪它開的 `p-*`；起動那一層再刪一次漏的、關掉 controller、搬回 scope、刪 `daemon/`，scope 由 systemd 收。起動那一層被 `kill -9` 時 systemd 也會整個收掉（測試驗了）；`on_parent_death stay` 時 scope 留到 daemon 結束、裡面空了才由 systemd 整個收（見上面「起動那一層死了」）。
 - 沒有 systemd --user：`status` 寫 `cgroup: off (原因)`，設定給了 `locks.cgroup` 就拒，其餘照常。
+- **`--cgroup PATH`／`"cgroup": "/path"`**（為了疊 daemon 加的【擬】）：用一個已經交給自己的 cgroup v2 夾（例：外面那層給的、systemd 的 `Delegate=yes`），不經 `systemd-run`、不看名字。路徑先 `realpath`（`status` 的 `cgroup` 寫解開的）；要有 `cgroup.procs`、`cgroup.subtree_control` 可寫；之後跟 scope 一樣：起動那一層搬進 `PATH/daemon/`、把 `cgroup.controllers` 列的都開給底下、每隻一個 `PATH/p-<名>-<流水號>/`、收尾刪掉。路徑不在、不是可管的 cgroup 夾、搬不進去：**起不來（退出碼 2）**（明講要用的夾用不了，不悄悄變 `off`）；相對路徑拒（退出碼 2）。`--cgroup auto`／`off` 蓋過檔裡的路徑，`--cgroup PATH` 蓋過檔裡的 `auto`／`off`。
 
 ## 測試
 
-`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**373 PASS、0 FAIL**（11-26 主 kernel 改名 init、五個選項、`net`：加 `rename`、`noinit`、`rlstay`、`dpath`、`ilandlock`、`exitcode`、`net` 七組共＋94 條，`dconf` 的「沒有 `kernel`」那條拿掉（沒有 `init` 現在是合法的），在那之前 280；11-26 加 daemon 設定檔、結束寬限、`on_parent_death`、`forget -k` 四組 `dconf`、`grace`、`pdeath`、`forgetk` 共＋91 條，在那之前 189；11-26 proc 的 stdout／stderr 沒設改 `/dev/null`、加 `stdio` 組＋10 條，在那之前 179；11-26 設定檔 `ns` 改物件、加 `ns.json` 與 `nsconf` 組共＋22 條；在那之前 157：init 改走 `/aos`、`procs/<名>/` 改成真的夾後 155；再加 init uid 不是 0 要拒的 2 條），約 35～40 秒（grace 組照實等寬限），清 build 跑一次加連跑 3 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
+`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**444 PASS、0 FAIL**（11-26 seccomp、疊 daemon、`--cgroup PATH`：加 `seccomp`、`nest`、`cgpath` 三組共＋71 條（47＋10＋14），`leftovers` 改用 exe 的 dev＋inode 也找天空裡的那份，在那之前 373；11-26 主 kernel 改名 init、五個選項、`net`：加 `rename`、`noinit`、`rlstay`、`dpath`、`ilandlock`、`exitcode`、`net` 七組共＋94 條，`dconf` 的「沒有 `kernel`」那條拿掉（沒有 `init` 現在是合法的），在那之前 280；11-26 加 daemon 設定檔、結束寬限、`on_parent_death`、`forget -k` 四組 `dconf`、`grace`、`pdeath`、`forgetk` 共＋91 條，在那之前 189；11-26 proc 的 stdout／stderr 沒設改 `/dev/null`、加 `stdio` 組＋10 條，在那之前 179；11-26 設定檔 `ns` 改物件、加 `ns.json` 與 `nsconf` 組共＋22 條；在那之前 157：init 改走 `/aos`、`procs/<名>/` 改成真的夾後 155；再加 init uid 不是 0 要拒的 2 條），約 35～40 秒（grace 組照實等寬限），清 build 跑一次加連跑 3 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
 
 | 組 | 驗什麼 |
 |---|---|
@@ -351,7 +421,10 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 | `ilandlock` | init `locks.landlock: true`：`locks` 寫 own domain、init asked for it；caps 0；讀得到 `$AOS_DAEMON/status`；經 `/aos/ctl` 起一隻、讀它的 `state`、讀 `cgroup/pids.max`、寫 `cgroup.freeze` 凍得住；實測讀不到那隻的 `/proc/<PID>/root`（`EACCES`）；`kill`、`forget` 照用 |
 | `exitcode` | `--on-init-exit exit --exit-code own`：init 以 4 結束 → daemon 3、stderr 寫 exit_code own；init 被 SIGKILL → 3（不是 137）；`--exit-code init` → 4；`own` 時 `status` 寫 own、SIGTERM 照舊 0；`own` 時到重起上限照舊 1 |
 | `net` | 外面在 `127.0.0.1` 開一個 TCP port：init 預設 `net none`（`locks`、`ns/net` 跟外面不同）；預設的 proc 連那個 port 失敗（`ECONNREFUSED`）、自己的 `127.0.0.1` 收發可以、`/proc/net/dev` 只有 `lo`、`locks` 寫 none、`ns/net` 跟外面不同；`"net": "host"` 連得到、自己的 lo 也行、介面跟外面一樣、`locks` 寫 host、`ns/net` 跟外面同一個；`net` 是 `"maybe"`、`5` 都 `EIO ConfigBad`；init `"net": "host"` 跟外面同一個 |
-| `leftovers`（最後一定跑） | 沒有留下行程（daemon、起動那一層、天空裡的 toys.py）、systemd unit、`aos-daemon-*` cgroup、掛載 |
+| `seccomp` | init（內建的擋單）試 16 個被擋的呼叫都 `EPERM`、`getpid`／`getppid`／`personality(0xffffffff)` 照通、`locks` 那行、`Seccomp: 2` 且過濾器比外面多 1、init 照樣讀 `$AOS_DAEMON/status` 與經 ctl 起一隻、daemon 自己沒多上；一般 proc 預設同上；`"builtin"` 跟不寫一樣；`off`：`kcmp`、`personality(ADDR_NO_RANDOMIZE)`、`process_vm_readv` 照通、`locks` 寫 off、沒多過濾器；x32、i386 的呼叫被 `SIGSYS` 殺、`off` 時照通；名單 `default allow`（重複算一個、不疊內建的）、`default deny`（全部名字減 `getppid`）、`default deny` 沒放 `execve` 是 `EIO`＋exec 失敗；名單寫錯七種、`seccomp` 值錯五種都是 `EIO`＋`ConfigBad`；init 名單有不認得的名字退出碼 2、init `off`、init 用自己的名單；init 裡 `unshare` 七種 namespace、`mount`、`umount2`、`setns` 都行（`uid_map` 寫 `0 0 1` 是核心拒的 `EPERM`） |
+| `nest` | 疊 daemon 量到的界線（見「疊 daemon」）：uid 0 的 proc 跑裡面那份以 2 結束（對照表寫不進去）；uid 1 的以 2 結束（`make mounts private: Operation not permitted`）、seccomp 關掉也一樣；拆開試 uid 0／uid 1／uid 1＋seccomp off 的 `unshare`、`uid_map`、`mount`；SIGTERM 後沒有留下（exe 的 dev＋inode）；init 跑裡面那份以 2 結束、外面那份也以 2 結束 |
+| `cgpath` | `systemd-run --user --scope -p Delegate=yes` 給一個 scope，`--cgroup <那個夾>`：`status` 的 `cgroup` 是它、daemon 在 `<夾>/daemon`、proc 的上限在 `<夾>/p-w-…`、結束後夾不見；`--cgroup` 給不在的、不是 cgroup 的、相對的路徑，daemon.json `"cgroup"` 給相對、數字、不在的路徑都退出碼 2＋說明 |
+| `leftovers`（最後一定跑） | 沒有留下行程（daemon、起動那一層、天空裡的 toys.py；exe 跟 `build/bin/aos-daemon` 是同一個檔（dev＋inode）的也算，天空裡的那份 readlink 看到的是天空裡的路徑）、systemd unit、`aos-daemon-*` cgroup、掛載 |
 
 ## 【擬】（不清楚時選保守的，之後可改）
 
@@ -392,17 +465,27 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 - `locks` 檔的寫法：`net: none (own netns, loopback only)`／`net: host (the daemon's network namespace)`；init 進 Landlock 時第一行尾巴加 `init asked for it (locks.landlock true)`、沒進時寫 `landlock: none (init)`。
 - 打開 lo 用 `ioctl(SIOCSIFFLAGS)`（不用 netlink、不用 `ip`）；在子行程 `unshare(CLONE_NEWNS)` 之後、丟 caps 之前做。
 - daemon 的 stderr 訊息裡 init 寫作 `init`（例 `started main (pid …, init)`、`restarting init main`）；`--restart-limit` 的說明文字照舊寫 `more than --restart-limit N`。
+- **以下是 11-26 seccomp、疊 daemon 這一輪 eca-aos 自己挑的**（使用者定的是：每隻 proc 預設上內建的擋單、擋的回 `EPERM`、建 namespace 與 mount 那一族不擋（為了疊 daemon）、`"off"`、自己的名單檔、init 也一樣、`locks` 檔那一行）：
+- 擋單裡的取捨：`kcmp`、`pidfd_getfd` 擋（跟 ptrace 同一類）；`move_pages`、`migrate_pages` 擋、`mbind`／`set_mempolicy`／`get_mempolicy` 放（只動自己）；`io_uring_*` 擋（使用者沒列，照 Docker 現在的預設）；`personality` 照 Docker 只放五個值；`create_module`、`get_kernel_syms`、`query_module`、`_sysctl` 這些核心早拿掉的也列（不花什麼）。
+- 別的架構（i386 的 `int 0x80`）與 x32 的號碼：整個行程殺掉（`KILL_PROCESS`），不是 `EPERM`。
+- `"seccomp": "builtin"` 也收（跟不寫一樣）。
+- 名單檔的格式 `{"default": "allow", "deny": [...]}`／`{"default": "deny", "allow": [...]}`，兩種都做了；名單不疊在內建的擋單上；重複的算一個；名字只認 x86_64 的；只能 x86_64 編（別的架構 `#error`）。
+- `locks` 那行的寫法：`seccomp: builtin (44 syscalls denied with EPERM, personality limited to safe values; other arch and x32 calls kill the process)`、`seccomp: off`、`seccomp: <路徑> (default allow, N denied with EPERM; …)`／`(default deny, N allowed, the rest EPERM; …)`。
+- seccomp 上在 chdir、接好 0／1／2 之後、`execve` 前一刻（使用者說的是「Landlock 之後、exec 前最後一步」）。
+- `--cgroup PATH`／`"cgroup": "/path"`：給的夾用不了就起不來（退出碼 2），不悄悄變 `off`；路徑要絕對；`status` 寫 `realpath` 後的路徑。
+- 疊 daemon 的界線寫成 `nest` 組的測試（照實記下「起不來、在哪一步」），沒有為了讓它起來放寬任何預設。
 
 ## 還沒做的
 
-- seccomp（設定給了就拒）。
+- seccomp 只有 x86_64；名單只認名字（不收號碼、不看參數；內建的擋單只有 `personality` 看參數）。
+- **疊 daemon 照預設的鎖起不來**（見「疊 daemon」）；放寬要使用者定。外面那份把 proc 的 cgroup 夾交給它、綁進天空、收尾由深到淺刪：量過、沒做。
 - 網路只有 `none`（只有 lo）與 `host` 兩種；要「有網路但不是外面那個」（veth、slirp、指定介面）這版沒有。
 - 到重起上限而 `stay` 之後，沒有讓 init 再起的指令（要 init 就重起 daemon）。
 - 擋訊號、abstract socket：要 Landlock ABI 6（Linux 6.12 以上）；這台 6.6 擋不住，程式在 ABI 6 以上會自動加。
 - `start` 的路徑用天空裡的路徑（照 init 自己的天空換算）：這版只收外面的路徑。
 - 天空表只在起動與跑的時候掛／卸之後量；proc 自己改不了天空（沒有 caps），所以這兩個時候以外不會變。
 - 一個很慢的天空（例如 bind 的來源卡在別的 FUSE 上）會讓主執行緒等到 10 秒逾時，這段時間其他 `start` 也排著。
-- 沒試過：沒有 Landlock 的核心（含 init 寫 `locks.landlock: true` 時的拒）、沒有 systemd --user 而 `--cgroup auto`（照程式會寫 `off (no systemd --user …)`）、cgroup v1、家機。
+- 沒試過：沒有 Landlock 的核心（含 init 寫 `locks.landlock: true` 時的拒）、沒有 systemd --user 而 `--cgroup auto`（照程式會寫 `off (no systemd --user …)`）、cgroup v1、家機、沒開 IA32／x32 的核心（`seccomp` 組的「`off` 時照通」那兩條會不一樣）。
 
 ## 要使用者定的
 
@@ -411,3 +494,9 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 3. **ABI 3 擋不住訊號**：init 以外的 proc 能對 daemon 送 SIGTERM（daemon 一收就整片收掉）。daemon 職責第 5 條已記「之後要求較新的 Linux」；這版照實記在測試與 `locks` 檔。
 4. ~~小世界裡放 `cgroup/`~~：使用者 11-26 定「照現在這樣」。開關照第 7 條「直接擺進資訊」，這版是把 cgroup 夾 bind 進小世界、用相對 symlink 指過去；所以 `/proc/<PID>/root` 會看到 `aos`、`cgroup` 兩個夾。
 5. ~~資訊夾用 `slots/<i>/` 加 symlink~~：使用者 11-26 定 `procs/<名>/` 是真的夾、`forget` 就消失。aos-procfs 加了 `remove_tree`，這裡用上了（見上面「`procs/<名>/`：真的夾」）。
+6. **疊 daemon 要放寬哪一道**（11-26 量的，見「疊 daemon」）：照預設的鎖，proc 裡的 daemon 起不來。能選的（各有代價，都沒做）：
+   - a. 讓某隻 proc 不進 Landlock（例 `locks.landlock: false` 只准給要疊 daemon 的 proc；現在使用者定的是「不能關」）——代價：那隻讀得到旁邊 proc 的 `/proc/<PID>/root` 這類東西少了一道擋。或等 Landlock ABI 6 以上（Linux 6.12+），改成只管 signal／abstract socket、不管檔案系統的 domain：照 Linux 原始碼，新的核心只在 domain 管了檔案系統權限時才擋 mount（**沒實測**，這台 6.6 做不到）。
+   - b. uid：疊 daemon 的 proc 用 subuid 的 uid（`"uid": 1` 之類，現在就能寫），或給它留 CAP_SETFCAP（讓 uid 0 對照得了自己）。前者不用改程式。
+   - c. 天空的 `dev` 加 `/dev/fuse`（例 `{"type": "dev", "dst": "/dev", "fuse": true}`）。
+   - d. cgroup：外面那份把那隻的 cgroup 夾交給它的 uid、綁進它的天空、收尾由深到淺刪（裡面那份的 `--cgroup PATH` 已經做了）。
+   量過 a＋b（uid 1）＋c 一起放寬時，裡面那份起得來、init 讀得到目錄、能 `start` 一隻、收 SIGTERM 時整片走光；再加 d 時 cgroup 也用得了。

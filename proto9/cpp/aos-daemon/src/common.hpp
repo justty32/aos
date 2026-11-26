@@ -1,6 +1,7 @@
 // common.hpp：aos-daemon 各檔共用的型別與小工具（設定、天空、proc 表、起動時握住的 fd）。
 #pragma once
 
+#include <linux/filter.h>
 #include <string>
 #include <sys/types.h>
 #include <utility>
@@ -36,6 +37,9 @@ struct ProcConfig {
     std::string stdout_path, stderr_path;   // 外面的路徑；空＝/dev/null
     std::string path;                  // 從哪個檔讀來的
     bool landlock = false;             // 設定寫了 locks.landlock: true（其他 proc 不管寫不寫都進；init 寫了才進）
+    std::string seccomp;               // locks.seccomp：""＝內建的擋單（預設）、"builtin"（同）、"off"、或外面的名單檔絕對路徑
+    bool sc_default_allow = true;      // 名單檔的 "default"：allow（名單是擋的）或 deny（名單是放的）
+    std::vector<int> sc_list;          // 名單檔解出來的號碼（load_seccomp_list 填）
     std::string net = "none";          // "none"（預設：自己一個 network namespace，只有 lo）或 "host"（跟 daemon 同一個）
     // 下面兩個只有 init 的設定收；其他 proc 寫了就拒
     std::string daemon_access;         // "mount"（不寫＝這個）或 "ptrace"
@@ -88,6 +92,7 @@ struct Options {
     double exit_grace = 0;            // 收到結束訊號：先只對 init 送 SIGTERM，最多等這麼多秒，再全部 SIGKILL
     bool parent_death_exit = true;    // 起動那一層死了 daemon 跟著走（parent-death signal）；false＝stay
     bool cgroup_auto = true;
+    std::string cgroup_path;          // --cgroup PATH／"cgroup": "PATH"：用這個已經交給自己的 cgroup 夾（起動那一層看到的絕對路徑）；空＝auto／off
     std::string cgroup_off_note = "--cgroup off";   // cgroup 關掉時 status 寫的原因（命令列或設定檔）
     bool subuid_auto = true;
 };
@@ -112,6 +117,13 @@ struct Spawned {
 std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out);   // ""＝成功，否則 "代號 原因"
 std::string live_mount(pid_t pid, const std::string& src, const std::string& dst, bool rw);
 std::string live_umount(pid_t pid, const std::string& dst);
+
+// seccomp.cpp：x86_64 的手寫 BPF；擋的回 EPERM，別的架構與 x32 的呼叫殺掉整個行程
+std::string load_seccomp_list(ProcConfig& c);              // locks.seccomp 是路徑時讀名單檔、名字換號碼；回 "" 或 "ConfigBad …"
+std::vector<sock_filter> seccomp_filter(const ProcConfig& c);   // 空＝off（不上）
+std::string seccomp_lock_line(const ProcConfig& c);        // locks 檔的那一行
+size_t seccomp_builtin_count();
+int syscall_number(const std::string& name);               // 不認得回 -1
 
 // ns.cpp
 std::string ns_table(pid_t pid, const std::vector<Mount>& planned, std::string& check, std::string& json);

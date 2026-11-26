@@ -48,6 +48,11 @@ AOS_DAEMON, and only the outside reaches the directory through /proc/<PID>/cwd.
 
 Every proc's config may say "net": "none" (default: its own network namespace with only a
 loopback that is up) or "host" (the daemon's network namespace, i.e. the outside network).
+Every proc (init too) gets a seccomp filter as the last step before exec: by default a
+built-in deny list (EPERM; kernel modules, kexec, reboot, clock, bpf, ptrace, keyrings, ...;
+creating namespaces and mounting stay allowed); "locks": {"seccomp": "off"} for none, or
+"seccomp": "/abs/list.json" with {"default": "allow", "deny": [names]} or
+{"default": "deny", "allow": [names]} (x86_64 syscall names).
 
 Daemon config (DAEMON_CONFIG, a JSON object; every key optional):
   {"init": "init.json",              path (relative to the daemon config's folder) or an
@@ -59,7 +64,8 @@ Daemon config (DAEMON_CONFIG, a JSON object; every key optional):
    "exit_code": "init",              init | own (with on_init_exit exit: init's code, or 3)
    "exit_grace": 0,                  seconds
    "on_parent_death": "exit",        exit | stay
-   "cgroup": "auto", "subuid": "auto"}
+   "cgroup": "auto",                 auto | off | /abs/path (use this delegated cgroup folder)
+   "subuid": "auto"}
 Flags override the file (aos-daemon daemon.json --exit-grace 10); --init beats "init".
 Unknown keys, wrong types or bad values: refuse to start, exit 2.
 
@@ -93,8 +99,9 @@ flags:
                            then SIGKILL every proc (default 0: at once; no init: at once)
   --on-parent-death MODE   exit (default): the daemon dies when the launching process dies;
                            stay: it keeps running (stop it with SIGTERM to the daemon's PID)
-  --cgroup auto|off        auto (default): use a delegated cgroup; re-run itself under
-                           `systemd-run --user --scope -p Delegate=yes` if needed and possible
+  --cgroup auto|off|PATH   auto (default): use a delegated cgroup; re-run itself under
+                           `systemd-run --user --scope -p Delegate=yes` if needed and possible;
+                           PATH: use this already delegated cgroup v2 folder (exit 2 if it can't)
   --subuid auto|off        auto (default): map the /etc/subuid range with newuidmap/newgidmap
   -h, --help               show this help
 
@@ -193,13 +200,44 @@ std::string own_cgroup() {
 struct Cgroup {
     std::string dir;                  // 交給 daemon 的夾（scope），空＝沒有
     std::string note;
+    std::string fatal;                // --cgroup PATH 用不了：起不來（退出碼 2）
     std::vector<std::string> enabled;
 };
+
+// 自己搬進 dir/daemon（v2 規定開了 controller 的夾不能直接放行程），再把 dir 有的 controller 都開給底下；回 "" 或原因
+std::string delegate_into(const std::string& dir, Cgroup& c) {
+    if (mkdir((dir + "/daemon").c_str(), 0755) != 0 && errno != EEXIST) return "mkdir " + dir + "/daemon: " + errstr(errno);
+    if (!write_file(dir + "/daemon/cgroup.procs", "0")) {
+        std::string e = "move into " + dir + "/daemon: " + errstr(errno);
+        rmdir((dir + "/daemon").c_str());
+        return e;
+    }
+    std::istringstream ctrls(read_text(dir + "/cgroup.controllers"));
+    for (std::string x; ctrls >> x;)
+        if (write_file(dir + "/cgroup.subtree_control", "+" + x)) c.enabled.push_back(x);
+    c.dir = dir;
+    return "";
+}
 
 // 在 scope 裡：自己搬進 scope/daemon（v2 規定開了 controller 的夾不能直接放行程），再把 controller 開給底下
 // reexec：重跑自己時的參數（daemon 設定檔與 --init 的路徑已換成絕對路徑，其他照原樣，蓋過設定檔的參數也一起帶過去）
 Cgroup prepare_cgroup(const Options& o, const std::vector<std::string>& reexec) {
     Cgroup c;
+    if (!o.cgroup_path.empty()) {
+        // 「用這個已經交給我的夾」（例：外面那層 daemon 把一隻 proc 的 cgroup 夾給了它，裡面再起 daemon）【擬】：不經 systemd-run、不看名字
+        char real[PATH_MAX];
+        if (!realpath(o.cgroup_path.c_str(), real)) {
+            c.fatal = "--cgroup " + o.cgroup_path + ": " + errstr(errno);
+            return c;
+        }
+        std::string dir = real;
+        if (access((dir + "/cgroup.procs").c_str(), F_OK) != 0 || access((dir + "/cgroup.subtree_control").c_str(), W_OK) != 0) {
+            c.fatal = "--cgroup " + o.cgroup_path + " is not a cgroup v2 folder we may manage (cgroup.subtree_control: " + errstr(errno) + ")";
+            return c;
+        }
+        if (std::string e = delegate_into(dir, c); !e.empty()) c.fatal = "--cgroup " + o.cgroup_path + ": " + e;
+        return c;
+    }
     if (!o.cgroup_auto) {
         c.note = o.cgroup_off_note;
         return c;
@@ -235,18 +273,7 @@ Cgroup prepare_cgroup(const Options& o, const std::vector<std::string>& reexec) 
         c.note = "not in a delegated aos-daemon scope (" + rel + ")";
         return c;
     }
-    if (mkdir((dir + "/daemon").c_str(), 0755) != 0 && errno != EEXIST) {
-        c.note = "mkdir " + dir + "/daemon: " + errstr(errno);
-        return c;
-    }
-    if (!write_file(dir + "/daemon/cgroup.procs", "0")) {
-        c.note = "move into " + dir + "/daemon: " + errstr(errno);
-        return c;
-    }
-    std::istringstream ctrls(read_text(dir + "/cgroup.controllers"));
-    for (std::string x; ctrls >> x;)
-        if (write_file(dir + "/cgroup.subtree_control", "+" + x)) c.enabled.push_back(x);
-    c.dir = dir;
+    if (std::string e = delegate_into(dir, c); !e.empty()) c.note = e;
     return c;
 }
 
@@ -338,9 +365,16 @@ std::string load_daemon_config(const std::string& path, Options& o) {
             else o.exit_grace = v.get<double>();
         } else if (k == "on_parent_death") {
             e = choice(k, v, "exit", "stay", o.parent_death_exit);
+        } else if (k == "cgroup" && v.is_string() && !v.get<std::string>().empty() && v.get<std::string>()[0] == '/') {
+            o.cgroup_path = v.get<std::string>();
         } else if (k == "cgroup" || k == "subuid") {
             e = choice(k, v, "auto", "off", k == "cgroup" ? o.cgroup_auto : o.subuid_auto);
-            if (k == "cgroup") o.cgroup_off_note = "\"cgroup\": \"off\" in the daemon config";
+            if (k == "cgroup") {
+                o.cgroup_off_note = "\"cgroup\": \"off\" in the daemon config";
+                o.cgroup_path.clear();
+                if (!e.empty())
+                    e = where + "\"cgroup\" must be \"auto\", \"off\" or an absolute path to a delegated cgroup folder, not " + v.dump();
+            }
         } else {
             e = where + "unknown key \"" + k + "\" (" + DCONF_KEYS + ")";
         }
@@ -411,10 +445,16 @@ int main(int argc, char** argv) {
             } else if (a == "--on-parent-death") {
                 if (v != "exit" && v != "stay") return usage_error("--on-parent-death is exit or stay");
                 o.parent_death_exit = v == "exit";
+            } else if (a == "--cgroup" && !v.empty() && v[0] == '/') {
+                o.cgroup_path = v;
             } else if (a == "--cgroup" || a == "--subuid") {
-                if (v != "auto" && v != "off") return usage_error(a + " is auto or off");
+                if (v != "auto" && v != "off")
+                    return usage_error(a + (a == "--cgroup" ? " is auto, off or an absolute path to a delegated cgroup folder" : " is auto or off"));
                 (a == "--cgroup" ? o.cgroup_auto : o.subuid_auto) = v == "auto";
-                if (a == "--cgroup") o.cgroup_off_note = "--cgroup off";
+                if (a == "--cgroup") {
+                    o.cgroup_off_note = "--cgroup off";
+                    o.cgroup_path.clear();
+                }
             }
         } catch (const std::exception&) {
             return usage_error("bad value for " + a + ": " + v);
@@ -433,6 +473,7 @@ int main(int argc, char** argv) {
     }
 
     Cgroup cg = prepare_cgroup(o, reexec);   // 可能 exec systemd-run 再回到這裡（在 scope 裡）
+    if (!cg.fatal.empty()) return usage_error(cg.fatal);
     if (!cg.dir.empty()) setenv("AOS_DAEMON_CGROUP", cg.dir.c_str(), 1);
     else setenv("AOS_DAEMON_CGROUP_NOTE", cg.note.c_str(), 1);
 

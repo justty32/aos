@@ -184,9 +184,13 @@ ProcConfig parse_config(const std::string& text, const std::string& path) {
                         c.cgroup.emplace_back(ck, val);
                     }
                 } else if (lk == "seccomp") {
-                    bad("locks.seccomp is not supported in this version");
+                    // 不寫＝內建的擋單；"off"＝不上；絕對路徑＝外面的名單檔（讀檔在 load_seccomp_list）
+                    if (!lv.is_string()) bad("locks.seccomp must be \"off\", \"builtin\" or an absolute path to a list file");
+                    c.seccomp = lv.get<std::string>();
+                    if (c.seccomp != "off" && c.seccomp != "builtin" && !abs_path_ok(c.seccomp))
+                        bad("locks.seccomp must be \"off\", \"builtin\" or a clean absolute path to a list file (seen where the daemon was started), not " + c.seccomp);
                 } else {
-                    bad("unknown lock " + lk + " (landlock, cgroup)");
+                    bad("unknown lock " + lk + " (landlock, cgroup, seccomp)");
                 }
             }
         } else if (k == "daemon_access") {

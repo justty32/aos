@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# toys.py：測試時在天空裡跑的小程式（init、探路的 proc、照退出碼結束的、睡著的、時好時壞的 init、收到 SIGTERM 才收尾的 init、留下孩子的 proc、試網路的 proc）。
+# toys.py：測試時在天空裡跑的小程式（init、探路的 proc、照退出碼結束的、睡著的、時好時壞的 init、收到 SIGTERM 才收尾的 init、留下孩子的 proc、試網路的 proc、試系統呼叫（seccomp）與開 namespace、mount 的 proc）。
 import errno, os, signal, socket, sys, time
 
 # init 拿到的 AOS_DAEMON（mount 模式 /aos、ptrace 模式 /proc/1/cwd）；其他 proc 沒有
@@ -66,6 +66,83 @@ def net(port):
     with open("/proc/net/dev") as f:
         res.append("ifaces " + ",".join(sorted(l.split(":")[0].strip() for l in f.read().splitlines()[2:])))
     return "\n".join(res) + "\n"
+
+
+def libc():
+    import ctypes
+    return ctypes, ctypes.CDLL(None, use_errno=True)
+
+
+def sys_probe(what):
+    """試一個系統呼叫（x86_64 號碼，直接 syscall()，不經 glibc 的包裝）；回 'ok' 或 'err ENAME'。"""
+    ctypes, c = libc()
+    c.syscall.restype = ctypes.c_long
+    L = ctypes.c_long
+    me = os.getpid()
+    if what == "process_vm_readv":
+        class Iov(ctypes.Structure):
+            _fields_ = [("base", ctypes.c_void_p), ("len", ctypes.c_size_t)]
+        src, dst = ctypes.create_string_buffer(b"x" * 8), ctypes.create_string_buffer(8)
+        a, b = Iov(ctypes.addressof(dst), 8), Iov(ctypes.addressof(src), 8)
+        args = (L(310), L(me), ctypes.byref(a), L(1), ctypes.byref(b), L(1), L(0))
+    else:
+        table = {
+            "getpid": (39,), "getppid": (110,),
+            "ptrace": (101, 2, 1, 0, 0),                  # PTRACE_PEEKDATA pid 1（不是 TRACEME：那會讓 daemon 變成追蹤它的人）
+            "bpf": (321, 0, 0, 0), "init_module": (175, 0, 0, 0), "finit_module": (313, -1, 0, 0),
+            "kcmp": (312, me, me, 1, 0, 0),               # KCMP_VM：跟自己比
+            "personality_query": (135, 0xffffffff), "personality_aslr": (135, 0x0040000),
+            "keyctl": (250, 0, -4, 0),                    # KEYCTL_GET_KEYRING_ID user keyring
+            "userfaultfd": (323, 1),                      # UFFD_USER_MODE_ONLY
+            "io_uring_setup": (425, 1, 0),
+            "name_to_handle_at": (303, -100, 0, 0, 0, 0),
+            "syslog": (103, 10, 0, 0),                    # SYSLOG_ACTION_SIZE_BUFFER
+            "reboot": (169, 0, 0, 0, 0), "swapon": (167, 0, 0), "acct": (163, 0),
+            "clock_settime": (227, 0, 0),
+        }
+        args = tuple(L(x) for x in table[what])
+    ctypes.set_errno(0)
+    r = c.syscall(*args)
+    if r == -1:
+        e = ctypes.get_errno()
+        return "err " + errno.errorcode.get(e, str(e))
+    return "ok"
+
+
+def nsmount(uid_line):
+    """在新的 user＋mount＋pid＋net＋uts＋ipc＋cgroup namespace 裡：寫 uid_map（uid_line）、mount 一塊 tmpfs、卸掉、setns 回自己的 uts。"""
+    ctypes, c = libc()
+    res = []
+
+    def rc(name, r):
+        res.append("%s %s" % (name, "ok" if r == 0 else "err " + errno.errorcode.get(ctypes.get_errno(), "?")))
+
+    flags = 0x10000000 | 0x00020000 | 0x20000000 | 0x40000000 | 0x04000000 | 0x08000000 | 0x02000000
+    rc("unshare", c.unshare(flags))
+    try:
+        with open("/proc/self/uid_map", "w") as f:
+            f.write(uid_line + "\n")
+        res.append("uid_map ok")
+    except OSError as e:
+        res.append("uid_map err " + errname(e))
+    rc("mount", c.mount(b"none", b"/tmp", b"tmpfs", 0, None))
+    rc("umount", c.umount2(b"/tmp", 2))
+    fd = os.open("/proc/self/ns/uts", os.O_RDONLY)
+    rc("setns", c.setns(fd, 0x04000000))
+    return "\n".join(res) + "\n"
+
+
+def die_arch(kind):
+    """x32：號碼帶 0x40000000 的 getpid；i386：int 0x80 的 getpid（從一小段可執行的記憶體叫）。被 seccomp 擋就是整個行程被 SIGSYS 殺掉。"""
+    ctypes, c = libc()
+    if kind == "x32":
+        c.syscall.restype = ctypes.c_long
+        return c.syscall(ctypes.c_long(0x40000000 | 39))
+    import mmap
+    m = mmap.mmap(-1, 4096, prot=mmap.PROT_READ | mmap.PROT_WRITE | mmap.PROT_EXEC)
+    m.write(b"\xb8\x14\x00\x00\x00\xcd\x80\xc3")   # mov eax, 20; int 0x80; ret
+    addr = ctypes.addressof(ctypes.c_char.from_buffer(m))
+    return ctypes.CFUNCTYPE(ctypes.c_int)(addr)()
 
 
 def put(out, name, text):
@@ -154,6 +231,29 @@ def main():
         time.sleep(1000)
     elif mode == "net":     # net OUT NAME PORT：見 net()，結果寫 OUT/NAME.txt，然後睡
         put(sys.argv[2], sys.argv[3] + ".txt", net(int(sys.argv[4])))
+        time.sleep(1000)
+    elif mode == "sys":     # sys OUT NAME CALL...：每個系統呼叫一行「CALL ok|err ENAME」，然後睡
+        out, name = sys.argv[2], sys.argv[3]
+        put(out, name + ".txt", "".join("%s %s\n" % (w, sys_probe(w)) for w in sys.argv[4:]))
+        time.sleep(1000)
+    elif mode == "nsmount":   # nsmount OUT NAME UID_MAP_LINE：見 nsmount()，然後睡
+        put(sys.argv[2], sys.argv[3] + ".txt", nsmount(sys.argv[4]))
+        time.sleep(1000)
+    elif mode == "isys":    # isys OUT CALL...：當 init，先試系統呼叫、寫 OUT/isys.txt
+        put(sys.argv[2], "isys.txt", "".join("%s %s\n" % (w, sys_probe(w)) for w in sys.argv[3:]))
+        init_loop(sys.argv[2])
+    elif mode == "insmount":   # insmount OUT UID_MAP_LINE：當 init，先試 nsmount、寫 OUT/insmount.txt（在孩子裡試，自己不換 namespace）
+        pid = os.fork()
+        if pid == 0:
+            put(sys.argv[2], "insmount.txt", nsmount(sys.argv[3]))
+            os._exit(0)
+        os.waitpid(pid, 0)
+        init_loop(sys.argv[2])
+    elif mode == "arch":    # arch OUT NAME x32|i386：寫 OUT/NAME.before，試；活下來就寫 OUT/NAME.txt
+        out, name = sys.argv[2], sys.argv[3]
+        put(out, name + ".before", "x")
+        r = die_arch(sys.argv[4])
+        put(out, name + ".txt", "survived %d\n" % r)
         time.sleep(1000)
     elif mode == "exit":
         sys.exit(int(sys.argv[2]))

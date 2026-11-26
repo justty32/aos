@@ -849,3 +849,11 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 交件：逐字到第 124 段、思考紀錄 daemon職責「實作時定的」到第 34 條、aospl 第 45 條（jsonpath）、HANDOFF 換新。
 - 背景：seccomp＋疊 daemon 那隻（opus）還在跑。**compact 後接**：讀這節與 HANDOFF 公司段 → 等它的通知 → 驗、交、【擬】一次三條 → 派下一批五樣（HANDOFF 寫了清單）。
 - 本地比遠端多 30 個 commit，全沒推。
+
+## 2026-11-26 compact 後
+
+- 讀過筆記。seccomp＋疊 daemon 那隻還在跑（在看 tests/run.py 的 cgroup 參數）；等通知。
+- 第 125 段：開始談 kernel；派 fable 背景審 daemon 規劃（只讀，報告 ~/.aos/scratch/proto9-daemon-review-1126/report.md）。
+- 第 126 段：init 做最小的（甲）。新開 thinking 26/kernel-1126.md。
+- 第 127～129 段：跟 init 說話走 ctl 介面，`__meta/__interfaces/ctl/` 底下寫怎麼講。我擬 kind file|socket、path（以宣告所在目錄起算）、commands；介面宣告可以是夾、底下放參數（要補 aospl 紀錄）。等他答三小題。
+- seccomp 那隻回來：我清 build 重跑 444／444、無殘留，交件。它的【擬】與疊 daemon 第 6 條（a～d）待給他看。下一批五樣等 ctl 三小題定了再派。

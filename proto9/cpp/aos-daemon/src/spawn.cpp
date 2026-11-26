@@ -8,6 +8,7 @@
 #include <grp.h>
 #include <linux/capability.h>
 #include <linux/landlock.h>
+#include <linux/seccomp.h>
 #include <linux/openat2.h>
 #include <net/if.h>
 #include <poll.h>
@@ -160,7 +161,8 @@ void loopback_up() {
 
 // 子行程：exec 之前全部在這裡做；失敗就把原因寫回 report_fd、_exit(127)
 [[noreturn]] void child(const ProcConfig& cfg, bool init, const std::vector<Mount>& mounts,
-                        const std::string& cgroup, std::vector<char*>& argv, std::vector<char*>& envp, int go) {
+                        const std::string& cgroup, std::vector<char*>& argv, std::vector<char*>& envp, int go,
+                        std::vector<sock_filter>& filter) {
     sigset_t none;
     sigemptyset(&none);
     sigprocmask(SIG_SETMASK, &none, nullptr);
@@ -308,6 +310,11 @@ void loopback_up() {
     if (chdir(cfg.cwd.c_str()) != 0) die("chdir " + cfg.cwd, errno);
     if (dup2(fin, 0) < 0 || dup2(fout, 1) < 0 || dup2(ferr, 2) < 0) die("dup2", errno);
     close_range(3, ~0u, CLOSE_RANGE_CLOEXEC);
+    // seccomp：exec 前最後一步（no_new_privs、Landlock 之後），daemon 自己的預備不受影響；過濾器 fork 前就組好了
+    if (!filter.empty()) {
+        sock_fprog prog{static_cast<unsigned short>(filter.size()), filter.data()};
+        if (syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog) != 0) die("seccomp", errno);
+    }
     execve(argv[0], argv.data(), envp.data());
     die("exec " + cfg.argv[0], errno);
 }
@@ -365,6 +372,7 @@ std::vector<std::string> locks_of(const ProcConfig& cfg, bool init) {
     l.push_back(cfg.net == "none" ? "net: none (own netns, loopback only)" : "net: host (the daemon's network namespace)");
     l.push_back("securebits: noroot, no_setuid_fixup, keep_caps_locked, no_cap_ambient_raise (all locked)");
     l.push_back("no_new_privs");
+    l.push_back(seccomp_lock_line(cfg));
     l.push_back(W.setgroups_ok ? "groups: cleared" : "groups: kept (setgroups is denied without newgidmap)");
     l.push_back("ns: root built from zero, read-only root, mount and umount need capabilities it does not have");
     for (const auto& [k, v] : cfg.cgroup) l.push_back("cgroup: " + k + "=" + v);
@@ -461,6 +469,7 @@ std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
     argv.push_back(nullptr);
     for (auto& e : env) envp.push_back(e.data());
     envp.push_back(nullptr);
+    std::vector<sock_filter> filter = seccomp_filter(cfg);
 
     int st[2], go[2];
     if (pipe2(st, O_CLOEXEC) != 0) return "Internal pipe: " + errstr(errno);
@@ -474,7 +483,7 @@ std::string spawn(const ProcConfig& cfg, bool init, long seq, Spawned& out) {
         close(st[0]);
         close(go[1]);
         report_fd = st[1];
-        child(cfg, init, out.mounts, out.cgroup, argv, envp, go[0]);
+        child(cfg, init, out.mounts, out.cgroup, argv, envp, go[0], filter);
     }
     close(st[1]);
     close(go[0]);
