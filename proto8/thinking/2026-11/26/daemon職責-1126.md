@@ -69,6 +69,12 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 27. **seccomp：預設套 daemon 內建的常見危險清單**（第 108 段）：像 Docker 預設那種（擋掛載、核心模組、開 namespace、ptrace、改系統時間等）；`"seccomp": "off"` 不套；`"seccomp": "/路徑/清單.json"` 用自己寫的。內建清單要自己維護；需要被擋功能的程式（例如在裡面開瀏覽器沙盒）就寫 `off` 或給自己的清單。
 28. **daemon.json 那批子 agent 定的細節**（第 109～113 段，都照現在）：收尾時間中再收到 SIGTERM／SIGINT 不理（Ctrl-C 會收到兩份），要馬上收就 `kill -9` daemon；`on_parent_death: stay` 只擋起動那一層被 `kill -9`，關終端機的 SIGHUP 照常收尾（長期背景跑交給 systemd／nohup）；收尾時間中 `ctl` 照常（含 `start`）；`forget -k` 固定最多等 5 秒；init 設定寫在 daemon.json 裡時 `config` 寫 `路徑#/init`；status 多 `exit_grace`、`on_parent_death`。其餘屬程式內部，不問。
 29. **天空裡的 proc 預設准自己再開 user namespace**（第 114、115 段；先選甲不准，改口准：「我一開始就打算讓他可以層層疊疊嵌套」；sky-1125 發現 4、四題的第 2 題）：內建 seccomp 清單**不擋**開 namespace（user、mount、PID 等），其他危險的照擋；proc 裡可以再跑 daemon、疊新的天空。開了也只能把自己的世界縮小或蓋住，天空原本的掛載卸不掉、翻不開。
+30. **天空表每一筆記下是怎麼來的、什麼時候**（第 118 段；daemon當容器第八輪第 8 條）：`ns.json` 每筆多 `by`（`start` 起動時照設定、`mount` 跑的時候 ctl 掛的、`daemon` daemon 自己加的如 `/aos`、`locked` 被迫帶進來的）與 `at`（UTC）；文字 `ns` 不加。分不出是誰寫的 ctl（外面寫的人 PID 看到 0），能寫的本來也只有 init 與外面的使用者。
+31. **合併目錄：A＋B，C 也做**（第 119 段；daemon當容器第八輪第 7 條）：A 不合併、各放各的資料夾用 `PATH` 串；B 起動前留一個空的 `tmpfs`，跑的時候用 ctl 的 `mount` 把單一個檔掛進去；C overlay 做成 `ns` 的 `{"type": "overlay", …}`（起動時疊，起動後不能加層）。D FUSE 合併目錄不在 daemon，歸某個 kernel 提供——使用者第 121 段補「D也是可以啦，就當以後有人想提供這個介面」。
+32. **init 那批子 agent 定的細節都照現在**（第 121～123 段）：沒有 init 要用 daemon.json（最短 `{}`），只用參數又沒 `--init` 就拒；status 的 `init_state`（`alive`／`dead`／`starting`／`none`／`gone`）與 `on_restart_limit`、`exit_code` 兩行，沒 init 時 `init`、`init_access` 寫 `-`；`stay` 時死的 init 留在表上可 forget；`exit_code own` 用 3；`daemon_path`＋ptrace 起動就拒；`daemon_path` 要乾淨；init 上 Landlock 後看不進別人的天空、沒 Landlock 時設 true 就拒。
+33. **ctl 加 `restart-init`**（第 122、123 段）：只在 init 不在時能用（死了、`gone`、還沒起過；活著就 `EINVAL`），照 daemon.json 的 init 設定起一隻真正的 init（有 `daemon_path` 掛的目錄與 `AOS_DAEMON`），表上舊的那筆先拿掉、重起次數歸零；設定裡沒有 init 就失敗。
+34. **daemon 的資訊與工具用 aoslua 描：先擺介面宣告**（第 124 段）：daemon 目錄擺 `__meta/__interfaces/aos/daemon`（有 `status`、`ctl`、`procs/`）、`__meta/__interfaces/aos/jsonpath`（底下可用 `#`，例 `procs/w/ns.json#/0/src`），每隻 `procs/<名字>/` 擺 `__meta/__interfaces/aos/proc`，都是靜態空檔。第二步以後再做：`procs/` 的 `__newindex`＝`start`、`__gc`＝`forget`，是可執行檔、背後寫 `ctl`，就是第 6 條的外層程式。
+    - 同一段：**`aos/utilpath` 改名 `aos/jsonpath`**（「也就是可以用#去存取json的東西」），記在 [aospl循址與元介面-1126](aospl循址與元介面-1126.md) 第 45 條。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 
@@ -76,4 +82,3 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 
 ## 還沒定的
 
-- 資訊與工具用 aoslua 的講法怎麼描（table、`__meta`、介面宣告）。

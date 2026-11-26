@@ -836,3 +836,16 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 116 段：seccomp 那批加「daemon 疊 daemon」測試（量實際限制：subuid、cgroup、net、Landlock 疊、seccomp 疊）。等 init 那隻回來再派。
 - 第 117 段：第八輪剩的只 7、8 在 daemon；先談 8（ns.json 每筆記誰要、何時）。
 - init 那隻回來：我清 build 重跑 373／373、無殘留。交件。接著派 seccomp＋疊 daemon。
+- 第 118 段：ns.json 加 by／at，照擬的。等 seccomp 那隻回來再派（同一夾）。下一題：第八輪第 7 條合併目錄。
+- 第 119 段：合併目錄 A＋B、C overlay 也做（ns type overlay）。跟 by／at 一起，等 seccomp 那隻回來再派；B 要有測試（跑的時候 mount 單檔進 tmpfs）。
+- 第 120 段：接著給 init 那批 11 條【擬】，一條一條。
+- 第 121 段：D 當以後某個 kernel 可提供的介面；init【擬】第 1 條照現在；**之後一次給三條**（他要的）。
+- 第 122 段：2～4 照現在；**ctl 加 restart-init**（下一批做）。
+- 第 123 段：restart-init 規則照擬的、5～7 照現在。init 那批【擬】看完。下一批（seccomp 回來後）：by／at、overlay、B 測試、restart-init。剩題目：aoslua 怎麼描。
+- 第 124 段：aoslua 第一步照擬的（三個介面宣告空檔，下一批做）；aos/utilpath 改名 aos/jsonpath（aospl 紀錄第 45 條）。daemon 題目談完一輪。
+
+## 2026-11-26 約 16:0x：使用者「你自己找個斷點，我幫你compact」
+
+- 交件：逐字到第 124 段、思考紀錄 daemon職責「實作時定的」到第 34 條、aospl 第 45 條（jsonpath）、HANDOFF 換新。
+- 背景：seccomp＋疊 daemon 那隻（opus）還在跑。**compact 後接**：讀這節與 HANDOFF 公司段 → 等它的通知 → 驗、交、【擬】一次三條 → 派下一批五樣（HANDOFF 寫了清單）。
+- 本地比遠端多 30 個 commit，全沒推。

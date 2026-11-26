@@ -89,6 +89,7 @@
 42. **`aos/rename` 可以在子樹裡跨層**（`a/b c/d`）。比較麻煩：要一層一層往下追溯子項的 rename。（第 62 段「B」）
 43. **rename 的錯誤一行一條，開頭照抄那筆的 `舊名 新名`，後面接原因**，例：`foo bar: bar exists`。（第 62 段「1.好。」）
 44. **`xxx/exec`、`xxx/before`、`xxx/after` 這一套，加上 stdin／stdout／stderr 的用法，記成一個可以用在別處的做法**，之後可能會改進。見下一節。（第 62 段）
+45. **`aos/utilpath` 改名 `aos/jsonpath`**（11-26 午後，[9p-proc-1125](../25/9p-proc-1125.md) 第 124 段：「utilpath應該改名叫jsonpath，也就是可以用#去存取json的東西」）：意思不變——能存取到 `xxx/__meta/__interfaces/aos/jsonpath`，`xxx/` 以下就能用 `#` 加 JSON Pointer 存取 json 檔裡的東西。第 31～35 條與下面「未決」裡的 `utilpath` 都照這個讀，原文不改。第一個用上的是 aos-daemon 的目錄（[daemon職責-1126](daemon職責-1126.md) 第 34 條）。
 
 ## exec／before／after 這一套（第 61、62 段；之後可能改進）
 
