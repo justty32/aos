@@ -1,6 +1,9 @@
-// main.cpp：aos-daemon2 的入口與起動那一層——讀參數、備好 cgroup（需要時經 systemd-run 進一個 scope）、開 user／PID／mount namespace、寫 uid/gid 對照表、轉送訊號、收尾。
+// main.cpp：aos-daemon2 的入口與起動那一層——讀 daemon 設定檔與參數（參數蓋過檔）、備好 cgroup（需要時經 systemd-run 進一個 scope）、開 user／PID／mount namespace、寫 uid/gid 對照表、轉送訊號、收尾。
 #include "common.hpp"
 
+#include "nlohmann/json.hpp"
+
+#include <algorithm>
 #include <cerrno>
 #include <dirent.h>
 #include <climits>
@@ -22,7 +25,8 @@ namespace {
 
 const char* HELP = R"(aos-daemon2 - the daemon gives facts and tools; all judgement belongs to one main kernel.
 
-usage: aos-daemon2 --kernel CONFIG [flags]
+usage: aos-daemon2 DAEMON_CONFIG [flags]
+       aos-daemon2 --kernel CONFIG [flags]
 
 Starts without root: a new user namespace (you are uid 0 inside, plus your subuid range),
 a new PID namespace (the daemon is PID 1 there) and a new mount namespace. The daemon serves
@@ -39,6 +43,17 @@ directory is mounted in its ns at /aos (cgroup directory at /cgroup, when there 
 and it has no capabilities; with "daemon_access": "ptrace" it keeps cap_sys_ptrace and
 reads /proc/1/cwd. In mount mode its own ns config may not use /aos or /cgroup (exit 2).
 
+Daemon config (DAEMON_CONFIG, a JSON object; every key optional except kernel):
+  {"kernel": "kernel.json",          path (relative to the daemon config's folder) or an
+                                     inline object in the same format as a `start` config
+   "on_kernel_exit": "restart",      restart | exit
+   "restart_limit": 5, "restart_window": 60,
+   "exit_grace": 0,                  seconds
+   "on_parent_death": "exit",        exit | stay
+   "cgroup": "auto", "subuid": "auto"}
+Flags override the file (aos-daemon2 daemon.json --exit-grace 10); --kernel beats "kernel".
+Unknown keys, wrong types or bad values: refuse to start, exit 2.
+
 Directory:
   status           daemon facts and the feedback of the last ctl command
   ctl              tools, one command per write:
@@ -47,16 +62,23 @@ Directory:
                      mount NAME [-w] SRC DST      (bind SRC into a running proc's ns; read-only unless -w)
                      umount NAME DST
                      forget NAME                  (remove a dead proc from the table)
+                     forget -k NAME               (same, but first clear what it left in its cgroup:
+                                                   write cgroup.kill, wait until empty, up to 5 s)
   procs/NAME/      a real folder per proc, with the files
                      name pid state exit started_at ended_at ns ns.json ns_check uid locks config
                    and, when there is a cgroup, cgroup -> its cgroup directory
                    (cpu.max, memory.max, cgroup.freeze, ...)
 
 flags:
-  --kernel CONFIG          main kernel config (required)
+  --kernel CONFIG          main kernel config (required, here or as "kernel" in DAEMON_CONFIG)
   --on-kernel-exit MODE    restart (default) or exit
   --restart-limit N        stop restarting (and exit) after more than N deaths ... (default 5)
   --restart-window S       ... within S seconds (default 60)
+  --exit-grace S           on SIGTERM/SIGINT/SIGHUP send SIGTERM to the main kernel only, wait up
+                           to S seconds for it to exit (not restarted meanwhile; ctl keeps working),
+                           then SIGKILL every proc (default 0: at once)
+  --on-parent-death MODE   exit (default): the daemon dies when the launching process dies;
+                           stay: it keeps running (stop it with SIGTERM to the daemon's PID)
   --cgroup auto|off        auto (default): use a delegated cgroup; re-run itself under
                            `systemd-run --user --scope -p Delegate=yes` if needed and possible
   --subuid auto|off        auto (default): map the /etc/subuid range with newuidmap/newgidmap
@@ -160,10 +182,11 @@ struct Cgroup {
 };
 
 // 在 scope 裡：自己搬進 scope/daemon（v2 規定開了 controller 的夾不能直接放行程），再把 controller 開給底下
-Cgroup prepare_cgroup(const Options& o, char** argv) {
+// reexec：重跑自己時的參數（daemon 設定檔與 --kernel 的路徑已換成絕對路徑，其他照原樣，蓋過設定檔的參數也一起帶過去）
+Cgroup prepare_cgroup(const Options& o, const std::vector<std::string>& reexec) {
     Cgroup c;
     if (!o.cgroup_auto) {
-        c.note = "--cgroup off";
+        c.note = o.cgroup_off_note;
         return c;
     }
     if (!getenv("AOS_DAEMON2_IN_SCOPE")) {
@@ -182,7 +205,7 @@ Cgroup prepare_cgroup(const Options& o, char** argv) {
         setenv("AOS_DAEMON2_IN_SCOPE", "1", 1);
         std::vector<std::string> args = {sr, "--user", "--scope", "--quiet", "--collect", "-p", "Delegate=yes",
                                          "--unit=aos-daemon2-" + std::to_string(getpid()), "--", self};
-        for (char** a = argv + 1; *a; ++a) args.push_back(*a);
+        for (const auto& a : reexec) args.push_back(a);
         std::vector<char*> av;
         for (auto& a : args) av.push_back(a.data());
         av.push_back(nullptr);
@@ -231,53 +254,151 @@ void cleanup_cgroup(const Cgroup& c) {
     if (write_file(c.dir + "/cgroup.procs", "0")) rmdir((c.dir + "/daemon").c_str());
 }
 
+std::string cwd_dir() {
+    char cwd[PATH_MAX];
+    return getcwd(cwd, sizeof cwd) ? cwd : "";
+}
+
+std::string absolute(const std::string& p, const std::string& base) { return p.empty() || p[0] == '/' ? p : base + "/" + p; }
+
+const char* const DCONF_KEYS = "kernel, on_kernel_exit, restart_limit, restart_window, exit_grace, on_parent_death, cgroup, subuid";
+
+// daemon 設定檔（json 物件）蓋到 o 上；回 "" 或錯誤（起不來，退出碼 2）。path 已是絕對路徑。
+std::string load_daemon_config(const std::string& path, Options& o) {
+    std::ifstream f(path);
+    if (!f) return "cannot read the daemon config " + path + ": " + errstr(errno);
+    std::string text((std::istreambuf_iterator<char>(f)), {});
+    nlohmann::json j;
+    try {
+        j = nlohmann::json::parse(text);
+    } catch (const std::exception& e) {
+        return "the daemon config " + path + " is not JSON: " + e.what();
+    }
+    std::string where = "in the daemon config " + path + ": ";
+    if (!j.is_object()) return where + "the top level must be an object";
+    std::string dir = path.substr(0, path.rfind('/'));
+    if (dir.empty()) dir = "/";
+    auto choice = [&](const std::string& k, const nlohmann::json& v, const char* a, const char* b, bool& out) {
+        if (!v.is_string() || (v.get<std::string>() != a && v.get<std::string>() != b))
+            return where + "\"" + k + "\" must be \"" + a + "\" or \"" + b + "\", not " + v.dump();
+        out = v.get<std::string>() == a;
+        return std::string();
+    };
+    auto finite = [](double x) { return x == x && x < 1e300 && x > -1e300; };
+    for (const auto& [k, v] : j.items()) {
+        std::string e;
+        if (k == "kernel") {
+            if (v.is_string() && !v.get<std::string>().empty()) {
+                o.kernel_path = absolute(v.get<std::string>(), dir);
+                o.kernel_text.clear();
+            } else if (v.is_object()) {
+                o.kernel_text = v.dump();
+                o.kernel_path = path + "#/kernel";
+            } else {
+                e = where + "\"kernel\" must be a path (a non-empty string) or an inline kernel config (an object), not " + v.dump();
+            }
+        } else if (k == "on_kernel_exit") {
+            e = choice(k, v, "restart", "exit", o.restart);
+        } else if (k == "restart_limit") {
+            if (!v.is_number_integer() || v.get<long long>() < 0 || v.get<long long>() > INT_MAX)
+                e = where + "\"restart_limit\" must be an integer >= 0, not " + v.dump();
+            else o.restart_limit = v.get<int>();
+        } else if (k == "restart_window") {
+            if (!v.is_number() || !(v.get<double>() > 0) || !finite(v.get<double>()))
+                e = where + "\"restart_window\" must be a number of seconds > 0, not " + v.dump();
+            else o.restart_window = v.get<double>();
+        } else if (k == "exit_grace") {
+            if (!v.is_number() || !(v.get<double>() >= 0) || !finite(v.get<double>()))
+                e = where + "\"exit_grace\" must be a number of seconds >= 0, not " + v.dump();
+            else o.exit_grace = v.get<double>();
+        } else if (k == "on_parent_death") {
+            e = choice(k, v, "exit", "stay", o.parent_death_exit);
+        } else if (k == "cgroup" || k == "subuid") {
+            e = choice(k, v, "auto", "off", k == "cgroup" ? o.cgroup_auto : o.subuid_auto);
+            if (k == "cgroup") o.cgroup_off_note = "\"cgroup\": \"off\" in the daemon config";
+        } else {
+            e = where + "unknown key \"" + k + "\" (" + DCONF_KEYS + ")";
+        }
+        if (!e.empty()) return e;
+    }
+    return "";
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
+    // 先分出位置參數（daemon 設定檔）與命令列參數；順序：預設值 ← 設定檔 ← 命令列參數
     Options o;
+    int conf_at = 0;                       // argv 裡 daemon 設定檔的位置；0＝沒有
+    std::vector<int> kernel_at;            // argv 裡 --kernel 的值的位置（重跑自己時換成絕對路徑）
+    std::vector<std::pair<std::string, std::string>> flags;
+    const char* WITH_VALUE[] = {"--kernel", "--on-kernel-exit", "--restart-limit", "--restart-window", "--exit-grace",
+                                "--on-parent-death", "--cgroup", "--subuid"};
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
-        auto val = [&]() -> std::string {
-            if (i + 1 >= argc) throw std::invalid_argument(a + " needs a value");
-            return argv[++i];
-        };
+        if (a == "-h" || a == "--help") {
+            std::cout << HELP;
+            return 0;
+        }
+        if (a.empty() || a[0] != '-') {
+            if (conf_at) return usage_error("only one daemon config file may be given (" + std::string(argv[conf_at]) + ", " + a + ")");
+            conf_at = i;
+            continue;
+        }
+        bool known = false;
+        for (const char* w : WITH_VALUE) known = known || a == w;
+        if (!known) return usage_error("unknown argument " + a);
+        if (i + 1 >= argc) return usage_error("bad value: " + a + " needs a value");
+        if (a == "--kernel") kernel_at.push_back(i + 1);
+        flags.emplace_back(a, argv[++i]);
+    }
+    std::string cwd = cwd_dir();
+    if (cwd.empty()) return usage_error("getcwd failed");
+    if (conf_at) {
+        o.config_path = absolute(argv[conf_at], cwd);
+        std::string e = load_daemon_config(o.config_path, o);
+        if (!e.empty()) return usage_error(e);
+    }
+    for (const auto& [a, v] : flags) {
         try {
-            if (a == "-h" || a == "--help") {
-                std::cout << HELP;
-                return 0;
-            } else if (a == "--kernel") {
-                o.kernel_path = val();
+            if (a == "--kernel") {
+                if (v.empty()) return usage_error("--kernel needs a path");
+                o.kernel_path = absolute(v, cwd);
+                o.kernel_text.clear();
             } else if (a == "--on-kernel-exit") {
-                std::string v = val();
                 if (v != "restart" && v != "exit") return usage_error("--on-kernel-exit is restart or exit");
                 o.restart = v == "restart";
             } else if (a == "--restart-limit") {
-                o.restart_limit = std::stoi(val());
+                o.restart_limit = std::stoi(v);
                 if (o.restart_limit < 0) return usage_error("--restart-limit must be >= 0");
             } else if (a == "--restart-window") {
-                o.restart_window = std::stod(val());
-                if (!(o.restart_window > 0)) return usage_error("--restart-window must be > 0");
+                o.restart_window = std::stod(v);
+                if (!(o.restart_window > 0) || !(o.restart_window < 1e300)) return usage_error("--restart-window must be > 0");
+            } else if (a == "--exit-grace") {
+                o.exit_grace = std::stod(v);
+                if (!(o.exit_grace >= 0) || !(o.exit_grace < 1e300)) return usage_error("--exit-grace must be a number of seconds >= 0");
+            } else if (a == "--on-parent-death") {
+                if (v != "exit" && v != "stay") return usage_error("--on-parent-death is exit or stay");
+                o.parent_death_exit = v == "exit";
             } else if (a == "--cgroup" || a == "--subuid") {
-                std::string v = val();
                 if (v != "auto" && v != "off") return usage_error(a + " is auto or off");
                 (a == "--cgroup" ? o.cgroup_auto : o.subuid_auto) = v == "auto";
-            } else {
-                return usage_error("unknown argument " + a);
+                if (a == "--cgroup") o.cgroup_off_note = "--cgroup off";
             }
-        } catch (const std::exception& e) {
-            return usage_error(std::string("bad value: ") + e.what());
+        } catch (const std::exception&) {
+            return usage_error("bad value for " + a + ": " + v);
         }
     }
-    if (o.kernel_path.empty()) return usage_error("--kernel CONFIG is required");
-    if (o.kernel_path[0] != '/') {
-        char cwd[PATH_MAX];
-        if (!getcwd(cwd, sizeof cwd)) return usage_error("getcwd failed");
-        o.kernel_path = std::string(cwd) + "/" + o.kernel_path;
-    }
-    if (access(o.kernel_path.c_str(), R_OK) != 0)
+    if (o.kernel_path.empty()) return usage_error("the main kernel config is required: --kernel CONFIG, or \"kernel\" in a daemon config");
+    if (o.kernel_text.empty() && access(o.kernel_path.c_str(), R_OK) != 0)
         return usage_error("cannot read " + o.kernel_path + ": " + errstr(errno));
+    std::vector<std::string> reexec;
+    for (int i = 1; i < argc; ++i) {
+        bool kv = std::find(kernel_at.begin(), kernel_at.end(), i) != kernel_at.end();
+        reexec.push_back(i == conf_at ? o.config_path : kv ? absolute(argv[i], cwd) : std::string(argv[i]));
+    }
 
-    Cgroup cg = prepare_cgroup(o, argv);   // 可能 exec systemd-run 再回到這裡（在 scope 裡）
+    Cgroup cg = prepare_cgroup(o, reexec);   // 可能 exec systemd-run 再回到這裡（在 scope 裡）
     if (!cg.dir.empty()) setenv("AOS_DAEMON2_CGROUP", cg.dir.c_str(), 1);
     else setenv("AOS_DAEMON2_CGROUP_NOTE", cg.note.c_str(), 1);
 

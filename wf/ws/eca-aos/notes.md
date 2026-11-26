@@ -811,3 +811,13 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 95 段：daemon 收 SIGTERM → 先只對主 kernel SIGTERM、等 `--exit-grace` 秒（主 kernel 先死就不等、不重起）→ 全部 SIGKILL，預設 0；`forget -k`。連同 `--on-parent-death`，**等 stdout 那隻回來再一起派**。
 - 第 96 段：他提 daemon 起動參數多了、要不要吃設定檔 → 擬樣子問他（還沒派；stdout 那隻還在跑）。
 - stdout 那隻回來：我清 build 重跑 189／189、無殘留。交件（proto9/README、HANDOFF，多 26 個沒推）。
+- 第 97 段：daemon 設定檔照擬的做。派一隻 opus 背景子 agent 一次做四樣（daemon.json、exit_grace、on_parent_death、forget -k），暫存 `~/.aos/scratch/proto9-daemon2c-1126/`。回來後：清 build 重跑、查殘留、交件、它自己定的【擬】給使用者一條一條看。
+- 第 98 段：沒 Landlock 就拒，照現在。下一條：subuid 最多 65535、退出碼分法。
+- 第 99 段：退出碼照現在；他覺得 daemon 跟主 kernel 綁太緊、想多些設定 → 列出綁在一起的地方問他指哪些（還沒派）。
+- 第 100 段：五樣都做成可選、預設照現在。**等 daemon.json 那隻回來再派**（同一夾）。我擬：daemon.json `kernel` 可不寫；`on_restart_limit exit|stay`；主 kernel 設定的 `daemon_path`（預設 /aos，cgroup 夾跟著放在同一層的 cgroup，相對連結才通）；主 kernel 設定可寫 `locks.landlock: true`（uid 0 照舊必須）；daemon.json `exit_code kernel|own`。
+- 第 101 段：五個可選設定照擬的。他說「你這邊差不多了之後跟我說，我幫你compact」→ 等 daemon.json 那隻回來：驗、交、派五樣那隻、HANDOFF 跟上，再請他 compact。
+- 第 102 段：不 compact（context 15%）；uid 上限 65535 照現在。README 較早的【擬】大致看完（剩 `locked`、天空表文字寫法已含在 ns 那段）。
+- 第 103 段：主 kernel 正式名字叫 core。正在問改名範圍（鍵、參數、status 行、文件）。
+- 第 104 段：改叫 init（範圍照 core 那張表換成 init）。等 daemon.json 那隻回來，跟五個可選設定一起派。
+- 第 105 段：先談網路；舊 proto9/cpp/aos-daemon 要收掉 → 問範圍（刪夾、git 歷史留著、daemon2 改名回 aos-daemon？）。引用它的：proto9/README、aos-procfs README、aos-daemon2 README、proto9/docs/01（proto8 thinking 裡的 aos-daemon 多半是 proto8 那支，不動）。
+- daemon.json 那隻回來：我清 build 重跑 280／280、無殘留。交件。它的 11 條【擬】待給使用者看（重點：寬限中第二次 SIGTERM 不理、stay 時 SIGHUP 還是會收掉 daemon、forget 沒 -k 是 EIO 不是 EINVAL）。

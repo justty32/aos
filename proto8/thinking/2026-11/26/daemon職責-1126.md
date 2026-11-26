@@ -57,6 +57,13 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 17. **daemon 結束怎麼收、起動那一層死了 daemon 走不走，都做成起動參數**（第 94 段）：預設照現在（結束時直接 SIGKILL、不給寬限；起動那一層死了 daemon 跟著走）；參數可以改成先 SIGTERM、等 N 秒再 SIGKILL，或起動那一層死了 daemon 留著。參數名字是 eca-aos 擬的。
     - 收尾的做法（第 95 段）：daemon 收到 SIGTERM，**先只對主 kernel 送 SIGTERM**，等設定的秒數（主 kernel 先結束就不等了；這段時間它死了不重起），再對所有 proc 送 SIGKILL。其他 proc 要不要好好收，由主 kernel 在這段時間自己處理。預設秒數 0，跟現在一樣。
 18. **`forget` 時 cgroup 裡還有行程照舊拒，但可以選先清再刪**（第 95 段）：預設要先寫 `cgroup.kill`；`forget -k <名字>` 就是 daemon 先寫 `cgroup.kill` 再拿掉。做成指令上的選項，每次由主 kernel 決定。
+19. **daemon 吃設定檔**（第 96、97 段）：`aos-daemon2 daemon.json`，鍵 `kernel`（路徑或整份主 kernel 設定；相對路徑以 daemon.json 所在夾為準——這個檔是起 daemon 的人給的，「相對於哪裡」清楚）、`on_kernel_exit`、`restart_limit`、`restart_window`、`exit_grace`、`on_parent_death`、`cgroup`、`subuid`；只有 `kernel` 必寫，其餘預設照現在；原本的起動參數照留、寫了蓋過檔；不認得的鍵拒；`status` 多一行 `config`。
+20. **Linux 沒有 Landlock 時，主 kernel 以外的 proc 一律起不來**（第 98 段）：`start` 回 EIO。規則現在只擋建區塊裝置，用意是讓每隻進自己的 domain，新版 Linux 能擋訊號時程式自動加。
+21. **退出碼照現在**（第 99 段）：0 收訊號、`exit` 時用主 kernel 的（被訊號殺 128＋N）、1 到重起上限、2 起不來。
+22. **daemon 跟主 kernel 綁死的地方盡量都做成可選，預設照現在**（第 99、100 段，使用者：「感覺跟kernel耦合的有點緊...希望能多些設定」「希望可以比較多都可選的」）：可以沒有主 kernel（只從外面操作）；主 kernel 死太多次 daemon 可以留著；主 kernel 天空裡放 daemon 目錄的位置可以改；主 kernel 可以另外上鎖；daemon 的退出碼可以不跟主 kernel。鍵名 eca-aos 擬。
+    - 第 101 段照擬的：`daemon.json` 的 `kernel` 可不寫、`on_restart_limit exit|stay`、`exit_code kernel|own`；主 kernel 設定的 `daemon_path`（預設 `/aos`，cgroup 夾跟著放同一層的 `cgroup`）、`locks.landlock`（預設不進）。主 kernel 的 uid 照舊要 0。
+23. **天空裡的 uid 最多到 65535**（第 102 段）：0＝使用者本人，N＝subuid 範圍第 N 個；範圍小就照實際，超過 `start` 失敗。
+24. **「主 kernel」正式叫 `init`**（第 103、104 段；先說 core，看到改名範圍後改 init）：角色像 Linux 的 1 號——daemon 起來第一個起它、其他 proc 都由它下 `start`。程式與文件凡是「主 kernel」都換：`daemon.json` 的 `init`、`--init`、`on_init_exit`、status 的 `init`／`init_access`／`init_restarts`／`init_last_exit`…、`exit_code` 的值 `init`。它在 `procs/` 底下的名字照它設定的 `name`。這份紀錄前面寫的「主 kernel」不改（當時的紀錄）。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 
@@ -65,4 +72,3 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 ## 還沒定的
 
 - 資訊與工具用 aoslua 的講法怎麼描（table、`__meta`、介面宣告）。
-- 主 kernel 的正式名字。

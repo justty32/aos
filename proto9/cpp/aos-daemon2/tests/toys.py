@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# toys.py：測試時在天空裡跑的小程式（主 kernel、探路的 proc、照退出碼結束的、睡著的、時好時壞的 kernel）。
-import errno, os, sys, time
+# toys.py：測試時在天空裡跑的小程式（主 kernel、探路的 proc、照退出碼結束的、睡著的、時好時壞的 kernel、收到 SIGTERM 才收尾的 kernel、留下孩子的 proc）。
+import errno, os, signal, sys, time
 
 # 主 kernel 拿到的 AOS_DAEMON（mount 模式 /aos、ptrace 模式 /proc/1/cwd）；其他 proc 沒有
 ROOT = os.environ.get("AOS_DAEMON", "/proc/1/cwd")
@@ -42,12 +42,14 @@ def put(out, name, text):
     os.rename(tmp, os.path.join(out, name))
 
 
-def kernel(out):
+def kernel(out, tick=None):
     """主 kernel：記下自己讀不讀得到 $AOS_DAEMON/status（第一行）、AOS_DAEMON 是什麼、讀不讀得到 /proc/1/cwd；
-    之後照 out/ask-* 做（讀路徑或寫 ctl），答案寫 out/ans-*。"""
+    之後照 out/ask-* 做（讀路徑或寫 ctl），答案寫 out/ans-*。tick：每一圈先叫一次（kgrace 用）。"""
     put(out, "kernel-%d.txt" % os.getpid(), "%s\nroot %s\nproc1 %s\n" % (
         try_path(ROOT + "/status"), os.environ.get("AOS_DAEMON", "-"), try_path("/proc/1/cwd/status")))
     while True:
+        if tick:
+            tick()
         for n in sorted(os.listdir(out)):
             if not n.startswith("ask-"):
                 continue
@@ -60,6 +62,41 @@ def kernel(out):
                 a = try_path(q)
             put(out, "ans-" + n[4:], a + "\n")
         time.sleep(0.02)
+
+
+def kgrace(out, how):
+    """當主 kernel；收到 SIGTERM 時照 how 做：
+    clean：寫 out/term，等 0.5 秒（收尾），寫 out/cleanup，以 0 結束
+    ignore：SIGTERM 不理，照樣當主 kernel
+    stay：寫 out/term，照樣當主 kernel（測試在寬限裡用 ask 叫它寫 ctl）
+    die：寫 out/term，馬上以 3 結束
+    ctl：寫 out/term，經 ctl 殺掉 w、等它死、forget 它，結果寫 out/cleanup，以 0 結束"""
+    got = []
+    if how == "ignore":
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    else:
+        signal.signal(signal.SIGTERM, lambda *_: got.append(1))
+
+    def tick():
+        if not got:
+            return
+        got.clear()
+        put(out, "term", "x")
+        if how == "clean":
+            time.sleep(0.5)
+            put(out, "cleanup", "x")
+            sys.exit(0)
+        if how == "die":
+            sys.exit(3)
+        if how == "ctl":
+            a = write_ctl("kill w KILL")
+            end = time.monotonic() + 5
+            while try_path(ROOT + "/procs/w/state") != "ok dead|" and time.monotonic() < end:
+                time.sleep(0.02)
+            b = write_ctl("forget w")
+            put(out, "cleanup", "%s %s %s\n" % (a, b, try_path(ROOT + "/procs/w")))
+            sys.exit(0)
+    kernel(out, tick)
 
 
 def main():
@@ -95,6 +132,18 @@ def main():
         kernel(sys.argv[2])
     elif mode == "sleep":
         time.sleep(1000)
+    elif mode == "kgrace":   # kgrace OUT HOW：見 kgrace()
+        kgrace(sys.argv[2], sys.argv[3])
+    elif mode == "orphan":   # orphan OUT NAME：生一個睡著的孩子（留在同一個 cgroup），寫 OUT/NAME.orphan 後自己以 0 結束
+        if os.fork() == 0:
+            os.setsid()
+            put(sys.argv[2], sys.argv[3] + ".orphan", str(os.getpid()))
+            time.sleep(1000)
+            os._exit(0)
+        end = time.monotonic() + 5
+        while not os.path.exists(os.path.join(sys.argv[2], sys.argv[3] + ".orphan")) and time.monotonic() < end:
+            time.sleep(0.01)
+        os._exit(0)
     elif mode == "flaky":   # flaky OUT N：前 N 次起來就以 5 結束，之後當主 kernel
         out, n = sys.argv[2], int(sys.argv[3])
         cnt = os.path.join(out, "flaky-count")

@@ -84,6 +84,12 @@ std::string iso_now() {
     return buf;
 }
 
+std::string seconds_text(double s) {
+    char buf[64];
+    snprintf(buf, sizeof buf, "%g", s);
+    return buf;
+}
+
 double mono_now() {
     timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);

@@ -69,15 +69,21 @@ struct World {
 };
 extern World W;
 
-// 起動參數（main.cpp 讀，起動那一層與 daemon 都用）
+// 起動參數（main.cpp 讀，起動那一層與 daemon 都用）：預設值 ← daemon 設定檔（有給的話）← 命令列參數（後蓋前）
 struct Options {
-    std::string kernel_path;          // 主 kernel 的設定檔（外面的路徑）
+    std::string config_path;          // daemon 設定檔（外面的絕對路徑）；空＝只用命令列參數起
+    std::string kernel_path;          // 主 kernel 的設定檔（外面的路徑）；內嵌時是 "<config_path>#/kernel"
+    std::string kernel_text;          // daemon 設定檔裡內嵌的主 kernel 設定（json 文字）；空＝讀 kernel_path
     bool restart = true;              // 主 kernel 死了：true＝restart、false＝exit
     int restart_limit = 5;            // window 秒內死超過這麼多次就不再起
     double restart_window = 60;
+    double exit_grace = 0;            // 收到結束訊號：先只對主 kernel 送 SIGTERM，最多等這麼多秒，再全部 SIGKILL
+    bool parent_death_exit = true;    // 起動那一層死了 daemon 跟著走（parent-death signal）；false＝stay
     bool cgroup_auto = true;
+    std::string cgroup_off_note = "--cgroup off";   // cgroup 關掉時 status 寫的原因（命令列或設定檔）
     bool subuid_auto = true;
 };
+std::string seconds_text(double s);   // 2 → "2"、0.5 → "0.5"
 
 // daemon.cpp：PID namespace 的 1 號。sync_fd 等起動那一層寫好 uid/gid 對照表再讀到自己在外面的 PID。
 [[noreturn]] void daemon_main(const Options& o, int sync_fd);

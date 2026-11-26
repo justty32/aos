@@ -62,6 +62,10 @@ long seq = 0;            // cgroup 夾名的流水號，只在主執行緒動
 std::string started_at;
 int EFD = -1;
 bool gone = false;       // FUSE 連線斷了
+// 收到結束訊號後、等主 kernel 自己結束的那段（exit_grace）：只在主執行緒動
+bool stopping = false;
+double stop_deadline = 0;   // monotonic
+std::string stop_why;
 
 // 做事的線把要 fork／收屍的事交給主執行緒（只有主執行緒 fork 與 waitpid）
 struct Request {
@@ -231,6 +235,8 @@ void kernel_died(const std::string& how, int as_code) {
         std::lock_guard<std::mutex> g(S.mu);
         S.kernel_last_exit = how;
     }
+    // 結束訊號後的寬限裡主 kernel 結束了：不重起，不再等，收掉其餘的
+    if (stopping) shutdown(0, stop_why + "; main kernel " + how + " within the exit grace");
     if (!O.restart) shutdown(as_code, "main kernel " + how + ", --on-kernel-exit exit");
     double now = mono_now();
     size_t n;
@@ -274,6 +280,54 @@ void reap_all() {
         log("proc " + hit->cfg.name + " exited: " + how);
         if (hit->main_kernel) kernel_died(how, hit->sig ? 128 + hit->sig : hit->code);
     }
+}
+
+// 主執行緒：收到 SIGTERM／SIGINT／SIGHUP。先只對主 kernel 送 SIGTERM，最多等 exit_grace 秒（主循環照跑，ctl 照用），
+// 主 kernel 先結束就不再等（kernel_died），時間到就 shutdown（全部 SIGKILL）。寬限裡再收到的結束訊號不管（照樣等到時間到）。
+void begin_stop(int sig) {
+    std::string why = std::string("got ") + signal_name(sig);
+    if (stopping) {
+        log(why + " while waiting for the main kernel to exit; still waiting");
+        return;
+    }
+    pid_t kp = 0;
+    {
+        std::lock_guard<std::mutex> g(S.mu);
+        auto p = find(KCFG.name);
+        if (p && p->main_kernel && p->alive) kp = p->sp.pid;
+    }
+    if (!kp) shutdown(0, why + ", no main kernel running");
+    kill(kp, SIGTERM);
+    if (!(O.exit_grace > 0)) shutdown(0, why);
+    stopping = true;
+    stop_why = why;
+    stop_deadline = mono_now() + O.exit_grace;
+    log(why + ": sent SIGTERM to the main kernel " + KCFG.name + ", waiting up to " + seconds_text(O.exit_grace) +
+        " s (exit_grace) before killing every proc");
+}
+
+// 做事的線：forget -k。那隻的 cgroup 夾裡還有行程就寫 cgroup.kill，等到空（最多 FORGET_KILL_WAIT 秒，monotonic）
+const double FORGET_KILL_WAIT = 5;
+std::string clear_cgroup(const std::string& name, const std::string& cg) {
+    auto populated = [&] {
+        std::string ev = read_fd_at(W.cgfd, cg + "/cgroup.events");
+        return !ev.empty() && ev.find("populated 0") == std::string::npos;
+    };
+    if (!populated()) return "";
+    int fd = openat(W.cgfd, (cg + "/cgroup.kill").c_str(), O_WRONLY | O_CLOEXEC);
+    bool ok = fd >= 0 && write(fd, "1", 1) == 1;
+    int e = errno;
+    if (fd >= 0) close(fd);
+    if (!ok) return "CgroupKillFailed " + name + ": writing " + cg + "/cgroup.kill: " + errstr(e) + " (cgroup.kill needs Linux 5.14)";
+    log("forget -k " + name + ": wrote cgroup.kill of " + cg);
+    double end = mono_now() + FORGET_KILL_WAIT;
+    while (populated()) {
+        if (mono_now() > end)
+            return "Timeout " + name + ": its cgroup " + cg + " still has processes " + seconds_text(FORGET_KILL_WAIT) +
+                   " s after writing cgroup.kill";
+        usleep(10000);
+    }
+    return "";
 }
 
 // ---------- 工具檔 ctl ----------
@@ -341,26 +395,46 @@ void setup_ctl(pf::Ctl& ctl) {
             if (c.words.size() == 3 && !signal_number(c.words[2])) return "SignalUnknown " + c.words[2];
             return check_name(c, 3, "kill NAME SIGNAL", 1);
         });
+    // forget [-k] NAME：-k＝那隻（一定要已經死了）的 cgroup 夾裡還有它留下的行程，先寫 cgroup.kill、等到空再拿掉；沒有 cgroup 時跟 forget 一樣
     ctl.on("forget",
         [](const pf::Command& c) {
+            bool k = c.words[1] == "-k";
+            const std::string& name = c.words.back();
             std::string cg;
             std::shared_ptr<Proc> p;
             {
                 std::lock_guard<std::mutex> g(S.mu);
-                p = find(c.words[1]);
-                if (!p) return pf::Result::failed("ProcUnknown " + c.words[1]);
-                if (p->alive) return pf::Result::failed("ProcAlive " + c.words[1]);
+                p = find(name);
+                if (!p) return pf::Result::failed("ProcUnknown " + name);
+                if (p->alive) return pf::Result::failed("ProcAlive " + name);
                 cg = p->sp.cgroup;
             }
-            // cgroup 裡還有它留下的行程就不拿掉（要收由 kernel 寫 cgroup.kill）
-            if (!cg.empty() && unlinkat(W.cgfd, cg.c_str(), AT_REMOVEDIR) != 0 && errno != ENOENT)
-                return pf::Result::failed("CgroupNotEmpty " + c.words[1] + ": " + errstr(errno) +
-                                          " (processes it left are still in its cgroup; write 1 to its cgroup/cgroup.kill)");
-            drop_proc(c.words[1], p.get());   // 這段時間裡主 kernel 被重起成同名的新一隻，就不拿那隻
-            log("forgot " + c.words[1]);
+            if (k && !cg.empty()) {
+                std::string e = clear_cgroup(name, cg);
+                if (!e.empty()) return pf::Result::failed(e);
+            }
+            if (!cg.empty()) {
+                // 不帶 -k：cgroup 裡還有它留下的行程就不拿掉（要收由 kernel 寫 cgroup.kill，或用 forget -k）
+                // 帶 -k：已經空了；剛被殺的還沒收屍時 rmdir 可能短暫 EBUSY，等一下
+                double end = mono_now() + (k ? FORGET_KILL_WAIT : 0);
+                for (;;) {
+                    if (unlinkat(W.cgfd, cg.c_str(), AT_REMOVEDIR) == 0 || errno == ENOENT) break;
+                    if (!k || errno != EBUSY || mono_now() > end)
+                        return pf::Result::failed("CgroupNotEmpty " + name + ": " + errstr(errno) +
+                                                  " (processes it left are still in its cgroup; write 1 to its cgroup/cgroup.kill, or use forget -k " +
+                                                  name + ")");
+                    usleep(10000);
+                }
+            }
+            drop_proc(name, p.get());   // 這段時間裡主 kernel 被重起成同名的新一隻，就不拿那隻
+            log("forgot " + name + (k ? " (-k)" : ""));
             return pf::Result::done();
         },
-        [](const pf::Command& c) { return check_name(c, 2, "forget NAME", 0); });
+        [](const pf::Command& c) -> std::string {
+            bool k = c.words.size() > 1 && c.words[1] == "-k";
+            if (c.words.size() != (k ? 3u : 2u)) return "ArgumentsBad usage: forget [-k] NAME";
+            return check_name(pf::Command{c.line, {c.words[0], c.words.back()}}, 2, "forget [-k] NAME", 0);
+        });
     ctl.on("mount",
         [](const pf::Command& c) {
             bool rw = c.words[2] == "-w";
@@ -437,10 +511,13 @@ std::string status_text() {
     s += pf::kv_line("pid_ns", "1");
     s += pf::kv_line("pid_host", std::to_string(W.host_pid));
     s += pf::kv_line("started_at", started_at);
+    s += pf::kv_line("config", O.config_path.empty() ? "-" : O.config_path);
     s += pf::kv_line("main_kernel", KCFG.name);
     s += pf::kv_line("on_kernel_exit", O.restart ? "restart" : "exit");
     s += pf::kv_line("restart_limit", std::to_string(O.restart_limit) + " deaths within " +
                                           std::to_string(static_cast<int>(O.restart_window)) + " s");
+    s += pf::kv_line("exit_grace", seconds_text(O.exit_grace) + " s");
+    s += pf::kv_line("on_parent_death", O.parent_death_exit ? "exit" : "stay");
     s += pf::kv_line("kernel_restarts", std::to_string(S.kernel_restarts));
     s += pf::kv_line("kernel_deaths_in_window", std::to_string(S.deaths.size()));
     s += pf::kv_line("kernel_last_exit", S.kernel_last_exit);
@@ -466,10 +543,12 @@ void must(int r, const std::string& what) {
 
 [[noreturn]] void daemon_main(const Options& o, int sync_fd) {
     O = o;
+    // on_parent_death exit（預設）：起動那一層死了就跟著走；先設再等 pipe，起動那一層在中間死了也不會漏
+    // stay：不設；起動那一層死了 daemon 照跑（被外面那層的 init／subreaper 收養），結束由對 daemon 送 SIGTERM
+    if (O.parent_death_exit) prctl(PR_SET_PDEATHSIG, SIGKILL);
     long info[6] = {0};   // 外面的 PID、setgroups_ok、subuid 起點、數量、外面的 uid、gid
     if (read(sync_fd, info, sizeof info) != static_cast<ssize_t>(sizeof info)) _exit(2);
     close(sync_fd);
-    prctl(PR_SET_PDEATHSIG, SIGKILL);   // 起動那一層死了就跟著走
     W.host_pid = info[0];
     W.setgroups_ok = info[1] != 0;
     W.subuid_start = info[2];
@@ -496,7 +575,8 @@ void must(int r, const std::string& what) {
     long abi = syscall(SYS_landlock_create_ruleset, nullptr, 0, LANDLOCK_CREATE_RULESET_VERSION);
     W.landlock_abi = abi > 0 ? static_cast<int>(abi) : 0;
     {
-        std::string err, text = read_host_file(O.kernel_path, err);
+        std::string err, text = O.kernel_text;   // daemon 設定檔裡內嵌的就不用讀檔
+        if (text.empty()) text = read_host_file(O.kernel_path, err);
         if (!err.empty()) fatal(err);
         try {
             KCFG = parse_config(text, O.kernel_path);
@@ -566,11 +646,16 @@ void must(int r, const std::string& what) {
 
     for (;;) {
         pollfd p[2] = {{sfd, POLLIN, 0}, {EFD, POLLIN, 0}};
-        if (poll(p, 2, -1) < 0 && errno != EINTR) fatal("poll: " + errstr(errno));
+        int timeout = -1;
+        if (stopping) {
+            double left = stop_deadline - mono_now();
+            timeout = left <= 0 ? 0 : left > 3600 ? 3600000 : static_cast<int>(left * 1000) + 1;
+        }
+        if (poll(p, 2, timeout) < 0 && errno != EINTR) fatal("poll: " + errstr(errno));
         signalfd_siginfo si;
         while (read(sfd, &si, sizeof si) == static_cast<ssize_t>(sizeof si)) {
             if (si.ssi_signo == SIGCHLD) continue;
-            shutdown(0, std::string("got ") + signal_name(static_cast<int>(si.ssi_signo)));
+            begin_stop(static_cast<int>(si.ssi_signo));
         }
         reap_all();
         uint64_t n;
@@ -591,6 +676,8 @@ void must(int r, const std::string& what) {
             r->cv.notify_all();
         }
         reap_all();
+        if (stopping && mono_now() >= stop_deadline)
+            shutdown(0, stop_why + "; the main kernel was still running after exit_grace " + seconds_text(O.exit_grace) + " s");
     }
 }
 
