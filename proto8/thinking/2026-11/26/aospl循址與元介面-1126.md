@@ -4,7 +4,7 @@
 
 ← [2026-11-26](README.md)｜前情：[daemon當容器-1125](../25/daemon當容器-1125.md)（做減法）、[9p-proc-1125](../25/9p-proc-1125.md)
 
-使用者原話逐字在 [9p-proc-1125](../25/9p-proc-1125.md) 第 40～61 段（接著前一天的編號抄）。這份只留整理後的原意、定了的、還沒定的。
+使用者原話逐字在 [9p-proc-1125](../25/9p-proc-1125.md) 第 40～62 段（接著前一天的編號抄）。這份只留整理後的原意、定了的、還沒定的。
 
 ## 使用者說的（照原意整理）
 
@@ -85,17 +85,30 @@
 38. **`aos/description`**，eca-aos 建議、使用者沒反對：UTF-8 文字，第一行一句話摘要，後面可接長說明；只讀不執行。（第 60 段）
 39. **`aos/rename` 是資料夾，`aos/rename/exec` 是可執行檔，只吃 stdin：一行一筆 `舊名 新名`（空白分開）。** 第一版名字不能有空白，跳脫規則「很以後」才加。stdout 不輸出東西，有錯直接寫 stderr。一筆失敗後面做不做，用 argv 設定。每處理完一行就處理下一行，不等全部收完。（第 60、61 段）
 40. **`xxx/__meta/__interfaces/aos/rename/exec` 管的就是 `xxx`**：在哪裡宣告就管那張 table 底下。（第 61 段）
-41. **`rename/before`、`rename/after` 先不做，先記一筆**（第 61 段原話）：一個是簡單的過濾，stdin／stdout 跟 exec 的 stdin 一樣，擋下其中一些行，具體訊息另外從 stderr 或別的檔看；另一個的 stdin 跟 exec 的 stdin 一樣，最後面接上 exec 的 stderr。使用者原話把過濾的叫 after、接 stderr 的叫 before；照順序看可能寫反了，eca-aos 已問。
+41. **`rename/before`、`rename/after` 先不做，先記一筆**：`before` 是簡單的過濾，stdin／stdout 跟 exec 的 stdin 一樣，擋下其中一些行，具體訊息另外從 stderr 或別的檔看；`after` 的 stdin 跟 exec 的 stdin 一樣，最後面接上 exec 的 stderr。（第 61 段；原話 before、after 寫反，第 62 段「2.對，我寫反了。」已照正）
+42. **`aos/rename` 可以在子樹裡跨層**（`a/b c/d`）。比較麻煩：要一層一層往下追溯子項的 rename。（第 62 段「B」）
+43. **rename 的錯誤一行一條，開頭照抄那筆的 `舊名 新名`，後面接原因**，例：`foo bar: bar exists`。（第 62 段「1.好。」）
+44. **`xxx/exec`、`xxx/before`、`xxx/after` 這一套，加上 stdin／stdout／stderr 的用法，記成一個可以用在別處的做法**，之後可能會改進。見下一節。（第 62 段）
+
+## exec／before／after 這一套（第 61、62 段；之後可能改進）
+
+| 東西 | 做什麼 | stdin | stdout | stderr |
+|---|---|---|---|---|
+| `xxx/` | 一個資料夾，代表一件可以做的事（例：`aos/rename/`） | | | |
+| `xxx/before` | 過濾：擋下其中一些行 | 一行一筆（跟 exec 一樣） | 放行的那些行 | 擋下的原因（或寫到別的檔） |
+| `xxx/exec` | 真的去做；在哪宣告就管那張 table；選項（例：一筆失敗後面做不做）用 argv | 一行一筆；第一版欄位用空白分開、內容不能有空白 | 不輸出 | 錯的那筆一行：開頭照抄那筆，後面接原因 |
+| `xxx/after` | 做完之後看結果 | 一行一筆（跟 exec 一樣），最後面接上 exec 的 stderr | | |
+
+每處理完一行就處理下一行，不等全部收完。`before`、`after` 先不做（第 61 段）。
+
 
 ## 未決
 
-- rename 只管直屬子項（名字不帶斜線），還是可以在子樹裡跨層（`a/b c/d`）。
-- rename 的錯誤寫在 stderr，怎麼對回是哪一行。
-- `rename/before`、`rename/after` 哪個是過濾、哪個接 exec 的 stderr。
+- exec／before／after 這一套：`after` 的 stdin 裡，原本那些行和 exec 的 stderr 怎麼分開；`after` 收到的是 `before` 過濾前還是過濾後的行。
 
 - `__metatable`、`__mode` 怎麼表示（使用者：先不管）。
 - `__index` 處理整條路（使用者想要，先不做）。
-- 介面宣告的形式第 26～30 條定了；接下來 aos 第一版要先說好哪幾個共同介面（`aos/utilpath` 第 31～35 條、`aos/name`／`aos/description`／`aos/rename` 第 36～41 條定了，還有哪些），各自在那個位置上放什麼。
+- 介面宣告的形式第 26～30 條定了；接下來 aos 第一版要先說好哪幾個共同介面（`aos/utilpath` 第 31～35 條、`aos/name`／`aos/description`／`aos/rename` 第 36～43 條定了，還有哪些），各自在那個位置上放什麼。
 - `aos/utilpath` 的細節格式（去掉哪些子項、別的檔型），以後放 `utilpath/xxx`。
 - aoslua 獨有的元素（給機器讀的簡介…）。
 - aos-exec 瘦身：使用者說先不管 aos-exec、先把介面弄好；第 7 條（`__call` 取代 `_entry`）會改掉它找入口的方式。

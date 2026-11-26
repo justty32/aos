@@ -754,3 +754,4 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 下一步：問使用者要不要接著定 aos 第一版的共同介面（aos/name、aos/description、改名、路徑解析規則）。
 - 第 57、58 段：路徑解析規則是介面 `aos/utilpath`（能存取到就代表 `xxx/` 以下可用 `#`），管整棵子樹、以後可用 JSON 寫細節（去掉子項）；`#` 後面 JSON Pointer、第一版只管 `.json`、只保證讀；讀宣告能不能用 `#` 看讀的程式，aos 標準實作預設支援。定了到 35 條。
 - 第 59～61 段：aos/name（給人看的名字）、aos/description、aos/rename（資料夾，`rename/exec` 只吃 stdin 一行 `舊 新`、名字不能有空白、錯誤寫 stderr、失敗後續做不做用 argv 設、在哪宣告就管哪張 table）；before／after 先不做只記一筆（他的原話過濾叫 after、接 stderr 叫 before，可能寫反，已問）。定了到 41 條。等他回：rename 跨不跨層、stderr 怎麼對行、before／after 名字。
+- 第 62 段：rename 子樹裡可跨層（要一層層追子項的 rename）、stderr 一行開頭抄那筆、before／after 照正（before 過濾、after 收 exec stderr）；exec／before／after 加 stdin／stdout／stderr 用法記成可通用的做法（思考紀錄新一節），之後可能改進。定了到 44 條。
