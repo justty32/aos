@@ -637,6 +637,13 @@ def t_access():
     check("access: kernel ns using /aos -> daemon exits 2 and says why", rc == 2 and "/aos" in d.err() and
           "daemon_access" in d.err(), (rc, d.err()[-300:]))
 
+    # 主 kernel 的 uid 不是 0：兩種模式都起不來
+    for mode in ("mount", "ptrace"):
+        d = Daemon("access-uid-" + mode, kernel_extra={"uid": 5, "daemon_access": mode})
+        rc = d.p.wait(10)
+        check("access: %s mode: kernel uid 5 -> daemon exits 2 and mentions uid" % mode,
+              rc == 2 and "uid" in d.err() and "uid 0" in d.err(), (rc, d.err()[-300:]))
+
 
 # ---------------------------------------------------------------- dirs
 

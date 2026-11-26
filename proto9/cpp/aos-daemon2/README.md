@@ -53,7 +53,7 @@ $ kill %1        # daemon 結束，底下整片跟著走
 | `--cgroup auto\|off` | `auto`（預設）：不在交給自己的 cgroup 裡，就用 `systemd-run --user --scope -p Delegate=yes` 重跑自己；沒有 systemd --user 就當 `off` |
 | `--subuid auto\|off` | `auto`（預設）：`/etc/subuid`、`/etc/subgid` 有範圍又有 `newuidmap`／`newgidmap` 就接在 1 號後面 |
 
-退出碼：收到 SIGTERM／SIGINT／SIGHUP 是 0；`--on-kernel-exit exit` 時是主 kernel 的退出碼（被訊號殺是 128＋訊號）；到重起上限是 1；起不來是 2。
+退出碼：收到 SIGTERM／SIGINT／SIGHUP 是 0；`--on-kernel-exit exit` 時是主 kernel 的退出碼（被訊號殺是 128＋訊號）；到重起上限是 1；起不來是 2（含主 kernel 設定用了保留的 `/aos`、`/cgroup`，或 uid 不是 0）。
 
 ## 資訊與工具的目錄
 
@@ -178,7 +178,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 - **天空表**多兩行：`aos - /aos rw` 與 `cgroup <cgroup 夾外面的路徑> /cgroup rw`（`ns_check` 照樣對）；`locks` 檔寫 `capabilities: none (bounding set empty)` 與 `daemon directory: /aos in its ns …`。
 - **ptrace 模式**：Linux 讀別的行程的 `/proc/<PID>/cwd` 時，除了同 uid，還要「自己的 caps 包含對方的」；daemon 在 user namespace 裡有全部 caps，主 kernel 清成 0 就讀不到（實測：0 caps EACCES，只留 cap_sys_ptrace 就讀得到）。代價是能 ptrace 同一個 user namespace 裡的行程（含 daemon）。這個模式天空裡沒有 `/aos`。
 - 兩種模式主 kernel 都讀得到其他 proc 的 `/proc/<PID>/root`（mount 模式也行：對方 caps 是 0、同 uid；Landlock 只擋 domain 裡的往外，不擋外面的往裡）。
-- 主 kernel 要用天空裡的 0 號（uid 0）：`ctl` 是 0200、FUSE 也只放跟 daemon 同 uid 的行程進來。
+- 主 kernel 要用天空裡的 0 號（uid 0）：`ctl` 是 0200、FUSE 也只放跟 daemon 同 uid 的行程進來。主 kernel 設定的 uid 不是 0，daemon 起不來（退出碼 2，說明原因；兩種 `daemon_access` 都一樣；重起主 kernel 時不再讀設定檔，所以只在起動時檢查）——使用者 11-26 定。
 - 它死了：`restart`（預設）就重起；`--restart-window` 秒內死超過 `--restart-limit` 次（預設 60 秒內超過 5 次，即第 6 次）就不再起，daemon 結束、整片收掉。起不來（exec 失敗之類）也算死一次。重起時舊的那筆從表上拿掉（`procs/<名>/` 整個拿掉）、用同一個名字起新的（新的 `procs/<名>/`）；`status` 的 `kernel_restarts`、`kernel_last_exit` 記著。`exit`：daemon 直接結束，退出碼用主 kernel 的。
 
 ### `procs/<名>/`：真的夾（使用者 11-26 定，「實作時定的」第 4 條）
@@ -198,7 +198,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 
 ## 測試
 
-`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**155 PASS、0 FAIL**（11-26 主 kernel 改走 `/aos`、`procs/<名>/` 改成真的夾之後；之前是 112），約 6～10 秒，清 build 跑一次加連跑 3 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
+`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**157 PASS、0 FAIL**（11-26 主 kernel 改走 `/aos`、`procs/<名>/` 改成真的夾後 155；再加主 kernel uid 不是 0 要拒的 2 條），約 6～10 秒，清 build 跑一次加連跑 3 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
 
 | 組 | 驗什麼 |
 |---|---|
@@ -211,7 +211,7 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 | `modes` | `--cgroup off --subuid off`：對照表只有一段、給 cgroup 上限或 uid 5 都 `EIO`＋`failed`、一般 proc 照起、`locks` 寫 groups kept |
 | `restart` | 前兩次起來就死的主 kernel 被重起兩次後活著；`--restart-limit 3` 起 4 次後 daemon 以 1 結束並說明原因；`--on-kernel-exit exit` 以主 kernel 的 4 結束、不重起；`--restart-limit 0` 第一次死就結束 |
 | `teardown` | `kill -9` daemon：底下 4 隻 1 秒內全不見、起動那一層以 137 結束；`kill -9` 起動那一層：daemon 與底下跟著走 |
-| `access` | mount 模式（預設）：`status` 寫 `main_kernel_access: mount /aos`；主 kernel 的 CapInh／Prm／Eff／Bnd／Amb 全 0；`AOS_DAEMON=/aos`、讀得到 `/aos/status`、讀 `/proc/1/cwd` 是 `EACCES`；天空表有 `aos - /aos rw` 與 cgroup 那行、`ns_check` ok；mountinfo 裡 `/aos` 是 `fuse.aosproc`；`locks` 寫 caps none、目錄在 `/aos`；列 `/aos`；寫 `/aos/ctl` 的 `start` 回來時已經 `alive`、讀 `/aos/procs/w/state`；起不來的是 `EIO`、原因在 `/aos/status`；經 `/aos/procs/w/cgroup` 讀到 `pids.max`；`ctl` 卸 `/aos`、掛蓋 `/aos` 都 `EINVAL`（`PathReserved`）；`kill`、`forget` 後 `/aos/procs/w` 走不到。非主 kernel 的：沒有 `/aos`、`/cgroup`，讀不到 `/proc/1/cwd`，沒有 `AOS_DAEMON`（有 `AOS_NAME`）；設定寫 `daemon_access` 是 `EIO`＋`ConfigBad`；外面的 `/proc/<PID>/cwd` 照通。ptrace 模式：`status` 寫 `ptrace /proc/1/cwd`、只留 cap_sys_ptrace、`AOS_DAEMON=/proc/1/cwd` 讀得到、沒有 `/aos`、經它寫 `start` 可以。主 kernel 天空自己用 `/aos`：daemon 以 2 結束並說明 |
+| `access` | mount 模式（預設）：`status` 寫 `main_kernel_access: mount /aos`；主 kernel 的 CapInh／Prm／Eff／Bnd／Amb 全 0；`AOS_DAEMON=/aos`、讀得到 `/aos/status`、讀 `/proc/1/cwd` 是 `EACCES`；天空表有 `aos - /aos rw` 與 cgroup 那行、`ns_check` ok；mountinfo 裡 `/aos` 是 `fuse.aosproc`；`locks` 寫 caps none、目錄在 `/aos`；列 `/aos`；寫 `/aos/ctl` 的 `start` 回來時已經 `alive`、讀 `/aos/procs/w/state`；起不來的是 `EIO`、原因在 `/aos/status`；經 `/aos/procs/w/cgroup` 讀到 `pids.max`；`ctl` 卸 `/aos`、掛蓋 `/aos` 都 `EINVAL`（`PathReserved`）；`kill`、`forget` 後 `/aos/procs/w` 走不到。非主 kernel 的：沒有 `/aos`、`/cgroup`，讀不到 `/proc/1/cwd`，沒有 `AOS_DAEMON`（有 `AOS_NAME`）；設定寫 `daemon_access` 是 `EIO`＋`ConfigBad`；外面的 `/proc/<PID>/cwd` 照通。ptrace 模式：`status` 寫 `ptrace /proc/1/cwd`、只留 cap_sys_ptrace、`AOS_DAEMON=/proc/1/cwd` 讀得到、沒有 `/aos`、經它寫 `start` 可以。主 kernel 天空自己用 `/aos`：daemon 以 2 結束並說明；主 kernel uid 5（mount、ptrace 兩種模式）：daemon 以 2 結束、說明要 uid 0 |
 | `dirs` | `procs/x` 是夾不是 symlink、裡面是那幾個檔；`ls procs/`；先讓核心快取那條路、開著一個檔，`forget` 回來時 `procs/x` 與底下都走不到、`ls procs/` 只剩 main、開著的檔照讀；同名再起是新的那隻；10 次 start／forget 每次都建、拿；最後 `procs/` 與 `status` 的 `procs` 對 |
 | `leftovers`（最後一定跑） | 沒有留下行程（daemon、起動那一層、天空裡的 toys.py）、systemd unit、`aos-daemon2-*` cgroup、掛載 |
 

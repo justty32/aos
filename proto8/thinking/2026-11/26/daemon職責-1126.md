@@ -48,6 +48,8 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 8. **只有主 kernel 拿得到 daemon 目錄的環境變數，名字叫 `AOS_DAEMON`。**（第 81、82 段）其他 proc 不給，設定寫了也拿掉；每隻都給 `AOS_NAME`。原本叫 `AOS_ROOT`，改名跟 proto8 的 `AOS_DAEMON`（daemon 的資料夾）同一個意思，也免得看成天空的根。只動 aos-daemon2，舊 aos-daemon、aos-procfs、aos-exec 照舊。
 9. **`status` 多一行 `main_kernel_access`**（第 83 段）：`mount /aos` 或 `ptrace /proc/1/cwd`，只是資訊、給除錯看。
 10. **aos-procfs 的 `remove_tree` 不拿 ctl 與信箱**（第 84 段，照現在）：本身或底下有就整個不動、回失敗。現在 `procs/<名字>/` 沒有這兩種；以後 proc 的夾要放自己的 ctl 時，再做「先收好（停做事的線、等著的人回錯）再拿掉」。
+11. **`ctl` 做下去才失敗一律回 `EIO`**（第 85 段）：原因在 `status` 的 `aos_ctl_error`；寫錯的照舊 `EINVAL`。不依原因挑不同號碼。
+12. **主 kernel 在天空裡一定要是 uid 0，設定寫了別的 daemon 起動就拒**（第 86 段）：退出碼 2，跟 `/aos` 撞名一樣。uid 0＝外面的使用者本人、跟 daemon 同帳號；`ctl` 只有擁有者能寫、daemon 的目錄只放同帳號進來，其他 proc 用 subuid 的帳號，光這條就進不去。
 
 ## 我的讀法（使用者沒反對，照這樣記）
 

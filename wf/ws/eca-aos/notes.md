@@ -797,3 +797,7 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 83 段：第 4 條 `main_kernel_access` 留著。下一條：第 5 條 `remove_tree` 不拿 ctl／信箱。
 - 第 84 段：第 5 條 `remove_tree` 照現在。新【擬】五條看完。剩：EIO 當錯誤碼、主 kernel 要是天空裡 uid 0、daemon2 README 舊【擬】清單；之後 daemon 題目（aoslua 怎麼描、主 kernel 正式名字、網路隔離與 seccomp、sky-1125 其餘、daemon當容器第 8 輪 7～11 與第 9 輪、舊 aos-daemon 退不退）。
 - AOS_DAEMON 那隻回來：清 build 重跑 155／155、無殘留。daemon2 README 把定了的【擬】標上；HANDOFF 跟上（多 23 個沒推、背景空）。交件。
+- 第 85 段：EIO 照現在。下一條：主 kernel 要是天空裡 uid 0。
+- 發現：daemon2 `src/main.cpp:46` 的 usage 還寫 `procs/NAME -> slots/N`（真的夾之前的舊說法），下次改 daemon2 時順手修。主 kernel 設定寫 uid≠0 時程式沒擋（起得來但碰不到 /aos），正在問使用者。
+- 第 86 段：主 kernel uid≠0 起動就拒（退出碼 2）。派 sonnet 子 agent 改＋修 usage 舊說法。回來後驗、交件。下一條【擬】：設定檔格式或天空表一行的寫法。
+- uid 那隻回來：起動時主 kernel uid≠0 就 fatal（退出碼 2，mount／ptrace 都一樣；重起不重讀設定所以不用再查）、usage 舊說法修好。我清 build 重跑 157／157、無殘留。交件（proto9/README、HANDOFF 跟上，多 24 個沒推）。正在問：設定檔格式（ns 一條一字串 vs JSON 物件）。

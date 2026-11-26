@@ -28,12 +28,16 @@ Starts without root: a new user namespace (you are uid 0 inside, plus your subui
 a new PID namespace (the daemon is PID 1 there) and a new mount namespace. The daemon serves
 one directory and stands in it; once ready it prints
     export AOS_DAEMON=/proc/<PID>/cwd
-on stdout. Inside the procs it starts, the same directory is /proc/1/cwd.
+on stdout. Only the main kernel gets AOS_DAEMON in its environment; other procs do not.
 The daemon itself then lives in a small world that holds only that directory (and the cgroup
 switches): /proc/<PID>/root shows nothing else.
 
 The main kernel (CONFIG, same JSON format as `start`) is started first. It is the only proc
-without a Landlock domain; it keeps cap_sys_ptrace so it can read /proc/1/cwd.
+without a Landlock domain, and it must run as uid 0 in its ns (any other "uid" in its
+config: the daemon refuses to start, exit 2). By default ("daemon_access": "mount") the
+directory is mounted in its ns at /aos (cgroup directory at /cgroup, when there is one), AOS_DAEMON=/aos,
+and it has no capabilities; with "daemon_access": "ptrace" it keeps cap_sys_ptrace and
+reads /proc/1/cwd. In mount mode its own ns config may not use /aos or /cgroup (exit 2).
 
 Directory:
   status           daemon facts and the feedback of the last ctl command
@@ -43,8 +47,10 @@ Directory:
                      mount NAME [-w] SRC DST      (bind SRC into a running proc's ns; read-only unless -w)
                      umount NAME DST
                      forget NAME                  (remove a dead proc from the table)
-  procs/NAME       -> slots/N: name pid state exit started_at ended_at ns ns_check uid locks config
-                      and cgroup -> its cgroup directory (cpu.max, memory.max, cgroup.freeze, ...)
+  procs/NAME/      a real folder per proc, with the files
+                     name pid state exit started_at ended_at ns ns_check uid locks config
+                   and, when there is a cgroup, cgroup -> its cgroup directory
+                   (cpu.max, memory.max, cgroup.freeze, ...)
 
 flags:
   --kernel CONFIG          main kernel config (required)

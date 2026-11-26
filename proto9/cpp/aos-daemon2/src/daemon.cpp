@@ -508,6 +508,9 @@ void must(int r, const std::string& what) {
         } catch (const std::exception& e) {
             fatal(std::string(e.what()) + " in " + O.kernel_path);
         }
+        if (KCFG.uid != 0)
+            fatal("ConfigBad the main kernel must run as uid 0 in its ns (its \"uid\" is " + std::to_string(KCFG.uid) +
+                  "): ctl is 0200 and only the daemon's uid may use the mounted directory, in " + O.kernel_path);
         // cgroup 夾這時已經握住了（有沒有 cgroup 定了）
         std::string bad = kernel_ns_conflict(KCFG, W.cgfd >= 0);
         if (!bad.empty()) fatal(bad + " in " + O.kernel_path);
