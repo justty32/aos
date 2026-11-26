@@ -740,3 +740,9 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 使用者第 48、49 段：__meta 留九個（__tostring 改名 __description）、單元改叫元素、基本操作九個（加改名）、之後可加 __stat、Linux 多的操作不算基本、要的自己實作並在介面宣告。思考紀錄跟上。
 - 使用者第 50 段：改名改回用介面宣告，基本操作八個。
 - 使用者第 51～53 段：基本操作八個、其餘全在介面宣告；__name／__description 改介面宣告、__stat 進基礎組；__meta 全是靜態檔（可執行檔或 .json，.json 是另外宣告的介面、aos 預設吃、可執行檔優先）；__index 一次一步、回地址；__pairs 一行一個名字；__call 繼承呼叫者一切。思考紀錄跟上。
+
+## 2026-11-26 中午前：收段落、準備 compact
+
+- 使用者（逐字）：「先到這邊，整理一下，我compact」→ HANDOFF 的公司段換成今天這版（sky 跑通、2～5 交件、aospl 那串、還開著的、沒推）。
+- 狀態：本地比遠端多 8 個 commit，全沒推；背景沒東西在跑；上網幫手 `tmux -L webref` 照舊留著；根目錄 `ls` 檔還在（要刪等他說）。
+- compact 後接：讀這節與 HANDOFF 公司段 → 思考紀錄 aospl循址與元介面-1126 的「未決」。等使用者：interfaces 第一版規範、__call.json、__metatable／__mode、daemon 9 條【開】、aos-exec 瘦身、artifact、push。
