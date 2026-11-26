@@ -16,12 +16,13 @@
 
 **寫這條的是家機 repo-aos 樹的 `main`**（Claude Code，模型 Opus 5.5）。細節在 [`wf/ws/main/notes.md`](ws/main/notes.md)「2026-11-25 晚（家機）」那節。上一條是公司 `eca-aos` 的 11-25 17:0x（proto9 小庫、daemon、aos-exec 交件與下一批 1～6），全文在 git 歷史 `3cc5beb2e`；還有效的摘在下面「公司那條還有效的」。
 
-**11-26 公司（`eca-aos`，模型 Opus 5.5，到中午前）**——細節在 [`wf/ws/eca-aos/notes.md`](ws/eca-aos/notes.md) 最後兩節。
+**11-26 公司（`eca-aos`，模型 Opus 5.5，到午後）**——細節在 [`wf/ws/eca-aos/notes.md`](ws/eca-aos/notes.md) 最後三節。
 - **sky-1125 在公司跑通**（`2ab7e45c1`）：10 PASS。修了三樣：util-linux 2.39 的對應參數、WSL 在 `/usr` 底下鎖住的子掛載要一起 bind、`/lib64` 改指 `usr/lib64`。**改到兩台共用的只有 `/lib64` 那行，家機 pull 後跑一次 `python3 run.py` 確認。**
-- **下一批 2～5 做完**（`068bfb2fb`）：外來登記擋冒名＋`aos_obey`（【擬】）、程式裡 persist→persists、測試等做完再看＋改 monotonic（WSL2 牆上時鐘會倒跳）、欄位表 `fields.hpp`；procfs 81、daemon 73，eca-aos 重編重跑全過。子 agent 列了 9 條【開】等使用者（記在筆記；aos-daemon README）。第 1 條（`add` 交給 aos-exec）沒做，第 6 條本來就是之後。
-- **使用者談了介面之前更根本的概念**（談話紀錄 9p-proc-1125 第 40～53 段逐字；整理在 [aospl循址與元介面-1126](../proto8/thinking/2026-11/26/aospl循址與元介面-1126.md)，定了 20 條）：Unix 路徑＝aos 通用循址格式；存取得到的都是 aoslua（aospl）的基礎，底下有東西的叫 table、走到底的叫元素；佈局符合格式就是那個東西；存在＝存取得到；元表 `xxx/__meta`（`__` 開頭保留給 aos），基礎八個 `__index`、`__newindex`、`__call`（取代 `_entry`）、`__pairs`、`__stat`、`__metatable`、`__gc`、`__mode`，全是靜態檔（可執行檔優先，`.json` 是另外宣告的介面）；基本操作八個（走、列、讀、寫、建、刪、看屬性、執行），其餘全在介面宣告。aos-exec 是普通程式，先不管。
-- **還開著**：`interfaces` 介面宣告檔的第一版規範（第 42 段沒講完）；`__call.json`、`__metatable`、`__mode`；daemon 那 9 條；aos-exec 瘦身（之後改看 `__meta/__call`）。**草稿 01 還沒跟上今天的概念**，等使用者說。
-- **沒推**：本地比遠端多 8 個 commit（11-26 全部）。push 要等使用者說。沒有東西在背景跑。
+- **下一批 2～5 做完**（`068bfb2fb`）：外來登記擋冒名＋`aos_obey`（【擬】）、程式裡 persist→persists、測試等做完再看＋改 monotonic（WSL2 牆上時鐘會倒跳）、欄位表 `fields.hpp`；procfs 81、daemon 73，eca-aos 重編重跑全過。子 agent 碰到的【開】記在 [aos-daemon README「碰到的【開】」](../proto9/cpp/aos-daemon/README.md)，等使用者看。第 1 條（`add` 交給 aos-exec）沒做，第 6 條本來就是之後。
+- **aoslua 與介面談完一段**（談話紀錄 9p-proc-1125 第 40～63 段逐字；整理在 [aospl循址與元介面-1126](../proto8/thinking/2026-11/26/aospl循址與元介面-1126.md)，定了 44 條；檔名還是 aospl，名字已改用 aoslua）：Unix 路徑＝aos 通用循址格式；存取得到的都是 aoslua 的基礎，table／元素；存在＝存取得到；元表 `xxx/__meta`，基礎八個（`__index`、`__newindex`、`__call`、`__pairs`、`__stat`、`__metatable`、`__gc`、`__mode`），全是靜態檔；基本操作八個，其餘全在介面宣告。**介面宣告＝能存取到 `xxx/__meta/__interfaces/<介面名>`**，哪層算介面、要不要繼承各自決定。共同介面定了 `aos/utilpath`（以下可用 `#`，後面 JSON Pointer，只保證讀）、`aos/name`、`aos/description`（內容直接放宣告位置）、`aos/rename`（`rename/exec` 吃 stdin 一行 `舊 新`、錯誤寫 stderr、子樹可跨層）；`exec`／`before`／`after` 加 stdin／stdout／stderr 的用法記成可通用的做法，之後可能改進。
+- **使用者收尾時說**（逐字）：「aos-exec先不管。介面這塊差不多了，你整理收尾一下，我要compact，然後回頭來聊daemon。」→ **compact 後接 daemon**。可拿出來的：aos-daemon README 的【開】；[daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md) 第八輪第 7～11 條與第九輪兩點；sky-1125 README 最後四題（Landlock、天空裡開 user namespace、選用 kernel、天空裡的 uid）；下面「公司那條還有效的」裡家機 sonnet 看到的三點。都不催，等他開題。
+- **還開著（不催）**：`__metatable`、`__mode`（先不管）；`__index` 整條路；`aos/utilpath` 細節；exec／before／after 兩個邊角；aos-exec 瘦身（之後改看 `__meta/__call`，先不管）。**草稿 01 還沒跟上這些概念**，等使用者說。
+- **沒推**：本地比遠端多 14 個 commit（11-26 全部）。push 要等使用者說。沒有東西在背景跑。
 
 **接手先讀**：這條 → [daemon當容器-1125](../proto8/thinking/2026-11/25/daemon當容器-1125.md)（第一～九輪：每輪定了的、實測數據、提案）→ 原話在 [9p-proc-1125](../proto8/thinking/2026-11/25/9p-proc-1125.md) 第 30～39 段 → progress `proto9-sky-1125`。
 
