@@ -771,3 +771,7 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 第 68～71 段：工具先做可寫檔（A）；資訊與工具清單照草稿；主 kernel 由 daemon 起動參數指定、唯一不進 Landlock；死了照起動參數 `restart`（60 秒內死超過 5 次就停、daemon 結束）或 `exit`。
 - 11:5x 使用者：「我十二點要去吃飯，你能先開始實作嗎？應該十二點十五分回來。」→ 派一隻 opus 背景子 agent 做 `proto9/cpp/aos-daemon2/`（新夾，舊 aos-daemon 不動；暫存 `~/.aos/scratch/proto9-daemon2-1126/`；不 commit）。**回來後**：清 build 重編重跑、查殘留（行程、掛載、cgroup、unit）、交件、把【擬】給使用者看。夾名 aos-daemon2 是我挑的，可改。
 - 12:2x aos-daemon2 那隻回來（約 2550 行）。我清 build 重編無警告、`make test` 110／110、查殘留（行程、unit、cgroup、掛載、/tmp）全空。交件（proto9/README 加一列）。等使用者的五點：執行期錯誤不是寫入錯誤（procfs 收到就回）、主 kernel 要 CAP_SYS_PTRACE 才讀得到 /proc/1/cwd、ABI 3 擋不住訊號、小世界裡多一個 cgroup/、procfs 拿不掉資料夾所以用 slots/。
+- 第 72 段選 B（ctl 做完才回）→ 派子 agent 改 aos-procfs（選用模式、預設不變）＋aos-daemon2，暫存 `~/.aos/scratch/proto9-ctlwait-1126/`。回來：三支都清 build 重跑、查殘留、交件。
+- 第 73、74 段選 B 但保留 A（預設：主 kernel 天空裡掛 daemon 的目錄、不給權限；設定可選給 CAP_SYS_PTRACE 走 /proc/1/cwd）→ **等上一隻回來再派**（同一夾，不能兩隻一起改）。固定位置的名字還沒定，我會擬 `/aos`（AOS_ROOT 指過去）。
+- 第 75 段：`cgroup/` 照現在留著。第 76 段選 B：aos-procfs 能拿掉資料夾、`procs/<名字>/` 真的夾 → 跟第 73、74 段那件一起，**等做完才回那隻回來再派**。
+- 12:3x 使用者（逐字）：「我剛吃完飯，想睡午覺休息一下，你弄一弄，大約13:00整理收尾，我13:10休息好，幫你compact」→ 掛 12:57 的計時；等做完才回那隻、驗、交、派下一隻（第 73～76 段那件）；13:00 整理 HANDOFF 收尾。

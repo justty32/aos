@@ -35,6 +35,13 @@ daemon 只管碰 Linux 權力的五樣：起收行程（自己 PID namespace 的
 8. **主 kernel 怎麼來**（第 70 段；名字先叫「主 kernel」）：daemon 起動參數指定是哪支程式，daemon 起來第一件事就起它；它是唯一不進 Landlock 的 proc，其他 proc 都由它對 daemon 下 `start` 起出來。使用者在外面跟 daemon 同帳號，也讀寫得到 `/proc/<daemon PID>/cwd`，留著方便除錯。
    - 它死了怎麼辦（第 71 段）：daemon 照起動參數預先寫好的規則做，判斷還是在起 daemon 的那一層（像 systemd 的 `Restart=`）。預設 `restart`：重起，但有上限（60 秒內死超過 5 次就不再起，daemon 結束、底下整片收掉）；另一個選項 `exit`：不重起，daemon 直接結束。主 kernel 重起後讀 daemon 的資訊接回去；它自己記憶體裡的東西（kernel 登記表、做到一半的判斷）要留就自己寫 persists。
 
+## 實作時定的（[aos-daemon2](../../../../proto9/cpp/aos-daemon2/README.md) 第一版之後）
+
+1. **`ctl` 做完才回。**（第 72 段，選 B）做下去才出錯的（設定檔讀不到、程式起不來、掛載失敗）也要讓寫入失敗；aos-procfs 多一種「做完才回」的模式。`start` 的做完＝程式 exec 起來了。
+2. **主 kernel 從自己天空裡的固定位置讀寫 daemon 的目錄，不給任何權限。**（第 73 段，選 B）實測：讀別人的 `/proc/<PID>/cwd` 要同帳號且自己的權限包含對方的；daemon 有一整套權限，主 kernel 沒有就讀不到。原本給 CAP_SYS_PTRACE（代價是能 ptrace daemon），改成把目錄掛進主 kernel 的天空。`/proc/<PID>/cwd` 留給外面的使用者。**A 也保留**（第 74 段）：預設走天空裡的固定位置，設定裡可以選給主 kernel CAP_SYS_PTRACE、改走 `/proc/1/cwd`。其他 proc 也沒有權限，光這條規則就讀不到 daemon 的目錄；Landlock 要擋的只剩訊號（6.6 擋不住，之後要求較新的 Linux）。
+3. **小世界裡留著 `cgroup/`。**（第 75 段）每隻 proc 資訊裡的 cgroup 連結指向它；`/proc/<PID>/root` 只有外面的使用者讀得到。
+4. **`procs/<名字>/` 是真的資料夾，`forget` 了就消失。**（第 76 段，選 B）aos-procfs 要能拿掉資料夾（連同底下的檔），不再用 `slots/<號碼>/` 加連結。合 aoslua：`procs/` 是一張 table，列出來的就是還在的名字。
+
 ## 我的讀法（使用者沒反對，照這樣記）
 
 - 第四輪寫「把開關發給 kernel，發給哪個由 daemon 定」。照第 4 條改成：**daemon 只把開關交給那一個 kernel；要不要再分給排程、准不准等其他 kernel，由它決定。**
