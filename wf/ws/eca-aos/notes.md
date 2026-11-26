@@ -739,3 +739,4 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 使用者第 47 段：interfaces 是 aoslua 標準的一部份；先看 Lua metatable 有什麼、參考著設計 __meta，再加 aoslua 獨有的。我列 Lua 5.4 全部元方法與建議（抄／改／先不抄）給他挑。
 - 使用者第 48、49 段：__meta 留九個（__tostring 改名 __description）、單元改叫元素、基本操作九個（加改名）、之後可加 __stat、Linux 多的操作不算基本、要的自己實作並在介面宣告。思考紀錄跟上。
 - 使用者第 50 段：改名改回用介面宣告，基本操作八個。
+- 使用者第 51～53 段：基本操作八個、其餘全在介面宣告；__name／__description 改介面宣告、__stat 進基礎組；__meta 全是靜態檔（可執行檔或 .json，.json 是另外宣告的介面、aos 預設吃、可執行檔優先）；__index 一次一步、回地址；__pairs 一行一個名字；__call 繼承呼叫者一切。思考紀錄跟上。
