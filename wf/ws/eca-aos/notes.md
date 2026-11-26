@@ -736,3 +736,5 @@ daemon 派出（第三隻子 agent，opus，背景）：`proto9/cpp/aos-daemon/`
 - 下一批 2～5 那隻回來：procfs 81（fields 5、run 40、mail 36）、daemon 73；我清 build 重編無警告，procfs 全過、daemon 連跑兩次 73/73、沒殘留掛載。它發現 WSL2 牆上時鐘每 ~32 秒倒跳 ~1.6 秒，測試改用 monotonic。草稿 01 它小改 15 行（標【擬】）。它列的【開】9 條等使用者（aos_name 比完整名字路、登記時讀不到 status 當場拒、外來 rm 只拿掉不停、json 版檔還沒擺…）。proto9/README 測試數我跟上。
 - 使用者第 45 段：元介面統一 `xxx/__meta`、照抄 Lua 命名連 table 一起抄；「這幾段確實要弄成思考紀錄」→ 寫了 thinking/2026-11/26/aospl循址與元介面-1126.md（只留原意、定了、未決）、日 README、月表一列。
 - 使用者第 46 段：保留 __ 開頭、讀 __meta 不經轉手是規範、__call 取代 _entry（__meta 多半參考用）、概念用 table 介紹；他把整串重整成四步（Unix 路徑＝通用循址格式 → 任何東西弄成存取得到 → aoslua 的 table 與 __meta 元表 → 別的手段可忽視 __meta）。思考紀錄跟上。
+- 使用者第 47 段：interfaces 是 aoslua 標準的一部份；先看 Lua metatable 有什麼、參考著設計 __meta，再加 aoslua 獨有的。我列 Lua 5.4 全部元方法與建議（抄／改／先不抄）給他挑。
+- 使用者第 48、49 段：__meta 留九個（__tostring 改名 __description）、單元改叫元素、基本操作九個（加改名）、之後可加 __stat、Linux 多的操作不算基本、要的自己實作並在介面宣告。思考紀錄跟上。
