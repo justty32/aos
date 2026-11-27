@@ -18,7 +18,7 @@
 
 **分工（白天到 21:36）**：main（個人帳號 `~/.claude`、remote control）只轉話與上傳 artifact，因為本週個人帳號只剩 4% 額度（使用者原話：「…這個session，所有工作都必須交給main-alt做，因爲我們本週額度剩4%。所以你就只能當傳話筒…」）。main-alt 做調查、實作、驗收、交件、寫網頁；子 agent 普通工作 opus、想事情 fable；要給使用者看的寫成單檔 HTML 放 `~/.aos/scratch/<名>/`，信裡附路徑，main 上傳。main-alt 少寄中間信（每封都吃 main 的額度）。
 
-**21:36 起改了**：main compact 後就關掉，使用者改直接跟 main-alt 講話（使用者原話：「事情應該都是在main-alt做的，小心不要跟他衝突到。你這邊compact後我就要關掉session了，我會跑去跟main-alt對話。」）。main 說它不再動 repo。main-alt 的帳號沒有 Artifact 工具，所以往後要給使用者看的網頁，就在對話裡給本機路徑；要上傳到網址，請使用者另外開有 Artifact 的 session。
+**21:36 起改了**：main compact 後就關掉，使用者改直接跟 main-alt 講話（使用者原話：「事情應該都是在main-alt做的，小心不要跟他衝突到。你這邊compact後我就要關掉session了，我會跑去跟main-alt對話。」）。main 說它不再動 repo。main-alt 的帳號沒有 Artifact 工具；使用者 compact 時說：「如果要用artifact的話，你仍然可以先把html做好後直接寄信給main，他那邊仍掛在aos樹上。」所以網頁照舊寫在 `~/.aos/scratch/<名>/report.html`，寄信給 main（box `/home/lorkhan/aos-home/.stack/procs/repo-aos/procs/main/mailbox`）請它上傳。今晚使用者多半只是問今天的細節、要 main-alt 記筆記。
 
 **授權**：**push 一律每晚 23:00**（使用者 11-27 13:05「Push就是一律晚上十一點push」，規矩在 [user/01](workflows/common/user/01-說話授權與記憶.md#每晚-2300-push2026-11-27-定)）。main-alt 的 aos 鐘 `nightly-push`（cron `0 23 * * *`）照那條的步驟推，推的結果寫在 main-alt 的對話裡，使用者來時告訴他（不再寄信給 main）。今晚是第一次；寫這條時本地比遠端多 24 個以上 commit。
 
