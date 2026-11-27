@@ -28,6 +28,7 @@ proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc �
 | [experiments/channels-1127/](experiments/channels-1127/README.md) | 封路小實驗（家機 6.18，C 探測程式＋`python3 run.py`，七種設定 × 191 條路）：量 aos-daemon 底下的 proc 除了檔案路徑還碰得到什麼——預設設定下 SysV IPC 與 POSIX mqueue 三個方向全通（沒開 IPC namespace）、`/proc/1/net` 看得到外面整台的 socket 表、照 PID 改得動兄弟與 daemon 的 nice／上限；訊號、ptrace、網路、危險系統呼叫都擋住了；封路建議五條等使用者挑 |
 | [experiments/pi-sandbox-1127/](experiments/pi-sandbox-1127/README.md) | pi 住進沙箱的原型（家機，`python3 run.py`；`--fake` 不花錢）：pi coding agent 整隻跑在 aos-daemon 的一隻 proc（預設的鎖、`net none`），腦只能經天空裡的 `/llm`（unix socket＋介面宣告、proxy 數次數與擋模型），read／write／edit／bash 都通，連外網、讀工作夾外的檔、繞過 `/llm` 都做不到；天空要的只有 `/usr`、`/dev`、node、pi 套件、可寫 HOME、工作夾、`/llm`；要使用者定的三題在 README 最後 |
 | [pi-sandbox/](pi-sandbox/README.md) | 原型搬正（最小方案 #3～#6，11-27 家機）：`aos_pi.py`（aos-pi：給工作夾、一句交代、模型、次數，照標準佈局起 daemon、llm kernel、pi，看 json 事件判做完）、`llm_kernel.py`（宣告在 `.aos/interfaces/aos/llm/`，上游可以是另一個 `/llm`＝kernel 疊 kernel）、`/llm/relay`、驗收 `accept.py --fake`（約 10 秒）、`compare.py`（同一支 probe 放進 srt、Codex 的對照表）；四個工具、兩隻帳本對帳、用完時下面 0 次都過；配上新 daemon 後必過項全過（SysV、mqueue、vsock 也擋住） |
+| [mini-sandbox/](mini-sandbox/README.md) | 更小的原型（使用者 11-27 下午定的四題，11-27 家機）：底層就是一行 `systemd-run --user --scope`（cpu、mem、pids）＋`unshare -UrmpnC`，`mini.py` 讀一份 json 組出來跑（`--dry-run` 印那一行）；可選的網路 kernel `net_kernel.py`（兩層 netns：pasta 接外網、nft 白名單與總量、tc 上下行頻寬，宣告在 `.aos/interfaces/aos/net/`、狀態檔每秒更新）；`uid: N` 切 subuid（預設關）；檔案、IPC、`/run/user` 全部漏給 Linux（使用者「反正就給他漏」；pi 經 D-Bus 叫 systemd 就跳出前兩層，實測）；驗收 `accept.py` 31 項兩次全過，pi `--fake` 經網路 kernel 跑通四個工具 |
 
 ## 跟 proto8 的關係
 
