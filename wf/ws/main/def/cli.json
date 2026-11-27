@@ -1,5 +1,5 @@
 {"kind": "claude",
- "flags": ["--tools", "Read,Write,Edit,Glob,Grep,Bash,Agent,Skill,AskUserQuestion,Artifact,ArtifactComments,ArtifactData,ArtifactCheck,WebSearch,WebFetch,ToolSearch,Monitor", "--permission-mode", "dontAsk", "--allowedTools", "Read,Glob,Grep,Write,Edit,Bash,AskUserQuestion,Artifact,ArtifactComments,ArtifactData,ArtifactCheck,WebSearch,WebFetch,ToolSearch,Monitor", "--strict-mcp-config", "--no-chrome", "--setting-sources", "project,local"],
+ "flags": ["--tools", "Read,Write,Edit,Glob,Grep,Bash,Agent,Skill,AskUserQuestion,Artifact,ArtifactComments,ArtifactData,ArtifactCheck,WebSearch,WebFetch,ToolSearch,Monitor", "--permission-mode", "default", "--allowedTools", "Read,Glob,Grep,Write,Edit,Bash,Agent,Skill,AskUserQuestion,Artifact,ArtifactComments,ArtifactData,ArtifactCheck,WebSearch,WebFetch,ToolSearch,Monitor", "--strict-mcp-config", "--no-chrome", "--setting-sources", "project,local"],
  "claude_mcp": ["user", "project", "local"],
  "tools_sub": "tools_sub.json",
  "timeout_ms": 0,

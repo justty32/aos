@@ -18,6 +18,8 @@ main（這個 repo 的主線 agent）專用的定義：照 [eca-claude 範本](.
 | `ToolSearch` | 叫得出延後載入的工具 |
 | `Monitor` | 等背景工作的條件 |
 
+另外 `--permission-mode` 從 `dontAsk` 改成 `default`，`--allowedTools` 多列 `Agent,Skill`。11-27 午實測：在 dontAsk 下，`AskUserQuestion` 就算列進 `--allowedTools` 也一律被拒；`Artifact` 照樣能發。改成 default 後，列進放行清單的工具不問就做，清單外的工具在畫面上問人，`claude -p` 照樣拒絕。
+
 只給 main 用，不改共用範本：範本也給 eca-aos-* 這類沒人盯的 agent 用，它們跳選項會一直等人。`claude -p` 實測寫錯的工具名會被略過，不會起不來；`AskUserQuestion`、`Artifact*` 在 `-p` 看不到，要互動畫面才驗得到。
 
 ## 換上與換回
