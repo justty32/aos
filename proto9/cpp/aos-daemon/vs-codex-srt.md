@@ -93,6 +93,8 @@ aos-daemon 的鎖跟 Codex 的 Linux 沙箱、Anthropic sandbox-runtime（srt）
 
 ## 給使用者挑（有疑慮，沒加）
 
+**使用者 11-27 午裁定**（經 main 轉述「都先用推薦」，[pi沙箱-1127](../../../proto8/thinking/2026-11/27/pi沙箱-1127.md) 定了的第 9 條）：第 1 條甲（照舊不擋）；第 4 條等要同時跑好幾隻 pi 時再做；第 5 條 `aos-pi` 先只鎖 `.git`。第 2、3 條本來就建議不做，照舊；第 6、7 條沒變。
+
 1. **擋「再開 user／mount namespace」與 mount 那一族**（srt 預設擋）。pi 在裡面會怎樣：擋了，pi 的 shell 就不能自己再開一層沙箱（`unshare`、`bwrap`、裝在裡面的 docker 類工具都失敗），我們的 Landlock 底下本來也 `mount` 不了；不擋就是現在這樣。衝突：使用者 11-26 定「不擋，要能疊 daemon」。選項：
    - 甲（現在）：不擋。
    - 乙：加一個設定（例 `"locks": {"nest": false}`），預設擋、要疊 daemon 的那隻才放。代價：多一個開關、預設變了。

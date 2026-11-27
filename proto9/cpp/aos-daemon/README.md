@@ -809,4 +809,4 @@ daemon 的目錄照 aoslua「存取得到＝有這個介面」擺靜態宣告（
    - b. **一律略過、`locks` 那行記下略過了哪些**。名單檔到處能用；代價是 `default allow` 的 `deny` 清單裡被略過的呼叫**其實沒擋**（Linux 有它就放行了，寫的人以為擋了），打錯字也只在 `locks` 看得到。
    - c. **看方向**：`default deny` 的 `allow` 清單裡不認得的略過（那個呼叫照樣 `EPERM`，只會更嚴）、記在 `locks`；`default allow` 的 `deny` 清單照舊拒（不悄悄少擋）。代價：`allow` 清單打錯字時程式跑起來才 `EPERM`，要看 `locks` 才知道。
    - d. **名單也收號碼**（例 `335` 或 `"nr:335"`）：標頭沒有的名字由寫的人自己給號碼，不認得的名字照舊拒。代價：格式多一種寫法；號碼寫錯不會被發現。可以跟 a 或 c 合用。
-8. **跟 Codex、srt 對照後「他們擋、我們沒擋」的那幾樣**（11-27）：`AF_VSOCK` 已經加了【擬】；其餘（srt 擋「再開 user／mount namespace 與 mount 那一族」、srt 擋 `AF_UNIX`、Codex 擋連網那一組、兩邊都有的每隻自己一個 PID namespace、`.git` 以外的點檔自動唯讀）各有衝突或代價，選項寫在 [vs-codex-srt.md](vs-codex-srt.md)「給使用者挑」。
+8. **跟 Codex、srt 對照後「他們擋、我們沒擋」的那幾樣**（11-27）：`AF_VSOCK` 已經加了【擬】；其餘（srt 擋「再開 user／mount namespace 與 mount 那一族」、srt 擋 `AF_UNIX`、Codex 擋連網那一組、兩邊都有的每隻自己一個 PID namespace、`.git` 以外的點檔自動唯讀）各有衝突或代價，選項寫在 [vs-codex-srt.md](vs-codex-srt.md)「給使用者挑」。**使用者 11-27 午經 main 轉述「都先用推薦」**：第 1 條（再開 user／mount namespace）甲＝照舊不擋、第 4 條（每隻自己一個 PID namespace）等要同時跑好幾隻 pi 時再做、第 5 條（`.git` 以外的點檔）`aos-pi` 先只鎖 `.git`；第 2、3 條本來就建議不做。

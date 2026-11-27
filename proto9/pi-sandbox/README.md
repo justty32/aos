@@ -125,16 +125,16 @@ info 那幾項在 aos-pi 都擋住，只有 `unshare_userns` 是通的（見下�
 
 1. **vsock 穿過 `net none`**（必過項；**已補**，aos-daemon 內建擋單加了這條【擬】，見 [vs-codex-srt](../cpp/aos-daemon/vs-codex-srt.md)）：Linux 的 vsock 不分 network namespace，家機有 `vsock_loopback` 模組，外面 `bind((VMADDR_CID_ANY, port))` 監聽，沙箱裡 `connect((1, port))` 就連上了。外面有在 vsock 上聽的服務（VM 管理程式之類）時，pi 的 shell 碰得到它們。srt（`seccomp-vsock-block`）與 Codex（`seccomp.rs` 的 `deny_vsock`）都在 seccomp 擋 `socket(AF_VSOCK)`。做法：`socket`／`socketpair` 的第一個參數是 `AF_VSOCK` 就回 EPERM。
 2. **SysV、mqueue**：舊 daemon 沒擋；新 daemon 每隻自己一份 IPC namespace 之後擋住了。
-3. **巢狀 user namespace 開得起來**（info）：`unshare(CLONE_NEWUSER)` 在 aos-pi、Codex 裡都成功，srt 擋。aos-daemon README 寫明內建擋單「不擋開 namespace 與 mount」（為了以後疊 daemon）。開了只是在自己的天空裡再分一層，碰不到外面；但它讓核心裡更多程式碼被沙箱碰到（核心的洞那條，最小方案第 4 節第 10 條）。要不要擋由使用者定。
+3. **巢狀 user namespace 開得起來**（info）：`unshare(CLONE_NEWUSER)` 在 aos-pi、Codex 裡都成功，srt 擋。aos-daemon README 寫明內建擋單「不擋開 namespace 與 mount」（為了以後疊 daemon）。開了只是在自己的天空裡再分一層，碰不到外面；但它讓核心裡更多程式碼被沙箱碰到（核心的洞那條，最小方案第 4 節第 10 條）。**使用者定甲：照舊不擋**（使用者 11-27 午經 main 轉述「都先用推薦」，[pi沙箱-1127](../../proto8/thinking/2026-11/27/pi沙箱-1127.md) 定了的第 9 條）。
 
 ## 漏給 Linux 的（照最小方案第 4 節，這版都沒變）
 
-1. 工作夾是真檔：pi 能把 `.git` 以外的檔全改壞或刪掉；救回來靠 git。
+1. 工作夾是真檔：pi 能把 `.git` 以外的檔全改壞或刪掉；救回來靠 git。工作夾裡只鎖 `.git`，`AGENTS.md`、`.claude/`、`Makefile` 這類不鎖，是使用者定的（定了的第 9 條；Codex、srt 各多鎖幾個，見 [vs-codex-srt](../cpp/aos-daemon/vs-codex-srt.md)「給使用者挑」第 5 條）。
 2. pi 留在工作夾的檔（Makefile、`package.json` 的 script、`AGENTS.md`）之後被你在外面執行或被別的 agent 讀：沙箱管不到，要你自己看 diff。
 3. pi 讀得到的都會經 `/llm` 送到模型供應商：祕密不要放進工作夾。
 4. 磁碟寫滿：工作夾與家目錄沒有配額；`/tmp` 有 256m 上限。
 5. CPU 與磁碟讀寫速度不設上限；記憶體 2G、行程數 512 有。
-6. 看得到還有誰在跑：照 PID 知道 daemon 與 kernel 在不在、讀它們的 nice（只有一隻 pi 時沒差）。
+6. 看得到還有誰在跑：照 PID 知道 daemon 與 kernel 在不在、讀它們的 nice（只有一隻 pi 時沒差）。每隻自己一個 PID namespace 使用者定「等要同時跑好幾隻 pi 時再做」（定了的第 9 條）。
 7. 同一個帳號：pi 能調小 daemon 能開的檔案數、改 llm kernel 的優先權（家機擋得住訊號，`ptrace` 也擋住了，見 probe）。
 8. 跑什麼程式不管：`/usr` 整個唯讀放進去，curl、python、gcc 都跑得了，只是沒網路。
 9. 主機名看得到；時間、快取這類側通道不管。
