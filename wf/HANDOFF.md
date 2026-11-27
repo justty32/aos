@@ -33,9 +33,9 @@
 **最小方案（回來了，使用者答了）**：全文 `~/.aos/scratch/proto9-minplan-1127/report.md`。第 161 段：兩題都甲——一隻 proc 在哪些 kernel 上，起它前就排好（跑到一半再加是很久以後）；pi 先用使用者本人帳號（切帳號是中期）；**實作前先上網找現成的開源輪子，注意 MIT**。已寫進 pi沙箱-1127 定了的第 6～8 條（`926dd8195`）。
 
 **在跑／接著做**
-1. **找輪子調查**（opus，11:4x 派，只查不寫）：交代全文 `~/.aos/scratch/proto9-wheels-1127/brief.md`，報告要存 `~/.aos/scratch/proto9-wheels-1127/report.md`。**重開 session 後若沒回來、那份 report.md 也沒有，就照 brief.md 原文再派一次。**
+1. **找輪子調查**（opus，11:4x 派，只查不寫）：交代全文 `~/.aos/scratch/proto9-wheels-1127/brief.md`，報告要存 `~/.aos/scratch/proto9-wheels-1127/report.md`。**重開 session 後若沒回來、那份 report.md 也沒有，就照 brief.md 原文再派一次（第一次重開已經重派過一次，又被這次重開打斷）。**
 2. 回來後：給使用者看（手機，用 Artifact 或 AskUserQuestion）——六件各「用現成的／自己做」一張表；若有輪子值得取代 aos-daemon 當基底＝方向題，他拍板。他說好就派 opus 照最小方案（＋輪子）做六件。
 
-**main 換定義（使用者 11:51：「讓你自己可以發artifact，可以跳選項給我…好了之後跟我說，我重開session。然後我會用/remote-control啓用遠端」）**：`wf/ws/main/def/`＝範本原樣複製，`cli.json` 多 AskUserQuestion、Artifact 四支、WebSearch、WebFetch、ToolSearch、Monitor。要從外面跑 `aos-agent --daemon ~/aos-home/.stack/procs/repo-aos ctl set-def main ~/repo/aos/wf/ws/main/def` 才生效（README 有換回的寫法）。重開後先試一次 AskUserQuestion，確認叫得到。
+**main 換定義＋接 Discord（11-27 午）**：公司帳號開不了 remote control，改成用 Discord 私訊跟 main 講話。`wf/ws/main/def/` 已經換上，裡面有 artifact、上網、官方 discord 頻道外掛；拿掉了 `--strict-mcp-config`，**不給跳選項**、權限是 dontAsk，因為跳選項會讓 Discord 那頭卡住。理由寫在 README。token 放 `~/.claude/channels/discord/.env`，由使用者自己寫。重開後：使用者私訊機器人拿配對碼，在畫面打 `/discord:access pair <碼>`。**在 Discord 上回話一律用外掛的 reply 工具**，要給他看的長東西做成 artifact、把連結傳過去。
 
 **還開著**：中文版知識庫落後 36 頁（11-26 收工就說要派，還沒派）；公司那台：sky-1125／channels 的 abi3 欄要在 WSL 跑一次對照、aos-daemon 名字表改產生後要在 Ubuntu 編一次；11-26 子 agent 的【擬】18 條、決策審查停在第 3 題（`aos/ctl` 形狀，`/aos`→`/.aos` 後可能要重看）。
