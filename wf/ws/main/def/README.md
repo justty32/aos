@@ -8,19 +8,20 @@ main（這個 repo 的主線 agent）專用的定義：照 [eca-claude 範本](.
 
 ## 跟範本差在哪
 
-`cli.json` 的 `--tools` 與 `--allowedTools` 都多加這幾支（dontAsk 下不列進 `--allowedTools` 就會被拒）：
+使用者 11-27 午發現公司帳號開不了 remote control（`policy-limits.json` 的 `allow_remote_control: false`），改用 Discord 跟 main 講話：「你能接入discord或chrome的line extension嗎？」→「弄」；「因爲你要是跳選項，那discord接不到，整個就會卡住」。
 
-| 工具 | 用途 |
+`cli.json`：
+
+| 改了什麼 | 為什麼 |
 |---|---|
-| `AskUserQuestion` | 跳選項給使用者點 |
-| `Artifact`、`ArtifactComments`、`ArtifactData`、`ArtifactCheck` | 發 artifact（手機上看表、圖、報告） |
-| `WebSearch`、`WebFetch` | 上網查（使用者 11-27「實作的時候先上網去看看」） |
-| `ToolSearch` | 叫得出延後載入的工具 |
-| `Monitor` | 等背景工作的條件 |
+| `--tools`、`--allowedTools` 多加 `Artifact`、`ArtifactComments`、`ArtifactData`、`ArtifactCheck`、`WebSearch`、`WebFetch`、`ToolSearch`、`Monitor`（`--allowedTools` 另多加 `Agent,Skill`） | 用 artifact 給手機看結果；上網找輪子 |
+| **不給 `AskUserQuestion`**，權限照範本用 `dontAsk` | 跳選項或跳權限詢問都要人在畫面前按，人在 Discord 上就會卡住。dontAsk 下清單外的工具直接拒絕，不等人。11-27 實測：dontAsk 下 `AskUserQuestion` 就算列進放行清單也會被拒 |
+| 拿掉 `--strict-mcp-config` | 實測這個開關會連外掛的 MCP 一起擋掉；repo 沒有 `.mcp.json`，拿掉不會多載入別的 server |
+| 加 `--channels plugin:discord@claude-plugins-official`、`settings.enabledPlugins` 開 `discord@claude-plugins-official`、放行 `mcp__plugin_discord_discord` | Anthropic 官方的 Discord 頻道外掛：私訊機器人＝送進這個 session，回覆經它的 `reply` 工具送回去 |
 
-另外 `--permission-mode` 從 `dontAsk` 改成 `default`，`--allowedTools` 多列 `Agent,Skill`。11-27 午實測：在 dontAsk 下，`AskUserQuestion` 就算列進 `--allowedTools` 也一律被拒；`Artifact` 照樣能發。改成 default 後，列進放行清單的工具不問就做，清單外的工具在畫面上問人，`claude -p` 照樣拒絕。
+外掛只在 main 這份設定裡開；使用者帳號那層（`~/.claude-alt/settings.json`）設成 `false`，免得一般的 claude 也去連同一隻機器人。外掛的 MCP 由 `bun` 跑：裝在 `~/.bun`，`~/.local/bin/bun` 是連結。機器人 token 放在 `~/.claude/channels/discord/.env`（`DISCORD_BOT_TOKEN=...`，由使用者自己寫，不進 repo，也不貼進對話）；配對狀態也存在同一個夾。
 
-只給 main 用，不改共用範本：範本也給 eca-aos-* 這類沒人盯的 agent 用，它們跳選項會一直等人。`claude -p` 實測寫錯的工具名會被略過，不會起不來；`AskUserQuestion`、`Artifact*` 在 `-p` 看不到，要互動畫面才驗得到。
+只給 main 用，不改共用範本：範本也給 eca-aos-* 這些沒人盯著的 agent 用。
 
 ## 換上與換回
 
