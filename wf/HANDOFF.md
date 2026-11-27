@@ -12,11 +12,11 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-27 早（家機）——pi 進沙箱：目標三句、標準佈局、`.aos`；最小方案 fable 在想
+## 2026-11-27 午（家機，使用者出門、下午只用手機）——pi 最小方案兩題照甲；先找現成輪子；main 換手機用的定義
 
 **寫這條的是家機 repo-aos 樹的 `main`**（Claude Code，模型 Opus 5.5）。上一條是家機 11-25 23:0x（中間夾了公司 eca-aos 11-26 的進度），全文在 git 歷史 `4e6baf17c`。細節在 [`wf/ws/main/notes.md`](ws/main/notes.md)「2026-11-27 早（家機）」、思考紀錄 [pi沙箱-1127](../proto8/thinking/2026-11/27/pi沙箱-1127.md)，原話 [9p-proc-1125](../proto8/thinking/2026-11/25/9p-proc-1125.md) 第 145～160 段。
 
-**授權**：沒有 push 授權（本地比遠端多 4 個 commit＋這次收尾那個，等使用者說）。子 agent：照往例用 Agent 工具，普通工作 opus、想事情 fable，不 commit，回來 main 驗再交；fable 寫不進 `.md` 報告，全文從回覆存進 `~/.aos/scratch/<名>/report.md`。
+**授權**：沒有 push 授權（本地比遠端多 6 個以上 commit，等使用者說）。子 agent：照往例用 Agent 工具，普通工作 opus、想事情 fable，不 commit，回來 main 驗再交；fable 寫不進 `.md` 報告，全文從回覆存進 `~/.aos/scratch/<名>/report.md`。
 
 **今天做了的**
 - 開場 pull、同步 11-26 公司的進度給使用者。家機重跑：sky-1125 10 PASS；aos-daemon 起初 619／623（seccomp 名字表缺新 Linux 的 12 個、測試沒收前一組的 daemon），opus 修好：名字表改 make 時從標頭產生，642／642×3（`8d4fa83fc`）；README「要使用者定的」第 7 條（名單寫了不認得的名字怎麼辦，推 a）。
@@ -30,6 +30,12 @@
 - **元表夾 `__meta` 改 `.aos`**，裡面名字不再加 `__`（`.aos/index`、`.aos/interfaces/aos/llm`）。
 - **預設 Unix 標準佈局**（第 159 段）：`/` 是管它的那一方的地方（唯讀），`/.aos` 是管它的那一方的宣告（取代 `/aos`、`/daemon`）；proc 家目錄 `/home/<名字>/` 可寫、`~/.aos` 是它自己的；由起 proc 的人選。普通程式什麼都不用知道；daemon 寫的事實留在 daemon 目錄（外面看），proc 預設看不到。
 
-**在跑**：fable「最小方案」（第 160 段：「我要最小方案，也就是讓pi進沙箱，然後我們可以層層疊疊。剩下的都漏進linux沒關係」）。回來後：全文存 `~/.aos/scratch/proto9-minplan-1127/report.md`（夾已建）→ 摘要給使用者（方案一段＋圖、做什麼、漏給 Linux 的、【擬】預設、最多 3 題）→ 他說照擬就派 opus 做。
+**最小方案（回來了，使用者答了）**：全文 `~/.aos/scratch/proto9-minplan-1127/report.md`。第 161 段：兩題都甲——一隻 proc 在哪些 kernel 上，起它前就排好（跑到一半再加是很久以後）；pi 先用使用者本人帳號（切帳號是中期）；**實作前先上網找現成的開源輪子，注意 MIT**。已寫進 pi沙箱-1127 定了的第 6～8 條（`926dd8195`）。
+
+**在跑／接著做**
+1. **找輪子調查**（opus，11:4x 派，只查不寫）：交代全文 `~/.aos/scratch/proto9-wheels-1127/brief.md`，報告要存 `~/.aos/scratch/proto9-wheels-1127/report.md`。**重開 session 後若沒回來、那份 report.md 也沒有，就照 brief.md 原文再派一次。**
+2. 回來後：給使用者看（手機，用 Artifact 或 AskUserQuestion）——六件各「用現成的／自己做」一張表；若有輪子值得取代 aos-daemon 當基底＝方向題，他拍板。他說好就派 opus 照最小方案（＋輪子）做六件。
+
+**main 換定義（使用者 11:51：「讓你自己可以發artifact，可以跳選項給我…好了之後跟我說，我重開session。然後我會用/remote-control啓用遠端」）**：`wf/ws/main/def/`＝範本原樣複製，`cli.json` 多 AskUserQuestion、Artifact 四支、WebSearch、WebFetch、ToolSearch、Monitor。要從外面跑 `aos-agent --daemon ~/aos-home/.stack/procs/repo-aos ctl set-def main ~/repo/aos/wf/ws/main/def` 才生效（README 有換回的寫法）。重開後先試一次 AskUserQuestion，確認叫得到。
 
 **還開著**：中文版知識庫落後 36 頁（11-26 收工就說要派，還沒派）；公司那台：sky-1125／channels 的 abi3 欄要在 WSL 跑一次對照、aos-daemon 名字表改產生後要在 Ubuntu 編一次；11-26 子 agent 的【擬】18 條、決策審查停在第 3 題（`aos/ctl` 形狀，`/aos`→`/.aos` 後可能要重看）。

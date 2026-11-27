@@ -39,3 +39,4 @@
 - 使用者這天主要在講方向（第 145～160 段）：只剩 kernel → 硬逼出 Plan 9 虛擬機 → 只取概念 → 選配與介面 → 可用與獨占 → 執行不攔 → 目標三句（pi 沙箱）→ `.aos` → 標準佈局。我的做法：每段原話先抄進 9p-proc-1125，再回邊緣狀況；他說「到一個段落派 fable」就派。
 - fable 報告子 agent 寫不進 `.md`（系統擋），由我照回覆全文存檔。
 - 收尾：使用者「你這邊也整理一下，我要compact」；最小方案 fable 還在跑（見 HANDOFF）。
+- 11-27 午：最小方案回來、使用者兩題照甲＋先找輪子（第 161 段），派 opus 調查（brief 在 `~/.aos/scratch/proto9-wheels-1127/brief.md`）。使用者出門前要手機好用：做了 main 專用定義 `wf/ws/main/def/`（多跳選項、artifact、上網），不改共用範本——範本也給沒人盯的 eca-aos-* 用，它們跳選項會卡住。`claude -p` 實測：`--tools` 寫錯名字會被略過；`AskUserQuestion`、`Artifact*` 在 `-p` 看不到。
