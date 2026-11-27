@@ -586,7 +586,8 @@ def wrapper_main():
         k.start()
         inner_cg = nest.cg_split(PROG, [os.getpid(), k.holder.pid, k.pasta.pid], "k-net", "in")
         k.stats = k.ask({"op": "stats"})
-        files = dict(decl_files(c, wrapped=True), **over)
+        # status: absolute, like the llm kernel's: the declaration is copied into each inner layer's dir, the file is not
+        files = dict(decl_files(c, wrapped=True), status=os.path.join(env, "status"), **over)
         nest.declare(env, "net", files, "net kernel: you are in a netns behind it; only the allowed ip:port, at "
                      "the declared rates, until the quota is used (an outer net kernel, if any, still applies)")
         k.write_status()

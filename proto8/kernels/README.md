@@ -13,7 +13,7 @@
 |---|---|
 | `aos/base-low` | 資源上限：CPU 一顆核的 20%、記憶體 512M（不用 swap）、行程＋執行緒 64 |
 | `aos/base-high` | 資源上限：200%、4G、1024 |
-| `aos/net/base-litellm-proxy` | 網路：只放行這台的 `127.0.0.1:4000`（LiteLLM），頻寬與總量有上限；別跟 llm kernel 一起用（pi 會繞過 llm kernel） |
+| `aos/net/base-litellm-proxy` | 網路：只放行這台的 `127.0.0.1:4000`（LiteLLM），頻寬與總量有上限；跟 llm kernel 一起用時要寫在 llm kernel 前面（外層）；寫在後面（`aos/llm/…,aos/net/base-litellm-proxy`）會讓 pi 繞過 llm kernel 直連 LiteLLM，mini 會印警告 |
 | `aos/mask/run-user` | 檔案遮蔽：`/run/user/<你的 uid>` 蓋成空夾（關住經 D-Bus 跳出沙箱那條路） |
 | `aos/mask/ssh` | 檔案遮蔽：`~/.ssh` 蓋成空夾 |
 | `aos/uid/1` | 切成 uid 1（外面是你第一個 subuid）；一定放最後 |
