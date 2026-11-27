@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Acceptance run for the nested llm kernel of mini: pi --fake through aos/base-low,aos/llm/fake with and without a net kernel (four tools, ledger = pi's turns), a used-up budget (429), no way to LiteLLM 4000 around the kernel, the brain without any network, llm inside a net kernel, llm on llm, the auto mask, optionally one real model run, and nothing left over afterwards; PASS/FAIL/info lines."""
+"""Acceptance run for the nested llm kernel of mini: pi --fake through aos/base-low,aos/llm/fake with and without a net kernel (four tools, ledger = pi's turns), a used-up budget (429), no way to LiteLLM 4000 around the kernel, the brain without any network, llm inside a net kernel, llm on llm, the auto mask, a net kernel inside an llm kernel that lets its upstream through (refused, nothing started; net first runs), the budget carried over through state, optionally one real model run, and nothing left over afterwards; PASS/FAIL/info lines."""
 
 import sys
 
@@ -320,6 +320,43 @@ def check_auto_mask():
                                                            "added aos/mask/run-user" in r.err))
 
 
+def check_order(pa):
+    log("\n== e. a net kernel inside an llm kernel that lets the llm's upstream through: refused before anything runs")
+    test_kernel("llm-up-a", "aos/llm/fake", upstream="http://127.0.0.1:%d/v1" % pa)  # A stands in for LiteLLM
+    for name, flags in (("e_order_refused", ()), ("e_order_refused_dry", ("--dry-run",))):
+        mark = os.path.join(BASE, name + ".ran")
+        before = S.snapshot((pa,))
+        r = mini(name.replace("_", "-"), ["t/llm-up-a", "t/net-a"], ["sh", "-c", "touch " + mark], cwd="/",
+                 timeout=30, flags=flags)
+        after = S.snapshot((pa,))
+        new = {k: (sorted(set(after[k]) - set(before[k])) if k != "procs" else
+                   [p for p in after[k] if p not in before[k]]) for k in after}
+        said = "KernelOrderBad" in r.err and "t/net-a" in r.err and "t/llm-up-a" in r.err
+        record(name, r.rc not in (0, None) and said and not os.path.exists(mark) and not r.out.strip() and
+               not any(new.values()),
+               "[t/llm-up-a,t/net-a%s] exit %s; the command ran: %s; new: %s; %s" % (
+                   " " + " ".join(flags) if flags else "", r.rc, os.path.exists(mark),
+                   {k: v for k, v in new.items() if v} or "nothing", r.err.strip().splitlines()[-1][:200]))
+    mark = os.path.join(BASE, "e_order_net_first.ran")
+    r = mini("e-order-net-first", ["t/net-a", "t/llm-up-a"], ["sh", "-c", "touch " + mark], cwd="/", timeout=60)
+    record("e_order_net_first", r.rc == 0 and os.path.exists(mark) and "KernelOrderBad" not in r.err,
+           "[t/net-a,t/llm-up-a] exit %s; the command ran: %s" % (r.rc, os.path.exists(mark)))
+
+
+def check_state():
+    log("\n== e. state: the budget carries over from one run to the next only when the config names a state folder")
+    test_kernel("llm-keep", "aos/llm/fake", limit=3, state=state_of("llm-keep"))
+    test_kernel("llm-fresh", "aos/llm/fake", limit=3)
+    codes = {}
+    for t in ("llm-keep", "llm-fresh"):
+        codes[t] = [mini("e-state-%d" % n, ["t/" + t], S.check_argv({"llm": {"posts": 2}}), cwd="/").j.get("llm_codes")
+                    for n in (1, 2)]
+    record("e_state_carries", codes["llm-keep"] == [[200, 200], [200, 429]] and
+           codes["llm-fresh"] == [[200, 200], [200, 200]] and budget("llm-keep") == {"used": 3, "limit": 3},
+           "limit 3, two runs of 2 requests: with state %s (budget file %s), without %s" % (
+               codes["llm-keep"], budget("llm-keep"), codes["llm-fresh"]))
+
+
 def check_real(pi, model):
     log("\n== e. the real model %s through LiteLLM 127.0.0.1:%d, at most 10 requests" % (model, LITELLM))
     if socket.socket().connect_ex(("127.0.0.1", LITELLM)) != 0:
@@ -371,6 +408,8 @@ def main():
         check_inside_net(pa)
         check_llm_on_llm()
         check_auto_mask()
+        check_order(pa)
+        check_state()
         if a.model and pi.ok:
             check_real(pi, a.model)
     finally:

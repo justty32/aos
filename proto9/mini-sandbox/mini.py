@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""mini: runs one command in the smallest sandbox, the one line systemd-run --user --scope (cpu, mem, pids) + unshare -UrmpnC (own user, mount, pid, net, cgroup namespaces), optional net kernel and uid N; or, with --kernels a,b,c, nests kernels found by name in $AOS_HOME/kernels (each one runs the next inside the environment it set up; a cgroup, net or llm kernel brings the /run/user mask along) around the command; everything else is left open."""
+"""mini: runs one command in the smallest sandbox, the one line systemd-run --user --scope (cpu, mem, pids) + unshare -UrmpnC (own user, mount, pid, net, cgroup namespaces), optional net kernel and uid N; or, with --kernels a,b,c, nests kernels found by name in $AOS_HOME/kernels (each one runs the next inside the environment it set up; a cgroup, net or llm kernel brings the /run/user mask along; a net kernel inside an llm kernel that lets the llm's upstream through is refused) around the command; everything else is left open."""
 
 import argparse
+import ipaddress
 import json
 import os
 import pwd
@@ -322,22 +323,55 @@ def add_auto_mask(ks):
     return ks[:at] + [m] + ks[at:], True
 
 
-def llm_bypass_warnings(ks):
-    """An llm kernel whose upstream is a port on this machine, and a net kernel further in that lets that port
-    through: the agent could talk to the upstream directly, uncounted."""
+def port_in(spec, port):
+    """A net kernel port spec (4000, "4000", "4000-4010", or {"port": ...}) covers this port?"""
+    if isinstance(spec, dict):
+        spec = spec.get("port")
+    a, _, b = str(spec).partition("-")
+    try:
+        return int(a) <= port <= int(b or a)
+    except ValueError:
+        return False
+
+
+def llm_bypasses(ks):
+    """An llm kernel whose upstream is ip:port, and a net kernel further in that lets that very ip:port through
+    (host_ports for this machine's loopback, an allow rule for any other address): the agent could talk to the
+    upstream directly, around the llm kernel's count and model list. One sentence per such pair."""
     out = []
     for i, k in enumerate(ks):
         up = str(k["config"].get("upstream", "")) if k["kind"] == "llm" else ""
-        m = re.match(r"^https?://(127\.0\.0\.1|localhost)(?::(\d+))?(/|$)", up)
+        m = re.match(r"^https?://(\[[^]]*\]|[^/:]+)(?::(\d+))?(/|$)", up)
         if not m:
             continue
-        port = int(m.group(2) or (443 if up.startswith("https") else 80))
+        host, port = m.group(1).strip("[]"), int(m.group(2) or (443 if up.startswith("https") else 80))
+        try:
+            ip = ipaddress.ip_address("127.0.0.1" if host == "localhost" else host)
+        except ValueError:
+            continue  # a host name: no address to compare with
         for n in ks[i + 1:]:
-            hp = n["config"].get("host_ports", []) if n["kind"] == "net" else []
-            if port in [p if isinstance(p, int) else p.get("port") for p in hp]:
-                out.append("%s lets host port %d through, the upstream of %s: the agent can reach it directly, "
-                           "around the llm kernel's count" % (n["name"], port, k["name"]))
+            how = lets_through(n["config"], ip, port) if n["kind"] == "net" else None
+            if how:
+                out.append("%s (net kernel) lets %s:%d through (its %s), and it sits inside %s (llm kernel), whose "
+                           "upstream is %s: the agent could reach the upstream directly, around the llm kernel's count "
+                           "and model list. Put %s before %s in --kernels (outside it), or take port %d out of its %s"
+                           % (n["name"], host, port, how, k["name"], up, n["name"], k["name"], port, how))
     return out
+
+
+def lets_through(c, ip, port):
+    """Which part of a net kernel's config lets tcp to ip:port through: "host_ports" (this machine's loopback),
+    "allow list", or None. Loopback inside is the sandbox's own lo, so for it only host_ports count."""
+    if ip.is_loopback:
+        return "host_ports" if any(port_in(p, port) for p in c.get("host_ports") or []) else None
+    for r in c.get("allow") or []:
+        try:
+            to = ipaddress.ip_network(str(r.get("to")), strict=False)
+        except (AttributeError, ValueError):
+            continue
+        if r.get("proto", "tcp") == "tcp" and port_in(r, port) and ip.version == to.version and ip in to:
+            return "allow list"
+    return None
 
 
 def root_env(run):
@@ -369,13 +403,15 @@ def kernels_main(args):
         ks = [find_kernel(n) for n in o["kernels"]]
     except (OSError, ValueError) as e:
         fail("KernelNotFound", str(e), 2)
+    bad = llm_bypasses(ks)  # before anything runs (--dry-run too): this order is refused, not warned about
+    if bad:
+        more = " (and %d more like it)" % (len(bad) - 1) if len(bad) > 1 else ""
+        fail("KernelOrderBad", "%s%s. Nothing was started." % (bad[0], more), 2)
     if o["auto_mask"]:
         ks, added = add_auto_mask(ks)
         if added:
             print("mini: added %s innermost (a cgroup, net or llm kernel is on; --no-auto-mask leaves /run/user/%d "
                   "open)" % (AUTO_MASK, os.getuid()), file=sys.stderr, flush=True)
-    for w in llm_bypass_warnings(ks):
-        print("mini: warning: " + w, file=sys.stderr, flush=True)
     scoped = os.readlink("/proc/self/ns/cgroup") == INIT_CGROUP_NS  # outside any sandbox: make a scope
     unit = "mini-%s-%d.scope" % (o["name"], os.getpid()) if scoped else None
     env = default_env()
