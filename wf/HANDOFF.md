@@ -29,6 +29,25 @@
 **今晚做完的**
 1. **七題實作**（使用者「好，都按照推薦」）：`chain.py`（去重、`merge`、`replace`／`without`、uid 排最裡、兩個 llm 沒串起來就拒絕）、`flat_kernel.py`（cg 與 mask 攤平；起之前算 user namespace 層數，主機上限 24【擬】）、`effective.py`（`.aos/effective/`＋`blame`＋`.aos/lock.json`、`--explain`／`--lock`／`--diff`）；修好兩個 bug（撞 33 層時卡死留孤兒、網路疊三層總量被吃光）。驗收 accept 31、stack_test 22、llm_test 15、bundle_test 19、overlap_test 31 全過。實作者標【擬】要問使用者的三點：上限「還能開的層數減 9」、下載佇列 1 秒（多 1 秒延遲）換總量正確、網路與 llm 要不要也攤平。
 2. **效能成本進 repo**（使用者「有幫我記錄效能成本嗎」）：[`proto9/mini-sandbox/PERF.md`](../proto9/mini-sandbox/PERF.md)＋[`perf/bench.py`](../proto9/mini-sandbox/perf/README.md)（`--quick` 約 6 秒，公司 WSL 也能跑）；攤平後實測 cg／mask 疊 100 層 0.2 秒起好（以前 33 層起不來）。網路收掉每層 3 秒還沒修。
-3. 23:00 鐘推送（今晚第一次）。日總覽 `~/.aos/scratch/day-1127/report.html`（含全景圖）。
+3. 23:00 鐘推送（今晚第一次，main-alt 推完寄信給 main）。日總覽 `~/.aos/scratch/day-1127/report.html`（含全景圖）。
+
+**架構說明**（使用者回家後「看要不要做一個更細節的，講述整個架構，運作方式的artifact」）：`~/.aos/scratch/arch-1127/report.html`，照 HEAD 程式寫；順手把 mini-sandbox README 的舊句子對齊程式（`97872b8ab`）。新發現的縫：`KernelOrderBad`「網路 kernel 讓 pi 繞過 llm 直連上游」的檢查只比 IP，上游寫成網域名稱時抓不到（`chain.py` `llm_bypasses`），沒修。
+
+**今天上傳給使用者的 artifact**（網址不變；要更新時 main 用同一個本機路徑 `~/.aos/scratch/<名>/report.html` 重新上傳）
+- 照 A 結果 https://claude.ai/artifact/SGxqBnnHLiEkdWMtXza4VP （proto9-impl-1127）
+- 更小版調查 https://claude.ai/artifact/8PE8siKazvHPpPm1UZGdhV （proto9-smallproto-1127）
+- 環境套環境 https://claude.ai/artifact/5czYEPZ89qiKSbp1oSV4YM （proto9-mini-1127）
+- kernel 設定檔格式 https://claude.ai/artifact/5ajPABGSeNsVXHF2RLbwCi （kernel-format-1127）
+- 統一介面 https://claude.ai/artifact/EfJVvzHAgfdyVDjDTLGrBj （kernel-iface-1127）
+- 一包 kernel https://claude.ai/artifact/KYdKPB151D9rYSUv818ddv （kernel-bundle-1127）
+- 重疊與規模 https://claude.ai/artifact/WdVA9e3A42xR5VxbF2BNsh （kernel-overlap-1127）
+- 一日總覽（含全景圖、效能成本） https://claude.ai/artifact/DdSi36oav4qc5gHCDkEPGw （day-1127）
+- 架構與運作 https://claude.ai/artifact/E7o1Ww7jdLY2nfDz5faD3M （arch-1127）
+- 找輪子摘要（早上的） https://claude.ai/artifact/WCpLpLEQtsVN6gqFFD28yo
+
+**main compact 之後接著做**：
+1. 收 main-alt 的 23:00 nightly-push 回信，轉給使用者：推了幾個 commit，或為什麼沒推。
+2. 那三點【擬】等使用者有空再問：層數上限 24、下載佇列 1 秒、網路和腦要不要也攤平。
+3. 其他照下面「還開著」。
 
 **還開著**：網路 kernel 收掉每層 3 秒；perf 的 llm 疊層量法要改成 `upstream: outer`；公司 WSL（aos-daemon `make test`、pi-sandbox、mini-sandbox 都沒在那台跑過；sky-1125／channels 的 abi3 欄）；決策審查第 3 題（`aos/ctl` 形狀，報告在公司機 `~/.aos/scratch/proto9-decisions-review-1126/`）連同介面裡同名不同義的欄位一起定；中文版知識庫落後 36 頁；pi-sandbox 補洞後還沒跑真模型、「沒設 `AOS_ENV` 看 `/`」沒跟上；11-26 的【擬】18 條。Bun 與 `.claude-alt` 的 discord 外掛（停用）還留著。
