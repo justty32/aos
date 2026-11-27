@@ -12,7 +12,7 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-27 晚（家機）——main 收掉了，使用者直接跟 main-alt 講話；一天下來兩個原型
+## 2026-11-28 凌晨（家機）——使用者又回去跟 main 講話；11-27 一天兩個原型、23:00 推完
 
 **寫這條的是 main-alt**（家機 repo-aos 樹，Claude Code、Opus 5.5、帳號 `.claude-alt`）。上一條（11-27 下午）全文在 git 歷史 `293269f7f`；那條的「分工」照舊有效，這裡只重述重點。
 
@@ -20,7 +20,9 @@
 
 **21:36 起改了**：main compact 後就關掉，使用者改直接跟 main-alt 講話（使用者原話：「事情應該都是在main-alt做的，小心不要跟他衝突到。你這邊compact後我就要關掉session了，我會跑去跟main-alt對話。」）。main 說它不再動 repo。main-alt 的帳號沒有 Artifact 工具；使用者 compact 時說：「如果要用artifact的話，你仍然可以先把html做好後直接寄信給main，他那邊仍掛在aos樹上。」所以網頁照舊寫在 `~/.aos/scratch/<名>/report.html`，寄信給 main（box `/home/lorkhan/aos-home/.stack/procs/repo-aos/procs/main/mailbox`）請它上傳。今晚使用者多半只是問今天的細節、要 main-alt 記筆記。
 
-**授權**：**push 一律每晚 23:00**（使用者 11-27 13:05「Push就是一律晚上十一點push」，規矩在 [user/01](workflows/common/user/01-說話授權與記憶.md#每晚-2300-push2026-11-27-定)）。main-alt 的 aos 鐘 `nightly-push`（cron `0 23 * * *`）照那條的步驟推，推的結果寫在 main-alt 的對話裡，使用者來時告訴他（不再寄信給 main）。今晚是第一次；寫這條時本地比遠端多 24 個以上 commit。
+**23:00 後又改回來**：使用者說「這次直接跟你交流，是因爲main那邊每週額度不夠了，這個情況會持續到週六下午四點每週額度重置後，那之後就仍會是以main爲主要交流對象」，接著（23:00 推完後）又說「你先繼續配合main，main那邊還有一些額度沒用完，我先去跟他討論這塊。」所以**現在 main 是對使用者的窗口**，main-alt 回去收 main 的信做事；分工照上面「白天」那段。使用者會臨時在兩邊切換。main-alt 直接講話時解說過的：遮檔案（mount namespace、tmpfs／null／ro、keep 開洞、MNT_LOCKED 讓 pi 拆不掉）與 cgroup（Delegate=yes 拿到 cpu/memory/pids、cpu.max／memory.max＋swap 0／pids.max、cgroup namespace 藏上限、v2 其他能做的）——講在 main-alt 的對話裡，沒寫成檔。
+
+**授權**：**push 一律每晚 23:00**（使用者 11-27 13:05「Push就是一律晚上十一點push」，規矩在 [user/01](workflows/common/user/01-說話授權與記憶.md#每晚-2300-push2026-11-27-定)）。main-alt 的 aos 鐘 `nightly-push`（cron `0 23 * * *`）照那條的步驟推，推的結果寫在 main-alt 的對話裡，使用者來時告訴他（不再寄信給 main）。**11-27 23:00 第一次已推**：fast-forward 推 30 個 commit，遠端 `dfdb2b835..a43bb6153`，推完本地與遠端一致。
 
 **今天做的**（日總覽網頁 `~/.aos/scratch/day-1127/report.html`；決定全在 [pi沙箱-1127](../proto8/thinking/2026-11/27/pi沙箱-1127.md) 定了的第 1～10 條）
 - 早上（main）：aos-daemon 在 6.18 修好；封路實驗 channels-1127；pi 原型 pi-sandbox-1127；找輪子 → 使用者「照 A」。
@@ -48,8 +50,8 @@
 - 找輪子摘要（早上的） https://claude.ai/artifact/WCpLpLEQtsVN6gqFFD28yo
 
 **接著做**（main-alt）：
-1. 23:00 推完，把推了幾個 commit 或為什麼沒推寫進對話，使用者來時告訴他。
-2. 那三點【擬】直接問使用者：層數上限 24、下載佇列 1 秒、網路和腦要不要也攤平。
+1. ~~23:00 推~~（11-27 已推 30 個，見上）；之後每晚照鐘推，結果寫在對話裡（使用者在跟 main 講話時就寄信告訴 main）。
+2. 那三點【擬】還沒得到回答（使用者說「這些設計點先等等」，要先問原理）：層數上限 24、下載佇列 1 秒、網路和腦要不要也攤平。
 3. 其他照下面「還開著」。
 
 **還開著**：網路 kernel 收掉每層 3 秒；perf 的 llm 疊層量法要改成 `upstream: outer`；公司 WSL（aos-daemon `make test`、pi-sandbox、mini-sandbox 都沒在那台跑過；sky-1125／channels 的 abi3 欄）；決策審查第 3 題（`aos/ctl` 形狀，報告在公司機 `~/.aos/scratch/proto9-decisions-review-1126/`）連同介面裡同名不同義的欄位一起定；中文版知識庫落後 36 頁；pi-sandbox 補洞後還沒跑真模型、「沒設 `AOS_ENV` 看 `/`」沒跟上；11-26 的【擬】18 條。Bun 與 `.claude-alt` 的 discord 外掛（停用）還留著。
