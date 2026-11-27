@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# toys.py：測試時在天空裡跑的小程式（init、探路的 proc、照退出碼結束的、睡著的、時好時壞的 init、收到 SIGTERM 才收尾的 init、留下孩子的 proc 與 init、帶著孩子的 proc、試網路的 proc、試系統呼叫（seccomp）與開 namespace、mount 的 proc、送訊號與冒名送訊號的 proc），外加在外面跑的：故意不回答的 FUSE（stuckfuse）、在 unshare 出來的那一層起 daemon 並在那一層掛卸 tmpfs（outer）、在沒有 /tmp 的根裡起 daemon（notmp）。
+# toys.py：測試時在天空裡跑的小程式（init、探路的 proc、照退出碼結束的、睡著的、時好時壞的 init、收到 SIGTERM 才收尾的 init、留下孩子的 proc 與 init、帶著孩子的 proc、試網路的 proc、試系統呼叫（seccomp）與開 namespace、mount 的 proc、送訊號與冒名送訊號的 proc、建與找 SysV IPC／POSIX mqueue 的 proc），外加在外面跑的：故意不回答的 FUSE（stuckfuse）、在 unshare 出來的那一層起 daemon 並在那一層掛卸 tmpfs（outer）、在沒有 /tmp 的根裡起 daemon（notmp）。
 import errno, os, signal, socket, sys, time
 
 # init 拿到的 AOS_DAEMON（它的 daemon_path，預設 /aos）；其他 proc 沒有（沒有時當 /proc/1/cwd，讀了會被擋）
@@ -9,8 +9,13 @@ ROOT = os.environ.get("AOS_DAEMON", "/proc/1/cwd")
 def try_path(p):
     """讀一個路徑：夾就列、檔就讀；'kill:PID' 是試送訊號 0；'sig:PID:SIG' 是真的送訊號 SIG；'forge:PID:SIG:FAKEPID' 是用
     rt_sigqueueinfo 送、寄件人 PID 填 FAKEPID（si_code SI_QUEUE）；'env:NAME' 是那個環境變數；'put:PATH=VALUE' 是把 VALUE 寫進 PATH；
-    'statvfs:PATH' 是那個檔案系統的總大小（位元組）；'fill:PATH:N' 是寫一個 N 位元組的檔。回 'ok …' 或 'err ENAME'。"""
+    'statvfs:PATH' 是那個檔案系統的總大小（位元組）；'fill:PATH:N' 是寫一個 N 位元組的檔；'ipc:KIND:WHAT' 是看不看得到那個
+    SysV 物件或 mqueue（ipc_see）。回 'ok …' 或 'err ENAME'。"""
     try:
+        if p.split(":", 1)[0] in ESCAPE_PROBES:   # escape 組：見 escape_probe
+            return escape_probe(p)
+        if p.startswith("ipc:"):   # ipc:KIND:WHAT：看不看得到那個 SysV 物件／mqueue（見 ipc_see）
+            return ipc_see(*p[4:].split(":", 1))
         if p.startswith("statvfs:"):
             v = os.statvfs(p[8:])
             return "ok %d" % (v.f_blocks * v.f_frsize)
@@ -43,6 +48,78 @@ def try_path(p):
             return "ok " + f.read(4000).replace("\n", "|")
     except OSError as e:
         return "err " + errno.errorcode.get(e.errno, str(e.errno))
+
+
+ESCAPE_PROBES = {"devnodes", "umount", "mounttmpfs", "remountrw", "openrw", "link", "mkfifo", "symw", "tcp", "run", "rename", "rmdir"}
+
+
+def escape_probe(p):
+    """escape 組（照 Codex、srt 測試的意思改寫）的探測，一個字串一件事；回 'ok …' 或 'err ENAME'（run 回 'ok rc=N …'）：
+    devnodes＝/dev 的五個是字元裝置、/dev/null 寫得進、/dev/zero 讀得到 0、/dev/full 寫是 ENOSPC；umount:PATH；mounttmpfs:PATH；
+    remountrw:PATH（bind 重掛成可寫）；openrw:PATH；link:SRC:DST（硬連結）；mkfifo:PATH；symw:LINK:TARGET（建一個指到 TARGET
+    的 symlink 再經它寫）；tcp:IP:PORT（連線）；run:ARGV（空白分開，回退出碼與輸出的頭）；rename:SRC:DST；rmdir:PATH。"""
+    import ctypes
+    import stat as st
+    kind, _, rest = p.partition(":")
+    c = ctypes.CDLL(None, use_errno=True)
+
+    def rc(r):
+        return "ok" if r == 0 else "err " + errno.errorcode.get(ctypes.get_errno(), "?")
+    if kind == "devnodes":
+        bad = [n for n in ("null", "zero", "full", "random", "urandom") if not st.S_ISCHR(os.stat("/dev/" + n).st_mode)]
+        if bad:
+            return "err notchr " + ",".join(bad)
+        with open("/dev/null", "wb") as f:
+            f.write(b"x")
+        with open("/dev/zero", "rb") as f:
+            if f.read(4) != b"\0" * 4:
+                return "err zero"
+        try:
+            with open("/dev/full", "wb", buffering=0) as f:
+                f.write(b"x")
+            return "err full-wrote"
+        except OSError as e:
+            if e.errno != errno.ENOSPC:
+                raise
+        return "ok"
+    if kind == "umount":
+        return rc(c.umount2(rest.encode(), 2))                        # MNT_DETACH
+    if kind == "mounttmpfs":
+        return rc(c.mount(b"none", rest.encode(), b"tmpfs", 0, None))
+    if kind == "remountrw":
+        return rc(c.mount(None, rest.encode(), None, 0x20 | 0x1000, None))   # MS_REMOUNT | MS_BIND，不帶 MS_RDONLY
+    if kind == "openrw":
+        os.close(os.open(rest, os.O_RDWR))
+        return "ok"
+    if kind == "link":
+        a, b = rest.split(":", 1)
+        os.link(a, b)
+        return "ok"
+    if kind == "mkfifo":
+        os.mkfifo(rest)
+        return "ok"
+    if kind == "symw":
+        link, target = rest.split(":", 1)
+        os.symlink(target, link)
+        with open(link, "w") as f:
+            f.write("escaped")
+        return "ok"
+    if kind == "tcp":
+        ip, port = rest.rsplit(":", 1)
+        socket.create_connection((ip, int(port)), timeout=3).close()
+        return "ok"
+    if kind == "run":
+        import subprocess
+        r = subprocess.run(rest.split(" "), capture_output=True, text=True, timeout=20)
+        return "ok rc=%d %s" % (r.returncode, (r.stdout + r.stderr).replace("\n", " ")[:200])
+    if kind == "rename":
+        a, b = rest.split(":", 1)
+        os.rename(a, b)
+        return "ok"
+    if kind == "rmdir":
+        os.rmdir(rest)
+        return "ok"
+    return "err unknown"
 
 
 def forge(pid, sig, fake):
@@ -212,6 +289,15 @@ def sys_probe(what):
         src, dst = ctypes.create_string_buffer(b"x" * 8), ctypes.create_string_buffer(8)
         a, b = Iov(ctypes.addressof(dst), 8), Iov(ctypes.addressof(src), 8)
         args = (L(310), L(me), ctypes.byref(a), L(1), ctypes.byref(b), L(1), L(0))
+    elif what == "process_vm_writev1":   # 寫 PID 1（daemon）的記憶體（idea from srt test/sandbox/pid-namespace-isolation.test.ts）
+        class Iov(ctypes.Structure):
+            _fields_ = [("base", ctypes.c_void_p), ("len", ctypes.c_size_t)]
+        src = ctypes.create_string_buffer(b"x" * 8)
+        a, b = Iov(ctypes.addressof(src), 8), Iov(0x400000, 8)
+        args = (L(311), L(1), ctypes.byref(a), L(1), ctypes.byref(b), L(1), L(0))
+    elif what == "vsockpair":            # socketpair(AF_VSOCK, SOCK_STREAM)
+        sv = (ctypes.c_int * 2)()
+        args = (L(53), L(40), L(1), L(0), sv)
     else:
         table = {
             "getpid": (39,), "getppid": (110,),
@@ -226,6 +312,14 @@ def sys_probe(what):
             "syslog": (103, 10, 0, 0),                    # SYSLOG_ACTION_SIZE_BUFFER
             "reboot": (169, 0, 0, 0, 0), "swapon": (167, 0, 0), "acct": (163, 0),
             "clock_settime": (227, 0, 0),
+            # 11-27 跟 Codex、srt 對照加的（idea from codex-rs/linux-sandbox/src/seccomp_tests.rs::x32_preserves_allowed_calls_and_socket_conditions
+            # 與 srt test/sandbox/seccomp-vsock-block.test.ts、pid-namespace-isolation.test.ts）
+            "vsock_stream": (41, 40, 1, 0), "vsock_dgram": (41, 40, 2, 0), "vsock_seqpacket": (41, 40, 5, 0),
+            "vsock_hi": (41, (1 << 32) | 40, 1, 0),      # domain 暫存器的上半有東西：核心只看低 32 位，照樣是 AF_VSOCK
+            "unix_socket": (41, 1, 1, 0), "inet_socket": (41, 2, 1, 0), "inet6_socket": (41, 10, 1, 0),
+            "netlink_socket": (41, 16, 3, 0),           # AF_NETLINK、SOCK_RAW、NETLINK_ROUTE
+            "io_uring_enter": (426, -1, 0, 0, 0, 0, 0), "io_uring_register": (427, -1, 0, 0, 0),
+            "ptrace_attach1": (101, 16, 1, 0, 0),         # PTRACE_ATTACH PID 1（daemon）
         }
         args = tuple(L(x) for x in table[what])
     ctypes.set_errno(0)
@@ -234,6 +328,147 @@ def sys_probe(what):
         e = ctypes.get_errno()
         return "err " + errno.errorcode.get(e, str(e))
     return "ok"
+
+
+# SysV IPC 與 POSIX mqueue（ipc 組）：天空裡的 proc 與外面的 run.py 都用這幾個（run.py import 這個檔）。
+# 物件：shm KEY、sem KEY+1、msg KEY+2、mq NAME；回 'ok …' 或 'err ENAME'
+IPC_CREAT, IPC_EXCL, IPC_RMID, IPC_NOWAIT, SHM_RDONLY, GETVAL, SETVAL = 0o1000, 0o2000, 0, 0o4000, 0o10000, 12, 16
+
+
+def ipc_libs():
+    ctypes, c = libc()
+    c.shmat.restype = ctypes.c_void_p
+    c.shmat.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_int]
+    c.shmdt.argtypes = [ctypes.c_void_p]
+    rt = c
+    if not hasattr(c, "mq_open"):   # glibc 2.34 以前 mq_* 在 librt
+        rt = ctypes.CDLL("librt.so.1", use_errno=True)
+    return ctypes, c, rt
+
+
+def ipc_err(ctypes):
+    e = ctypes.get_errno()
+    return "err " + errno.errorcode.get(e, str(e))
+
+
+def sem_value(marker):
+    return sum(marker.encode()) % 30000
+
+
+def ipc_make(kind, what, marker):
+    """建一個（IPC_EXCL／O_EXCL：已經有同 key、同名的就 EEXIST），放進 marker。"""
+    ctypes, c, rt = ipc_libs()
+    ctypes.set_errno(0)
+    m = marker.encode()
+    if kind == "shm":
+        i = c.shmget(int(what), 64, IPC_CREAT | IPC_EXCL | 0o600)
+        if i < 0:
+            return ipc_err(ctypes)
+        a = c.shmat(i, None, 0)
+        if a is None or a == ctypes.c_void_p(-1).value:
+            return ipc_err(ctypes)
+        ctypes.memmove(a, m + b"\0", len(m) + 1)
+        c.shmdt(ctypes.c_void_p(a))
+        return "ok"
+    if kind == "sem":
+        i = c.semget(int(what), 1, IPC_CREAT | IPC_EXCL | 0o600)
+        if i < 0 or c.semctl(i, 0, SETVAL, ctypes.c_int(sem_value(marker))) < 0:
+            return ipc_err(ctypes)
+        return "ok"
+    if kind == "msg":
+        i = c.msgget(int(what), IPC_CREAT | IPC_EXCL | 0o600)
+        buf = ctypes.create_string_buffer(b"\1\0\0\0\0\0\0\0" + m)
+        if i < 0 or c.msgsnd(i, buf, len(m), IPC_NOWAIT) < 0:
+            return ipc_err(ctypes)
+        return "ok"
+    if kind == "mq":
+        fd = rt.mq_open(what.encode(), os.O_CREAT | os.O_EXCL | os.O_RDWR, 0o600, None)
+        if fd < 0:
+            return ipc_err(ctypes)
+        r = rt.mq_send(fd, m, len(m), 0)
+        rt.mq_close(fd)
+        return "ok" if r == 0 else ipc_err(ctypes)
+    return "err unknown-kind"
+
+
+def ipc_see(kind, what):
+    """看得到嗎：shm 回裡面的字、sem 回值、msg 回第一封的字（MSG_COPY 不拿走；核心沒有 MSG_COPY 就只回 ok）、mq 回 ok。"""
+    ctypes, c, rt = ipc_libs()
+    ctypes.set_errno(0)
+    if kind == "shm":
+        i = c.shmget(int(what), 0, 0)
+        if i < 0:
+            return ipc_err(ctypes)
+        a = c.shmat(i, None, SHM_RDONLY)
+        if a is None or a == ctypes.c_void_p(-1).value:
+            return ipc_err(ctypes)
+        s = ctypes.string_at(a)
+        c.shmdt(ctypes.c_void_p(a))
+        return "ok " + s.decode(errors="replace")
+    if kind == "sem":
+        i = c.semget(int(what), 0, 0)
+        v = c.semctl(i, 0, GETVAL) if i >= 0 else -1
+        return ipc_err(ctypes) if v < 0 else "ok %d" % v
+    if kind == "msg":
+        i = c.msgget(int(what), 0)
+        if i < 0:
+            return ipc_err(ctypes)
+        buf = ctypes.create_string_buffer(8 + 256)
+        n = c.msgrcv(i, buf, 256, 0, IPC_NOWAIT | 0o40000)   # MSG_COPY：照位置 0 複製一封、不拿走
+        return "ok " + buf.raw[8:8 + n].decode(errors="replace") if n >= 0 else "ok"
+    if kind == "mq":
+        fd = rt.mq_open(what.encode(), os.O_RDONLY, 0, None)
+        if fd < 0:
+            return ipc_err(ctypes)
+        rt.mq_close(fd)
+        return "ok"
+    return "err unknown-kind"
+
+
+def ipc_drop(kind, what):
+    ctypes, c, rt = ipc_libs()
+    if kind == "mq":
+        return rt.mq_unlink(what.encode())
+    get = {"shm": lambda: c.shmget(int(what), 0, 0), "sem": lambda: c.semget(int(what), 0, 0),
+           "msg": lambda: c.msgget(int(what), 0)}[kind]
+    i = get()
+    if i < 0:
+        return i
+    return {"shm": lambda: c.shmctl(i, IPC_RMID, None), "sem": lambda: c.semctl(i, 0, IPC_RMID),
+            "msg": lambda: c.msgctl(i, IPC_RMID, None)}[kind]()
+
+
+def ipc_objects(key, mq):
+    return [("shm", str(key)), ("sem", str(key + 1)), ("msg", str(key + 2)), ("mq", mq)]
+
+
+def sysvipc_keys():
+    """這個 IPC namespace 的 SysV 物件的 key（/proc/sysvipc/*，十進位）；讀不到回 None。"""
+    keys = set()
+    for k in ("shm", "sem", "msg"):
+        try:
+            lines = read_file("/proc/sysvipc/" + k).splitlines()[1:]
+        except OSError:
+            return None
+        keys |= {int(l.split()[0]) for l in lines if l.strip()}
+    return keys
+
+
+def read_file(p):
+    with open(p) as f:
+        return f.read()
+
+
+def ipc_toy(out, name, key, mq, probes):
+    """ipc 那隻：在自己的 IPC namespace 建四樣（marker-NAME），再看 probes（'shm:KEY'、'sem:KEY'、'msg:KEY'、'mq:NAME'）
+    與自己的那四樣，加上 /proc/sysvipc 列得出的 key；結果寫 OUT/NAME.txt。"""
+    marker = "marker-" + name
+    res = ["make:%s %s" % (k, ipc_make(k, w, marker)) for k, w in ipc_objects(key, mq)]
+    res += ["own:%s %s" % (k, ipc_see(k, w)) for k, w in ipc_objects(key, mq)]
+    res += ["%s %s" % (p, ipc_see(*p.split(":", 1))) for p in probes]
+    ks = sysvipc_keys()
+    res.append("sysvipc %s" % ("unreadable" if ks is None else ",".join(str(k) for k in sorted(ks)) or "-"))
+    put(out, name + ".txt", "\n".join(res) + "\n")
 
 
 def nsmount(uid_line):
@@ -362,6 +597,9 @@ def main():
     elif mode == "sys":     # sys OUT NAME CALL...：每個系統呼叫一行「CALL ok|err ENAME」，然後睡
         out, name = sys.argv[2], sys.argv[3]
         put(out, name + ".txt", "".join("%s %s\n" % (w, sys_probe(w)) for w in sys.argv[4:]))
+        time.sleep(1000)
+    elif mode == "ipc":     # ipc OUT NAME KEY MQNAME PROBE...：見 ipc_toy()，然後睡
+        ipc_toy(sys.argv[2], sys.argv[3], int(sys.argv[4]), sys.argv[5], sys.argv[6:])
         time.sleep(1000)
     elif mode == "nsmount":   # nsmount OUT NAME UID_MAP_LINE：見 nsmount()，然後睡
         put(sys.argv[2], sys.argv[3] + ".txt", nsmount(sys.argv[4]))

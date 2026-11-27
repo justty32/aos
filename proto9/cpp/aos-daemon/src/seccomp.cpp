@@ -47,6 +47,10 @@ static_assert(sizeof SYSCALLS / sizeof SYSCALLS[0] > 300, "the generated syscall
 //   比 6.6 新的 Linux 加的呼叫（11-27 家機 6.18、標頭 7.2 看到的：uretprobe、uprobe、mseal、setxattrat、getxattrat、listxattrat、
 //   removexattrat、open_tree_attr、file_getattr、file_setattr、listns、rseq_slice_yield）都沒加進擋單【擬】：多半只動自己的行程或檔，
 //   open_tree_attr 是不擋的 mount 那一族；listns 列得出看得到的 namespace，要不要擋見 README「seccomp」。
+//   3. 11-27 跟 Codex（openai/codex codex-rs/linux-sandbox/src/seccomp.rs @ fe6dca342）與 sandbox-runtime（0.0.83，
+//      vendor/seccomp-src/seccomp-unix-block.c @ 0bbebed0a）逐條比過（表在 vs-codex-srt.md）：他們擋、我們沒擋的只加了
+//      socket／socketpair 的 AF_VSOCK【擬】（兩邊都擋：vsock 不分 network namespace，`net none` 也連得到這台機器的 hypervisor／
+//      WSL 的 Windows 那一邊）；AF_UNIX、建 namespace、mount 那一族他們有的擋了，我們刻意不擋（天空裡要連 socket、要疊 daemon）。
 const int BUILTIN_DENY[] = {
     175, 313, 176, 174, 177, 178,   // init_module finit_module delete_module create_module get_kernel_syms query_module
     246, 320, 169,                  // kexec_load kexec_file_load reboot
@@ -66,6 +70,9 @@ const int NR_PERSONALITY = 135;
 // personality 只放這幾個值（跟 Docker 一樣）：PER_LINUX、PER_LINUX32、UNAME26、UNAME26|PER_LINUX32、0xffffffff（只查不改）
 const uint32_t PERSONALITY_OK[] = {0x0, 0x8, 0x20000, 0x20008, 0xffffffffu};
 const uint32_t X32_BIT = 0x40000000u;
+// 第一個參數（domain）是這些值就 EPERM 的呼叫：socket、socketpair 的 AF_VSOCK（40）【擬，11-27 照 Codex、srt 加】
+const int NR_SOCKET = 41, NR_SOCKETPAIR = 53;
+const uint32_t AF_VSOCK_ = 40;
 
 sock_filter stmt(uint16_t code, uint32_t k) { return sock_filter{code, 0, 0, k}; }
 sock_filter jump(uint16_t code, uint32_t k, uint8_t jt, uint8_t jf) { return sock_filter{code, jt, jf, k}; }
@@ -151,6 +158,15 @@ std::vector<sock_filter> seccomp_filter(const ProcConfig& c) {
             f.push_back(stmt(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
         }
         f.push_back(stmt(BPF_RET | BPF_K, RET_EPERM));
+        // socket、socketpair：domain 是 AF_VSOCK 就 EPERM，其他照放（只比低 32 位：核心把 domain 當 int）。
+        // 不是這個呼叫就跳過這一段（LD、JEQ、RET EPERM、RET ALLOW 四條）；A 在跳過時還是系統呼叫號碼
+        for (int nr : {NR_SOCKET, NR_SOCKETPAIR}) {
+            f.push_back(jump(BPF_JMP | BPF_JEQ | BPF_K, static_cast<uint32_t>(nr), 0, 4));
+            f.push_back(stmt(BPF_LD | BPF_W | BPF_ABS, offsetof(seccomp_data, args)));
+            f.push_back(jump(BPF_JMP | BPF_JEQ | BPF_K, AF_VSOCK_, 0, 1));
+            f.push_back(stmt(BPF_RET | BPF_K, RET_EPERM));
+            f.push_back(stmt(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+        }
         f.push_back(stmt(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
         return f;
     }
@@ -164,7 +180,7 @@ std::string seccomp_lock_line(const ProcConfig& c) {
     const char* tail = "; other arch and x32 calls kill the process";
     if (c.seccomp.empty() || c.seccomp == "builtin")
         return "seccomp: builtin (" + std::to_string(seccomp_builtin_count()) +
-               " syscalls denied with EPERM, personality limited to safe values" + tail + ")";
+               " syscalls denied with EPERM, personality limited to safe values, AF_VSOCK sockets denied" + tail + ")";
     return "seccomp: " + c.seccomp + " (default " + (c.sc_default_allow ? "allow, " : "deny, ") + std::to_string(c.sc_list.size()) +
            (c.sc_default_allow ? " denied with EPERM" : " allowed, the rest EPERM") + tail + ")";
 }

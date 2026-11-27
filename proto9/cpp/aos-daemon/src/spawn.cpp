@@ -321,6 +321,9 @@ void loopback_up() {
     // 3. 自己一份 mount namespace，根從一塊新的 tmpfs 組起；net none 時順便開自己的 network namespace、打開 lo。
     //    根那塊 tmpfs 掛在這份的 "/" 上面（不靠外面要有哪個夾當墊腳；以前墊在 /tmp），之後 pivot_root 換過去
     if (unshare(CLONE_NEWNS) != 0) die("unshare mount namespace", errno);
+    // 每隻（含 init）自己一份 IPC namespace（最小方案第 5 節第 8 條：每隻都開、不做開關）：SysV 共享記憶體／號誌／訊息佇列與
+    // POSIX mqueue 只在自己這份裡，外面、兄弟建的看不到，自己建的也出不去；新的這份屬於 daemon 的 user namespace
+    if (unshare(CLONE_NEWIPC) != 0) die("unshare ipc namespace", errno);
     if (cfg.net == "none") {
         if (unshare(CLONE_NEWNET) != 0) die("unshare network namespace", errno);
         loopback_up();
@@ -499,6 +502,7 @@ std::vector<std::string> locks_of(const ProcConfig& cfg, bool init) {
         l.push_back("signals: can signal init and other uid-0 procs (Landlock ABI " + std::to_string(W.landlock_abi) +
                     " has no signal scoping; the daemon ignores stop signals from it)");
     l.push_back(cfg.net == "none" ? "net: none (own netns, loopback only)" : "net: host (the daemon's network namespace)");
+    l.push_back("ipc: own ipc namespace (SysV shm, semaphores, message queues and POSIX mqueues are its own)");
     l.push_back("securebits: noroot, no_setuid_fixup, keep_caps_locked, no_cap_ambient_raise (all locked)");
     l.push_back("no_new_privs");
     l.push_back(seccomp_lock_line(cfg));

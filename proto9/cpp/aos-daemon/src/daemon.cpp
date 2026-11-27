@@ -158,11 +158,11 @@ void make_proc_nodes(const std::shared_ptr<Proc>& proc) {
     add("config", [](const Proc& p) { return p.cfg.path + "\n"; });
     // 相對連結：小世界裡是 /aos/procs/<名>/ → /cgroup/…；init 的天空把 cgroup 夾放在 daemon_path 旁邊的 cgroup，所以兩邊都通
     if (!proc->sp.cgroup.empty()) FS->add_symlink(d + "/cgroup", "../../../cgroup/" + proc->sp.cgroup);
-    // 介面宣告（aoslua）：這個夾符合 aos/proc；靜態空檔
-    FS->add_dir(d + "/__meta");
-    FS->add_dir(d + "/__meta/__interfaces");
-    FS->add_dir(d + "/__meta/__interfaces/aos");
-    FS->add_text(d + "/__meta/__interfaces/aos/proc", [] { return std::string(); });
+    // 介面宣告（aoslua）：這個夾符合 aos/proc；靜態空檔。夾叫 .aos、裡面的名字不加 __（pi沙箱-1127「定了的」第 3 條；舊寫法 __meta/__interfaces 改名了）
+    FS->add_dir(d + "/.aos");
+    FS->add_dir(d + "/.aos/interfaces");
+    FS->add_dir(d + "/.aos/interfaces/aos");
+    FS->add_text(d + "/.aos/interfaces/aos/proc", [] { return std::string(); });
 }
 
 // 主執行緒：放進表、擺出 procs/<名>/
@@ -861,15 +861,16 @@ void cgroup_remove_later(const std::string& cg) {
         setup_ctl(*CTL);
         fs.add_text("status", status_text);
         fs.add_dir("procs");
-        // 介面宣告（aoslua，使用者 11-26 定）：靜態、唯讀。aos/ctl 是夾（kind、path、commands），aos/jsonpath 是空檔
-        fs.add_dir("__meta");
-        fs.add_dir("__meta/__interfaces");
-        fs.add_dir("__meta/__interfaces/aos");
-        fs.add_dir("__meta/__interfaces/aos/ctl");
-        fs.add_text("__meta/__interfaces/aos/ctl/kind", [] { return std::string("file\n"); });
-        fs.add_text("__meta/__interfaces/aos/ctl/path", [] { return std::string("ctl\n"); });
-        fs.add_text("__meta/__interfaces/aos/ctl/commands", [] { return std::string(COMMANDS) + "\n"; });
-        fs.add_text("__meta/__interfaces/aos/jsonpath", [] { return std::string(); });
+        // 介面宣告（aoslua，使用者 11-26 定）：靜態、唯讀。aos/ctl 是夾（kind、path、commands），aos/jsonpath 是空檔。
+        // 夾叫 .aos、裡面的名字不加 __（使用者 11-27 定，pi沙箱-1127「定了的」第 3 條；舊寫法 __meta/__interfaces 改名了）
+        fs.add_dir(".aos");
+        fs.add_dir(".aos/interfaces");
+        fs.add_dir(".aos/interfaces/aos");
+        fs.add_dir(".aos/interfaces/aos/ctl");
+        fs.add_text(".aos/interfaces/aos/ctl/kind", [] { return std::string("file\n"); });
+        fs.add_text(".aos/interfaces/aos/ctl/path", [] { return std::string("ctl\n"); });
+        fs.add_text(".aos/interfaces/aos/ctl/commands", [] { return std::string(COMMANDS) + "\n"; });
+        fs.add_text(".aos/interfaces/aos/jsonpath", [] { return std::string(); });
         fs.mount(SMALL_AOS);
     } catch (const std::exception& e) {
         fatal(std::string("mount info directory: ") + e.what());

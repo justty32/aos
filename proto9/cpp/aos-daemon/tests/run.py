@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# run.py：aos-daemon 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、init 重起規則、整片跟著 daemon 走、init 經 /aos 碰目錄（ptrace 收掉）、procs/<名>/ 是真的夾、daemon 設定檔、結束寬限、起動那一層死了留下、forget -k、改名 init、沒有 init、到重起上限留著、daemon_path、init 進 Landlock、exit_code、net none／host、seccomp（內建的擋單、off、自己的名單）、疊 daemon 量到的界線、--cgroup PATH、停止訊號只收外面與 init 送的、普通 proc 經 init 的 /proc/<PID>/root 進不去、bind 來源卡住時不跟著卡、ns.json 的 by／at、overlay、合併目錄 B、restart-init、介面宣告、舊版 Linux 的警告、bind 的 beneath、ns.json 的 real、init 重起前清舊 cgroup、daemon 握著的那一層跟著外面掛卸（slave）、外面沒有 /tmp、kill 送給整個 cgroup／行程組、tmpfs 與根的 size、太深的 json、沒有殘留。
-# 用法：python3 tests/run.py [組名…]；組：basic procs nsconf ns landlock cgroup mount modes restart teardown access dirs stdio dconf grace pdeath forgetk rename noinit rlstay dpath ilandlock exitcode net seccomp nest cgpath sigsrc ipath stuck nsby overlay merge rinit iface oldlinux beneath real irestart slave notmp killgrp tsize jdepth（最後一定跑 leftovers）
+# run.py：aos-daemon 的測試——不用 root 起來、export 那行、/proc/<PID>/cwd 與 /proc/<PID>/root、start/kill/forget、退出碼、天空表對 mountinfo、Landlock、cgroup、跑的時候掛卸、init 重起規則、整片跟著 daemon 走、init 經 /aos 碰目錄（ptrace 收掉）、procs/<名>/ 是真的夾、daemon 設定檔、結束寬限、起動那一層死了留下、forget -k、改名 init、沒有 init、到重起上限留著、daemon_path、init 進 Landlock、exit_code、net none／host、seccomp（內建的擋單、off、自己的名單）、疊 daemon 量到的界線、--cgroup PATH、停止訊號只收外面與 init 送的、普通 proc 經 init 的 /proc/<PID>/root 進不去、bind 來源卡住時不跟著卡、ns.json 的 by／at、overlay、合併目錄 B、restart-init、介面宣告、舊版 Linux 的警告、bind 的 beneath、ns.json 的 real、init 重起前清舊 cgroup、daemon 握著的那一層跟著外面掛卸（slave）、外面沒有 /tmp、kill 送給整個 cgroup／行程組、tmpfs 與根的 size、太深的 json、每隻自己的 IPC namespace、照 Codex 與 srt 的逃脫測試改寫的一組、沒有殘留。
+# 用法：python3 tests/run.py [組名…]；組：basic procs nsconf ns landlock cgroup mount modes restart teardown access dirs stdio dconf grace pdeath forgetk rename noinit rlstay dpath ilandlock exitcode net seccomp nest cgpath sigsrc ipath stuck nsby overlay merge rinit iface oldlinux beneath real irestart slave notmp killgrp tsize jdepth ipc escape（最後一定跑 leftovers）
 import errno, json, os, re, select, shutil, signal, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -212,7 +212,7 @@ def t_basic():
           os.path.samefile("/proc/%d/cwd" % d.pid, "/proc/%d/root/aos" % d.pid))
     check("basic: no host files through /proc/<PID>/root",
           not os.path.exists("/proc/%d/root/etc" % d.pid) and not os.path.exists("/proc/%d/root/usr" % d.pid))
-    check("basic: the directory holds __meta/, ctl, procs/, status (no slots/)", sorted(os.listdir(d.root)) == ["__meta", "ctl", "procs", "status"],
+    check("basic: the directory holds .aos/, ctl, procs/, status (no slots/, no __meta/)", sorted(os.listdir(d.root)) == [".aos", "ctl", "procs", "status"],
           sorted(os.listdir(d.root)))
     kt = init_file(d)
     check("basic: init reads $AOS_DAEMON/status, AOS_DAEMON is /aos", kt.startswith("ok pid_ns: 1") and "\nroot /aos\n" in kt, kt)
@@ -671,7 +671,7 @@ def t_access():
           "capabilities: none" in d.fact("main", "locks") and "daemon directory: /aos" in d.fact("main", "locks"),
           d.fact("main", "locks"))
     a = d.ask("/aos")
-    check("access: init lists /aos", a == "ok __meta ctl procs status", a)
+    check("access: init lists /aos", a == "ok .aos ctl procs status", a)
     cw = config(d.dir, "w", ["sleep"], locks={"cgroup": {"pids.max": "20"}} if cg_on else {})
     a = d.ask("ctl start " + cw)
     check("access: init writes 'start' into /aos/ctl; when the write returns the proc is alive",
@@ -746,7 +746,7 @@ def t_dirs():
     d.ctl("start " + c)
     p = d.root + "/procs/x"
     check("dirs: procs/x is a real directory, not a symlink", os.path.isdir(p) and not os.path.islink(p))
-    want = {"name", "pid", "state", "exit", "started_at", "ended_at", "ns", "ns.json", "ns_check", "uid", "locks", "config", "__meta"}
+    want = {"name", "pid", "state", "exit", "started_at", "ended_at", "ns", "ns.json", "ns_check", "uid", "locks", "config", ".aos"}
     if not d.status().get("cgroup", "off").startswith("off"):
         want.add("cgroup")
     check("dirs: it holds the facts", set(os.listdir(p)) == want, sorted(os.listdir(p)))
@@ -1488,7 +1488,10 @@ def t_net():
 # ---------------------------------------------------------------- seccomp
 
 SC_DENIED = ["ptrace", "bpf", "init_module", "finit_module", "kcmp", "personality_aslr", "keyctl", "userfaultfd",
-             "io_uring_setup", "name_to_handle_at", "syslog", "process_vm_readv", "reboot", "swapon", "acct", "clock_settime"]
+             "io_uring_setup", "name_to_handle_at", "syslog", "process_vm_readv", "reboot", "swapon", "acct", "clock_settime",
+             # 11-27 加（idea from srt test/sandbox/pid-namespace-isolation.test.ts 的 io_uring_enter、process_vm_writev 對 PID 1、
+             # ptrace(PTRACE_ATTACH) 對 PID 1）
+             "io_uring_enter", "io_uring_register", "process_vm_writev1", "ptrace_attach1"]
 SC_OFF_OK = ["kcmp", "personality_aslr", "process_vm_readv"]   # 核心本來就放（不用權限），只有內建的擋單擋
 SC_ALLOWED = ["getpid", "getppid", "personality_query"]
 
@@ -1523,7 +1526,8 @@ def t_seccomp():
     check("seccomp: init: getpid, getppid, personality(0xffffffff) still work", all(got.get(c) == "ok" for c in SC_ALLOWED), got)
     lk = d.fact("main", "locks")
     check("seccomp: init: locks say seccomp: builtin (44 syscalls denied ...)",
-          "\nseccomp: builtin (44 syscalls denied with EPERM, personality limited to safe values; other arch and x32 calls kill the process)\n" in lk, lk)
+          "\nseccomp: builtin (44 syscalls denied with EPERM, personality limited to safe values, AF_VSOCK sockets denied; "
+          "other arch and x32 calls kill the process)\n" in lk, lk)
     hp = d.hostpid("main")
     check("seccomp: init: /proc status shows mode 2 and one more filter than the outside", seccomp_filters(hp) == ("2", mine + 1),
           (seccomp_filters(hp), mine))
@@ -1553,6 +1557,23 @@ def t_seccomp():
           all(got.get(c) == "ok" for c in SC_OFF_OK + SC_ALLOWED), got)
     check("seccomp: off: locks say seccomp: off", "\nseccomp: off\n" in d.fact("so", "locks"), d.fact("so", "locks"))
     check("seccomp: off: no filter added", seccomp_filters(d.hostpid("so"))[1] == mine, seccomp_filters(d.hostpid("so")))
+
+    # AF_VSOCK（11-27 照 Codex、srt 加）：vsock 不分 network namespace，net none 也連得到 hypervisor／WSL 的 Windows 那邊。
+    # idea from srt test/sandbox/seccomp-vsock-block.test.ts（每種 type、domain 暫存器上半有東西、別的 family 不受影響、net 不限也擋）
+    # 與 codex-rs/linux-sandbox/src/seccomp_tests.rs::x32_preserves_allowed_calls_and_socket_conditions
+    vs = ["vsock_stream", "vsock_dgram", "vsock_seqpacket", "vsock_hi", "vsockpair"]
+    other = ["unix_socket", "inet_socket", "inet6_socket", "netlink_socket"]
+    for n, extra in (("vn", {}), ("vh", {"net": "host"})):
+        r = d.ctl("start " + config(d.dir, n, ["sys", "/out", n] + vs + other, **extra))
+        got = results(d, n)
+        check("seccomp: AF_VSOCK socket()/socketpair() of every type is EPERM, also with the domain register's upper half set (net %s)"
+              % (extra.get("net") or "none"), r == (0, "done", "-") and all(got.get(c) == "err EPERM" for c in vs), (r, got))
+        check("seccomp: ... while AF_UNIX, AF_INET, AF_INET6, AF_NETLINK sockets still open (net %s)" % (extra.get("net") or "none"),
+              all(got.get(c) == "ok" for c in other), got)
+    r = d.ctl("start " + config(d.dir, "vo", ["sys", "/out", "vo"] + vs, locks={"seccomp": "off"}))
+    got = results(d, "vo")
+    check("seccomp: off: AF_VSOCK socket() is not EPERM (%s; only the built-in list refuses it)" % got.get("vsock_stream"),
+          r == (0, "done", "-") and got.get("vsock_stream") not in (None, "err EPERM"), got)
 
     # 別的架構與 x32：整個行程被 SIGSYS 殺掉
     for kind in ("x32", "i386"):
@@ -2158,18 +2179,21 @@ def t_rinit():
     d.stop()
 
 
-# ---------------------------------------------------------------- iface（介面宣告 __meta/__interfaces，使用者 11-26 定）
+# ---------------------------------------------------------------- iface（介面宣告 .aos/interfaces，使用者 11-26 定；11-27 從舊寫法 __meta/__interfaces 改名）
 
 def t_iface():
     d = Daemon("iface")
     if not check("iface: daemon up", d.pid and init_up(d), d.err()):
         return
-    base = d.root + "/__meta/__interfaces/aos"
-    check("iface: __meta/__interfaces/aos holds ctl/ and jsonpath", sorted(os.listdir(base)) == ["ctl", "jsonpath"], os.listdir(base))
+    base = d.root + "/.aos/interfaces/aos"
+    check("iface: the old __meta/ is gone (renamed to .aos/, names inside without __), here and in procs/main/",
+          not os.path.lexists(d.root + "/__meta") and not os.path.lexists(d.root + "/procs/main/__meta") and
+          not os.path.lexists(d.root + "/.aos/__interfaces"))
+    check("iface: .aos/interfaces/aos holds ctl/ and jsonpath", sorted(os.listdir(base)) == ["ctl", "jsonpath"], os.listdir(base))
     check("iface: aos/ctl is a folder with kind, path, commands", os.path.isdir(base + "/ctl") and
           sorted(os.listdir(base + "/ctl")) == ["commands", "kind", "path"])
     check("iface: aos/ctl/kind is file", read(base + "/ctl/kind") == "file\n", read(base + "/ctl/kind"))
-    check("iface: aos/ctl/path is ctl, and that is the ctl next to __meta", read(base + "/ctl/path") == "ctl\n" and
+    check("iface: aos/ctl/path is ctl, and that is the ctl next to .aos", read(base + "/ctl/path") == "ctl\n" and
           os.path.exists(os.path.join(d.root, read(base + "/ctl/path").strip())))
     cmds = read(base + "/ctl/commands").split()
     check("iface: aos/ctl/commands lists the commands, restart-init included",
@@ -2180,8 +2204,8 @@ def t_iface():
     r = d.ctl("frobnicate")
     check("iface: ... while a word not listed is CommandUnknown", (r[2] or "").startswith("CommandUnknown"), r)
     check("iface: aos/jsonpath is an empty file", os.path.isfile(base + "/jsonpath") and read(base + "/jsonpath") == "")
-    modes = {p: os.stat(p).st_mode & 0o777 for p in (d.root + "/__meta", base, base + "/ctl", base + "/ctl/kind", base + "/jsonpath")}
-    check("iface: read-only (folders 0555, files 0444)", list(modes.values()) == [0o555, 0o555, 0o555, 0o444, 0o444], modes)
+    modes = {p: os.stat(p).st_mode & 0o777 for p in (d.root + "/.aos", d.root + "/.aos/interfaces", base, base + "/ctl", base + "/ctl/kind", base + "/jsonpath")}
+    check("iface: read-only (folders 0555, files 0444)", list(modes.values()) == [0o555, 0o555, 0o555, 0o555, 0o444, 0o444], modes)
     errs = []
     for f in (lambda: os.close(os.open(base + "/ctl/kind", os.O_WRONLY)), lambda: os.mkdir(base + "/x"),
               lambda: os.close(os.open(base + "/new", os.O_WRONLY | os.O_CREAT)), lambda: os.unlink(base + "/jsonpath")):
@@ -2190,19 +2214,19 @@ def t_iface():
             errs.append("ok")
         except OSError as e:
             errs.append(errno.errorcode.get(e.errno, str(e.errno)))
-    check("iface: writing, making, removing under __meta all fail (%s)" % " ".join(errs), "ok" not in errs, errs)
+    check("iface: writing, making, removing under .aos all fail (%s)" % " ".join(errs), "ok" not in errs, errs)
     d.ctl("start " + config(d.dir, "w", ["sleep"]))
     started(d, "w")
     for n in ("main", "w"):
-        p = "%s/procs/%s/__meta/__interfaces/aos" % (d.root, n)
+        p = "%s/procs/%s/.aos/interfaces/aos" % (d.root, n)
         check("iface: procs/%s/ declares aos/proc (an empty file)" % n, os.listdir(p) == ["proc"] and read(p + "/proc") == "",
               os.listdir(p))
-    check("iface: init reads /aos/__meta/__interfaces/aos/ctl/kind", d.ask("/aos/__meta/__interfaces/aos/ctl/kind") == "ok file|")
-    check("iface: init reads .../ctl/path and .../ctl/commands", d.ask("/aos/__meta/__interfaces/aos/ctl/path") == "ok ctl|" and
-          d.ask("/aos/__meta/__interfaces/aos/ctl/commands") == "ok start kill mount umount forget restart-init|")
-    check("iface: init reads .../aos/jsonpath and procs/w/__meta/__interfaces/aos/proc",
-          d.ask("/aos/__meta/__interfaces/aos/jsonpath") == "ok" and d.ask("/aos/procs/w/__meta/__interfaces/aos/proc") == "ok")
-    a = d.ask("put:/aos/__meta/__interfaces/aos/ctl/kind=socket")
+    check("iface: init reads /aos/.aos/interfaces/aos/ctl/kind", d.ask("/aos/.aos/interfaces/aos/ctl/kind") == "ok file|")
+    check("iface: init reads .../ctl/path and .../ctl/commands", d.ask("/aos/.aos/interfaces/aos/ctl/path") == "ok ctl|" and
+          d.ask("/aos/.aos/interfaces/aos/ctl/commands") == "ok start kill mount umount forget restart-init|")
+    check("iface: init reads .../aos/jsonpath and procs/w/.aos/interfaces/aos/proc",
+          d.ask("/aos/.aos/interfaces/aos/jsonpath") == "ok" and d.ask("/aos/procs/w/.aos/interfaces/aos/proc") == "ok")
+    a = d.ask("put:/aos/.aos/interfaces/aos/ctl/kind=socket")
     check("iface: init cannot change the declaration (%s)" % a, (a or "").startswith("err") and read(base + "/ctl/kind") == "file\n", a)
     d.stop()
 
@@ -2564,6 +2588,208 @@ def t_jdepth():
 
 # ---------------------------------------------------------------- leftovers
 
+# ---------------------------------------------------------------- ipc（每隻自己一份 IPC namespace，11-27 最小方案第 5 節第 8 條）
+
+IPC_BASE = 0x41440000 + (os.getpid() % 4096) * 16   # 這次測試用的 SysV key（外面那份 +0..2、proc 的 +4..6、c 的 +8..10）
+MQ_PREFIX = "/aosdtest-ipc-%d" % os.getpid()
+
+
+def t_ipc():
+    sys.path.insert(0, TOYS)
+    import toys
+    ko, ka, kc = IPC_BASE, IPC_BASE + 4, IPC_BASE + 8
+    mo, ma, mc = MQ_PREFIX + "-out", MQ_PREFIX + "-a", MQ_PREFIX + "-c"
+    outside = toys.ipc_objects(ko, mo)
+    made = [toys.ipc_make(k, w, "marker-out") for k, w in outside]
+    try:
+        if not check("ipc: outside makes SysV shm, sem, msg and a POSIX mqueue (%s)" % " ".join(made),
+                     made == ["ok"] * 4, made):
+            return
+        d = Daemon("ipc")
+        if not check("ipc: daemon up", d.pid and init_up(d), d.err()):
+            return
+        myipc = os.readlink("/proc/self/ns/ipc")
+        hp = {"main": d.hostpid("main")}
+        check("ipc: init has its own ipc namespace", os.readlink("/proc/%d/ns/ipc" % hp["main"]) != myipc)
+        check("ipc: init's locks say so", "\nipc: own ipc namespace" in d.fact("main", "locks"), d.fact("main", "locks"))
+        check("ipc: init cannot see the outside's shm (%s)" % d.ask("ipc:shm:%d" % ko), d.ask("ipc:shm:%d" % ko) == "err ENOENT")
+        check("ipc: init cannot see the outside's mqueue (%s)" % d.ask("ipc:mq:" + mo), d.ask("ipc:mq:" + mo) == "err ENOENT")
+        probes_out = ["%s:%s" % kw for kw in outside]
+        probes_a = ["%s:%s" % kw for kw in toys.ipc_objects(ka, ma)]
+        for n in ("a", "b"):   # a、b 用同一組 key 與 mqueue 名字：各建各的（IPC_EXCL／O_EXCL 都成功＝看不到對方的）
+            r = d.ctl("start " + config(d.dir, n, ["ipc", "/out", n, str(ka), ma] + probes_out))
+            check("ipc: start %s" % n, r[0] == 0 and started(d, n), r)
+            hp[n] = d.hostpid(n)
+        ra, rb = results(d, "a"), results(d, "b")
+        check("ipc: a makes shm, sem, msg, mqueue in its own namespace",
+              [ra.get("make:" + k) for k in ("shm", "sem", "msg", "mq")] == ["ok"] * 4, ra)
+        check("ipc: a reads back its own (shm marker-a, sem, msg marker-a, mqueue)",
+              ra.get("own:shm") == "ok marker-a" and ra.get("own:sem") == "ok %d" % toys.sem_value("marker-a") and
+              ra.get("own:msg") in ("ok marker-a", "ok") and ra.get("own:mq") == "ok", ra)
+        for k, w in outside:
+            check("ipc: a cannot see the outside's %s (%s)" % (k, ra.get("%s:%s" % (k, w))), ra.get("%s:%s" % (k, w)) == "err ENOENT", ra)
+        check("ipc: a's /proc/sysvipc lists only its own three keys",
+              ra.get("sysvipc") == ",".join(str(x) for x in (ka, ka + 1, ka + 2)), (ra.get("sysvipc"), ka))
+        check("ipc: b (sibling) makes the same keys and mqueue name with EXCL: all ok, so a's are not visible to it",
+              [rb.get("make:" + k) for k in ("shm", "sem", "msg", "mq")] == ["ok"] * 4, rb)
+        check("ipc: b reads back marker-b, not marker-a", rb.get("own:shm") == "ok marker-b", rb)
+        for k, w in outside:
+            check("ipc: b cannot see the outside's %s" % k, rb.get("%s:%s" % (k, w)) == "err ENOENT", rb)
+        # 外面看 proc 建的
+        for k, w in toys.ipc_objects(ka, ma):
+            got = toys.ipc_see(k, w)
+            check("ipc: the outside cannot see what a and b made: %s (%s)" % (k, got), got == "err ENOENT", got)
+        ks = toys.sysvipc_keys()
+        check("ipc: the outside's /proc/sysvipc has none of their keys (and still has its own)",
+              ks is not None and not ({ka, ka + 1, ka + 2} & ks) and {ko, ko + 1, ko + 2} <= ks)
+        if os.path.isdir("/dev/mqueue"):
+            check("ipc: the outside's /dev/mqueue has no %s" % ma, not os.path.exists("/dev/mqueue" + ma) and
+                  os.path.exists("/dev/mqueue" + mo))
+        # c 在 a、b 都在的時候找它們建的；net host 的 h 也一樣有自己的一份（不做開關）
+        r = d.ctl("start " + config(d.dir, "c", ["ipc", "/out", "c", str(kc), mc] + probes_a))
+        check("ipc: start c", r[0] == 0 and started(d, "c"), r)
+        hp["c"] = d.hostpid("c")
+        rc = results(d, "c")
+        for k, w in toys.ipc_objects(ka, ma):
+            check("ipc: c cannot see its siblings' %s (%s)" % (k, rc.get("%s:%s" % (k, w))), rc.get("%s:%s" % (k, w)) == "err ENOENT", rc)
+        check("ipc: init cannot see a's shm either", d.ask("ipc:shm:%d" % ka) == "err ENOENT")
+        r = d.ctl("start " + config(d.dir, "h", ["ipc", "/out", "h", str(kc), mc] + probes_out, net="host"))
+        check("ipc: start h (net host)", r[0] == 0 and started(d, "h"), r)
+        hp["h"] = d.hostpid("h")
+        rh = results(d, "h")
+        check("ipc: net host does not share ipc: h cannot see the outside's shm or mqueue",
+              rh.get("shm:%d" % ko) == "err ENOENT" and rh.get("mq:" + mo) == "err ENOENT", rh)
+        check("ipc: h makes c's key and mqueue name with EXCL while c holds them", rh.get("make:shm") == "ok" and rh.get("make:mq") == "ok", rh)
+        nss = {n: os.readlink("/proc/%d/ns/ipc" % p) for n, p in hp.items()}
+        check("ipc: main, a, b, c, h and the outside: six different ipc namespaces",
+              len(set(nss.values()) | {myipc}) == 6, nss)
+        check("ipc: every proc's locks say own ipc namespace",
+              all("\nipc: own ipc namespace" in d.fact(n, "locks") for n in hp), [d.fact(n, "locks") for n in hp])
+        for n in ("a", "b", "c", "h"):
+            d.ctl("kill %s KILL" % n)
+        check("ipc: daemon stops", d.stop() == 0)
+        ks = toys.sysvipc_keys()
+        check("ipc: after the daemon is gone, the outside still has none of their keys",
+              ks is not None and not ({ka, ka + 1, ka + 2, kc, kc + 1, kc + 2} & ks))
+    finally:
+        for k, w in outside:
+            toys.ipc_drop(k, w)
+
+
+# ---------------------------------------------------------------- escape（照 Codex、srt 的逃脫測試的意思改寫，11-27；對照表在 vs-codex-srt.md）
+
+def t_escape():
+    """一隻預設的 proc（uid 0、net none、內建 seccomp、Landlock），天空：可寫的 /work（外面的一個 git 夾），上面再蓋唯讀的 /work/.git；
+    試著逃。每條旁邊註明出處（只取意思，程式是自己寫的）。"""
+    d = Daemon("escape")
+    if not check("escape: daemon up", d.pid and init_up(d), d.err()):
+        return
+    work = os.path.join(d.dir, "work")
+    os.makedirs(os.path.join(work, ".git", "hooks"))
+    with open(os.path.join(work, ".git", "config"), "w") as f:
+        f.write("[core]\n")
+    decoy = os.path.join(d.dir, "decoy")          # 第二個工作夾的 .git 是指到 decoy 的 symlink
+    os.makedirs(decoy)
+    work2 = os.path.join(d.dir, "work2")
+    os.makedirs(work2)
+    os.symlink(decoy, os.path.join(work2, ".git"))
+    secret = os.path.join(d.dir, "secret")        # 外面有、天空裡沒放的夾
+    os.makedirs(secret)
+    ns = base_ns(d.dir) + [bind(work, "/work", True), bind(os.path.join(work, ".git"), "/work/.git")]
+    init_ns = d.hostpid("main")
+    init_pid_ns = ns_pid(d, "main")
+    probes = [
+        "devnodes",                                                   # codex suite/sandbox.rs::bwrap_populates_minimal_dev_nodes、test_dev_null_write
+        "fill:/work/ok.txt:1",                                        # codex test_writable_root（對照：可寫的照寫）
+        "fill:/work/.git/config:1", "fill:/work/.git/hooks/pre-commit:1", "fill:/work/.git/new:1",
+        # ↑ codex sandbox_blocks_metadata_writes_inside_writable_root；srt mandatory-deny-paths.test.ts 的 .git/config、.git/hooks/pre-commit
+        "rename:/work/.git:/work/.git2", "rmdir:/work/.git",          # 換掉、刪掉 .git 本身（codex sandbox_keeps_parent_repo_discovery_…）
+        "symw:/work/viahook:/work/.git/hooks/post-checkout",          # 經可寫夾裡自己做的 symlink 寫唯讀的地方（srt write-through-links）
+        "symw:/work/viaetc:/etc/aosd-escape",                         # srt integration「prevents symlink-based write escape」、symlink-write-path
+        "symw:/work/viasecret:%s/planted" % secret,                   # 指到外面真的路徑（天空裡沒有）：ENOENT、外面不會多檔
+        "fill:/usr/aosd-escape:1",                                    # codex test_root_write（天空的唯讀處）
+        "link:/etc/passwd:/work/pw",                                  # srt integration「special files」：硬連結到唯讀的檔
+        "mkfifo:/tmp/fifo",                                           # 同上：mkfifo 在可寫處照做
+        "umount:/proc", "umount:/work/.git",                          # srt pid-namespace-isolation「denies umount(/proc)」；拿掉唯讀那層
+        "remountrw:/work/.git", "mounttmpfs:/tmp",                    # srt docker-weak-sandbox「no way to unmount a deny」的同類
+        "openrw:/proc/1/mem", "openrw:/proc/%s/mem" % init_pid_ns,    # srt「denies opening /proc/1/mem for write」（PID 1＝daemon、init）
+        "tcp:1.1.1.1:80", "tcp:::1:9",                                # codex sandbox_blocks_curl／nc／dev_tcp_redirection
+    ]
+    r = d.ctl("start " + config(d.dir, "x", ["probe", "/out", "x"] + probes, ns=ns))
+    check("escape: start the proc", r == (0, "done", "-"), r)
+    t = wait_for(lambda: os.path.exists(os.path.join(d.dir, "x.txt")) and read(os.path.join(d.dir, "x.txt")), 30) or ""
+    got = {}
+    for l in t.strip().splitlines():
+        k, _, v = l.partition(" ")
+        got[k] = v
+    exp = [
+        ("devnodes", "ok", "/dev has null, zero, full, random, urandom as character devices; null takes writes, zero reads 0, full is ENOSPC"),
+        ("fill:/work/ok.txt:1", "ok", "the writable /work takes a new file"),
+        ("fill:/work/.git/config:1", "err EROFS", ".git/config under the read-only cover is EROFS"),
+        ("fill:/work/.git/hooks/pre-commit:1", "err EROFS", "a new git hook is EROFS"),
+        ("fill:/work/.git/new:1", "err EROFS", "a new file in .git is EROFS"),
+        ("rename:/work/.git:/work/.git2", "err EBUSY", ".git cannot be renamed away (it is a mount point: EBUSY)"),
+        ("rmdir:/work/.git", "err EBUSY", ".git cannot be removed (EBUSY)"),
+        ("symw:/work/viahook:/work/.git/hooks/post-checkout", "err EROFS", "writing through a symlink it made in /work into .git is EROFS"),
+        ("symw:/work/viaetc:/etc/aosd-escape", "err EROFS", "a symlink to /etc resolves in the sky: EROFS"),
+        ("symw:/work/viasecret:%s/planted" % secret, "err ENOENT", "a symlink to a real outside path not in the sky: ENOENT"),
+        ("fill:/usr/aosd-escape:1", "err EROFS", "/usr (read-only bind) is EROFS"),
+        ("link:/etc/passwd:/work/pw", "err EXDEV", "a hard link from /work to /etc/passwd is EXDEV"),
+        ("mkfifo:/tmp/fifo", "ok", "mkfifo in /tmp works"),
+        ("umount:/proc", "err EPERM", "umount /proc is EPERM (no capabilities)"),
+        ("umount:/work/.git", "err EPERM", "umount the read-only .git cover is EPERM"),
+        ("remountrw:/work/.git", "err EPERM", "remounting the .git cover read-write is EPERM"),
+        ("mounttmpfs:/tmp", "err EPERM", "mounting a tmpfs over /tmp is EPERM"),
+        ("openrw:/proc/1/mem", "err EACCES", "opening the daemon's /proc/1/mem for write is EACCES"),
+        ("openrw:/proc/%s/mem" % init_pid_ns, "err EACCES", "opening init's /proc/<pid>/mem for write is EACCES"),
+        ("tcp:1.1.1.1:80", "err ENETUNREACH", "net none: a TCP connect to 1.1.1.1:80 is ENETUNREACH"),
+        ("tcp:::1:9", "err ECONNREFUSED", "net none: its own ::1 answers (nothing listens: ECONNREFUSED), not the outside's"),
+    ]
+    for k, want, what in exp:
+        v = got.get(k)
+        check("escape: %s (%s)" % (what, v), v == want, (k, v))
+    check("escape: outside, .git/config and the hooks folder are unchanged, decoy is empty, nothing planted in secret",
+          read(os.path.join(work, ".git", "config")) == "[core]\n" and os.listdir(os.path.join(work, ".git", "hooks")) == [] and
+          os.listdir(decoy) == [] and os.listdir(secret) == [] and os.path.exists(os.path.join(work, "ok.txt")))
+    # .git 是指到外面的 symlink 時，唯讀那層蓋不上去（掛載點在天空裡解，是天空裡不存在的路徑）：起不來，不是「蓋了一半照跑」
+    # （idea from codex suite/sandbox.rs::sandbox_blocks_codex_symlink_replacement_attack、
+    #  sandbox_reports_codex_symlink_build_failure_without_panicking：fail closed）
+    ns2 = base_ns(d.dir) + [bind(work2, "/work2", True), bind(os.path.join(work2, ".git"), "/work2/.git")]
+    r = d.ctl("start " + config(d.dir, "x2", ["probe", "/out", "x2", "fill:/work2/.git/x:1"], ns=ns2))
+    check("escape: a .git that is a symlink to outside: the read-only cover cannot go on, so start fails closed (%s)" % r[2],
+          r[0] == errno.EIO and r[1] == "failed" and "/work2/.git" in (r[2] or "") and
+          not os.path.exists("%s/procs/x2" % d.root) and os.listdir(decoy) == [], r)
+    check("escape: init is still alive and the same one after all that", started(d, "main") and d.hostpid("main") == init_ns)
+    # setuid 不起作用（srt integration「prevents privilege escalation: a setuid copy of bash does not become root; sudo/su fail」）：
+    # 用 subuid 的 proc（uid 1；uid 0 在天空裡本來就是 0 號，看不出差別）跑 /usr/bin/sudo：bind 是 nosuid、又有 no_new_privs，sudo 拿不到 euid 0
+    sudo = "/usr/bin/sudo"
+    if os.path.exists(sudo) and os.stat(sudo).st_mode & 0o4000 and d.status().get("subuid", "off") != "off":
+        so = os.path.join(d.dir, "su-out")       # uid 1 寫不進 d.dir，給它一個大家都能寫的夾當 /out
+        os.makedirs(so)
+        os.chmod(so, 0o777)
+        r = d.ctl("start " + config(d.dir, "su", ["probe", "/out", "su", "run:%s -n /usr/bin/id -u" % sudo],
+                                    ns=base_ns(d.dir)[:-1] + [bind(so, "/out", True)], uid=1))
+        t = wait_for(lambda: os.path.exists(os.path.join(so, "su.txt")) and read(os.path.join(so, "su.txt")), 25) or ""
+        v = t.partition(" -u ")[2].strip()
+        check("escape: setuid does not work in the sky: uid 1 running sudo does not get euid 0 (%s)" % v[:80],
+              r == (0, "done", "-") and v.startswith("ok rc=") and not v.startswith("ok rc=0") and
+              ("no new privileges" in v or "effective uid is not 0" in v), (r, v))
+    else:
+        check("escape: (skip) no setuid /usr/bin/sudo or no subuid", True)
+    d.stop()
+
+
+def ipc_left():
+    """這次測試的 key 範圍、mqueue 名字留在外面的。"""
+    sys.path.insert(0, TOYS)
+    import toys
+    ks = toys.sysvipc_keys() or set()
+    left = sorted(hex(k) for k in ks if IPC_BASE <= k < IPC_BASE + 16)
+    if os.path.isdir("/dev/mqueue"):
+        left += sorted(n for n in os.listdir("/dev/mqueue") if ("/" + n).startswith(MQ_PREFIX))
+    return left
+
+
 def t_leftovers():
     for p, pid in STARTED:
         if p.poll() is None:
@@ -2597,6 +2823,8 @@ def t_leftovers():
     check("leftovers: no cgroups", not cgs, cgs)
     mi = [l for l in read("/proc/self/mountinfo").splitlines() if "aosdaemon" in l or TMP in l]
     check("leftovers: no mounts", not mi, mi)
+    il = ipc_left()
+    check("leftovers: no SysV IPC objects or POSIX mqueues from the ipc group", not il, il)
 
 
 GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "nsconf": t_nsconf, "landlock": t_landlock, "cgroup": t_cgroup,
@@ -2606,7 +2834,8 @@ GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "nsconf": t_nsconf, "l
           "exitcode": t_exitcode, "net": t_net, "seccomp": t_seccomp, "nest": t_nest, "cgpath": t_cgpath,
           "sigsrc": t_sigsrc, "ipath": t_ipath, "stuck": t_stuck, "nsby": t_nsby, "overlay": t_overlay, "merge": t_merge,
           "rinit": t_rinit, "iface": t_iface, "oldlinux": t_oldlinux, "beneath": t_beneath, "real": t_real,
-          "irestart": t_irestart, "slave": t_slave, "notmp": t_notmp, "killgrp": t_killgrp, "tsize": t_tsize, "jdepth": t_jdepth}
+          "irestart": t_irestart, "slave": t_slave, "notmp": t_notmp, "killgrp": t_killgrp, "tsize": t_tsize, "jdepth": t_jdepth,
+          "ipc": t_ipc, "escape": t_escape}
 
 
 def stop_left_running(group):
