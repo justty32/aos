@@ -12,13 +12,15 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-27 晚（家機）——main 只傳話、main-alt 做事；一天下來兩個原型，七題實作中
+## 2026-11-27 晚（家機）——main 收掉了，使用者直接跟 main-alt 講話；一天下來兩個原型
 
 **寫這條的是 main-alt**（家機 repo-aos 樹，Claude Code、Opus 5.5、帳號 `.claude-alt`）。上一條（11-27 下午）全文在 git 歷史 `293269f7f`；那條的「分工」照舊有效，這裡只重述重點。
 
-**分工**：main（個人帳號 `~/.claude`、remote control）只轉話與上傳 artifact，因為本週個人帳號只剩 4% 額度（使用者原話：「…這個session，所有工作都必須交給main-alt做，因爲我們本週額度剩4%。所以你就只能當傳話筒…」）。main-alt 做調查、實作、驗收、交件、寫網頁；子 agent 普通工作 opus、想事情 fable；要給使用者看的寫成單檔 HTML 放 `~/.aos/scratch/<名>/`，信裡附路徑，main 上傳。main-alt 少寄中間信（每封都吃 main 的額度）。
+**分工（白天到 21:36）**：main（個人帳號 `~/.claude`、remote control）只轉話與上傳 artifact，因為本週個人帳號只剩 4% 額度（使用者原話：「…這個session，所有工作都必須交給main-alt做，因爲我們本週額度剩4%。所以你就只能當傳話筒…」）。main-alt 做調查、實作、驗收、交件、寫網頁；子 agent 普通工作 opus、想事情 fable；要給使用者看的寫成單檔 HTML 放 `~/.aos/scratch/<名>/`，信裡附路徑，main 上傳。main-alt 少寄中間信（每封都吃 main 的額度）。
 
-**授權**：**push 一律每晚 23:00**（使用者 11-27 13:05「Push就是一律晚上十一點push」，規矩在 [user/01](workflows/common/user/01-說話授權與記憶.md#每晚-2300-push2026-11-27-定)）。main-alt 的 aos 鐘 `nightly-push`（cron `0 23 * * *`）照那條的步驟推，推完寄信給 main。今晚是第一次；寫這條時本地比遠端多 24 個以上 commit。
+**21:36 起改了**：main compact 後就關掉，使用者改直接跟 main-alt 講話（使用者原話：「事情應該都是在main-alt做的，小心不要跟他衝突到。你這邊compact後我就要關掉session了，我會跑去跟main-alt對話。」）。main 說它不再動 repo。main-alt 的帳號沒有 Artifact 工具，所以往後要給使用者看的網頁，就在對話裡給本機路徑；要上傳到網址，請使用者另外開有 Artifact 的 session。
+
+**授權**：**push 一律每晚 23:00**（使用者 11-27 13:05「Push就是一律晚上十一點push」，規矩在 [user/01](workflows/common/user/01-說話授權與記憶.md#每晚-2300-push2026-11-27-定)）。main-alt 的 aos 鐘 `nightly-push`（cron `0 23 * * *`）照那條的步驟推，推的結果寫在 main-alt 的對話裡，使用者來時告訴他（不再寄信給 main）。今晚是第一次；寫這條時本地比遠端多 24 個以上 commit。
 
 **今天做的**（日總覽網頁 `~/.aos/scratch/day-1127/report.html`；決定全在 [pi沙箱-1127](../proto8/thinking/2026-11/27/pi沙箱-1127.md) 定了的第 1～10 條）
 - 早上（main）：aos-daemon 在 6.18 修好；封路實驗 channels-1127；pi 原型 pi-sandbox-1127；找輪子 → 使用者「照 A」。
@@ -29,11 +31,11 @@
 **今晚做完的**
 1. **七題實作**（使用者「好，都按照推薦」）：`chain.py`（去重、`merge`、`replace`／`without`、uid 排最裡、兩個 llm 沒串起來就拒絕）、`flat_kernel.py`（cg 與 mask 攤平；起之前算 user namespace 層數，主機上限 24【擬】）、`effective.py`（`.aos/effective/`＋`blame`＋`.aos/lock.json`、`--explain`／`--lock`／`--diff`）；修好兩個 bug（撞 33 層時卡死留孤兒、網路疊三層總量被吃光）。驗收 accept 31、stack_test 22、llm_test 15、bundle_test 19、overlap_test 31 全過。實作者標【擬】要問使用者的三點：上限「還能開的層數減 9」、下載佇列 1 秒（多 1 秒延遲）換總量正確、網路與 llm 要不要也攤平。
 2. **效能成本進 repo**（使用者「有幫我記錄效能成本嗎」）：[`proto9/mini-sandbox/PERF.md`](../proto9/mini-sandbox/PERF.md)＋[`perf/bench.py`](../proto9/mini-sandbox/perf/README.md)（`--quick` 約 6 秒，公司 WSL 也能跑）；攤平後實測 cg／mask 疊 100 層 0.2 秒起好（以前 33 層起不來）。網路收掉每層 3 秒還沒修。
-3. 23:00 鐘推送（今晚第一次，main-alt 推完寄信給 main）。日總覽 `~/.aos/scratch/day-1127/report.html`（含全景圖）。
+3. 23:00 鐘推送（今晚第一次，結果寫在 main-alt 的對話裡）。日總覽 `~/.aos/scratch/day-1127/report.html`（含全景圖）。
 
 **架構說明**（使用者回家後「看要不要做一個更細節的，講述整個架構，運作方式的artifact」）：`~/.aos/scratch/arch-1127/report.html`，照 HEAD 程式寫；順手把 mini-sandbox README 的舊句子對齊程式（`97872b8ab`）。新發現的縫：`KernelOrderBad`「網路 kernel 讓 pi 繞過 llm 直連上游」的檢查只比 IP，上游寫成網域名稱時抓不到（`chain.py` `llm_bypasses`），沒修。
 
-**今天上傳給使用者的 artifact**（網址不變；要更新時 main 用同一個本機路徑 `~/.aos/scratch/<名>/report.html` 重新上傳）
+**今天上傳給使用者的 artifact**（網址不變；要更新得由有 Artifact 工具的 session 用同一個本機路徑 `~/.aos/scratch/<名>/report.html` 重新上傳）
 - 照 A 結果 https://claude.ai/artifact/SGxqBnnHLiEkdWMtXza4VP （proto9-impl-1127）
 - 更小版調查 https://claude.ai/artifact/8PE8siKazvHPpPm1UZGdhV （proto9-smallproto-1127）
 - 環境套環境 https://claude.ai/artifact/5czYEPZ89qiKSbp1oSV4YM （proto9-mini-1127）
@@ -45,9 +47,9 @@
 - 架構與運作 https://claude.ai/artifact/E7o1Ww7jdLY2nfDz5faD3M （arch-1127）
 - 找輪子摘要（早上的） https://claude.ai/artifact/WCpLpLEQtsVN6gqFFD28yo
 
-**main compact 之後接著做**：
-1. 收 main-alt 的 23:00 nightly-push 回信，轉給使用者：推了幾個 commit，或為什麼沒推。
-2. 那三點【擬】等使用者有空再問：層數上限 24、下載佇列 1 秒、網路和腦要不要也攤平。
+**接著做**（main-alt）：
+1. 23:00 推完，把推了幾個 commit 或為什麼沒推寫進對話，使用者來時告訴他。
+2. 那三點【擬】直接問使用者：層數上限 24、下載佇列 1 秒、網路和腦要不要也攤平。
 3. 其他照下面「還開著」。
 
 **還開著**：網路 kernel 收掉每層 3 秒；perf 的 llm 疊層量法要改成 `upstream: outer`；公司 WSL（aos-daemon `make test`、pi-sandbox、mini-sandbox 都沒在那台跑過；sky-1125／channels 的 abi3 欄）；決策審查第 3 題（`aos/ctl` 形狀，報告在公司機 `~/.aos/scratch/proto9-decisions-review-1126/`）連同介面裡同名不同義的欄位一起定；中文版知識庫落後 36 頁；pi-sandbox 補洞後還沒跑真模型、「沒設 `AOS_ENV` 看 `/`」沒跟上；11-26 的【擬】18 條。Bun 與 `.claude-alt` 的 discord 外掛（停用）還留著。
