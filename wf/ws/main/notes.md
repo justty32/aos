@@ -32,3 +32,10 @@
 - **三分在家機已就位**：19:05 整棵樹重起，跑在新路徑；`stack_paths.py` 的 `.bak-trisplit-1124` 五份使用者「可以刪」後刪了；舊範本夾只剩 `__pycache__` 的兩個刪了；push 到 `be448758e`。
 - **信**：repo-vc 的 main 兩封都回了 DONE（根的 AOS_LLM_KERNEL；知識庫 source.md 的 .json→.md，`e8439c021`）。
 - **文件跟上**：kb 交 `4936939e5`（12 檔）＋筆記 `71e2dd871`，progress `home-stack-move-1124` 刪了。kb 留給 main 的：家機 repo-aos 那列的定義是 `templates/daemons/daemon-sub`（文件寫 `wf/tree/root`，兩者設定相同）；dev-env/03 常見錯誤表「.stack 整個不見了」那列已不適用；不碰清單還列著家機已不在的 `~/aos-home.old-1122`（公司那台可能還在）。三個位子都 sleep 了。
+
+## 2026-11-27 早（家機）
+
+- 開場 pull 了公司 11-26 的 30 多個 commit，同步給使用者；家機重跑測試、修 aos-daemon 兩處（`8d4fa83fc`）、封路實驗（`81776b63f`）、pi 原型（`a815a05a8`）、thinking 11-27 pi沙箱（`6594f0246` 起）。
+- 使用者這天主要在講方向（第 145～160 段）：只剩 kernel → 硬逼出 Plan 9 虛擬機 → 只取概念 → 選配與介面 → 可用與獨占 → 執行不攔 → 目標三句（pi 沙箱）→ `.aos` → 標準佈局。我的做法：每段原話先抄進 9p-proc-1125，再回邊緣狀況；他說「到一個段落派 fable」就派。
+- fable 報告子 agent 寫不進 `.md`（系統擋），由我照回覆全文存檔。
+- 收尾：使用者「你這邊也整理一下，我要compact」；最小方案 fable 還在跑（見 HANDOFF）。
