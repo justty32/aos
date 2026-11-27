@@ -26,6 +26,7 @@ proto9＝aos 第九版原型的起點：以「aos proc 介面」（一個 proc �
 | [experiments/fuse-proc-1125/](experiments/fuse-proc-1125/README.md) | FUSE 小實驗（玩具 proc 與玩具 daemon，Python 標準庫）：這台不靠函式庫掛得起來、鎖做得出來；坑在死掉的掛載要有人卸、proc 卡住會拖住讀它的人 |
 | [experiments/sky-1125/](experiments/sky-1125/README.md) | 天空小實驗（玩具 daemon 當 PID namespace 的 1 號，Python 標準庫加 unshare／setpriv，不用 root）：照純文字設定替每隻 proc 從零組天空、表跟 mountinfo 一對一；名字交給 kernel、只能往下傳自己有的、依賴鏈、llm proxy 當唯一出口、跑的時候改、上鎖、一起死、subuid、cgroup 凍結，`python3 run.py` 十項全過；發現同 uid 的 proc 會走 /proc/<PID>/root 看進 daemon 與別人的天空（daemon 自己 non-dumpable 擋得住；兄弟之間要不要每隻加 Landlock，等使用者選） |
 | [experiments/channels-1127/](experiments/channels-1127/README.md) | 封路小實驗（家機 6.18，C 探測程式＋`python3 run.py`，七種設定 × 191 條路）：量 aos-daemon 底下的 proc 除了檔案路徑還碰得到什麼——預設設定下 SysV IPC 與 POSIX mqueue 三個方向全通（沒開 IPC namespace）、`/proc/1/net` 看得到外面整台的 socket 表、照 PID 改得動兄弟與 daemon 的 nice／上限；訊號、ptrace、網路、危險系統呼叫都擋住了；封路建議五條等使用者挑 |
+| [experiments/pi-sandbox-1127/](experiments/pi-sandbox-1127/README.md) | pi 住進沙箱的原型（家機，`python3 run.py`；`--fake` 不花錢）：pi coding agent 整隻跑在 aos-daemon 的一隻 proc（預設的鎖、`net none`），腦只能經天空裡的 `/llm`（unix socket＋介面宣告、proxy 數次數與擋模型），read／write／edit／bash 都通，連外網、讀工作夾外的檔、繞過 `/llm` 都做不到；天空要的只有 `/usr`、`/dev`、node、pi 套件、可寫 HOME、工作夾、`/llm`；要使用者定的三題在 README 最後 |
 
 ## 跟 proto8 的關係
 
