@@ -2,16 +2,15 @@
  "kind": "claude",
  "flags": [
   "--tools",
-  "Read,Write,Edit,Glob,Grep,Bash,Agent,Skill,Artifact,ArtifactComments,ArtifactData,ArtifactCheck,WebSearch,WebFetch,ToolSearch,Monitor",
+  "Read,Write,Edit,Glob,Grep,Bash,Agent,Skill,AskUserQuestion,Artifact,ArtifactComments,ArtifactData,ArtifactCheck,WebSearch,WebFetch,ToolSearch,Monitor",
   "--permission-mode",
-  "dontAsk",
+  "default",
   "--allowedTools",
-  "Read,Glob,Grep,Write,Edit,Bash,Agent,Skill,Artifact,ArtifactComments,ArtifactData,ArtifactCheck,WebSearch,WebFetch,ToolSearch,Monitor,mcp__plugin_discord_discord",
+  "Read,Glob,Grep,Write,Edit,Bash,Agent,Skill,AskUserQuestion,Artifact,ArtifactComments,ArtifactData,ArtifactCheck,WebSearch,WebFetch,ToolSearch,Monitor",
+  "--strict-mcp-config",
   "--no-chrome",
   "--setting-sources",
-  "project,local",
-  "--channels",
-  "plugin:discord@claude-plugins-official"
+  "project,local"
  ],
  "claude_mcp": [
   "user",
@@ -83,8 +82,7 @@
    "context7@claude-plugins-official": false,
    "feature-dev@claude-plugins-official": false,
    "github@claude-plugins-official": false,
-   "skill-creator@claude-plugins-official": false,
-   "discord@claude-plugins-official": true
+   "skill-creator@claude-plugins-official": false
   },
   "tui": "fullscreen"
  }

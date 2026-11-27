@@ -12,7 +12,7 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-27 午（家機，使用者出門、下午只用手機）——pi 最小方案兩題照甲；先找現成輪子；main 換手機用的定義
+## 2026-11-27 午（家機）——main 換個人帳號當調度、main-alt 做事；最小方案等「照 A」
 
 **寫這條的是家機 repo-aos 樹的 `main`**（Claude Code，模型 Opus 5.5）。上一條是家機 11-25 23:0x（中間夾了公司 eca-aos 11-26 的進度），全文在 git 歷史 `4e6baf17c`。細節在 [`wf/ws/main/notes.md`](ws/main/notes.md)「2026-11-27 早（家機）」、思考紀錄 [pi沙箱-1127](../proto8/thinking/2026-11/27/pi沙箱-1127.md)，原話 [9p-proc-1125](../proto8/thinking/2026-11/25/9p-proc-1125.md) 第 145～160 段。
 
@@ -36,6 +36,14 @@
 1. **找輪子調查做完了**（重派那次在重開前就跑完了）：全文在 `~/.aos/scratch/proto9-wheels-1127/report.md`，手機版摘要 artifact https://claude.ai/artifact/WCpLpLEQtsVN6gqFFD28yo 。結論：沒有現成的一整套；推薦 A＝aos-daemon 照做、零件挑輪子（6 件裡 5 件自己做，小轉接沿用原型的 launch.mjs，socat 當備案），測項抄 Codex、sandbox-runtime（Apache 授權）。B 是改用 bwrap（會推翻 11-26 第 41 條），C 是整套換成 srt／Codex，D 是最外面再套虛擬機（中長期）。
 2. **等使用者回「照 A」**：回了就派 opus 照最小方案做六件，測項加上跟 Codex、srt 的對照。
 
-**main 換定義＋接 Discord（11-27 午）**：公司帳號開不了 remote control，改成用 Discord 私訊跟 main 講話。`wf/ws/main/def/` 已經換上，裡面有 artifact、上網、官方 discord 頻道外掛；拿掉了 `--strict-mcp-config`，**不給跳選項**、權限是 dontAsk，因為跳選項會讓 Discord 那頭卡住。理由寫在 README。token 放 `~/.claude/channels/discord/.env`，由使用者自己寫。重開後：使用者私訊機器人拿配對碼，在畫面打 `/discord:access pair <碼>`。**在 Discord 上回話一律用外掛的 reply 工具**，要給他看的長東西做成 artifact、把連結傳過去。
+**新分工（使用者 11-27 12:1x：「你掛一個用$AOS_HOME/templates/agents/eca-claude-alt的main-alt…留下handoff，我幫你compact後，我改用~/.claude來aos-agent open。然後事情都讓那個main-alt做」）**
+- **main**（這隻）：使用者 compact 後，會用 `CLAUDE_CONFIG_DIR=~/.claude aos-agent open -t main` 開畫面，也就是改用個人帳號，再開 remote control 在手機上跟它講話。公司帳號 `.claude-alt` 的政策不准 remote control，Discord 那條路已經放棄。main 只負責跟使用者講話和調度，**實際的工作都寄信交給 main-alt**，不在 main 自己的帳號上跑子 agent 隊。
+- **main-alt**：已經掛上 repo-aos daemon，範本是 `$AOS_HOME/templates/agents/eca-claude-alt`（`.claude-alt` 帳號、工作區 `~/repo/aos`），沒開畫面，靠收信一輪一輪做。父 stack 是 main，它的通知會回到 main。寄信用 `mailbox_send` 或 `aos-post send`；**信裡要給齊脈絡**，它沒有這段對話：指到本檔、`~/.aos/scratch/proto9-minplan-1127/report.md`、`~/.aos/scratch/proto9-wheels-1127/report.md`、pi沙箱-1127。
+- main 的定義 `wf/ws/main/def/`：Discord 拿掉了（外掛只裝在 `.claude-alt`，換成 `~/.claude` 後找不到會出事）。**跳選項加回來，權限改成 default**，因為 remote control 在手機上就能點。`--strict-mcp-config` 也恢復了。
+- 接續：已經在 `~/.claude/projects/-home-lorkhan-repo-aos/` 放了這段對話（`c273d56e…`）的 jsonl 和資料夾的連結，指回 `.claude-alt` 那份，換帳號用 `--resume` 照理接得上（沒實測）。記憶兩邊都有：`look-for-wheels-first`、`main-alt-does-the-work`。
+- 我掛錯過一隻 `phone`（用 eca-claude 加 `--envs CLAUDE_CONFIG_DIR`，結果畫面沒吃到這個設定），已經 `ctl rm`。stack 還留在 `procs/phone`，要清就 `ctl rm --purge`，或等使用者說。
+- Bun（`~/.bun`、`~/.local/bin/bun`）和 `.claude-alt` 的 discord 外掛（使用者層 disabled）都留著，沒有在用。
+
+**接著做**：使用者回「照 A」，就寄信給 main-alt：照最小方案做六件，測項加上跟 Codex、sandbox-runtime 的對照，子 agent 由它自己派；做完由它驗過再走 commit-request。main 驗收它的結果，再用 artifact 或跳選項給使用者看。
 
 **還開著**：中文版知識庫落後 36 頁（11-26 收工就說要派，還沒派）；公司那台：sky-1125／channels 的 abi3 欄要在 WSL 跑一次對照、aos-daemon 名字表改產生後要在 Ubuntu 編一次；11-26 子 agent 的【擬】18 條、決策審查停在第 3 題（`aos/ctl` 形狀，`/aos`→`/.aos` 後可能要重看）。
