@@ -8,20 +8,16 @@ main（這個 repo 的主線 agent）專用的定義：照 [eca-claude 範本](.
 
 ## 跟範本差在哪
 
-使用者 11-27 午發現公司帳號開不了 remote control（`policy-limits.json` 的 `allow_remote_control: false`），改用 Discord 跟 main 講話：「你能接入discord或chrome的line extension嗎？」→「弄」；「因爲你要是跳選項，那discord接不到，整個就會卡住」。
-
-`cli.json`：
+`cli.json`（11-27 午最後的版本）：
 
 | 改了什麼 | 為什麼 |
 |---|---|
-| `--tools`、`--allowedTools` 多加 `Artifact`、`ArtifactComments`、`ArtifactData`、`ArtifactCheck`、`WebSearch`、`WebFetch`、`ToolSearch`、`Monitor`（`--allowedTools` 另多加 `Agent,Skill`） | 用 artifact 給手機看結果；上網找輪子 |
-| **不給 `AskUserQuestion`**，權限照範本用 `dontAsk` | 跳選項或跳權限詢問都要人在畫面前按，人在 Discord 上就會卡住。dontAsk 下清單外的工具直接拒絕，不等人。11-27 實測：dontAsk 下 `AskUserQuestion` 就算列進放行清單也會被拒 |
-| 拿掉 `--strict-mcp-config` | 實測這個開關會連外掛的 MCP 一起擋掉；repo 沒有 `.mcp.json`，拿掉不會多載入別的 server |
-| 加 `--channels plugin:discord@claude-plugins-official`、`settings.enabledPlugins` 開 `discord@claude-plugins-official`、放行 `mcp__plugin_discord_discord` | Anthropic 官方的 Discord 頻道外掛：私訊機器人＝送進這個 session，回覆經它的 `reply` 工具送回去 |
+| `--tools`、`--allowedTools` 多加 `AskUserQuestion`、`Artifact`、`ArtifactComments`、`ArtifactData`、`ArtifactCheck`、`WebSearch`、`WebFetch`、`ToolSearch`、`Monitor`（`--allowedTools` 另多加 `Agent,Skill`） | 在手機上跳選項給使用者點、用 artifact 給他看結果、上網找輪子 |
+| `--permission-mode` 改成 `default` | 11-27 實測：在 dontAsk 下，`AskUserQuestion` 就算列進放行清單也一律被拒。改成 default 後，放行清單裡的工具不問就做；清單外的工具在畫面上（含 remote control）問人，沒有畫面的 `claude -p` 照舊拒絕 |
 
-外掛只在 main 這份設定裡開；使用者帳號那層（`~/.claude-alt/settings.json`）設成 `false`，免得一般的 claude 也去連同一隻機器人。外掛的 MCP 由 `bun` 跑：裝在 `~/.bun`，`~/.local/bin/bun` 是連結。機器人 token 放在 `~/.claude/channels/discord/.env`（`DISCORD_BOT_TOKEN=...`，由使用者自己寫，不進 repo，也不貼進對話）；配對狀態也存在同一個夾。
+經過：公司帳號（`~/.claude-alt`）的政策是 `allow_remote_control: false`。中間試過接 Discord：官方外掛、`--channels`、拿掉 `--strict-mcp-config`，後來使用者改成「main 用個人帳號 `~/.claude` 開畫面、走 remote control；工作交給 main-alt（`eca-claude-alt`）」，Discord 那套就全拿掉了。紀錄在 git 歷史與 `wf/HANDOFF.md`。這份定義不寫死帳號，帳號由開畫面那個殼的 `CLAUDE_CONFIG_DIR` 決定。
 
-只給 main 用，不改共用範本：範本也給 eca-aos-* 這些沒人盯著的 agent 用。
+只給 main 用，不改共用範本：範本也給 eca-aos-* 這些沒人盯的 agent 用，它們跳選項會一直卡著等人。
 
 ## 換上與換回
 
