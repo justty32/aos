@@ -1,0 +1,9 @@
+{
+  "description": "llm kernel to the LiteLLM proxy on this machine (127.0.0.1:4000): only chatgpt-gpt-6-luna-nothink, 10 requests per run; put it outside any net kernel (it needs this machine's network, the agent does not)",
+  "program": "llm_kernel.py",
+  "config": {
+    "upstream": "http://127.0.0.1:4000/v1",
+    "models": ["chatgpt-gpt-6-luna-nothink"],
+    "limit": 10
+  }
+}

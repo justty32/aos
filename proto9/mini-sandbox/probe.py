@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""What accept.py and stack_test.py run inside a mini sandbox instead of pi: one subcommand per check (check = several at once), one json line out (standard library only, so it also runs as python3 -I -c SOURCE where your home is closed)."""
+"""What accept.py, stack_test.py and llm_test.py run inside a mini sandbox instead of pi: one subcommand per check (check = several at once), one json line out (standard library only, so it also runs as python3 -I -c SOURCE where your home is closed)."""
 
 import glob
 import json
@@ -239,7 +239,7 @@ def read(path):
 def check(spec):
     """Several checks in one sandbox (stack_test.py); spec is a json object, each key optional:
     secret PATH, cpu SECONDS, pids N, mem MB, tcp [[HOST, PORT], ...], get [HOST, PORT, BYTES, MAX_TIME],
-    escape [UNIT, OUTFILE], umount PATH."""
+    escape [UNIT, OUTFILE], umount PATH, llm {posts, model, bad_model, state} (see llm_check)."""
     s = json.loads(spec)
     r = {"uid": os.getuid(), "cgroup": open("/proc/self/cgroup").read().strip(),
          "ifaces": sorted(n for _, n in socket.if_nameindex())}
@@ -325,12 +325,61 @@ def check(spec):
     if "escape" in s:
         r.update(("escape_" + k, v) for k, v in leaks_dict(*s["escape"]).items()
                  if k in ("systemd_run", "busctl", "run_user", "net"))
+    if "llm" in s:
+        r.update(llm_check(s["llm"]))
     if "umount" in s:
         import ctypes
         libc = ctypes.CDLL(None, use_errno=True)
         rc = libc.umount2(s["umount"].encode(), 2)  # MNT_DETACH
         r["umount"] = "ok" if rc == 0 else os.strerror(ctypes.get_errno())
     out(**r)
+
+
+def llm_post(sock, model, timeout=20):
+    """One chat request over a unix socket (HTTP/1.1); returns the status code or an error."""
+    body = json.dumps({"model": model, "messages": [{"role": "user", "content": "hi"}]}).encode()
+    try:
+        c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        c.settimeout(timeout)
+        c.connect(sock)
+        c.sendall(b"POST /v1/chat/completions HTTP/1.1\r\nHost: llm\r\nContent-Type: application/json\r\n"
+                  b"Connection: close\r\nContent-Length: %d\r\n\r\n" % len(body) + body)
+        head = c.recv(64)
+        c.close()
+        return int(head.split()[1]) if head.startswith(b"HTTP/") else "no answer"
+    except (OSError, ValueError, IndexError) as e:
+        return err(e)
+
+
+def llm_check(spec):
+    """What the agent sees of an llm kernel: its aos/llm declaration (found through $AOS_ENV), N requests over the
+    declared socket, other llm sockets it can find on the disk, and the kernel's state folder."""
+    r = {}
+    decl = os.path.join(os.environ.get("AOS_ENV", "/nonexistent"), ".aos", "interfaces", "aos", "llm")
+    try:
+        sock = open(os.path.join(decl, "path")).read().strip()
+        r["llm_network"] = open(os.path.join(decl, "network")).read().split(":")[0]
+    except OSError as e:
+        r["llm_decl"] = err(e)
+        return r
+    r["llm_codes"] = [llm_post(sock, spec.get("model", "fake-model")) for _ in range(int(spec.get("posts", 1)))]
+    if spec.get("bad_model"):
+        r["llm_bad_model"] = llm_post(sock, spec["bad_model"])
+    r["llm_other_socks"] = {p: llm_post(p, spec.get("model", "fake-model"), 5)
+                            for p in sorted(glob.glob("/tmp/aos-mini-*/*-llm-*/sock")) if p != sock}
+    if spec.get("state"):
+        st = spec["state"]
+        try:
+            r["llm_state_list"] = sorted(os.listdir(st))
+        except OSError as e:
+            r["llm_state_list"] = err(e)
+        try:
+            with open(os.path.join(st, "budget.json"), "w") as f:
+                f.write('{"used": 0, "limit": 1000}\n')
+            r["llm_state_write"] = "wrote budget.json"
+        except OSError as e:
+            r["llm_state_write"] = err(e)
+    return r
 
 
 CMDS = {"cpu": cpu, "mem": mem, "pids": pids, "cgroup": cgroup, "procs": procs, "tcp": tcp, "get": http_get,

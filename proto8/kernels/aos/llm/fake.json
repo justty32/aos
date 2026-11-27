@@ -1,0 +1,15 @@
+{
+  "description": "llm kernel, scripted fake brain (no model is called): model fake-model, 50 requests per run; a first message with 'four steps' gets read, write, edit, bash (the acceptance task), anything else 'FAKE OK'",
+  "program": "llm_kernel.py",
+  "config": {
+    "upstream": "fake",
+    "models": ["fake-model"],
+    "limit": 50,
+    "fake_script": [{"when": "four steps", "steps": [
+      {"tool": "read", "args": {"path": "NOTES.md"}},
+      {"tool": "write", "args": {"path": "hello.txt", "content": "pinecone\n"}},
+      {"tool": "edit", "args": {"path": "config.ini", "edits": [{"oldText": "level = low", "newText": "level = high"}]}},
+      {"tool": "bash", "args": {"command": "python3 test_app.py"}},
+      {"text": "FAKE: ran the four steps"}]}]
+  }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stacking tests for mini --kernels: different kernels together, some of them, in other orders (uid in the middle must fail closed), the same kind twice (net in net, cgroup in cgroup, mask on mask: the tighter one wins), mini started inside mini, pi --fake through the stack, and nothing left over afterwards; PASS/FAIL/info lines."""
+"""Stacking tests for mini --kernels a,b,c: different kernels together, some of them (none: no --kernels), in other orders (uid in the middle must fail closed), the /run/user mask mini adds with a cgroup or net kernel (and --no-auto-mask), the same kind twice (net in net, cgroup in cgroup, mask on mask: the tighter one wins), mini started inside mini, pi --fake through the stack, and nothing left over afterwards; PASS/FAIL/info lines."""
 
 import sys
 
@@ -18,6 +18,7 @@ import accept as A  # noqa: E402  (test servers, last_json)
 HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.expanduser("~/.aos/scratch/proto9-mini-1127/stack")
 MINI, PROBE = os.path.join(HERE, "mini.py"), os.path.join(HERE, "probe.py")
+AOS_HOME = os.path.normpath(os.path.join(HERE, "..", "..", "proto8"))  # the kernels by name: $AOS_HOME/kernels
 HOST = "169.254.77.1"
 RESULTS = []
 
@@ -54,8 +55,10 @@ class Run:
         self.j = A.last_json(out)
 
 
-def mini(name, kernels, argv, cwd=None, timeout=120, while_running=None, env=None):
-    cmd = [sys.executable, MINI, "--name", name, "--cwd", cwd or BASE, "--kernels"] + kernels + ["--"] + argv
+def mini(name, kernels, argv, cwd=None, timeout=120, while_running=None, env=None, flags=()):
+    """mini.py --kernels a,b,c -- ARGV (no --kernels at all when the list is empty)."""
+    cmd = [sys.executable, MINI, "--name", name, "--cwd", cwd or BASE] + list(flags) + \
+        (["--kernels", ",".join(kernels)] if kernels else []) + ["--"] + argv
     p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                          env=dict(os.environ, **(env or {})))
     unit = "mini-%s-%d.scope" % (name, p.pid)
@@ -163,10 +166,17 @@ def escape_stop(unit):
     subprocess.run(["systemctl", "--user", "reset-failed", unit], capture_output=True)
 
 
-def judge(name, kernels, r, pa, pc, extra=""):
+def auto_masked(kernels, flags=()):
+    """mini.py adds aos/mask/run-user when a cgroup or net kernel is on and no mask is (unless --no-auto-mask)."""
+    return "--no-auto-mask" not in flags and any(("base" in k or "net" in k or "cg-" in k) for k in kernels) and \
+        not any("mask" in k for k in kernels)
+
+
+def judge(name, kernels, r, pa, pc, extra="", flags=()):
     """One combination: every limit of the kernels it has must hold; what it does not have is shown as info."""
     j = r.j
-    has = lambda kind: any(kind in k for k in kernels)
+    auto = auto_masked(kernels, flags)
+    has = lambda kind: any(kind in k for k in kernels) or (kind == "mask" and auto)
     if not j:
         record(name, False, "no answer: rc %s err %s" % (r.rc, r.err.strip()[-300:]))
         return
@@ -185,51 +195,60 @@ def judge(name, kernels, r, pa, pc, extra=""):
         (got if j["ifaces"] == ["lo"] else bad).append("no net (ifaces %s)" % j["ifaces"])
     blocked = not str(j.get("escape_busctl", "rc 0")).startswith("rc 0") and \
         not str(j.get("escape_systemd_run", "rc 0")).startswith("rc 0")
+    said = "added aos/mask/run-user" in r.err
+    if auto != said:
+        bad.append("mask added by mini: %s, expected %s" % (said, auto))
+    elif auto:
+        got.append("mask added by mini")
     if has("mask") or has("uid"):
         (got if blocked else bad).append("escape blocked (busctl: %s)" % str(j.get("escape_busctl"))[:60])
     else:
-        got.append("escape OPEN, as without a mask (busctl %s)" % str(j.get("escape_busctl"))[:30])
+        (bad if blocked else got).append("escape OPEN, as without a mask (busctl %s)" % str(j.get(
+            "escape_busctl"))[:30])
     if has("uid"):
         (got if j["uid"] == 1 and "Permission" in j.get("secret", "") else bad).append(
             "uid %s, 600 file %s" % (j["uid"], j.get("secret")))
     else:
         (got if j["uid"] == 0 and j.get("secret", "").startswith("read") else bad).append("uid 0, 600 file read")
-    record(name, not bad, "[%s] %s%s" % (" ".join(kernels) or "no kernels", "; ".join(bad + got), extra))
+    record(name, not bad, "[%s%s] %s%s" % (",".join(kernels) or "no --kernels", " " + " ".join(flags) if flags else "",
+                                           "; ".join(bad + got), extra))
 
 
 def matrix(pa, pc, secret):
     log("\n== a. different kernels together, some of them, other orders")
     combos = [
-        ("a_none", []),
-        ("a_base", ["t/base"]),
-        ("a_base_net", ["t/base", "t/net-ab"]),
-        ("a_base_mask", ["t/base", "aos/mask/run-user"]),
-        ("a_base_mask_uid", ["t/base", "aos/mask/run-user", "aos/uid/1"]),
-        ("a_all", ["t/base", "t/net-ab", "aos/mask/run-user", "aos/uid/1"]),
-        ("a_mask_outermost", ["aos/mask/run-user", "t/base", "t/net-ab", "aos/uid/1"]),
-        ("a_net_outermost", ["t/net-ab", "t/base", "aos/mask/run-user", "aos/uid/1"]),
-        ("a_mask_inside_net", ["t/base", "t/net-ab", "aos/mask/run-user"]),
+        ("a_none", [], ()),
+        ("a_base", ["t/base"], ()),
+        ("a_base_no_auto_mask", ["t/base"], ("--no-auto-mask",)),
+        ("a_base_net", ["t/base", "t/net-ab"], ()),
+        ("a_base_net_no_auto_mask", ["t/base", "t/net-ab"], ("--no-auto-mask",)),
+        ("a_base_mask", ["t/base", "aos/mask/run-user"], ()),
+        ("a_base_mask_uid", ["t/base", "aos/mask/run-user", "aos/uid/1"], ()),
+        ("a_all", ["t/base", "t/net-ab", "aos/mask/run-user", "aos/uid/1"], ()),
+        ("a_mask_outermost", ["aos/mask/run-user", "t/base", "t/net-ab", "aos/uid/1"], ()),
+        ("a_net_outermost", ["t/net-ab", "t/base", "aos/mask/run-user", "aos/uid/1"], ()),
+        ("a_mask_inside_net", ["t/base", "t/net-ab", "aos/mask/run-user"], ()),
     ]
-    for name, ks in combos:
+    for name, ks, flags in combos:
         unit = "mini-stk-%s-%d.service" % (name.replace("_", "-"), os.getpid())
         outfile = os.path.join(BASE, name + ".escape")
         spec = {"secret": secret, "tcp": [[HOST, pa], [HOST, pc]], "escape": [unit, outfile]}
         if "t/base" in ks:
             spec.update(cpu=1.5, pids=100, mem=400)
-        if "aos/mask/run-user" in ks and "aos/uid/1" not in ks:
+        if ("aos/mask/run-user" in ks or auto_masked(ks, flags)) and "aos/uid/1" not in ks:
             spec["umount"] = "/run/user/%d" % os.getuid()
         env = {"XDG_RUNTIME_DIR": os.environ.get("XDG_RUNTIME_DIR", ""),
                "DBUS_SESSION_BUS_ADDRESS": os.environ.get("DBUS_SESSION_BUS_ADDRESS", "")}
         argv = ["env"] + ["%s=%s" % kv for kv in env.items()] + check_argv(spec)
         watch = where_is_pasta if "t/net-ab" in ks else None
-        r = mini(name.replace("_", "-"), ks, argv, cwd="/", while_running=watch)
+        r = mini(name.replace("_", "-"), ks, argv, cwd="/", while_running=watch, flags=flags)
         extra = ""
         if r.seen:
             extra = "; pasta in %s, %s the cgroup limits" % (r.seen["cgroup"],
                                                               "under" if r.seen["under_limits"] else "OUTSIDE")
         if "umount" in spec:
             extra += "; umount of the mask inside: %s" % r.j.get("umount")
-        judge(name, ks, r, pa, pc, extra)
+        judge(name, ks, r, pa, pc, extra, flags)
         if "umount" in spec and r.j.get("umount") == "ok":
             record(name + "_mask_kept", False, "the agent could remove the mask")
         escape_stop(unit)
@@ -292,13 +311,14 @@ def nested(pa, pb, pc):
     log("\n== c. mini inside mini (the agent starts another sandbox): never looser than the outer one")
     outer = ["t/cg-tight", "aos/mask/run-user", "t/net-ab"]
     env = ["env", "MINI_PASTA=%s" % os.environ["MINI_PASTA"], "MINI_KERNELS_PATH=%s" % os.environ["MINI_KERNELS_PATH"],
+           "AOS_HOME=%s" % os.environ["AOS_HOME"],
            "XDG_RUNTIME_DIR=%s" % os.environ.get("XDG_RUNTIME_DIR", ""),
            "DBUS_SESSION_BUS_ADDRESS=%s" % os.environ.get("DBUS_SESSION_BUS_ADDRESS", "")]
     for name, inner in (("c_mini_in_mini_looser", ["t/cg-loose", "t/net-ac-10mb"]), ("c_mini_in_mini_bare", [])):
         unit = "mini-stk-%s-%d.service" % (name.replace("_", "-"), os.getpid())
         spec = {"cpu": 1.5, "pids": 100, "mem": 400, "tcp": [[HOST, pa], [HOST, pb], [HOST, pc]],
                 "escape": [unit, os.path.join(BASE, name + ".escape")]}
-        argv = env + ["python3", MINI, "--name", "inner", "--kernels"] + inner + ["--", "sh", "-c",
+        argv = env + ["python3", MINI, "--name", "inner"] + (["--kernels", ",".join(inner)] if inner else []) + ["--", "sh", "-c",
                       "cat $AOS_ENV/.aos/kernels | tr '\\n' ','; echo; exec \"$@\"", "sh"] + check_argv(spec)
         r = mini(name.replace("_", "-"), outer, argv)
         j = r.j
@@ -403,7 +423,8 @@ def main():
     shutil.rmtree(BASE, ignore_errors=True)
     os.makedirs(BASE)
     os.environ["MINI_PASTA"] = pasta
-    os.environ["MINI_KERNELS_PATH"] = "%s:%s" % (os.path.join(BASE, "kernels"), os.path.join(HERE, "kernels"))
+    os.environ["MINI_KERNELS_PATH"] = os.path.join(BASE, "kernels")  # t/...; aos/... from this checkout's proto8
+    os.environ["AOS_HOME"] = AOS_HOME
     servers = [A.start_server() for _ in range(3)]
     pa, pb, pc = (s.server_address[1] for s in servers)
     before = snapshot((pa, pb, pc))

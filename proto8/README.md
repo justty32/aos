@@ -27,6 +27,7 @@
 | [frontend/](frontend/API.md) | 選配的網頁外掛：全景頁 `aos-frontend`（後端 Python 標準庫；v2 網頁原始碼在 `ui/v2/`，`dist/` 不進 git，要 Node 才建得出來，見 [ui/v2/README](frontend/ui/v2/README.md)）；aide 定義的差異檔 `aide-def/`、systemd 範例、測試也在這夾 |
 | [py/](py/README.md) | Python 原始碼（11-18 S3 前叫 `lib/`）：agent 用的工具在 `py/tools/`（底層原語 → 動 aos 的 → 整隻 agent）；機讀的協議定義在 [py/schema/](py/schema/README.md)；共用模組在一個套件 [py/aos/](py/aos/)（`aos.flags`、`aos.ws`、`aos.daemon_ctl` 等，說明在 [py/docs/04](py/docs/04-共用模組.md)）。安裝後的抄本在 `lib/`（不進 git，執行期認它） |
 | [templates/](templates/README.md) | 起手範本 [start-api](templates/starts/start-api/README.md)、[start-eca](templates/starts/start-eca/README.md)（一包抄好一棵樹：根＋一隻 agent＋樹裡的 `env.sh`，`cp -r` 一行；11-18 S6）；agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent）等；kernel 範本在 [templates/kernels/](templates/kernels/README.md)：llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |
+| [kernels/](kernels/README.md) | proto9 `mini-sandbox` 照名字找的 kernel 設定（`--kernels aos/base-low,aos/llm/fake`；一個名字＝一份 `<名字>.json`；使用者 11-27 定放 `$AOS_HOME/kernels/`）。跟上一列 `templates/kernels/`（proto8 掛在 daemon 上的 llm-kernel 等範本）是兩回事 |
 | [knowledge/](knowledge/README.md) | 出廠內容樹：普通資料夾＋`.json`，用一般檔案／json 工具讀；第一本是 `aos/`——給小模型的 aos 體系說明（英文） |
 | [archive/](archive/README.md) | 封存（11-17 重建：langs、tree-swap、aos-home；清單在它的 README） |
 | [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論）；使用者自己的意見稿 11-22 搬到 repo 根的 [`wf/user/advice/`](../wf/user/advice/) |

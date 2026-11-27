@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""mini: runs one command in the smallest sandbox, the one line systemd-run --user --scope (cpu, mem, pids) + unshare -UrmpnC (own user, mount, pid, net, cgroup namespaces), optional net kernel and uid N; or, with --kernels, nests kernels found by name (each one runs the next inside the environment it set up) around the command; everything else is left open."""
+"""mini: runs one command in the smallest sandbox, the one line systemd-run --user --scope (cpu, mem, pids) + unshare -UrmpnC (own user, mount, pid, net, cgroup namespaces), optional net kernel and uid N; or, with --kernels a,b,c, nests kernels found by name in $AOS_HOME/kernels (each one runs the next inside the environment it set up; a cgroup, net or llm kernel brings the /run/user mask along) around the command; everything else is left open."""
 
 import argparse
 import json
 import os
 import pwd
+import re
 import shlex
 import shutil
 import signal
@@ -207,15 +208,35 @@ def give_back(paths):
 
 # ------------------------------------------------------------ --kernels: nested kernels found by name
 
+KINDS = {"cg_kernel.py": "cgroup", "net_kernel.py": "net", "mask_kernel.py": "mask", "uid_kernel.py": "uid",
+         "llm_kernel.py": "llm"}
+AUTO_MASK = "aos/mask/run-user"
+AUTO_MASK_FOR = ("cgroup", "net", "llm")  # limits that one call over D-Bus to systemd --user would get around
+KERNELS_USAGE = ("mini.py [--name N] [--cwd D] [--dry-run|--print] [--kernels NAME,NAME,...] [--no-auto-mask] "
+                 "-- COMMAND...")
+
+
 def kernel_dirs():
-    """Where names are looked up, first match wins: $MINI_KERNELS_PATH (folders separated by :), else kernels/
-    next to this file."""
-    return [d for d in (os.environ.get("MINI_KERNELS_PATH") or os.path.join(HERE, "kernels")).split(":") if d]
+    """Where names are looked up, first match wins: the folders in $MINI_KERNELS_PATH (separated by :), then
+    $AOS_HOME/kernels."""
+    dirs = [d for d in os.environ.get("MINI_KERNELS_PATH", "").split(":") if d]
+    if os.environ.get("AOS_HOME"):
+        dirs.append(os.path.join(os.environ["AOS_HOME"], "kernels"))
+    return dirs
+
+
+def kernel_program(prog, jsonfile):
+    """A bare file name (cg_kernel.py) is one of mini's own programs, next to mini.py; otherwise $VARS and ~ are
+    expanded and a relative path is relative to the folder of the kernel's json file."""
+    if "/" not in prog and "$" not in prog:
+        return os.path.join(HERE, prog)
+    p = os.path.expanduser(os.path.expandvars(prog))
+    return p if os.path.isabs(p) else os.path.normpath(os.path.join(os.path.dirname(jsonfile), p))
 
 
 def find_kernel(name):
-    """A name (aos/base-low) -> {name, program, config, file}. A name that is a path (has a leading / or ./, or
-    ends in .json) is that file."""
+    """A name (aos/base-low) -> {name, kind, program, config, file}. A name that is a path (has a leading / or ./,
+    or ends in .json) is that file."""
     if name.startswith(("/", "./", "../", "~")) or name.endswith(".json"):
         path = os.path.abspath(os.path.expanduser(name))
         if not os.path.isfile(path):
@@ -223,9 +244,13 @@ def find_kernel(name):
     else:
         if ".." in name.split("/") or not name.strip("/"):
             raise ValueError("kernel name %r: want a/b/c, no .." % name)
-        found = [os.path.join(d, name + ".json") for d in kernel_dirs() if os.path.isfile(os.path.join(d, name + ".json"))]
+        dirs = kernel_dirs()
+        if not dirs:
+            raise ValueError("kernel %s: nowhere to look (set AOS_HOME, whose kernels/ holds the kernels by name, "
+                             "or MINI_KERNELS_PATH)" % name)
+        found = [os.path.join(d, name + ".json") for d in dirs if os.path.isfile(os.path.join(d, name + ".json"))]
         if not found:
-            raise ValueError("kernel %s: not found in %s" % (name, ":".join(kernel_dirs())))
+            raise ValueError("kernel %s: not found in %s" % (name, ":".join(dirs)))
         path = found[0]
     with open(path) as f:
         k = json.load(f)
@@ -234,42 +259,85 @@ def find_kernel(name):
     bad = set(k) - {"description", "program", "config"}
     if bad:
         raise ValueError("kernel %s: unknown keys %s" % (name, ", ".join(sorted(bad))))
-    prog = k["program"] if os.path.isabs(k["program"]) else os.path.join(HERE, k["program"])
+    prog = kernel_program(k["program"], path)
     if not os.path.isfile(prog):
         raise ValueError("kernel %s: program %s not found" % (name, prog))
-    return {"name": name, "program": prog, "config": k.get("config", {}), "file": path}
+    return {"name": name, "kind": KINDS.get(os.path.basename(prog), "other"), "program": prog,
+            "config": k.get("config", {}), "file": path}
 
 
 def parse_kernels_args(args):
-    o = {"kernels": [], "name": "mini", "cwd": os.getcwd(), "dry_run": False, "print": False}
+    o = {"kernels": [], "name": "mini", "cwd": os.getcwd(), "dry_run": False, "print": False, "auto_mask": True}
     if "--" not in args:
-        fail("ArgumentsBad", "want: mini.py [--name N] [--cwd D] [--dry-run|--print] --kernels NAME... -- COMMAND...", 2)
+        fail("ArgumentsBad", "want: " + KERNELS_USAGE, 2)
     i = args.index("--")
     own, o["argv"] = args[:i], args[i + 1:]
-    k, in_names = 0, False
+    k = 0
     while k < len(own):
         a = own[k]
-        if a in ("--name", "--cwd") and k + 1 < len(own):
-            o[a[2:]] = own[k + 1]
+        if a.startswith("--kernels="):
+            a, own = "--kernels", own[:k] + ["--kernels", a.split("=", 1)[1]] + own[k + 1:]
+        if a in ("--name", "--cwd", "--kernels") and k + 1 < len(own):
+            if a == "--kernels":  # one argument, names separated by commas (several --kernels add up)
+                o["kernels"] += [n.strip() for n in own[k + 1].split(",") if n.strip()]
+            else:
+                o[a[2:]] = own[k + 1]
             k += 2
-            in_names = False
         elif a in ("--dry-run", "--print"):
             o[a[2:].replace("-", "_")] = True
             k += 1
-            in_names = False
-        elif a == "--kernels":
-            in_names = True
-            k += 1
-        elif in_names and not a.startswith("--"):
-            o["kernels"].append(a)
+        elif a == "--no-auto-mask":
+            o["auto_mask"] = False
             k += 1
         else:
-            fail("ArgumentsBad", "unknown option %r" % a, 2)
+            fail("ArgumentsBad", "unknown option %r (want: %s)" % (a, KERNELS_USAGE), 2)
     if not o["argv"]:
         fail("ArgumentsBad", "nothing to run after --", 2)
     if not str(o["name"]).replace("-", "").replace("_", "").isalnum():
         fail("ArgumentsBad", "--name: letters, digits, - and _ only", 2)
     return o
+
+
+def covers_run_user(k):
+    """Does this mask kernel cover /run/user/<uid> (its default when it lists no paths)?"""
+    paths = k["config"].get("paths")
+    if paths is None:
+        return True
+    return any((p if isinstance(p, str) else p.get("path", "")).rstrip("/") in ("/run/user/{uid}",
+               "/run/user/%d" % os.getuid(), "/run/user") for p in paths)
+
+
+def add_auto_mask(ks):
+    """With a cgroup, net or llm kernel on and nothing covering /run/user/<uid>: add aos/mask/run-user, innermost
+    (just before a uid kernel, which must stay last), so nothing inside can ask systemd --user over D-Bus for a
+    process outside every limit. Returns the new list and whether it added one."""
+    if not any(k["kind"] in AUTO_MASK_FOR for k in ks) or any(k["kind"] == "mask" and covers_run_user(k) for k in ks):
+        return ks, False
+    try:
+        m = find_kernel(AUTO_MASK)
+    except (OSError, ValueError):  # not in the kernels folders: the same thing, built in
+        m = {"name": AUTO_MASK, "kind": "mask", "program": os.path.join(HERE, "mask_kernel.py"),
+             "config": {"paths": [{"path": "/run/user/{uid}", "how": "tmpfs"}]}, "file": "(built in)"}
+    at = next((i for i, k in enumerate(ks) if k["kind"] == "uid"), len(ks))
+    return ks[:at] + [m] + ks[at:], True
+
+
+def llm_bypass_warnings(ks):
+    """An llm kernel whose upstream is a port on this machine, and a net kernel further in that lets that port
+    through: the agent could talk to the upstream directly, uncounted."""
+    out = []
+    for i, k in enumerate(ks):
+        up = str(k["config"].get("upstream", "")) if k["kind"] == "llm" else ""
+        m = re.match(r"^https?://(127\.0\.0\.1|localhost)(?::(\d+))?(/|$)", up)
+        if not m:
+            continue
+        port = int(m.group(2) or (443 if up.startswith("https") else 80))
+        for n in ks[i + 1:]:
+            hp = n["config"].get("host_ports", []) if n["kind"] == "net" else []
+            if port in [p if isinstance(p, int) else p.get("port") for p in hp]:
+                out.append("%s lets host port %d through, the upstream of %s: the agent can reach it directly, "
+                           "around the llm kernel's count" % (n["name"], port, k["name"]))
+    return out
 
 
 def root_env(run):
@@ -301,6 +369,13 @@ def kernels_main(args):
         ks = [find_kernel(n) for n in o["kernels"]]
     except (OSError, ValueError) as e:
         fail("KernelNotFound", str(e), 2)
+    if o["auto_mask"]:
+        ks, added = add_auto_mask(ks)
+        if added:
+            print("mini: added %s innermost (a cgroup, net or llm kernel is on; --no-auto-mask leaves /run/user/%d "
+                  "open)" % (AUTO_MASK, os.getuid()), file=sys.stderr, flush=True)
+    for w in llm_bypass_warnings(ks):
+        print("mini: warning: " + w, file=sys.stderr, flush=True)
     scoped = os.readlink("/proc/self/ns/cgroup") == INIT_CGROUP_NS  # outside any sandbox: make a scope
     unit = "mini-%s-%d.scope" % (o["name"], os.getpid()) if scoped else None
     env = default_env()
@@ -363,20 +438,28 @@ def kernels_main(args):
     sys.exit(128 - rc if rc < 0 else rc)
 
 
+def kernels_mode(args):
+    """--kernels-style options, or a -- with no config file before it (no --kernels = no kernels at all)."""
+    own = args[:args.index("--")] if "--" in args else args
+    if any(a.startswith("--kernels") or a in ("--name", "--cwd", "--no-auto-mask") for a in own):
+        return True
+    return "--" in args and not [a for a in own if not a.startswith("-")]
+
+
 def main():
     if len(sys.argv) >= 2 and sys.argv[1] == "--inside":
         return inside(sys.argv[2:])
-    if "--kernels" in sys.argv[1:sys.argv.index("--") if "--" in sys.argv else None]:
-        return kernels_main(sys.argv[1:])
     if len(sys.argv) >= 2 and sys.argv[1] == "--give-back":
         if len(sys.argv) < 3:
             fail("ArgumentsBad", "--give-back DIR...", 2)
         return give_back(sys.argv[2:])
+    if kernels_mode(sys.argv[1:]):
+        return kernels_main(sys.argv[1:])
     ap = argparse.ArgumentParser(prog=PROG, description="Run one command in the minimal sandbox described by a "
                                  "json config; exits with the command's code (128+N if killed by signal N).",
                                  epilog="Also: mini.py --give-back DIR... (chown files written as uid N back to you); mini.py [--name N] "
-                                 "[--cwd D] [--dry-run|--print] --kernels NAME... -- COMMAND... (nest kernels by name, "
-                                 "see README)")
+                                 "[--cwd D] [--dry-run|--print] [--kernels NAME,NAME,...] [--no-auto-mask] -- COMMAND... "
+                                 "(nest kernels by name, see README)")
     ap.error = lambda m: fail("ArgumentsBad", "%s (usage: %s --help)" % (m, PROG), 2)
     ap.add_argument("config", help="json: name, argv, cwd, env, cpu, mem, pids, net, uid (see README)")
     ap.add_argument("argv", nargs="*", help="after --: the command, instead of the config's argv")

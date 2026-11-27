@@ -1,0 +1,24 @@
+{
+ "description": "proto8/kernels 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。誰連誰、誰 import 誰、bin/ 指令對哪個檔看 wf/knowledge/code-map/deps/。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "aos": {
+   "base-high.json": "cgroup kernel, higher limits: 2 cores, 4G memory (no swap), 1024 processes/threads",
+   "base-low.json": "cgroup kernel, low limits: 20% of one core, 512M memory (no swap), 64 processes/threads",
+   "llm": {
+    "fake.json": "llm kernel, scripted fake brain (no model is called): model fake-model, 50 requests per run; a first message with 'four steps' gets read, write, edit…",
+    "litellm-luna.json": "llm kernel to the LiteLLM proxy on this machine (127.0.0.1:4000): only chatgpt-gpt-6-luna-nothink, 10 requests per run; put it outside any net kernel…"
+   },
+   "mask": {
+    "run-user.json": "mask kernel: cover /run/user/<your uid> with an empty folder (no systemd --user, no D-Bus session bus, no Wayland/PipeWire sockets)",
+    "ssh.json": "mask kernel: cover ~/.ssh with an empty folder (an example of masking one more path)"
+   },
+   "net": {
+    "base-litellm-proxy.json": "net kernel: only the LiteLLM proxy on the machine outside (127.0.0.1:4000, seen inside as 169.254.77.1:4000); 16mbit down, 8mbit up, 200 MB in all"
+   },
+   "uid": {
+    "1.json": "uid kernel: everything inside runs as uid 1 (outside: your first subordinate id); put it last"
+   }
+  }
+ }
+}
