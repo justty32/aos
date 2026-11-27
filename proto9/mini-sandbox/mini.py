@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""mini: runs one command in the smallest sandbox, the one line systemd-run --user --scope (cpu, mem, pids) + unshare -UrmpnC (own user, mount, pid, net, cgroup namespaces), optional net kernel and uid N; or, with --kernels a,b,c, nests kernels found by name in $AOS_HOME/kernels (each one runs the next inside the environment it set up; a cgroup, net or llm kernel brings the /run/user mask along; a net kernel inside an llm kernel that lets the llm's upstream through is refused) around the command; everything else is left open."""
+"""mini: runs one command in the smallest sandbox, the one line systemd-run --user --scope (cpu, mem, pids) + unshare -UrmpnC (own user, mount, pid, net, cgroup namespaces), optional net kernel and uid N; or, with --kernels a,b,c, nests kernels found by name in $AOS_HOME/kernels (a name may be a bundle: a folder whose _chain.json lists more names, expanded in place; each kernel runs the next inside the environment it set up; a cgroup, net or llm kernel brings the /run/user mask along; a net kernel inside an llm kernel that lets the llm's upstream through is refused) around the command; everything else is left open."""
 
 import argparse
 import ipaddress
@@ -235,36 +235,139 @@ def kernel_program(prog, jsonfile):
     return p if os.path.isabs(p) else os.path.normpath(os.path.join(os.path.dirname(jsonfile), p))
 
 
-def find_kernel(name):
-    """A name (aos/base-low) -> {name, kind, program, config, file}. A name that is a path (has a leading / or ./,
-    or ends in .json) is that file."""
-    if name.startswith(("/", "./", "../", "~")) or name.endswith(".json"):
-        path = os.path.abspath(os.path.expanduser(name))
-        if not os.path.isfile(path):
-            raise ValueError("kernel %s: no such file" % name)
-    else:
-        if ".." in name.split("/") or not name.strip("/"):
-            raise ValueError("kernel name %r: want a/b/c, no .." % name)
-        dirs = kernel_dirs()
-        if not dirs:
-            raise ValueError("kernel %s: nowhere to look (set AOS_HOME, whose kernels/ holds the kernels by name, "
-                             "or MINI_KERNELS_PATH)" % name)
-        found = [os.path.join(d, name + ".json") for d in dirs if os.path.isfile(os.path.join(d, name + ".json"))]
-        if not found:
-            raise ValueError("kernel %s: not found in %s" % (name, ":".join(dirs)))
-        path = found[0]
+CHAIN = "_chain.json"   # a folder with this file is a bundle: one name that stands for a chain of kernels
+MAX_BUNDLE_DEPTH = 8    # bundles inside bundles, at most this deep
+
+
+class KernelError(ValueError):
+    """Finding or expanding kernel names went wrong; code is the error code mini prints (exit 2)."""
+
+    def __init__(self, code, msg):
+        super().__init__(msg)
+        self.code = code
+
+
+def is_path(name):
+    return name.startswith(("/", "./", "../", "~")) or name.endswith(".json")
+
+
+def check_name(name):
+    if ".." in name.split("/") or not name.strip("/") or "//" in name or name.startswith("_") or "/_" in name:
+        raise KernelError("KernelNotFound", "kernel name %r: want a/b/c (no .., no part starting with _)" % name)
+
+
+def lookup(name, dirs):
+    """A name in these folders, first folder that has it wins: ("file", NAME.json) or ("bundle", NAME/). Both in one
+    folder is an error: which one is meant is not guessed."""
+    for d in dirs:
+        f, b = os.path.join(d, name + ".json"), os.path.join(d, name)
+        hf, hb = os.path.isfile(f), os.path.isfile(os.path.join(b, CHAIN))
+        if hf and hb:
+            raise KernelError("KernelNameClash", "kernel %s: both %s (one kernel) and %s/ (a bundle, it has %s) "
+                              "exist; rename one of them" % (name, f, b, CHAIN))
+        if hf:
+            return "file", f
+        if hb:
+            return "bundle", b
+    raise KernelError("KernelNotFound", "kernel %s: not found in %s" % (name, ":".join(dirs)))
+
+
+def load_kernel(name, path):
+    """One kernel file -> {name, kind, program, config, file, from}."""
     with open(path) as f:
         k = json.load(f)
     if not isinstance(k, dict) or not isinstance(k.get("program"), str):
-        raise ValueError("kernel %s (%s): want {\"program\": ..., \"config\": {...}}" % (name, path))
+        raise KernelError("KernelNotFound", "kernel %s (%s): want {\"program\": ..., \"config\": {...}}" % (name, path))
     bad = set(k) - {"description", "program", "config"}
     if bad:
-        raise ValueError("kernel %s: unknown keys %s" % (name, ", ".join(sorted(bad))))
+        raise KernelError("KernelNotFound", "kernel %s: unknown keys %s" % (name, ", ".join(sorted(bad))))
     prog = kernel_program(k["program"], path)
     if not os.path.isfile(prog):
-        raise ValueError("kernel %s: program %s not found" % (name, prog))
+        raise KernelError("KernelNotFound", "kernel %s: program %s not found" % (name, prog))
     return {"name": name, "kind": KINDS.get(os.path.basename(prog), "other"), "program": prog,
-            "config": k.get("config", {}), "file": path}
+            "config": k.get("config", {}), "file": path, "from": []}
+
+
+def resolve(entry, bundle=None):
+    """A name -> (full name, "file" or "bundle", path). At the top (--kernels) and for a name with a / inside a
+    bundle: looked up in $MINI_KERNELS_PATH, then $AOS_HOME/kernels. Inside a bundle (bundle = (its name, its
+    folder)), a name without / (or starting with ./) is one of the bundle's own: cg in aos/base is aos/base/cg, found
+    in that folder only. A path (/..., ~..., ....json; at the top also ./...) is that file or bundle folder."""
+    if bundle and (entry.startswith("./") or "/" not in entry):
+        local = entry[2:] if entry.startswith("./") else entry
+        check_name(local)
+        bname, bdir = bundle
+        kind, path = lookup(local, [bdir])
+        return (bname.rstrip("/") + "/" + local if not is_path(bname) else os.path.join(bdir, local)), kind, path
+    if entry.startswith(("/", "~")) or (not bundle and is_path(entry)):
+        path = os.path.abspath(os.path.expanduser(entry))
+        if os.path.basename(path) == CHAIN and os.path.isfile(path):
+            return entry, "bundle", os.path.dirname(path)
+        if os.path.isdir(path) and os.path.isfile(os.path.join(path, CHAIN)):
+            return entry, "bundle", path
+        if not os.path.isfile(path):
+            raise KernelError("KernelNotFound", "kernel %s: no such file (or folder with %s)" % (entry, CHAIN))
+        return entry, "file", path
+    check_name(entry)
+    dirs = kernel_dirs()
+    if not dirs:
+        raise KernelError("KernelNotFound", "kernel %s: nowhere to look (set AOS_HOME, whose kernels/ holds the "
+                          "kernels by name, or MINI_KERNELS_PATH)" % entry)
+    kind, path = lookup(entry, dirs)
+    return entry, kind, path
+
+
+def load_chain(name, folder):
+    path = os.path.join(folder, CHAIN)
+    try:
+        with open(path) as f:
+            c = json.load(f)
+    except (OSError, ValueError) as e:
+        raise KernelError("KernelBundleBad", "bundle %s: %s: %s" % (name, path, e))
+    if not isinstance(c, dict) or set(c) - {"description", "chain"}:
+        raise KernelError("KernelBundleBad", "bundle %s: %s: want {\"description\": ..., \"chain\": [names, "
+                          "outermost first]}" % (name, path))
+    chain = c.get("chain")
+    if not isinstance(chain, list) or not chain or not all(isinstance(x, str) and x.strip() for x in chain):
+        raise KernelError("KernelBundleBad", "bundle %s: %s: chain must be a non-empty list of names" % (name, path))
+    return [x.strip() for x in chain]
+
+
+def expand(entry, bundle=None, stack=()):
+    """A name -> the kernels it stands for, outermost first: one kernel, or a bundle's chain expanded in place (each
+    kernel remembers the bundles it came from in "from", outermost first). stack: the bundles we are inside, as
+    (name, real folder); a bundle that is already in it is a loop, more than MAX_BUNDLE_DEPTH is too deep."""
+    full, kind, path = resolve(entry, bundle)
+    if kind == "file":
+        k = load_kernel(full, path)
+        k["from"] = [n for n, _ in stack]
+        return [k]
+    real = os.path.realpath(path)
+    trail = [n for n, _ in stack] + [full]
+    if real in [r for _, r in stack]:
+        raise KernelError("KernelBundleLoop", "bundles include each other: %s" % " -> ".join(trail))
+    if len(stack) >= MAX_BUNDLE_DEPTH:
+        raise KernelError("KernelBundleTooDeep", "bundles nested more than %d deep: %s" % (
+            MAX_BUNDLE_DEPTH, " -> ".join(trail)))
+    out = []
+    for e in load_chain(full, path):
+        out += expand(e, (full, path), tuple(stack) + ((full, real),))
+    return out
+
+
+def find_kernel(name):
+    """A name -> the list of kernels it stands for (one, or a bundle's chain expanded)."""
+    return expand(name)
+
+
+def shown(k):
+    """aos/base/cg (from aos/base)."""
+    return k["name"] + (" (from %s)" % ">".join(k["from"]) if k.get("from") else "")
+
+
+def layer_line(k):
+    """The line a kernel adds to .aos/kernels (the kernel writes it; mini shows the same with --dry-run)."""
+    return "%s %s" % (k["kind"], k["name"]) + (" from %s" % ">".join(k["from"]) if k.get("from") else "")
 
 
 def parse_kernels_args(args):
@@ -316,9 +419,13 @@ def add_auto_mask(ks):
         return ks, False
     try:
         m = find_kernel(AUTO_MASK)
+        if len(m) != 1 or m[0]["kind"] != "mask":
+            raise ValueError("not one mask kernel")
+        m = m[0]
     except (OSError, ValueError):  # not in the kernels folders: the same thing, built in
         m = {"name": AUTO_MASK, "kind": "mask", "program": os.path.join(HERE, "mask_kernel.py"),
-             "config": {"paths": [{"path": "/run/user/{uid}", "how": "tmpfs"}]}, "file": "(built in)"}
+             "config": {"paths": [{"path": "/run/user/{uid}", "how": "tmpfs"}]}, "file": "(built in)", "from": []}
+    m = dict(m, auto=True)
     at = next((i for i, k in enumerate(ks) if k["kind"] == "uid"), len(ks))
     return ks[:at] + [m] + ks[at:], True
 
@@ -355,7 +462,7 @@ def llm_bypasses(ks):
                 out.append("%s (net kernel) lets %s:%d through (its %s), and it sits inside %s (llm kernel), whose "
                            "upstream is %s: the agent could reach the upstream directly, around the llm kernel's count "
                            "and model list. Put %s before %s in --kernels (outside it), or take port %d out of its %s"
-                           % (n["name"], host, port, how, k["name"], up, n["name"], k["name"], port, how))
+                           % (shown(n), host, port, how, shown(k), up, n["name"], k["name"], port, how))
     return out
 
 
@@ -374,12 +481,23 @@ def lets_through(c, ip, port):
     return None
 
 
+def outer_layers():
+    """How many layers an outer environment already has (mini started inside a sandbox), so the numbers go on."""
+    outer = os.environ.get("AOS_ENV") or "/"
+    try:
+        with open(os.path.join(outer, ".aos", "kernels")) as f:
+            return len([l for l in f.read().splitlines() if l.strip()])
+    except OSError:
+        return 0
+
+
 def root_env(run):
     """The folder the outermost kernel reads: nothing declared yet, plus who you are on the machine. Inside a
     sandbox that has one already (mini started by the agent), start from a copy of that one."""
     root = os.path.join(run, "0-root")
-    outer = os.environ.get("AOS_ENV")
-    if outer and os.path.isdir(os.path.join(outer, ".aos")):
+    outer = os.environ.get("AOS_ENV") or "/"  # the rule: $AOS_ENV first, / when it is not set
+    if os.path.isdir(os.path.join(outer, ".aos", "interfaces")) or (outer != "/" and os.path.isdir(os.path.join(
+            outer, ".aos"))):
         shutil.copytree(os.path.join(outer, ".aos"), os.path.join(root, ".aos"), symlinks=True)
     else:
         os.makedirs(os.path.join(root, ".aos"))
@@ -399,8 +517,12 @@ def root_env(run):
 
 def kernels_main(args):
     o = parse_kernels_args(args)
+    ks = []
     try:
-        ks = [find_kernel(n) for n in o["kernels"]]
+        for n in o["kernels"]:
+            ks += find_kernel(n)
+    except KernelError as e:
+        fail(e.code, str(e), 2)
     except (OSError, ValueError) as e:
         fail("KernelNotFound", str(e), 2)
     bad = llm_bypasses(ks)  # before anything runs (--dry-run too): this order is refused, not warned about
@@ -421,14 +543,20 @@ def kernels_main(args):
         leaf_src = f.read()
     chain = []
     for k in ks:
-        chain += [sys.executable, "-I", k["program"], "--name", k["name"], "--json", json.dumps(k["config"]), "--"]
+        chain += [sys.executable, "-I", k["program"], "--name", k["name"]] + \
+            (["--from", ">".join(k["from"])] if k.get("from") else []) + ["--json", json.dumps(k["config"]), "--"]
     chain += [sys.executable, "-I", "-c", leaf_src, "stage1", "--env-json", json.dumps(env, sort_keys=True), "--"]
     chain += o["argv"]
     line = (["systemd-run", "--user", "--scope", "--quiet", "--collect", "--unit", unit, "-p", "Delegate=yes", "--"]
             if scoped else []) + chain
-    if o["dry_run"] or o["print"]:
-        shown = shlex.join(line).replace(shlex.quote(leaf_src), '"$(cat %s)"' % os.path.join(HERE, "leaf.py"))
-        print(("mini: " if o["print"] else "") + shown, file=sys.stderr if o["print"] else sys.stdout, flush=True)
+    if o["dry_run"] or o["print"]:  # the layers after expanding bundles (numbered as in .aos/kernels), then the line
+        to = sys.stderr if o["print"] else sys.stdout
+        first = outer_layers() + 1
+        for i, k in enumerate(ks):
+            print("%slayer %d: %s%s" % ("mini: " if o["print"] else "# ", first + i, layer_line(k),
+                                        " (added by mini)" if k.get("auto") else ""), file=to)
+        text = shlex.join(line).replace(shlex.quote(leaf_src), '"$(cat %s)"' % os.path.join(HERE, "leaf.py"))
+        print(("mini: " if o["print"] else "") + text, file=to, flush=True)
         if o["dry_run"]:
             return
     run = tempfile.mkdtemp(prefix="aos-mini-", dir="/tmp")  # readable by a uid N further in (your home is not)

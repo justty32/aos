@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""net kernel for mini: holds an outer network namespace that pasta connects to the outside, keeps the ip/port allow list, the quota (nft) and the up/down rates (tc) there, and pulls a veth into a sandbox's own netns (on request through ctl, or, as a nesting wrapper, into the netns it starts the next layer in); declares aos/net and keeps a status file with the counters."""
+"""net kernel for mini: holds an outer network namespace that pasta connects to the outside, keeps the ip/port allow list, the quota (nft) and the up/down rates (tc) there, and pulls a veth into a sandbox's own netns (on request through ctl, or, as a nesting wrapper, into the netns it starts the next layer in); declares aos/net (locked read-only for the inner layer) and keeps a status file with the counters."""
 
 import argparse
 import ipaddress
@@ -544,8 +544,8 @@ def nested_config(cfg, outer):
 
 
 def gate_main(argv):
-    """First program of the inner layer (root in its own user ns under the outer netns, in its own netns): say
-    ready, wait until the kernel has pulled the veth in, then run the next layer."""
+    """First program of the inner layer (root in its own user ns under the outer netns, in its own net and mount
+    ns): say ready, wait until the kernel has pulled the veth in, lock the declarations, then run the next layer."""
     w, r = int(argv[0]), int(argv[1])
     nxt = argv[3:] if argv[2:3] == ["--"] else argv[2:]
     os.write(w, b"ready\n")
@@ -554,6 +554,7 @@ def gate_main(argv):
     os.close(r)
     if ans != "ok":
         fail("NetFailed", ans or "no answer from the net kernel", 125)
+    nest.lock_env(PROG)  # our own mount namespace: the kernel outside keeps writing its status file
     try:
         os.execvp(nxt[0], nxt)
     except OSError as e:
@@ -575,7 +576,7 @@ def wrapper_main():
         fail("ConfigBad", "%s: %s" % (opts["name"], e), 2)
     for w in warns:
         warn("%s: %s" % (opts["name"], w))
-    env = nest.new_env("net", opts["name"])
+    env = nest.new_env("net", opts["name"], opts.get("from"))
     cfgp = os.path.join(env, "net.json")
     with open(cfgp, "w") as f:
         json.dump(raw, f)  # the holder reads it again
@@ -597,7 +598,7 @@ def wrapper_main():
     r1, w1 = os.pipe()
     r2, w2 = os.pipe()
     argv = ["nsenter", "--user=/proc/%d/ns/user" % k.holder.pid, "--preserve-credentials",
-            "unshare", "--user", "--map-users=all", "--map-groups=all", "--net", "--"] + \
+            "unshare", "--user", "--map-users=all", "--map-groups=all", "--net", "--mount", "--"] + \
         nest.py(os.path.abspath(__file__)) + ["--gate", str(w1), str(r2), "--"] + nxt
     box = []  # caught (not ignored) while we start it: an ignored signal stays ignored in the inner layers
     for s in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):

@@ -1,11 +1,13 @@
-"""Shared by the mini kernels that nest (cg, mask, uid, net as a wrapper): the KERNEL [options] -- NEXT... shape, the environment folder each layer reads from the outer one ($AOS_ENV) and hands a copy of to the inner one, user namespaces that keep the subordinate ids, and the cgroup layout (a layer's own cgroup holds no process)."""
+"""Shared by the mini kernels that nest (cg, mask, uid, llm, net as a wrapper): the KERNEL [options] -- NEXT... shape, the environment folder each layer reads from the outer one ($AOS_ENV, or / when it is not set) and hands a copy of to the inner one (every kernel's cell has name, layer and status; the folders are locked read-only for the inner layers), user namespaces that keep the subordinate ids, and the cgroup layout (a layer's own cgroup holds no process)."""
 
 import ctypes
 import json
 import os
 import pwd
+import re
 import shutil
 import sys
+import time
 
 INIT_CGROUP_NS = "cgroup:[4026531835]"   # the init namespaces have fixed inode numbers
 DECL = os.path.join(".aos", "interfaces", "aos")
@@ -26,7 +28,8 @@ def warn(prog, msg):
 
 
 def parse(prog, argv, flags=("--stage2",)):
-    """KERNEL [--name N] [--json CFG] [--stage2] -- NEXT... -> (opts, cfg dict, next argv)."""
+    """KERNEL [--name N] [--from BUNDLE] [--json CFG] [--stage2] -- NEXT... -> (opts, cfg dict, next argv).
+    --from: the bundle(s) mini expanded this kernel from, outermost first, joined by > (e.g. aos/full>aos/base)."""
     if "--" not in argv:
         fail(prog, "ArgumentsBad", "want: %s [--name N] [--json CFG] -- NEXT..." % prog, 2)
     i = argv.index("--")
@@ -39,9 +42,9 @@ def parse(prog, argv, flags=("--stage2",)):
         if a in flags:
             opts[a.lstrip("-")] = True
             k += 1
-        elif a in ("--name", "--json") and k + 1 < len(own):
-            if a == "--name":
-                opts["name"] = own[k + 1]
+        elif a in ("--name", "--from", "--json") and k + 1 < len(own):
+            if a in ("--name", "--from"):
+                opts[a[2:]] = own[k + 1]
             else:
                 try:
                     cfg = json.loads(own[k + 1])
@@ -103,8 +106,12 @@ def userns_args():
 # ------------------------------------------------------------ the environment folder ($AOS_ENV)
 
 def env_outer():
+    """Where the outer layers' declarations are: $AOS_ENV, or / when it is not set (an environment that declares at
+    its root, like pi-sandbox's /.aos); None when there is nothing."""
     d = os.environ.get("AOS_ENV")
-    return d if d and os.path.isdir(d) else None
+    if d:
+        return d if os.path.isdir(d) else None
+    return "/" if os.path.isdir("/.aos") else None
 
 
 def decl_read(envdir, kind, key, default=None):
@@ -147,32 +154,53 @@ def _write(path, text):
     os.replace(tmp, path)
 
 
-def new_env(kind, name):
+ME = {}  # this layer, once new_env made its folder: name, layer, from
+
+
+def new_env(kind, name, frm=None):
     """The folder this layer hands to the inner one: a copy of the outer folder's .aos (so the inner sees everything
-    declared further out), plus one line in .aos/kernels. Lives next to the outer one (in the run folder)."""
-    outer = env_outer()
-    if not outer:
+    declared further out), plus one line in .aos/kernels ("<kind> <name>", then " from <bundle>" when mini expanded
+    it from a bundle). Lives next to the outer one (in the run folder)."""
+    outer = os.environ.get("AOS_ENV")
+    if not outer or not os.path.isdir(os.path.join(outer, ".aos")):
         raise RuntimeError("AOS_ENV is not set (start kernels through mini.py --kernels)")
     run = os.path.dirname(outer)
     with open(os.path.join(outer, ".aos", "kernels")) as f:
         lines = [l for l in f.read().splitlines() if l.strip()]
-    d = os.path.join(run, "%d-%s-%d" % (len(lines) + 1, kind, os.getpid()))
+    layer = len(lines) + 1
+    d = os.path.join(run, "%d-%s-%d" % (layer, kind, os.getpid()))
     shutil.copytree(os.path.join(outer, ".aos"), os.path.join(d, ".aos"), symlinks=True)
     os.chmod(d, 0o755)
-    _write(os.path.join(d, ".aos", "kernels"), "".join(l + "\n" for l in lines + ["%s %s" % (kind, name)]))
+    line = "%s %s" % (kind, name) + (" from %s" % frm if frm else "")
+    _write(os.path.join(d, ".aos", "kernels"), "".join(l + "\n" for l in lines + [line]))
+    ME.update(name=name, layer=layer, frm=frm)
     return d
 
 
 def declare(envdir, kind, files, description=None):
-    """Declare (or replace: the inner declaration shadows the outer one) aos/<kind> in envdir."""
+    """Declare (or replace: the inner declaration shadows the outer one) aos/<kind> in envdir. Every cell has
+    description, name (the kernel's name as mini expanded it), layer (1 = outermost: its line in .aos/kernels),
+    status (the absolute path of a live status file, or empty), and from (only when it came from a bundle)."""
     d = os.path.join(envdir, DECL, kind)
     if os.path.isdir(d):
         shutil.rmtree(d)
     os.makedirs(d, mode=0o755)
+    files = dict(files)
+    files.setdefault("status", "")
+    if ME:
+        files.setdefault("name", ME["name"])
+        files.setdefault("layer", str(ME["layer"]))
+        if ME.get("frm"):
+            files.setdefault("from", ME["frm"])
     for k, v in files.items():
         _write(os.path.join(d, k), (v + "\n") if v else "")
     if description:
         _write(os.path.join(d, "description"), description + "\n")
+
+
+def status_head(state):
+    """The first two lines of every status file: state: running|stopped, updated: <UTC>."""
+    return "state: %s\nupdated: %s\n" % (state, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 
 
 # ------------------------------------------------------------ mounts and cgroups
@@ -185,6 +213,54 @@ def mount(src, target, fstype=None, flags=0, data=None):
     if _libc.mount(enc(src), enc(target), enc(fstype), ctypes.c_ulong(flags), enc(data)) != 0:
         e = ctypes.get_errno()
         raise OSError(e, "mount %s: %s" % (target, os.strerror(e)))
+
+
+ST_FLAGS = ((1, MS_RDONLY), (2, MS_NOSUID), (4, MS_NODEV), (8, MS_NOEXEC), (1024, MS_NOATIME),
+            (2048, MS_NODIRATIME), (4096, MS_RELATIME))
+
+
+def mount_flags(path):
+    """The flags path is mounted with now (a remount must keep the ones an outer layer locked, or it is EPERM)."""
+    f = os.statvfs(path).f_flag
+    return sum(ms for st, ms in ST_FLAGS if f & st)
+
+
+def mountpoints():
+    out = set()
+    with open("/proc/self/mountinfo") as f:
+        for line in f:
+            p = line.split()[4]
+            out.add(re.sub(r"\\([0-7]{3})", lambda m: chr(int(m.group(1), 8)), p))
+    return out
+
+
+def ro_bind(path):
+    """Bind path onto itself (with what is mounted below it) and make that read-only."""
+    mount(path, path, None, MS_BIND | MS_REC)
+    mount(None, path, None, MS_BIND | MS_REMOUNT | MS_RDONLY | mount_flags(path))
+
+
+def lock_env(prog):
+    """Before the inner layer starts, in our own mount namespace (the inner layers get a copy, where these mounts
+    are locked: they cannot unmount them or make them writable): every layer folder of the run folder (the one we
+    hand down, the outer ones, mini's 0-root) read-only, and the run folder itself a mount point (still writable,
+    so inner layers can add theirs), so it cannot be renamed away from inside. Already mounted ones (an outer
+    layer's lock, the llm kernel's hidden state) are left as they are. The kernels outside keep writing their
+    status files: they are not in this namespace, and the inner layers see the same folder, read-only."""
+    env = os.environ.get("AOS_ENV")
+    if not env or not os.path.isdir(env):
+        return
+    run = os.path.dirname(os.path.abspath(env))
+    try:
+        mps = mountpoints()
+        if run not in mps:
+            mount(run, run, None, MS_BIND | MS_REC)
+        for n in sorted(os.listdir(run)):
+            p = os.path.join(run, n)
+            if os.path.isdir(p) and not os.path.islink(p) and p not in mps:
+                ro_bind(p)
+    except OSError as e:
+        fail(prog, "LockFailed", "%s: %s" % (run, e))
 
 
 def cg_path():

@@ -1,0 +1,5 @@
+{
+  "description": "mask kernel of the aos/base bundle: cover /run/user/<your uid> with an empty folder (no systemd --user, no D-Bus session bus)",
+  "program": "mask_kernel.py",
+  "config": {"paths": [{"path": "/run/user/{uid}", "how": "tmpfs"}]}
+}

@@ -1,9 +1,10 @@
-"""Innermost step of a mini --kernels chain (self-contained: mini.py runs it as python3 -I -c SOURCE, so it works even after a uid kernel took away your home): the agent's own user, mount, pid and cgroup namespaces, an empty network unless an outer layer declared aos/net, a clean environment, then the agent."""
+"""Innermost step of a mini --kernels chain (self-contained: mini.py runs it as python3 -I -c SOURCE, so it works even after a uid kernel took away your home): the declarations locked read-only if no kernel did it yet, the agent's own user, mount, pid and cgroup namespaces, an empty network unless an outer layer declared aos/net ($AOS_ENV, or / when it is not set), a clean environment, then the agent."""
 
 import ctypes
 import json
 import os
 import pwd
+import re
 import shutil
 import subprocess
 import sys
@@ -61,6 +62,29 @@ def mount(src, target, fstype=None, flags=0, data=None):
         raise OSError(e, "mount %s: %s" % (target, os.strerror(e)))
 
 
+MS_RDONLY, MS_REMOUNT, MS_BIND, MS_REC = 1, 32, 4096, 16384
+ST_FLAGS = ((1, 1), (2, 2), (4, 4), (8, 8), (1024, 1024), (2048, 2048), (4096, 1 << 21))  # statvfs -> MS_*
+
+
+def lock_env(envdir):
+    """Same as nest.lock_env (copied): in our own mount namespace, every layer folder of the run folder read-only
+    and the run folder a mount point, so the agent (one user namespace further in) cannot change or remove them."""
+    run = os.path.dirname(os.path.abspath(envdir))
+    try:
+        with open("/proc/self/mountinfo") as f:
+            mps = {re.sub(r"\\([0-7]{3})", lambda m: chr(int(m.group(1), 8)), l.split()[4]) for l in f}
+        if run not in mps:
+            mount(run, run, None, MS_BIND | MS_REC)
+        for n in sorted(os.listdir(run)):
+            p = os.path.join(run, n)
+            if os.path.isdir(p) and not os.path.islink(p) and p not in mps:
+                mount(p, p, None, MS_BIND | MS_REC)
+                fl = os.statvfs(p).f_flag
+                mount(None, p, None, MS_BIND | MS_REMOUNT | MS_RDONLY | sum(m for st, m in ST_FLAGS if fl & st))
+    except OSError as e:
+        fail("LockFailed", "%s: %s" % (run, e))
+
+
 def cg_dir():
     with open("/proc/self/cgroup") as f:
         path = next(l[3:].strip() for l in f if l.startswith("0::"))
@@ -80,10 +104,15 @@ def cg_enable(d):
         cg_write(d, "cgroup.subtree_control", want)
 
 
-def stage1(env_json, argv):
-    """Outside the agent's namespaces. If we are alone in our cgroup, park ourselves (unshare waits here) in
-    <cg>/wait and leave <cg>/sb empty for the agent, so its cgroup root holds no process."""
-    envdir = os.environ.get("AOS_ENV", "")
+def stage1(env_json, argv, locked=False):
+    """Outside the agent's namespaces. If nobody locked the declarations yet (no kernels: mini's 0-root), first one
+    more user and mount namespace of our own to lock them in. If we are alone in our cgroup, park ourselves (unshare
+    waits here) in <cg>/wait and leave <cg>/sb empty for the agent, so its cgroup root holds no process."""
+    envdir = os.environ.get("AOS_ENV", "") or ("/" if os.path.isdir("/.aos") else "")
+    if envdir and envdir != "/" and not locked and os.access(envdir, os.W_OK):
+        line = ["unshare"] + userns_args() + ["--mount", "--", sys.executable, "-I", "-c", own_source(), "stage0",
+                                              "--env-json", env_json, "--"] + argv
+        os.execvp(line[0], line)
     has_net = bool(envdir) and os.path.isdir(os.path.join(envdir, NET_DECL))
     sb = None
     try:
@@ -147,8 +176,8 @@ def stage2(env_json, sb, lo, argv):
 
 
 def main(args):
-    if not args or args[0] not in ("stage1", "stage2") or "--" not in args:
-        fail("ArgumentsBad", "want: stage1|stage2 --env-json J [--sb DIR] [--lo] -- ARGV...", 2)
+    if not args or args[0] not in ("stage0", "stage1", "stage2") or "--" not in args:
+        fail("ArgumentsBad", "want: stage0|stage1|stage2 --env-json J [--sb DIR] [--lo] -- ARGV...", 2)
     i = args.index("--")
     own, argv = args[1:i], args[i + 1:]
     if not argv:
@@ -163,6 +192,9 @@ def main(args):
             k += 1
         else:
             fail("ArgumentsBad", "unknown option %r" % own[k], 2)
+    if args[0] == "stage0":  # in the extra namespace stage1 asked for
+        lock_env(os.environ["AOS_ENV"])
+        return stage1(o.get("--env-json", "{}"), argv, locked=True)
     if args[0] == "stage1":
         return stage1(o.get("--env-json", "{}"), argv)
     stage2(o.get("--env-json", "{}"), o.get("--sb"), o.get("--lo"), argv)

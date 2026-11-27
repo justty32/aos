@@ -1,4 +1,4 @@
-最小的沙箱原型（11-27 家機）：底層就是一行 `systemd-run --user --scope`（CPU、記憶體、行程數上限）加 `unshare -UrmpnC`（自己的 user／mount／PID／網路／cgroup namespace），上面可選疊網路 kernel（兩層 netns：pasta 接外網、nft 白名單與總量、tc 頻寬）與切 uid；第二段（11-27 晚）加了照名字嵌套的 `mini.py --kernels`（每個 kernel 是一支包裝程式，替內層設好環境再在裡面起下一層：cgroup、網路、檔案遮蔽、uid），檔案遮蔽 kernel 蓋掉 `/run/user/<uid>` 就關住經 D-Bus 跳出去那條路；第三段（11-27 夜，使用者六題都照推薦）把 kernel 設定搬到 `$AOS_HOME/kernels/`、`--kernels` 改逗號分隔、裝了上限／網路／llm kernel 自動加遮蔽，並把 llm kernel 做成嵌套的一層（pi 沒網路也經 socket 問得到腦，被記帳、限模型、限次數）；第四段（11-27 深夜，使用者三題都照推薦）定下 llm kernel 也觸發自動遮蔽、額度每次跑重算（要累計寫 `state`），網路 kernel 寫在 llm kernel 裡面又放行它的上游時 mini 直接拒絕起來；其他照舊全部漏給 Linux。舊驗收 31 項、層疊實測 22 項、llm 嵌套驗收 11 項都兩次全過，真模型跑過一次。
+最小的沙箱原型（11-27 家機）：底層就是一行 `systemd-run --user --scope`（CPU、記憶體、行程數上限）加 `unshare -UrmpnC`（自己的 user／mount／PID／網路／cgroup namespace），上面可選疊網路 kernel（兩層 netns：pasta 接外網、nft 白名單與總量、tc 頻寬）與切 uid；第二段（11-27 晚）加了照名字嵌套的 `mini.py --kernels`（每個 kernel 是一支包裝程式，替內層設好環境再在裡面起下一層：cgroup、網路、檔案遮蔽、uid），檔案遮蔽 kernel 蓋掉 `/run/user/<uid>` 就關住經 D-Bus 跳出去那條路；第三段（11-27 夜，使用者六題都照推薦）把 kernel 設定搬到 `$AOS_HOME/kernels/`、`--kernels` 改逗號分隔、裝了上限／網路／llm kernel 自動加遮蔽，並把 llm kernel 做成嵌套的一層（pi 沒網路也經 socket 問得到腦，被記帳、限模型、限次數）；第四段（11-27 深夜，使用者三題都照推薦）定下 llm kernel 也觸發自動遮蔽、額度每次跑重算（要累計寫 `state`），網路 kernel 寫在 llm kernel 裡面又放行它的上游時 mini 直接拒絕起來；第五段（11-27 深夜，統一介面四題照推薦＋一包 kernel）每個 kernel 那一格固定有 `name`、`layer`、`status`，宣告夾交給內層前鎖成唯讀（pi 在裡面試了十幾種拆法都拆不掉，只有沙箱外的行程寫得到），`--kernels aos/base` 可以是一個夾（`_chain.json` 列出展開成哪一串、可巢狀、擋循環）；其他照舊全部漏給 Linux。舊驗收 31 項、層疊實測 22 項、llm 嵌套驗收 15 項、一包 kernel 與唯讀鎖 20 項都全過，真模型跑過一次。
 
 # mini-sandbox（11-27，家機 Manjaro 6.18）
 
@@ -7,6 +7,15 @@
 我自己定的標【擬】。
 
 ## 結論先講
+
+**第五段（11-27 深夜，統一介面四題照推薦，再加「一包 kernel」；細節在「第五段：統一介面與一包 kernel」）**
+
+- **每個 kernel 那一格固定有的**：`$AOS_ENV/.aos/interfaces/aos/<種類>/` 底下一定有 `description`、`name`（設定的名字，一包展開的寫展開後的，例 `aos/base/cg`）、`layer`（第幾層，1＝最外，就是 `.aos/kernels` 的第幾行）、`status`（有活狀態＝狀態檔的絕對路徑；沒有＝空檔）；從一包來的多一個 `from`。狀態檔頭兩行固定 `state: running|stopped`、`updated: <UTC 時間>`（llm 的補上了）。
+- **宣告夾鎖成唯讀**：每一層起內層之前，在自己的 mount namespace 把交出去的夾（連外層的夾與 mini 的 `0-root`）唯讀掛上，整個暫存夾也掛成一個掛載點（改不了名）；沒裝 kernel 時由最裡那步自己鎖。**pi 在裡面會怎樣**：讀得到、寫不進去（`Read-only file system`），改名、卸載、改回可寫、用新的掛載 API、自己再開一層 namespace 再拆，全部失敗（試法與結果見下）；kernel 在外面照樣每秒更新狀態檔，pi 看得到新的內容。**拆得掉的只有一條**：`/run/user` 沒蓋時（`--no-auto-mask` 或什麼 kernel 都不裝），pi 經 D-Bus 叫 systemd 在沙箱外起一隻行程，那隻寫得進去（實測）。
+- **pi 找宣告的規矩**：先看 `$AOS_ENV`，沒設就看 `/`；`relay.js`、最裡那步、各 kernel、`probe.py` 都照這個找。
+- **同名不同義的（`kind`、路徑相對或絕對、沒上限的寫法）沒改**，列在「先記下」一節，跟決策審查第 3 題一起定。
+- **一包 kernel**：`--kernels aos/base` 可以對到一個夾，夾裡的 `_chain.json`【擬】列出展開成哪一串；夾裡的 kernel 寫短名（`cg`＝`aos/base/cg`），別處的寫全名（`aos/llm/fake`）；一包裡可以再引用一包（最多 8 層），互相引用會報錯並印出整圈；跟單名混著寫也行（`--kernels aos/base,aos/net/xxx`）。展開後跟直接寫一串完全一樣：照順序嵌套、自動遮蔽照樣加、`KernelOrderBad` 照樣查、`--dry-run` 先印展開後的每一層。單檔 `aos/base.json` 跟夾 `aos/base/` 同時在時【擬】報錯要你改名。示範包 `proto8/kernels/aos/base/`（`cg`、`mask`、再引用 `aos/llm/fake`）。
+- **驗收**：新的 `bundle_test.py` 20 項（19 PASS、1 info）跑兩次都過；`accept.py` 31、`stack_test.py` 22、`llm_test.py` 15 照舊全過；跑完沒留下行程、scope、netns、`/tmp/aos-mini-*`。
 
 **第四段（11-27 深夜，kernel 設定檔格式說明第 07 節三題都照推薦；細節在「第四段：三題怎麼做」）**
 
@@ -278,17 +287,18 @@ systemd-run --user --scope … -p Delegate=yes --                         ← mi
 
 - 一個環境變數 `AOS_ENV` 指到一個夾，夾裡的 `.aos/` 就是「到這一層為止，外面給了什麼」：
   - `.aos/interfaces/aos/<種類>/<欄位>`：每個欄位一個小檔（照第一段網路 kernel 的寫法）；
-  - `.aos/kernels`：從外到內一行一層，例 `cgroup aos/base-low`、`net aos/net/base-litellm-proxy`；
+  - `.aos/kernels`：從外到內一行一層，例 `cgroup aos/base-low`、`net aos/net/base-litellm-proxy`（第五段：從一包展開的多寫 ` from <包>`，例 `cgroup aos/base/cg from aos/base`；每一格另有 `name`、`layer`、`status`，見「第五段」）；
   - `.aos/host_uid`、`.aos/host_subuid`：你在外面的 uid 與 subuid 範圍（mini.py 在最外面寫一次）。
 - **每一層做三件事**：讀 `$AOS_ENV`（外層給的）→ 抄一份成自己的夾、加上（或蓋掉）自己這一種的宣告 → `AOS_ENV` 改指自己的夾，再起下一層。外層的夾不動。所以內層讀到同一種的宣告，就是離它最近那層的——跟 `with-dyns` 裡讀到最裡那層的值一樣。遮蔽 kernel 例外：它把外層蓋過的路徑一起抄進來，因為外層的遮蔽在內層一樣有效。
 - **實際有人讀的**：最裡那步看有沒有 `aos/net`，決定要不要給空網路；cgroup kernel 讀外層的 `aos/cgroup`，比自己鬆就警告；網路 kernel 讀外層的 `aos/net`——自己的 `host_ports`（「外面那台機器的某個 port」）翻成「到外層 `host_addr` 的白名單」，總量比外層大就警告；遮蔽 kernel 讀 `host_uid` 換掉 `{uid}`；uid kernel 讀 `host_subuid` 算外面看是哪個 id。
+- **沒設 `AOS_ENV` 時看 `/`**（第五段使用者定第 3 題）：讀宣告的程式一律「先看 `$AOS_ENV`，沒設就看 `/.aos`」。
 - **為什麼是「環境變數指一個夾」，不是 `/.aos`**：根目錄是你主機的，不用 root 開不了 `/.aos`（要整片天空自己組，那是 pi-sandbox 那一版）；普通程式不看這個變數就什麼事都沒有，合「普通程式什麼都不用知道」（pi沙箱-1127 第 5 條）。
 - **夾放在哪**：`/tmp/aos-mini-*/`（mini.py 開、跑完刪），每層一個 `<第幾層>-<種類>-<PID>/`，網路 kernel 的狀態檔 `status` 也在它那一層的夾裡。不放 `$XDG_RUNTIME_DIR` 是因為切成 uid N 之後進不了 `/run/user/1000`（700），最裡那步就讀不到宣告。遮蔽 kernel 若蓋到這個夾，會在蓋子上留一個洞（宣告寫 `hole`）讓內層看得見。
 
 ### 名字去哪找（第三段，使用者定第 1 題）
 
 - `aos/base-low` → 先在 `$MINI_KERNELS_PATH`（冒號分隔的夾，可不設）裡找 `aos/base-low.json`，再找 `$AOS_HOME/kernels/aos/base-low.json`；第一個找到的算。兩個都沒設：`mini: error: KernelNotFound kernel aos/base-low: nowhere to look (set AOS_HOME, …)`，退出碼 2，什麼都沒跑。名字本身像路徑（`/`、`./`、`~` 開頭或 `.json` 結尾）就直接讀那個檔。
-- 一個名字＝一份 json：`{"description": "…", "program": "cg_kernel.py", "config": {…}}`。
+- 一個名字＝一份 json：`{"description": "…", "program": "cg_kernel.py", "config": {…}}`。第五段起也可以是一個夾（一包 kernel）：`aos/base` 對到 `aos/base/_chain.json`，展開成它列的那一串；同一個夾裡 `aos/base.json` 和 `aos/base/_chain.json` 都在時報錯（見「一包 kernel」）。
 - **`program` 怎麼寫才在兩處都對**【擬】：只寫檔名（`cg_kernel.py`、`llm_kernel.py`）＝mini 自己的程式，就是跟 `mini.py` 同一夾的那支；所以同一份 json 放在 `proto8/kernels/`、測試的暫存夾、或 `$AOS_HOME` 被抄到 repo 外，都指到「正在跑的那份 mini」旁邊的程式。寫了 `/` 的照路徑走：`$變數`、`~` 先展開，相對路徑從那份 json 所在的夾算（例 `"$AOS_HOME/../proto9/mini-sandbox/cg_kernel.py"` 也行）。
 - 原本 `proto9/mini-sandbox/kernels/` 拿掉了，不留後備（避免兩份對不上）；測試用的 `t/…` 照舊寫在暫存夾、用 `MINI_KERNELS_PATH` 指過去，`aos/…` 讀這份 repo 的 `proto8/kernels/`（測試自己把 `AOS_HOME` 設成這份 repo 的 `proto8`）。
 
@@ -302,6 +312,7 @@ systemd-run --user --scope … -p Delegate=yes --                         ← mi
 | `aos/uid/1` | 切 uid：裡面是 uid 1（外面是你第一個 subuid）；要放最後 |
 | `aos/llm/fake` | llm kernel，劇本腦、不叫模型：模型 `fake-model`、一次跑 50 次；第一句有 `four steps` 就照劇本叫 read、write、edit、bash（驗收那件小事），其他答 `FAKE OK` |
 | `aos/llm/litellm-luna` | llm kernel，上游是這台的 LiteLLM `127.0.0.1:4000`：只准 `chatgpt-gpt-6-luna-nothink`、一次跑 10 次；要放在網路 kernel 外面 |
+| `aos/base`（第五段，一包） | 夾 `aos/base/`，`_chain.json` 串 `cg`（20%、512M、64）、`mask`（蓋 `/run/user`）、`aos/llm/fake`；見「一包 kernel」 |
 
 使用者例子裡的 `aos/bases/extra-1` 不知道指什麼，沒做（`aos/mask/ssh` 是「再多一層」的示範）。
 
@@ -320,6 +331,7 @@ python3 mini.py --print --kernels … -- …     # 先把那一行印到 stderr 
 # kernel 名字去 $MINI_KERNELS_PATH、$AOS_HOME/kernels 找（見上）
 python3 stack_test.py                       # 層疊實測（約 100 秒；--no-pi、--pasta PATH、--keep）
 python3 llm_test.py                         # llm 嵌套驗收（約 35 秒；--model M 多跑一次真模型、--no-pi、--keep）
+python3 bundle_test.py                      # 一包 kernel、每一格固定檔、唯讀鎖（約 20 秒；--pasta PATH、--keep）
 ```
 
 退出碼照傳（被訊號殺＝128+N，OOM＝137）。收到 SIGTERM／SIGINT／SIGHUP：整個 scope 送同一個訊號，5 秒後還在的整個 scope 送 SIGKILL。pi 自己在裡面跑 mini 時沒有 scope（見下），改送給自己那個 process group。
@@ -413,7 +425,7 @@ mini-<名>-<PID>.scope         ← mini.py 開的（Delegate=yes，沒有上限�
 3. **網路 kernel 疊網路 kernel 時，「本機」的意思變了**：對內層來說，「外面那台機器」是外層的沙箱，所以內層的 `host_ports` 被翻成「到外層 `host_addr` 的白名單」，pi 一樣用 `169.254.77.1:<port>` 連；外層的子網已經用了 `10.77.0.0/16`，內層自動改用 `10.78.0.0/16`（往上找沒用過的）。
 4. **pi 在裡面再起 mini 時沒有 systemd scope**：它在自己的 cgroup namespace 裡（加上遮蔽時連 systemd 都連不到），所以不開 scope、cgroup 用兄弟夾；收行程改送 process group，這條路**沒測**。
 5. **內層沒寫網路 kernel ≠ 沒網路**：外層宣告了 `aos/net`，內層最裡那步就沿用那個網路（`c_mini_in_mini_bare`）。一樣緊，不會更鬆；要更緊就在內層也放一個網路 kernel。
-6. **宣告夾 pi 改得到**：`/tmp/aos-mini-*` 是你本人的檔，pi（uid 0＝你）寫得進去。宣告只在每層起來時讀一次，之後改了沒有作用；但網路 kernel 的狀態檔 `status` 也在那裡，pi 可以改它來騙看狀態的人（不影響規則本身）。要擋得在 pi 那層之前用唯讀掛載蓋住，這版沒做。
+6. **宣告夾 pi 改得到**：`/tmp/aos-mini-*` 是你本人的檔，pi（uid 0＝你）寫得進去。宣告只在每層起來時讀一次，之後改了沒有作用；但網路 kernel 的狀態檔 `status` 也在那裡，pi 可以改它來騙看狀態的人（不影響規則本身）。要擋得在 pi 那層之前用唯讀掛載蓋住，這版沒做。（第五段做了：每層起內層前鎖成唯讀，pi 拆不掉；`/run/user` 沒蓋時經 D-Bus 在沙箱外起的行程照樣寫得到，見「唯讀鎖」。）
 7. **這次找到並修好的**：網路 kernel 起的時候先把 SIGTERM 設成「忽略」，被忽略的訊號會一路傳給它起的內層，pi 那層的 `sh` 就連 `trap` 都設不上（POSIX 規定），結果收不到 SIGTERM、被 5 秒後的 SIGKILL 殺掉（退出碼 137 而不是自己的 3）。改成起內層前先換成「轉送」。另外第一版收訊號只殺 `systemd-run` 起的那一支（後來 exec 成網路 kernel），最裡那步的 `unshare` 跟 pi 留在 scope 裡沒死；改成 5 秒後對整個 scope 送 SIGKILL。
 
 ## 第三段：六題怎麼做（使用者 11-27 晚「都先按照推薦，我還在外面爽玩」）
@@ -469,6 +481,156 @@ mini: error: KernelOrderBad aos/net/base-litellm-proxy (net kernel) lets 127.0.0
 
 跑了兩輪（第二輪先 unset 所有 `AOS_*`），兩輪數字一樣：`accept.py` `SUMMARY ok (31 PASS, 0 FAIL, 4 info, 41s)`、`stack_test.py` `SUMMARY ok (22 PASS, 0 FAIL, 0 info, 103s)`、`llm_test.py`（不叫真模型）`SUMMARY ok (15 PASS, 0 FAIL, 0 info, 40s)`；跑完沒留下行程、scope、netns、`/tmp/aos-mini-*`、測試伺服器。
 
+## 第五段：統一介面與一包 kernel（使用者 11-27 深夜「先按照推薦」）
+
+原話（經 main-alt 的任務書轉來）：「先按照推薦。然後還有，是否自由組合定義後，這種一包的kernel也能用？比如我用--kernels aos/base，他其實是aos/base/底下一堆東西的結合（可能還會加上一些ext/xxx），只是用aos/base/底下的某個檔把他們串起來。」題目在統一介面調查（家機 `~/.aos/scratch/kernel-iface-1127/report.html`，不進 git）第 5 節，四題都選推薦的甲。
+
+| 題 | 使用者定的 | 這版怎麼做 | pi 在裡面會怎樣 |
+|---|---|---|---|
+| 1 | 每個 kernel 那一格固定補 `name`、`layer`、`status`；狀態檔頭兩行固定 | 見下「每一格固定有的」 | 每一格都看得出是哪一層、哪個設定寫的，有沒有活狀態可查 |
+| 2 | 宣告夾交給內層前鎖成唯讀，實測 pi 拆不拆得掉 | 見下「唯讀鎖」 | 讀得到、改不了；只有沙箱外的行程（`/run/user` 沒蓋時經 D-Bus 起的）寫得到 |
+| 3 | pi 先看 `$AOS_ENV`，沒設就看 `/` | 見下「pi 去哪找宣告」 | 一種找法，mini 與將來 `/.aos` 的沙箱都通 |
+| 4 | 同名不同義的先記下，跟決策審查第 3 題一起定 | 沒改，見下「先記下」 | 沒差（還沒有程式跨種類讀這些欄） |
+
+### 每一格固定有的（第 1 題）
+
+`$AOS_ENV/.aos/interfaces/aos/<種類>/` 底下：
+
+| 檔 | 內容 | 例 |
+|---|---|---|
+| `description` | 一行英文：這一層對裡面做了什麼 | `cgroup kernel: cpu (percent of one core), mem, pids …` |
+| `name` | 這一格是哪個設定寫的；一包展開的寫展開後的名字 | `aos/base/cg` |
+| `layer` | 第幾層，1＝最外；就是 `.aos/kernels` 的第幾行 | `1` |
+| `status` | 有活狀態＝狀態檔的絕對路徑；沒有＝空檔 | net、llm 有；cgroup、mask、uid 空檔 |
+| `from`（從一包展開的才有）【擬】 | 從哪一包來；包裡還有包時從外到內用 `>` 接起來 | `aos/base`、`t/nest>aos/base` |
+
+- **狀態檔**（net、llm）頭兩行固定 `state: running|stopped`、`updated: 2026-11-27T09:24:42Z`（UTC），後面各家自己的。llm 的這次補上（以前第一行就是 `requests_used`），收掉時寫 `state: stopped`。
+- `.aos/kernels` 每行 `<種類> <名字>`，從一包展開的後面加 ` from <包>`：例 `cgroup aos/base/cg from aos/base`。
+- **同一種疊兩層時**，那一格是最裡那層寫的（跟以前一樣蓋掉外層的），`layer` 就是 `.aos/kernels` 裡那種種類的最後一行（`f_cells_match`、`f_mixed` 實測對得上）。
+- 寫在 `nest.py` 的 `new_env`／`declare`（每支 kernel 都經它），各 kernel 不用自己寫。`version` 沒做（調查報告說可選；proto 一向當沒有舊版）。
+- 單獨起的網路 kernel（第一段 `net_kernel.py --dir`）不在任何一層裡，沒有 `name`／`layer`，`status` 照舊寫相對的 `status`（第 4 題：相對或絕對先不改）。
+
+### 唯讀鎖（第 2 題）
+
+**怎麼鎖**（`nest.lock_env`，最裡那步 `leaf.py` 抄一份）：每一層起內層之前，在**自己的** mount namespace 裡：
+
+1. 整個暫存夾（`/tmp/aos-mini-*`）bind 到自己身上，變成一個掛載點（還是可寫：內層要在裡面開自己的夾）。為什麼：不這樣的話 pi 可以把整個暫存夾改名、再在原地放一份假的。
+2. 暫存夾裡每一個還不是掛載點的夾（自己交出去的那一層、外層的、mini 的 `0-root`）bind 到自己身上再改成唯讀（照 llm kernel 蓋帳本夾那招；連底下已經蓋上的東西一起，例 llm 疊 llm 時蓋掉外層 socket 的 `/dev/null`）。已經是掛載點的（外層鎖過的、llm kernel 藏起來的帳本夾）不動。
+3. 然後才起內層。內層在新的 user namespace 裡拿到這些掛載的複本，Linux 把它們標成「鎖住的」：不能卸、不能改回可寫。
+
+- 誰鎖：cgroup、mask、llm kernel 在它們本來就有的第二段（stage2）；網路 kernel 在 `--gate`（內層的第一支，這次加了 `--mount`）；uid kernel 這次加了一段（切 uid 之前，還是你本人時）；沒裝任何 kernel 時（`mini.py -- 指令`）由最裡那步自己多開一層 user＋mount namespace 鎖 `0-root`（夾還寫得進去才鎖）。
+- **kernel 自己照樣更新狀態檔**：網路 kernel、llm kernel 留在外層（不在那個 mount namespace 裡），每秒或每次請求用「寫新檔再改名」換掉 `status`；內層看到的是同一個夾的唯讀 bind，所以讀到的是新的。實測 `g_status_live`：pi 那邊 net 的 `updated` 三秒內往前走、llm 的 `requests_used` 從 1 變 2。
+- unix socket 放在唯讀夾裡照樣連得上（連線不算寫檔）：llm 的 `sock` 在被鎖的夾裡，pi 問腦照常 200（`f_nested_run`、`llm_test.py` 全過）。
+
+**實測 pi 拆不拆得掉**（`probe.py check` 的 `lock`，在 pi 的位置跑、跟 pi 一樣是 uid 0＝你本人、有自己的 user＋mount namespace；先在 pi 那層試一次，再 fork 一隻自己 `unshare(CLONE_NEWUSER|CLONE_NEWNS)`＝`unshare -Urm` 後同樣再試一次；最後比對宣告有沒有變）：
+
+| 怎麼試 | pi 那層 | 自己再開一層（`unshare -Urm`） |
+|---|---|---|
+| 往 `.aos/kernels` 加一行、往某一格的 `name` 加字、在 `.aos/` 開新檔、刪掉 `name`、往 llm／net 的狀態檔加一行 | `Read-only file system` | 同左 |
+| 把自己的宣告夾改名、把整個暫存夾改名 | `Device or resource busy` | 同左 |
+| `umount`（`MNT_DETACH`） | `Invalid argument` | 同左 |
+| `mount -o remount,bind,rw`（不帶唯讀重掛），之後再寫 | `Operation not permitted`；寫仍 `Read-only file system` | 同左 |
+| 新的掛載 API：`mount_setattr` 清掉唯讀 | `Operation not permitted` | 同左 |
+| `open_tree` 複製一份（成功）→ 對複本 `mount_setattr` 清唯讀 → `move_mount` 掛到別處（成功）→ 經那裡寫 | 清唯讀 `Operation not permitted`；寫 `Read-only file system` | 同左 |
+| 不帶 `--rec` 把暫存夾、或整個 `/tmp` bind 到別處（想看到鎖底下原本的夾） | `Invalid argument`（Linux 不准露出被鎖的掛載蓋住的東西） | 同左 |
+| 自己那層用 tmpfs 蓋掉宣告夾再寫 | — | 成功，但只改到它自己看到的；外層、pi 那層讀到的照舊 |
+| 最後比對（`.aos/kernels` 與每一格的檔） | 沒變 | 沒變 |
+
+- 疊法：`t/nest`（cgroup＋mask＋llm＋net，`g_lock_bundle`）、不裝 kernel（`g_lock_no_kernels`）、`aos/base-low,aos/uid/1`（`g_lock_uid1`，pi 是 uid 1：大多回 `Permission denied`／`Operation not permitted`）都一樣拆不掉；手動另外試過 `aos/base`、`aos/base-low,aos/net/base-litellm-proxy,aos/uid/1`，結果同上。
+- **拆得掉的那一條（照實記）**：`g_lock_escape_no_mask`（info）——`t/cg --no-auto-mask`（有上限、但 `/run/user` 沒蓋），pi 經 `busctl --user call … StartTransientUnit` 叫 systemd 起一隻 `sh`，那隻在沙箱外面、沒有這些掛載，往 `.aos/kernels` 加一行成功，pi 回頭讀就看到那一行。鎖是 mount namespace 裡的東西，沙箱外面的行程本來就不受它管。什麼 kernel 都不裝時也沒有自動遮蔽，一樣跳得出去。裝了 cgroup／net／llm kernel（自動遮蔽）或自己裝 `aos/mask/run-user` 時這條是關的。
+- **還漏的**【擬，沒擋】：暫存夾本身是可寫的（內層要開自己的夾），pi 可以在裡面多開別的夾或檔；沒有人會去讀它們，`AOS_ENV` 指的那個夾是鎖住的。pi 也可以對自己起的程式把 `AOS_ENV` 設成別的夾——只騙得到它自己的孩子。
+- 這也改了以前「做不到或出事的」第 6 條（宣告夾 pi 改得到）：裝了遮蔽時改不到了。
+
+### pi 去哪找宣告（第 3 題）
+
+規矩：**先看 `$AOS_ENV`，沒設就看 `/`**（看 `/.aos/…`）。這樣 mini（用變數，因為不用 root 開不了主機的 `/.aos`）和將來自己組整片根目錄的沙箱（宣告就在 `/.aos`），pi 用同一種找法。
+
+照這個改的地方：`relay.js`（沒給 `--llm` 也沒設 `AOS_ENV` 時讀 `/`，以前是 relay 自己所在的夾）、`leaf.py`（看有沒有 `aos/net`）、`nest.py`（各 kernel 讀外層宣告）、`mini.py`（沙箱裡再起 mini 時從哪一份抄起）、`probe.py`（找 llm 的宣告）。`pi-sandbox` 那一版沒動（它的 llm 宣告在 `/llm/.aos/…`，不在 `/.aos`；這次只動 mini-sandbox）。
+
+### 先記下，跟決策審查第 3 題一起定（第 4 題）
+
+這次都**沒改**，照調查報告第 1 節列出來：
+
+- **`kind`**：llm 與 aos-daemon 的 `aos/ctl` 是「怎麼跟我講話」（`socket`／`file`）；net 是「網路怎麼接進來」（`veth`）。
+- **路徑相對還是絕對**：`aos/ctl`、pi-sandbox、單獨起的網路 kernel 寫相對（以宣告所在的夾起算）；mini 嵌套的 llm、net 寫絕對（宣告會一層層抄進內層的夾，相對的會對不上）。調查報告提的折衷：「`/` 開頭是絕對，否則以宣告所在的夾起算」。
+- **沒上限怎麼寫**：cgroup 寫 `max`；net 的 `quota`、`up`、`down` 是空檔。
+- 另外兩點（調查報告也列了，一起記）：`description` 在 mini 放在種類那一格（講那一層），pi-sandbox 與單獨起的 net 放在 `interfaces/aos/description`（講整個夾）；`.aos/kernels`、`host_uid`、`host_subuid` 直接放在 `.aos/` 頂層，照 aoslua 嚴格說該搬到 `interfaces/aos/` 底下。
+
+### 一包 kernel
+
+**用法**：`--kernels` 的名字可以是一個夾，夾裡有 `_chain.json`【擬】：
+
+```json
+{"description": "bundle aos/base: …",
+ "chain": ["cg", "mask", "aos/llm/fake"]}
+```
+
+- `chain` 由外到內，跟 `--kernels` 一樣前面＝外層。
+- **名字怎麼讀**【擬】：沒有 `/` 的（`cg`）或 `./` 開頭的（`./sub/x`）是這一包自己的，只在這個夾裡找（`cg` 就是 `aos/base/cg`，對到 `aos/base/cg.json`）；有 `/` 的（`aos/llm/fake`、`ext/xxx`）是全名，照平常的找法（`$MINI_KERNELS_PATH`、`$AOS_HOME/kernels`）；`/`、`~` 開頭的是路徑。
+- 夾裡其他 json 是普通的單個 kernel 設定（`aos/base/cg.json` 也能單獨寫 `--kernels aos/base/cg`）。`_` 開頭的名字保留，mini 不收（所以 `_chain` 不會被當成 kernel）。
+- **一包裡再引用一包**：展開時照樣展開，最多 8 層（`t/d2`：8 層照跑；`t/d1`：9 層報 `KernelBundleTooDeep` 並印出整串）。**互相引用**（`t/loop-a` 引用 `t/loop-b`、`t/loop-b` 又引用 `t/loop-a`，或自己引用自己）報 `KernelBundleLoop` 並印出那一圈（`t/loop-a -> t/loop-b -> t/loop-a`）。都在起任何東西之前，退出碼 2。
+- **混著寫**：`--kernels aos/base,t/net-a,aos/mask/ssh` 就是 `aos/base` 展開的三層，接著那兩個（`f_mixed`）。
+- **展開後跟直接寫一串一樣**：照順序嵌套；自動遮蔽照展開後的看（`t/cgonly` 只有一個 cgroup kernel，mini 照樣在最裡面加 `aos/mask/run-user`，`f_auto_mask_expanded`；`aos/base` 自己有蓋 `/run/user` 的遮蔽就不加）；`KernelOrderBad` 照展開後的查，錯誤訊息裡的名字後面帶 `(from 包)`（`f_order_bad_expanded`）。
+- **`--dry-run`** 先印展開後的每一層，再印那一行：
+
+```
+$ mini.py --dry-run --kernels aos/base,aos/mask/ssh -- true
+# layer 1: cgroup aos/base/cg from aos/base
+# layer 2: mask aos/base/mask from aos/base
+# layer 3: llm aos/llm/fake from aos/base
+# layer 4: mask aos/mask/ssh
+systemd-run --user --scope … cg_kernel.py --name aos/base/cg --from aos/base --json '{…}' -- …
+```
+
+  自動加的那層後面寫 `(added by mini)`；`--print` 同樣印到 stderr。每支 kernel 多收一個 `--from 包`（`nest.parse`）。
+- **錯誤代號**【擬】：`KernelNameClash`（同名的檔與夾）、`KernelBundleLoop`、`KernelBundleTooDeep`、`KernelBundleBad`（`_chain.json` 讀不懂、`chain` 空的）；找不到照舊 `KernelNotFound`。
+
+**串接檔叫什麼（【擬】，要問使用者）**：推薦 `_chain.json`，不推 `.aos/chain`。
+
+| | `_chain.json`（推薦） | `.aos/chain` |
+|---|---|---|
+| 看不看得到 | `ls aos/base/` 就看到 | 點開頭是隱藏的，`ls` 看不到，新手會以為 `aos/base/` 只是放了幾份設定 |
+| 意思會不會打架 | 不會 | 這個原型裡 `.aos/` 一直是「執行時外層宣告給內層的東西」（`$AOS_ENV/.aos/…`、`/.aos`）；設定也放 `.aos/` 會讓同一個名字一邊是宣告、一邊是設定；照 aoslua，`.aos/` 頂層又是留給 `index`、`call` 這類基礎元素的 |
+| 格式 | 跟旁邊的 kernel 設定一樣是 json，能寫 `description` | 照宣告的寫法一行一個名字，手改最簡單，但寫不了說明 |
+| 跟 repo 慣例 | `_` 開頭＝「這個夾自己的檔」，跟 `_index.json`、`_description.md` 同一套 | 跟 aoslua「夾自己宣告它能被當成什麼」一致；將來 kernel 若變成 aos 的物件（夾＝程式），這種寫法比較順 |
+
+**單檔 `aos/base.json` 跟夾 `aos/base/` 同時在（【擬】，要問使用者）**：推薦**報錯要人改名**（`KernelNameClash`，退出碼 2，訊息印兩個路徑；`--dry-run` 也報）。理由：兩個都在，多半是把單檔改成一包時舊的忘了刪；「夾優先」會讓人改了 `aos/base.json` 卻怎麼都不生效，又不會有任何提示。代價：改成一包時要記得刪或改名舊檔。只在**同一個找的夾**裡兩個都在才報錯；不同的夾（`$MINI_KERNELS_PATH` 跟 `$AOS_HOME/kernels`）照舊第一個找到的算。只有夾、沒有 `_chain.json` 的（例 `aos/net/`）不是一包，就是放設定的夾，不算撞名。
+
+**示範**：`proto8/kernels/aos/base/`＝`_chain.json`（`cg`、`mask`、`aos/llm/fake`）＋`cg.json`（20%、512M、64）＋`mask.json`（蓋 `/run/user`）。pi 在裡面會怎樣：有上限、跳不出去、沒網路、經 socket 問得到劇本腦（每次 50 次）。巢狀的示範在 `bundle_test.py` 的暫存夾：`t/nest`＝`aos/base`＋它自己的 `net`（只放行測試伺服器 A）。
+
+### 驗收（`bundle_test.py`，新開）
+
+`bundle_test.py` 在外面起一個測試伺服器 A，`AOS_HOME` 設成這份 repo 的 `proto8`、`MINI_KERNELS_PATH` 指暫存夾（`~/.aos/scratch/proto9-mini-1127/bundle/`）的 `t/…`。
+
+| 項目 | 怎麼試 | 結果（兩次一樣，11-27 家機） |
+|---|---|---|
+| `f_expand_dry` | `--dry-run --kernels aos/base` | 三層照順序：`cgroup aos/base/cg from aos/base`、`mask …`、`llm aos/llm/fake from aos/base`；每支都帶 `--from aos/base`；沒自動加遮蔽；沒開暫存夾 |
+| `f_nested_dry` | `t/nest`（`aos/base` 加自己的 `net`） | 四層，前三層 `from t/nest>aos/base`、第四層 `net t/nest/net from t/nest` |
+| `f_loop`、`f_loop_self` | 互相引用、自己引用自己 | 退出碼 2、`KernelBundleLoop`、印出 `t/loop-a -> t/loop-b -> t/loop-a`／`t/self -> t/self`；指令沒跑、沒開暫存夾 |
+| `f_too_deep`、`f_depth_8_ok` | 9 層、8 層 | 9 層報 `KernelBundleTooDeep` 印出整串；8 層照跑，`from` 寫 `t/d2>…>t/d9` |
+| `f_clash`、`f_clash_dry` | `t/clash.json` 與 `t/clash/_chain.json` 都在 | 退出碼 2、`KernelNameClash`、兩個路徑都印、要人改名；`--dry-run` 也報 |
+| `f_order_bad_expanded`（`_dry`） | 一包裡 llm（上游＝A）在外、放行 A 的網路 kernel 在內 | `KernelOrderBad`，名字帶 `(from t/badorder)`；什麼都沒起 |
+| `f_nested_run` | 真的跑 `t/nest` | `.aos/kernels` 跟 `--dry-run` 一樣四行；A 通；經 socket 問腦 200；沒自動加遮蔽（包裡有） |
+| `f_cells_match` | 同上 | 每一格的 `name`、`layer`、`from` 都對得上 `.aos/kernels` 那種種類最後一行 |
+| `g_lock_bundle` | 同上，`lock` 全套 | 上面「實測 pi 拆不拆得掉」那張表，全部失敗、宣告沒變 |
+| `g_status_live` | 同上 | llm、net 狀態檔頭兩行 `state: running`、`updated: …`；pi 讀到 llm `requests_used 1→2`、net `updated` 往前走 |
+| `f_mixed` | `aos/base,t/net-a,aos/mask/ssh` | 五行照順序；A 通；問腦 200；兩格 mask 是最裡那層的 |
+| `f_auto_mask_expanded` | `t/cgonly`（一包裡只有 cg） | mini 加了 `aos/mask/run-user`；`.aos/kernels` 兩行；經 D-Bus 跳不出去 |
+| `g_lock_no_kernels` | 不裝 kernel | 最裡那步自己鎖 `0-root`，全部拆不掉 |
+| `g_lock_uid1` | `aos/base-low,aos/uid/1` | pi 是 uid 1，全部拆不掉 |
+| `g_lock_escape_no_mask`（info） | `t/cg --no-auto-mask`，經 D-Bus 在沙箱外起一隻去寫 | 裡面照樣拆不掉；**外面那隻寫得進去**（`busctl rc 0`，`.aos/kernels` 多一行 `pwned from outside`） |
+| `cleanup` | 跑前跑後比 | 行程、netns、`mini-*` 單元（含跳出去起的那隻）、`/tmp/aos-mini-*`、`/tmp/aos-probe-*`、測試伺服器都沒留 |
+
+兩次：`SUMMARY ok (19 PASS, 0 FAIL, 1 info, 20s)`（第一次跑時有三項是測試自己讀 `--dry-run` 輸出寫錯，改了測試再跑兩次）。舊的三支這次各跑一次：`accept.py` `SUMMARY ok (31 PASS, 0 FAIL, 4 info, 41s)`、`stack_test.py` `(22 PASS, 0 FAIL, 0 info, 104s)`、`llm_test.py` `(15 PASS, 0 FAIL, 0 info, 39s)`。
+
+### 第五段沒做或沒驗的
+
+- 串接檔名、同名衝突的處理是【擬】，等使用者定。
+- 單獨起的網路 kernel（`--dir`，第一段的用法）的宣告夾沒鎖（它不起內層），也沒補 `name`／`layer`。
+- pi-sandbox 那一版沒照「沒設 `AOS_ENV` 就看 `/`」改（它的 relay 讀 `/llm`），這次只動 mini-sandbox。
+- 真的 pi 沒專門去拆鎖（拆鎖用 `probe.py` 在 pi 的位置、用 pi 一樣的權限試）；pi `--fake` 經被鎖的宣告找 socket、問腦照常（`llm_test.py` 的 `e_pi_nonet`、`e_pi_net` 等）。
+- 公司 WSL 沒跑；mask 的 `keep` 留洞剛好碰到暫存夾的情形沒測；一包裡寫路徑（`/…`）的引用、`./sub/x` 沒有專門的測項。
+
 ## llm kernel（`llm_kernel.py`，第三段）
 
 使用者定第 4 題：llm kernel 也改成跟 mini 的 kernel 同一種包裝程式（`llm_kernel … -- 下一層`）。程式是 mini 這邊一份：HTTP 的部分照 [pi-sandbox](../pi-sandbox/README.md) 的 `llm_kernel.py` 抄過來改，`fake_brain.py` 原樣抄、`relay.js` 抄過來改兩處（見下）；pi-sandbox 的檔都沒動。
@@ -518,7 +680,8 @@ mini: error: KernelOrderBad aos/net/base-litellm-proxy (net kernel) lets 127.0.0
 | `kind`、`protocol`、`api`、`base` | `socket`、`http/1.1`、`openai-completions`、`/v1`（跟 pi-sandbox 一樣） |
 | `path` | socket 的**絕對路徑**【擬】（pi-sandbox 寫相對於宣告夾；mini 的宣告會被一層層抄進內層的夾，相對路徑就對不上了） |
 | `models`、`limit` | 准的模型一行一個；次數上限（內層的 llm kernel 讀來比、寫鬆就警告） |
-| `status` | 狀態檔的絕對路徑（`requests_used`、`requests_limit`、`models`、`upstream`） |
+| `status` | 狀態檔的絕對路徑（第五段起頭兩行 `state: running|stopped`、`updated: <UTC>`，接著 `requests_used`、`requests_limit`、`models`、`upstream`） |
+| `name`、`layer`（從一包來的另有 `from`） | 第五段起每一格都有，見「每一格固定有的」 |
 | `relay` | 第一個字是轉接的絕對路徑，後面是用法（同 pi-sandbox 的寫法） |
 | `network` | `unchanged: …` 或 `cut: …`（見下）【擬】 |
 | `description` | 一行英文：這隻 kernel 是什麼 |
@@ -652,6 +815,8 @@ pi 繞不過它，靠這幾件（都有驗收項）：
 
 - 第三段：`program` 只寫檔名＝mini 自己的程式、寫了 `/` 才當路徑（`$變數`、`~` 展開、相對 json 的夾）；找名字是 `$MINI_KERNELS_PATH` 先、`$AOS_HOME/kernels` 後；`--kernels=a,b` 與寫兩次 `--kernels` 接起來；`--no-auto-mask` 這個名字、自動遮蔽加在最裡面（uid 之前）、找不到 json 時用內建的；`llm_kernel.py` 的設定欄位（`upstream` 的四種寫法）、劇本腦也算次數、宣告的 `path`／`status`／`relay` 寫絕對路徑、`limit`、`network` 兩個新欄位；在網路 kernel 裡面時給內層新的空網路、把 `aos/net` 拿掉、上游 `127.0.0.1` 換成 `host_addr`；帳本夾用 tmpfs 蓋、上游 socket 用 `/dev/null` 蓋；relay 預設讀 `$AOS_ENV`、聽 8787；`aos/llm/fake`（劇本寫在設定裡、50 次）、`aos/llm/litellm-luna`（10 次）兩個示範名字；`llm_test.py` 的測項與門檻。
 
+- 第五段：每一格的 `from` 檔與 `.aos/kernels` 的 ` from <包>`、巢狀包用 `>` 接；鎖法（整個暫存夾掛成可寫的掛載點、裡面每一層的夾唯讀，已是掛載點的不動；沒裝 kernel 時最裡那步多開一層來鎖）；串接檔名 `_chain.json` 與格式（`description`、`chain`）；包裡名字的讀法（沒 `/` 或 `./` 開頭＝包自己的、有 `/`＝全名、`/`／`~` 開頭＝路徑）；`_` 開頭的名字保留；巢狀最多 8 層；同一個夾裡單檔與包同名時報錯；錯誤代號 `KernelNameClash`、`KernelBundleLoop`、`KernelBundleTooDeep`、`KernelBundleBad`；`--dry-run` 先印 `# layer N: …`；`bundle_test.py` 的測項與 `probe.py` 的 `lock` 試法。
+
 ## 跟任務書不一樣的地方
 
 - **`systemd-run --user` 那條漏洞換了一個量法**：任務書寫「`systemd-run --user` 從裡面起的行程跑出沙箱」；實測這支指令在 `-C` 的沙箱裡失敗，同一個請求改走 `busctl` 才成功。驗收兩種都試、兩種結果都印。
@@ -690,18 +855,19 @@ pi 繞不過它，靠這幾件（都有驗收項）：
 
 | 檔 | 是什麼 |
 |---|---|
-| `mini.py` | 讀設定、組那一行、跑、退出碼照傳；`--inside`（沙箱裡第一支）、`--give-back`（uid N 的檔還給你）；第二段加 `--kernels`（照名字找 kernel、串成一行、開 `$AOS_ENV`）；第三段改逗號分隔、去 `$AOS_HOME/kernels` 找、自動遮蔽、`--no-auto-mask`；第四段：網路 kernel 在 llm kernel 裡面又放行它的上游時拒絕起來（`KernelOrderBad`） |
+| `mini.py` | 讀設定、組那一行、跑、退出碼照傳；`--inside`（沙箱裡第一支）、`--give-back`（uid N 的檔還給你）；第二段加 `--kernels`（照名字找 kernel、串成一行、開 `$AOS_ENV`）；第三段改逗號分隔、去 `$AOS_HOME/kernels` 找、自動遮蔽、`--no-auto-mask`；第四段：網路 kernel 在 llm kernel 裡面又放行它的上游時拒絕起來（`KernelOrderBad`）；第五段：一包 kernel（`_chain.json` 展開、巢狀、擋循環與太深、同名衝突報錯）、`--from`、`--dry-run` 印展開後的每一層 |
 | `net_kernel.py` | 網路 kernel：外層 netns＋pasta＋nft＋tc、`ctl`、宣告、狀態檔；`--holder` 是它在外層裡的那一半；第二段加包裝模式（`--json CFG -- 下一支`）與 `--gate`（下一支的第一步） |
-| `probe.py` | 驗收在沙箱裡跑的小指令（cpu、mem、pids、cgroup、procs、tcp、get、put、curl、ns、leaks、ctl、read；第二段加 `check`＝一次量很多樣；第三段 `check` 加 `llm`：經宣告的 socket 問腦、找別的 llm socket、碰帳本夾） |
+| `probe.py` | 驗收在沙箱裡跑的小指令（cpu、mem、pids、cgroup、procs、tcp、get、put、curl、ns、leaks、ctl、read；第二段加 `check`＝一次量很多樣；第三段 `check` 加 `llm`：經宣告的 socket 問腦、找別的 llm socket、碰帳本夾；第五段 `check` 加 `lock`：各種拆唯讀鎖的試法、狀態檔有沒有照常更新、經 D-Bus 從外面寫） |
 | `accept.py` | 驗收：測試伺服器、三隻網路 kernel、每項一個沙箱、pi `--fake`、跑前跑後比對 |
-| `nest.py` | 第二段：kernel 共用的小工具（`KERNEL [選項] -- 下一支` 的參數、`$AOS_ENV` 的讀寫、user namespace 的對應、cgroup 的排法與重掛） |
+| `nest.py` | 第二段：kernel 共用的小工具（`KERNEL [選項] -- 下一支` 的參數、`$AOS_ENV` 的讀寫、user namespace 的對應、cgroup 的排法與重掛）；第五段：每一格固定的 `name`／`layer`／`status`／`from`、狀態檔頭兩行、唯讀鎖（`lock_env`）、沒設 `AOS_ENV` 就看 `/` |
 | `cg_kernel.py` | 第二段：cgroup kernel（cpu、mem、pids 上限＋自己的 cgroup namespace） |
 | `mask_kernel.py` | 第二段：檔案遮蔽 kernel（tmpfs／`/dev/null`／唯讀） |
-| `uid_kernel.py` | 第二段：uid kernel（換成 uid N，要放最後） |
-| `leaf.py` | 第二段：最裡那步（pi 自己的 namespace、沒網路宣告就空網路、乾淨的環境變數），用 `-c` 帶原始碼跑 |
+| `uid_kernel.py` | 第二段：uid kernel（換成 uid N，要放最後）；第五段：切之前多一段鎖宣告 |
+| `leaf.py` | 第二段：最裡那步（pi 自己的 namespace、沒網路宣告就空網路、乾淨的環境變數），用 `-c` 帶原始碼跑；第五段：沒有 kernel 鎖過宣告時自己多開一層來鎖 |
 | `llm_kernel.py` | 第三段：llm kernel（unix socket 上的 HTTP proxy、記帳、限模型、限次數；宣告 `aos/llm`；藏帳本夾；在網路 kernel 裡面時給內層空網路） |
 | `fake_brain.py` | 第三段：劇本腦（從 pi-sandbox 原樣抄） |
-| `relay.js` | 第三段：llm kernel 放進宣告夾的小轉接（從 pi-sandbox 抄，預設讀 `$AOS_ENV`、收絕對路徑） |
+| `relay.js` | 第三段：llm kernel 放進宣告夾的小轉接（從 pi-sandbox 抄，預設讀 `$AOS_ENV`、收絕對路徑）；第五段：沒設 `AOS_ENV` 讀 `/` |
 | `llm_test.py` | 第三段：llm 嵌套驗收（pi `--fake` 有／沒網路、429、繞不過、llm 在網路 kernel 裡、llm 疊 llm、自動遮蔽、`--model` 時真模型一次、跑前跑後比對）；第四段加寫錯疊法被拒、`state` 累計 |
 | [`proto8/kernels/`](../../proto8/kernels/README.md) | 第三段：照名字找的 kernel 設定（`aos/base-low.json` 等；第二段在這個夾的 `kernels/`，搬過去了） |
+| `bundle_test.py` | 第五段：一包 kernel（展開順序、巢狀、循環與太深報錯、混著寫、同名衝突、展開後的自動遮蔽與 `KernelOrderBad`）、每一格的 `name`／`layer`／`from` 對得上 `.aos/kernels`、唯讀鎖（pi 那層與再開一層都拆不掉、經 D-Bus 從外面寫得到）、狀態檔頭兩行與照常更新、跑前跑後比對 |
 | `stack_test.py` | 第二段：層疊實測（不同 kernel 疊、同一種疊兩層、沙箱裡開沙箱、pi `--fake`、跑前跑後比對）；第三段改逗號、加自動遮蔽兩項 |

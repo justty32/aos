@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cgroup kernel for mini (nests): makes a child cgroup under its own with cpu, memory and pids limits, moves into it, gives the inner layers their own cgroup namespace (they cannot see or raise these limits) and declares aos/cgroup; then runs the next layer there."""
+"""cgroup kernel for mini (nests): makes a child cgroup under its own with cpu, memory and pids limits, moves into it, gives the inner layers their own cgroup namespace (they cannot see or raise these limits) and declares aos/cgroup; then runs the next layer there, with the declarations locked read-only."""
 
 import os
 import re
@@ -121,7 +121,7 @@ def stage1(opts, cfg, nxt):
         if o is not None and (m is None or m > o):
             nest.warn(PROG, "%s: %s asks %s, an outer layer gives %s; %s applies" % (
                 opts["name"], k, show(k, m), show(k, o), show(k, o)))
-    env = nest.new_env("cgroup", opts["name"])
+    env = nest.new_env("cgroup", opts["name"], opts.get("from"))
     nest.declare(env, "cgroup", {
         "cpu": show("cpu", eff["cpu"]), "mem": show("mem", eff["mem"]), "pids": show("pids", eff["pids"]),
         "asked": "cpu %s mem %s pids %s" % (show("cpu", c["cpu"]), show("mem", c["mem"]), show("pids", c["pids"])),
@@ -135,12 +135,13 @@ def stage1(opts, cfg, nxt):
 
 
 def stage2(opts, nxt):
-    """In the new user, mount and cgroup namespaces: our cgroup is the root now."""
+    """In the new user, mount and cgroup namespaces: our cgroup is the root now; lock the declarations."""
     try:
         nest.cg_remount()
         nest.cg_layout("inner")
     except (OSError, RuntimeError) as e:
         nest.fail(PROG, "CgroupFailed", "inside: %s" % e)
+    nest.lock_env(PROG)
     try:
         os.execvp(nxt[0], nxt)
     except OSError as e:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""llm kernel for mini (nests): keeps an OpenAI-style HTTP proxy on a unix socket running in its own layer (counts and caps requests, only the listed models, upstream = a URL, the outer llm kernel, or a scripted fake brain), declares aos/llm with a relay for the inner layers, hides its budget and ledger from them, and runs the next layer; the agent reaches the brain through the socket without any network."""
+"""llm kernel for mini (nests): keeps an OpenAI-style HTTP proxy on a unix socket running in its own layer (counts and caps requests, only the listed models, upstream = a URL, the outer llm kernel, or a scripted fake brain), declares aos/llm with a relay for the inner layers (locked read-only for them, the status file still kept up to date), hides its budget and ledger from them, and runs the next layer; the agent reaches the brain through the socket without any network."""
 
 import http.client
 import json
@@ -60,9 +60,9 @@ def budget_write(b):
     write_atomic(K.budget, json.dumps(b) + "\n", 0o600)
 
 
-def status_write(b):
-    write_atomic(K.status, "requests_used: %d\nrequests_limit: %d\nmodels: %s\nupstream: %s\n" % (
-        b["used"], b["limit"], " ".join(K.models), K.upstream_desc))
+def status_write(b, state="running"):
+    write_atomic(K.status, nest.status_head(state) + "requests_used: %d\nrequests_limit: %d\nmodels: %s\n"
+                 "upstream: %s\n" % (b["used"], b["limit"], " ".join(K.models), K.upstream_desc))
 
 
 def ledger(rec):
@@ -333,7 +333,7 @@ def stage1(opts, cfg, nxt):
         nest.fail(PROG, "ConfigBad", "%s: %s" % (opts["name"], e), 2)
     for w in warns:
         nest.warn(PROG, "%s: %s" % (opts["name"], w))
-    env = nest.new_env("llm", opts["name"])
+    env = nest.new_env("llm", opts["name"], opts.get("from"))
     if not K.state:  # this run only: next to our folder, removed with the run folder
         K.state = env + ".state"
     os.makedirs(K.state, mode=0o700, exist_ok=True)
@@ -373,6 +373,10 @@ def stage1(opts, cfg, nxt):
     srv.shutdown()
     srv.server_close()
     b = budget_read()
+    try:
+        status_write(b, "stopped")
+    except OSError:
+        pass
     print("%s: %s: %d answered (%s), %d refused, %d upstream errors; %d of %d used" % (
         PROG, K.name, K.counts.get("fake", 0) + K.counts.get("sent", 0), "fake" if K.fake else "sent",
         K.counts.get("refused", 0), K.counts.get("upstream_error", 0), b["used"], b["limit"]),
@@ -387,7 +391,8 @@ def stage1(opts, cfg, nxt):
 def stage2(opts, cfg, nxt):
     """In the new user and mount (and, inside a net kernel, net) namespace: hide the state folder (budget, ledger)
     under an empty tmpfs and the upstream kernel's socket under /dev/null (the agent, further in, cannot take them
-    off: mounts from here are locked there); lo up."""
+    off: mounts from here are locked there); lock the declarations read-only (we keep writing the status file from
+    outside this namespace); lo up."""
     if cfg.get("lo"):
         subprocess.run(["ip", "link", "set", "lo", "up"], stderr=subprocess.DEVNULL)
     for p in cfg.get("hide", []):
@@ -398,6 +403,7 @@ def stage2(opts, cfg, nxt):
                 nest.mount("/dev/null", p, None, nest.MS_BIND)
         except OSError as e:
             nest.fail(PROG, "HideFailed", "%s: %s" % (p, e))
+    nest.lock_env(PROG)  # after the hiding: the hidden state folder is a mount point already and stays as it is
     try:
         os.execvp(nxt[0], nxt)
     except OSError as e:

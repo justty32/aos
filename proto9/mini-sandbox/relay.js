@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The relay mini's llm kernel puts out next to its socket (copied from pi-sandbox/relay.js; the declaration dir defaults to $AOS_ENV and the declared socket path may be absolute): listens on 127.0.0.1:PORT (the client's own loopback), joins each connection to the declared unix socket, runs CMD and exits with its code.
+// The relay mini's llm kernel puts out next to its socket (copied from pi-sandbox/relay.js; the declaration dir defaults to $AOS_ENV, or / when it is not set, and the declared socket path may be absolute): listens on 127.0.0.1:PORT (the client's own loopback), joins each connection to the declared unix socket, runs CMD and exits with its code.
 // CommonJS on purpose: the kernel puts it out without an extension, and node runs an extensionless file as CommonJS.
 "use strict";
 const fs = require("node:fs");
@@ -7,7 +7,7 @@ const net = require("node:net");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const USAGE = "relay [--llm DIR] [--port N] [-- CMD ARGS...]  (DIR: default $AOS_ENV; N: default 8787)";
+const USAGE = "relay [--llm DIR] [--port N] [-- CMD ARGS...]  (DIR: default $AOS_ENV, or / when it is not set; N: default 8787)";
 
 function die(code, msg) {
   process.stderr.write(`relay: error: ${code} ${msg}\n`);
@@ -16,7 +16,7 @@ function die(code, msg) {
 
 const argv = process.argv.slice(2);
 if (argv.includes("--help") || argv.includes("-h")) {
-  process.stdout.write(`usage: ${USAGE}\nListens on 127.0.0.1:N and joins each connection to the unix socket that DIR (default $AOS_ENV) declares in .aos/interfaces/aos/llm/; with CMD, runs it (a .js/.mjs/.cjs CMD runs under this node) and exits with its code.\n`);
+  process.stdout.write(`usage: ${USAGE}\nListens on 127.0.0.1:N and joins each connection to the unix socket that DIR (default $AOS_ENV) declares in .aos/interfaces/aos/llm/ (DIR: default $AOS_ENV, or / when it is not set); with CMD, runs it (a .js/.mjs/.cjs CMD runs under this node) and exits with its code.\n`);
   process.exit(0);
 }
 if (argv.length === 0) die("ArgumentsBad", `no arguments (usage: ${USAGE})`);
@@ -28,7 +28,7 @@ for (let i = 0; i < own.length; i += 2) {
   if (!["--llm", "--port"].includes(own[i]) || own[i + 1] === undefined) die("ArgumentsBad", `bad argument ${own[i]} (usage: ${USAGE})`);
   opts[own[i].slice(2)] = own[i + 1];
 }
-const llm = opts.llm || process.env.AOS_ENV || path.dirname(__filename);
+const llm = opts.llm || process.env.AOS_ENV || "/"; // the rule: $AOS_ENV first, / when it is not set
 const port = Number(opts.port || 8787);
 
 // reachable = has the interface; its parameters are the one-line files under it

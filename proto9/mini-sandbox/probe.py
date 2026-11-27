@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""What accept.py, stack_test.py and llm_test.py run inside a mini sandbox instead of pi: one subcommand per check (check = several at once), one json line out (standard library only, so it also runs as python3 -I -c SOURCE where your home is closed)."""
+"""What accept.py, stack_test.py, llm_test.py and bundle_test.py run inside a mini sandbox instead of pi: one subcommand per check (check = several at once), one json line out (standard library only, so it also runs as python3 -I -c SOURCE where your home is closed)."""
 
 import glob
 import json
@@ -239,7 +239,8 @@ def read(path):
 def check(spec):
     """Several checks in one sandbox (stack_test.py); spec is a json object, each key optional:
     secret PATH, cpu SECONDS, pids N, mem MB, tcp [[HOST, PORT], ...], get [HOST, PORT, BYTES, MAX_TIME],
-    escape [UNIT, OUTFILE], umount PATH, llm {posts, model, bad_model, state} (see llm_check)."""
+    escape [UNIT, OUTFILE], umount PATH, llm {posts, model, bad_model, state} (see llm_check), lock {status_wait,
+    model} (see lock_check)."""
     s = json.loads(spec)
     r = {"uid": os.getuid(), "cgroup": open("/proc/self/cgroup").read().strip(),
          "ifaces": sorted(n for _, n in socket.if_nameindex())}
@@ -327,12 +328,182 @@ def check(spec):
                  if k in ("systemd_run", "busctl", "run_user", "net"))
     if "llm" in s:
         r.update(llm_check(s["llm"]))
+    if "lock" in s:
+        r.update(lock_check(s["lock"]))
     if "umount" in s:
         import ctypes
         libc = ctypes.CDLL(None, use_errno=True)
         rc = libc.umount2(s["umount"].encode(), 2)  # MNT_DETACH
         r["umount"] = "ok" if rc == 0 else os.strerror(ctypes.get_errno())
     out(**r)
+
+
+# ---------------------------------------------------------------- can the agent undo the read-only lock?
+
+AT_FDCWD, AT_EMPTY_PATH, AT_RECURSIVE = -100, 0x1000, 0x8000
+OPEN_TREE_CLONE, MOVE_MOUNT_F_EMPTY_PATH, MOUNT_ATTR_RDONLY = 1, 4, 1
+SYS_OPEN_TREE, SYS_MOVE_MOUNT, SYS_MOUNT_SETATTR = 428, 429, 442  # x86_64
+MS_RDONLY, MS_REMOUNT, MS_BIND, MS_REC = 1, 32, 4096, 16384
+
+
+def _libc():
+    import ctypes
+    return ctypes, ctypes.CDLL(None, use_errno=True)
+
+
+def _rc(rc):
+    ctypes, _ = _libc()
+    return "ok" if rc >= 0 else os.strerror(ctypes.get_errno())
+
+
+def _try(fn):
+    try:
+        fn()
+        return "ok"
+    except OSError as e:
+        return e.strerror or str(e)
+
+
+def _mount(src, target, fstype, flags):
+    ctypes, libc = _libc()
+    enc = lambda x: x.encode() if isinstance(x, str) else x
+    return _rc(libc.mount(enc(src), enc(target), enc(fstype), ctypes.c_ulong(flags), None))
+
+
+def _setattr_rw(fd, path, flags):
+    """mount_setattr(2): clear MOUNT_ATTR_RDONLY (the new mount API's way to make a mount writable)."""
+    ctypes, libc = _libc()
+    attr = (ctypes.c_uint64 * 4)(0, MOUNT_ATTR_RDONLY, 0, 0)
+    return _rc(libc.syscall(SYS_MOUNT_SETATTR, ctypes.c_int(fd), path.encode(), ctypes.c_uint(flags), attr,
+                            ctypes.c_size_t(32)))
+
+
+def lock_attacks(env, cells, scratch):
+    """Everything the agent (root in its own user and mount namespace) might try to write the declarations."""
+    ctypes, libc = _libc()
+    r = {}
+    kernels = os.path.join(env, ".aos", "kernels")
+    run = os.path.dirname(env)
+    first = os.path.join(cells[0], "name") if cells else kernels
+    r["append_kernels"] = _try(lambda: open(kernels, "a").write("pwned x\n"))
+    r["write_cell"] = _try(lambda: open(first, "a").write("pwned\n"))
+    r["new_file"] = _try(lambda: open(os.path.join(env, ".aos", "pwned"), "w").write("x"))
+    r["remove_file"] = _try(lambda: os.unlink(first))
+    st = [open(os.path.join(c, "status")).read().strip() for c in cells]
+    st = [x for x in st if x]
+    if st:
+        r["write_status"] = _try(lambda: open(st[0], "a").write("state: pwned\n"))
+    for name, src in (("rename_env", env), ("rename_run", run)):
+        r[name] = _try(lambda: os.rename(src, src + ".x"))
+        if r[name] == "ok":
+            os.rename(src + ".x", src)
+    r["umount"] = _rc(libc.umount2(env.encode(), 2))  # MNT_DETACH
+    r["remount_rw"] = _mount(None, env, None, MS_REMOUNT | MS_BIND)
+    r["remount_rw_then_write"] = _try(lambda: open(kernels, "a").write("pwned remount\n"))
+    r["mount_setattr_rw"] = _setattr_rw(AT_FDCWD, env, 0)
+    fd = libc.syscall(SYS_OPEN_TREE, ctypes.c_int(AT_FDCWD), env.encode(), ctypes.c_uint(OPEN_TREE_CLONE |
+                                                                                         AT_RECURSIVE))
+    r["open_tree_clone"] = _rc(fd)
+    if fd >= 0:
+        r["clone_setattr_rw"] = _setattr_rw(fd, "", AT_EMPTY_PATH)
+        os.makedirs(scratch + "/clone", exist_ok=True)
+        r["clone_move_mount"] = _rc(libc.syscall(SYS_MOVE_MOUNT, ctypes.c_int(fd), b"", ctypes.c_int(AT_FDCWD),
+                                                 (scratch + "/clone").encode(), ctypes.c_uint(MOVE_MOUNT_F_EMPTY_PATH)))
+        if r["clone_move_mount"] == "ok":
+            r["clone_write"] = _try(lambda: open(scratch + "/clone/.aos/kernels", "a").write("pwned clone\n"))
+            libc.umount2((scratch + "/clone").encode(), 2)
+        os.close(fd)
+    for name, src in (("bind_run_plain", run), ("bind_tmp_plain", os.path.dirname(run))):
+        t = os.path.join(scratch, name)
+        os.makedirs(t, exist_ok=True)
+        r[name] = _mount(src, t, None, MS_BIND)  # without MS_REC: would show what the locked mounts cover
+        if r[name] == "ok":
+            under = os.path.join(t, os.path.relpath(kernels, src))
+            r[name + "_write"] = _try(lambda: open(under, "a").write("pwned bind\n"))
+            libc.umount2(t.encode(), 2)
+    return r
+
+
+def lock_check(spec):
+    """The declarations ($AOS_ENV, or /) are locked read-only: try to write, remove, rename, unmount, remount them,
+    once as the agent and once more from a user and mount namespace of its own (like unshare -Urm), then see that
+    nothing changed; and that the live status files still move (kept up to date from outside). escape_unit: last,
+    ask systemd --user over D-Bus for a process outside the sandbox that appends to .aos/kernels."""
+    import tempfile
+    env = os.environ.get("AOS_ENV") or "/"
+    decl = os.path.join(env, ".aos", "interfaces", "aos")
+    cells = [os.path.join(decl, k) for k in sorted(os.listdir(decl))] if os.path.isdir(decl) else []
+    cells = [c for c in cells if os.path.isdir(c)]
+    snap = lambda: {p: open(p).read() for p in [os.path.join(env, ".aos", "kernels")] +
+                    [os.path.join(c, f) for c in cells for f in sorted(os.listdir(c)) if os.path.isfile(os.path.join(c, f))]}
+    before = snap()
+    r = {"lock_cells": {os.path.basename(c): {f: open(os.path.join(c, f)).read().strip() for f in
+                                              ("name", "layer", "status", "from") if os.path.exists(os.path.join(c, f))}
+                        for c in cells},
+         "lock_kernels": open(os.path.join(env, ".aos", "kernels")).read().splitlines()}
+    scratch = tempfile.mkdtemp(prefix="aos-probe-")
+    try:
+        r["lock_agent"] = lock_attacks(env, cells, scratch)
+        rd, wr = os.pipe()
+        pid = os.fork()
+        if pid == 0:  # one user + mount namespace further in, root there (unshare -Urm)
+            os.close(rd)
+            try:
+                uid, gid = os.getuid(), os.getgid()
+                os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNS)
+                open("/proc/self/setgroups", "w").write("deny")
+                open("/proc/self/uid_map", "w").write("0 %d 1" % uid)
+                open("/proc/self/gid_map", "w").write("0 %d 1" % gid)
+                n = lock_attacks(env, cells, scratch)
+                n["cover_with_tmpfs"] = _mount("tmpfs", env, "tmpfs", 0)  # only its own view changes
+                if n["cover_with_tmpfs"] == "ok":
+                    n["cover_then_write"] = _try(lambda: open(os.path.join(env, "own"), "w").write("x"))
+            except OSError as e:
+                n = {"unshare": err(e)}
+            os.write(wr, json.dumps(n).encode())
+            os._exit(0)
+        os.close(wr)
+        got = b""
+        while True:
+            c = os.read(rd, 65536)
+            if not c:
+                break
+            got += c
+        os.waitpid(pid, 0)
+        r["lock_nested"] = json.loads(got or b"{}")
+    finally:
+        for d in sorted((os.path.join(dp, x) for dp, ds, _ in os.walk(scratch) for x in ds), reverse=True):
+            _, libc = _libc()
+            libc.umount2(d.encode(), 2)
+        subprocess.run(["rm", "-rf", scratch], stderr=subprocess.DEVNULL)
+    after = snap()
+    r["lock_unchanged"] = before == after
+    if before != after:
+        r["lock_changed"] = sorted(p for p in set(before) | set(after) if before.get(p) != after.get(p))
+    live = {}
+    for c in cells:
+        sp = open(os.path.join(c, "status")).read().strip()
+        if not sp:
+            continue
+        h1 = open(sp).read().splitlines()
+        if os.path.basename(c) == "llm":
+            llm_post(open(os.path.join(c, "path")).read().strip(), spec.get("model", "fake-model"))
+        time.sleep(float(spec.get("status_wait", 0)))
+        h2 = open(sp).read().splitlines()
+        live[os.path.basename(c)] = {"before": h1[:3], "after": h2[:3], "moved": h1 != h2}
+    r["lock_live"] = live
+    if spec.get("escape_unit"):  # out through systemd --user (open when /run/user is not covered), write from there
+        k = os.path.join(env, ".aos", "kernels")
+        script = "echo 'pwned from outside' >> %s" % k
+        p = subprocess.run(["busctl", "--user", "call", "--", "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+                            "org.freedesktop.systemd1.Manager", "StartTransientUnit", "ssa(sv)a(sa(sv))",
+                            spec["escape_unit"], "fail", "2", "ExecStart", "a(sasb)", "1", "/bin/sh", "3", "/bin/sh",
+                            "-c", script, "false", "CollectMode", "s", "inactive-or-failed", "0"],
+                           capture_output=True, text=True)
+        time.sleep(1.5)
+        r["lock_escape"] = {"busctl": "rc %d %s" % (p.returncode, (p.stdout + p.stderr).strip()[-120:]),
+                            "kernels_now": open(k).read().splitlines()[-1:]}
+    return r
 
 
 def llm_post(sock, model, timeout=20):
@@ -355,7 +526,7 @@ def llm_check(spec):
     """What the agent sees of an llm kernel: its aos/llm declaration (found through $AOS_ENV), N requests over the
     declared socket, other llm sockets it can find on the disk, and the kernel's state folder."""
     r = {}
-    decl = os.path.join(os.environ.get("AOS_ENV", "/nonexistent"), ".aos", "interfaces", "aos", "llm")
+    decl = os.path.join(os.environ.get("AOS_ENV") or "/", ".aos", "interfaces", "aos", "llm")
     try:
         sock = open(os.path.join(decl, "path")).read().strip()
         r["llm_network"] = open(os.path.join(decl, "network")).read().split(":")[0]

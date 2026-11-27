@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""File mask kernel for mini (nests): in its own user and mount namespace covers the listed paths (default /run/user/<uid>, the way out through systemd --user and D-Bus) with an empty tmpfs, /dev/null or a read-only bind, keeps the chain's aos folder visible, declares aos/mask, then runs the next layer there."""
+"""File mask kernel for mini (nests): in its own user and mount namespace covers the listed paths (default /run/user/<uid>, the way out through systemd --user and D-Bus) with an empty tmpfs, /dev/null or a read-only bind, keeps the chain's aos folder visible, declares aos/mask, then runs the next layer there, with the declarations locked read-only."""
 
 import json
 import os
@@ -13,8 +13,6 @@ import nest  # noqa: E402
 PROG = "mask-kernel"
 DEFAULT = [{"path": "/run/user/{uid}", "how": "tmpfs"}]
 HOWS = ("tmpfs", "null", "ro")
-ST_FLAGS = ((1, nest.MS_RDONLY), (2, nest.MS_NOSUID), (4, nest.MS_NODEV), (8, nest.MS_NOEXEC),
-            (1024, nest.MS_NOATIME), (2048, nest.MS_NODIRATIME), (4096, nest.MS_RELATIME))
 
 
 def resolve(cfg):
@@ -45,7 +43,7 @@ def stage1(opts, cfg, nxt):
         paths, keep = resolve(cfg)
     except (ValueError, KeyError) as e:
         nest.fail(PROG, "ConfigBad", str(e), 2)
-    env = nest.new_env("mask", opts["name"])
+    env = nest.new_env("mask", opts["name"], opts.get("from"))
     outer = nest.decl_read(nest.env_outer(), "mask", "paths", "")
     lines = [l for l in outer.splitlines() if l.strip()]
     for p in paths:
@@ -62,11 +60,6 @@ def stage1(opts, cfg, nxt):
     argv = ["unshare"] + nest.userns_args() + ["--mount", "--"] + nest.py(os.path.abspath(__file__)) + \
         ["--stage2", "--name", opts["name"], "--json", spec, "--"] + nxt
     os.execvp(argv[0], argv)
-
-
-def mount_flags(path):
-    f = os.statvfs(path).f_flag
-    return sum(ms for st, ms in ST_FLAGS if f & st)
 
 
 def cover(p, keep):
@@ -90,7 +83,7 @@ def cover(p, keep):
         nest.mount("/dev/null", path, None, nest.MS_BIND)
     else:  # ro: bind it onto itself, then make that bind read-only (keeping the flags it already has, or EPERM)
         nest.mount(path, path, None, nest.MS_BIND | nest.MS_REC)
-        nest.mount(None, path, None, nest.MS_BIND | nest.MS_REMOUNT | nest.MS_RDONLY | mount_flags(path))
+        nest.mount(None, path, None, nest.MS_BIND | nest.MS_REMOUNT | nest.MS_RDONLY | nest.mount_flags(path))
 
 
 def stage2(opts, cfg, nxt):
@@ -99,6 +92,7 @@ def stage2(opts, cfg, nxt):
             cover(p, cfg["keep"])
         except OSError as e:
             nest.fail(PROG, "MaskFailed", "%s %s: %s" % (p["how"], p["path"], e))
+    nest.lock_env(PROG)
     try:
         os.execvp(nxt[0], nxt)
     except OSError as e:

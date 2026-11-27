@@ -3,6 +3,11 @@
  "generated_by": "wf/tools/index_gen.py",
  "tree": {
   "aos": {
+   "base": {
+    "_chain.json": "bundle aos/base: the usual base, outermost first: resource limits (cg), /run/user covered (mask), then the scripted fake brain (aos/llm/fake)",
+    "cg.json": "20% of one core, 512M memory (no swap), 64 processes/threads",
+    "mask.json": "cover /run/user/<your uid> with an empty folder (no systemd --user, no D-Bus session bus)"
+   },
    "base-high.json": "cgroup kernel, higher limits: 2 cores, 4G memory (no swap), 1024 processes/threads",
    "base-low.json": "cgroup kernel, low limits: 20% of one core, 512M memory (no swap), 64 processes/threads",
    "llm": {

@@ -1,0 +1,4 @@
+{
+  "description": "bundle aos/base: the usual base, outermost first: resource limits (cg), /run/user covered (mask), then the scripted fake brain (aos/llm/fake)",
+  "chain": ["cg", "mask", "aos/llm/fake"]
+}
