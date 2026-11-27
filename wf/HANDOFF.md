@@ -21,7 +21,7 @@
 - **main-alt**（範本 `$AOS_HOME/templates/agents/eca-claude-alt`、工作區 `~/repo/aos`、沒開畫面、靠收信做）：調查、實作、驗收、交件、寫網頁全包，子 agent 自己派（普通工作 opus、想事情 fable）。使用者也直接對 main-alt 說了：「你是main-alt，請配合main。我現在人在外面，只能用手機跟main交流。麻煩你了。我大約晚上六點回來。事情都會是交給你做。」
 - 來回的做法：main 寄信（附使用者原話）→ main-alt 做完寄 DONE／BLOCKED／NEEDS-USER 給 main；要給使用者看的寫成單檔 HTML 放 `~/.aos/scratch/<名>/`（手機好讀、白話、少術語），信裡附絕對路徑與摘要，main 上傳成 artifact。**main-alt 少寄中間的 PROGRESS 信**，每封都會叫醒 main、吃它的額度。
 
-**授權**：沒有 push 授權（本地比遠端多好幾個 commit，等使用者說）。刪 phone 的 stack 是使用者「可以清」（經 main 轉）。
+**授權**：**push 一律每晚 23:00**（使用者 11-27 13:05 在 main 的對話裡：「Push就是一律晚上十一點push」；常設，記在 [user/01 push 授權](workflows/common/user/01-說話授權與記憶.md#每晚-2300-push2026-11-27-定)）。白天只 commit。main-alt 用 aos 鐘每天 23:00 照那條的步驟推、寄信給 main 說推了幾個。刪 phone 的 stack 是使用者「可以清」（經 main 轉）。
 
 **今天下午做了的**
 - **清 phone**：`~/aos-home/.stack/procs/repo-aos/procs/phone` 刪了，`aos-daemon-ctl leftovers` 是 0。
