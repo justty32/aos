@@ -10,7 +10,7 @@
 
 **第六段（11-27 深夜，多包重疊、攤平七題照推薦，加修兩個 bug；細節在「第六段：多包重疊、攤平、effective 與兩個 bug」）**
 
-- **pi 在裡面會怎樣**：兩包都引用同一個 kernel 時只起一次（一隻腦、一本帳，印一行說留了外面那次）；uid 寫在哪都行，mini 搬到最裡面；兩個 llm 沒串起來、uid 號碼打架、`merge` 合不了的，**起之前就拒絕**，什麼都沒起。連在一起的 cgroup 與 mask kernel **攤平成一層**（一個 namespace、cgroup 取最小、遮蔽照順序一張表），pi 看到的上限、檔案、宣告、`.aos/kernels` 跟一層一層做一樣（實測），一樣拆不掉；100 層也 2 秒起來（以前第 33 層就撞牆）。pi 讀 `$AOS_ENV/.aos/effective/` 就知道自己真正的上限、`blame` 說是第幾層哪一包給的；`.aos/lock.json` 記每層的檔與雜湊。
+- **pi 在裡面會怎樣**：兩包都引用同一個 kernel 時只起一次（一隻腦、一本帳，印一行說留了外面那次）；uid 寫在哪都行，mini 搬到最裡面；兩個 llm 沒串起來、uid 號碼打架、`merge` 合不了的，**起之前就拒絕**，什麼都沒起。連在一起的 cgroup 與 mask kernel **攤平成一層**（一個 namespace、cgroup 取最小、遮蔽照順序一張表），pi 看到的上限、檔案、宣告、`.aos/kernels` 跟一層一層做一樣（實測），一樣拆不掉；100 層約 0.2 秒就起好（[PERF.md](PERF.md)；以前第 33 層就撞牆）。pi 讀 `$AOS_ENV/.aos/effective/` 就知道自己真正的上限、`blame` 說是第幾層哪一包給的；`.aos/lock.json` 記每層的檔與雜湊。
 - **新寫法**：`_chain.json` 裡可以寫 `{"merge": ["a", "b"]}`（合成一層，只取緊）和 `{"use": "aos/base", "replace": {"cg": "aos/base-high"}, "without": ["aos/llm/fake"]}`（整層換掉或拿掉）。新指令 `mini.py --explain`、`--lock`、`--diff A B`。內層寫鬆的警告改成 mini 印一行摘要。
 - **起之前先算 user namespace 層數**：網路 2、其他每個真層 1、最裡那步 1；在主機上超過 24（Linux 最多 33，留 9 給 pi 自己再開沙箱，24／9 是【擬】）就報 `KernelTooDeep`、什麼都不起。
 - **bug a（撞牆卡死、留孤兒）**：每個 kernel 開 namespace 前先問還有沒有位子，沒有就印 `UsernsFull`（說清楚是層數用完、不是硬碟滿）；網路 kernel 不再死等 gate；mini 收尾時把 scope 裡剩的全收掉。故意撞牆兩種疊法都 17 秒內回來、什麼都沒留。
@@ -162,9 +162,9 @@ systemd-run --user --scope --quiet --collect --unit mini-t-2114095.scope -p CPUQ
 
 **nft 規則**（外層 A，表名 `inet aosnet`）：從 `vp*` 進來的新連線只有白名單（與 `host_addr` 的那幾個 port）放行，其他回 `admin-prohibited`（pi 看到「No route to host」，馬上失敗）；放行與回程的封包兩個方向都先經過同一個 `quota`，超過就丟；從 `vp*` 打 A 自己一律丟（`to_outer`）；往 `aosnet0` 出去的做 masquerade。每條白名單一個具名計數器。完整規則用 `--dry-run` 看。
 
-**tc**：上傳在 `aosnet0`（A 往 pasta）掛 tbf、佇列 1 秒；下載在每條 `vpN`（A 往沙箱）掛 tbf、佇列 200 毫秒。
+**tc**：上傳在 `aosnet0`（A 往 pasta）掛 tbf、佇列 1 秒；下載在每條 `vpN`（A 往沙箱）掛 tbf、佇列也是 1 秒（原本 200 毫秒，第六段改，見下方「網路疊三層總量被吃光」那條）。
 - **上傳的佇列為什麼開 1 秒（這次量到的）**：200 毫秒時上傳 2 MB 有時 2 秒、有時 5～13 秒，tbf 只丟了 1～3 個封包，卻多送了三成的位元組；開到 1 秒後連續 7 次（含一次 10 MB）都 0 丟、0.97～1.00 MB/s。推測原因：上傳那條 TCP 的另一頭是 pasta 自己（它把連線接下來再從你主機送出去），漏一個封包後面的都要重送；所以寧可排隊、不要丟。代價是上傳卡滿時延遲最多多 1 秒。
-- 下載的另一頭是沙箱自己的 Linux，丟幾個封包它處理得好，200 毫秒就準（1.96 MB/s，設 2.00）。
+- 下載的另一頭是沙箱自己的 Linux，單層時 200 毫秒就準（1.96 MB/s，設 2.00）；但疊三層時中間層丟包、pasta 整段重送被重複計數，所以第六段也改成 1 秒不丟。
 
 **veth 由網路 kernel 拆**：沙箱結束後，它的 netns 有時會被還沒關完的連線拖住（例如總量用完卡著的下載），veth 一直在，下一個沙箱就因 `max_attach` 接不上（第一輪驗收撞到）。現在 holder 記住每條 vpN 接的是哪隻行程（PID＋啟動時間），那隻不在了就 `ip link del`，每秒查一次、接新沙箱前也查一次。
 
@@ -258,7 +258,7 @@ info（漏掉的，照實量、不算失敗；兩次一樣）：
 - **Janet 的 `with-dyns`**：在一段程式外面包一層「這一段裡某個設定是什麼」，裡面的程式去讀，拿到的是離它最近那層包的值；包好幾層就是一層套一層。這裡一樣：每個 kernel 替它裡面那一段設好環境，裡面再包一層，就是在這個環境裡再設一次。
 - **跟 Lua metatable 一層層合併不一樣的地方**：後一層不是跟前一層「合併設定表」，而是**真的跑在前一層的環境裡**——它的行程在前一層的 cgroup 裡、它看到的網路是前一層給的網路、它看到的檔案是前一層遮過的檔案。所以它用得到前一層的東西，也鬆不過前一層。
 - **誰是住戶**：每個 kernel 是前一層的住戶；pi（agent）是最裡層的住戶。**寫在前面的＝外層**（使用者已確認）。
-- **內層不能比外層鬆**（11-27 定的 1甲：不擋在裡面再開沙箱）：這版不是靠 kernel 自律，是 Linux 本身就這樣算——cgroup 上限一層層往下取最緊、封包要先過內層的規則再過外層的、從外層抄來的掛載在內層是鎖住的。內層寫得比外層鬆，只是寫了沒用（起來時印一行警告）。
+- **內層不能比外層鬆**（11-27 定的 1甲：不擋在裡面再開沙箱）：這版不是靠 kernel 自律，是 Linux 本身就這樣算——cgroup 上限一層層往下取最緊、封包要先過內層的規則再過外層的、從外層抄來的掛載在內層是鎖住的。內層寫得比外層鬆，只是寫了沒用（第六段起改由 mini 起之前印一行摘要，不再每個 kernel 各印）。
 
 ### 長什麼樣
 
@@ -594,7 +594,7 @@ systemd-run --user --scope … cg_kernel.py --name aos/base/cg --from aos/base -
 ```
 
   自動加的那層後面寫 `(added by mini)`；`--print` 同樣印到 stderr。每支 kernel 多收一個 `--from 包`（`nest.parse`）。
-- **錯誤代號**【擬】：`KernelNameClash`（同名的檔與夾）、`KernelBundleLoop`、`KernelBundleTooDeep`、`KernelBundleBad`（`_chain.json` 讀不懂、`chain` 空的）；找不到照舊 `KernelNotFound`。
+- **錯誤代號**：`KernelNameClash`（同名的檔與夾）、`KernelBundleLoop`、`KernelBundleTooDeep`、`KernelBundleBad`（`_chain.json` 讀不懂、`chain` 空的）；找不到照舊 `KernelNotFound`。
 
 **串接檔叫什麼（使用者定，11-27 深夜「都先按照推薦。」：甲 `_chain.json`）**：推薦 `_chain.json`，不推 `.aos/chain`。
 
@@ -636,7 +636,7 @@ systemd-run --user --scope … cg_kernel.py --name aos/base/cg --from aos/base -
 
 ### 第五段沒做或沒驗的
 
-- 串接檔名、同名衝突的處理是【擬】，等使用者定。
+- 串接檔名 `_chain.json`、同名的檔與夾並存報錯，使用者 11-27 深夜照推薦定了（「都先按照推薦。」）。
 - 單獨起的網路 kernel（`--dir`，第一段的用法）的宣告夾沒鎖（它不起內層），也沒補 `name`／`layer`。
 - pi-sandbox 那一版沒照「沒設 `AOS_ENV` 就看 `/`」改（它的 relay 讀 `/llm`），這次只動 mini-sandbox。
 - 真的 pi 沒專門去拆鎖（拆鎖用 `probe.py` 在 pi 的位置、用 pi 一樣的權限試）；pi `--fake` 經被鎖的宣告找 socket、問腦照常（`llm_test.py` 的 `e_pi_nonet`、`e_pi_net` 等）。
@@ -890,7 +890,7 @@ looser than an outer layer (the outer one applies): 3
 |---|---|
 | `kind`、`protocol`、`api`、`base` | `socket`、`http/1.1`、`openai-completions`、`/v1`（跟 pi-sandbox 一樣） |
 | `path` | socket 的**絕對路徑**【擬】（pi-sandbox 寫相對於宣告夾；mini 的宣告會被一層層抄進內層的夾，相對路徑就對不上了） |
-| `models`、`limit` | 准的模型一行一個；次數上限（內層的 llm kernel 讀來比、寫鬆就警告） |
+| `models`、`limit` | 准的模型一行一個；次數上限（寫得比外層鬆時，由 mini 起之前印一行摘要） |
 | `status` | 狀態檔的絕對路徑（第五段起頭兩行 `state: running|stopped`、`updated: <UTC>`，接著 `requests_used`、`requests_limit`、`models`、`upstream`） |
 | `name`、`layer`（從一包來的另有 `from`） | 第五段起每一格都有，見「每一格固定有的」 |
 | `relay` | 第一個字是轉接的絕對路徑，後面是用法（同 pi-sandbox 的寫法） |

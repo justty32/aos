@@ -1,5 +1,5 @@
 {
-  "description": "uid kernel: everything inside runs as uid 1 (outside: your first subordinate id); put it last",
+  "description": "uid kernel: everything inside runs as uid 1 (outside: your first subordinate id); mini moves it to the innermost layer by itself",
   "program": "uid_kernel.py",
   "config": {"uid": 1}
 }
