@@ -14,7 +14,7 @@
 - **宣告夾鎖成唯讀**：每一層起內層之前，在自己的 mount namespace 把交出去的夾（連外層的夾與 mini 的 `0-root`）唯讀掛上，整個暫存夾也掛成一個掛載點（改不了名）；沒裝 kernel 時由最裡那步自己鎖。**pi 在裡面會怎樣**：讀得到、寫不進去（`Read-only file system`），改名、卸載、改回可寫、用新的掛載 API、自己再開一層 namespace 再拆，全部失敗（試法與結果見下）；kernel 在外面照樣每秒更新狀態檔，pi 看得到新的內容。**拆得掉的只有一條**：`/run/user` 沒蓋時（`--no-auto-mask` 或什麼 kernel 都不裝），pi 經 D-Bus 叫 systemd 在沙箱外起一隻行程，那隻寫得進去（實測）。
 - **pi 找宣告的規矩**：先看 `$AOS_ENV`，沒設就看 `/`；`relay.js`、最裡那步、各 kernel、`probe.py` 都照這個找。
 - **同名不同義的（`kind`、路徑相對或絕對、沒上限的寫法）沒改**，列在「先記下」一節，跟決策審查第 3 題一起定。
-- **一包 kernel**：`--kernels aos/base` 可以對到一個夾，夾裡的 `_chain.json`【擬】列出展開成哪一串；夾裡的 kernel 寫短名（`cg`＝`aos/base/cg`），別處的寫全名（`aos/llm/fake`）；一包裡可以再引用一包（最多 8 層），互相引用會報錯並印出整圈；跟單名混著寫也行（`--kernels aos/base,aos/net/xxx`）。展開後跟直接寫一串完全一樣：照順序嵌套、自動遮蔽照樣加、`KernelOrderBad` 照樣查、`--dry-run` 先印展開後的每一層。單檔 `aos/base.json` 跟夾 `aos/base/` 同時在時【擬】報錯要你改名。示範包 `proto8/kernels/aos/base/`（`cg`、`mask`、再引用 `aos/llm/fake`）。
+- **一包 kernel**：`--kernels aos/base` 可以對到一個夾，夾裡的 `_chain.json`（使用者定，11-27 深夜「都先按照推薦。」）列出展開成哪一串；夾裡的 kernel 寫短名（`cg`＝`aos/base/cg`），別處的寫全名（`aos/llm/fake`）；一包裡可以再引用一包（最多 8 層），互相引用會報錯並印出整圈；跟單名混著寫也行（`--kernels aos/base,aos/net/xxx`）。展開後跟直接寫一串完全一樣：照順序嵌套、自動遮蔽照樣加、`KernelOrderBad` 照樣查、`--dry-run` 先印展開後的每一層。單檔 `aos/base.json` 跟夾 `aos/base/` 同時在時報錯要你改名（使用者定，11-27 深夜「都先按照推薦。」）。示範包 `proto8/kernels/aos/base/`（`cg`、`mask`、再引用 `aos/llm/fake`）。
 - **驗收**：新的 `bundle_test.py` 20 項（19 PASS、1 info）跑兩次都過；`accept.py` 31、`stack_test.py` 22、`llm_test.py` 15 照舊全過；跑完沒留下行程、scope、netns、`/tmp/aos-mini-*`。
 
 **第四段（11-27 深夜，kernel 設定檔格式說明第 07 節三題都照推薦；細節在「第四段：三題怎麼做」）**
@@ -558,7 +558,7 @@ mini: error: KernelOrderBad aos/net/base-litellm-proxy (net kernel) lets 127.0.0
 
 ### 一包 kernel
 
-**用法**：`--kernels` 的名字可以是一個夾，夾裡有 `_chain.json`【擬】：
+**用法**：`--kernels` 的名字可以是一個夾，夾裡有 `_chain.json`：
 
 ```json
 {"description": "bundle aos/base: …",
@@ -585,7 +585,7 @@ systemd-run --user --scope … cg_kernel.py --name aos/base/cg --from aos/base -
   自動加的那層後面寫 `(added by mini)`；`--print` 同樣印到 stderr。每支 kernel 多收一個 `--from 包`（`nest.parse`）。
 - **錯誤代號**【擬】：`KernelNameClash`（同名的檔與夾）、`KernelBundleLoop`、`KernelBundleTooDeep`、`KernelBundleBad`（`_chain.json` 讀不懂、`chain` 空的）；找不到照舊 `KernelNotFound`。
 
-**串接檔叫什麼（【擬】，要問使用者）**：推薦 `_chain.json`，不推 `.aos/chain`。
+**串接檔叫什麼（使用者定，11-27 深夜「都先按照推薦。」：甲 `_chain.json`）**：推薦 `_chain.json`，不推 `.aos/chain`。
 
 | | `_chain.json`（推薦） | `.aos/chain` |
 |---|---|---|
@@ -594,7 +594,7 @@ systemd-run --user --scope … cg_kernel.py --name aos/base/cg --from aos/base -
 | 格式 | 跟旁邊的 kernel 設定一樣是 json，能寫 `description` | 照宣告的寫法一行一個名字，手改最簡單，但寫不了說明 |
 | 跟 repo 慣例 | `_` 開頭＝「這個夾自己的檔」，跟 `_index.json`、`_description.md` 同一套 | 跟 aoslua「夾自己宣告它能被當成什麼」一致；將來 kernel 若變成 aos 的物件（夾＝程式），這種寫法比較順 |
 
-**單檔 `aos/base.json` 跟夾 `aos/base/` 同時在（【擬】，要問使用者）**：推薦**報錯要人改名**（`KernelNameClash`，退出碼 2，訊息印兩個路徑；`--dry-run` 也報）。理由：兩個都在，多半是把單檔改成一包時舊的忘了刪；「夾優先」會讓人改了 `aos/base.json` 卻怎麼都不生效，又不會有任何提示。代價：改成一包時要記得刪或改名舊檔。只在**同一個找的夾**裡兩個都在才報錯；不同的夾（`$MINI_KERNELS_PATH` 跟 `$AOS_HOME/kernels`）照舊第一個找到的算。只有夾、沒有 `_chain.json` 的（例 `aos/net/`）不是一包，就是放設定的夾，不算撞名。
+**單檔 `aos/base.json` 跟夾 `aos/base/` 同時在（使用者定，11-27 深夜「都先按照推薦。」：甲 報錯）**：推薦**報錯要人改名**（`KernelNameClash`，退出碼 2，訊息印兩個路徑；`--dry-run` 也報）。理由：兩個都在，多半是把單檔改成一包時舊的忘了刪；「夾優先」會讓人改了 `aos/base.json` 卻怎麼都不生效，又不會有任何提示。代價：改成一包時要記得刪或改名舊檔。只在**同一個找的夾**裡兩個都在才報錯；不同的夾（`$MINI_KERNELS_PATH` 跟 `$AOS_HOME/kernels`）照舊第一個找到的算。只有夾、沒有 `_chain.json` 的（例 `aos/net/`）不是一包，就是放設定的夾，不算撞名。
 
 **示範**：`proto8/kernels/aos/base/`＝`_chain.json`（`cg`、`mask`、`aos/llm/fake`）＋`cg.json`（20%、512M、64）＋`mask.json`（蓋 `/run/user`）。pi 在裡面會怎樣：有上限、跳不出去、沒網路、經 socket 問得到劇本腦（每次 50 次）。巢狀的示範在 `bundle_test.py` 的暫存夾：`t/nest`＝`aos/base`＋它自己的 `net`（只放行測試伺服器 A）。
 

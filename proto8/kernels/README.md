@@ -6,7 +6,7 @@
 
 - **怎麼找**：`mini.py` 先找 `$MINI_KERNELS_PATH`（冒號分隔的夾，可不設），再找 `$AOS_HOME/kernels/`；第一個找到的算。兩個都沒設就報錯、什麼都不跑。
 - **一份長這樣**：`{"description": "一行英文", "program": "cg_kernel.py", "config": {…}}`。`program` 只寫檔名＝mini 自己的程式（跟 `mini.py` 同一夾）；寫了 `/` 才當路徑（`$變數`、`~` 會展開，相對路徑從這份 json 的夾算）【擬】。`config` 各 kernel 自己的欄位，見 mini-sandbox 的 README。
-- **一包 kernel**（使用者 11-27 深夜：「是否自由組合定義後，這種一包的kernel也能用？比如我用--kernels aos/base，他其實是aos/base/底下一堆東西的結合（可能還會加上一些ext/xxx），只是用aos/base/底下的某個檔把他們串起來。」）：一個夾裡放 `_chain.json`【擬】＝`{"description": "…", "chain": ["cg", "mask", "aos/llm/fake"]}`，由外到內列出展開成哪一串。沒有 `/` 的名字是這一包自己的（`cg`＝`aos/base/cg.json`），有 `/` 的是全名（照上面的找法）。一包裡可以再引用一包（最多 8 層）；互相引用、太深都報錯並印出整串；能跟單名混著寫（`--kernels aos/base,aos/net/xxx`）。展開後跟直接寫一串一樣（嵌套順序、自動遮蔽、`KernelOrderBad` 都照展開後的算），`--dry-run` 先印展開後的每一層。同一個夾裡 `aos/base.json` 和 `aos/base/_chain.json` 都在時【擬】報錯（`KernelNameClash`）要你改名。細節在 mini-sandbox README 的「一包 kernel」。
+- **一包 kernel**（使用者 11-27 深夜：「是否自由組合定義後，這種一包的kernel也能用？比如我用--kernels aos/base，他其實是aos/base/底下一堆東西的結合（可能還會加上一些ext/xxx），只是用aos/base/底下的某個檔把他們串起來。」）：一個夾裡放 `_chain.json`＝`{"description": "…", "chain": ["cg", "mask", "aos/llm/fake"]}`，由外到內列出展開成哪一串。沒有 `/` 的名字是這一包自己的（`cg`＝`aos/base/cg.json`），有 `/` 的是全名（照上面的找法）。一包裡可以再引用一包（最多 8 層）；互相引用、太深都報錯並印出整串；能跟單名混著寫（`--kernels aos/base,aos/net/xxx`）。展開後跟直接寫一串一樣（嵌套順序、自動遮蔽、`KernelOrderBad` 都照展開後的算），`--dry-run` 先印展開後的每一層。同一個夾裡 `aos/base.json` 和 `aos/base/_chain.json` 都在時報錯（`KernelNameClash`）要你改名。細節在 mini-sandbox README 的「一包 kernel」。
 - **寫在前面的是外層**：`--kernels a,b,c` 的 `a` 最外面，pi 住在最裡面；裝了資源上限、網路或 llm kernel 時，mini 自動在最裡面加 `aos/mask/run-user`（`--no-auto-mask` 關掉；llm kernel 也算是使用者 11-27 深夜定的，見下）。
 - **pi 在裡面會怎樣**：這些檔 pi 讀得到也改得到（檔案沒遮），改了要到下一次起的時候才生效。（跑起來之後各層交給它的宣告夾——`$AOS_ENV` 那邊——是唯讀的，那是另一回事，見下。）
 - **pi 去哪找宣告**（11-27 深夜使用者定）：先看 `$AOS_ENV`，沒設就看 `/`（`/.aos/…`）。每個 kernel 在 `$AOS_ENV/.aos/interfaces/aos/<種類>/` 一定寫 `description`、`name`（這份設定的名字；一包展開的寫展開後的，例 `aos/base/cg`）、`layer`（第幾層，1＝最外）、`status`（狀態檔的絕對路徑，沒有就空檔），從一包來的多一個 `from`；狀態檔頭兩行固定 `state:`、`updated:`。這些宣告在交給內層前鎖成唯讀，pi 改不了也拆不掉（只有 `/run/user` 沒蓋時，經 D-Bus 在沙箱外起的行程寫得到）。
@@ -38,4 +38,4 @@
 3. pi 先看 `$AOS_ENV`，沒設就看 `/`。
 4. 同名不同義的（`kind`、路徑相對或絕對、沒上限寫 `max` 還是空檔）先不改，跟決策審查第 3 題（`aos/ctl` 的形狀）一起定。
 
-一包 kernel 照上面「一包 kernel」那條做；串接檔叫 `_chain.json`、單檔與夾同名時報錯，這兩點是我先照推薦做的【擬】，要再問使用者。
+一包 kernel 照上面「一包 kernel」那條做；串接檔叫 `_chain.json`、單檔與夾同名時報錯，這兩點使用者 11-27 深夜定了：「都先按照推薦。」
