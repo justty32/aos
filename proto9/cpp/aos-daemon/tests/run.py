@@ -2609,6 +2609,21 @@ GROUPS = {"basic": t_basic, "procs": t_procs, "ns": t_ns, "nsconf": t_nsconf, "l
           "irestart": t_irestart, "slave": t_slave, "notmp": t_notmp, "killgrp": t_killgrp, "tsize": t_tsize, "jdepth": t_jdepth}
 
 
+def stop_left_running(group):
+    """一組半途拋了例外時，它起的 daemon 沒走到 stop()：在這裡收掉，不然下一組「什麼都沒留下」的檢查會算到它（11-27 seccomp 拋例外時
+    nest 最後那條就是看到 seccomp 組留下的起動那一層與 daemon 兩支）。先 SIGTERM、10 秒不走再 SIGKILL。"""
+    left = [p for p, _ in STARTED if p.poll() is None]
+    for p in left:
+        p.send_signal(signal.SIGTERM)
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait(5)
+    if left:
+        print("NOTE %s raised: stopped %d daemon(s) it left running (pids %s)" % (group, len(left), [p.pid for p in left]), flush=True)
+
+
 def main():
     if not os.path.exists(BIN):
         sys.exit("missing %s: run make first" % BIN)
@@ -2619,6 +2634,7 @@ def main():
                 GROUPS[n]()
             except Exception as e:
                 check("%s: raised %r" % (n, e), False)
+                stop_left_running(n)
     finally:
         t_leftovers()
         shutil.rmtree(TMP, ignore_errors=True)

@@ -17,7 +17,8 @@ aos-daemon：照「daemon 只提供資訊與工具、判斷全交給 init」重�
 | `src/spawn.cpp` | 起一隻 proc：子行程先在小世界拿 daemon 的目錄（init 才要）、進原本那一層拿來源（`beneath` 時從那個夾往下開）並量出真實位置、根從零組天空（`net none` 時也開自己的 network namespace、打開 lo）、換根、進 cgroup、上鎖、exec；跑的時候掛、卸 |
 | `src/ns.cpp` | 天空表：讀那隻的 `/proc/<PID>/mountinfo`，一個掛載一行，對回設定標上來源 |
 | `src/config.cpp` | 讀設定檔（json）與天空的每一行（含 `beneath`、`size`、`root_size`）；太深的 json 不解；init 的 `daemon_path` 與 cgroup 夾的位置 |
-| `src/seccomp.cpp` | seccomp 過濾器（手寫 BPF）：內建的擋單、使用者名單檔、x86_64 系統呼叫名字表、`locks` 檔的那一行 |
+| `src/seccomp.cpp` | seccomp 過濾器（手寫 BPF）：內建的擋單、使用者名單檔、x86_64 系統呼叫名字表（`make` 時產生的 `build/gen/syscalls_x86_64.inc`）、`locks` 檔的那一行 |
+| `Makefile` | 編譯；另外從編譯器找得到的 `asm/unistd_64.h` 產生系統呼叫名字表（見下面「seccomp」的名單檔） |
 | `src/util.cpp` | 小工具：經起動前握住的根讀外面的檔、時間、記錄、訊號名字 |
 | `src/common.hpp` | 共用的型別 |
 | `tests/run.py` | 測試（`make test`） |
@@ -29,7 +30,7 @@ aos-procfs 的原始碼在 `make` 時編進 `build/obj/procfs/`，不動 `../aos
 
 ```
 cd proto9/cpp/aos-daemon
-make            # build/bin/aos-daemon；-Wall -Wextra 沒有警告
+make            # build/bin/aos-daemon；-Wall -Wextra 沒有警告；要 Linux 的標頭（Arch 的 linux-api-headers、Ubuntu 的 linux-libc-dev）
 make test       # tests/run.py：約 80 秒（grace 組要等寬限、stuck 組照實等三次 10 秒逾時）；只跑某幾組：python3 tests/run.py basic restart
                 # slave、notmp 兩組要 unshare（util-linux），沒有就跳過
 ```
@@ -506,13 +507,14 @@ Landlock 的 domain 只管一種檔案系統的權限（建 block 裝置，本�
 
 - **架構檢查**：`seccomp_data.arch` 不是 `AUDIT_ARCH_X86_64`（例 `int 0x80` 進來的 i386 呼叫），或號碼帶 x32 的位元（`0x40000000`）：**整個行程殺掉**（`SECCOMP_RET_KILL_PROCESS`，那隻記 `signal 31 SIGSYS`）**【擬】**——不然 i386／x32 的入口能繞過整張表；32 位元或 x32 的程式在 proc 裡本來就不支援，殺掉比「每個呼叫都 EPERM、半死不活」清楚。名單檔也一樣有這段。
 - **擋的回 `EPERM`**（使用者 11-26 定），不殺。
-- **名單檔**（格式【擬】）：`{"default": "allow", "deny": ["ptrace", "bpf"]}`（列的回 `EPERM`、其餘放）或 `{"default": "deny", "allow": [...]}`（列的放、其餘 `EPERM`；兩種都做了）。名字是 x86_64 的系統呼叫名（`src/seccomp.cpp` 裡的表，照 `asm/unistd_64.h` 抄的 373 個）；重複的算一個。不認得的名字、`default` 不是 `allow`／`deny`、清單的鍵跟 `default` 對不上（`allow` 配 `allow`）、多的鍵、項目不是字串、不是 JSON、讀不到：`start` 寫入失敗 `EIO`、`ConfigBad locks.seccomp list …`、不留 `procs/` 的夾；init 的就 daemon 起不來（退出碼 2）。名單檔**不疊在內建的擋單上**【擬】：寫了名單就只照名單（要內建的那些就自己列進去）。`default deny` 的名單要放 `execve` 等 exec 要的呼叫，不然 `start` 是 `EIO`、`StartFailed exec …: Operation not permitted`。
+- **名單檔**（格式【擬】）：`{"default": "allow", "deny": ["ptrace", "bpf"]}`（列的回 `EPERM`、其餘放）或 `{"default": "deny", "allow": [...]}`（列的放、其餘 `EPERM`；兩種都做了）。名字是 x86_64 的系統呼叫名：**`make` 時從編譯器找得到的 `asm/unistd_64.h` 產生**（`build/gen/syscalls_x86_64.inc`；家機 11-27 標頭 7.2 是 385 個，公司 Ubuntu 的標頭在 `/usr/include/x86_64-linux-gnu/asm/`，編譯器自己找得到）。以前是手抄進 `src/seccomp.cpp` 的 373 個，跟不上新 Linux：11-27 家機 6.18 上 `uretprobe`（6.11 加的）等 12 個名字不認得，寫了就 `ConfigBad`。現在表跟編的那台的標頭一樣新；標頭更新了 `make` 會重產生。所以「認不認得某個名字」看的是**編 daemon 那台的標頭**，不是跑的那台的 Linux：標頭比 Linux 舊時，Linux 有、標頭沒有的名字照舊 `ConfigBad`（要不要放寬見「要使用者定的」第 7 條）。重複的算一個。不認得的名字、`default` 不是 `allow`／`deny`、清單的鍵跟 `default` 對不上（`allow` 配 `allow`）、多的鍵、項目不是字串、不是 JSON、讀不到：`start` 寫入失敗 `EIO`、`ConfigBad locks.seccomp list …`、不留 `procs/` 的夾；init 的就 daemon 起不來（退出碼 2）。名單檔**不疊在內建的擋單上**【擬】：寫了名單就只照名單（要內建的那些就自己列進去）。`default deny` 的名單要放 `execve` 等 exec 要的呼叫，不然 `start` 是 `EIO`、`StartFailed exec …: Operation not permitted`。
 - `locks.seccomp` 不是字串、不是 `"off"`／`"builtin"`／乾淨的絕對路徑：`ConfigBad`。
 - init 的名單檔只在 daemon 起動時讀一次，重起 init 用同一份（跟 init 設定一樣）。
 - init 照內建的擋單跑得好好的（整套測試的 init 都上了；它要的都沒擋）。
 - 實測（`seccomp` 組）：init 與一般 proc 試 `ptrace`、`bpf`、`init_module`、`finit_module`、`kcmp`、`personality(ADDR_NO_RANDOMIZE)`、`keyctl`、`userfaultfd`、`io_uring_setup`、`name_to_handle_at`、`syslog`、`process_vm_readv`、`reboot`、`swapon`、`acct`、`clock_settime` 都是 `EPERM`；`off` 時 `kcmp`、`personality(ADDR_NO_RANDOMIZE)`、對自己的 `process_vm_readv` 照通（核心本來就放）；x32、i386 的 `getpid` 被殺（`SIGSYS`），`off` 時照通；`/proc/<PID>/status` 的 `Seccomp_filters` 比外面多 1（`off` 不多）；init（沒有 Landlock）裡 `unshare` 七種 namespace、`mount`、`umount2`、`setns` 都行。
 - 只有 x86_64：別的架構編不過（`#error`）**【擬】**。
 - **對照的現成清單**（daemon職責第 41 條）：(1) systemd 255 的 `systemd-analyze syscall-filter`，11-26 在公司 WSL 上印出來逐組比過——`@module`、`@reboot`、`@swap`、`@clock`、`@raw-io`、`@keyring` 在 x86_64 有的全擋；`@debug` 擋 `ptrace`、`perf_event_open`、`pidfd_getfd`、`lookup_dcookie`；`@obsolete` 只擋 `create_module`、`get_kernel_syms`、`query_module`、`uselib`、`_sysctl`；`@privileged` 只擋 `acct`、`bpf`、`quotactl`、`quotactl_fd`、`open_by_handle_at`、`vhangup`、`nfsservctl`、`_sysctl`（`setuid` 這類、`chroot`、`pivot_root`、`sethostname` 不擋）；`@resources` 只擋 `move_pages`、`migrate_pages`；`@aio` 只擋 `io_uring_*`；`@mount` 整組不擋；`@cpu-emulation` 的 `modify_ldt` 沒擋。(2) Docker（moby）預設的 `profiles/seccomp/default.json` 的精神：`syslog`、`userfaultfd`、`kcmp`、`name_to_handle_at`、`process_vm_readv`／`writev` 在 systemd 的群組裡不算危險，照 Docker「要 `CAP_SYS_PTRACE`／`CAP_SYSLOG` 等才放」擋；`personality` 的五個值照它。本機沒有 docker，沒有逐行比對某一版的 `default.json`。逐條寫在 `src/seccomp.cpp` 擋單上面的註解。
+- **比 6.6 新的 Linux 加的呼叫沒有加進內建的擋單【擬】**（11-27 家機標頭 7.2 比公司 WSL 多的 12 個：`uretprobe`、`uprobe`、`mseal`、`setxattrat`、`getxattrat`、`listxattrat`、`removexattrat`、`open_tree_attr`、`file_getattr`、`file_setattr`、`listns`、`rseq_slice_yield`）：多半只動自己的行程或檔，`open_tree_attr` 是不擋的 mount 那一族。`listns` 列得出這隻看得到的 namespace（有點像窺看），這輪沒拿新版的 systemd、Docker 清單對照過它，先不擋；要擋就加進擋單（44 → 45）。
 
 ### 疊 daemon（proc 裡再起 daemon；11-26 量的）
 
@@ -606,7 +608,18 @@ daemon 的目錄照 aoslua「存取得到＝有這個介面」擺靜態宣告（
 
 ## 測試
 
-`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**648 PASS、0 FAIL**（11-26 第 40～45、50 條：加 `oldlinux`、`beneath`、`real`、`irestart`、`slave`、`notmp`、`killgrp`、`tsize`、`jdepth` 九組共＋92 條（4＋18＋10＋9＋11＋5＋12＋17＋6），`access` 拿掉 ptrace 模式的 6 條、init uid 5 的兩條併成一條、加「寫 ptrace 起不來」「寫 mount 照收」2 條（33→28），`dpath` 加擋 `daemon_path` 上層的 2 條（23→25），`nest` 的訊息改成 `make mounts slave`，比 `ns.json` 的地方不看 `real`；在那之前 559；11-26 審查三條與五樣：加 `sigsrc`、`ipath`、`stuck`、`nsby`、`overlay`、`merge`、`rinit`、`iface` 八組共＋115 條（14＋20＋17＋10＋15＋9＋13＋17），`basic`、`access`、`dirs` 的目錄清單多 `__meta`，`mount`、`dpath` 比 `ns.json` 時不看 `by`／`at`，在那之前 444；11-26 seccomp、疊 daemon、`--cgroup PATH`：加 `seccomp`、`nest`、`cgpath` 三組共＋71 條（47＋10＋14），`leftovers` 改用 exe 的 dev＋inode 也找天空裡的那份，在那之前 373；11-26 主 kernel 改名 init、五個選項、`net`：加 `rename`、`noinit`、`rlstay`、`dpath`、`ilandlock`、`exitcode`、`net` 七組共＋94 條，`dconf` 的「沒有 `kernel`」那條拿掉（沒有 `init` 現在是合法的），在那之前 280；11-26 加 daemon 設定檔、結束寬限、`on_parent_death`、`forget -k` 四組 `dconf`、`grace`、`pdeath`、`forgetk` 共＋91 條，在那之前 189；11-26 proc 的 stdout／stderr 沒設改 `/dev/null`、加 `stdio` 組＋10 條，在那之前 179；11-26 設定檔 `ns` 改物件、加 `ns.json` 與 `nsconf` 組共＋22 條；在那之前 157：init 改走 `/aos`、`procs/<名>/` 改成真的夾後 155；再加 init uid 不是 0 要拒的 2 條），約 80 秒（grace 組照實等寬限、stuck 組照實等三次 10 秒逾時），清 build 跑一次加連跑 3 次都一樣。等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
+`make test`（公司 WSL：Linux 6.6.114.1-microsoft-standard-WSL2、Landlock ABI 3、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍）：**648 PASS、0 FAIL**（11-26 第 40～45、50 條：加 `oldlinux`、`beneath`、`real`、`irestart`、`slave`、`notmp`、`killgrp`、`tsize`、`jdepth` 九組共＋92 條（4＋18＋10＋9＋11＋5＋12＋17＋6），`access` 拿掉 ptrace 模式的 6 條、init uid 5 的兩條併成一條、加「寫 ptrace 起不來」「寫 mount 照收」2 條（33→28），`dpath` 加擋 `daemon_path` 上層的 2 條（23→25），`nest` 的訊息改成 `make mounts slave`，比 `ns.json` 的地方不看 `real`；在那之前 559；11-26 審查三條與五樣：加 `sigsrc`、`ipath`、`stuck`、`nsby`、`overlay`、`merge`、`rinit`、`iface` 八組共＋115 條（14＋20＋17＋10＋15＋9＋13＋17），`basic`、`access`、`dirs` 的目錄清單多 `__meta`，`mount`、`dpath` 比 `ns.json` 時不看 `by`／`at`，在那之前 444；11-26 seccomp、疊 daemon、`--cgroup PATH`：加 `seccomp`、`nest`、`cgpath` 三組共＋71 條（47＋10＋14），`leftovers` 改用 exe 的 dev＋inode 也找天空裡的那份，在那之前 373；11-26 主 kernel 改名 init、五個選項、`net`：加 `rename`、`noinit`、`rlstay`、`dpath`、`ilandlock`、`exitcode`、`net` 七組共＋94 條，`dconf` 的「沒有 `kernel`」那條拿掉（沒有 `init` 現在是合法的），在那之前 280；11-26 加 daemon 設定檔、結束寬限、`on_parent_death`、`forget -k` 四組 `dconf`、`grace`、`pdeath`、`forgetk` 共＋91 條，在那之前 189；11-26 proc 的 stdout／stderr 沒設改 `/dev/null`、加 `stdio` 組＋10 條，在那之前 179；11-26 設定檔 `ns` 改物件、加 `ns.json` 與 `nsconf` 組共＋22 條；在那之前 157：init 改走 `/aos`、`procs/<名>/` 改成真的夾後 155；再加 init uid 不是 0 要拒的 2 條），約 80 秒（grace 組照實等寬限、stuck 組照實等三次 10 秒逾時），清 build 跑一次加連跑 3 次都一樣。
+
+**家機**（Manjaro、Linux 6.18、Landlock ABI 7、cgroup v2、有 systemd --user、`/etc/subuid` 有範圍、有 `unshare`、`fusermount3`）11-27：**642 PASS、0 FAIL**（清 build 後連跑 3 次）。比公司 WSL 少 6 條，都是照環境換條數的，沒有哪組被跳過：
+- `sigsrc` 14 → 11（−3）：ABI 6 以上天空裡的 proc 送不出停止訊號（`EPERM`），「每個記一行 ignored」與兩條「冒名的寄件人不理」只在 ABI 小於 6 時驗。
+- `oldlinux` 4 → 2（−2）：ABI 小於 6 驗警告行的三條，ABI 6 以上換成「沒有這行」一條。
+- `nsby` 10 → 9（−1）：「`/usr` 底下 locked 的那幾筆是 `locked`」只在 `/usr` 底下有子掛載時驗（WSL 有 `/usr/lib/wsl/…`，家機沒有）。
+
+條數同、內容照環境換的還有 `landlock` 的訊號那條、`ns` 的 locked 那條。缺東西時會整組或部分跳過、只記一條 `(skip)` 的：`procs`（沒有 subuid）、`cgroup`／`forgetk`／`irestart`／`killgrp` 的 cgroup 部分（沒有 cgroup）、`landlock`／`ilandlock`／`ipath`（沒有 Landlock）、`slave`／`notmp`（沒有 `unshare`）、`stuck`（做不出卡住的 FUSE）；兩台都沒跳（`cgpath` 沒有 `systemd-run` 是記一條失敗，不是跳過）。
+
+11-27 家機第一次跑是 619 過、4 失敗（共 623）：名字表缺 `uretprobe`，`seccomp` 組的 `default deny` 名單起不來，後面讀 `procs/ud/locks` 拋例外、整組後半 20 條沒跑（−20＋「raised」1 條＝642−19＝623）；它起的 daemon 也沒收，下一組 `nest` 最後「什麼都沒留下」看到的兩支就是 `seccomp` 組留下的起動那一層與 daemon（不是 `nest` 自己的，daemon 收尾沒問題）。改了名字表（見「seccomp」），`run.py` 也改成某組拋例外時先收掉它留下的 daemon（先 SIGTERM、10 秒不走再 SIGKILL，印一行 `NOTE`），不再拖累下一組。
+
+等待一律用 monotonic 時鐘、等到條件成立（WSL2 的牆上時鐘每 32 秒左右往回跳 1.6 秒）。
 
 | 組 | 驗什麼 |
 |---|---|
@@ -725,6 +738,10 @@ daemon 的目錄照 aoslua「存取得到＝有這個介面」擺靜態宣告（
 - 擋 `daemon_path` 與 cgroup 夾的上層：`mount`／`umount` 的 DST 是它們的上層就 `PathReserved <DST> in init's ns is above …`。
 - json 最多疊 64 層（設定檔、名單檔、init 設定）。
 - 「天空裡看得到的外面資訊」、`ns_check` 不管 `locked`、Landlock 16 層、`exit_grace` 0 等於不通知：只寫進 README，程式沒改。
+- **以下是 11-27 家機修測試這一輪自己挑的**（使用者交代的是：補齊名字表、評估改成編的時候產生、不改「不認得的名字」的行為、nest 殘留查清楚再修）：
+- 系統呼叫名字表改成 `make` 時從 `asm/unistd_64.h` 產生（經編譯器的 `-E -dM`，不寫死標頭的路徑，Arch 與 Ubuntu 都找得到）；產生的不到 300 個就當沒裝標頭、`make` 失敗；`build/gen/syscalls.d` 記著用了哪個標頭，標頭更新就重產生。
+- 比 6.6 新的 12 個呼叫（含 `listns`）沒加進內建的擋單（見「seccomp」）。
+- `run.py`：某組拋例外時先收掉它起了還在跑的 daemon（SIGTERM、10 秒後 SIGKILL）、印一行 `NOTE`（不算一條測試）；`nest` 的「什麼都沒留下」照舊看全部（不只看自己起的），等待照舊 3 秒——查過不是等太短（見「測試」）。
 
 ## 還沒做的
 
@@ -742,7 +759,7 @@ daemon 的目錄照 aoslua「存取得到＝有這個介面」擺靜態宣告（
 - daemon職責第 38 條（proc 預設用 subuid、除 init 禁 uid 0）、第 47 條（`start`／`mount` 的路徑照寫的人的天空解）、第 48 條（`events`）：還在跟使用者談，這版沒動；`aos/ctl` 宣告的形狀也還在談。第 49 條（FUSE kernel）：待辦。
 - `on_main` 取消那條沒有測試（要讓主執行緒卡 60 秒以上才碰得到）。
 - 審查小事 13 的另一半（`daemon當容器-1125` 被取代的舊紀錄標註）在 proto8/thinking，不在這個夾，這輪沒動。
-- 沒試過：沒有 Landlock 的核心（含 init 寫 `locks.landlock: true` 時的拒）、沒有 systemd --user 而 `--cgroup auto`（照程式會寫 `off (no systemd --user …)`）、cgroup v1、家機、沒開 IA32／x32 的核心（`seccomp` 組的「`off` 時照通」那兩條會不一樣）。
+- 沒試過：沒有 Landlock 的核心（含 init 寫 `locks.landlock: true` 時的拒）、沒有 systemd --user 而 `--cgroup auto`（照程式會寫 `off (no systemd --user …)`）、cgroup v1、沒開 IA32／x32 的核心（`seccomp` 組的「`off` 時照通」那兩條會不一樣）。
 
 ## 要使用者定的
 
@@ -757,3 +774,8 @@ daemon 的目錄照 aoslua「存取得到＝有這個介面」擺靜態宣告（
    - c. 天空的 `dev` 加 `/dev/fuse`（例 `{"type": "dev", "dst": "/dev", "fuse": true}`）。
    - d. cgroup：外面那份把那隻的 cgroup 夾交給它的 uid、綁進它的天空、收尾由深到淺刪（裡面那份的 `--cgroup PATH` 已經做了）。
    量過 a＋b（uid 1）＋c 一起放寬時，裡面那份起得來、init 讀得到目錄、能 `start` 一隻、收 SIGTERM 時整片走光；再加 d 時 cgroup 也用得了。
+7. **seccomp 名單寫了 daemon 不認得、但跑的那台 Linux 有的名字，怎麼辦**（11-27 提）：名字表現在跟**編 daemon 那台的標頭**一樣新（見「seccomp」），所以這種情形只剩「標頭比 Linux 舊」（例：Ubuntu 標頭 6.8、核心換成 6.11 以上的 HWE），或名單檔從新的機器帶到舊的機器編的 daemon。現在一律 `ConfigBad`（`start` 是 `EIO`、init 的名單就 daemon 起不來）。能選的：
+   - a. **照現在：一律拒**。明確、打錯字馬上知道；代價是名單檔換台不一定能用，要重編 daemon（裝新標頭）或改名單。
+   - b. **一律略過、`locks` 那行記下略過了哪些**。名單檔到處能用；代價是 `default allow` 的 `deny` 清單裡被略過的呼叫**其實沒擋**（Linux 有它就放行了，寫的人以為擋了），打錯字也只在 `locks` 看得到。
+   - c. **看方向**：`default deny` 的 `allow` 清單裡不認得的略過（那個呼叫照樣 `EPERM`，只會更嚴）、記在 `locks`；`default allow` 的 `deny` 清單照舊拒（不悄悄少擋）。代價：`allow` 清單打錯字時程式跑起來才 `EPERM`，要看 `locks` 才知道。
+   - d. **名單也收號碼**（例 `335` 或 `"nr:335"`）：標頭沒有的名字由寫的人自己給號碼，不認得的名字照舊拒。代價：格式多一種寫法；號碼寫錯不會被發現。可以跟 a 或 c 合用。
