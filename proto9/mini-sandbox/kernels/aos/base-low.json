@@ -1,0 +1,5 @@
+{
+  "description": "cgroup kernel, low limits: 20% of one core, 512M memory (no swap), 64 processes/threads",
+  "program": "cg_kernel.py",
+  "config": {"cpu": "20%", "mem": "512M", "pids": 64}
+}

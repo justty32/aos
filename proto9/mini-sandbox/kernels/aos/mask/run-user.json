@@ -1,0 +1,5 @@
+{
+  "description": "mask kernel: cover /run/user/<your uid> with an empty folder (no systemd --user, no D-Bus session bus, no Wayland/PipeWire sockets)",
+  "program": "mask_kernel.py",
+  "config": {"paths": [{"path": "/run/user/{uid}", "how": "tmpfs"}]}
+}

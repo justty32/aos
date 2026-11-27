@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""What accept.py runs inside a mini sandbox instead of pi: one subcommand per check, one json line out (standard library only)."""
+"""What accept.py and stack_test.py run inside a mini sandbox instead of pi: one subcommand per check (check = several at once), one json line out (standard library only, so it also runs as python3 -I -c SOURCE where your home is closed)."""
 
 import glob
 import json
@@ -180,6 +180,10 @@ def ns():
 
 def leaks(unit, outfile):
     """What is left open on purpose (info): ~/.ssh, /run/user/UID, and systemd --user starting a process for us."""
+    out(**leaks_dict(unit, outfile))
+
+
+def leaks_dict(unit, outfile):
     r = {}
     home = os.environ.get("HOME", "/")
     try:
@@ -209,7 +213,7 @@ def leaks(unit, outfile):
                             "2", "ExecStart", "a(sasb)", "1", "/bin/sh", "3", "/bin/sh", "-c", script, "false",
                             "CollectMode", "s", "inactive-or-failed", "0"], capture_output=True, text=True)
         r["busctl"] = "rc %d %s" % (p.returncode, (p.stdout + p.stderr).strip()[-200:])
-    out(**r)
+    return r
 
 
 def ctl(sock, pid):
@@ -232,8 +236,106 @@ def read(path):
         out(read=err(e))
 
 
+def check(spec):
+    """Several checks in one sandbox (stack_test.py); spec is a json object, each key optional:
+    secret PATH, cpu SECONDS, pids N, mem MB, tcp [[HOST, PORT], ...], get [HOST, PORT, BYTES, MAX_TIME],
+    escape [UNIT, OUTFILE], umount PATH."""
+    s = json.loads(spec)
+    r = {"uid": os.getuid(), "cgroup": open("/proc/self/cgroup").read().strip(),
+         "ifaces": sorted(n for _, n in socket.if_nameindex())}
+    if "secret" in s:
+        try:
+            with open(s["secret"]) as f:
+                r["secret"] = "read %d bytes" % len(f.read())
+        except OSError as e:
+            r["secret"] = err(e)
+    if "cpu" in s:
+        t0, c0 = time.monotonic(), time.process_time()
+        while time.monotonic() - t0 < float(s["cpu"]):
+            pass
+        r["cpu_ratio"] = round((time.process_time() - c0) / (time.monotonic() - t0), 3)
+    if "pids" in s:
+        kids, error = [], None
+        for _ in range(int(s["pids"])):
+            try:
+                pid = os.fork()
+            except OSError as e:
+                error = err(e)
+                break
+            if pid == 0:
+                time.sleep(30)
+                os._exit(0)
+            kids.append(pid)
+        for k in kids:
+            os.kill(k, 9)
+            os.waitpid(k, 0)
+        r["forked"], r["fork_error"] = len(kids), error
+    if "mem" in s:
+        rd, wr = os.pipe()
+        pid = os.fork()
+        if pid == 0:
+            os.close(rd)
+            chunks = []
+            for i in range(1, int(s["mem"]) + 1):
+                chunks.append(bytearray(1024 * 1024))
+                if i % 10 == 0:
+                    os.write(wr, b"%d\n" % i)
+            os._exit(0)
+        os.close(wr)
+        got = b""
+        while True:
+            c = os.read(rd, 4096)
+            if not c:
+                break
+            got += c
+        _, st = os.waitpid(pid, 0)
+        r["mem_reached_mb"] = int(got.split()[-1]) if got.split() else 0
+        r["mem_end"] = "killed by signal %d" % os.WTERMSIG(st) if os.WIFSIGNALED(st) else "exit %d" % os.WEXITSTATUS(st)
+    for host, port in s.get("tcp", []):
+        t0 = time.monotonic()
+        try:
+            socket.create_connection((host, int(port)), timeout=3).close()
+            r["tcp %s:%s" % (host, port)] = "ok"
+        except OSError as e:
+            r["tcp %s:%s" % (host, port)] = "%s (%.1fs)" % (err(e), time.monotonic() - t0)
+    if "get" in s:
+        host, port, n, mt = s["get"]
+        t0 = time.monotonic()
+        got, error = 0, None
+        try:
+            c = socket.create_connection((host, int(port)), timeout=5)
+            c.sendall(("GET /bytes/%d HTTP/1.0\r\nHost: x\r\n\r\n" % int(n)).encode())
+            deadline = t0 + float(mt)
+            head = b""
+            while time.monotonic() < deadline:
+                c.settimeout(max(0.05, deadline - time.monotonic()))
+                d = c.recv(1 << 20)
+                if not d:
+                    break
+                if b"\r\n\r\n" not in head:
+                    head += d
+                    if b"\r\n\r\n" in head:
+                        got = len(head.split(b"\r\n\r\n", 1)[1])
+                    continue
+                got += len(d)
+            c.close()
+        except OSError as e:
+            error = err(e)
+        r["get_bytes"], r["get_error"] = got, error
+    if "escape" in s:
+        r.update(("escape_" + k, v) for k, v in leaks_dict(*s["escape"]).items()
+                 if k in ("systemd_run", "busctl", "run_user", "net"))
+    if "umount" in s:
+        import ctypes
+        libc = ctypes.CDLL(None, use_errno=True)
+        rc = libc.umount2(s["umount"].encode(), 2)  # MNT_DETACH
+        r["umount"] = "ok" if rc == 0 else os.strerror(ctypes.get_errno())
+    out(**r)
+
+
 CMDS = {"cpu": cpu, "mem": mem, "pids": pids, "cgroup": cgroup, "procs": procs, "tcp": tcp, "get": http_get,
-        "put": http_put, "curl": curl, "run": run, "ns": ns, "leaks": leaks, "ctl": ctl, "read": read}
+        "put": http_put, "curl": curl, "run": run, "ns": ns, "leaks": leaks, "ctl": ctl, "read": read,
+        "check": check}
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in CMDS:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""net kernel for mini: holds an outer network namespace that pasta connects to the outside, keeps the ip/port allow list, the quota (nft) and the up/down rates (tc) there, and on request pulls a veth into a sandbox's own netns; declares aos/net and keeps a status file with the counters."""
+"""net kernel for mini: holds an outer network namespace that pasta connects to the outside, keeps the ip/port allow list, the quota (nft) and the up/down rates (tc) there, and pulls a veth into a sandbox's own netns (on request through ctl, or, as a nesting wrapper, into the netns it starts the next layer in); declares aos/net and keeps a status file with the counters."""
 
 import argparse
 import ipaddress
@@ -16,6 +16,11 @@ import subprocess
 import sys
 import threading
 import time
+import types
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import nest  # noqa: E402
 
 PROG = "net-kernel"
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -77,7 +82,10 @@ def port_spec(p):
 
 def load_config(path):
     with open(path) as f:
-        c = json.load(f)
+        return load_config_dict(json.load(f))
+
+
+def load_config_dict(c):
     unknown = set(c) - set(DEFAULTS)
     if unknown:
         raise ValueError("unknown keys: %s" % ", ".join(sorted(unknown)))
@@ -270,6 +278,28 @@ def holder_main(cfg_path):
         out.flush()
 
 
+def decl_files(c, wrapped=False):
+    """The aos/net declaration (one small file per field). wrapped: no ctl, the inner layer already sits behind it."""
+    files = {
+        "kind": "veth",          # a veth into your own netns; the rules live on the other end
+        "ctl": "ctl",            # socket (relative): one json line in, one out; ops info, attach
+        "protocol": "json-lines",
+        "allow": "\n".join("%s %s %s" % (r["proto"], r["to"], r["port"]) for r in c["allow"]),
+        "host_addr": c["host_addr"] if c["host_ports"] else "",
+        "host_ports": "\n".join("%s %s" % (h["proto"], h["port"]) for h in c["host_ports"]),
+        "down": c["down"] or "",
+        "up": c["up"] or "",
+        "quota": "" if c["quota"] is None else str(c["quota"]),
+        "max_attach": str(c["max_attach"]),
+        "ipv6": "no",
+        "dns": "only if allowed above (by ip and port 53)",
+        "status": "status",
+    }
+    if wrapped:
+        del files["ctl"], files["protocol"], files["max_attach"]
+    return files
+
+
 # ------------------------------------------------------------ the kernel: runs outside, in your own namespaces
 
 def subid_range(path, user):
@@ -315,6 +345,8 @@ class Kernel:
                  "--map-group=0", "--map-groups=1:%d:%d" % (sg[0], self.subids)]
         else:
             m = ["--map-root-user"]
+        if not nest.in_init_userns():  # nested in another kernel: keep every id we have (nest.userns_args)
+            m = nest.userns_args()[1:]
         return ["unshare", "--user"] + m + ["--net", "--", sys.executable, "-I", os.path.abspath(__file__),
                                             "--holder", os.path.abspath(self.a.config)]
 
@@ -367,23 +399,7 @@ class Kernel:
     def declare(self):
         d = os.path.join(self.a.dir, DECL)
         os.makedirs(d, exist_ok=True)
-        c = self.c
-        files = {
-            "kind": "veth",          # a veth into your own netns; the rules live on the other end
-            "ctl": "ctl",            # socket (relative): one json line in, one out; ops info, attach
-            "protocol": "json-lines",
-            "allow": "\n".join("%s %s %s" % (r["proto"], r["to"], r["port"]) for r in c["allow"]),
-            "host_addr": c["host_addr"] if c["host_ports"] else "",
-            "host_ports": "\n".join("%s %s" % (h["proto"], h["port"]) for h in c["host_ports"]),
-            "down": c["down"] or "",
-            "up": c["up"] or "",
-            "quota": "" if c["quota"] is None else str(c["quota"]),
-            "max_attach": str(c["max_attach"]),
-            "ipv6": "no",
-            "dns": "only if allowed above (by ip and port 53)",
-            "status": "status",
-        }
-        for k, v in files.items():
+        for k, v in decl_files(self.c).items():
             write_atomic(os.path.join(d, k), v + "\n" if v else "")
         write_atomic(os.path.join(self.a.dir, ".aos", "interfaces", "aos", "description"),
                      "net kernel: the outside network, only to the allowed ip:port, at the declared rates, "
@@ -469,9 +485,164 @@ class Kernel:
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
 
 
+# ------------------------------------------------------------ as a nesting wrapper: net_kernel.py --json CFG -- NEXT...
+
+def free_subnet():
+    """10.77.0.0/16 unless the netns we run in already uses it (a net kernel inside another one): then the next
+    free one of 10.78 .. 10.99."""
+    try:
+        used = [ipaddress.ip_interface("%s/%s" % (a["local"], a["prefixlen"])).network
+                for i in json.loads(subprocess.run(["ip", "-j", "addr"], capture_output=True, text=True).stdout)
+                for a in i.get("addr_info", []) if a.get("family") == "inet"]
+    except (ValueError, KeyError):
+        used = []
+    for n in range(77, 100):
+        net = ipaddress.ip_network("10.%d.0.0/16" % n)
+        if not any(net.overlaps(u) for u in used):
+            return str(net)
+    raise RuntimeError("no free 10.77-99.0.0/16 for the veths")
+
+
+def nested_config(cfg, outer):
+    """Read what an outer net kernel declared and fit our config into the network it gives us: our host_ports
+    mean the machine outside, which for us is the outer kernel's host_addr, so they become allow rules to it.
+    Returns (config, declaration overrides, warnings)."""
+    c = dict(cfg)
+    c.pop("description", None)
+    over, warns = {}, []
+    if not nest.declared(outer, "net"):
+        return c, over, warns
+    oaddr = nest.decl_read(outer, "net", "host_addr", "")
+    ohost = set(nest.decl_read(outer, "net", "host_ports", "").split("\n")) - {""}
+    oallow = set(nest.decl_read(outer, "net", "allow", "").split("\n")) - {""}
+    hp = c.get("host_ports") or []
+    if hp:
+        if not oaddr:
+            raise ValueError("host_ports %s: the outer net kernel gives no way to the machine (it declares no "
+                             "host_addr)" % hp)
+        hp = [p if isinstance(p, dict) else {"port": p} for p in hp]
+        c["allow"] = list(c.get("allow") or []) + [{"to": oaddr, "port": p["port"], "proto": p.get("proto", "tcp")}
+                                                     for p in hp]
+        c["host_ports"] = []  # pasta: --no-map-gw, our "host" would only be the outer sandbox itself
+        over = {"host_addr": oaddr, "host_ports": "\n".join("%s %s" % (p.get("proto", "tcp"), p["port"]) for p in hp)}
+        for p in hp:
+            if "%s %s" % (p.get("proto", "tcp"), p["port"]) not in ohost:
+                warns.append("host port %s is not allowed by the outer net kernel; it stays closed" % p["port"])
+    for r in cfg.get("allow") or []:
+        net = ipaddress.ip_network(r["to"], strict=False)
+        if "%s %s %s" % (r.get("proto", "tcp"), net, r["port"]) not in oallow:
+            warns.append("allow %s:%s is not in the outer allow list (by text); the outer one decides" % (
+                r["to"], r["port"]))
+    oq = nest.decl_read(outer, "net", "quota", "")
+    if oq:
+        mine = size_bytes(c["quota"]) if c.get("quota") is not None else None
+        if mine is None or mine > int(oq):
+            warns.append("quota %s is more than the outer %s bytes; the outer one cuts first" % (
+                c.get("quota", "none"), oq))
+            over["quota"] = oq
+    return c, over, warns
+
+
+def gate_main(argv):
+    """First program of the inner layer (root in its own user ns under the outer netns, in its own netns): say
+    ready, wait until the kernel has pulled the veth in, then run the next layer."""
+    w, r = int(argv[0]), int(argv[1])
+    nxt = argv[3:] if argv[2:3] == ["--"] else argv[2:]
+    os.write(w, b"ready\n")
+    ans = os.read(r, 4096).decode().strip()
+    os.close(w)
+    os.close(r)
+    if ans != "ok":
+        fail("NetFailed", ans or "no answer from the net kernel", 125)
+    try:
+        os.execvp(nxt[0], nxt)
+    except OSError as e:
+        fail("ExecFailed", "%s: %s" % (nxt[0], e.strerror), 127)
+
+
+def wrapper_main():
+    opts, cfg, nxt = nest.parse(PROG, sys.argv[1:], flags=())
+    pasta = os.environ.get("MINI_PASTA") or shutil.which("pasta")
+    if not pasta or not os.access(pasta, os.X_OK):
+        fail("PastaMissing", "no pasta (install the passt package, or set MINI_PASTA)", 2)
+    outer = nest.env_outer()
+    try:
+        c, over, warns = nested_config(cfg, outer)
+        if "subnet" not in c:
+            c["subnet"] = free_subnet()
+        raw, c = c, load_config_dict(dict(c))
+    except (ValueError, KeyError, TypeError, RuntimeError) as e:
+        fail("ConfigBad", "%s: %s" % (opts["name"], e), 2)
+    for w in warns:
+        warn("%s: %s" % (opts["name"], w))
+    env = nest.new_env("net", opts["name"])
+    cfgp = os.path.join(env, "net.json")
+    with open(cfgp, "w") as f:
+        json.dump(raw, f)  # the holder reads it again
+    k = Kernel(types.SimpleNamespace(dir=env, config=cfgp, pasta=pasta), c)
+    for s in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(s, signal.SIG_IGN)  # while we set up; passed on to the inner layer once it runs
+    try:
+        k.start()
+        inner_cg = nest.cg_split(PROG, [os.getpid(), k.holder.pid, k.pasta.pid], "k-net", "in")
+        k.stats = k.ask({"op": "stats"})
+        files = dict(decl_files(c, wrapped=True), **over)
+        nest.declare(env, "net", files, "net kernel: you are in a netns behind it; only the allowed ip:port, at "
+                     "the declared rates, until the quota is used (an outer net kernel, if any, still applies)")
+        k.write_status()
+    except (RuntimeError, OSError) as e:
+        k.stop()
+        fail("StartFailed", str(e))
+    r1, w1 = os.pipe()
+    r2, w2 = os.pipe()
+    argv = ["nsenter", "--user=/proc/%d/ns/user" % k.holder.pid, "--preserve-credentials",
+            "unshare", "--user", "--map-users=all", "--map-groups=all", "--net", "--"] + \
+        nest.py(os.path.abspath(__file__)) + ["--gate", str(w1), str(r2), "--"] + nxt
+    box = []  # caught (not ignored) while we start it: an ignored signal stays ignored in the inner layers
+    for s in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(s, lambda sig, _: box and box[0].send_signal(sig))
+    inner = subprocess.Popen(argv, pass_fds=(w1, r2), env=dict(os.environ, AOS_ENV=env))
+    box.append(inner)
+    os.close(w1)
+    os.close(r2)
+    ok = False
+    try:
+        if os.read(r1, 64).strip() == b"ready":
+            k.ask({"op": "attach", "pid": inner.pid})
+            if inner_cg:
+                nest.cg_move(inner.pid, inner_cg)
+            ok = True
+            os.write(w2, b"ok\n")
+        else:
+            os.write(w2, b"no ready line from the inner layer\n")
+    except (RuntimeError, OSError) as e:
+        try:
+            os.write(w2, ("AttachFailed %s\n" % e).encode())
+        except OSError:
+            pass
+    os.close(r1)
+    os.close(w2)
+    threading.Thread(target=k.status_loop, daemon=True).start()
+    rc = inner.wait()
+    k.stopping.set()
+    try:
+        k.stats = k.ask({"op": "stats"})
+    except Exception:
+        pass
+    k.stop()
+    k.write_status("stopped")
+    if not ok and rc == 0:
+        rc = 125
+    sys.exit(128 - rc if rc < 0 else rc)
+
+
 def main():
     if len(sys.argv) >= 2 and sys.argv[1] == "--holder":
         return holder_main(sys.argv[2])
+    if len(sys.argv) >= 2 and sys.argv[1] == "--gate":
+        return gate_main(sys.argv[2:])
+    if "--json" in sys.argv[1:sys.argv.index("--") if "--" in sys.argv else None]:
+        return wrapper_main()
     ap = argparse.ArgumentParser(prog=PROG, description="net kernel for mini: an outer netns behind pasta with the "
                                  "allow list, quota and rates; sandboxes attach a veth to it through DIR/ctl")
     ap.error = lambda m: fail("ArgumentsBad", "%s (usage: %s --help)" % (m, PROG), 2)

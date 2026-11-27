@@ -1,4 +1,4 @@
-最小的沙箱原型（11-27 家機）：底層就是一行 `systemd-run --user --scope`（CPU、記憶體、行程數上限）加 `unshare -UrmpnC`（自己的 user／mount／PID／網路／cgroup namespace），上面可選疊一隻網路 kernel（兩層 netns：pasta 接外網、nft 白名單與總量、tc 頻寬）與切 uid 的選項；檔案、IPC、`/run/user` 等其他全部漏給 Linux。驗收兩次全過、pi `--fake` 經網路 kernel 跑通四個工具。
+最小的沙箱原型（11-27 家機）：底層就是一行 `systemd-run --user --scope`（CPU、記憶體、行程數上限）加 `unshare -UrmpnC`（自己的 user／mount／PID／網路／cgroup namespace），上面可選疊網路 kernel（兩層 netns：pasta 接外網、nft 白名單與總量、tc 頻寬）與切 uid；第二段（11-27 晚）加了照名字嵌套的 `mini.py --kernels`（每個 kernel 是一支包裝程式，替內層設好環境再在裡面起下一層：cgroup、網路、檔案遮蔽、uid），檔案遮蔽 kernel 蓋掉 `/run/user/<uid>` 就關住經 D-Bus 跳出去那條路；其他照舊全部漏給 Linux。舊驗收 31 項、層疊實測 20 項都兩次全過。
 
 # mini-sandbox（11-27，家機 Manjaro 6.18）
 
@@ -7,6 +7,16 @@
 我自己定的標【擬】。
 
 ## 結論先講
+
+**第二段（11-27 晚，嵌套與檔案遮蔽，細節在下面「嵌套」以後各節）**
+
+- **pi 在裡面會怎樣**：`mini.py --kernels aos/base-low aos/net/base-litellm-proxy aos/mask/run-user -- pi …` 這樣寫，pi 就住在三層 kernel 的最裡面：CPU、記憶體、行程數有上限、只連得到外面的 LiteLLM、`/run/user/1000` 是一個空夾；**這次經 D-Bus 也跳不出去了**（`busctl` 回「連不上」），遮蔽它拆不掉（`umount` 回 Invalid argument）。不裝遮蔽 kernel 就跟第一段一樣，一行跳出去（這次又量了一次）。
+- **每個 kernel 都是一支包裝程式**：`kernel1 [參數] -- kernel2 [參數] -- … -- pi`，每一支替後面設好環境，然後在那個環境裡起下一支（跟 `unshare`、`nsenter`、`setpriv` 同一種形狀）。寫在前面的是外層，後面的是它的住戶。
+- **疊起來只會更緊**：同一種疊兩層，Linux 本身就取較緊的那個（cgroup 是一層層往下算、網路是封包要先過內層再過外層）；內層寫得比外層鬆，實測照樣被外層擋住，內層 kernel 起來時印一行警告。pi 在沙箱裡自己再起一個 mini，也鬆不過外面那層。
+- **只有一種疊法會出事：uid 不是最後一個**。切了 uid 之後，後面的 kernel 讀不到你家目錄裡的程式，起不來（退出碼 2，pi 沒跑），不會「少一層照跑」。
+- **層疊實測兩次都全過**：`stack_test.py` 20 項（含 pi `--fake` 經 base＋net＋mask 跑完四個工具）；舊的 `accept.py` 31 項照樣兩次全過。
+
+**第一段（11-27 下午）**
 
 - **pi 在裡面會怎樣**：它是 uid 0（對到外面的你本人），看得到、寫得到你所有的檔；`ps` 只看得到自己那幾隻；CPU、記憶體、行程數有上限，而且它**改不掉**這些上限；沒裝網路 kernel 時只有 `lo`，什麼都連不到；裝了就只連得到白名單上的 ip:port，速度與總量有上限，規則它拆不掉，它還能自己再開一層沙箱。
 - **但它一行就能整個跳出去**：`/run/user/1000` 沒蓋（使用者選的，見「漏掉的」第 3 條）。這次實測：`systemd-run --user` 這支指令在沙箱裡反而失敗，可是同一個請求直接經 D-Bus（`busctl --user call … StartTransientUnit`）送出去就成功，起出來的行程在你本人的網路、不在沙箱的 cgroup 裡（沒有 CPU／記憶體上限）。
@@ -205,13 +215,215 @@ info（漏掉的，照實量、不算失敗；兩次一樣）：
 
 坑：pi 的 stdin 是一條不會關的管子時，它會一直等（把 stdin 當成多的提示），第一次跑卡到逾時；`accept.py` 給它 `/dev/null`。
 
+## 嵌套：`mini.py --kernels`（第二段，11-27 晚）
+
+### 使用者的比喻與規則
+
+使用者 11-27 的原話（照序）：「試試看層疊」「到時候的用法，或許可以是這樣：aos daemon ctl add --kernels aos/base-low aos/net/base-litellm-proxy aos/bases/extra-1 $AOS_HOME/templates/fsm-agent/gpt」「…你知道janet嗎，他有setdyn…又像是lua的srt metatable一層一層合併...不太對，因為後一層會需要使用前一層的東西，所以應該是嵌套set」「應該說，後一層就是運行在前一層給出的環境裡，環境套環境」。
+
+- **Janet 的 `with-dyns`**：在一段程式外面包一層「這一段裡某個設定是什麼」，裡面的程式去讀，拿到的是離它最近那層包的值；包好幾層就是一層套一層。這裡一樣：每個 kernel 替它裡面那一段設好環境，裡面再包一層，就是在這個環境裡再設一次。
+- **跟 Lua metatable 一層層合併不一樣的地方**：後一層不是跟前一層「合併設定表」，而是**真的跑在前一層的環境裡**——它的行程在前一層的 cgroup 裡、它看到的網路是前一層給的網路、它看到的檔案是前一層遮過的檔案。所以它用得到前一層的東西，也鬆不過前一層。
+- **誰是住戶**：每個 kernel 是前一層的住戶；pi（agent）是最裡層的住戶。**寫在前面的＝外層**（使用者已確認）。
+- **內層不能比外層鬆**（11-27 定的 1甲：不擋在裡面再開沙箱）：這版不是靠 kernel 自律，是 Linux 本身就這樣算——cgroup 上限一層層往下取最緊、封包要先過內層的規則再過外層的、從外層抄來的掛載在內層是鎖住的。內層寫得比外層鬆，只是寫了沒用（起來時印一行警告）。
+
+### 長什麼樣
+
+```
+python3 mini.py --kernels aos/base-low aos/net/base-litellm-proxy aos/mask/run-user -- pi …
+組出來的那一行（--dry-run 印得出來；{…} 是各自那份設定）：
+systemd-run --user --scope … -p Delegate=yes --                         ← mini.py：外面那個 scope（沒有上限）
+  python3 -I cg_kernel.py   --name aos/base-low                --json {…} --
+  python3 -I net_kernel.py  --name aos/net/base-litellm-proxy  --json {…} --
+  python3 -I mask_kernel.py --name aos/mask/run-user           --json {…} --
+  python3 -I -c "$(cat leaf.py)" stage1 --env-json {…} --               ← 最裡那步（不是 kernel，一定有）
+  pi …
+```
+
+每一支只看自己的參數，`--` 後面整串原封不動當成「下一個要跑的指令」，設好環境就在裡面跑它。
+
+| 程式 | 替內層做什麼 | 自己留著嗎 | 宣告給內層 |
+|---|---|---|---|
+| `cg_kernel.py` | 在自己的 cgroup 底下開子 cgroup `k-<PID>`、設 cpu／memory（含 swap 0）／pids 上限、搬進去；開新的 user＋mount＋cgroup namespace（內層看自己是 `/`、改不了這些上限、搬不出去），重掛一份 `/sys/fs/cgroup` | 不留（換成下一支） | `aos/cgroup/`：`cpu`、`mem`、`pids`（跟外層宣告比過、取較緊的）、`asked`（自己寫的） |
+| `net_kernel.py`（`--json` 時是包裝模式） | 外層 netns＋pasta＋nft＋tc（跟第一段一樣）；用 `nsenter --user=<外層>` 加 `unshare --user --net` 起下一支，把 veth 拉進它的 netns，好了才放行；自己這幾隻搬進 cgroup `k-net`、下一支放 `in` | 留著（顧 pasta、每秒寫狀態檔），下一支結束才收、退出碼照傳 | `aos/net/`（欄位同第一段，少 `ctl`、`protocol`、`max_attach`） |
+| `mask_kernel.py` | 開新的 user＋mount namespace，把設定的路徑蓋掉（見下面「檔案遮蔽 kernel」） | 不留 | `aos/mask/paths`：外層蓋過的也抄進來，一行一條 |
+| `uid_kernel.py` | 開新的 user namespace，`setpriv` 換成 uid N、清掉附加群組、丟掉所有 capability、`no_new_privs` | 不留 | `aos/uid/`：`uid`、`outside`（外面看是哪個 id） |
+| `leaf.py`（最裡那步） | pi 自己的 user／mount／PID／cgroup namespace 與新的 `/proc`；外層沒宣告 `aos/net` 就給一個只有 `lo` 的空網路；`env -i` 換成乾淨的環境變數 | `unshare` 在外面等 pi | 不宣告；把 `AOS_ENV` 交給 pi【擬】 |
+
+`leaf.py` 用 `python3 -I -c "<整份原始碼>"` 跑（不是讀檔），因為切成 uid N 之後它讀不到你家目錄裡的檔；它也不 import 這個夾的別的檔。
+
+**為什麼是這個形狀**（「每支都是包裝程式、`--` 串下去」）：
+
+1. **這就是 Linux 本來的做法**：`unshare`、`nsenter`、`setpriv`、`env`、`systemd-run` 本身就是「設好一樣東西，再執行後面的指令」，這種一支接一支 exec 下去的串法叫 chain loading，daemontools、s6、execline 都這樣做（只借形狀，沒抄程式）。每一支不用知道後面是誰。
+2. **「後一層跑在前一層的環境裡」自動成立**：下一支就是在前一支設好的 namespace、cgroup 裡被起來的，不用另外傳什麼。
+3. **一支一件事**：換順序＝換 `--kernels` 的順序；同一種寫兩次就是兩層。
+4. 想過的另一種：「一個主程式讀全部設定、一次設好」（第一段的 `mini.py cfg.json` 就是）——做不到「後一層用前一層的東西」（例如內層網路 kernel 的 pasta 要跑在外層給的網路裡），pi 也不能在裡面用同一套再疊一層。第一段那種用法照樣留著（`accept.py` 測的就是它）。
+
+### 每層怎麼知道外層給了什麼：`$AOS_ENV`【擬】
+
+- 一個環境變數 `AOS_ENV` 指到一個夾，夾裡的 `.aos/` 就是「到這一層為止，外面給了什麼」：
+  - `.aos/interfaces/aos/<種類>/<欄位>`：每個欄位一個小檔（照第一段網路 kernel 的寫法）；
+  - `.aos/kernels`：從外到內一行一層，例 `cgroup aos/base-low`、`net aos/net/base-litellm-proxy`；
+  - `.aos/host_uid`、`.aos/host_subuid`：你在外面的 uid 與 subuid 範圍（mini.py 在最外面寫一次）。
+- **每一層做三件事**：讀 `$AOS_ENV`（外層給的）→ 抄一份成自己的夾、加上（或蓋掉）自己這一種的宣告 → `AOS_ENV` 改指自己的夾，再起下一層。外層的夾不動。所以內層讀到同一種的宣告，就是離它最近那層的——跟 `with-dyns` 裡讀到最裡那層的值一樣。遮蔽 kernel 例外：它把外層蓋過的路徑一起抄進來，因為外層的遮蔽在內層一樣有效。
+- **實際有人讀的**：最裡那步看有沒有 `aos/net`，決定要不要給空網路；cgroup kernel 讀外層的 `aos/cgroup`，比自己鬆就警告；網路 kernel 讀外層的 `aos/net`——自己的 `host_ports`（「外面那台機器的某個 port」）翻成「到外層 `host_addr` 的白名單」，總量比外層大就警告；遮蔽 kernel 讀 `host_uid` 換掉 `{uid}`；uid kernel 讀 `host_subuid` 算外面看是哪個 id。
+- **為什麼是「環境變數指一個夾」，不是 `/.aos`**：根目錄是你主機的，不用 root 開不了 `/.aos`（要整片天空自己組，那是 pi-sandbox 那一版）；普通程式不看這個變數就什麼事都沒有，合「普通程式什麼都不用知道」（pi沙箱-1127 第 5 條）。
+- **夾放在哪**：`/tmp/aos-mini-*/`（mini.py 開、跑完刪），每層一個 `<第幾層>-<種類>-<PID>/`，網路 kernel 的狀態檔 `status` 也在它那一層的夾裡。不放 `$XDG_RUNTIME_DIR` 是因為切成 uid N 之後進不了 `/run/user/1000`（700），最裡那步就讀不到宣告。遮蔽 kernel 若蓋到這個夾，會在蓋子上留一個洞（宣告寫 `hole`）讓內層看得見。
+
+### 名字去哪找【擬】
+
+- `aos/base-low` → 依序在 `$MINI_KERNELS_PATH`（冒號分隔的夾）裡找 `aos/base-low.json`，沒設就是這個夾的 `kernels/`。名字本身像路徑（`/`、`./`、`~` 開頭或 `.json` 結尾）就直接讀那個檔。
+- 一個名字＝一份 json：`{"description": "…", "program": "cg_kernel.py", "config": {…}}`，`program` 是相對於這個夾的程式。
+- 將來可以放 `$AOS_HOME/kernels/`（跟 `knowledge/`、`templates/` 同一層），或每個 agent 範本自己帶幾份——見「待使用者定」第 1 題。
+
+| 名字（`kernels/` 底下） | 是什麼 |
+|---|---|
+| `aos/base-low` | cgroup：CPU 一顆核的 20%、記憶體 512M（不准用 swap）、行程＋執行緒 64 |
+| `aos/base-high` | cgroup：200%、4G、1024 |
+| `aos/net/base-litellm-proxy` | 網路：只放行外面 `127.0.0.1:4000`（LiteLLM；裡面用 `169.254.77.1:4000` 連），下載 16mbit、上傳 8mbit、總量 200 MB |
+| `aos/mask/run-user` | 檔案遮蔽：`/run/user/<你的 uid>` 蓋成空夾 |
+| `aos/mask/ssh` | 檔案遮蔽：`~/.ssh` 蓋成空夾（示範再多蓋一個路徑） |
+| `aos/uid/1` | 切 uid：裡面是 uid 1（外面是你第一個 subuid）；要放最後 |
+
+使用者例子裡的 `aos/bases/extra-1` 不知道指什麼，沒做（`aos/mask/ssh` 是「再多一層」的示範）。
+
+### 怎麼跑
+
+```
+cd proto9/mini-sandbox
+python3 mini.py --kernels aos/base-low aos/net/base-litellm-proxy aos/mask/run-user -- pi …
+python3 mini.py --kernels aos/base-low aos/mask/run-user aos/uid/1 -- sh -c id   # uid 一定放最後
+python3 mini.py --kernels -- sh            # 一個 kernel 都不裝：只有最裡那步（沒網路、沒上限、檔案全漏）
+python3 mini.py --dry-run --kernels … -- …   # 只印組出來的那一行
+python3 mini.py --print --kernels … -- …     # 先把那一行印到 stderr 再跑
+# 其他選項：--name N（scope 叫 mini-<N>-<PID>）、--cwd D；網路 kernel 要 pasta：MINI_PASTA=<路徑>，沒設找 PATH
+python3 stack_test.py                       # 層疊實測（約 95 秒；--no-pi、--pasta PATH、--keep）
+```
+
+退出碼照傳（被訊號殺＝128+N，OOM＝137）。收到 SIGTERM／SIGINT／SIGHUP：整個 scope 送同一個訊號，5 秒後還在的整個 scope 送 SIGKILL。pi 自己在裡面跑 mini 時沒有 scope（見下），改送給自己那個 process group。
+
+### cgroup 怎麼分（為什麼內層鬆不過外層）
+
+Linux 的 cgroup v2 有一條規矩：開了控制器（cpu、memory、pids）往下分的 cgroup，自己不能直接放行程。所以每一層都把自己搬進一個子夾、讓「根」空著。實際跑起來（`systemd-cgls` 看到的，base＋net＋mask＋pi）：
+
+```
+mini-<名>-<PID>.scope         ← mini.py 開的（Delegate=yes，沒有上限；裡面的人才能自己分）
+└─ k-<PID>                    ← cgroup kernel 的上限設在這
+   └─ inner                   ← 它給內層的 cgroup namespace 根（內層看是 /）
+      ├─ k-net                ← 網路 kernel、holder、pasta
+      └─ in
+         ├─ wait              ← 最裡那步的 unshare 在這裡等
+         └─ sb                ← pi 的 cgroup namespace 根
+            └─ agent          ← pi
+```
+
+- 上限一層層往下算：子夾寫 500M、祖先是 200M，實際就是 200M（Linux 算的，實測見下表 b_cg_*）。
+- 內層改不了自己 namespace 根的上限（`Operation not permitted`），也搬不出根（第一段 `cgroup_ns_C` 量過）。
+- pi 在 `/sys/fs/cgroup` 看到自己的 `memory.max` 是 `max`（上限掛在它看不到的祖先上）；要知道自己的上限，讀 `$AOS_ENV/.aos/interfaces/aos/cgroup/`。
+- 每層要重掛一份 `/sys/fs/cgroup`，不然它看到的還是整台的樹、找不到自己：直接掛會 `EBUSY`（同一個 cgroup2 掛在同一點上），所以先蓋一小塊 tmpfs、在裡面掛、再 bind 過去（這次試出來的）。
+- pi 自己再起 mini（沙箱裡開沙箱）時，它的 cgroup 裡還有 pi 的其他行程，cgroup kernel 就在 namespace 根底下開一個兄弟夾 `k-<PID>`（還在外層的上限底下）；在最外面（主機的 cgroup namespace）不准這樣做，免得開到別人的 slice 去。這些空夾等外層結束時跟著 scope 一起收。
+
+## 檔案遮蔽 kernel（`mask_kernel.py`）
+
+使用者 11-27：「啊，3.這個，就做成一個kernel吧」——蓋 `/run/user/<uid>` 不寫死在底層，做成可裝可不裝的 kernel。
+
+| 設定欄位 | 預設 | 意思 |
+|---|---|---|
+| `paths` | `[{"path": "/run/user/{uid}", "how": "tmpfs"}]` | 要蓋的路徑；`{uid}`＝你外面的 uid、`{home}`＝家目錄；不存在就跳過（宣告寫 `absent`） |
+| `paths[].how` | `tmpfs` | `tmpfs`：蓋成空夾（1 MB，pi 寫得進去，沙箱結束就沒了）；`null`：用 `/dev/null` 蓋一個檔；`ro`：原地唯讀 |
+| `keep` | 無 | 蓋掉的夾裡要留著看得見的路徑；`$AOS_ENV` 所在的夾一定留 |
+
+- **pi 在裡面會怎樣**：`/run/user/1000` 是一個空夾，systemd --user、D-Bus session bus、Wayland、PipeWire 的 socket 都不見了；`systemd-run --user` 與 `busctl --user call … StartTransientUnit` 都回「No such file or directory」，**跳不出去**（實測 a_base_mask 等 6 種疊法）。不裝就跟第一段一樣跳得出去（a_none、a_base、a_base_net 這次又量到 `busctl rc 0`）。
+- **pi 拆不掉**：遮蔽做在外層的 mount namespace，pi 在更裡面一層（它自己的 user namespace），Linux 把從外層抄來的掛載鎖住；`umount2(…, MNT_DETACH)` 回 `Invalid argument`（實測）。
+- **還漏的**（這個 kernel 預設只蓋這一個夾）：其他檔案全漏（`~/.ssh` 可以加 `aos/mask/ssh`）；`~/.config/systemd/user/` 寫得進去，你下次登入時那個服務會在沙箱外面跑；IPC 跟外面同一個；`$SSH_AUTH_SOCK` 不在 `/run/user` 底下時照樣連得到。
+- **坑**：家機的 fnm（node 版本管理）把每個殼的 node 放在 `/run/user/1000/fnm_multishells/…`，`PATH` 裡若是那條路，遮掉之後 pi 就找不到 node。要寫真實路徑（`~/.local/share/fnm/node-versions/…`；pi-sandbox 的 `aos_pi.find_node()` 本來就找真實路徑，所以 `d_pi_fake_stack` 沒事）。
+- 預設裝不裝：**待使用者定**（使用者傾向不裝，見最後「待使用者定」第 6 題）。
+
+## 層疊實測（`stack_test.py`）
+
+`stack_test.py` 在外面起三個測試伺服器 A、B、C（`127.0.0.1` 隨機 port），照名字用 `MINI_KERNELS_PATH=<暫存>/kernels:kernels` 找 kernel（測試用的 `t/…` 寫在暫存夾，`aos/…` 用 repo 裡的），每種疊法起一個沙箱跑 `probe.py check`（一次量很多樣，原始碼用 `-c` 傳進去，uid 1 也跑得動），最後比對跑前跑後。測試用的 kernel：`t/base`＝20%／200M／40 隻；`t/net-ab`＝放行 A、B，總量 5 MB；`t/net-a-2mb`＝只放 A、2 MB；`t/net-ac-10mb`＝A、C、10 MB；`t/cg-tight`＝20%／200M／30；`t/cg-loose`＝80%／500M／100。
+
+**a. 不同 kernel 疊、只裝幾個、換順序**（數字是兩次的值，一樣只寫一個）
+
+| 項目 | 疊法（前面＝外層） | 量到的 | pi 在裡面會怎樣 |
+|---|---|---|---|
+| `a_none` | 不裝 | 只有 `lo`；`busctl` 成功；uid 0、600 的檔讀得到 | 看不到別人的行程、沒網路，但沒有任何上限，一行就跳出去 |
+| `a_base` | base | CPU 0.2；記憶體到 190 MB 被砍；fork 到第 38 隻失敗；只有 `lo`；`busctl` 成功 | 有上限、改不掉，但一行就跳出去、上限白設 |
+| `a_base_net` | base、net | 上限同上（記憶體到 140 MB 就砍）；A 通、C `No route to host`；pasta 在 `k-<PID>/inner/k-net`（上限裡面）；`busctl` 成功 | 只連得到 A，但一行就跳出去、白名單也白設；pasta 跟網路 kernel 吃掉 pi 約 50～60 MB 額度 |
+| `a_base_mask` | base、mask | 上限同 `a_base`；`busctl` 回 No such file；`umount` 回 Invalid argument | 有上限、跳不出去、拆不掉遮蔽；沒網路 |
+| `a_base_mask_uid` | base、mask、uid | 再加：`id -u`＝1、600 的檔 `Permission denied`（記憶體 190、180 MB 被砍） | 同上，而且進不了你的家目錄 |
+| `a_all` | base、net、mask、uid | 四樣同時成立 | 有上限、只連得到 A、跳不出去、是 uid 1 |
+| `a_mask_outermost` | mask、base、net、uid | 同 `a_all` | 跟 `a_all` 一樣：遮蔽放最外面也行 |
+| `a_net_outermost` | net、base、mask、uid | 同 `a_all`，但記憶體到 190 MB 才砍；pasta 在 `/k-net`（**上限外面**） | 跟 `a_all` 一樣，差別是網路 kernel 吃的資源不算在 pi 的額度裡 |
+| `a_mask_inside_net` | base、net、mask | 同 `a_base_net`＋跳不出去、`umount` 回 Invalid argument | 遮蔽放在網路 kernel 裡面也一樣有效 |
+| `a_uid_before_mask` | base、uid、mask | 退出碼 2：`can't open file …/mask_kernel.py: Permission denied`；指令沒跑 | **出事的疊法**：起不來（不會少一層照跑） |
+| `a_uid_before_net` | base、uid、net | 同上（`net_kernel.py` 讀不到） | 同上 |
+
+**b. 同一種疊兩層**
+
+| 項目 | 疊法 | 量到的 | pi 在裡面會怎樣 |
+|---|---|---|---|
+| `b_net_in_net_tighter` | 外：A、B、5 MB；內：A、2 MB | A 通；B `No route to host`；要 4 MB，拿到 1901064、1901144 位元組就斷 | 只連得到兩層都准的 A，總量照較小的 2 MB |
+| `b_net_in_net_looser` | 外：A、B、5 MB；內：A、C、10 MB | A 通；C 連不到（外層擋）；要 8 MB，拿到 4795216、4790404 位元組就斷（之前沒用過這隻的總量）；內層網路 kernel 起來時印兩行警告 | 內層寫鬆了沒用：C 照樣連不到、5 MB 照樣斷 |
+| `b_cg_in_cg_looser` | 外 20%／200M／30；內 80%／500M／100 | CPU 0.2；190 MB 砍；fork 到第 28 隻失敗；內層 cgroup kernel 印三行警告（「… applies」） | 照外層的上限 |
+| `b_cg_in_cg_tighter` | 反過來 | 一樣（0.2、190 MB、28） | 照內層的上限（還是兩層中較緊的） |
+| `b_mask_on_mask` | `aos/mask/run-user`、`aos/mask/ssh` | 跳不出去；`~/.ssh/id_ed25519` No such file；宣告兩行（`tmpfs /run/user/1000`、`tmpfs /home/…/.ssh`） | 兩樣都看不到 |
+
+**c. 沙箱裡再開沙箱（pi 自己跑 `mini.py --kernels …`）**
+
+| 項目 | 外層 → 內層 | 量到的 | pi 在裡面會怎樣 |
+|---|---|---|---|
+| `c_mini_in_mini_looser` | 外：`t/cg-tight`、mask、`t/net-ab` → 內：`t/cg-loose`、`t/net-ac-10mb` | `.aos/kernels` 五行（外三內二）；CPU 0.2；記憶體到 80 MB 就砍（外層 200M 還算進內層那幾隻 kernel 與 pasta）；fork 到第 18 隻失敗；A 通、B 不通（內層沒放）、C 不通（外層擋）；跳不出去 | 裡面那層只會更緊；寫鬆的部分全部無效 |
+| `c_mini_in_mini_bare` | 同上外層 → 內層不裝 kernel | 上限照外層；A、B 通（**沿用外層的網路**）、C 不通；跳不出去 | 跟外層一樣緊（沒網路宣告不是「沒網路」，是「照外層」） |
+
+**d. pi**：`d_pi_fake_stack`——pi `--fake` 經 `t/base-pi`（200%／2G／512）、`t/net-pi`（只放行腦的轉接 port）、`aos/mask/run-user` 跑完 read、write、edit、bash 四個工具，`hello.txt` 是 `pinecone`。**pi 在裡面照常工作**。
+
+`cleanup`：跑前跑後比這次的行程（含 subuid 的）、它們握著的 netns、`mini-*` 的 systemd 單元（含跳出去起的那隻）、`/tmp/aos-mini-*` 與 `$XDG_RUNTIME_DIR/aos-mini-*`、三個測試伺服器的 port，什麼都沒留。
+
+## 做不到或出事的（第二段）
+
+1. **uid 只能放最後**：切了之後，後面的 kernel 讀不到你 700 的家目錄裡的程式，也寫不了 cgroup 的檔（擁有者是你本人）。實測起不來、退出碼 2、指令沒跑（fail closed）。最裡那步不受影響（用 `-c` 帶原始碼）。要讓 uid 放中間，得把 kernel 程式裝到大家讀得到的地方（例如 `/usr/local/lib/aos/`），那要 root 或另外安排。
+2. **網路 kernel 在 cgroup kernel 外面時，pasta 不算進上限**（`a_net_outermost`）：不是錯，是兩種選擇——網路 kernel 放裡面，pasta 吃的 CPU／記憶體算 pi 的（pi 能用的少約 50～60 MB）；放外面，pi 用滿額度，但 pasta 不受限。
+3. **網路 kernel 疊網路 kernel 時，「本機」的意思變了**：對內層來說，「外面那台機器」是外層的沙箱，所以內層的 `host_ports` 被翻成「到外層 `host_addr` 的白名單」，pi 一樣用 `169.254.77.1:<port>` 連；外層的子網已經用了 `10.77.0.0/16`，內層自動改用 `10.78.0.0/16`（往上找沒用過的）。
+4. **pi 在裡面再起 mini 時沒有 systemd scope**：它在自己的 cgroup namespace 裡（加上遮蔽時連 systemd 都連不到），所以不開 scope、cgroup 用兄弟夾；收行程改送 process group，這條路**沒測**。
+5. **內層沒寫網路 kernel ≠ 沒網路**：外層宣告了 `aos/net`，內層最裡那步就沿用那個網路（`c_mini_in_mini_bare`）。一樣緊，不會更鬆；要更緊就在內層也放一個網路 kernel。
+6. **宣告夾 pi 改得到**：`/tmp/aos-mini-*` 是你本人的檔，pi（uid 0＝你）寫得進去。宣告只在每層起來時讀一次，之後改了沒有作用；但網路 kernel 的狀態檔 `status` 也在那裡，pi 可以改它來騙看狀態的人（不影響規則本身）。要擋得在 pi 那層之前用唯讀掛載蓋住，這版沒做。
+7. **這次找到並修好的**：網路 kernel 起的時候先把 SIGTERM 設成「忽略」，被忽略的訊號會一路傳給它起的內層，pi 那層的 `sh` 就連 `trap` 都設不上（POSIX 規定），結果收不到 SIGTERM、被 5 秒後的 SIGKILL 殺掉（退出碼 137 而不是自己的 3）。改成起內層前先換成「轉送」。另外第一版收訊號只殺 `systemd-run` 起的那一支（後來 exec 成網路 kernel），最裡那步的 `unshare` 跟 pi 留在 scope 裡沒死；改成 5 秒後對整個 scope 送 SIGKILL。
+
+## 待使用者定（第二段）
+
+順序誰在外層已確認（前面＝外層），不再問。
+
+1. **kernel 的名字去哪裡找**
+   - 甲（推薦）：`$AOS_HOME/kernels/<名字>.json`（跟 `knowledge/`、`templates/` 同一層），另外可用環境變數加別的夾、或直接寫路徑。pi 在裡面會怎樣：都一樣，差在你去哪裡改設定。
+   - 乙：放在 agent 範本底下（`templates/fsm-agent/gpt/kernels/…`），每個範本自己帶。pi 一樣；同一份 base-low 會在很多範本裡各抄一份。
+   - 丙：每個 kernel 一個夾（設定＋程式＋說明，像 agent 定義夾）。pi 一樣；最整齊，但現在只有四支程式，夾比內容多。
+2. **同名設定／內層想放寬時怎麼辦**
+   - 甲（推薦，現在的做法）：照取兩層較緊的，內層放寬無效、起來時印一行警告。pi 在裡面會怎樣：受較緊的那層限制。
+   - 乙：內層比外層鬆就報錯、不起。pi 一樣受限，差在寫錯時是起不來還是只有警告。
+3. **沒寫 `--kernels` 時預設是什麼**
+   - 甲（推薦）：什麼 kernel 都不裝，只有最裡那步。pi 在裡面會怎樣：看不到別人的行程、沒網路，但沒有任何上限，檔案全漏，一行就跳出去。
+   - 乙：預設 `aos/base-low`。pi 有上限，但不裝遮蔽時上限照樣能一行繞過。
+   - 丙：預設 `aos/base-low aos/mask/run-user`。pi 有上限、跳不出去、沒網路。
+4. **跟 `/llm`、`.aos` 宣告怎麼接**
+   - 推薦：pi-sandbox 的 llm kernel 也改成同一種包裝程式（例 `aos/llm/<名>`）：它在自己的環境裡開 `/llm` socket、宣告 `.aos/interfaces/aos/llm/`（現在已經是這個格式），內層照 `$AOS_ENV` 找到 socket；socket 放在宣告夾旁邊，遮蔽 kernel 自動留洞。pi 只會講 HTTP，還要那個小轉接（pi-sandbox 的 `/llm/relay`）。pi 在裡面會怎樣：不用網路 kernel 也問得到腦，而且只問得到這一個。
+   - 另一個小點：pi 現在拿得到 `AOS_ENV`【擬】。不給的話，pi 不知道外面給了它什麼（普通程式本來就不用知道）；給的話，懂 aos 的程式才找得到 `/llm` 這類介面。
+5. **跟 proto8 `aos-daemon-ctl add` 的參數衝不衝突、`--kernels` 怎麼擺**：現有旗標是 `--name --ws --stack --def --limits --auto-restart --reply-to --timeout-s --ws-json --stack-json --path-json`，`--kernels` 不撞名；但 `add … XXX [-- ARGS]` 的 XXX 是位置參數，草圖 `--kernels a b c XXX` 會分不清名字到哪裡結束。
+   - 甲：`--kernels` 吃到下一個選項為止，XXX 用 `--def`／`--path-json` 給。
+   - 乙（推薦）：逗號分隔一個參數 `--kernels aos/base-low,aos/net/base-litellm-proxy XXX`，最接近草圖、不會吃掉 XXX。
+   - 丙：可重複的 `--kernel NAME --kernel NAME XXX`。
+   - pi 在裡面會怎樣：三種都一樣，差在打字。另外 `--limits`（aos-sandbox 的上限）跟 cgroup kernel 重疊：疊起來一樣取較緊的、不會打架；要不要收掉 `--limits` 另外再說。
+6. **檔案遮蔽 kernel 預設裝不裝**
+   - 甲：不裝（使用者先前傾向，照「反正就給他漏」）。pi 在裡面會怎樣：一行就跳出去，cgroup 與網路 kernel 都白設（這次 a_base、a_base_net 又量到）。
+   - 乙（推薦）：只要裝了 cgroup 或網路 kernel，就自動在它們裡面加 `aos/mask/run-user`（不然那兩個形同虛設）；兩個都沒裝時不加。pi 有上限時就跳不出去；其他檔案照樣全漏。
+   - 丙：一律裝。pi 永遠連不到 systemd --user、D-Bus、Wayland、PipeWire。
+
 ## 漏掉的（使用者 11-27：「3.甲，剩下都按照推薦。反正就給他漏」）
 
 照 net-report 第 1 節「漏掉之後 pi 做得到什麼」，這版全部照漏：
 
 1. **讀你所有的檔**：`~/.ssh` 私鑰（這次實測讀得到）、各種 token、瀏覽器資料、LiteLLM 設定裡的金鑰。
 2. **寫和刪你所有的檔**：改 repo（包括 `.git`、`AGENTS.md`、git hooks）、`~/.bashrc`；在 `~/.config/systemd/user/` 放一個服務，你下次登入它就在沙箱外面跑。
-3. **整個跳出去：`/run/user/1000` 這個口**。pi 在裡面摸得到 systemd --user 與 D-Bus，叫 systemd 替它起一隻新行程，那隻就在沙箱外面：**你本人的網路（網路 kernel 的白名單、頻寬、總量全部不算數）、不在 mini 的 cgroup 裡（CPU、記憶體、行程數上限全部不算數）**——前兩層的限制都被繞過。這次實測：`systemd-run --user` 那支指令在沙箱裡會失敗，但直接經 D-Bus（`busctl`）送同一個請求就成功，所以「指令失敗」不代表口是關的。它也能從外面那隻 `nsenter` 進網路 kernel 的外層、把規則清掉（理論上，沒試）。**這是使用者知情後選的，原話「3.甲，剩下都按照推薦。反正就給他漏」，不再勸。**（之後使用者補了「3.這個，就做成一個kernel吧」：把蓋 `/run/user/<uid>` 做成可裝可不裝的檔案遮蔽 kernel、預設裝不裝還沒定——見 pi沙箱-1127 第 10 條；**這版沒做**。）
+3. **整個跳出去：`/run/user/1000` 這個口**。pi 在裡面摸得到 systemd --user 與 D-Bus，叫 systemd 替它起一隻新行程，那隻就在沙箱外面：**你本人的網路（網路 kernel 的白名單、頻寬、總量全部不算數）、不在 mini 的 cgroup 裡（CPU、記憶體、行程數上限全部不算數）**——前兩層的限制都被繞過。這次實測：`systemd-run --user` 那支指令在沙箱裡會失敗，但直接經 D-Bus（`busctl`）送同一個請求就成功，所以「指令失敗」不代表口是關的。它也能從外面那隻 `nsenter` 進網路 kernel 的外層、把規則清掉（理論上，沒試）。**這是使用者知情後選的，原話「3.甲，剩下都按照推薦。反正就給他漏」，不再勸。**（之後使用者補了「3.這個，就做成一個kernel吧」：第二段做了，見「檔案遮蔽 kernel」；不裝時這一條照舊，預設裝不裝待使用者定。）
 4. **D-Bus session bus**：能叫桌面上的程式；你的密碼庫如果開著，可能拿得到密碼（沒試）。
 5. **其他用檔案路徑連的 socket**：X11、Wayland（看畫面、送按鍵）、PipeWire（麥克風）、`$SSH_AUTH_SOCK`（叫你的 ssh-agent 幫它簽）、docker.sock（若你在 docker 群組）；網路 kernel 的 `ctl` 也連得到，但請求會被拒。只有 abstract socket 因為自己有 netns 連不到外面。
 6. **IPC 跟外面相通**（這次實測同一個 namespace）：SysV 共享記憶體、號誌、訊息佇列、POSIX mqueue、`/dev/shm`。
@@ -242,12 +454,14 @@ info（漏掉的，照實量、不算失敗；兩次一樣）：
 - 總量算上下行加總、含表頭；用完是丟封包（連線卡住、新連線逾時），不是回拒絕。
 - 宣告 `aos/net` 的欄位名與內容（`kind veth`、`protocol json-lines` 等）、狀態檔的格式；`ctl` 只收不在沙箱裡的呼叫者；`gate.sock` 放在 `$XDG_RUNTIME_DIR/aos-mini-*`。
 - 驗收的門檻：CPU 比 0.15～0.25；頻寬設定值的 ±25%；6 MB 的流量讓 quota 漲 6.0～6.6 MB；用完時拿到的量跟剩下的差 10%＋100 KB 以內。
+- 第二段：`--kernels` 的寫法與「吃到 `--` 為止」；每支 kernel 的參數 `--name N --json CFG -- 下一支…`；`AOS_ENV`、`.aos/kernels`、`.aos/host_uid`、`.aos/host_subuid`；宣告夾放 `/tmp/aos-mini-*/<第幾層>-<種類>-<PID>/`；`MINI_KERNELS_PATH`、`MINI_PASTA`；名字的 json 格式（`description`、`program`、`config`）與 `kernels/` 底下的示範名字（`aos/base-high`、`aos/mask/ssh`、`aos/uid/1` 是我加的）；cgroup 夾名 `k-<PID>`、`inner`、`k-net`、`in`、`wait`、`sb`、`agent`；scope 加 `Delegate=yes`；內層比外層鬆時印警告、不報錯；網路 kernel 包裝模式的子網自動往上找、`host_ports` 翻成外層 `host_addr` 的白名單；遮蔽 kernel 的 `{uid}`、`{home}`、`keep`、`hole`、tmpfs 1 MB；最裡那步的 cgroup 排法、把 `AOS_ENV` 交給 pi；層疊實測的門檻（CPU 0.15～0.25、記憶體 200M 時 190 MB 以內被砍、2 MB 總量時拿到 1.5～2.0 MB、5 MB 時 4～5 MB）。
 
 ## 跟任務書不一樣的地方
 
 - **`systemd-run --user` 那條漏洞換了一個量法**：任務書寫「`systemd-run --user` 從裡面起的行程跑出沙箱」；實測這支指令在 `-C` 的沙箱裡失敗，同一個請求改走 `busctl` 才成功。驗收兩種都試、兩種結果都印。
 - 那一行多了 `--kill-child`、`--collect`、`--unit` 與一小段 `mini.py --inside`（理由見上）；有網路 kernel 時前面多 `nsenter --user=<A>`。
 - 上傳整形的 tbf 佇列是 1 秒，不是調查報告的 200 毫秒（理由見上）。
+- 第二段：網路 kernel 照嵌套重整成「外層、在自己的環境裡起內層」（`--json` 包裝模式），但第一段的 `ctl`＋`mini.py cfg.json` 那種用法沒拆，`accept.py` 照舊測它；層疊實測另開 `stack_test.py`，沒塞進 `accept.py`；最裡那步（`leaf.py`）不算 kernel、一定有；任務書沒提的 `aos/base-high`、`aos/mask/ssh`、`aos/uid/1` 是我加的示範；另外加了 pi `--fake` 經整疊跑一次（`d_pi_fake_stack`）。
 
 ## 沒驗的
 
@@ -259,19 +473,28 @@ info（漏掉的，照實量、不算失敗；兩次一樣）：
 - UDP 白名單、port 範圍、CIDR：程式會轉成 nft，沒有專門的驗收項。
 - 長時間上傳（10 MB 以上）只手動試過一次（10 MB、0.97 MB/s、0 丟）。
 - 真的模型：沒叫（任務書不要）。pi 經網路 kernel 直接打 LiteLLM 4000（`host_ports: [4000]`）照理就通，沒試。
-- 使用者後來補的：`/run/user` 檔案遮蔽 kernel、`--kernels` 依名字疊 kernel、「試層疊」（同一種 kernel 疊兩層、換順序）——這版都沒做。網路 kernel 跟沙箱的關係已經是「環境套環境」（沙箱生在網路 kernel 的 user namespace 裡），但「網路 kernel 疊網路 kernel」沒試。
+- （第一段寫的「`/run/user` 檔案遮蔽 kernel、`--kernels`、試層疊這版都沒做」：第二段做了。）
+- 第二段沒驗的：公司 WSL；`$AOS_HOME/kernels/` 那個位置（只做了 `MINI_KERNELS_PATH` 與這個夾的 `kernels/`）；pi 在裡面跑 mini 時收訊號（送 process group）；遮蔽的 `null`、`ro` 兩種只手動試過一次（`null` 蓋的檔讀到空的、`ro` 的夾寫入回 Read-only file system、pi 改回可寫被拒、不存在的路徑宣告 `absent`），沒進 `stack_test.py`；llm kernel 改成嵌套沒做；網路 kernel 疊三層以上、`max_attach` 大於 1 的包裝模式；真的模型（只跑 `--fake`）；SIGKILL 掉 mini.py 本身時（沙箱照跑，同第一段第 14 條）。
 
 ## 暫存與清理
 
 - pasta 編在 `~/.aos/scratch/proto9-mini-1127/passt/`（官方 `git clone https://passt.top/passt`、`git checkout 2026_10_02.cba3570`、`make`；GPL-2.0+，只當另外的程式呼叫，沒抄進 repo）。`accept.py` 沒給 `--pasta` 又在 PATH 上找不到時用這一份。
 - 驗收的暫存在 `~/.aos/scratch/proto9-mini-1127/accept/`，全過就刪（`--keep` 留著）。
+- 層疊實測的暫存在 `~/.aos/scratch/proto9-mini-1127/stack/`，全過就刪（`--keep` 留著）；`--kernels` 跑的時候每次開一個 `/tmp/aos-mini-*/`，跑完刪。
 - 用到 nft、tc、veth 時 Linux 會自動載入幾個核心模組（`nft_quota`、`sch_tbf`、`veth` 等），卸掉要 root，重開機就沒了，沒有害處。
 
 ## 檔案
 
 | 檔 | 是什麼 |
 |---|---|
-| `mini.py` | 讀設定、組那一行、跑、退出碼照傳；`--inside`（沙箱裡第一支）、`--give-back`（uid N 的檔還給你） |
-| `net_kernel.py` | 網路 kernel：外層 netns＋pasta＋nft＋tc、`ctl`、宣告、狀態檔；`--holder` 是它在外層裡的那一半 |
-| `probe.py` | 驗收在沙箱裡跑的小指令（cpu、mem、pids、cgroup、procs、tcp、get、put、curl、ns、leaks、ctl、read） |
+| `mini.py` | 讀設定、組那一行、跑、退出碼照傳；`--inside`（沙箱裡第一支）、`--give-back`（uid N 的檔還給你）；第二段加 `--kernels`（照名字找 kernel、串成一行、開 `$AOS_ENV`） |
+| `net_kernel.py` | 網路 kernel：外層 netns＋pasta＋nft＋tc、`ctl`、宣告、狀態檔；`--holder` 是它在外層裡的那一半；第二段加包裝模式（`--json CFG -- 下一支`）與 `--gate`（下一支的第一步） |
+| `probe.py` | 驗收在沙箱裡跑的小指令（cpu、mem、pids、cgroup、procs、tcp、get、put、curl、ns、leaks、ctl、read；第二段加 `check`＝一次量很多樣） |
 | `accept.py` | 驗收：測試伺服器、三隻網路 kernel、每項一個沙箱、pi `--fake`、跑前跑後比對 |
+| `nest.py` | 第二段：kernel 共用的小工具（`KERNEL [選項] -- 下一支` 的參數、`$AOS_ENV` 的讀寫、user namespace 的對應、cgroup 的排法與重掛） |
+| `cg_kernel.py` | 第二段：cgroup kernel（cpu、mem、pids 上限＋自己的 cgroup namespace） |
+| `mask_kernel.py` | 第二段：檔案遮蔽 kernel（tmpfs／`/dev/null`／唯讀） |
+| `uid_kernel.py` | 第二段：uid kernel（換成 uid N，要放最後） |
+| `leaf.py` | 第二段：最裡那步（pi 自己的 namespace、沒網路宣告就空網路、乾淨的環境變數），用 `-c` 帶原始碼跑 |
+| `kernels/` | 第二段：照名字找的 kernel 設定（`aos/base-low.json` 等） |
+| `stack_test.py` | 第二段：層疊實測（不同 kernel 疊、同一種疊兩層、沙箱裡開沙箱、pi `--fake`、跑前跑後比對） |

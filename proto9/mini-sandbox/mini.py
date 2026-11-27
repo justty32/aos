@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""mini: runs one command in the smallest sandbox, the one line systemd-run --user --scope (cpu, mem, pids) + unshare -UrmpnC (own user, mount, pid, net, cgroup namespaces); optional net kernel and uid N; everything else is left open."""
+"""mini: runs one command in the smallest sandbox, the one line systemd-run --user --scope (cpu, mem, pids) + unshare -UrmpnC (own user, mount, pid, net, cgroup namespaces), optional net kernel and uid N; or, with --kernels, nests kernels found by name (each one runs the next inside the environment it set up) around the command; everything else is left open."""
 
 import argparse
 import json
@@ -18,6 +18,7 @@ PROG = "mini"
 HERE = os.path.dirname(os.path.abspath(__file__))
 NET_DECL = os.path.join(".aos", "interfaces", "aos", "net")
 KEYS = {"name", "argv", "cwd", "env", "cpu", "mem", "pids", "net", "uid"}
+INIT_CGROUP_NS = "cgroup:[4026531835]"
 
 
 def fail(code, msg, exit_code=1):
@@ -204,16 +205,178 @@ def give_back(paths):
     sys.exit(subprocess.call(argv))
 
 
+# ------------------------------------------------------------ --kernels: nested kernels found by name
+
+def kernel_dirs():
+    """Where names are looked up, first match wins: $MINI_KERNELS_PATH (folders separated by :), else kernels/
+    next to this file."""
+    return [d for d in (os.environ.get("MINI_KERNELS_PATH") or os.path.join(HERE, "kernels")).split(":") if d]
+
+
+def find_kernel(name):
+    """A name (aos/base-low) -> {name, program, config, file}. A name that is a path (has a leading / or ./, or
+    ends in .json) is that file."""
+    if name.startswith(("/", "./", "../", "~")) or name.endswith(".json"):
+        path = os.path.abspath(os.path.expanduser(name))
+        if not os.path.isfile(path):
+            raise ValueError("kernel %s: no such file" % name)
+    else:
+        if ".." in name.split("/") or not name.strip("/"):
+            raise ValueError("kernel name %r: want a/b/c, no .." % name)
+        found = [os.path.join(d, name + ".json") for d in kernel_dirs() if os.path.isfile(os.path.join(d, name + ".json"))]
+        if not found:
+            raise ValueError("kernel %s: not found in %s" % (name, ":".join(kernel_dirs())))
+        path = found[0]
+    with open(path) as f:
+        k = json.load(f)
+    if not isinstance(k, dict) or not isinstance(k.get("program"), str):
+        raise ValueError("kernel %s (%s): want {\"program\": ..., \"config\": {...}}" % (name, path))
+    bad = set(k) - {"description", "program", "config"}
+    if bad:
+        raise ValueError("kernel %s: unknown keys %s" % (name, ", ".join(sorted(bad))))
+    prog = k["program"] if os.path.isabs(k["program"]) else os.path.join(HERE, k["program"])
+    if not os.path.isfile(prog):
+        raise ValueError("kernel %s: program %s not found" % (name, prog))
+    return {"name": name, "program": prog, "config": k.get("config", {}), "file": path}
+
+
+def parse_kernels_args(args):
+    o = {"kernels": [], "name": "mini", "cwd": os.getcwd(), "dry_run": False, "print": False}
+    if "--" not in args:
+        fail("ArgumentsBad", "want: mini.py [--name N] [--cwd D] [--dry-run|--print] --kernels NAME... -- COMMAND...", 2)
+    i = args.index("--")
+    own, o["argv"] = args[:i], args[i + 1:]
+    k, in_names = 0, False
+    while k < len(own):
+        a = own[k]
+        if a in ("--name", "--cwd") and k + 1 < len(own):
+            o[a[2:]] = own[k + 1]
+            k += 2
+            in_names = False
+        elif a in ("--dry-run", "--print"):
+            o[a[2:].replace("-", "_")] = True
+            k += 1
+            in_names = False
+        elif a == "--kernels":
+            in_names = True
+            k += 1
+        elif in_names and not a.startswith("--"):
+            o["kernels"].append(a)
+            k += 1
+        else:
+            fail("ArgumentsBad", "unknown option %r" % a, 2)
+    if not o["argv"]:
+        fail("ArgumentsBad", "nothing to run after --", 2)
+    if not str(o["name"]).replace("-", "").replace("_", "").isalnum():
+        fail("ArgumentsBad", "--name: letters, digits, - and _ only", 2)
+    return o
+
+
+def root_env(run):
+    """The folder the outermost kernel reads: nothing declared yet, plus who you are on the machine. Inside a
+    sandbox that has one already (mini started by the agent), start from a copy of that one."""
+    root = os.path.join(run, "0-root")
+    outer = os.environ.get("AOS_ENV")
+    if outer and os.path.isdir(os.path.join(outer, ".aos")):
+        shutil.copytree(os.path.join(outer, ".aos"), os.path.join(root, ".aos"), symlinks=True)
+    else:
+        os.makedirs(os.path.join(root, ".aos"))
+        with open("/proc/self/uid_map") as f:
+            init = f.read().split() == ["0", "0", "4294967295"]
+        su = subid_range("/etc/subuid") if init else None
+        for name, text in (("kernels", ""), ("host_uid", "%d\n" % os.getuid() if init else ""),
+                           ("host_subuid", "%d %d\n" % su if su else "")):
+            with open(os.path.join(root, ".aos", name), "w") as f:
+                f.write(text)
+    for dp, dns, fns in os.walk(root):
+        os.chmod(dp, 0o755)
+        for fn in fns:
+            os.chmod(os.path.join(dp, fn), 0o644)
+    return root
+
+
+def kernels_main(args):
+    o = parse_kernels_args(args)
+    try:
+        ks = [find_kernel(n) for n in o["kernels"]]
+    except (OSError, ValueError) as e:
+        fail("KernelNotFound", str(e), 2)
+    scoped = os.readlink("/proc/self/ns/cgroup") == INIT_CGROUP_NS  # outside any sandbox: make a scope
+    unit = "mini-%s-%d.scope" % (o["name"], os.getpid()) if scoped else None
+    env = default_env()
+    if unit:
+        env["MINI_UNIT"] = unit
+    with open(os.path.join(HERE, "leaf.py")) as f:
+        leaf_src = f.read()
+    chain = []
+    for k in ks:
+        chain += [sys.executable, "-I", k["program"], "--name", k["name"], "--json", json.dumps(k["config"]), "--"]
+    chain += [sys.executable, "-I", "-c", leaf_src, "stage1", "--env-json", json.dumps(env, sort_keys=True), "--"]
+    chain += o["argv"]
+    line = (["systemd-run", "--user", "--scope", "--quiet", "--collect", "--unit", unit, "-p", "Delegate=yes", "--"]
+            if scoped else []) + chain
+    if o["dry_run"] or o["print"]:
+        shown = shlex.join(line).replace(shlex.quote(leaf_src), '"$(cat %s)"' % os.path.join(HERE, "leaf.py"))
+        print(("mini: " if o["print"] else "") + shown, file=sys.stderr if o["print"] else sys.stdout, flush=True)
+        if o["dry_run"]:
+            return
+    run = tempfile.mkdtemp(prefix="aos-mini-", dir="/tmp")  # readable by a uid N further in (your home is not)
+    os.chmod(run, 0o711)
+    cenv = dict(os.environ, AOS_ENV=root_env(run))
+    if unit:
+        cenv["MINI_UNIT"] = unit
+    try:
+        p = subprocess.Popen(line, cwd=o["cwd"], env=cenv, start_new_session=not unit)
+    except OSError as e:
+        shutil.rmtree(run, ignore_errors=True)
+        fail("StartFailed", "%s: %s" % (line[0], e.strerror))
+
+    def stop(sig):
+        """The whole scope gets the signal; 5 s later whatever is left gets SIGKILL (the leaf's unshare holds
+        SIGTERM back and the agent as pid 1 may ignore it). Inside a sandbox there is no scope: the process group."""
+        if unit:
+            subprocess.run(["systemctl", "--user", "kill", "--signal=%d" % sig, unit], capture_output=True)
+        else:
+            try:
+                os.killpg(p.pid, sig)
+            except OSError:
+                pass
+        try:
+            p.wait(5)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+        if unit:
+            subprocess.run(["systemctl", "--user", "kill", "--signal=KILL", unit], capture_output=True)
+        else:
+            try:
+                os.killpg(p.pid, signal.SIGKILL)
+            except OSError:
+                pass
+
+    def forward(sig, _):
+        threading.Thread(target=stop, args=(sig,), daemon=True).start()
+    for s_ in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(s_, forward)
+    rc = p.wait()
+    shutil.rmtree(run, ignore_errors=True)
+    sys.exit(128 - rc if rc < 0 else rc)
+
+
 def main():
     if len(sys.argv) >= 2 and sys.argv[1] == "--inside":
         return inside(sys.argv[2:])
+    if "--kernels" in sys.argv[1:sys.argv.index("--") if "--" in sys.argv else None]:
+        return kernels_main(sys.argv[1:])
     if len(sys.argv) >= 2 and sys.argv[1] == "--give-back":
         if len(sys.argv) < 3:
             fail("ArgumentsBad", "--give-back DIR...", 2)
         return give_back(sys.argv[2:])
     ap = argparse.ArgumentParser(prog=PROG, description="Run one command in the minimal sandbox described by a "
                                  "json config; exits with the command's code (128+N if killed by signal N).",
-                                 epilog="Also: mini.py --give-back DIR... (chown files written as uid N back to you)")
+                                 epilog="Also: mini.py --give-back DIR... (chown files written as uid N back to you); mini.py [--name N] "
+                                 "[--cwd D] [--dry-run|--print] --kernels NAME... -- COMMAND... (nest kernels by name, "
+                                 "see README)")
     ap.error = lambda m: fail("ArgumentsBad", "%s (usage: %s --help)" % (m, PROG), 2)
     ap.add_argument("config", help="json: name, argv, cwd, env, cpu, mem, pids, net, uid (see README)")
     ap.add_argument("argv", nargs="*", help="after --: the command, instead of the config's argv")

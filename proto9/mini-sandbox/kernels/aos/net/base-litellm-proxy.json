@@ -1,0 +1,5 @@
+{
+  "description": "net kernel: only the LiteLLM proxy on the machine outside (127.0.0.1:4000, seen inside as 169.254.77.1:4000); 16mbit down, 8mbit up, 200 MB in all",
+  "program": "net_kernel.py",
+  "config": {"host_ports": [4000], "down": "16mbit", "up": "8mbit", "quota": "200mb"}
+}

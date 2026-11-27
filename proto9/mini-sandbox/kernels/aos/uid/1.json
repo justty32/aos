@@ -1,0 +1,5 @@
+{
+  "description": "uid kernel: everything inside runs as uid 1 (outside: your first subordinate id); put it last",
+  "program": "uid_kernel.py",
+  "config": {"uid": 1}
+}

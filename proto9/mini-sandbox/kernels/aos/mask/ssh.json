@@ -1,0 +1,5 @@
+{
+  "description": "mask kernel: cover ~/.ssh with an empty folder (an example of masking one more path)",
+  "program": "mask_kernel.py",
+  "config": {"paths": [{"path": "{home}/.ssh", "how": "tmpfs"}]}
+}

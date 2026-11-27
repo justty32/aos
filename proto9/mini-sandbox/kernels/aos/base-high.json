@@ -1,0 +1,5 @@
+{
+  "description": "cgroup kernel, higher limits: 2 cores, 4G memory (no swap), 1024 processes/threads",
+  "program": "cg_kernel.py",
+  "config": {"cpu": "200%", "mem": "4G", "pids": 1024}
+}
