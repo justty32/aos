@@ -38,23 +38,43 @@ def resolve(cfg):
     return out, keep
 
 
+def under(path, folder):
+    return path == folder or path.startswith(folder.rstrip("/") + "/")
+
+
+def lines_for(paths, keep, covered):
+    """The declaration lines of one mask layer: absent (not there, or already under an empty tmpfs an earlier
+    layer of the same flattened table put up, and not in one of its holes), or how and path, then its holes.
+    covered: (path, holes) of the tmpfs covers so far, updated."""
+    out = []
+    for p in paths:
+        hidden = any(under(p["path"], c) and not any(under(p["path"], h) for h in holes) and p["path"] != c
+                     for c, holes in covered)
+        if hidden or not os.path.lexists(p["path"]):
+            out.append("absent %s" % p["path"])
+            continue
+        out.append("%s %s" % (p["how"], p["path"]))
+        holes = [k for k in keep if p["how"] == "tmpfs" and k.startswith(p["path"] + "/")]
+        out += ["hole %s" % k for k in holes]
+        if p["how"] == "tmpfs":
+            covered.append((p["path"], holes))
+    return out
+
+
+DESCRIPTION = ("mask kernel: these paths are covered for everything inside (tmpfs = an empty folder, null = an empty "
+               "file, ro = read-only); a hole is a path left visible inside a covered folder")
+
+
 def stage1(opts, cfg, nxt):
     try:
         paths, keep = resolve(cfg)
     except (ValueError, KeyError) as e:
         nest.fail(PROG, "ConfigBad", str(e), 2)
+    nest.need_userns(PROG, 1, "mask kernel %s" % opts["name"])
     env = nest.new_env("mask", opts["name"], opts.get("from"))
     outer = nest.decl_read(nest.env_outer(), "mask", "paths", "")
-    lines = [l for l in outer.splitlines() if l.strip()]
-    for p in paths:
-        if not os.path.lexists(p["path"]):
-            lines.append("absent %s" % p["path"])
-            continue
-        lines.append("%s %s" % (p["how"], p["path"]))
-        lines += ["hole %s" % k for k in keep if p["how"] == "tmpfs" and k.startswith(p["path"] + "/")]
-    nest.declare(env, "mask", {"paths": "\n".join(lines)},
-                 "mask kernel: these paths are covered for everything inside (tmpfs = an empty folder, null = an "
-                 "empty file, ro = read-only); a hole is a path left visible inside a covered folder")
+    lines = [l for l in outer.splitlines() if l.strip()] + lines_for(paths, keep, [])
+    nest.declare(env, "mask", {"paths": "\n".join(lines)}, DESCRIPTION)
     os.environ["AOS_ENV"] = env
     spec = json.dumps({"paths": paths, "keep": keep})
     argv = ["unshare"] + nest.userns_args() + ["--mount", "--"] + nest.py(os.path.abspath(__file__)) + \

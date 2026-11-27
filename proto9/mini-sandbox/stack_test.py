@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stacking tests for mini --kernels a,b,c: different kernels together, some of them (none: no --kernels), in other orders (uid in the middle must fail closed), the /run/user mask mini adds with a cgroup or net kernel (and --no-auto-mask), the same kind twice (net in net, cgroup in cgroup, mask on mask: the tighter one wins), mini started inside mini, pi --fake through the stack, and nothing left over afterwards; PASS/FAIL/info lines."""
+"""Stacking tests for mini --kernels a,b,c: different kernels together, some of them (none: no --kernels), in other orders (uid written in the middle is moved innermost), the /run/user mask mini adds with a cgroup or net kernel (and --no-auto-mask), the same kind twice (net in net, cgroup in cgroup, mask on mask: the tighter one wins), mini started inside mini, pi --fake through the stack, and nothing left over afterwards; PASS/FAIL/info lines."""
 
 import sys
 
@@ -252,13 +252,14 @@ def matrix(pa, pc, secret):
         if "umount" in spec and r.j.get("umount") == "ok":
             record(name + "_mask_kept", False, "the agent could remove the mask")
         escape_stop(unit)
-    log("\n== a. uid in the middle (the layers after it lose your home): must fail closed")
+    log("\n== a. uid written in the middle: mini moves it innermost (11-27 night, answer 5; it used to fail closed)")
     for name, ks in (("a_uid_before_mask", ["t/base", "aos/uid/1", "aos/mask/run-user"]),
                      ("a_uid_before_net", ["t/base", "aos/uid/1", "t/net-ab"])):
-        r = mini(name.replace("_", "-"), ks, ["sh", "-c", "echo AGENT_RAN"], cwd="/")
-        record(name, r.rc != 0 and "AGENT_RAN" not in r.out,
-               "[%s] exit %s, agent ran: %s; %s" % (" ".join(ks), r.rc, "AGENT_RAN" in r.out,
-                                                    (r.err.strip().splitlines() or ["-"])[-1][:140]))
+        r = mini(name.replace("_", "-"), ks, ["sh", "-c", 'echo "AGENT_RAN uid=$(id -u) last=$(tail -n1 '
+                                              '$AOS_ENV/.aos/kernels)"'], cwd="/")
+        said = "moved aos/uid/1 innermost" in r.err
+        record(name, r.rc == 0 and "AGENT_RAN uid=1 last=uid aos/uid/1" in r.out and said,
+               "[%s] exit %s, %s; mini said it moved uid: %s" % (" ".join(ks), r.rc, r.out.strip()[:80], said))
 
 
 def same_kind(pa, pb, pc, ssh_file):
@@ -275,17 +276,17 @@ def same_kind(pa, pb, pc, ssh_file):
     j = r.j
     a, c = j.get("tcp %s:%d" % (HOST, pa)), j.get("tcp %s:%d" % (HOST, pc))
     got = j.get("get_bytes", -1)
-    warned = "not allowed by the outer" in r.err and "more than the outer" in r.err
+    warned = "mini: 2 setting(s) written looser" in r.err  # host port C, quota 10 MB (one line for both)
     record("b_net_in_net_looser", a == "ok" and c != "ok" and 4_000_000 < got < 5_000_000 and warned,
-           "outer A,B 5 MB; inner asks A,C 10 MB: A %s, C %s; asked 8 MB, got %d before the outer cut; inner "
-           "kernel warned: %s" % (a, (c or "")[:40], got, warned))
+           "outer A,B 5 MB; inner asks A,C 10 MB: A %s, C %s; asked 8 MB, got %d before the outer cut; one line "
+           "about the looser settings: %s" % (a, (c or "")[:40], got, warned))
     for name, ks in (("b_cg_in_cg_looser", ["t/cg-tight", "t/cg-loose"]),
                      ("b_cg_in_cg_tighter", ["t/cg-loose", "t/cg-tight"])):
         r = mini(name.replace("_", "-"), ks, check_argv({"cpu": 1.5, "pids": 100, "mem": 400}))
         j = r.j
         ok = 0.15 <= j.get("cpu_ratio", 0) <= 0.25 and j.get("mem_end") == "killed by signal 9" and \
             j.get("mem_reached_mb", 999) < 200 and j.get("forked", 99) < 30
-        warned = "applies" in r.err
+        warned = "mini: 3 setting(s) written looser" in r.err  # cpu, mem, pids: one line
         record(name, ok and (warned or name.endswith("tighter")),
                "[%s] (20%%/200M/30 and 80%%/500M/100) cpu %s, mem %s at %s MB, forked %s; warned about the looser "
                "inner: %s" % (" ".join(ks), j.get("cpu_ratio"), j.get("mem_end"), j.get("mem_reached_mb"),

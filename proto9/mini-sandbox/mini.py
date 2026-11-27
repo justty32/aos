@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
-"""mini: runs one command in the smallest sandbox, the one line systemd-run --user --scope (cpu, mem, pids) + unshare -UrmpnC (own user, mount, pid, net, cgroup namespaces), optional net kernel and uid N; or, with --kernels a,b,c, nests kernels found by name in $AOS_HOME/kernels (a name may be a bundle: a folder whose _chain.json lists more names, expanded in place; each kernel runs the next inside the environment it set up; a cgroup, net or llm kernel brings the /run/user mask along; a net kernel inside an llm kernel that lets the llm's upstream through is refused) around the command; everything else is left open."""
+"""mini: runs one command in the smallest sandbox, the one line systemd-run --user --scope (cpu, mem, pids) + unshare -UrmpnC (own user, mount, pid, net, cgroup namespaces), optional net kernel and uid N; or, with --kernels a,b,c, nests kernels found by name in $AOS_HOME/kernels around the command (bundles, merge, use/replace/without, one of each kernel, uid innermost, the /run/user mask, orders that go around an llm kernel refused: see chain.py), neighbouring cgroup and mask kernels flattened into one layer, the user namespaces counted before anything starts, what the agent gets written to .aos/effective/ and .aos/lock.json (--explain, --lock, --diff); everything else is left open."""
 
-import argparse
-import ipaddress
-import json
 import os
-import pwd
-import re
-import shlex
-import shutil
-import signal
-import socket
-import subprocess
 import sys
-import tempfile
-import threading
+
+sys.dont_write_bytecode = True  # mini.py imports its kernels' modules: keep the repo free of __pycache__
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import argparse  # noqa: E402
+import json  # noqa: E402
+import pwd  # noqa: E402
+import shlex  # noqa: E402
+import shutil  # noqa: E402
+import signal  # noqa: E402
+import socket  # noqa: E402
+import subprocess  # noqa: E402
+import tempfile  # noqa: E402
+import threading  # noqa: E402
+import time  # noqa: E402
+
+import chain  # noqa: E402
+import effective  # noqa: E402
+import nest  # noqa: E402
 
 PROG = "mini"
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -209,160 +216,9 @@ def give_back(paths):
 
 # ------------------------------------------------------------ --kernels: nested kernels found by name
 
-KINDS = {"cg_kernel.py": "cgroup", "net_kernel.py": "net", "mask_kernel.py": "mask", "uid_kernel.py": "uid",
-         "llm_kernel.py": "llm"}
-AUTO_MASK = "aos/mask/run-user"
-AUTO_MASK_FOR = ("cgroup", "net", "llm")  # limits that one call over D-Bus to systemd --user would get around
 KERNELS_USAGE = ("mini.py [--name N] [--cwd D] [--dry-run|--print] [--kernels NAME,NAME,...] [--no-auto-mask] "
-                 "-- COMMAND...")
-
-
-def kernel_dirs():
-    """Where names are looked up, first match wins: the folders in $MINI_KERNELS_PATH (separated by :), then
-    $AOS_HOME/kernels."""
-    dirs = [d for d in os.environ.get("MINI_KERNELS_PATH", "").split(":") if d]
-    if os.environ.get("AOS_HOME"):
-        dirs.append(os.path.join(os.environ["AOS_HOME"], "kernels"))
-    return dirs
-
-
-def kernel_program(prog, jsonfile):
-    """A bare file name (cg_kernel.py) is one of mini's own programs, next to mini.py; otherwise $VARS and ~ are
-    expanded and a relative path is relative to the folder of the kernel's json file."""
-    if "/" not in prog and "$" not in prog:
-        return os.path.join(HERE, prog)
-    p = os.path.expanduser(os.path.expandvars(prog))
-    return p if os.path.isabs(p) else os.path.normpath(os.path.join(os.path.dirname(jsonfile), p))
-
-
-CHAIN = "_chain.json"   # a folder with this file is a bundle: one name that stands for a chain of kernels
-MAX_BUNDLE_DEPTH = 8    # bundles inside bundles, at most this deep
-
-
-class KernelError(ValueError):
-    """Finding or expanding kernel names went wrong; code is the error code mini prints (exit 2)."""
-
-    def __init__(self, code, msg):
-        super().__init__(msg)
-        self.code = code
-
-
-def is_path(name):
-    return name.startswith(("/", "./", "../", "~")) or name.endswith(".json")
-
-
-def check_name(name):
-    if ".." in name.split("/") or not name.strip("/") or "//" in name or name.startswith("_") or "/_" in name:
-        raise KernelError("KernelNotFound", "kernel name %r: want a/b/c (no .., no part starting with _)" % name)
-
-
-def lookup(name, dirs):
-    """A name in these folders, first folder that has it wins: ("file", NAME.json) or ("bundle", NAME/). Both in one
-    folder is an error: which one is meant is not guessed."""
-    for d in dirs:
-        f, b = os.path.join(d, name + ".json"), os.path.join(d, name)
-        hf, hb = os.path.isfile(f), os.path.isfile(os.path.join(b, CHAIN))
-        if hf and hb:
-            raise KernelError("KernelNameClash", "kernel %s: both %s (one kernel) and %s/ (a bundle, it has %s) "
-                              "exist; rename one of them" % (name, f, b, CHAIN))
-        if hf:
-            return "file", f
-        if hb:
-            return "bundle", b
-    raise KernelError("KernelNotFound", "kernel %s: not found in %s" % (name, ":".join(dirs)))
-
-
-def load_kernel(name, path):
-    """One kernel file -> {name, kind, program, config, file, from}."""
-    with open(path) as f:
-        k = json.load(f)
-    if not isinstance(k, dict) or not isinstance(k.get("program"), str):
-        raise KernelError("KernelNotFound", "kernel %s (%s): want {\"program\": ..., \"config\": {...}}" % (name, path))
-    bad = set(k) - {"description", "program", "config"}
-    if bad:
-        raise KernelError("KernelNotFound", "kernel %s: unknown keys %s" % (name, ", ".join(sorted(bad))))
-    prog = kernel_program(k["program"], path)
-    if not os.path.isfile(prog):
-        raise KernelError("KernelNotFound", "kernel %s: program %s not found" % (name, prog))
-    return {"name": name, "kind": KINDS.get(os.path.basename(prog), "other"), "program": prog,
-            "config": k.get("config", {}), "file": path, "from": []}
-
-
-def resolve(entry, bundle=None):
-    """A name -> (full name, "file" or "bundle", path). At the top (--kernels) and for a name with a / inside a
-    bundle: looked up in $MINI_KERNELS_PATH, then $AOS_HOME/kernels. Inside a bundle (bundle = (its name, its
-    folder)), a name without / (or starting with ./) is one of the bundle's own: cg in aos/base is aos/base/cg, found
-    in that folder only. A path (/..., ~..., ....json; at the top also ./...) is that file or bundle folder."""
-    if bundle and (entry.startswith("./") or "/" not in entry):
-        local = entry[2:] if entry.startswith("./") else entry
-        check_name(local)
-        bname, bdir = bundle
-        kind, path = lookup(local, [bdir])
-        return (bname.rstrip("/") + "/" + local if not is_path(bname) else os.path.join(bdir, local)), kind, path
-    if entry.startswith(("/", "~")) or (not bundle and is_path(entry)):
-        path = os.path.abspath(os.path.expanduser(entry))
-        if os.path.basename(path) == CHAIN and os.path.isfile(path):
-            return entry, "bundle", os.path.dirname(path)
-        if os.path.isdir(path) and os.path.isfile(os.path.join(path, CHAIN)):
-            return entry, "bundle", path
-        if not os.path.isfile(path):
-            raise KernelError("KernelNotFound", "kernel %s: no such file (or folder with %s)" % (entry, CHAIN))
-        return entry, "file", path
-    check_name(entry)
-    dirs = kernel_dirs()
-    if not dirs:
-        raise KernelError("KernelNotFound", "kernel %s: nowhere to look (set AOS_HOME, whose kernels/ holds the "
-                          "kernels by name, or MINI_KERNELS_PATH)" % entry)
-    kind, path = lookup(entry, dirs)
-    return entry, kind, path
-
-
-def load_chain(name, folder):
-    path = os.path.join(folder, CHAIN)
-    try:
-        with open(path) as f:
-            c = json.load(f)
-    except (OSError, ValueError) as e:
-        raise KernelError("KernelBundleBad", "bundle %s: %s: %s" % (name, path, e))
-    if not isinstance(c, dict) or set(c) - {"description", "chain"}:
-        raise KernelError("KernelBundleBad", "bundle %s: %s: want {\"description\": ..., \"chain\": [names, "
-                          "outermost first]}" % (name, path))
-    chain = c.get("chain")
-    if not isinstance(chain, list) or not chain or not all(isinstance(x, str) and x.strip() for x in chain):
-        raise KernelError("KernelBundleBad", "bundle %s: %s: chain must be a non-empty list of names" % (name, path))
-    return [x.strip() for x in chain]
-
-
-def expand(entry, bundle=None, stack=()):
-    """A name -> the kernels it stands for, outermost first: one kernel, or a bundle's chain expanded in place (each
-    kernel remembers the bundles it came from in "from", outermost first). stack: the bundles we are inside, as
-    (name, real folder); a bundle that is already in it is a loop, more than MAX_BUNDLE_DEPTH is too deep."""
-    full, kind, path = resolve(entry, bundle)
-    if kind == "file":
-        k = load_kernel(full, path)
-        k["from"] = [n for n, _ in stack]
-        return [k]
-    real = os.path.realpath(path)
-    trail = [n for n, _ in stack] + [full]
-    if real in [r for _, r in stack]:
-        raise KernelError("KernelBundleLoop", "bundles include each other: %s" % " -> ".join(trail))
-    if len(stack) >= MAX_BUNDLE_DEPTH:
-        raise KernelError("KernelBundleTooDeep", "bundles nested more than %d deep: %s" % (
-            MAX_BUNDLE_DEPTH, " -> ".join(trail)))
-    out = []
-    for e in load_chain(full, path):
-        out += expand(e, (full, path), tuple(stack) + ((full, real),))
-    return out
-
-
-def find_kernel(name):
-    """A name -> the list of kernels it stands for (one, or a bundle's chain expanded)."""
-    return expand(name)
-
-
-def shown(k):
-    """aos/base/cg (from aos/base)."""
-    return k["name"] + (" (from %s)" % ">".join(k["from"]) if k.get("from") else "")
+                 "-- COMMAND...; mini.py --explain|--lock --kernels NAME,...; mini.py --diff A B (A, B: lock files "
+                 "or NAME,NAME,...)")
 
 
 def layer_line(k):
@@ -371,10 +227,9 @@ def layer_line(k):
 
 
 def parse_kernels_args(args):
-    o = {"kernels": [], "name": "mini", "cwd": os.getcwd(), "dry_run": False, "print": False, "auto_mask": True}
-    if "--" not in args:
-        fail("ArgumentsBad", "want: " + KERNELS_USAGE, 2)
-    i = args.index("--")
+    o = {"kernels": [], "name": "mini", "cwd": os.getcwd(), "dry_run": False, "print": False, "auto_mask": True,
+         "explain": False, "lock": False, "diff": None, "argv": []}
+    i = args.index("--") if "--" in args else len(args)
     own, o["argv"] = args[:i], args[i + 1:]
     k = 0
     while k < len(own):
@@ -387,7 +242,10 @@ def parse_kernels_args(args):
             else:
                 o[a[2:]] = own[k + 1]
             k += 2
-        elif a in ("--dry-run", "--print"):
+        elif a == "--diff" and k + 2 < len(own):
+            o["diff"] = own[k + 1:k + 3]
+            k += 3
+        elif a in ("--dry-run", "--print", "--explain", "--lock"):
             o[a[2:].replace("-", "_")] = True
             k += 1
         elif a == "--no-auto-mask":
@@ -395,110 +253,45 @@ def parse_kernels_args(args):
             k += 1
         else:
             fail("ArgumentsBad", "unknown option %r (want: %s)" % (a, KERNELS_USAGE), 2)
-    if not o["argv"]:
-        fail("ArgumentsBad", "nothing to run after --", 2)
+    if not o["argv"] and not (o["explain"] or o["lock"] or o["diff"]):
+        fail("ArgumentsBad", ("nothing to run after --" if "--" in args else "want: " + KERNELS_USAGE), 2)
     if not str(o["name"]).replace("-", "").replace("_", "").isalnum():
         fail("ArgumentsBad", "--name: letters, digits, - and _ only", 2)
     return o
 
 
-def covers_run_user(k):
-    """Does this mask kernel cover /run/user/<uid> (its default when it lists no paths)?"""
-    paths = k["config"].get("paths")
-    if paths is None:
-        return True
-    return any((p if isinstance(p, str) else p.get("path", "")).rstrip("/") in ("/run/user/{uid}",
-               "/run/user/%d" % os.getuid(), "/run/user") for p in paths)
-
-
-def add_auto_mask(ks):
-    """With a cgroup, net or llm kernel on and nothing covering /run/user/<uid>: add aos/mask/run-user, innermost
-    (just before a uid kernel, which must stay last), so nothing inside can ask systemd --user over D-Bus for a
-    process outside every limit. Returns the new list and whether it added one."""
-    if not any(k["kind"] in AUTO_MASK_FOR for k in ks) or any(k["kind"] == "mask" and covers_run_user(k) for k in ks):
-        return ks, False
-    try:
-        m = find_kernel(AUTO_MASK)
-        if len(m) != 1 or m[0]["kind"] != "mask":
-            raise ValueError("not one mask kernel")
-        m = m[0]
-    except (OSError, ValueError):  # not in the kernels folders: the same thing, built in
-        m = {"name": AUTO_MASK, "kind": "mask", "program": os.path.join(HERE, "mask_kernel.py"),
-             "config": {"paths": [{"path": "/run/user/{uid}", "how": "tmpfs"}]}, "file": "(built in)", "from": []}
-    m = dict(m, auto=True)
-    at = next((i for i, k in enumerate(ks) if k["kind"] == "uid"), len(ks))
-    return ks[:at] + [m] + ks[at:], True
-
-
-def port_in(spec, port):
-    """A net kernel port spec (4000, "4000", "4000-4010", or {"port": ...}) covers this port?"""
-    if isinstance(spec, dict):
-        spec = spec.get("port")
-    a, _, b = str(spec).partition("-")
-    try:
-        return int(a) <= port <= int(b or a)
-    except ValueError:
-        return False
-
-
-def llm_bypasses(ks):
-    """An llm kernel whose upstream is ip:port, and a net kernel further in that lets that very ip:port through
-    (host_ports for this machine's loopback, an allow rule for any other address): the agent could talk to the
-    upstream directly, around the llm kernel's count and model list. One sentence per such pair."""
-    out = []
-    for i, k in enumerate(ks):
-        up = str(k["config"].get("upstream", "")) if k["kind"] == "llm" else ""
-        m = re.match(r"^https?://(\[[^]]*\]|[^/:]+)(?::(\d+))?(/|$)", up)
-        if not m:
-            continue
-        host, port = m.group(1).strip("[]"), int(m.group(2) or (443 if up.startswith("https") else 80))
-        try:
-            ip = ipaddress.ip_address("127.0.0.1" if host == "localhost" else host)
-        except ValueError:
-            continue  # a host name: no address to compare with
-        for n in ks[i + 1:]:
-            how = lets_through(n["config"], ip, port) if n["kind"] == "net" else None
-            if how:
-                out.append("%s (net kernel) lets %s:%d through (its %s), and it sits inside %s (llm kernel), whose "
-                           "upstream is %s: the agent could reach the upstream directly, around the llm kernel's count "
-                           "and model list. Put %s before %s in --kernels (outside it), or take port %d out of its %s"
-                           % (shown(n), host, port, how, shown(k), up, n["name"], k["name"], port, how))
-    return out
-
-
-def lets_through(c, ip, port):
-    """Which part of a net kernel's config lets tcp to ip:port through: "host_ports" (this machine's loopback),
-    "allow list", or None. Loopback inside is the sandbox's own lo, so for it only host_ports count."""
-    if ip.is_loopback:
-        return "host_ports" if any(port_in(p, port) for p in c.get("host_ports") or []) else None
-    for r in c.get("allow") or []:
-        try:
-            to = ipaddress.ip_network(str(r.get("to")), strict=False)
-        except (AttributeError, ValueError):
-            continue
-        if r.get("proto", "tcp") == "tcp" and port_in(r, port) and ip.version == to.version and ip in to:
-            return "allow list"
-    return None
+def outer_dir():
+    return os.environ.get("AOS_ENV") or "/"  # the rule: $AOS_ENV first, / when it is not set
 
 
 def outer_layers():
     """How many layers an outer environment already has (mini started inside a sandbox), so the numbers go on."""
-    outer = os.environ.get("AOS_ENV") or "/"
     try:
-        with open(os.path.join(outer, ".aos", "kernels")) as f:
+        with open(os.path.join(outer_dir(), ".aos", "kernels")) as f:
             return len([l for l in f.read().splitlines() if l.strip()])
     except OSError:
         return 0
 
 
-def root_env(run):
-    """The folder the outermost kernel reads: nothing declared yet, plus who you are on the machine. Inside a
-    sandbox that has one already (mini started by the agent), start from a copy of that one."""
+def outer_lock():
+    """The layers of the chain we run inside (its .aos/lock.json), if any."""
+    try:
+        with open(os.path.join(outer_dir(), ".aos", "lock.json")) as f:
+            return [r for r in json.load(f).get("layers", [])]
+    except (OSError, ValueError, AttributeError):
+        return []
+
+
+def root_env(run, lock, eff):
+    """The folder the outermost kernel reads: nothing declared yet, plus who you are on the machine, what the whole
+    chain gives the agent (effective/, computed before starting) and the lock. Inside a sandbox that has one already
+    (mini started by the agent), start from a copy of that one."""
     root = os.path.join(run, "0-root")
-    outer = os.environ.get("AOS_ENV") or "/"  # the rule: $AOS_ENV first, / when it is not set
+    outer = outer_dir()
     if os.path.isdir(os.path.join(outer, ".aos", "interfaces")) or (outer != "/" and os.path.isdir(os.path.join(
             outer, ".aos"))):
         shutil.copytree(os.path.join(outer, ".aos"), os.path.join(root, ".aos"), symlinks=True)
+        shutil.rmtree(os.path.join(root, ".aos", "effective"), ignore_errors=True)  # the outer chain's: ours replaces it
     else:
         os.makedirs(os.path.join(root, ".aos"))
         with open("/proc/self/uid_map") as f:
@@ -508,6 +301,7 @@ def root_env(run):
                            ("host_subuid", "%d %d\n" % su if su else "")):
             with open(os.path.join(root, ".aos", name), "w") as f:
                 f.write(text)
+    effective.write(os.path.join(root, ".aos"), eff, lock)
     for dp, dns, fns in os.walk(root):
         os.chmod(dp, 0o755)
         for fn in fns:
@@ -515,25 +309,95 @@ def root_env(run):
     return root
 
 
+def userns_limit():
+    """(limit, how it was found): nested user namespaces this chain may use from here. $MINI_USERNS_MAX if set (for
+    tests); otherwise what Linux still allows below this point (33 from the machine), minus chain.USERNS_KEEP kept
+    for sandboxes the agent starts inside when mini runs on the machine itself (inside a sandbox, mini is such a
+    sandbox: the outer mini kept those for it)."""
+    if os.environ.get("MINI_USERNS_MAX", "").isdigit():
+        return int(os.environ["MINI_USERNS_MAX"]), "MINI_USERNS_MAX"
+    free = nest.userns_room(40)
+    keep = chain.USERNS_KEEP if nest.in_init_userns() else 0
+    return free - keep, "%d can still be nested below this point, %d kept for sandboxes the agent starts inside" % (
+        free, keep)
+
+
+def plan_text(ks, groups, first):
+    out = []
+    for g in groups:
+        nums = [first + i for i in g]
+        span = "%d" % nums[0] if len(nums) == 1 else "%d-%d" % (nums[0], nums[-1])
+        out.append("[%s %s]" % (chain.group_kind(ks, g), span))
+    return out
+
+
+def build_lock(names, auto_mask=True):
+    """Names -> everything mini knows before starting: kernels, notes, the plan, the lock, effective values."""
+    ks, notes, added = chain.expand_all(names, auto_mask)
+    groups = chain.plan(ks)
+    need, parts = chain.userns_needed(ks, groups)
+    first = outer_layers() + 1
+    rs = effective.records(ks, groups, first, outer_lock())
+    lock = {"kernels": names, "layers": rs, "plan": [[first + i for i in g] for g in groups],
+            "plan_text": plan_text(ks, groups, first), "userns": need,
+            "userns_parts": ["%s %d" % (w, n) for w, n in parts], "userns_by_kind": chain.userns_summary(ks, groups)}
+    return ks, notes, added, groups, lock, effective.compute(rs)
+
+
+def lock_or_names(arg, auto_mask):
+    if os.path.isfile(arg):
+        try:
+            return effective.load_lock(arg)
+        except (OSError, ValueError) as e:
+            fail("ArgumentsBad", "%s: %s" % (arg, e), 2)
+    return build_lock([n.strip() for n in arg.split(",") if n.strip()], auto_mask)[4]
+
+
+def flat_argv(ks, g):
+    layers = [{"kind": ks[i]["kind"], "name": ks[i]["name"], "from": ">".join(ks[i]["from"]),
+               "config": ks[i]["config"]} for i in g]
+    return [sys.executable, "-I", os.path.join(HERE, "flat_kernel.py"), "--json", json.dumps({"layers": layers}), "--"]
+
+
 def kernels_main(args):
     o = parse_kernels_args(args)
-    ks = []
     try:
-        for n in o["kernels"]:
-            ks += find_kernel(n)
-    except KernelError as e:
+        if o["diff"]:
+            a, b = (lock_or_names(x, o["auto_mask"]) for x in o["diff"])
+            sys.exit(1 if effective.diff(a, b, sys.stdout) else 0)
+        ks, notes, added, groups, lock, eff = build_lock(o["kernels"], o["auto_mask"])
+    except chain.KernelError as e:
         fail(e.code, str(e), 2)
     except (OSError, ValueError) as e:
         fail("KernelNotFound", str(e), 2)
-    bad = llm_bypasses(ks)  # before anything runs (--dry-run too): this order is refused, not warned about
-    if bad:
-        more = " (and %d more like it)" % (len(bad) - 1) if len(bad) > 1 else ""
-        fail("KernelOrderBad", "%s%s. Nothing was started." % (bad[0], more), 2)
-    if o["auto_mask"]:
-        ks, added = add_auto_mask(ks)
-        if added:
-            print("mini: added %s innermost (a cgroup, net or llm kernel is on; --no-auto-mask leaves /run/user/%d "
-                  "open)" % (AUTO_MASK, os.getuid()), file=sys.stderr, flush=True)
+    limit, why = userns_limit()
+    need = lock["userns"]
+    limit_line = "%d needed (%s); limit here %d (%s)%s" % (need, lock["userns_by_kind"], limit, why,
+                                                            "; TOO MANY, mini would refuse" if need > limit else "")
+    if o["explain"]:
+        effective.explain(lock, eff, notes + ([{"text": "added %s innermost (a cgroup, net or llm kernel is on)" %
+                                                chain.AUTO_MASK}] if added else []), limit_line, sys.stdout)
+        return
+    if o["lock"]:
+        print(json.dumps(lock, indent=1))
+        return
+    to = sys.stderr if not o["dry_run"] else sys.stdout
+    for n in notes:
+        if n["run"] or o["dry_run"]:
+            print("%s%s" % ("# note: " if o["dry_run"] else "mini: ", n["text"]), file=to, flush=True)
+    if need > limit:
+        fail("KernelTooDeep", "this chain needs %d nested user namespaces (%s), more than the %d allowed here (%s). "
+             "To need fewer: write cgroup and mask kernels next to each other (they run as one layer), merge kernels "
+             "of one kind ({\"merge\": [...]} in a %s), use fewer net kernels (2 each) and llm kernels; mini.py "
+             "--explain shows the plan. Nothing was started." % (need, lock["userns_by_kind"], limit, why,
+                                                                  chain.CHAIN), 2)
+    if added:
+        print("mini: added %s innermost%s (a cgroup, net or llm kernel is on; --no-auto-mask leaves /run/user/%d open)"
+              % (chain.AUTO_MASK, ", just before the uid kernel" if ks and ks[-1]["kind"] == "uid" else "",
+                 os.getuid()), file=sys.stderr, flush=True)
+    if eff.looser and not o["dry_run"]:
+        print("mini: %d setting(s) written looser than an outer layer's; the outer ones apply (details: mini.py "
+              "--explain)" % len(eff.looser), file=sys.stderr, flush=True)
     scoped = os.readlink("/proc/self/ns/cgroup") == INIT_CGROUP_NS  # outside any sandbox: make a scope
     unit = "mini-%s-%d.scope" % (o["name"], os.getpid()) if scoped else None
     env = default_env()
@@ -541,27 +405,34 @@ def kernels_main(args):
         env["MINI_UNIT"] = unit
     with open(os.path.join(HERE, "leaf.py")) as f:
         leaf_src = f.read()
-    chain = []
-    for k in ks:
-        chain += [sys.executable, "-I", k["program"], "--name", k["name"]] + \
+    line = []
+    for g in groups:
+        if len(g) > 1:
+            line += flat_argv(ks, g)
+            continue
+        k = ks[g[0]]
+        line += [sys.executable, "-I", k["program"], "--name", k["name"]] + \
             (["--from", ">".join(k["from"])] if k.get("from") else []) + ["--json", json.dumps(k["config"]), "--"]
-    chain += [sys.executable, "-I", "-c", leaf_src, "stage1", "--env-json", json.dumps(env, sort_keys=True), "--"]
-    chain += o["argv"]
+    line += [sys.executable, "-I", "-c", leaf_src, "stage1", "--env-json", json.dumps(env, sort_keys=True), "--"]
+    line += o["argv"]
     line = (["systemd-run", "--user", "--scope", "--quiet", "--collect", "--unit", unit, "-p", "Delegate=yes", "--"]
-            if scoped else []) + chain
+            if scoped else []) + line
     if o["dry_run"] or o["print"]:  # the layers after expanding bundles (numbered as in .aos/kernels), then the line
         to = sys.stderr if o["print"] else sys.stdout
-        first = outer_layers() + 1
-        for i, k in enumerate(ks):
-            print("%slayer %d: %s%s" % ("mini: " if o["print"] else "# ", first + i, layer_line(k),
-                                        " (added by mini)" if k.get("auto") else ""), file=to)
+        pre = "mini: " if o["print"] else "# "
+        for r, k in zip(lock["layers"][-len(ks):] if ks else [], ks):
+            print("%slayer %d: %s%s  (file %s)" % (pre, r["layer"], layer_line(k), " (added by mini)" if k.get("auto")
+                                                   else "", r["file"] if isinstance(r["file"], str) else
+                                                   " + ".join(r["file"])), file=to)
+        print("%splan: %d real layers instead of %d: %s; user namespaces: %s" % (
+            pre, len(groups), len(ks), " ".join(lock["plan_text"]), limit_line), file=to)
         text = shlex.join(line).replace(shlex.quote(leaf_src), '"$(cat %s)"' % os.path.join(HERE, "leaf.py"))
         print(("mini: " if o["print"] else "") + text, file=to, flush=True)
         if o["dry_run"]:
             return
     run = tempfile.mkdtemp(prefix="aos-mini-", dir="/tmp")  # readable by a uid N further in (your home is not)
     os.chmod(run, 0o711)
-    cenv = dict(os.environ, AOS_ENV=root_env(run))
+    cenv = dict(os.environ, AOS_ENV=root_env(run, lock, eff))
     if unit:
         cenv["MINI_UNIT"] = unit
     try:
@@ -598,14 +469,39 @@ def kernels_main(args):
     for s_ in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         signal.signal(s_, forward)
     rc = p.wait()
+    sweep(unit, p.pid)
     shutil.rmtree(run, ignore_errors=True)
     sys.exit(128 - rc if rc < 0 else rc)
+
+
+def sweep(unit, pgid):
+    """The chain has ended (its outermost process is gone); anything still in the scope (or, inside a sandbox, in
+    the process group) is left over from a layer that failed half way (e.g. util-linux unshare's id-mapping helper
+    when a user namespace could not be made, which holds our stdout and the scope open for ever): kill it, so mini
+    returns and nothing is left behind."""
+    if unit:
+        r = subprocess.run(["systemctl", "--user", "show", "-p", "ActiveState", "--value", unit], capture_output=True,
+                           text=True)
+        if r.stdout.strip() in ("active", "activating", "deactivating"):
+            subprocess.run(["systemctl", "--user", "kill", "--signal=KILL", unit], capture_output=True)
+            for _ in range(50):
+                r = subprocess.run(["systemctl", "--user", "show", "-p", "ActiveState", "--value", unit],
+                                   capture_output=True, text=True)
+                if r.stdout.strip() not in ("active", "activating", "deactivating"):
+                    break
+                time.sleep(0.1)
+    else:
+        try:
+            os.killpg(pgid, signal.SIGKILL)
+        except OSError:
+            pass
 
 
 def kernels_mode(args):
     """--kernels-style options, or a -- with no config file before it (no --kernels = no kernels at all)."""
     own = args[:args.index("--")] if "--" in args else args
-    if any(a.startswith("--kernels") or a in ("--name", "--cwd", "--no-auto-mask") for a in own):
+    if any(a.startswith("--kernels") or a in ("--name", "--cwd", "--no-auto-mask", "--explain", "--lock", "--diff")
+           for a in own):
         return True
     return "--" in args and not [a for a in own if not a.startswith("-")]
 
@@ -621,9 +517,8 @@ def main():
         return kernels_main(sys.argv[1:])
     ap = argparse.ArgumentParser(prog=PROG, description="Run one command in the minimal sandbox described by a "
                                  "json config; exits with the command's code (128+N if killed by signal N).",
-                                 epilog="Also: mini.py --give-back DIR... (chown files written as uid N back to you); mini.py [--name N] "
-                                 "[--cwd D] [--dry-run|--print] [--kernels NAME,NAME,...] [--no-auto-mask] -- COMMAND... "
-                                 "(nest kernels by name, see README)")
+                                 epilog="Also: mini.py --give-back DIR... (chown files written as uid N back to you); " +
+                                 KERNELS_USAGE + " (nest kernels by name, see README)")
     ap.error = lambda m: fail("ArgumentsBad", "%s (usage: %s --help)" % (m, PROG), 2)
     ap.add_argument("config", help="json: name, argv, cwd, env, cpu, mem, pids, net, uid (see README)")
     ap.add_argument("argv", nargs="*", help="after --: the command, instead of the config's argv")

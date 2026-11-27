@@ -284,15 +284,8 @@ def load(opts, cfg, outer):
     else:
         raise ValueError("upstream %r: want \"fake\", an http(s) URL, an absolute folder, or leave it out to use the "
                          "outer llm kernel" % up)
-    if k.up_dir:
-        lower = read_decl(k.up_dir)
-        missing = [m for m in k.models if lower["models"] and m not in lower["models"]]
-        if missing:
-            warns.append("the upstream llm kernel does not take %s (it takes %s); those requests will be refused "
-                         "there" % (", ".join(missing), ", ".join(lower["models"])))
-        if lower["limit"] and k.limit > int(lower["limit"][0]):
-            warns.append("limit %d is more than the upstream llm kernel's %s; it refuses first" % (
-                k.limit, lower["limit"][0]))
+    if k.up_dir:  # a model the upstream does not take, a limit above its own: looser, the upstream refuses first
+        read_decl(k.up_dir)  # (mini.py prints one line for all such settings, details in mini.py --explain)
     k.state = cfg.get("state")
     if k.state:
         k.state = os.path.abspath(os.path.expanduser(str(k.state).replace("{name}", k.name.replace("/", "-"))))
@@ -333,6 +326,7 @@ def stage1(opts, cfg, nxt):
         nest.fail(PROG, "ConfigBad", "%s: %s" % (opts["name"], e), 2)
     for w in warns:
         nest.warn(PROG, "%s: %s" % (opts["name"], w))
+    nest.need_userns(PROG, 1, "llm kernel %s" % opts["name"])
     env = nest.new_env("llm", opts["name"], opts.get("from"))
     if not K.state:  # this run only: next to our folder, removed with the run folder
         K.state = env + ".state"
@@ -351,8 +345,15 @@ def stage1(opts, cfg, nxt):
     declare(env)
     inner_cg = nest.cg_split(PROG, [os.getpid()], "k-llm", "in")
     hide = [K.state]
-    if K.up_dir:  # the upstream kernel's socket too: the agent must go through our count, not around it
-        hide.append(read_decl(K.up_dir)["sock"])
+    for d in (K.up_dir, outer if nest.declared(outer, "llm") else None):
+        # the upstream kernel's socket, and any outer llm kernel's (whatever our upstream is): the agent must go
+        # through our count, not around it
+        try:
+            s = read_decl(d)["sock"] if d else None
+        except ValueError:
+            s = None
+        if s and s not in hide:
+            hide.append(s)
     argv = ["unshare"] + nest.userns_args() + ["--mount"] + (["--net"] if K.cut_net else []) + ["--"] + \
         nest.py(os.path.abspath(__file__)) + ["--stage2", "--name", opts["name"], "--json",
                                               json.dumps({"hide": hide, "lo": K.cut_net}), "--"] + nxt

@@ -82,52 +82,68 @@ def set_limits(d, c):
         w("pids.max", str(c["pids"]))
 
 
+def enter_child(c):
+    """Make a child cgroup of ours with limits c (cpu, mem, pids; None = no limit) and move into it, so the
+    process that unshares the cgroup namespace next sees that child as its root."""
+    d = nest.cg_dir()
+    me = os.getpid()
+    leaf = "k-%d" % me
+    if not os.access(os.path.join(d, "cgroup.procs"), os.W_OK):
+        raise PermissionError("%s is not ours to change (run under mini.py --kernels, which makes a delegated "
+                              "scope)" % d)
+    others = [p for p in nest.cg_procs(d) if p != me]
+    if not others:  # the usual case: the outer layer left us alone in its cgroup
+        child = os.path.join(d, leaf)
+        os.makedirs(child, exist_ok=True)
+        nest.cg_move(0, child)
+        nest.cg_enable(d)
+        set_limits(child, c)
+    elif not nest.cg_init_ns() and nest.cg_path() != "/":
+        # inside someone's sandbox, next to other processes (e.g. mini started by the agent): a sibling under
+        # our parent, which is still inside the namespace root, so the outer limits hold for it too
+        child = os.path.join(os.path.dirname(d), leaf)
+        os.makedirs(child, exist_ok=True)
+        set_limits(child, c)
+        nest.cg_move(0, child)
+    else:
+        raise RuntimeError("cgroup %s has other processes (%s) and no parent of ours to put a sibling in" % (
+            d, " ".join(map(str, others[:5]))))
+
+
+def effective(c, outer):
+    """The tightest of what we ask and what the outer layers declared, per limit (a looser ask is not warned about
+    here: mini.py prints one line for all of them, details in mini.py --explain)."""
+    eff = {}
+    for k in ("cpu", "mem", "pids"):
+        o, m = outer.get(k), c[k]
+        eff[k] = m if o is None else (o if m is None else min(o, m))
+    return eff
+
+
+def cell(eff, c):
+    """The aos/cgroup declaration of one layer."""
+    return {"cpu": show("cpu", eff["cpu"]), "mem": show("mem", eff["mem"]), "pids": show("pids", eff["pids"]),
+            "asked": "cpu %s mem %s pids %s" % (show("cpu", c["cpu"]), show("mem", c["mem"]), show("pids", c["pids"])),
+            "namespace": "own (you see your cgroup as /, cannot raise these limits or move out)"}
+
+
+DESCRIPTION = ("cgroup kernel: cpu (percent of one core), mem, pids for everything inside; the tightest of all layers "
+               "applies")
+
+
 def stage1(opts, cfg, nxt):
     try:
         c = load(cfg)
     except ValueError as e:
         nest.fail(PROG, "ConfigBad", str(e), 2)
+    nest.need_userns(PROG, 1, "cgroup kernel %s" % opts["name"])
     try:
-        d = nest.cg_dir()
-        me = os.getpid()
-        leaf = "k-%d" % me
-        if not os.access(os.path.join(d, "cgroup.procs"), os.W_OK):
-            raise PermissionError("%s is not ours to change (run under mini.py --kernels, which makes a delegated "
-                                  "scope)" % d)
-        others = [p for p in nest.cg_procs(d) if p != me]
-        if not others:  # the usual case: the outer layer left us alone in its cgroup
-            child = os.path.join(d, leaf)
-            os.makedirs(child, exist_ok=True)
-            nest.cg_move(0, child)
-            nest.cg_enable(d)
-            set_limits(child, c)
-        elif not nest.cg_init_ns() and nest.cg_path() != "/":
-            # inside someone's sandbox, next to other processes (e.g. mini started by the agent): a sibling under
-            # our parent, which is still inside the namespace root, so the outer limits hold for it too
-            child = os.path.join(os.path.dirname(d), leaf)
-            os.makedirs(child, exist_ok=True)
-            set_limits(child, c)
-            nest.cg_move(0, child)
-        else:
-            raise RuntimeError("cgroup %s has other processes (%s) and no parent of ours to put a sibling in" % (
-                d, " ".join(map(str, others[:5]))))
+        enter_child(c)
     except (OSError, RuntimeError) as e:
         nest.fail(PROG, "CgroupFailed", str(e))
-    outer = outer_limits()
-    eff = {}
-    for k in ("cpu", "mem", "pids"):
-        o, m = outer.get(k), c[k]
-        eff[k] = m if o is None else (o if m is None else min(o, m))
-        if o is not None and (m is None or m > o):
-            nest.warn(PROG, "%s: %s asks %s, an outer layer gives %s; %s applies" % (
-                opts["name"], k, show(k, m), show(k, o), show(k, o)))
+    eff = effective(c, outer_limits())
     env = nest.new_env("cgroup", opts["name"], opts.get("from"))
-    nest.declare(env, "cgroup", {
-        "cpu": show("cpu", eff["cpu"]), "mem": show("mem", eff["mem"]), "pids": show("pids", eff["pids"]),
-        "asked": "cpu %s mem %s pids %s" % (show("cpu", c["cpu"]), show("mem", c["mem"]), show("pids", c["pids"])),
-        "namespace": "own (you see your cgroup as /, cannot raise these limits or move out)",
-    }, "cgroup kernel: cpu (percent of one core), mem, pids for everything inside; the tightest of all layers "
-       "applies")
+    nest.declare(env, "cgroup", cell(eff, c), DESCRIPTION)
     os.environ["AOS_ENV"] = env
     argv = ["unshare"] + nest.userns_args() + ["--mount", "--cgroup", "--"] + nest.py(os.path.abspath(__file__)) + \
         ["--stage2", "--name", opts["name"], "--"] + nxt

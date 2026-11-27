@@ -1,12 +1,21 @@
-最小的沙箱原型（11-27 家機）：底層就是一行 `systemd-run --user --scope`（CPU、記憶體、行程數上限）加 `unshare -UrmpnC`（自己的 user／mount／PID／網路／cgroup namespace），上面可選疊網路 kernel（兩層 netns：pasta 接外網、nft 白名單與總量、tc 頻寬）與切 uid；第二段（11-27 晚）加了照名字嵌套的 `mini.py --kernels`（每個 kernel 是一支包裝程式，替內層設好環境再在裡面起下一層：cgroup、網路、檔案遮蔽、uid），檔案遮蔽 kernel 蓋掉 `/run/user/<uid>` 就關住經 D-Bus 跳出去那條路；第三段（11-27 夜，使用者六題都照推薦）把 kernel 設定搬到 `$AOS_HOME/kernels/`、`--kernels` 改逗號分隔、裝了上限／網路／llm kernel 自動加遮蔽，並把 llm kernel 做成嵌套的一層（pi 沒網路也經 socket 問得到腦，被記帳、限模型、限次數）；第四段（11-27 深夜，使用者三題都照推薦）定下 llm kernel 也觸發自動遮蔽、額度每次跑重算（要累計寫 `state`），網路 kernel 寫在 llm kernel 裡面又放行它的上游時 mini 直接拒絕起來；第五段（11-27 深夜，統一介面四題照推薦＋一包 kernel）每個 kernel 那一格固定有 `name`、`layer`、`status`，宣告夾交給內層前鎖成唯讀（pi 在裡面試了十幾種拆法都拆不掉，只有沙箱外的行程寫得到），`--kernels aos/base` 可以是一個夾（`_chain.json` 列出展開成哪一串、可巢狀、擋循環）；其他照舊全部漏給 Linux。舊驗收 31 項、層疊實測 22 項、llm 嵌套驗收 15 項、一包 kernel 與唯讀鎖 20 項都全過，真模型跑過一次。
+最小的沙箱原型（11-27 家機）：底層就是一行 `systemd-run --user --scope`（CPU、記憶體、行程數上限）加 `unshare -UrmpnC`（自己的 user／mount／PID／網路／cgroup namespace），上面可選疊網路 kernel（兩層 netns：pasta 接外網、nft 白名單與總量、tc 頻寬）與切 uid；第二段（11-27 晚）加了照名字嵌套的 `mini.py --kernels`（每個 kernel 是一支包裝程式，替內層設好環境再在裡面起下一層：cgroup、網路、檔案遮蔽、uid），檔案遮蔽 kernel 蓋掉 `/run/user/<uid>` 就關住經 D-Bus 跳出去那條路；第三段（11-27 夜，使用者六題都照推薦）把 kernel 設定搬到 `$AOS_HOME/kernels/`、`--kernels` 改逗號分隔、裝了上限／網路／llm kernel 自動加遮蔽，並把 llm kernel 做成嵌套的一層（pi 沒網路也經 socket 問得到腦，被記帳、限模型、限次數）；第四段（11-27 深夜，使用者三題都照推薦）定下 llm kernel 也觸發自動遮蔽、額度每次跑重算（要累計寫 `state`），網路 kernel 寫在 llm kernel 裡面又放行它的上游時 mini 直接拒絕起來；第五段（11-27 深夜，統一介面四題照推薦＋一包 kernel）每個 kernel 那一格固定有 `name`、`layer`、`status`，宣告夾交給內層前鎖成唯讀（pi 在裡面試了十幾種拆法都拆不掉，只有沙箱外的行程寫得到），`--kernels aos/base` 可以是一個夾（`_chain.json` 列出展開成哪一串、可巢狀、擋循環）；第六段（11-27 深夜，使用者七題照推薦）同一個 kernel 只起一次、`merge` 與 `use`／`replace`／`without`、uid 自動排最裡、兩個 llm 沒串起來就拒絕、連在一起的 cgroup 與 mask 攤平成一層、起之前先算 user namespace 層數、每次寫 `.aos/effective/`（附 blame）與 `.aos/lock.json`、`--explain`／`--diff`，並修好撞 namespace 上限時卡死留孤兒、網路疊三層時中間層總量被重送吃光兩個 bug；其他照舊全部漏給 Linux。舊驗收 31 項、層疊實測 22 項、llm 嵌套驗收 15 項、一包 kernel 與唯讀鎖 20 項、重疊與攤平 31 項都全過，真模型跑過一次。
 
 # mini-sandbox（11-27，家機 Manjaro 6.18）
 
-← [proto9](../README.md)｜使用者定的：[pi沙箱-1127](../../proto8/thinking/2026-11/27/pi沙箱-1127.md) 定了的第 10 條｜依據（不進 git，家機）：`~/.aos/scratch/proto9-smallproto-1127/net-report.md`（最小底層與網路模組調查）、`uid-report.md`（切 uid 調查）、給使用者看的 `report.html`｜旁邊那一版：[pi-sandbox](../pi-sandbox/README.md)（從零組天空、seccomp、`/llm`，跟這版並存、不被取代）
+← [proto9](../README.md)｜**效能成本：[PERF.md](PERF.md)**（每種 kernel 每層多少、攤平前後、靜態 vs FUSE、pi-sandbox 那條路；重跑用 [`perf/bench.py`](perf/README.md)，使用者 11-27 晚「有幫我記錄效能成本嗎」）｜使用者定的：[pi沙箱-1127](../../proto8/thinking/2026-11/27/pi沙箱-1127.md) 定了的第 10 條｜依據（不進 git，家機）：`~/.aos/scratch/proto9-smallproto-1127/net-report.md`（最小底層與網路模組調查）、`uid-report.md`（切 uid 調查）、給使用者看的 `report.html`｜旁邊那一版：[pi-sandbox](../pi-sandbox/README.md)（從零組天空、seccomp、`/llm`，跟這版並存、不被取代）
 
 我自己定的標【擬】。
 
 ## 結論先講
+
+**第六段（11-27 深夜，多包重疊、攤平七題照推薦，加修兩個 bug；細節在「第六段：多包重疊、攤平、effective 與兩個 bug」）**
+
+- **pi 在裡面會怎樣**：兩包都引用同一個 kernel 時只起一次（一隻腦、一本帳，印一行說留了外面那次）；uid 寫在哪都行，mini 搬到最裡面；兩個 llm 沒串起來、uid 號碼打架、`merge` 合不了的，**起之前就拒絕**，什麼都沒起。連在一起的 cgroup 與 mask kernel **攤平成一層**（一個 namespace、cgroup 取最小、遮蔽照順序一張表），pi 看到的上限、檔案、宣告、`.aos/kernels` 跟一層一層做一樣（實測），一樣拆不掉；100 層也 2 秒起來（以前第 33 層就撞牆）。pi 讀 `$AOS_ENV/.aos/effective/` 就知道自己真正的上限、`blame` 說是第幾層哪一包給的；`.aos/lock.json` 記每層的檔與雜湊。
+- **新寫法**：`_chain.json` 裡可以寫 `{"merge": ["a", "b"]}`（合成一層，只取緊）和 `{"use": "aos/base", "replace": {"cg": "aos/base-high"}, "without": ["aos/llm/fake"]}`（整層換掉或拿掉）。新指令 `mini.py --explain`、`--lock`、`--diff A B`。內層寫鬆的警告改成 mini 印一行摘要。
+- **起之前先算 user namespace 層數**：網路 2、其他每個真層 1、最裡那步 1；在主機上超過 24（Linux 最多 33，留 9 給 pi 自己再開沙箱，24／9 是【擬】）就報 `KernelTooDeep`、什麼都不起。
+- **bug a（撞牆卡死、留孤兒）**：每個 kernel 開 namespace 前先問還有沒有位子，沒有就印 `UsernsFull`（說清楚是層數用完、不是硬碟滿）；網路 kernel 不再死等 gate；mini 收尾時把 scope 裡剩的全收掉。故意撞牆兩種疊法都 17 秒內回來、什麼都沒留。
+- **bug b（網路疊三層中間層總量被吃光）**：原因是 pasta 一丟封包就整段重送、總量在 tbf 丟之前就算了（中間層丟 22519 個、送出 4291 個）；下載佇列改 1 秒後 0 丟，三層總量都對。
+- **驗收**：新的 `overlap_test.py` 31 項兩次全過；四支舊驗收全過（有 8 項照新規則改了預期，見該節）。
 
 **第五段（11-27 深夜，統一介面四題照推薦，再加「一包 kernel」；細節在「第五段：統一介面與一包 kernel」）**
 
@@ -272,6 +281,7 @@ systemd-run --user --scope … -p Delegate=yes --                         ← mi
 | `net_kernel.py`（`--json` 時是包裝模式） | 外層 netns＋pasta＋nft＋tc（跟第一段一樣）；用 `nsenter --user=<外層>` 加 `unshare --user --net` 起下一支，把 veth 拉進它的 netns，好了才放行；自己這幾隻搬進 cgroup `k-net`、下一支放 `in` | 留著（顧 pasta、每秒寫狀態檔），下一支結束才收、退出碼照傳 | `aos/net/`（欄位同第一段，少 `ctl`、`protocol`、`max_attach`） |
 | `mask_kernel.py` | 開新的 user＋mount namespace，把設定的路徑蓋掉（見下面「檔案遮蔽 kernel」） | 不留 | `aos/mask/paths`：外層蓋過的也抄進來，一行一條 |
 | `uid_kernel.py` | 開新的 user namespace，`setpriv` 換成 uid N、清掉附加群組、丟掉所有 capability、`no_new_privs` | 不留 | `aos/uid/`：`uid`、`outside`（外面看是哪個 id） |
+| `flat_kernel.py`（第六段，攤平的那一層） | 連在一起的幾個 cgroup 與 mask kernel 一次做：一個子 cgroup（上限取最小）、一個 user＋mount（＋cgroup）namespace、遮蔽照順序一條條掛 | 不留 | 跟它們一個個做一樣，每層一個夾、一行 `.aos/kernels`，多一個 `flattened` |
 | `leaf.py`（最裡那步） | pi 自己的 user／mount／PID／cgroup namespace 與新的 `/proc`；外層沒宣告 `aos/net` 就給一個只有 `lo` 的空網路；`env -i` 換成乾淨的環境變數 | `unshare` 在外面等 pi | 不宣告；把 `AOS_ENV` 交給 pi【擬】 |
 
 `leaf.py` 用 `python3 -I -c "<整份原始碼>"` 跑（不是讀檔），因為切成 uid N 之後它讀不到你家目錄裡的檔；它也不 import 這個夾的別的檔。
@@ -288,7 +298,8 @@ systemd-run --user --scope … -p Delegate=yes --                         ← mi
 - 一個環境變數 `AOS_ENV` 指到一個夾，夾裡的 `.aos/` 就是「到這一層為止，外面給了什麼」：
   - `.aos/interfaces/aos/<種類>/<欄位>`：每個欄位一個小檔（照第一段網路 kernel 的寫法）；
   - `.aos/kernels`：從外到內一行一層，例 `cgroup aos/base-low`、`net aos/net/base-litellm-proxy`（第五段：從一包展開的多寫 ` from <包>`，例 `cgroup aos/base/cg from aos/base`；每一格另有 `name`、`layer`、`status`，見「第五段」）；
-  - `.aos/host_uid`、`.aos/host_subuid`：你在外面的 uid 與 subuid 範圍（mini.py 在最外面寫一次）。
+  - `.aos/host_uid`、`.aos/host_subuid`：你在外面的 uid 與 subuid 範圍（mini.py 在最外面寫一次）；
+  - 第六段：`.aos/effective/`（整串攤平後 pi 真正拿到的值與 `blame`）、`.aos/lock.json`（每層的檔、雜湊、設定），mini.py 起之前寫在最外面，每層照抄。
 - **每一層做三件事**：讀 `$AOS_ENV`（外層給的）→ 抄一份成自己的夾、加上（或蓋掉）自己這一種的宣告 → `AOS_ENV` 改指自己的夾，再起下一層。外層的夾不動。所以內層讀到同一種的宣告，就是離它最近那層的——跟 `with-dyns` 裡讀到最裡那層的值一樣。遮蔽 kernel 例外：它把外層蓋過的路徑一起抄進來，因為外層的遮蔽在內層一樣有效。
 - **實際有人讀的**：最裡那步看有沒有 `aos/net`，決定要不要給空網路；cgroup kernel 讀外層的 `aos/cgroup`，比自己鬆就警告；網路 kernel 讀外層的 `aos/net`——自己的 `host_ports`（「外面那台機器的某個 port」）翻成「到外層 `host_addr` 的白名單」，總量比外層大就警告；遮蔽 kernel 讀 `host_uid` 換掉 `{uid}`；uid kernel 讀 `host_subuid` 算外面看是哪個 id。
 - **沒設 `AOS_ENV` 時看 `/`**（第五段使用者定第 3 題）：讀宣告的程式一律「先看 `$AOS_ENV`，沒設就看 `/.aos`」。
@@ -631,6 +642,206 @@ systemd-run --user --scope … cg_kernel.py --name aos/base/cg --from aos/base -
 - 真的 pi 沒專門去拆鎖（拆鎖用 `probe.py` 在 pi 的位置、用 pi 一樣的權限試）；pi `--fake` 經被鎖的宣告找 socket、問腦照常（`llm_test.py` 的 `e_pi_nonet`、`e_pi_net` 等）。
 - 公司 WSL 沒跑；mask 的 `keep` 留洞剛好碰到暫存夾的情形沒測；一包裡寫路徑（`/…`）的引用、`./sub/x` 沒有專門的測項。
 
+## 第六段：多包重疊、攤平、effective 與兩個 bug（使用者 11-27 深夜「好，都按照推薦。」）
+
+原話：「好，都按照推薦。然後我準備回家了，幫我準備一份今日的總覽，圖多，細節折疊，只講結論」。題目在家機 `~/.aos/scratch/kernel-overlap-1127/report.html`（不進 git），調查全文同夾 `overlap-report.md`（重疊）、`scale-report.md`（上百上千層）、`files-report.md`（純檔案替換攤平成一張表）。七題都選推薦，另修兩個 bug。
+
+### 七題怎麼做
+
+| 題 | 使用者定的 | 這版怎麼做 | pi 在裡面會怎樣 |
+|---|---|---|---|
+| 1 | 同一個 kernel 展開後出現兩次，只留最外面那次、印一行 | 看的是**解析出來的那個檔的真實路徑**（不是名字）；印 `mini: aos/llm/fake appears twice (from t/b1, t/b2); kept the outer one`（`--dry-run` 印成 `# note: …`） | 兩包都引用 `aos/llm/fake` 時只有一隻腦、一本帳；以前「額度相加」「問不到腦」那兩個洞不會發生 |
+| 2 | 同種不同設定照舊疊兩層取緊；明寫 `merge` 才合成一層，只准取緊 | `_chain.json` 裡寫 `{"merge": ["a", "b"]}`；合法見下「merge 怎麼合」；比不出誰緊的報 `KernelMergeBad`；你自己寫的 kernel 不合 | 合成的那層跟疊兩層一樣緊（實測 cgroup、網路）；網路合成一層就只有一隻 pasta |
+| 3 | 兩個 llm 沒串起來時起之前拒絕；內層 llm 一律蓋掉外層的 socket | 內層 llm 的 `upstream` 不是 `"outer"`（或不寫）、外層也是 llm → `KernelOrderBad`，訊息教你改成 `"upstream": "outer"` 或拿掉一個；`llm_kernel.py` 不管上游寫什麼，只要外層宣告了 llm，就把外層的 socket 用 `/dev/null` 蓋掉 | 寫錯的疊法起不來；串對的，問得到的次數是兩層中小的那個，外層 socket 連不到 |
+| 4 | 一包改另一包：`use`＋`replace`／`without` 整層換掉或拿掉；鍵是那一包 chain 裡寫的名字；`--dry-run` 印誰被誰換掉、每層是哪個檔 | 見下「`use`、`replace`、`without`」；`--dry-run` 每層後面多 `(file 路徑)`，換掉、拿掉的各一行 `# note:` | 拿到的就是換過的那層（可以比原包鬆，寫設定的人明講的） |
+| 5 | uid 自動排到最裡面（自動遮蔽仍插在 uid 前面），同號去重、不同號報錯，印一行 | 展開、去重之後把 uid 搬到最後，印 `mini: moved aos/uid/1 innermost …`；兩份同號只留外面那份，印 `uid 1 appears twice …`；不同號 `KernelUidClash` | 以前 uid 寫在中間起不來（退出碼 2）；現在照跑，pi 是 uid 1 |
+| 6 | 純檔案替換（mask）與資源上限（cg）連續的在原位置攤平；網路與 llm 照舊真開；起之前先算 user namespace 層數，超過上限報錯 | 見下「攤平」與「起之前先算層數」 | 看到的檔案、上限、宣告、`.aos/kernels` 都跟一層一層做一樣（實測）；拆不掉；100 層也起得來 |
+| 7 | 每次起來寫 `effective/`（每種一夾、每欄一檔、`blame`）與鎖定檔；`--explain`、`--diff`；寫鬆的警告只印一行摘要 | 見下「effective、lock、`--explain`、`--diff`」 | 讀 `$AOS_ENV/.aos/effective/cgroup/mem` 就知道自己的記憶體上限，`blame` 說是第幾層、哪一包給的（不會再被「最裡那層」的名字誤導） |
+
+### merge 怎麼合（第 2 題）
+
+原則：合出來的那一層，在 pi 眼中要跟「照舊疊兩層」一樣緊。
+
+| 種類 | 欄位 | 怎麼合 | 合不了（`KernelMergeBad`） |
+|---|---|---|---|
+| cgroup | `cpu`、`mem`、`pids` | 各取小；沒寫＝沒上限，取對方的 | — |
+| mask | `paths` | 路徑聯集；同一條路徑有一份是 `tmpfs`／`null`（看不到）就用它，全是 `ro` 才 `ro` | 同一條路徑一份 `tmpfs` 一份 `null` |
+| mask | `keep` | 一個洞要「每一份蓋到它上面那個夾的都留這個洞」才留（跟疊兩層一樣） | — |
+| net | `allow`、`host_ports` | 交集，照位址範圍（CIDR）與 port 範圍算，不照文字 | — |
+| net | `quota`、`up`、`down`、`burst`、`max_attach`、`status_interval` | 取小 | — |
+| net | `subnet`、`host_addr` | 要一樣 | 不一樣 |
+| llm | `models` | 交集 | 交集是空的 |
+| llm | `limit` | 取小 | — |
+| llm | `upstream`、`state`、`fake_script` | 要一樣（`upstream` 不寫＝`outer`） | 不一樣 |
+| uid | `uid` | 要一樣 | 不一樣 |
+
+另外：種類不同、或其中一份的 `program` 不是 mini 那五支（你自己寫的 kernel）也報 `KernelMergeBad`。`merge` 裡每一項要正好是一個 kernel（寫一包會報錯）。合成那層的名字是 `a+b`（例 `t/mnet/ab+t/mnet/ac`），`.aos/kernels` 一行、宣告一格；lock 裡 `merged` 列出是哪幾份。
+
+### `use`、`replace`、`without`（第 4 題）
+
+```json
+{"description": "aos/dev: aos/base with more memory and no brain",
+ "chain": [{"use": "aos/base", "replace": {"cg": "aos/base-high"}, "without": ["aos/llm/fake"]},
+           "aos/mask/ssh"]}
+```
+
+- `use` 要對到一包（有 `_chain.json` 的夾），對到單個 kernel 報 `KernelBundleBad`。
+- `replace`、`without` 的鍵是**那一包 `chain` 裡寫的名字**（`aos/base` 就是 `cg`、`mask`、`aos/llm/fake`）；寫了不存在的報 `KernelBundleBad` 並列出有哪些。`chain` 裡寫成物件的（`merge`、`use`）不能當鍵【擬】。
+- 換上去的名字照**寫 `use` 的這一包**來讀（`aos/dev` 裡寫 `cg2` 就是 `aos/dev/cg2`）；可以是一包或 `merge`。
+- `--dry-run`：
+
+```
+$ mini.py --dry-run --kernels t/dev -- true
+# note: t/dev: aos/base/cg replaced by t/cg-high (…/kernels/t/cg-high.json)
+# note: t/dev: left out aos/llm/fake (without, in aos/base)
+# layer 1: cgroup t/cg-high from t/dev  (file …/kernels/t/cg-high.json)
+# layer 2: mask aos/base/mask from t/dev>aos/base  (file …/proto8/kernels/aos/base/mask.json)
+# layer 3: mask aos/mask/ssh from t/dev  (file …/proto8/kernels/aos/mask/ssh.json)
+# plan: 1 real layers instead of 3: [flat 1-3]; user namespaces: 2 needed (flat 1, innermost step 1); limit here 24 (…)
+systemd-run --user --scope … flat_kernel.py --json '{"layers": [...]}' -- …
+```
+
+### 攤平（第 6 題）
+
+- **哪些會攤**：展開、去重、排好 uid、加完自動遮蔽之後，**連在一起的 cgroup 與 mask kernel**（中間沒有網路、llm、uid 或你自己寫的 kernel）由一支新的 `flat_kernel.py` 一次做完：cgroup 只開一層（上限取這一段裡最小的；外面的上限照樣由 Linux 一層層算），mask 照寫的順序在**同一個 mount namespace** 一條條掛（`keep` 留洞照原做法：先開著洞、蓋上、再接回去），整段只用 **1 層 user namespace**。只有一個的照舊用自己的程式（`cg_kernel.py`、`mask_kernel.py`）。
+- **不搬位置**：cgroup 不跨過網路或 llm kernel（pasta、proxy 算在外面那層 cgroup 的帳上；往裡搬它們就逃出上限）；mask 也只在原位置合（寫在 llm 前面的遮蔽本來就要連 llm 一起遮）。例 `cg, mask, llm, cg, mask, uid` → `[攤平 1-2] [llm 3] [攤平 4-5] [uid 6]`。
+- **宣告照舊一層一格**：`.aos/kernels` 照樣一行一層、每層一個夾（`<層>-<種類>-<PID>`）、`name`／`layer`／`from` 照寫；多一個 `flattened` 檔，寫這一層是跟哪幾層一起做的（例 `1 2 3 4 5 6 7 8 9 10`）【擬】。cgroup 那格的值照「一層一層做到這層時」算；mask 那格照樣一行一行累加，後面的路徑如果落在前面某條 tmpfs 底下（又不在洞裡），寫 `absent`（跟一層一層做時一樣）。
+- **pi 一定比表多一層**：攤平那層的掛載，在下一層（llm、網路、uid 或最裡那步）開新的 user namespace 時被 Linux 鎖住；最裡那步本來就一定多開一層，所以 pi 拆不掉（`m_mask_table` 實測：`umount` 三條都 `Invalid argument`、改回可寫 `Operation not permitted`、宣告的唯讀鎖全部拆不掉）。
+- **實測**：scale-report 那十層 cgroup（90／70／85／40／60／95／50／80／75／65%、400～250M、80～45）攤平後跟手寫的一層 40%／250M／45 比：CPU 0.399 vs 0.397、行程都到第 43 隻失敗、記憶體都在 230 MB 被砍。四個 mask（蓋夾留洞、蓋檔、唯讀、一條落在前面蓋子底下）攤成一張表，跟「一個 mask 寫三條路徑」看到的一模一樣。100 層 cgroup 與 mask 輪流（以前第 33 層就撞牆）攤成 1 層，2 秒起來，上限是第 1 層給的 31%，第 100 層蓋的夾看不到。
+
+### 起之前先算層數（第 6 題）
+
+- **每種吃幾層 user namespace**：cgroup、mask、uid、llm、攤平的一層各 1；網路 2（它外層 netns 自己一層、內層一層）；你自己寫的 kernel 算 1【擬，猜的】；最裡那步 1（一個 kernel 都沒有時 2，多一層鎖宣告）。以**攤平後**為準。
+- **上限**：mini 先實測「從這裡往下還能開幾層」（開一個子行程一層層 `unshare` 到 Linux 說不行，馬上結束，什麼都不留；從這台主機上量是 33），**在主機上起時留 9 層給 pi 自己在裡面再開沙箱，所以上限 24**【擬：9 與 24】；在沙箱裡起（pi 自己開的 mini）不再留，因為外面那個 mini 已經替它留了。
+- **超過就起之前報錯**，退出碼 2，什麼都沒起（`--dry-run` 也報）：
+
+```
+mini: error: KernelTooDeep this chain needs 28 nested user namespaces (net 13 x 2, mask 1, innermost step 1), more than the 24 allowed here (33 can still be nested below this point, 9 kept for sandboxes the agent starts inside). To need fewer: write cgroup and mask kernels next to each other (they run as one layer), merge kernels of one kind ({"merge": [...]} in a _chain.json), use fewer net kernels (2 each) and llm kernels; mini.py --explain shows the plan. Nothing was started.
+```
+
+- `MINI_USERNS_MAX=N` 換掉這個上限（驗收用來故意撞牆）【擬】。
+
+### effective、lock、`--explain`、`--diff`（第 7 題）
+
+- **`$AOS_ENV/.aos/effective/`**：mini 在起之前算好、放進 `0-root`，每一層的夾照樣抄下去，pi 讀得到、改不了（唯讀鎖）。一種一個夾、一個欄位一個檔（一行一個值），加一個 `blame`：
+
+| 夾 | 檔 | 例 |
+|---|---|---|
+| `cgroup/` | `cpu`、`mem`、`pids`、`blame` | `mem` 是 `300M`；`blame` 一行 `mem 300M <- layer 4 t/cg3`（沒有一層設的寫 `max <- (no layer sets it)`） |
+| `mask/` | `paths`（`tmpfs /run/user/1000` 這樣，`{uid}`、`{home}` 已換掉）、`holes`（有 `keep` 時）、`blame` | `paths tmpfs /home/lorkhan/.ssh <- layer 6 aos/mask/ssh` |
+| `net/` | `network`（`through N net kernel(s)`；llm kernel 寫在網路 kernel 裡面時是 `none`）、`allow`、`host_ports`（交集）、`down`、`up`（最小）、`quota`（最小）、`blame` | 每一層的總量**各自一個計數器**，`blame` 每層一行 `quota … (its own counter)` |
+| `llm/` | `models`（交集）、`limit`（最小）、`upstream`（最外那隻的）、`blame` | `limit 50 <- layer 3 aos/llm/fake from aos/base (its own ledger)` |
+| `uid/` | `uid`、`blame` | `uid 1 <- layer 7 aos/uid/1` |
+
+  另有 `effective/description` 一行說明。各種類那一格（`interfaces/aos/<種類>/`）照舊，當作「最裡那層自己寫的」；pi 要知道「我被怎樣限制」就讀 `effective/`。pi 自己在裡面再起 mini 時，外面那串的 lock 會接在前面一起算（層號接著外面的）。
+- **`.aos/lock.json`**：`{"kernels": [寫的名字], "layers": [{"layer", "kind", "name", "from", "file", "sha256", "config", "real", …}], "plan": [[1, 2], [3], …], "userns": N, …}`；`real` 是它跑在第幾個真層、`flattened` 是一起做的層號，自動加的有 `auto`、換上來的有 `replaced`、合成的有 `merged`（後面這幾個欄位【擬】）。
+- **`mini.py --explain --kernels …`**：不起任何東西，印每層（含檔）、去重／換掉／拿掉／搬 uid 的說明、攤平計畫、要幾層 user namespace 與上限、effective＋blame、寫得比外層鬆的每一項：
+
+```
+$ mini.py --explain --kernels aos/base,aos/net/base-litellm-proxy,aos/base-high,aos/mask/ssh,aos/uid/1
+# 7 layers after expanding bundles
+  layer 1   cgroup aos/base/cg from aos/base  file …/aos/base/cg.json
+  …
+flatten plan: 5 real layers instead of 7: [flat 1-2]  [llm 3]  [net 4]  [flat 5-6]  [uid 7]
+user namespaces: 7 needed (flat 2 x 1, llm 1, net 2, uid 1, innermost step 1); limit here 24 (33 can still be nested below this point, 9 kept for sandboxes the agent starts inside)
+effective (what the agent gets)  <- who decided it
+  cgroup cpu 20% <- layer 1 aos/base/cg from aos/base
+  …
+  net    quota 200000000 <- layer 4 aos/net/base-litellm-proxy (its own counter)
+  llm    limit 50 <- layer 3 aos/llm/fake from aos/base (its own ledger)
+  uid    uid 1 <- layer 7 aos/uid/1
+looser than an outer layer (the outer one applies): 3
+  layer 5 aos/base-high: cpu 200% (an outer layer gives 20%)
+  …
+```
+
+- **`mini.py --lock --kernels …`** 印 lock（不起）；**`mini.py --diff A B`**：`A`、`B` 各是一個 lock 檔（例從 pi 那邊抄出來的 `$AOS_ENV/.aos/lock.json`）或一串名字。印 `+ layer N 種類 名字 (new)`、`- … (gone)`、`~ 名字: 欄位 舊 -> 新`、`~ 名字: moved layer a -> b`、`~ 名字: file changed (same config)`，最後 `= effective cgroup/mem: 300M -> 500M` 這種「pi 拿到的變了什麼」；一樣時印 `same: …`、退出碼 0，有差退出碼 1【擬】。
+- **寫鬆的警告只印一行**：以前 cg、網路、llm kernel 各自一項一行（10 層 cg 印 19 行）；現在 kernel 不印了，mini 起之前算好印一行 `mini: 3 setting(s) written looser than an outer layer's; the outer ones apply (details: mini.py --explain)`，每一項在 `--explain` 的最後。算進去的：cpu／mem／pids 寫得比外層大（沒寫的不算）、網路 `allow`／`host_ports` 外層沒放行的、`quota`／`up`／`down` 比外層大、llm `limit` 比外層大、`models` 外層不收的。
+
+### bug a：撞到 user namespace 上限時卡死、留孤兒
+
+- **原因**（照 scale-report 1b 的查法；這次把第 2 道修法拿掉重撞一次，確認第 3 道單獨也收得乾淨，見下）：kernel 都用 util-linux 的 `unshare --map-users…` 開 namespace；它會先分出一隻小幫手（名字也叫 `unshare`），等主行程開好 namespace 後替它寫 id 對應。主行程開失敗（第 34 層，`ENOSPC`）就印 `unshare failed: No space left on device` 退出，**小幫手一直等下去**，握著 stdout 和 scope，所以讀 mini 輸出的人等不完、scope 收不掉。網路 kernel 更糟：它在等內層從 gate 管子回 `ready`，管子的寫端被小幫手握著，永遠等不到檔案結尾，整串卡死、mini 不回來。
+- **修法（三道）**：
+  1. **起之前先算**（第 6 題）：一般情況根本走不到牆。
+  2. **每個 kernel 開 namespace 前先問一次還有沒有位子**（`nest.need_userns`，最裡那步 `leaf.py` 也抄一份）：開一個子行程試著往下開需要的層數，馬上結束；不夠就印一行說清楚、退出碼 1，不去叫 util-linux：`llm-kernel: error: UsernsFull llm kernel t/w/34 needs 1 more nested user namespace(s), only 0 left here: Linux allows 33 nested from the machine and the layers outside used the rest (this is not a full disk); use fewer kernels (mini.py --explain shows how many each one takes)`。
+  3. **萬一還是有東西卡住**：網路 kernel 等 gate 時同時看內層是不是已經結束（結束了就不再等）；mini 在最外面那支結束後，把 scope 裡剩下的全部 SIGKILL（在沙箱裡起時是整個 process group），等 scope 消失才回來。
+- **實測**：把上限關掉（`MINI_USERNS_MAX=99`）故意疊 34 隻 llm kernel、32 隻 llm＋1 隻網路 kernel（網路那隻正好卡在 gate 那層）：兩種都在 16～17 秒回來（大部分是 33 隻 llm 一隻隻收掉的時間），退出碼 1，印 `UsernsFull`，沒留行程、scope、netns、`/tmp/aos-mini-*`。另外把第 2 道拿掉只留第 3 道再試一次：一樣 17～19 秒回來、什麼都沒留，只是訊息變回 util-linux 那句。再加一項：你自己寫的 kernel 留一隻 `sleep 300` 在 stdout 上就退出 3，mini 0.1 秒回來、退出碼 3、`sleep` 被收掉。
+
+### bug b：網路疊三層、頻寬不同時中間層總量被吃光
+
+- **重現**（scale-report 第 2 節的設定：外 32mbit／60 MB、中 16mbit／40 MB、內只放 A、24mbit／25 MB，下載 4 秒）：pi 只收到 5.4 MB（1.36 MB/s），中間層 `quota_used` 已經 40,000,000（用完），外層、內層才 6.1、5.8 MB。從外面進各層的外層 netns 看 `tc -s qdisc`：**中間層的 tbf 丟了 22519 個封包、只送出 4291 個**，另外兩層 0 丟。
+- **原因**：下載方向往 tbf 佇列裡送的是 pasta（中間層的 pasta 接外面那層、替內層把 TCP 接下來重送）；pasta 一丟封包就從最後確認的那個位元組起**整段重送**；而總量（nft `quota`）是在 forward 掛鉤算的，**在 tbf 丟之前**，所以每一份重送都被算一次：送進去 26801 個、通過 4291 個，40 MB 的額度 4 秒就被沒送到的封包吃光。只有一層時、或另外兩層，佇列沒滿到丟，所以看不出來。
+- **修法**：下載的 tbf 佇列也開到 1 秒（`DOWN_LATENCY`，跟上傳一樣；以前是 200 毫秒），讓 tbf 延後而不是丟。我也找過「把計數放到 tbf 之後」：nftables 沒有 qdisc 之後的掛鉤（netdev 的 egress 也在 qdisc 之前），要做就得在外層 netns 裡多繞一對 veth，太重，沒做。另外狀態檔多兩行 `up_dropped:`、`down_dropped:`（tbf 丟了幾個，照理是 0；不是 0 就表示總量多算了這些）。
+- **實測**（`overlap_test.py` 的 `p_net3_quota`，同一組設定）：4 秒拿到約 7.8 MB（1.94 MB/s，就是中間層 16mbit 的速度），三層 `quota_used` 都約 8～9 MB（多的是佇列裡還沒送到的與表頭）；接著要 40 MB，總共拿到約 23.6 MB 被內層 25 MB 切掉；三層 `down_dropped` 都是 0。
+- **代價**：下載塞滿時多 1 秒延遲（以前 0.2 秒）；記憶體最多多一秒份的封包（16mbit 約 2 MB）。
+
+### 舊驗收改了哪些（照新規則）
+
+| 驗收 | 項目 | 以前 | 現在 | 為什麼 |
+|---|---|---|---|---|
+| `stack_test.py` | `a_uid_before_mask`、`a_uid_before_net` | uid 寫在中間要起不來 | 要起得來、pi 是 uid 1、`.aos/kernels` 最後一行是 uid、mini 說搬了 | 第 5 題 |
+| `stack_test.py` | `b_net_in_net_looser`、`b_cg_in_cg_looser` | 找 kernel 各自的警告 | 找 mini 那一行摘要（2 項、3 項） | 第 7 題 |
+| `llm_test.py` | `e_llm_on_llm` | 找 llm kernel 的「refuses first」警告 | 找 mini 那一行摘要（1 項） | 第 7 題 |
+| `bundle_test.py` | `f_expand_dry`、`f_nested_dry`、`f_depth_8_ok` | `--dry-run` 每層一行就是名字；數 `--from aos/base` 三次 | 每層後面多 `(file …)`，比對時切掉；改數 `(file ` 三次（cg 與 mask 攤平後不再各帶 `--from`） | 第 4、6 題 |
+
+`accept.py` 沒改（它測的是第一段 `mini.py cfg.json`，不經 `--kernels`；網路 kernel 下載佇列改 1 秒後 `down_rate` 照樣 1.96 MB/s）。
+
+### 驗收（`overlap_test.py`，新開）
+
+在外面起三個測試伺服器 A、B、C；`MINI_KERNELS_PATH` 指暫存夾（`~/.aos/scratch/proto9-mini-1127/overlap/`）的 `t/…`。
+
+| 項目 | 怎麼試 | 結果 |
+|---|---|---|
+| `h_dedup_dry` | `t/b1`（cg、`aos/llm/fake`）、`t/b2`（`aos/mask/ssh`、`aos/llm/fake`），`--dry-run` | 四層（llm 只一層，第 4 層是自動遮蔽）；一行 `aos/llm/fake appears twice (from t/b1, t/b2); kept the outer one` |
+| `h_dedup_run` | 真的跑 `aos/base,aos/base` | `.aos/kernels` 三行；問腦兩次 200；別的 llm socket 一個都連不到；三行 `appears twice` |
+| `i_merge_cg` | `merge` 20%／400M／80 與 60%／200M／30 | 一層 `cgroup t/mcg/a+t/mcg/b`；CPU 0.2、180 MB 被砍、第 28 隻失敗；`blame` 三行都指這一層 |
+| `i_merge_net` | `merge` A,B 5 MB 與 A,C 3 MB | 一層（一隻 pasta）；A 通、B、C 不通；要 4 MB 拿到約 2.9 MB 被切 |
+| `i_merge_bad_llm`／`_own`／`_kind` | 上游不同、自己寫的 kernel、種類不同 | 都 `KernelMergeBad`、退出碼 2、什麼都沒起 |
+| `j_llm_unchained`（`_dry`） | 兩個各自是劇本腦的 llm | `KernelOrderBad`，訊息有 `"upstream": "outer"`；什麼都沒起 |
+| `j_llm_chained` | 外 3 次、內 `upstream: outer` 5 次 | `[200, 200, 200, 429]`；外層 socket 連不到 |
+| `k_replace_dry` | `t/dev`（`use aos/base`、換掉 `cg`、拿掉 `aos/llm/fake`、加 `aos/mask/ssh`） | 三層、兩行 note（換掉、拿掉）、第一層的檔是 `t/cg-high.json` |
+| `k_replace_run` | 真的跑 `t/dev` | CPU 0.6（60%）、280 MB 被砍（300M）、沒有腦 |
+| `k_replace_bad` | `replace` 寫了不存在的鍵 | `KernelBundleBad`，列出 `cg, mask, aos/llm/fake` |
+| `l_uid_moved` | `aos/uid/1,t/cg` | 照跑、uid 1、`.aos/kernels` 最後一行 uid、說了搬到最裡面 |
+| `l_uid_same_once` | 兩包各以 uid 1 收尾（不同檔） | 照跑、uid 1、`cgroup, mask, mask, uid`；一行 `uid 1 appears twice` |
+| `l_uid_clash` | uid 1 與 uid 2 | `KernelUidClash`、什麼都沒起 |
+| `m_cg_ten_vs_one` | 十層 cg（攤平）vs 一層 | 見上「攤平」的實測 |
+| `m_mask_table` | 四個 mask 攤成一張表 vs 一個 mask 三條路徑；pi 試著拆 | 看到的一樣；`umount`、改回可寫、唯讀鎖全部失敗；宣告五行最後一行 `absent` |
+| `m_userns_refused`（`_dry`） | 13 個網路 kernel（28 層） | `KernelTooDeep`、什麼都沒起、沒留東西 |
+| `m_hundred_layers` | 100 層 cg 與 mask 輪流 | 照跑、2 秒、`.aos/kernels` 101 行、上限 31% 是第 1 層的、第 100 層蓋的看不到 |
+| `n_effective_blame` | `aos/base,t/cg3`（只寫 mem 300M） | `blame`：`cpu 20% <- layer 1 aos/base/cg from aos/base`、`mem 300M <- layer 4 t/cg3`、`pids 64 <- layer 1 …` |
+| `n_lock` | 同上 | 四層照順序，`sha256` 跟檔對得上，`plan [[1, 2], [3], [4]]` |
+| `n_explain` | `--explain` | 有 blame、攤平計畫、層數、3 項寫鬆 |
+| `n_diff` | lock 檔 vs 一串名字 | `- t/cg3 (gone)`、`+ t/cg-loose (new)`、`= effective cgroup/mem: 300M -> 500M`，退出碼 1；一樣時 0 |
+| `n_looser_one_line` | 外 20%／200M／40、內 80%／500M／100 | stderr 只有一行摘要 |
+| `o_wall_llm34`、`o_wall_net_gate`、`o_orphan_swept` | 見上「bug a」 | 都乾淨回來、沒留東西 |
+| `p_net3_quota` | 見上「bug b」 | 總量對、0 丟 |
+| `cleanup` | 跑前跑後比 | 行程、netns、`mini-*` 單元、`/tmp/aos-mini-*`、`/tmp/aos-probe-*`、測試伺服器都沒留 |
+
+兩次（11-27 家機）：`SUMMARY ok (31 PASS, 0 FAIL, 0 info, 111s)`、`SUMMARY ok (31 PASS, 0 FAIL, 0 info, 111s)`（第一輪寫測試時 `h_dedup_dry` 的預期漏了自動遮蔽那層，改了測試再跑兩次）。舊的四支也各跑兩次：`accept.py` `(31 PASS, 0 FAIL, 4 info, 42s)` 兩次、`stack_test.py` `(22 PASS, 0 FAIL, 0 info, 108s／107s)`、`llm_test.py` `(15 PASS, 0 FAIL, 0 info, 41s／40s)`、`bundle_test.py` `(19 PASS, 0 FAIL, 1 info, 20s)` 兩次。跑完沒留下行程、scope、netns、`/tmp/aos-mini-*`。
+
+### 第六段我擬的（【擬】）
+
+- 錯誤代號 `KernelMergeBad`、`KernelUidClash`、`KernelTooDeep`、`UsernsFull`；兩個 llm 沒串起來沿用 `KernelOrderBad`（使用者說同一類）。
+- `merge`、`use`、`replace`、`without` 的 json 長相照調查報告；合成那層叫 `a+b`；`merge` 裡每項只能是一個 kernel；`chain` 裡寫成物件的不能當 `replace` 的鍵；換上去的名字照寫 `use` 的那一包讀。
+- 去重印的那行與 `--dry-run` 的 `# note:`、每層 `(file …)`、`# plan: …`；`replace`／`without` 平常跑不印（只在 `--dry-run`、`--explain`）。
+- 攤平用一支新程式 `flat_kernel.py`；只有一個的照舊用原程式；`flattened` 這個欄位名與內容；攤平時 cgroup 先做、mask 再照順序掛。
+- 層數：自己寫的 kernel 算 1；上限＝實測還能開幾層減 9（在主機上就是 24），沙箱裡起時不減；`MINI_USERNS_MAX`。
+- `effective/` 的夾與欄位名、`blame` 的寫法（沒有一層設的寫 `(no layer sets it)`、`quota`／`limit` 每層一行）、`description`；放進 `0-root` 讓每層照抄；lock 的 `real`、`plan`、`plan_text`、`userns*`、`auto`、`replaced`、`merged`、`outer` 欄位；`--lock`；`--diff` 的輸出格式與退出碼。
+- 寫鬆的摘要算哪些項（見上）。
+- 下載佇列 1 秒；狀態檔 `up_dropped`、`down_dropped`。
+- mini 結束後清 scope：查 `ActiveState`、送 SIGKILL、最多等 5 秒。
+
+### 第六段沒做或沒驗的
+
+- **跟任務書的推薦不一樣的一點**：攤平只合 cgroup 與 mask（「將來的純檔案類」還沒有）；net 合成一個 netns、llm 一支 proxy 多本帳（scale-report 的乙）沒做，網路與 llm 照舊一層一層真開。
+- 「看外層」的 `--explain`：pi 在沙箱裡再起 mini 時會把外面那串的 lock 接在前面算 effective，但沒有測項；外面那串宣告的 llm（例 pi-sandbox 的 `/.aos`）不算進第 3 題的拒絕（只看這一串自己），只靠 llm kernel 蓋掉它的 socket。
+- 自己寫的 kernel 實際吃幾層 user namespace 是猜的（算 1）。
+- `--diff` 比的是名字對名字；同一個名字換了位置印 `moved`，名字改了就是一刪一加。
+- mask 的 `keep` 寫一個檔（不是夾）照舊起不來（overlap-report 1.4 第 3 點），沒修。
+- 第四段的 `KernelOrderBad`（網路 kernel 放行 llm 的上游）規則沒改，只是改在展開、去重、排 uid 之後查。
+- 公司 WSL 沒跑；真的 pi（`--fake`）沒在攤平的那一層裡跑過（舊驗收裡 pi 跑的幾種疊法，cg 與遮蔽中間都隔著 llm 或網路 kernel，沒被攤平；經過攤平的是 `stack_test.py` 的 `a_base`、`a_base_mask_uid` 等用 `probe.py` 量的幾項，照樣全過）。
+
 ## llm kernel（`llm_kernel.py`，第三段）
 
 使用者定第 4 題：llm kernel 也改成跟 mini 的 kernel 同一種包裝程式（`llm_kernel … -- 下一層`）。程式是 mini 這邊一份：HTTP 的部分照 [pi-sandbox](../pi-sandbox/README.md) 的 `llm_kernel.py` 抄過來改，`fake_brain.py` 原樣抄、`relay.js` 抄過來改兩處（見下）；pi-sandbox 的檔都沒動。
@@ -807,7 +1018,7 @@ pi 繞不過它，靠這幾件（都有驗收項）：
 
 - 夾名 `mini-sandbox`、檔名 `mini.py`／`net_kernel.py`／`probe.py`／`accept.py`；`mini.py --inside`、`--give-back`、`--print`。
 - 那一行多的 `--kill-child`、`--collect`、`--unit mini-<名>-<PID>.scope`、`mini.py --inside`；`env` 的預設、多給 `MINI_UNIT`；收訊號時「整個 scope 送一次、5 秒後殺 `unshare`」。
-- 網路 kernel 的設定欄位與預設（`host_addr 169.254.77.1`、`subnet 10.77.0.0/16`、每個沙箱一段 `/30`、`max_attach 1`、`status_interval 1`、burst 的算法）；只做 IPv4（pasta `-4`）；tap 名 `aosnet0`、veth 名 `vpN`／`eth0`；上傳佇列 1 秒、下載 200 毫秒。
+- 網路 kernel 的設定欄位與預設（`host_addr 169.254.77.1`、`subnet 10.77.0.0/16`、每個沙箱一段 `/30`、`max_attach 1`、`status_interval 1`、burst 的算法）；只做 IPv4（pasta `-4`）；tap 名 `aosnet0`、veth 名 `vpN`／`eth0`；上傳佇列 1 秒、下載 200 毫秒（第六段下載也改 1 秒，見 bug b）。
 - 總量算上下行加總、含表頭；用完是丟封包（連線卡住、新連線逾時），不是回拒絕。
 - 宣告 `aos/net` 的欄位名與內容（`kind veth`、`protocol json-lines` 等）、狀態檔的格式；`ctl` 只收不在沙箱裡的呼叫者；`gate.sock` 放在 `$XDG_RUNTIME_DIR/aos-mini-*`。
 - 驗收的門檻：CPU 比 0.15～0.25；頻寬設定值的 ±25%；6 MB 的流量讓 quota 漲 6.0～6.6 MB；用完時拿到的量跟剩下的差 10%＋100 KB 以內。
@@ -828,6 +1039,7 @@ pi 繞不過它，靠這幾件（都有驗收項）：
 - 第三段：llm kernel 的劇本腦**也算次數**（pi-sandbox 的不算）；`state` 不寫時額度只算這一次（跑完刪）。
 - 第三段：`accept.py` 沒改（它測的是第一段 `mini.py cfg.json` 的用法，不經 `--kernels`、不找名字）。
 - 第三段：llm 嵌套驗收另開 `llm_test.py`（沒塞進 `stack_test.py`），真模型用 `--model` 才跑；它也跑了兩次以上（三次）。
+- 第六段：攤平只做 cgroup 與 mask（任務書寫「純檔案替換 kernel（mask，以及將來的純檔案類）與資源上限（cg）」，將來的純檔案類還沒有）；`replace`／`without` 平常跑不印，只在 `--dry-run`、`--explain` 印（任務書只要求 `--dry-run`）；多做了 `--lock`；在沙箱裡起 mini 時不再留 9 層（理由見第六段）；任務書說的 lock 欄位都有，另外多幾個（`real` 等）。舊的四支驗收有 8 項改了預期（第六段「舊驗收改了哪些」）。
 
 ## 沒驗的
 
@@ -845,6 +1057,8 @@ pi 繞不過它，靠這幾件（都有驗收項）：
 
 ## 暫存與清理
 
+- 第六段：重疊與攤平驗收的暫存在 `~/.aos/scratch/proto9-mini-1127/overlap/`，全過就刪（`--keep` 留著）；這次幾輪的輸出在同一層的 `v1-*.log`、`v2-*.log`；bug b 的重現腳本在 `~/.aos/scratch/mini-overlap-1127/bugb/repro.py`（`python3 repro.py nested3 4`）。
+
 - pasta 編在 `~/.aos/scratch/proto9-mini-1127/passt/`（官方 `git clone https://passt.top/passt`、`git checkout 2026_10_02.cba3570`、`make`；GPL-2.0+，只當另外的程式呼叫，沒抄進 repo）。`accept.py` 沒給 `--pasta` 又在 PATH 上找不到時用這一份。
 - 驗收的暫存在 `~/.aos/scratch/proto9-mini-1127/accept/`，全過就刪（`--keep` 留著）。
 - llm 嵌套驗收的暫存在 `~/.aos/scratch/proto9-mini-1127/llm/`，全過就刪（`--keep` 留著）；第三段這幾次的輸出留在同一層的 `accept-r3.log`、`accept-r4.log`、`stack-r3.log`、`stack-r4.log`、`llm-r2.log`、`llm-r3.log`。
@@ -855,19 +1069,23 @@ pi 繞不過它，靠這幾件（都有驗收項）：
 
 | 檔 | 是什麼 |
 |---|---|
-| `mini.py` | 讀設定、組那一行、跑、退出碼照傳；`--inside`（沙箱裡第一支）、`--give-back`（uid N 的檔還給你）；第二段加 `--kernels`（照名字找 kernel、串成一行、開 `$AOS_ENV`）；第三段改逗號分隔、去 `$AOS_HOME/kernels` 找、自動遮蔽、`--no-auto-mask`；第四段：網路 kernel 在 llm kernel 裡面又放行它的上游時拒絕起來（`KernelOrderBad`）；第五段：一包 kernel（`_chain.json` 展開、巢狀、擋循環與太深、同名衝突報錯）、`--from`、`--dry-run` 印展開後的每一層 |
-| `net_kernel.py` | 網路 kernel：外層 netns＋pasta＋nft＋tc、`ctl`、宣告、狀態檔；`--holder` 是它在外層裡的那一半；第二段加包裝模式（`--json CFG -- 下一支`）與 `--gate`（下一支的第一步） |
+| `mini.py` | 讀設定、組那一行、跑、退出碼照傳；`--inside`（沙箱裡第一支）、`--give-back`（uid N 的檔還給你）；第二段加 `--kernels`（照名字找 kernel、串成一行、開 `$AOS_ENV`）；第三段改逗號分隔、去 `$AOS_HOME/kernels` 找、自動遮蔽、`--no-auto-mask`；第四段：網路 kernel 在 llm kernel 裡面又放行它的上游時拒絕起來（`KernelOrderBad`）；第五段：一包 kernel（`_chain.json` 展開、巢狀、擋循環與太深、同名衝突報錯）、`--from`、`--dry-run` 印展開後的每一層；第六段：展開的部分搬到 `chain.py`，加起之前算層數（`KernelTooDeep`）、寫 `effective/` 與 `lock.json`、`--explain`／`--lock`／`--diff`、寫鬆一行摘要、收尾時清掉 scope 裡剩的 |
+| `net_kernel.py` | 網路 kernel：外層 netns＋pasta＋nft＋tc、`ctl`、宣告、狀態檔；`--holder` 是它在外層裡的那一半；第二段加包裝模式（`--json CFG -- 下一支`）與 `--gate`（下一支的第一步）；第六段：下載佇列 1 秒、狀態檔 `up_dropped`／`down_dropped`、開 namespace 前先問位子、等 gate 時看內層還在不在、寫鬆的警告交給 mini |
 | `probe.py` | 驗收在沙箱裡跑的小指令（cpu、mem、pids、cgroup、procs、tcp、get、put、curl、ns、leaks、ctl、read；第二段加 `check`＝一次量很多樣；第三段 `check` 加 `llm`：經宣告的 socket 問腦、找別的 llm socket、碰帳本夾；第五段 `check` 加 `lock`：各種拆唯讀鎖的試法、狀態檔有沒有照常更新、經 D-Bus 從外面寫） |
 | `accept.py` | 驗收：測試伺服器、三隻網路 kernel、每項一個沙箱、pi `--fake`、跑前跑後比對 |
-| `nest.py` | 第二段：kernel 共用的小工具（`KERNEL [選項] -- 下一支` 的參數、`$AOS_ENV` 的讀寫、user namespace 的對應、cgroup 的排法與重掛）；第五段：每一格固定的 `name`／`layer`／`status`／`from`、狀態檔頭兩行、唯讀鎖（`lock_env`）、沒設 `AOS_ENV` 就看 `/` |
-| `cg_kernel.py` | 第二段：cgroup kernel（cpu、mem、pids 上限＋自己的 cgroup namespace） |
-| `mask_kernel.py` | 第二段：檔案遮蔽 kernel（tmpfs／`/dev/null`／唯讀） |
-| `uid_kernel.py` | 第二段：uid kernel（換成 uid N，要放最後）；第五段：切之前多一段鎖宣告 |
-| `leaf.py` | 第二段：最裡那步（pi 自己的 namespace、沒網路宣告就空網路、乾淨的環境變數），用 `-c` 帶原始碼跑；第五段：沒有 kernel 鎖過宣告時自己多開一層來鎖 |
-| `llm_kernel.py` | 第三段：llm kernel（unix socket 上的 HTTP proxy、記帳、限模型、限次數；宣告 `aos/llm`；藏帳本夾；在網路 kernel 裡面時給內層空網路） |
+| `nest.py` | 第二段：kernel 共用的小工具（`KERNEL [選項] -- 下一支` 的參數、`$AOS_ENV` 的讀寫、user namespace 的對應、cgroup 的排法與重掛）；第五段：每一格固定的 `name`／`layer`／`status`／`from`、狀態檔頭兩行、唯讀鎖（`lock_env`）、沒設 `AOS_ENV` 就看 `/`；第六段：還能開幾層 user namespace（`userns_room`）、不夠就 `UsernsFull`（`need_userns`）、每格的 `flattened` |
+| `cg_kernel.py` | 第二段：cgroup kernel（cpu、mem、pids 上限＋自己的 cgroup namespace）；第六段：拆成 `enter_child`／`effective`／`cell` 給攤平那層共用，寫鬆不再自己警告 |
+| `mask_kernel.py` | 第二段：檔案遮蔽 kernel（tmpfs／`/dev/null`／唯讀）；第六段：宣告那幾行拆成 `lines_for` 給攤平那層共用（落在前面蓋子底下的寫 `absent`） |
+| `uid_kernel.py` | 第二段：uid kernel（換成 uid N，要放最後）；第五段：切之前多一段鎖宣告；第六段：寫在哪都行（mini 搬到最後） |
+| `leaf.py` | 第二段：最裡那步（pi 自己的 namespace、沒網路宣告就空網路、乾淨的環境變數），用 `-c` 帶原始碼跑；第五段：沒有 kernel 鎖過宣告時自己多開一層來鎖；第六段：開 namespace 前先問還有沒有位子（`UsernsFull`） |
+| `llm_kernel.py` | 第三段：llm kernel（unix socket 上的 HTTP proxy、記帳、限模型、限次數；宣告 `aos/llm`；藏帳本夾；在網路 kernel 裡面時給內層空網路）；第六段：只要外層宣告了 llm 就蓋掉它的 socket、開 namespace 前先問位子、寫鬆的警告交給 mini |
 | `fake_brain.py` | 第三段：劇本腦（從 pi-sandbox 原樣抄） |
 | `relay.js` | 第三段：llm kernel 放進宣告夾的小轉接（從 pi-sandbox 抄，預設讀 `$AOS_ENV`、收絕對路徑）；第五段：沒設 `AOS_ENV` 讀 `/` |
 | `llm_test.py` | 第三段：llm 嵌套驗收（pi `--fake` 有／沒網路、429、繞不過、llm 在網路 kernel 裡、llm 疊 llm、自動遮蔽、`--model` 時真模型一次、跑前跑後比對）；第四段加寫錯疊法被拒、`state` 累計 |
 | [`proto8/kernels/`](../../proto8/kernels/README.md) | 第三段：照名字找的 kernel 設定（`aos/base-low.json` 等；第二段在這個夾的 `kernels/`，搬過去了） |
 | `bundle_test.py` | 第五段：一包 kernel（展開順序、巢狀、循環與太深報錯、混著寫、同名衝突、展開後的自動遮蔽與 `KernelOrderBad`）、每一格的 `name`／`layer`／`from` 對得上 `.aos/kernels`、唯讀鎖（pi 那層與再開一層都拆不掉、經 D-Bus 從外面寫得到）、狀態檔頭兩行與照常更新、跑前跑後比對 |
-| `stack_test.py` | 第二段：層疊實測（不同 kernel 疊、同一種疊兩層、沙箱裡開沙箱、pi `--fake`、跑前跑後比對）；第三段改逗號、加自動遮蔽兩項 |
+| `stack_test.py` | 第二段：層疊實測（不同 kernel 疊、同一種疊兩層、沙箱裡開沙箱、pi `--fake`、跑前跑後比對）；第三段改逗號、加自動遮蔽兩項；第六段：uid 寫在中間改成要起得來、寫鬆的警告改看一行摘要 |
+| `chain.py` | 第六段：名字變成真正跑的那一串（從 `mini.py` 搬出來的找名字、展開一包，加 `merge`、`use`／`replace`／`without`、去重、uid 排最裡、兩個 llm 沒串起來就拒絕、`KernelOrderBad`、自動遮蔽、攤平計畫、算 user namespace 層數） |
+| `effective.py` | 第六段：effective 值與 `blame`、寫鬆的項目、lock、`--explain`、`--diff` |
+| `flat_kernel.py` | 第六段：攤平的那一層（連在一起的 cgroup 與 mask 一支程式、一個 namespace 做完，每層照樣一個宣告夾） |
+| `overlap_test.py` | 第六段：七題各項、攤平前後比、層數超過、effective／blame／lock、`--explain`、`--diff`、bug a（撞牆乾淨失敗、不留孤兒）、bug b（網路三層總量）、跑前跑後比對 |

@@ -1,4 +1,4 @@
-"""Shared by the mini kernels that nest (cg, mask, uid, llm, net as a wrapper): the KERNEL [options] -- NEXT... shape, the environment folder each layer reads from the outer one ($AOS_ENV, or / when it is not set) and hands a copy of to the inner one (every kernel's cell has name, layer and status; the folders are locked read-only for the inner layers), user namespaces that keep the subordinate ids, and the cgroup layout (a layer's own cgroup holds no process)."""
+"""Shared by the mini kernels that nest (cg, mask, uid, llm, net as a wrapper): the KERNEL [options] -- NEXT... shape, the environment folder each layer reads from the outer one ($AOS_ENV, or / when it is not set) and hands a copy of to the inner one (every kernel's cell has name, layer and status; the folders are locked read-only for the inner layers), user namespaces that keep the subordinate ids (and whether one more still fits, asked before each kernel makes its own: a clear UsernsFull instead of util-linux's "No space left on device"), and the cgroup layout (a layer's own cgroup holds no process)."""
 
 import ctypes
 import json
@@ -85,6 +85,62 @@ def subid_range(path, uid=None):
     except OSError:
         pass
     return None
+
+
+CLONE_NEWUSER = 0x10000000
+USERNS_WALL = 33  # nested user namespaces counted from the machine's own (measured on 6.18; man 7 user_namespaces says 32)
+
+
+def userns_room(want):
+    """How many more user namespaces can still be nested below this process, counted up to want: a child makes them
+    one inside the other (each mapping only its own ids) until Linux says no (ENOSPC, or EUSERS before 4.9) and
+    exits; nothing is left behind. Any other failure counts as room (not ours to judge)."""
+    r, w = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(r)
+        n = 0
+        try:
+            uid, gid = os.geteuid(), os.getegid()
+            while n < want:
+                if _libc.unshare(CLONE_NEWUSER) != 0:
+                    e = ctypes.get_errno()
+                    if e not in (28, 87):  # ENOSPC, EUSERS: the wall; anything else: do not judge
+                        n = want
+                    break
+                n += 1
+                for f, t in (("setgroups", "deny"), ("uid_map", "0 %d 1" % uid), ("gid_map", "0 %d 1" % gid)):
+                    with open("/proc/self/" + f, "w") as fh:
+                        fh.write(t)
+                uid = gid = 0
+        except OSError:
+            n = want
+        os.write(w, str(n).encode())
+        os._exit(0)
+    os.close(w)
+    got = b""
+    while True:
+        c = os.read(r, 64)
+        if not c:
+            break
+        got += c
+    os.close(r)
+    os.waitpid(pid, 0)
+    try:
+        return int(got)
+    except ValueError:
+        return want
+
+
+def need_userns(prog, want, what):
+    """Before a kernel makes its user namespace(s): is there room for want more? If not, say so in one line (not
+    util-linux's "No space left on device", which reads like a full disk, and without its id-mapping helper left
+    waiting forever) and exit 1."""
+    have = userns_room(want)
+    if have < want:
+        fail(prog, "UsernsFull", "%s needs %d more nested user namespace(s), only %d left here: Linux allows %d nested "
+             "from the machine and the layers outside used the rest (this is not a full disk); use fewer kernels "
+             "(mini.py --explain shows how many each one takes)" % (what, want, have, USERNS_WALL))
 
 
 def userns_args():
@@ -180,7 +236,8 @@ def new_env(kind, name, frm=None):
 def declare(envdir, kind, files, description=None):
     """Declare (or replace: the inner declaration shadows the outer one) aos/<kind> in envdir. Every cell has
     description, name (the kernel's name as mini expanded it), layer (1 = outermost: its line in .aos/kernels),
-    status (the absolute path of a live status file, or empty), and from (only when it came from a bundle)."""
+    status (the absolute path of a live status file, or empty), from (only when it came from a bundle) and
+    flattened (only when mini set this layer up together with others in one user namespace: their layer numbers)."""
     d = os.path.join(envdir, DECL, kind)
     if os.path.isdir(d):
         shutil.rmtree(d)
@@ -192,6 +249,8 @@ def declare(envdir, kind, files, description=None):
         files.setdefault("layer", str(ME["layer"]))
         if ME.get("frm"):
             files.setdefault("from", ME["frm"])
+        if ME.get("flat"):
+            files.setdefault("flattened", " ".join(map(str, ME["flat"])))
     for k, v in files.items():
         _write(os.path.join(d, k), (v + "\n") if v else "")
     if description:

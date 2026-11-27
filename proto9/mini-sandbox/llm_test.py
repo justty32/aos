@@ -292,7 +292,7 @@ def check_llm_on_llm():
     r = mini("e-llm-on-llm", ["t/llm-outer", "t/llm-inner"], S.check_argv({"llm": {"posts": 4}}), cwd="/")
     j = r.j
     outer, inner = ledger("llm-outer"), ledger("llm-inner")
-    warned = "it refuses first" in r.err
+    warned = "mini: 1 setting(s) written looser" in r.err  # its limit 10 above the outer 3: one summary line
     others = j.get("llm_other_socks", {})
     record("e_llm_on_llm", j.get("llm_codes") == [200, 200, 200, 429] and len(inner) == 4 and
            [l["result"] for l in outer] == ["fake"] * 3 + ["refused"] and warned and len(others) == 1 and

@@ -1,4 +1,4 @@
-"""Innermost step of a mini --kernels chain (self-contained: mini.py runs it as python3 -I -c SOURCE, so it works even after a uid kernel took away your home): the declarations locked read-only if no kernel did it yet, the agent's own user, mount, pid and cgroup namespaces, an empty network unless an outer layer declared aos/net ($AOS_ENV, or / when it is not set), a clean environment, then the agent."""
+"""Innermost step of a mini --kernels chain (self-contained: mini.py runs it as python3 -I -c SOURCE, so it works even after a uid kernel took away your home): a clear UsernsFull if no user namespace is left for it, the declarations locked read-only if no kernel did it yet, the agent's own user, mount, pid and cgroup namespaces, an empty network unless an outer layer declared aos/net ($AOS_ENV, or / when it is not set), a clean environment, then the agent."""
 
 import ctypes
 import json
@@ -85,6 +85,47 @@ def lock_env(envdir):
         fail("LockFailed", "%s: %s" % (run, e))
 
 
+def userns_room(want):
+    """Same as nest.userns_room (copied): how many more user namespaces fit below us, up to want."""
+    r, w = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(r)
+        n = 0
+        try:
+            uid, gid = os.geteuid(), os.getegid()
+            while n < want:
+                if _libc.unshare(0x10000000) != 0:
+                    if ctypes.get_errno() not in (28, 87):
+                        n = want
+                    break
+                n += 1
+                for f, t in (("setgroups", "deny"), ("uid_map", "0 %d 1" % uid), ("gid_map", "0 %d 1" % gid)):
+                    with open("/proc/self/" + f, "w") as fh:
+                        fh.write(t)
+                uid = gid = 0
+        except OSError:
+            n = want
+        os.write(w, str(n).encode())
+        os._exit(0)
+    os.close(w)
+    got = os.read(r, 64)
+    os.close(r)
+    os.waitpid(pid, 0)
+    try:
+        return int(got)
+    except ValueError:
+        return want
+
+
+def need_userns(want):
+    have = userns_room(want)
+    if have < want:
+        fail("UsernsFull", "the agent's own namespaces need %d more nested user namespace(s), only %d left here: Linux "
+             "allows 33 nested from the machine and the layers outside used the rest (this is not a full disk); use "
+             "fewer kernels (mini.py --explain shows how many each one takes)" % (want, have), 1)
+
+
 def cg_dir():
     with open("/proc/self/cgroup") as f:
         path = next(l[3:].strip() for l in f if l.startswith("0::"))
@@ -110,9 +151,12 @@ def stage1(env_json, argv, locked=False):
     waits here) in <cg>/wait and leave <cg>/sb empty for the agent, so its cgroup root holds no process."""
     envdir = os.environ.get("AOS_ENV", "") or ("/" if os.path.isdir("/.aos") else "")
     if envdir and envdir != "/" and not locked and os.access(envdir, os.W_OK):
+        need_userns(2)
         line = ["unshare"] + userns_args() + ["--mount", "--", sys.executable, "-I", "-c", own_source(), "stage0",
                                               "--env-json", env_json, "--"] + argv
         os.execvp(line[0], line)
+    if not locked:
+        need_userns(1)
     has_net = bool(envdir) and os.path.isdir(os.path.join(envdir, NET_DECL))
     sb = None
     try:

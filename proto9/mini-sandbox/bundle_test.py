@@ -63,7 +63,7 @@ def dirs_now():
 
 
 def layers(out):
-    return [l[len("# layer "):] for l in out.splitlines() if l.startswith("# layer ")]
+    return [l[len("# layer "):].split("  (file ")[0] for l in out.splitlines() if l.startswith("# layer ")]
 
 
 def refused(name, kernels, code, want_in_err, flags=()):
@@ -121,9 +121,9 @@ def expansion(pa):
     r = S.mini("f-dry", ["aos/base"], ["true"], flags=("--dry-run",))
     got = layers(r.out)
     record("f_expand_dry", r.rc == 0 and got == ["%d: %s" % (i + 1, w) for i, w in enumerate(want)] and
-           r.out.count("--from aos/base") == 3 and "added aos/mask" not in r.err and dirs_now() == before,
-           "[aos/base --dry-run] layers %s; --from on each: %s; auto mask: %s (its own mask covers /run/user)" % (
-               got, r.out.count("--from aos/base"), "added aos/mask" in r.err))
+           r.out.count("  (file ") == 3 and "added aos/mask" not in r.err and dirs_now() == before,
+           "[aos/base --dry-run] layers %s; a file on each: %s; auto mask: %s (its own mask covers /run/user)" % (
+               got, r.out.count("  (file "), "added aos/mask" in r.err))
     r = S.mini("f-nested-dry", ["t/nest"], ["true"], flags=("--dry-run",))
     want_n = ["cgroup aos/base/cg from t/nest>aos/base", "mask aos/base/mask from t/nest>aos/base",
               "llm aos/llm/fake from t/nest>aos/base", "net t/nest/net from t/nest"]

@@ -31,6 +31,7 @@ def main():
     sub = nest.host_subuid()
     if sub and uid > sub[1]:
         nest.fail(PROG, "NoSubids", "uid %d is outside your %d subordinate ids" % (uid, sub[1]), 2)
+    nest.need_userns(PROG, 1, "uid kernel %s" % opts["name"])
     env = nest.new_env("uid", opts["name"], opts.get("from"))
     nest.declare(env, "uid", {"uid": str(uid), "outside": str(sub[0] + uid - 1) if sub else "unknown"},
                  "uid kernel: everything inside runs as this uid (outside: one of your subordinate ids), without "

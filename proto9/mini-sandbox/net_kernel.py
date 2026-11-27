@@ -7,6 +7,7 @@ import json
 import os
 import pwd
 import re
+import select
 import shutil
 import signal
 import socket
@@ -167,8 +168,11 @@ def tbf(dev, rate, burst, latency):
 
 # Upload goes into pasta, which ends the sandbox's TCP itself; one dropped packet there cost a third more bytes and
 # up to 5x the time in our runs (11-27), so the upload queue is deep enough (1s) that tbf delays instead of drops.
-# Download ends in the sandbox's own kernel, which copes with drops; a short queue keeps the delay low.
-UP_LATENCY, DOWN_LATENCY = "1s", "200ms"
+# Download: pasta is the sender into the queue (ours, or an inner net kernel's pasta further on); after a drop it
+# sends everything from the last acknowledged byte again, and the quota (nft, forward hook) has counted every copy
+# before tbf dropped it: three net kernels at 32/16/24mbit used up the middle one's 40 MB in 4 s while 2.5 MB
+# arrived (22519 of 26810 packets dropped there). A 1s queue here too: no drops, quota = bytes that went through.
+UP_LATENCY, DOWN_LATENCY = "1s", "1s"
 
 
 # ------------------------------------------------------------ the holder: runs inside the outer namespaces
@@ -264,7 +268,14 @@ def holder_main(cfg_path):
                     counters[o["counter"]["name"]] = [o["counter"]["packets"], o["counter"]["bytes"]]
                 elif "quota" in o:
                     quota = {"bytes": o["quota"]["bytes"], "used": o["quota"]["used"]}
-            return {"counters": counters, "quota": quota,
+            drops = {"up": 0, "down": 0}  # packets tbf dropped (the quota counted them already)
+            try:
+                for q in json.loads(sh(["tc", "-s", "-j", "qdisc", "show"])):
+                    if q.get("kind") == "tbf":
+                        drops["up" if q.get("dev") == TAP else "down"] += int(q.get("drops", 0))
+            except (RuntimeError, ValueError):
+                pass
+            return {"counters": counters, "quota": quota, "drops": drops,
                     "attached": sorted(n for n in ifaces() if n.startswith(VETH) and n[len(VETH):].isdigit())}
         raise RuntimeError("unknown op %r" % op)
 
@@ -420,6 +431,8 @@ class Kernel:
         for k in ("up", "down", "denied", "to_outer"):
             p, b = cn.get(k, [0, 0])
             lines.append("%s: packets %d bytes %d" % (k, p, b))
+        for k in ("up", "down"):  # dropped by the rate limit after being counted (should stay 0, see DOWN_LATENCY)
+            lines.append("%s_dropped: packets %d" % (k, s.get("drops", {}).get(k, 0)))
         for i, r in enumerate(c["allow"]):
             p, b = cn.get("r%d" % i, [0, 0])
             lines.append("allow.%d: %s %s %s new_connections %d bytes %d" % (i, r["proto"], r["to"], r["port"], p, b))
@@ -513,8 +526,6 @@ def nested_config(cfg, outer):
     if not nest.declared(outer, "net"):
         return c, over, warns
     oaddr = nest.decl_read(outer, "net", "host_addr", "")
-    ohost = set(nest.decl_read(outer, "net", "host_ports", "").split("\n")) - {""}
-    oallow = set(nest.decl_read(outer, "net", "allow", "").split("\n")) - {""}
     hp = c.get("host_ports") or []
     if hp:
         if not oaddr:
@@ -525,20 +536,12 @@ def nested_config(cfg, outer):
                                                      for p in hp]
         c["host_ports"] = []  # pasta: --no-map-gw, our "host" would only be the outer sandbox itself
         over = {"host_addr": oaddr, "host_ports": "\n".join("%s %s" % (p.get("proto", "tcp"), p["port"]) for p in hp)}
-        for p in hp:
-            if "%s %s" % (p.get("proto", "tcp"), p["port"]) not in ohost:
-                warns.append("host port %s is not allowed by the outer net kernel; it stays closed" % p["port"])
-    for r in cfg.get("allow") or []:
-        net = ipaddress.ip_network(r["to"], strict=False)
-        if "%s %s %s" % (r.get("proto", "tcp"), net, r["port"]) not in oallow:
-            warns.append("allow %s:%s is not in the outer allow list (by text); the outer one decides" % (
-                r["to"], r["port"]))
+    # a host port or allow rule the outer kernel does not let through stays closed, a bigger quota is cut by the
+    # outer one first: looser settings, which mini.py sums up in one line (details in mini.py --explain)
     oq = nest.decl_read(outer, "net", "quota", "")
     if oq:
         mine = size_bytes(c["quota"]) if c.get("quota") is not None else None
         if mine is None or mine > int(oq):
-            warns.append("quota %s is more than the outer %s bytes; the outer one cuts first" % (
-                c.get("quota", "none"), oq))
             over["quota"] = oq
     return c, over, warns
 
@@ -576,6 +579,7 @@ def wrapper_main():
         fail("ConfigBad", "%s: %s" % (opts["name"], e), 2)
     for w in warns:
         warn("%s: %s" % (opts["name"], w))
+    nest.need_userns(PROG, 2, "net kernel %s" % opts["name"])  # the outer netns's own, then the inner layer's
     env = nest.new_env("net", opts["name"], opts.get("from"))
     cfgp = os.path.join(env, "net.json")
     with open(cfgp, "w") as f:
@@ -609,6 +613,11 @@ def wrapper_main():
     os.close(r2)
     ok = False
     try:
+        # wait for the ready line, or for the inner layer to end (if its unshare failed, an id-mapping helper of
+        # util-linux may still hold the pipe open: no end of file would ever come)
+        while not select.select([r1], [], [], 0.2)[0]:
+            if inner.poll() is not None:
+                raise RuntimeError("the inner layer ended (exit %s) before it was ready" % inner.returncode)
         if os.read(r1, 64).strip() == b"ready":
             k.ask({"op": "attach", "pid": inner.pid})
             if inner_cg:
