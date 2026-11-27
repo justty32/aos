@@ -33,8 +33,8 @@
 **最小方案（回來了，使用者答了）**：全文 `~/.aos/scratch/proto9-minplan-1127/report.md`。第 161 段：兩題都甲——一隻 proc 在哪些 kernel 上，起它前就排好（跑到一半再加是很久以後）；pi 先用使用者本人帳號（切帳號是中期）；**實作前先上網找現成的開源輪子，注意 MIT**。已寫進 pi沙箱-1127 定了的第 6～8 條（`926dd8195`）。
 
 **在跑／接著做**
-1. **找輪子調查**（opus，11:4x 派，只查不寫）：交代全文 `~/.aos/scratch/proto9-wheels-1127/brief.md`，報告要存 `~/.aos/scratch/proto9-wheels-1127/report.md`。**重開 session 後若沒回來、那份 report.md 也沒有，就照 brief.md 原文再派一次（第一次重開已經重派過一次，又被這次重開打斷）。**
-2. 回來後：給使用者看（手機，用 Artifact 或 AskUserQuestion）——六件各「用現成的／自己做」一張表；若有輪子值得取代 aos-daemon 當基底＝方向題，他拍板。他說好就派 opus 照最小方案（＋輪子）做六件。
+1. **找輪子調查做完了**（重派那次在重開前就跑完了）：全文在 `~/.aos/scratch/proto9-wheels-1127/report.md`，手機版摘要 artifact https://claude.ai/artifact/WCpLpLEQtsVN6gqFFD28yo 。結論：沒有現成的一整套；推薦 A＝aos-daemon 照做、零件挑輪子（6 件裡 5 件自己做，小轉接沿用原型的 launch.mjs，socat 當備案），測項抄 Codex、sandbox-runtime（Apache 授權）。B 是改用 bwrap（會推翻 11-26 第 41 條），C 是整套換成 srt／Codex，D 是最外面再套虛擬機（中長期）。
+2. **等使用者回「照 A」**：回了就派 opus 照最小方案做六件，測項加上跟 Codex、srt 的對照。
 
 **main 換定義＋接 Discord（11-27 午）**：公司帳號開不了 remote control，改成用 Discord 私訊跟 main 講話。`wf/ws/main/def/` 已經換上，裡面有 artifact、上網、官方 discord 頻道外掛；拿掉了 `--strict-mcp-config`，**不給跳選項**、權限是 dontAsk，因為跳選項會讓 Discord 那頭卡住。理由寫在 README。token 放 `~/.claude/channels/discord/.env`，由使用者自己寫。重開後：使用者私訊機器人拿配對碼，在畫面打 `/discord:access pair <碼>`。**在 Discord 上回話一律用外掛的 reply 工具**，要給他看的長東西做成 artifact、把連結傳過去。
 
