@@ -52,7 +52,7 @@
 **接著做**（main-alt）：
 1. ~~23:00 推~~（11-27 已推 30 個，見上）；之後每晚照鐘推，結果寫在對話裡（使用者在跟 main 講話時就寄信告訴 main）。
 2. 那三點【擬】還沒得到回答（使用者說「這些設計點先等等」，要先問原理）：層數上限 24、下載佇列 1 秒、網路和腦要不要也攤平。
-3. **main 11-28 02:47 來信兩件，等使用者回來找 main-alt 再做**（全文 `~/.aos/scratch/pending-1128/from-main-0247.md`）：cg kernel 加 inotify／fanotify 每層上限（使用者「1.要。」）；README 寫磁碟用 tmpfs＋記憶體上限、IO 提醒使用者自己 delegate io（使用者「磁碟這塊，我們就是建議最簡單的方式：給他tmpfs然後限制記憶體…」）。
+3. **main 11-28 02:47 來信兩件，等使用者回來找 main-alt 再做**（全文 `~/.aos/scratch/pending-1128/from-main-0247.md`）：cg kernel 加 inotify／fanotify 每層上限（使用者「1.要。」）；README 寫磁碟用 tmpfs＋記憶體上限、IO 提醒使用者自己 delegate io（使用者「磁碟這塊，我們就是建議最簡單的方式：給他tmpfs然後限制記憶體…」）。**02:50 第二封**（全文在 main-alt 信箱 `mailbox/archive/`）：mini 加 seccomp kernel（如 `aos/sys/`），三份預設：只擋少量危險的／比較嚴格（再擋 unshare、mount、setns）／「全擋」（main 理解成白名單，動手前問使用者一句）；相鄰的合成一張表、要 no_new_privs；第 1 份要不要放進 aos/base 要問（使用者原話「可以做。啊具體要擋啥，就使用者自行處置，我們就是提供幾種預設：只擋少量危險的，比較嚴格的，全擋。」）。另把 11-28 main 那邊討論的結論記進 proto8/thinking（fork+exec 繼承、籠子裡 ctl add 給假 daemon、不切 uid 時用遮檔案補、每層上限、磁碟與 IO、seccomp、net 收掉 3 秒「確實要找時間修，不急」）。
 4. 其他照下面「還開著」。
 
 **還開著**：網路 kernel 收掉每層 3 秒；perf 的 llm 疊層量法要改成 `upstream: outer`；公司 WSL（aos-daemon `make test`、pi-sandbox、mini-sandbox 都沒在那台跑過；sky-1125／channels 的 abi3 欄）；決策審查第 3 題（`aos/ctl` 形狀，報告在公司機 `~/.aos/scratch/proto9-decisions-review-1126/`）連同介面裡同名不同義的欄位一起定；中文版知識庫落後 36 頁；pi-sandbox 補洞後還沒跑真模型、「沒設 `AOS_ENV` 看 `/`」沒跟上；11-26 的【擬】18 條。Bun 與 `.claude-alt` 的 discord 外掛（停用）還留著。
