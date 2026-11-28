@@ -48,6 +48,7 @@
 - 一日總覽（含全景圖、效能成本） https://claude.ai/artifact/DdSi36oav4qc5gHCDkEPGw （day-1127）
 - 架構與運作 https://claude.ai/artifact/E7o1Ww7jdLY2nfDz5faD3M （arch-1127）
 - 找輪子摘要（早上的） https://claude.ai/artifact/WCpLpLEQtsVN6gqFFD28yo
+- （11-28）aos 通用介面兩套 https://claude.ai/artifact/CsMjkvyAZW6rAvydxFCbRk （iface-two-1128；thinking `536f12699`，推薦 A，六題等使用者）
 
 **接著做**（main-alt）：
 1. ~~23:00 推~~（11-27 已推 30 個，見上）；之後每晚照鐘推，結果寫在對話裡（使用者在跟 main 講話時就寄信告訴 main）。
