@@ -30,3 +30,4 @@
 | [2026-11-25](25/README.md) | 4 | API agent（agent-fsm）也認 /status、/usage、/exit（照 /clear 的做法；/exit 選 stop）；9P 的 aos proc 介面第一輪談話（實測 /proc/<PID>/cwd）；aos proc 介面架構規劃第一波十六份報告；proto9 做減法：daemon 當容器、kernel 接住名字（家機實測） |
 | [2026-11-26](26/README.md) | 2 | aospl：通用循址字串、參考 Lua 的鴨子型別、存在＝存取得到、元介面 `xxx/__meta`；aos-exec 是普通程式、資料夾有 `_entry` 是一份介面；介面宣告檔起了頭 |
 | [2026-11-27](27/README.md) | 1 | proto9 的目標三句：讓 pi coding agent 安全行動的沙箱、基於 Plan 9／aoslua、選配與介面是核心；只剩 kernel、可用與獨占、執行不攔；pi 放進沙箱的原型（經 `/llm` 連腦） |
+| [2026-11-28](28/README.md) | 1 | aos 通用介面兩套（A 檔案夾式、B manifest 式）給使用者比，推薦 A，六題未定 |
